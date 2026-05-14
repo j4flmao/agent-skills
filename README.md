@@ -16,12 +16,13 @@ cd agent-skills
 
 | Agent | Auto-loaded files |
 |-------|-------------------|
-| Claude Code | `.claude/CLAUDE.md` + `.claude/rules/compression.md`, `routing.md`, `structure.md` |
+| Claude Code | `.claude/CLAUDE.md` + `.claude/rules/` + `.claude/skills/` + `.claude/hooks/` + `.claude/settings.json` |
 | OpenCode | `.opencode/AGENTS.md` + `.opencode/commands/*.md` |
-| Amazon Q | `.amp/rules/agent-skills.mdc` + `.amp/rules/compression.mdc` |
+| Amp | `.amp/AGENTS.md` + `.amp/agent-skills.md` + `.amp/subagents.md` |
 | GitHub Copilot | `.github/copilot-instructions.md` |
 | Gemini | `.gemini/INSTRUCTIONS.md` |
 | Cursor | `.cursor/rules/agent-skills.mdc` + `.cursor/rules/compression.mdc` |
+| Codex CLI | `.codex/AGENTS.md` + `.codex/rules/` + `.codex/hooks/` + `.codex/skills/` |
 
 ### Option 2: Copy skills into another project
 
@@ -35,6 +36,8 @@ git clone https://github.com/j4flmao/agent-skills ~/skills
 cp -r ~/skills/.claude /path/to/your/project/     # Claude Code
 cp -r ~/skills/.opencode /path/to/your/project/   # OpenCode
 cp -r ~/skills/.cursor /path/to/your/project/     # Cursor
+cp -r ~/skills/.amp /path/to/your/project/        # Amp
+cp -r ~/skills/.codex /path/to/your/project/      # Codex CLI
 ```
 
 Or cherry-pick individual skills:
@@ -129,21 +132,23 @@ Every skill enforces: **No filler. No preamble/postamble. Why use many token whe
 Agent config files contain the compression rules:
 - `.claude/rules/compression.md`
 - `.opencode/AGENTS.md`
-- `.amp/rules/compression.mdc`
+- `.amp/AGENTS.md`
 - `.cursor/rules/compression.mdc`
 - `.github/copilot-instructions.md`
 - `.gemini/INSTRUCTIONS.md`
+- `.codex/rules/compression.md`
 
 ## File Structure
 
 ```
 .
-├── .claude/          Claude Code (4 files)
-├── .opencode/        OpenCode (1 file + 3 commands)
-├── .amp/             Amazon Q (2 rule files)
+├── .claude/          Claude Code (CLAUDE.md + 3 rules + 4 skills + 6 hooks + settings.json)
+├── .opencode/        OpenCode (AGENTS.md + 3 commands)
+├── .amp/             Amp (AGENTS.md + agent-skills.md + subagents.md + plugins/)
 ├── .github/          GitHub Copilot instructions
 ├── .gemini/          Gemini instructions
-├── .cursor/          Cursor (2 rule files)
+├── .cursor/          Cursor (2 rules)
+├── .codex/           Codex CLI (AGENTS.md + 3 rules + 5 hooks + 1 skill)
 ├── skills/
 │   ├── core/         2 skills
 │   ├── planning/     5 skills
@@ -157,7 +162,7 @@ Agent config files contain the compression rules:
     └── bundle-definitions.json
 ```
 
-Total: **76 SKILL.md** + **128 reference .md files** = **204 files**.
+Total: **76 SKILL.md** + **128 reference .md files** + **agent configs** = **215+ files**.
 
 ## License
 
