@@ -1,0 +1,37 @@
+{
+  "name": "@j4flmao/agent-skills",
+  "version": "1.0.0",
+  "description": "Universal agent skills suite — BMad-class backend & frontend development skills for any AI agent",
+  "keywords": [
+    "agent-skill",
+    "claude-code",
+    "cursor",
+    "codex",
+    "windsurf",
+    "ai-agent",
+    "fullstack",
+    "clean-architecture",
+    "nestjs",
+    "react",
+    "vue",
+    "angular",
+    "golang",
+    "rust",
+    "python"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/j4flmao/agent-skills.git"
+  },
+  "license": "MIT",
+  "author": "j4flmao",
+  "files": [
+    "skills/",
+    "bundles/",
+    "SKILL.md"
+  ],
+  "scripts": {
+    "lint": "echo 'No lint step configured yet'",
+    "test": "echo 'No test step configured yet'"
+  }
+}

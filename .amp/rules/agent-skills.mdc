@@ -1,0 +1,30 @@
+---
+description: "j4flmao/skills — 76 skills, compressed output, stack routing"
+glob: "**/*"
+---
+
+# .amp — j4flmao/skills
+
+Amazon Q Developer. Rules load by glob match.
+
+## Compress (ALWAYS)
+Strip: a/an/the | just/really | sure/happy | I think/might be | however/moreover | code explain | preamble/postamble
+Pattern: `[thing] [action] [why]. [next].`
+Full prose: security. destructive.
+
+## Routing
+No match → `skills/core/master-orchestrator/SKILL.md`. Detect stack then route.
+Phase order: planning → backend → frontend → mobile → dev-loop → devops → management.
+
+## Keywords
+```
+brief/prd/adr         → planning/
+{stack}               → backend/{stack}/
+oop/api/db/auth/testing→ backend/universal/
+{framework}           → frontend/{framework}/
+state/a11y/performance→ frontend/universal/
+ios/android           → mobile/
+docker/k8s/terraform  → devops/
+review/debug/refactor → dev-loop/
+pm/ba/qa/security     → management/
+```

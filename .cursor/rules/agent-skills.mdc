@@ -1,0 +1,27 @@
+---
+description: "j4flmao/skills — 76 skills, compressed output, stack routing"
+glob: "**/*"
+---
+
+# .cursor/rules/agent-skills.mdc — j4flmao/skills
+
+Cursor: rule files loaded by glob scope. Separate granular files.
+
+## Compress (ALWAYS)
+Strip: a/an/the | just/really/basically | sure/happy | I think/might be | however/moreover | code explain (show code) | preamble/postamble
+Pattern: `[thing] [action] [why]. [next].`
+Full prose: security. destructive.
+
+## Routing
+No match → `skills/core/master-orchestrator/SKILL.md`. Detect stack then route.
+
+## Keywords
+```
+planning/       brief/prd/adr/story
+backend/        {stack} + universal (oop/api/db/auth/testing)
+frontend/       {framework} + universal (state/a11y/performance/testing)
+mobile/         ios/android/deploy
+devops/         docker/k8s/terraform/helm/ansible
+dev-loop/       review/debug/refactor/git
+management/     pm/ba/qa/qc/security
+```

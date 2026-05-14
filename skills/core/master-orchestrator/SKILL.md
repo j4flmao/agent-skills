@@ -1,0 +1,386 @@
+---
+name: master-orchestrator
+description: >
+  Use this skill when the user says 'start', 'help me build', 'initialize', 'I want to build X', 'where do I start', 'what should I do next', 'what skill should I use', or any open-ended project initiation. This is the single entry point for the entire skill suite. It inspects the project filesystem for existing artifacts and routes to the correct next skill. Do NOT use for: direct implementation, bug reports, code review requests, or deployment questions. Those route to their respective skills directly.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [orchestration, phase-0, entry-point]
+---
+
+# Master Orchestrator
+
+## Purpose
+Inspect project state and route to the correct skill. This skill NEVER implements, debugs, or designs. It only routes.
+
+## Agent Protocol
+
+### Trigger
+Exact user phrases: "start", "help me build", "initialize", "I want to build X", "where do I start", "what skill", "what should I do next", "begin", "let's start".
+
+### Input Context
+- Working directory must be set to the project root.
+- If no project root is detectable, ask the user: "Where is your project directory?"
+
+### Output Artifact
+None. This skill produces no files. It emits a routing decision as text.
+
+### Response Format
+The agent MUST output exactly one of the following templates. No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick. No explanations.
+
+Template A — Route to a single skill:
+```
+Next skill: **{skill-name}**
+Reason: {one sentence exactly}
+Context: {key facts the next skill needs}
+```
+
+Template B — Route to multiple skills (sequential):
+```
+Next skills:
+1. **{skill-name}** — {reason}
+2. **{skill-name}** — {reason}
+```
+
+Template C — Need more information:
+```
+Need: {what you need from the user}
+Options:
+- {option 1}
+- {option 2}
+```
+
+### Completion Criteria
+This skill is complete when:
+- [ ] Project state has been checked (docs/, README, package manifests)
+- [ ] Stack/language detected or asked
+- [ ] A single next skill has been identified
+- [ ] Output follows exactly one of the three templates above
+- [ ] No implementation, debugging, or advice has been given
+
+### Max Response Length
+3 lines maximum for routing. 6 lines maximum for "need more information."
+
+## Workflow
+
+### Step 1: Check Filesystem
+Run these checks in order. Stop at the first match.
+1. `Test-Path -LiteralPath docs/brief*.md` — brief exists
+2. `Test-Path -LiteralPath docs/prd*.md` — PRD exists
+3. `Test-Path -LiteralPath docs/decisions/` — ADRs exist
+4. `Test-Path -LiteralPath docs/specs/` — tech specs exist
+5. `Test-Path -LiteralPath package.json` — Node project
+6. `Test-Path -LiteralPath Cargo.toml` — Rust project
+7. `Test-Path -LiteralPath go.mod` — Go project
+8. `Test-Path -LiteralPath requirements.txt` or `pyproject.toml` — Python project
+9. `Test-Path -LiteralPath pom.xml` or `build.gradle` — Java project
+
+### Step 2: Route by State
+
+State: No docs exist, no README with requirements.
+  Route: create-brief
+  Reason: "No product definition found. Starting with a brief to define scope."
+
+State: docs/brief exists, no docs/prd.
+  Route: create-prd
+  Reason: "Brief exists. Expanding into full requirements with epics and stories."
+
+State: docs/prd exists, no docs/decisions or docs/specs.
+  Route: create-adr, create-tech-spec
+  Reason: "Requirements exist. Need architecture decisions and technical specification before implementation."
+
+State: Architecture docs exist, user describes a backend task.
+  1. Detect stack (read package.json / Cargo.toml / go.mod / requirements.txt / pom.xml)
+  2. Route to {stack}-architecture and backend-api-design
+
+State: Architecture docs exist, user describes a frontend task.
+  1. Detect framework (read package.json for react/next/vue/angular)
+  2. Route to {framework}-architecture
+
+State: User shows code for review.
+  Route: code-review
+
+State: User describes a bug with error message or stack trace.
+  Route: debugging-strategy
+
+State: User says "deploy", "CI/CD", "containerize".
+  Route: docker-patterns, cicd-pipeline
+
+State: User asks about project management, sprint planning, estimation, or risk.
+  Route: pm
+  Reason: "Project management request. Handling sprint planning, estimation, risk, or reporting."
+
+State: User asks about requirements, user stories, acceptance criteria, or business analysis.
+  Route: ba
+  Reason: "Business analysis request. Writing or refining user stories and acceptance criteria."
+
+State: User asks about test strategy, test cases, defect reporting, or test automation.
+  Route: qa
+  Reason: "Quality assurance request. Designing test strategy, test cases, or defect management."
+
+State: User asks about code quality, quality gates, static analysis, or technical debt.
+  Route: qc
+  Reason: "Quality control request. Enforcing quality gates, static analysis, or technical debt tracking."
+
+State: User asks about SOLID, OOP, DRY, GRASP, or design principles.
+  Route: oop-principles
+  Reason: "Object-oriented or software design principles request."
+
+State: User asks about design patterns, GoF, pattern selection, creational/structural/behavioral.
+  Route: design-patterns
+  Reason: "Design pattern selection or implementation request."
+
+State: User asks about microservices, saga, CQRS, event sourcing, service decomposition.
+  Route: microservices
+  Reason: "Microservices architecture and distributed patterns request."
+
+State: User asks about microfrontend, Module Federation, frontend composition.
+  Route: microfrontend
+  Reason: "Microfrontend architecture request."
+
+State: User asks about frontend component patterns, hooks patterns, component design.
+  Route: frontend-patterns
+  Reason: "Frontend design patterns request."
+
+State: User asks about team rules, code review, branch strategy, communication protocol, incident response.
+  Route: team-rules
+  Reason: "Team collaboration protocols request."
+
+State: User asks about frontend design patterns, component patterns, hooks patterns.
+  Route: frontend-patterns
+  Reason: "Frontend component and hooks pattern request."
+
+State: User asks about API response format, Response<T>, error handling, exception mapping, error codes.
+  Route: api-response
+  Reason: "API response standardization request."
+
+State: User asks about security team, appsec, vulnerability management, security review, threat model.
+  Route: security
+  Reason: "Security team operations request."
+
+State: User asks about pentesting, penetration test, vulnerability assessment, bug bounty.
+  Route: pentesting
+  Reason: "Penetration testing and reporting request."
+
+State: User asks about alert rules, alert fatigue, notification routing, Prometheus alerts, Grafana alerts.
+  Route: alerting
+  Reason: "Alert rule design request."
+
+State: User asks about monitoring, Prometheus, Grafana, Loki, ELK, metrics, dashboards.
+  Route: monitoring
+  Reason: "Monitoring stack configuration request."
+
+State: User asks about Helm, Helm chart, values management, chart deployment.
+  Route: helm-patterns
+  Reason: "Helm chart patterns request."
+
+State: User asks about Terraform, IaC, infrastructure provisioning.
+  Route: terraform
+  Reason: "Terraform infrastructure patterns request."
+
+State: User asks about Ansible, playbook, configuration management.
+  Route: ansible
+  Reason: "Ansible automation patterns request."
+
+State: User asks about Jenkins, CI/CD pipeline, Jenkinsfile.
+  Route: jenkins
+  Reason: "Jenkins pipeline patterns request."
+
+State: User asks about Longhorn, distributed storage, persistent volumes, backup.
+  Route: longhorn
+  Reason: "Longhorn storage patterns request."
+
+State: Node.js stack detected and user describes a backend task.
+  Route: nodejs-architecture
+  Reason: "Node.js backend detected. Setting up Express/Fastify/Hono project structure."
+
+State: Node.js stack detected and user asks about patterns, async handlers, DI.
+  Route: nodejs-patterns
+  Reason: "Node.js patterns request."
+
+State: ElysiaJS stack detected (bun, elysia in dependencies).
+  Route: elysia-architecture
+  Reason: "ElysiaJS on Bun detected. Setting up Elysia project structure."
+
+State: ElysiaJS user asks about plugins, guards, Eden Treaty.
+  Route: elysia-patterns
+  Reason: "ElysiaJS patterns request."
+
+State: Ruby on Rails stack detected (Gemfile, rails).
+  Route: rails
+  Reason: "Ruby on Rails backend detected."
+
+State: SvelteKit stack detected (package.json has @sveltejs/kit).
+  Route: sveltekit
+  Reason: "SvelteKit frontend detected."
+
+State: .NET stack detected and user describes a backend task.
+  Route: dotnet-architecture
+  Reason: "C# .NET backend detected. Setting up project structure and architecture."
+
+State: .NET stack detected and user asks about patterns, CQRS, MediatR, EF Core patterns.
+  Route: dotnet-patterns
+  Reason: "C# .NET patterns request. Implementing CQRS, Result pattern, or pipeline behaviors."
+
+State: NestJS stack detected and user asks about patterns, modules, guards, interceptors.
+  Route: nestjs-patterns
+  Reason: "NestJS patterns request."
+
+State: Go stack detected and user asks about patterns, concurrency, error handling, idiomatic Go.
+  Route: golang-patterns
+  Reason: "Go patterns request."
+
+State: Rust stack detected and user asks about patterns, error handling, ownership, async Rust.
+  Route: rust-patterns
+  Reason: "Rust patterns request."
+
+State: Angular detected and user asks about patterns, RxJS, NgRx, modules.
+  Route: angular-patterns
+  Reason: "Angular patterns request."
+
+State: User asks about Docker, Dockerfile, docker-compose, containerization.
+  Route: docker-patterns
+  Reason: "Docker containerization request."
+
+State: User says deploy, CI/CD, GitHub Actions, GitLab CI, pipeline automation.
+  Route: cicd-pipeline
+  Reason: "CI/CD pipeline request."
+
+State: User asks about Kubernetes, k8s, pods, deployments, services, ingress.
+  Route: kubernetes-patterns
+  Reason: "Kubernetes orchestration request."
+
+State: User asks about observability, tracing, OpenTelemetry, distributed tracing, span.
+  Route: observability
+  Reason: "Observability and distributed tracing request."
+
+State: User asks about API design, RESTful, OpenAPI, versioning, endpoint structure.
+  Route: backend-api-design
+  Reason: "API design request."
+
+State: User asks about authentication, authorization, JWT, OAuth, SSO, RBAC.
+  Route: backend-auth-patterns
+  Reason: "Authentication and authorization patterns request."
+
+State: User asks about clean architecture, hexagonal, onion, ports and adapters, dependency rule.
+  Route: backend-clean-architecture
+  Reason: "Clean architecture patterns request."
+
+State: User asks about database design, SQL, migrations, ORM, schema design, indexing.
+  Route: backend-database-patterns
+  Reason: "Database design patterns request."
+
+State: User asks about event-driven, messaging, Kafka, RabbitMQ, pub-sub, event bus.
+  Route: backend-event-driven
+  Reason: "Event-driven architecture request."
+
+State: User asks about backend testing, unit tests, integration tests, TDD, mocking.
+  Route: backend-testing
+  Reason: "Backend testing strategy request."
+
+State: User asks about accessibility, a11y, WCAG, screen reader, ARIA.
+  Route: frontend-accessibility
+  Reason: "Frontend accessibility request."
+
+State: User asks about design system, component library, Storybook, tokens.
+  Route: frontend-design-system
+  Reason: "Design system and component library request."
+
+State: User asks about frontend performance, Core Web Vitals, Lighthouse, LCP, CLS, INP.
+  Route: frontend-performance
+  Reason: "Frontend performance optimization request."
+
+State: User asks about state management, Redux, Zustand, Pinia, NgRx, Vuex.
+  Route: frontend-state-management
+  Reason: "Frontend state management request."
+
+State: User asks about frontend testing, Jest, Vitest, Cypress, Playwright, testing library.
+  Route: frontend-testing
+  Reason: "Frontend testing strategy request."
+
+State: User asks about changelog, release notes, semantic versioning.
+  Route: changelog-generator
+  Reason: "Changelog generation request."
+
+State: User asks about git workflow, branching strategy, rebase, merge, git flow.
+  Route: git-workflow
+  Reason: "Git workflow and branching strategy request."
+
+State: User asks about profiling, performance audit, bottleneck, flamegraph, CPU profile.
+  Route: performance-profiler
+  Reason: "Performance profiling request."
+
+State: User asks about README, documentation, project docs, contributing guide.
+  Route: readme-writer
+  Reason: "README and project documentation request."
+
+State: User asks about refactoring, code improvement, restructuring, technical debt reduction.
+  Route: refactor-guide
+  Reason: "Code refactoring guide request."
+
+State: User asks about security audit, dependency check, SAST, DAST, vulnerability scan.
+  Route: security-auditor
+  Reason: "Security audit request."
+
+State: User says iOS, Swift, SwiftUI, iPhone, iPad, Xcode.
+  Route: ios
+  Reason: "iOS native development request."
+
+State: User says Android, Kotlin, Jetpack Compose, Google Play.
+  Route: android
+  Reason: "Android native development request."
+
+State: User asks about mobile deploy, TestFlight, App Store, Play Store, mobile CI/CD, code signing.
+  Route: mobile-deployment
+  Reason: "Mobile app deployment request."
+
+State: User asks about user stories, story splitting, story points, backlog refinement.
+  Route: create-story
+  Reason: "User story creation request."
+
+State: User says init, scaffold, new project, start fresh, project setup.
+  Route: project-init
+  Reason: "Project initialization request."
+
+### Step 3: Detect Backend Stack
+Read project files:
+- package.json: if @nestjs/core present -> nestjs
+- package.json: if elysia present or bun detected -> elysia
+- package.json: if no @nestjs/core, no elysia, has express/fastify/hono -> nodejs
+- go.mod -> golang
+- Cargo.toml -> rust
+- Gemfile -> rails
+- requirements.txt: if fastapi present -> python-fastapi; if django present -> python-django
+- pyproject.toml: if django present -> python-django
+- pom.xml or build.gradle -> spring-boot
+- *.csproj or *.sln -> dotnet
+- None detected -> ask user: "Which backend stack does this project use? (nestjs, nodejs, elysia, golang, rust, rails, python, spring, dotnet)"
+
+### Step 4: Detect Frontend Framework
+- package.json: if @sveltejs/kit present -> sveltekit
+- package.json: if next present -> react-nextjs
+- package.json: if react present but no next -> react-architecture
+- package.json: if vue present -> vue-architecture
+- package.json: if nuxt present -> vue-nuxt
+- angular.json -> angular-architecture
+- None detected -> ask user
+
+## Rules
+- This skill produces ZERO code. No implementation. No debugging. No advice.
+- End EVERY response with exactly one of the three templates in Response Format.
+- If multiple skills could apply, pick the one with the highest priority (earliest phase).
+- If you cannot determine the stack, ask. Do not guess.
+- Never explain why you chose the skill. The template already contains "Reason."
+- If the user asks a question outside routing (e.g., "how do I do X"), respond with: "That question should be handled by {skill-name}. Activate that skill with: {trigger phrase}"
+
+## References
+This skill uses no external reference files — all routing logic is inline.
+
+## Handoff
+This skill does not produce artifacts. It routes to the appropriate next skill.
+Carry forward: routing decision, detected stack, detected framework, existing artifacts found.

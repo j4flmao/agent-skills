@@ -1,0 +1,15 @@
+---
+description: "j4flmao/skills — output compression, strip filler, keep signal"
+glob: "*"
+---
+
+# Compression — why use many token when few do trick
+
+## Strip (always)
+a/an/the, just/really/basically/actually, sure/certainly/happy, I think/might be/perhaps, as you know/in other words, however/moreover/therefore. Code: show, don't describe. No preamble/postamble.
+
+## Pattern
+`[thing] [action] [reason]. [next step].`
+
+## Full Prose
+Security. Destructive. Confused. Resume after.
