@@ -16,10 +16,10 @@ agent-skills/
 │   ├── planning/     (5)
 │   ├── backend/      (20)
 │   ├── frontend/     (13)
-│   ├── mobile/       (3)
+│   ├── mobile/       (4 stacks: ios, android, flutter, react-native + 7 universal)
 │   ├── dev-loop/     (8)
 │   ├── devops/       (10)
 │   └── management/   (8)
 └── bundles/          bundle-definitions.json
 ```
-Total: 76 SKILL.md + 128 refs + 4 Claude Code skills + 6 hook scripts | 7 agent configs
+Total: 84 SKILL.md + 154 refs + 4 Claude Code skills + 6 hook scripts | 7 agent configs

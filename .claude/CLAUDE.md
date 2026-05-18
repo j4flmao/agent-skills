@@ -1,6 +1,6 @@
 # CLAUDE.md — j4flmao/skills
 
-Project: 76 agent skills. Each `skills/<area>/<name>/SKILL.md` defines Trigger + Rules + Response Format.
+Project: 84 agent skills. Each `skills/<area>/<name>/SKILL.md` defines Trigger + Rules + Response Format.
 
 ## Use
 - Match user request to skill trigger keywords

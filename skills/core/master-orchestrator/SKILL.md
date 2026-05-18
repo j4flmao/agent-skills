@@ -255,6 +255,38 @@ State: User asks about Kubernetes, k8s, pods, deployments, services, ingress.
   Route: kubernetes-patterns
   Reason: "Kubernetes orchestration request."
 
+State: User asks about GitHub Actions, CI/CD workflow, pipeline automation.
+  Route: github-actions
+  Reason: "GitHub Actions CI/CD request."
+
+State: User asks about GitOps, ArgoCD, Flux, Git-based deployment.
+  Route: gitops
+  Reason: "GitOps deployment strategy request."
+
+State: User asks about Vault, secrets management, HashiCorp Vault, secret storage.
+  Route: vault
+  Reason: "Vault secrets management request."
+
+State: User asks about AWS, EC2, S3, Lambda, RDS, cloud infrastructure.
+  Route: aws
+  Reason: "AWS cloud infrastructure request."
+
+State: User asks about serverless, Lambda, Cloud Functions, FaaS.
+  Route: serverless
+  Reason: "Serverless architecture request."
+
+State: User asks about monorepo, Nx, Turborepo, workspace organization.
+  Route: monorepo
+  Reason: "Monorepo tooling and workspace request."
+
+State: User asks about Dependabot, Renovate, dependency updates, vulnerability scanning.
+  Route: dependency-management
+  Reason: "Dependency management automation request."
+
+State: User asks about API documentation, Swagger, OpenAPI, API spec generation.
+  Route: api-documentation
+  Reason: "API documentation generation request."
+
 State: User asks about observability, tracing, OpenTelemetry, distributed tracing, span.
   Route: observability
   Reason: "Observability and distributed tracing request."
@@ -279,6 +311,30 @@ State: User asks about event-driven, messaging, Kafka, RabbitMQ, pub-sub, event 
   Route: backend-event-driven
   Reason: "Event-driven architecture request."
 
+State: User asks about gRPC, protobuf, streaming, bidirectional RPC.
+  Route: grpc-patterns
+  Reason: "gRPC and protobuf patterns request."
+
+State: User asks about WebSocket, real-time, socket.io, WS, live updates.
+  Route: websocket-patterns
+  Reason: "WebSocket and real-time communication request."
+
+State: User asks about message queue, message broker, RabbitMQ, Kafka, SQS.
+  Route: message-queue
+  Reason: "Message queue and broker patterns request."
+
+State: User asks about caching, Redis cache, CDN, cache strategy, cache invalidation.
+  Route: caching
+  Reason: "Caching strategy and implementation request."
+
+State: User asks about rate limiting, throttling, API rate limit, backpressure.
+  Route: rate-limiting
+  Reason: "Rate limiting and throttling request."
+
+State: User asks about load testing, k6, Locust, Artillery, benchmark, stress test.
+  Route: load-testing
+  Reason: "Load testing and performance benchmarking request."
+
 State: User asks about backend testing, unit tests, integration tests, TDD, mocking.
   Route: backend-testing
   Reason: "Backend testing strategy request."
@@ -302,6 +358,22 @@ State: User asks about state management, Redux, Zustand, Pinia, NgRx, Vuex.
 State: User asks about frontend testing, Jest, Vitest, Cypress, Playwright, testing library.
   Route: frontend-testing
   Reason: "Frontend testing strategy request."
+
+State: User asks about Tailwind CSS, utility-first CSS, CSS design tokens.
+  Route: tailwind-css
+  Reason: "Tailwind CSS and utility-first styling request."
+
+State: User asks about Storybook, component library, visual testing, component documentation.
+  Route: storybook
+  Reason: "Storybook component documentation request."
+
+State: User asks about PWA, service worker, offline support, manifest, progressive web app.
+  Route: pwa
+  Reason: "Progressive web app implementation request."
+
+State: User asks about SEO, meta tags, Open Graph, structured data, sitemap, search optimization.
+  Route: seo
+  Reason: "SEO and search optimization request."
 
 State: User asks about changelog, release notes, semantic versioning.
   Route: changelog-generator
@@ -335,9 +407,53 @@ State: User says Android, Kotlin, Jetpack Compose, Google Play.
   Route: android
   Reason: "Android native development request."
 
+State: User says Flutter, Dart, cross-platform mobile, widgets, pubspec.
+  Route: flutter
+  Reason: "Flutter cross-platform development request."
+
+State: User says React Native, Expo, RN, react-native, Hermes.
+  Route: react-native
+  Reason: "React Native cross-platform development request."
+
+State: User asks about mobile pattern, mobile architecture, MVVM, MVI, mobile project structure, Clean Architecture mobile.
+  Route: mobile-patterns
+  Reason: "Mobile architecture pattern request."
+
+State: User asks about mobile testing, widget test, component test mobile, golden test, XCUITest, Espresso, Detox.
+  Route: mobile-testing
+  Reason: "Mobile testing strategy request."
+
+State: User asks about mobile performance, app slow, jank, frame drop, memory leak mobile, app startup.
+  Route: mobile-performance
+  Reason: "Mobile performance optimization request."
+
+State: User asks about mobile security, secure storage, certificate pinning, OWASP mobile, root detection, biometric.
+  Route: mobile-security
+  Reason: "Mobile security implementation request."
+
+State: User asks about mobile networking, API client mobile, offline first, GraphQL mobile, REST client, caching mobile, pagination.
+  Route: mobile-networking
+  Reason: "Mobile networking layer request."
+
+State: User asks about mobile storage, local database, SQLite mobile, Room, Core Data, Hive, Isar, file storage mobile.
+  Route: mobile-storage
+  Reason: "Mobile local storage request."
+
 State: User asks about mobile deploy, TestFlight, App Store, Play Store, mobile CI/CD, code signing.
   Route: mobile-deployment
   Reason: "Mobile app deployment request."
+
+State: User asks about push notifications, APNs, FCM, notification payload.
+  Route: push-notifications
+  Reason: "Mobile push notification implementation request."
+
+State: User asks about in-app purchase, subscription, StoreKit, Play Billing, revenue.
+  Route: in-app-purchase
+  Reason: "In-app purchase and subscription request."
+
+State: User asks about crash reporting, Sentry, Crashlytics, error tracking mobile.
+  Route: crash-reporting
+  Reason: "Mobile crash reporting setup request."
 
 State: User asks about user stories, story splitting, story points, backlog refinement.
   Route: create-story
@@ -369,6 +485,13 @@ Read project files:
 - package.json: if nuxt present -> vue-nuxt
 - angular.json -> angular-architecture
 - None detected -> ask user
+
+### Step 5: Detect Mobile Stack
+- pubspec.yaml -> flutter
+- package.json: if react-native present -> react-native
+- Package.swift or *.xcworkspace -> ios
+- build.gradle.kts / settings.gradle.kts with kotlin -> android
+- None detected -> skip mobile stack
 
 ## Rules
 - This skill produces ZERO code. No implementation. No debugging. No advice.

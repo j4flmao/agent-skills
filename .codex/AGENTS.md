@@ -1,6 +1,6 @@
 # .codex/AGENTS.md -- j4flmao/skills
 
-Codex CLI project config for the agent skill suite. 76 skills, compressed output, stack-based routing.
+Codex CLI project config for the agent skill suite. 105 skills, compressed output, stack-based routing.
 
 ## Compress (ALWAYS)
 
@@ -21,11 +21,17 @@ Phase order: planning -> backend -> frontend -> mobile -> dev-loop -> devops -> 
 ```
 planning/    -> brief, prd, adr, tech spec, story
 backend/     -> nestjs, nodejs, elysia, go, rust, python, spring, dotnet, rails
-               universal: oop, api-design, api-response, database, auth, testing
+               universal: oop, api-design, api-response, database, auth, testing,
+               grpc, websocket, message-queue, caching, rate-limiting, load-testing
 frontend/    -> react, nextjs, vue, nuxt, angular, sveltekit
-               universal: state, a11y, design-system, performance, testing, microfrontend
-mobile/      -> ios, android, deploy
-devops/      -> docker, k8s, terraform, helm, ansible, jenkins, longhorn, monitoring
+               universal: state, a11y, design-system, performance, testing, microfrontend,
+               tailwind, storybook, pwa, seo
+mobile/      -> ios, android, flutter, react-native
+               universal: patterns, testing, performance, security, networking, storage, deployment,
+               push-notifications, in-app-purchase, crash-reporting
+devops/      -> docker, k8s, terraform, helm, ansible, jenkins, longhorn, monitoring,
+               github-actions, gitops, vault, aws, serverless, monorepo,
+               dependency-management, api-documentation
 dev-loop/    -> review, debug, refactor, git, security, performance, changelog, readme
 management/  -> pm, ba, qa, qc, team-rules, security, pentesting, alerting
 ```
@@ -39,6 +45,8 @@ management/  -> pm, ba, qa, qc, team-rules, security, pentesting, alerting
 - `requirements.txt` / `pyproject.toml`: python
 - `pom.xml` / `build.gradle`: spring-boot
 - `*.csproj` / `*.sln`: dotnet
+- `pubspec.yaml`: flutter
+- `package.json` with `react-native`: react-native
 
 ## Project structure
 
@@ -51,6 +59,6 @@ agent-skills/
   .gemini/           Gemini
   .cursor/           Cursor
   .codex/            Codex CLI (this file)
-  skills/            76 skills
-  bundles/           13 bundle definitions
+  skills/            105 skills
+  bundles/           15 bundle definitions
 ```

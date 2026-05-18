@@ -1,6 +1,6 @@
 # j4flmao/agent-skills — Amp guidance
 
-76 skills across 8 phases. Each `skills/<area>/<name>/SKILL.md` defines trigger keywords, rules, and response format.
+105 skills across 8 phases. Each `skills/<area>/<name>/SKILL.md` defines trigger keywords, rules, and response format.
 
 ## Use
 
@@ -15,7 +15,7 @@
 - `skills/planning/` — brief, prd, adr, tech-spec, story
 - `skills/backend/` — nestjs, nodejs, elysia, golang, rust, python-fastapi, python-django, spring-boot, dotnet, rails, oop-principles, design-patterns, microservices, clean-architecture, api-design, api-response, database-patterns, auth-patterns, event-driven, testing
 - `skills/frontend/` — react, nextjs, vue, nuxt, angular, sveltekit, patterns, state-management, accessibility, design-system, performance, testing, microfrontend
-- `skills/mobile/` — ios, android, mobile-deployment
+- `skills/mobile/` — ios, android, flutter, react-native, patterns, testing, performance, security, networking, storage, deployment
 - `skills/dev-loop/` — code-review, debugging, refactor, git-workflow, security-audit, performance-profile, changelog, readme
 - `skills/devops/` — docker, cicd, kubernetes, observability, helm, terraform, ansible, jenkins, longhorn, monitoring
 - `skills/management/` — pm, ba, qa, qc, team-rules, security, pentesting, alerting
@@ -26,7 +26,7 @@ planning → backend → frontend → mobile → dev-loop → devops → managem
 
 ## Bundles
 
-See @bundles/bundle-definitions.json for 13 skill bundles.
+See @bundles/bundle-definitions.json for 15 skill bundles.
 
 ## Agent configs
 

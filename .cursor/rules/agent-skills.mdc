@@ -1,5 +1,5 @@
 ---
-description: "j4flmao/skills — 76 skills, compressed output, stack routing"
+description: "j4flmao/skills — 105 skills, compressed output, stack routing"
 glob: "**/*"
 ---
 
@@ -20,7 +20,7 @@ No match → `skills/core/master-orchestrator/SKILL.md`. Detect stack then route
 planning/       brief/prd/adr/story
 backend/        {stack} + universal (oop/api/db/auth/testing)
 frontend/       {framework} + universal (state/a11y/performance/testing)
-mobile/         ios/android/deploy
+mobile/         ios/android/flutter/react-native + universal (7)
 devops/         docker/k8s/terraform/helm/ansible
 dev-loop/       review/debug/refactor/git
 management/     pm/ba/qa/qc/security

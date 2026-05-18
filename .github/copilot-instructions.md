@@ -15,7 +15,7 @@ Phase order: planning → backend → frontend → mobile → dev-loop → devop
 planning/ → brief, prd, adr, story
 backend/  → nestjs, nodejs, elysia, go, rust, python, spring, dotnet, rails + universal (oop/api/db/auth/testing)
 frontend/ → react, vue, angular, sveltekit + universal (state/a11y/performance/testing/microfrontend)
-mobile/   → ios, android, deploy
+mobile/   → ios, android, flutter, react-native + universal (patterns/testing/performance/security/networking/storage/deployment)
 devops/   → docker, k8s, terraform, helm, ansible, monitoring
 dev-loop/ → review, debug, refactor, git, changelog
 management/ → pm, ba, qa, qc, security, pentesting, alerting

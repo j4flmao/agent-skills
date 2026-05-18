@@ -19,8 +19,9 @@ No match → `skills/core/master-orchestrator/SKILL.md` then detect stack.
 planning/    → brief, prd, adr
 backend/     → {nestjs,nodejs,elysia,go,rust,python,spring,dotnet,rails}
 frontend/    → {react,vue,angular,sveltekit}
-mobile/      → ios, android, deploy
-devops/      → docker, k8s, terraform, helm
+mobile/      → ios, android, flutter, react-native
+               universal: patterns, testing, performance, security, networking, storage, deployment
+devops/      → docker, k8s, terraform, helm, github-actions, gitops, vault, aws, serverless, monorepo
 dev-loop/    → review, debug, refactor
 management/  → pm, ba, qa, qc, security
 ```
@@ -30,11 +31,13 @@ management/  → pm, ba, qa, qc, security
 oop/solid/microservices   → backend/universal/
 api-design/api-response   → backend/universal/
 database/auth/event-driven→ backend/universal/
+grpc/websocket/mq/cache/rate-limit/load-test → backend/universal/
 state/a11y/design-system  → frontend/universal/
 performance/testing/microfrontend → frontend/universal/
+tailwind/storybook/pwa/seo → frontend/universal/
 ```
 
 ## Project
 ```
-skills/ (76) + bundles/ (13)
+skills/ (105) + bundles/ (15)
 ```

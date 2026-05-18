@@ -1,37 +1,71 @@
 {
   "name": "@j4flmao/agent-skills",
   "version": "1.0.0",
-  "description": "Universal agent skills suite -class backend & frontend development skills for any AI agent",
+<<<<<<< HEAD
+  "description": "105 agent skills for software development — planning, backend, frontend, mobile, devops, management. Works with Claude Code, OpenCode, Cursor, Codex CLI, Copilot, Gemini, Amp, Windsurf.",
   "keywords": [
-    "agent-skill",
+    "agent-skills",
     "claude-code",
+    "opencode",
     "cursor",
-    "codex",
+    "codex-cli",
     "windsurf",
+    "copilot",
+    "gemini",
+    "amp",
     "ai-agent",
     "fullstack",
-    "clean-architecture",
+    "backend",
+    "frontend",
+    "mobile",
+    "devops",
     "nestjs",
     "react",
     "vue",
     "angular",
+    "sveltekit",
     "golang",
     "rust",
-    "python"
+    "python",
+    "dotnet",
+    "spring-boot",
+    "rails",
+    "flutter",
+    "react-native",
+    "ios",
+    "android",
+    "docker",
+    "kubernetes",
+    "terraform"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/j4flmao/agent-skills.git"
   },
+  "homepage": "https://github.com/j4flmao/agent-skills#readme",
+  "bugs": {
+    "url": "https://github.com/j4flmao/agent-skills/issues"
+  },
   "license": "MIT",
   "author": "j4flmao",
+  "engines": {
+    "node": ">=18"
+  },
   "files": [
     "skills/",
     "bundles/",
-    "SKILL.md"
+    "docs/",
+    ".claude/",
+    ".opencode/",
+    ".amp/",
+    ".github/",
+    ".gemini/",
+    ".cursor/",
+    ".codex/",
+    ".windsurf/"
   ],
   "scripts": {
-    "lint": "echo 'No lint step configured yet'",
-    "test": "echo 'No test step configured yet'"
+    "validate": "pwsh -NoProfile -Command \"exit (Get-ChildItem skills -Recurse -Filter SKILL.md | Where-Object { (Get-Content $_.FullName -Raw) -notmatch '^---' }).Count\"",
+    "lint": "pwsh -NoProfile -Command \"exit (Get-ChildItem skills -Recurse -Filter SKILL.md | ForEach-Object { $c=Get-Content $_.FullName -Raw; $d=$_.DirectoryName; [regex]::Matches($c,'references/[\\w-]+\\.md') | Where-Object { -not (Test-Path (Join-Path $d $_.Value)) } }).Count\""
   }
 }

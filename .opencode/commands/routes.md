@@ -1,6 +1,6 @@
 # /routes — List available skills
 
-Show all 76 skills grouped by phase, with trigger keywords.
+Show all 105 skills grouped by phase, with trigger keywords.
 
 ## Output
 ```
