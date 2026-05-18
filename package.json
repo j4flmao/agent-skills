@@ -1,7 +1,6 @@
 {
   "name": "@j4flmao/agent-skills",
   "version": "1.0.0",
-<<<<<<< HEAD
   "description": "105 agent skills for software development — planning, backend, frontend, mobile, devops, management. Works with Claude Code, OpenCode, Cursor, Codex CLI, Copilot, Gemini, Amp, Windsurf.",
   "keywords": [
     "agent-skills",
