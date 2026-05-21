@@ -327,6 +327,10 @@ State: User asks about caching, Redis cache, CDN, cache strategy, cache invalida
   Route: caching
   Reason: "Caching strategy and implementation request."
 
+State: User asks about API gateway, Kong, Nginx reverse proxy, AWS API Gateway, gateway pattern, BFF, API proxy, gateway aggregation.
+  Route: api-gateway
+  Reason: "API gateway configuration request."
+
 State: User asks about rate limiting, throttling, API rate limit, backpressure.
   Route: rate-limiting
   Reason: "Rate limiting and throttling request."

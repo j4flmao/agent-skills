@@ -10,16 +10,16 @@ Full prose: security. destructive.
 ## Routing
 No match → `skills/core/master-orchestrator/SKILL.md`. Detect stack first.
 
-### All Skills (105)
+### All Skills (106)
 ```
 core (2):       master-orchestrator, project-init
 planning (5):   create-brief, create-prd, create-adr, create-tech-spec, create-story
-backend (26):   nestjs-a/p, nodejs-a/p, elysia-a/p, golang-a/p, rust-a/p
+backend (27):   nestjs-a/p, nodejs-a/p, elysia-a/p, golang-a/p, rust-a/p
                 python-fastapi, python-django, spring-boot-a, dotnet-a/p, rails
                 universal: oop, design-patterns, microservices, clean-architecture,
                 api-design, api-response, database-patterns, auth-patterns,
                 event-driven, testing, grpc-patterns, websocket-patterns,
-                message-queue, caching, rate-limiting, load-testing
+                message-queue, caching, rate-limiting, load-testing, api-gateway
 frontend (17):  react-a, react-nextjs, vue-a, vue-nuxt, angular-a/p, sveltekit
                 universal: patterns, state-management, accessibility,
                 design-system, performance, testing, microfrontend,

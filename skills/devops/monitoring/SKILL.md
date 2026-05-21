@@ -125,6 +125,208 @@ groups:
 | **Cardinality limit** | <500,000 active series per Prometheus |
 | **Storage calculation** | ~1KB per sample → 8M samples/day = ~8GB/day |
 
+### Alerting Rules
+
+```yaml
+# rules/alerts.yml
+groups:
+  - name: infrastructure
+    interval: 30s
+    rules:
+      - alert: NodeDown
+        expr: up{job="node-exporter"} == 0
+        for: 1m
+        labels:
+          severity: P0
+        annotations:
+          summary: "Node {{ $labels.instance }} down"
+          runbook: "https://runbook.example.com/node-down"
+
+      - alert: HighCpuUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 10m
+        labels:
+          severity: P2
+        annotations:
+          summary: "CPU > 90% on {{ $labels.instance }}"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: P1
+        annotations:
+          summary: "Disk < 10% free on {{ $labels.instance }}"
+
+      - alert: HighMemoryPressure
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 < 10
+        for: 5m
+        labels:
+          severity: P2
+        annotations:
+          summary: "Memory < 10% available on {{ $labels.instance }}"
+
+  - name: kubernetes
+    interval: 30s
+    rules:
+      - alert: PodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[15m]) > 2
+        for: 5m
+        labels:
+          severity: P1
+        annotations:
+          summary: "Pod {{ $labels.pod }} restarting frequently"
+
+      - alert: PersistentVolumeFilling
+        expr: (kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) * 100 > 85
+        for: 5m
+        labels:
+          severity: P1
+        annotations:
+          summary: "PV {{ $labels.persistentvolumeclaim }} > 85% full"
+
+      - alert: PodsPending
+        expr: kube_pod_status_phase{phase="Pending"} > 0
+        for: 15m
+        labels:
+          severity: P2
+        annotations:
+          summary: "{{ $value }} pods pending > 15min"
+
+  - name: applications
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: P1
+        annotations:
+          summary: "{{ $labels.service }} error rate > 5%"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: P1
+        annotations:
+          summary: "{{ $labels.service }} p99 latency > 2s"
+
+      - alert: ServiceDown
+        expr: probe_success{job="blackbox"} == 0
+        for: 1m
+        labels:
+          severity: P0
+        annotations:
+          summary: "{{ $labels.target }} is unreachable"
+
+      - alert: ZeroTraffic
+        expr: rate(http_requests_total[5m]) == 0
+        for: 5m
+        labels:
+          severity: P0
+        annotations:
+          summary: "{{ $labels.service }} zero traffic — possible outage"
+
+      - alert: HighLogErrorRate
+        expr: sum(rate({job=~".+"} |= "error" [5m])) by (job) > 10
+        for: 5m
+        labels:
+          severity: P2
+        annotations:
+          summary: "Error log rate > 10/s for {{ $labels.job }}"
+```
+
+### Alertmanager Configuration
+
+```yaml
+# alertmanager.yml
+route:
+  receiver: default
+  group_by:
+    - alertname
+    - severity
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - match:
+        severity: P0
+      receiver: pagerduty-critical
+      repeat_interval: 5m
+      group_wait: 10s
+    - match:
+        severity: P1
+      receiver: slack-warning
+      repeat_interval: 30m
+    - match:
+        severity: P2
+      receiver: slack-info
+      repeat_interval: 6h
+    - match:
+        severity: P3
+      receiver: null
+    - match_re:
+        job: "(node-exporter|kube-state-metrics)"
+      receiver: infra-team
+      group_by:
+        - alertname
+        - instance
+
+receivers:
+  - name: pagerduty-critical
+    pagerduty_configs:
+      - routing_key: "${PD_ROUTING_KEY}"
+        severity: critical
+        description: "{{ .GroupLabels.alertname }} — {{ .CommonAnnotations.summary }}"
+        client: "Prometheus"
+        client_url: "{{ .ExternalURL }}"
+
+  - name: slack-warning
+    slack_configs:
+      - api_url: "${SLACK_WEBHOOK_URL}"
+        channel: "#alerts-critical"
+        title: "{{ .GroupLabels.alertname }}"
+        text: "{{ .CommonAnnotations.summary }}"
+        color: danger
+        fields:
+          - title: Severity
+            value: "{{ .GroupLabels.severity }}"
+          - title: Service
+            value: "{{ .GroupLabels.job }}"
+          - title: Grafana
+            value: "{{ .GeneratorURL }}"
+
+  - name: slack-info
+    slack_configs:
+      - api_url: "${SLACK_WEBHOOK_URL}"
+        channel: "#alerts-info"
+        title: "{{ .GroupLabels.alertname }}"
+        text: "{{ .CommonAnnotations.summary }}"
+        color: warning
+
+  - name: infra-team
+    slack_configs:
+      - api_url: "${SLACK_WEBHOOK_URL}"
+        channel: "#infra-alerts"
+        title: "Infra: {{ .GroupLabels.alertname }}"
+        text: "{{ .CommonAnnotations.summary }}"
+
+inhibit_rules:
+  - source_match:
+      severity: P0
+    target_match:
+      severity: P2
+    equal:
+      - instance
+  - source_match:
+      alertname: NodeDown
+    target_match:
+      alertname: HighCpuUsage
+    equal:
+      - instance
+```
+
 ## Grafana Configuration
 
 ### Folder Structure

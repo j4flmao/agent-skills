@@ -1,4 +1,4 @@
-# Routing — 105 skills
+# Routing — 106 skills
 
 ## Entry
 `skills/core/master-orchestrator/SKILL.md` (no trigger match → route here)
@@ -12,7 +12,7 @@ planning → backend → frontend → mobile → dev-loop → devops → managem
 | core | master-orchestrator, project-init |
 | planning | create-brief, create-prd, create-adr, create-tech-spec, create-story |
 | backend-stack | nestjs, nodejs, elysia, golang, rust, python-fastapi, python-django, spring-boot, dotnet, rails |
-| backend-universal | oop-principles, design-patterns, microservices, clean-architecture, api-design, api-response, database-patterns, auth-patterns, event-driven, testing |
+| backend-universal | oop-principles, design-patterns, microservices, clean-architecture, api-design, api-response, database-patterns, auth-patterns, event-driven, testing, grpc-patterns, websocket-patterns, message-queue, caching, rate-limiting, load-testing, api-gateway |
 | frontend-stack | react, react-nextjs, vue, vue-nuxt, angular, sveltekit |
 | frontend-universal | patterns, state-management, accessibility, design-system, performance, testing, microfrontend |
 | mobile-stack | ios, android, flutter, react-native |
@@ -55,6 +55,7 @@ in-app-purchase/sub       → mobile/universal/in-app-purchase
 sentry/crashlytics        → mobile/universal/crash-reporting
 review/debug/refactor     → dev-loop/
 docker/k8s/terraform      → devops/
+api-gateway/kong/nginx-gateway → backend/universal/api-gateway
 grpc/protobuf             → backend/universal/grpc-patterns
 websocket/socket-io       → backend/universal/websocket-patterns
 kafka/rabbitmq/mq         → backend/universal/message-queue

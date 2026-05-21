@@ -54,7 +54,7 @@ cp -r ~/skills/skills/devops/docker-patterns /path/to/project/skills/
 
 ```bash
 # Requires the repo to be pushed to GitHub
-npx skills add j4flmao/agent-skills            # all 105 skills
+npx skills add j4flmao/agent-skills            # all 106 skills
 npx skills add j4flmao/agent-skills --bundle backend-only
 npx skills add j4flmao/agent-skills -g          # global (every project)
 ```
@@ -162,7 +162,7 @@ Agent config files contain the compression rules:
 ├── skills/
 │   ├── core/         2 skills
 │   ├── planning/     5 skills
-│   ├── backend/      26 skills (10 stacks + 16 universal)
+│   ├── backend/      27 skills (10 stacks + 17 universal)
 │   ├── frontend/     17 skills (4 stacks + 11 universal)
 │   ├── mobile/
 │   │   ├── ios/           iOS native
@@ -177,7 +177,7 @@ Agent config files contain the compression rules:
     └── bundle-definitions.json
 ```
 
-Total: **105 SKILL.md** + **239 reference .md files** + **docs/ + agent configs** = **350+ files**.
+Total: **106 SKILL.md** + **243 reference .md files** + **docs/ + agent configs** = **355+ files**.
 
 ## License
 

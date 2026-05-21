@@ -31,7 +31,7 @@ management/  → pm, ba, qa, qc, security
 oop/solid/microservices   → backend/universal/
 api-design/api-response   → backend/universal/
 database/auth/event-driven→ backend/universal/
-grpc/websocket/mq/cache/rate-limit/load-test → backend/universal/
+grpc/websocket/mq/cache/rate-limit/load-test/api-gateway → backend/universal/
 state/a11y/design-system  → frontend/universal/
 performance/testing/microfrontend → frontend/universal/
 tailwind/storybook/pwa/seo → frontend/universal/
@@ -39,5 +39,5 @@ tailwind/storybook/pwa/seo → frontend/universal/
 
 ## Project
 ```
-skills/ (105) + bundles/ (15)
+skills/ (106) + bundles/ (15)
 ```

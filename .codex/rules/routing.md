@@ -1,4 +1,4 @@
-# Routing -- 105 skills
+# Routing -- 106 skills
 
 ## Entry
 
@@ -28,6 +28,7 @@ grpc/protobuf/streaming   -> backend/universal/grpc-patterns
 websocket/socket-io/realtime -> backend/universal/websocket-patterns
 kafka/rabbitmq/message-queue -> backend/universal/message-queue
 redis/caching/cdn         -> backend/universal/caching
+api-gateway/kong/nginx-gateway/bff -> backend/universal/api-gateway
 rate-limit/throttle       -> backend/universal/rate-limiting
 load-test/k6/benchmark    -> backend/universal/load-testing
 tailwind/utility-css      -> frontend/universal/tailwind-css
@@ -59,7 +60,7 @@ planning -> backend -> frontend -> mobile -> dev-loop -> devops -> management
 | core (2) | master-orchestrator, project-init |
 | planning (5) | create-brief, create-prd, create-adr, create-tech-spec, create-story |
 | backend-stack (10) | nestjs, nodejs, elysia, golang, rust, python-fastapi, python-django, spring-boot, dotnet, rails |
-| backend-universal (16) | oop-principles, design-patterns, microservices, clean-architecture, api-design, api-response, database-patterns, auth-patterns, event-driven, testing, grpc-patterns, websocket-patterns, message-queue, caching, rate-limiting, load-testing |
+| backend-universal (17) | oop-principles, design-patterns, microservices, clean-architecture, api-design, api-response, database-patterns, auth-patterns, event-driven, testing, grpc-patterns, websocket-patterns, message-queue, caching, rate-limiting, load-testing, api-gateway |
 | frontend-stack (6) | react, react-nextjs, vue, vue-nuxt, angular, sveltekit |
 | frontend-universal (11) | patterns, state-management, accessibility, design-system, performance, testing, microfrontend, tailwind-css, storybook, pwa, seo |
 | mobile-stack (4) | ios, android, flutter, react-native |
