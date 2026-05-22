@@ -1,4 +1,4 @@
-# .opencode/AGENTS.md — j4flmao/skills (217)
+# .opencode/AGENTS.md — j4flmao/skills (267)
 
 LOCAL MODEL (qwen 14b). CONTEXT LIMITED. EVERY TOKEN COUNTS.
 
@@ -23,15 +23,17 @@ mobile/      → ios, android, flutter, react-native, kmp, ionic-capacitor, dotn
                universal: patterns, testing, performance, security, networking, storage, deployment,
                push, iap, crash, deep-linking, offline, biometrics, maps, camera, analytics
 devops/      → docker, k8s, terraform, helm, github-actions, gitops, vault, aws, serverless, monorepo,
-               argo-cd, azure, gcp, chaos, service-mesh, finops, backup-dr, db-migration
+               argo-cd, azure, gcp, chaos, service-mesh, finops, backup-dr, db-migration,
+               dataops, mlops, kubernetes-for-data, cloud-cost-optimization
 dev-loop/    → review, debug, refactor, pr-writer, dev-container, tech-debt, api-client
 management/  → pm, ba, qa, qc, security, okr-kpi, sprint-retro, risk
 core/        → onboarding, context-compressor
 enterprise/  → compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance
 product/     → analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization
-ai/          → ai-prompt-engineering, ai-rag-patterns, ai-llm-ops, ai-vector-databases, ai-ai-agents, ai-ai-evals
-security/    → security-sast-dast, security-sbom, security-secrets-management, security-container-security, security-api-security
-data/        → data-etl-pipeline, data-data-warehouse, data-streaming, data-bi-tools, data-data-quality
+ai/          → ai-prompt-engineering, ai-rag-patterns, ai-llm-ops, ai-vector-databases, ai-ai-agents, ai-ai-evals, ai-model-training, ai-embeddings, ai-multimodal, ai-ai-safety, ai-ai-testing, ai-ai-cost-optimization, ai-langchain-patterns, ai-mcp-patterns, ai-ai-observability
+security/    → security-sast-dast, security-sbom, security-secrets-management, security-container-security, security-api-security, security-data-security
+ml/          → ml-experiment-tracking, ml-classical-ml, ml-deep-learning, ml-feature-engineering, ml-hyperparameter-tuning, ml-model-evaluation, ml-model-interpretability, ml-time-series, ml-nlp, ml-computer-vision, ml-recommender, ml-anomaly-detection, ml-ml-pipeline, ml-feature-store, ml-model-serving
+data/        → data-etl-pipeline, data-data-warehouse, data-streaming, data-bi-tools, data-data-quality, data-distributed-storage, data-distributed-compute, data-data-lake, data-data-lakehouse, data-batch-processing, data-workflow-orchestration, data-cdc-patterns, data-data-replication, data-data-platform, data-data-catalog, data-data-observability, data-data-contracts, data-data-mesh, data-data-versioning, data-data-api, data-data-virtualization, data-schema-registry, data-relational-database, data-nosql-database, data-graph-database, data-search-engine
 design/      → design-design-systems, design-ux-research, design-accessibility, design-prototyping
 quality/     → quality-e2e-testing, quality-visual-testing, quality-load-testing, quality-contract-testing
 ```
@@ -51,5 +53,5 @@ animation/form/data-fetching/bundler/img-opt/theming → frontend/universal/
 
 ## Project
 ```
-skills/ (217) + bundles/ (15)
+skills/ (267) + bundles/ (15)
 ```

@@ -1,6 +1,6 @@
 # @j4flmao/agent-skills
 
-217 agent skills for software development — planning, backend, frontend, mobile, devops, management, enterprise, product, ai, security, data, design, quality. Each skill is a `SKILL.md` defining triggers, rules, and response format.
+267 agent skills for software development — planning, backend, frontend, mobile, devops, management, enterprise, product, ml, ai, security, data, design, quality. Each skill is a `SKILL.md` defining triggers, rules, and response format.
 
 ## Installation
 
@@ -54,7 +54,7 @@ cp -r ~/skills/skills/devops/docker-patterns /path/to/project/skills/
 
 ```bash
 # Requires the repo to be pushed to GitHub
-npx skills add j4flmao/agent-skills            # all 217 skills
+npx skills add j4flmao/agent-skills            # all 267 skills
 npx skills add j4flmao/agent-skills --bundle backend-only
 npx skills add j4flmao/agent-skills -g          # global (every project)
 ```
@@ -67,21 +67,21 @@ npx skills add j4flmao/agent-skills --bundle <name>
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| `fullstack-nestjs-react` | 88 | NestJS + React |
-| `fullstack-golang-vue` | 88 | Go + Vue |
-| `fullstack-rust-angular` | 88 | Rust + Angular |
-| `fullstack-dotnet-react` | 88 | .NET + React |
-| `fullstack-nodejs-react` | 88 | Node.js + React |
-| `fullstack-elysia-react` | 88 | ElysiaJS + React |
-| `fullstack-rails-svelte` | 86 | Rails + SvelteKit |
-| `backend-only` | 90+ | Backend only (includes ai, security, data skills) |
-| `frontend-only` | 52+ | Frontend only (includes design skills) |
-| `devops-only` | 31+ | DevOps only (includes security, nomad, incident-response) |
-| `management-only` | 11+ | Management only (includes data, quality, cost-benefit, hiring, stakeholder) |
-| `mobile-ios` | 54+ | iOS + universal mobile skills + deployment |
-| `mobile-android` | 54+ | Android + universal mobile skills + deployment |
-| `mobile-flutter` | 61+ | Flutter + universal mobile skills + deployment |
-| `mobile-react-native` | 61+ | React Native + universal mobile skills + deployment |
+| `fullstack-nestjs-react` | 208 | NestJS + React |
+| `fullstack-golang-vue` | 208 | Go + Vue |
+| `fullstack-rust-angular` | 208 | Rust + Angular |
+| `fullstack-dotnet-react` | 208 | .NET + React |
+| `fullstack-nodejs-react` | 208 | Node.js + React |
+| `fullstack-elysia-react` | 208 | ElysiaJS + React |
+| `fullstack-rails-svelte` | 206 | Rails + SvelteKit |
+| `backend-only` | 165+ | Backend only (includes ai, ml, security, data skills) |
+| `frontend-only` | 64+ | Frontend only (includes design skills) |
+| `devops-only` | 50+ | DevOps only (includes security, nomad, incident-response) |
+| `management-only` | 59+ | Management only (includes data, quality, cost-benefit, hiring, stakeholder) |
+| `mobile-ios` | 92+ | iOS + universal mobile skills + deployment |
+| `mobile-android` | 92+ | Android + universal mobile skills + deployment |
+| `mobile-flutter` | 95+ | Flutter + universal mobile skills + deployment |
+| `mobile-react-native` | 95+ | React Native + universal mobile skills + deployment |
 
 ## How Skills Work
 
@@ -115,13 +115,14 @@ No keyword match? Agent routes through `master-orchestrator`, detects the projec
 | **3 — Frontend Universal** | `design-system`, `state-management`, `performance`, `accessibility`, `testing`, `patterns`, `microfrontend`, `tailwind-css`, `storybook`, `pwa`, `seo`, `animation`, `form-handling`, `data-fetching`, `bundler-tools`, `image-optimization`, `theming` |
 | **3b — Stack Frontend** | `react-a`, `react-nextjs`, `vue-a`, `vue-nuxt`, `angular-a/p`, `sveltekit`, `remix-a/p`, `astro-a`, `solidjs-a/p`, `qwik-a`, `svelte-a/p` |
 | **4 — Dev Loop** | `code-review`, `debugging-strategy`, `refactor-guide`, `git-workflow`, `security-auditor`, `performance-profiler`, `changelog-generator`, `readme-writer`, `pr-writer`, `dev-container`, `tech-debt-tracker`, `api-client-generator` |
-| **5 — DevOps** | `docker-patterns`, `cicd-pipeline`, `kubernetes-patterns`, `observability`, `helm-patterns`, `terraform`, `ansible`, `jenkins`, `longhorn`, `monitoring`, `github-actions`, `gitops`, `vault`, `aws`, `serverless`, `monorepo`, `dependency-management`, `api-documentation`, `argo-cd`, `azure`, `gcp`, `chaos-engineering`, `service-mesh`, `finops`, `backup-dr`, `database-migration` |
+| **5 — DevOps** | `docker-patterns`, `cicd-pipeline`, `kubernetes-patterns`, `observability`, `helm-patterns`, `terraform`, `ansible`, `jenkins`, `longhorn`, `monitoring`, `github-actions`, `gitops`, `vault`, `aws`, `serverless`, `monorepo`, `dependency-management`, `api-documentation`, `argo-cd`, `azure`, `gcp`, `chaos-engineering`, `service-mesh`, `finops`, `backup-dr`, `database-migration`, `dataops`, `mlops`, `kubernetes-for-data`, `cloud-cost-optimization` |
 | **6 — Management** | `pm`, `ba`, `qa`, `qc`, `team-rules`, `security`, `pentesting`, `alerting`, `okr-kpi`, `sprint-retro`, `risk-management` |
-| **7 — AI** | `ai-prompt-engineering`, `ai-rag-patterns`, `ai-llm-ops`, `ai-vector-databases`, `ai-ai-agents`, `ai-ai-evals` |
-| **7b — Security** | `security-sast-dast`, `security-sbom`, `security-secrets-management`, `security-container-security`, `security-api-security` |
-| **7c — Data** | `data-etl-pipeline`, `data-data-warehouse`, `data-streaming`, `data-bi-tools`, `data-data-quality` |
+| **7 — AI** | `ai-prompt-engineering`, `ai-rag-patterns`, `ai-llm-ops`, `ai-vector-databases`, `ai-ai-agents`, `ai-ai-evals`, `ai-model-training`, `ai-embeddings`, `ai-multimodal`, `ai-ai-safety`, `ai-ai-testing`, `ai-ai-cost-optimization`, `ai-langchain-patterns`, `ai-mcp-patterns`, `ai-ai-observability` |
+| **7b — Security** | `security-sast-dast`, `security-sbom`, `security-secrets-management`, `security-container-security`, `security-api-security`, `security-data-security` |
+| **7c — Data** | `data-etl-pipeline`, `data-data-warehouse`, `data-streaming`, `data-bi-tools`, `data-data-quality`, `data-distributed-storage`, `data-distributed-compute`, `data-data-lake`, `data-data-lakehouse`, `data-batch-processing`, `data-workflow-orchestration`, `data-cdc-patterns`, `data-data-replication`, `data-data-platform`, `data-data-catalog`, `data-data-observability`, `data-data-contracts`, `data-data-mesh`, `data-data-versioning`, `data-data-api`, `data-data-virtualization`, `data-schema-registry`, `data-relational-database`, `data-nosql-database`, `data-graph-database`, `data-search-engine` |
 | **7d — Design** | `design-design-systems`, `design-ux-research`, `design-accessibility`, `design-prototyping` |
 | **7e — Quality** | `quality-e2e-testing`, `quality-visual-testing`, `quality-load-testing`, `quality-contract-testing` |
+| **7f — ML** | `ml-experiment-tracking`, `ml-classical-ml`, `ml-deep-learning`, `ml-feature-engineering`, `ml-hyperparameter-tuning`, `ml-model-evaluation`, `ml-model-interpretability`, `ml-time-series`, `ml-nlp`, `ml-computer-vision`, `ml-recommender`, `ml-anomaly-detection`, `ml-ml-pipeline`, `ml-feature-store`, `ml-model-serving` |
 | **8 — Mobile Stacks** | `ios`, `android`, `flutter`, `react-native`, `kotlin-multiplatform`, `ionic-capacitor`, `dotnet-maui` |
 | **8b — Mobile Universal** | `mobile-patterns`, `mobile-testing`, `mobile-performance`, `mobile-security`, `mobile-networking`, `mobile-storage`, `mobile-deployment`, `push-notifications`, `in-app-purchase`, `crash-reporting`, `deep-linking`, `offline-first`, `biometrics`, `map-location`, `camera-media`, `analytics` |
 | **9 — Enterprise** | `compliance-audit`, `cost-governance`, `data-governance`, `identity-provider`, `integration-patterns`, `legacy-migration`, `multi-tenant`, `sla-management` |
@@ -184,20 +185,21 @@ Agent config files contain the compression rules:
 │   │   ├── ar-vr/                 AR/VR
 │   │   └── universal/     16 skills
 │   ├── dev-loop/     12 skills
-│   ├── devops/       28 skills (26 + nomad, incident-response)
+│   ├── devops/       32 skills (30 + nomad, incident-response)
 │   ├── management/   14 skills (11 + cost-benefit, hiring, stakeholder)
 │   ├── enterprise/    8 skills
 │   ├── product/       8 skills
-│   ├── ai/            6 skills
-│   ├── security/      5 skills
-│   ├── data/          5 skills
+│   ├── ai/            15 skills
+│   ├── ml/            15 skills
+│   ├── security/      6 skills
+│   ├── data/          26 skills
 │   ├── design/        4 skills
 │   └── quality/       4 skills
 └── bundles/
     └── bundle-definitions.json
 ```
 
-Total: **217 SKILL.md** + **474+ reference .md files** + **docs/ + agent configs** = **691+ files**.
+Total: **267 SKILL.md** + **576+ reference .md files** + **docs/ + agent configs** = **843+ files**.
 
 ## License
 

@@ -10,7 +10,7 @@ Full prose: security. destructive.
 ## Routing
 No match → `skills/core/master-orchestrator/SKILL.md`. Detect stack first.
 
-### All Skills (217)
+### All Skills (267)
 ```
 core (4):       master-orchestrator, project-init, onboarding, context-compressor
 planning (8):   create-brief, create-prd, create-adr, create-tech-spec, create-story,
@@ -41,18 +41,31 @@ mobile-plus (1): ar-vr
 dev-loop (12):  code-review, debugging-strategy, refactor-guide, git-workflow,
                 security-auditor, performance-profiler, changelog-generator, readme-writer,
                 pr-writer, dev-container, tech-debt-tracker, api-client-generator
-devops (26):    docker-patterns, cicd-pipeline, kubernetes-patterns, observability,
+devops (30):    docker-patterns, cicd-pipeline, kubernetes-patterns, observability,
                 helm-patterns, terraform, ansible, jenkins, longhorn, monitoring,
                 github-actions, gitops, vault, aws, serverless,
                 monorepo, dependency-management, api-documentation,
-                argo-cd, azure, gcp, chaos-engineering, service-mesh, finops, backup-dr, database-migration
+                 argo-cd, azure, gcp, chaos-engineering, service-mesh, finops, backup-dr, database-migration,
+                 dataops, mlops, kubernetes-for-data, cloud-cost-optimization
 devops-plus (2): nomad, incident-response
 mgt (11):       pm, ba, qa, qc, team-rules, security, pentesting, alerting,
                 okr-kpi, sprint-retro, risk-management
 mgt-plus (3):   cost-benefit, hiring, stakeholder
-ai (6):         ai-prompt-engineering, ai-rag-patterns, ai-llm-ops, ai-vector-databases, ai-ai-agents, ai-ai-evals
-security (5):   security-sast-dast, security-sbom, security-secrets-management, security-container-security, security-api-security
-data (5):       data-etl-pipeline, data-data-warehouse, data-streaming, data-bi-tools, data-data-quality
+ai (15):        ai-prompt-engineering, ai-rag-patterns, ai-llm-ops, ai-vector-databases, ai-ai-agents, ai-ai-evals,
+                ai-model-training, ai-embeddings, ai-multimodal, ai-ai-safety, ai-ai-testing,
+                ai-ai-cost-optimization, ai-langchain-patterns, ai-mcp-patterns, ai-ai-observability
+security (6):   security-sast-dast, security-sbom, security-secrets-management, security-container-security, security-api-security, security-data-security
+data (26):      data-etl-pipeline, data-data-warehouse, data-streaming, data-bi-tools, data-data-quality,
+                data-distributed-storage, data-distributed-compute, data-data-lake, data-data-lakehouse,
+                data-batch-processing, data-workflow-orchestration, data-cdc-patterns, data-data-replication,
+                data-data-platform, data-data-catalog, data-data-observability, data-data-contracts,
+                data-data-mesh, data-data-versioning, data-data-api, data-data-virtualization,
+                data-schema-registry, data-relational-database, data-nosql-database, data-graph-database,
+                data-search-engine
+ml (15):        ml-experiment-tracking, ml-classical-ml, ml-deep-learning, ml-feature-engineering,
+                ml-hyperparameter-tuning, ml-model-evaluation, ml-model-interpretability, ml-time-series,
+                ml-nlp, ml-computer-vision, ml-recommender, ml-anomaly-detection, ml-ml-pipeline,
+                ml-feature-store, ml-model-serving
 design (4):     design-design-systems, design-ux-research, design-accessibility, design-prototyping
 quality (4):    quality-e2e-testing, quality-visual-testing, quality-load-testing, quality-contract-testing
 enterprise (8): compliance-audit, multi-tenant, integration-patterns,

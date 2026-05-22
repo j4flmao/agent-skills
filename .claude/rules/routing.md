@@ -1,4 +1,4 @@
-# Routing — 217 skills
+# Routing — 267 skills
 
 ## Entry
 `skills/core/master-orchestrator/SKILL.md` (no trigger match → route here)
@@ -18,11 +18,12 @@ planning → backend → frontend → mobile → dev-loop → devops → managem
 | mobile-stack | ios, android, flutter, react-native, kotlin-multiplatform, ionic-capacitor, dotnet-maui |
 | mobile-universal | patterns, testing, performance, security, networking, storage, deployment, push-notifications, in-app-purchase, crash-reporting, deep-linking, offline-first, biometrics, map-location, camera-media, analytics |
 | dev-loop | code-review, debugging-strategy, refactor-guide, git-workflow, security-auditor, performance-profiler, changelog-generator, readme-writer, pr-writer, dev-container, tech-debt-tracker, api-client-generator |
-| devops | docker-patterns, cicd-pipeline, kubernetes-patterns, observability, helm-patterns, terraform, ansible, jenkins, longhorn, monitoring, github-actions, gitops, vault, aws, serverless, monorepo, dependency-management, api-documentation, argo-cd, azure, gcp, chaos-engineering, service-mesh, finops, backup-dr, database-migration |
+| devops | docker-patterns, cicd-pipeline, kubernetes-patterns, observability, helm-patterns, terraform, ansible, jenkins, longhorn, monitoring, github-actions, gitops, vault, aws, serverless, monorepo, dependency-management, api-documentation, argo-cd, azure, gcp, chaos-engineering, service-mesh, finops, backup-dr, database-migration, dataops, mlops, kubernetes-for-data, cloud-cost-optimization |
 | management | pm, ba, qa, qc, team-rules, security, pentesting, alerting, okr-kpi, sprint-retro, risk-management |
-| ai (6) | ai-prompt-engineering, ai-rag-patterns, ai-llm-ops, ai-vector-databases, ai-ai-agents, ai-ai-evals |
-| security (5) | security-sast-dast, security-sbom, security-secrets-management, security-container-security, security-api-security |
-| data (5) | data-etl-pipeline, data-data-warehouse, data-streaming, data-bi-tools, data-data-quality |
+| ai (15) | ai-prompt-engineering, ai-rag-patterns, ai-llm-ops, ai-vector-databases, ai-ai-agents, ai-ai-evals, ai-model-training, ai-embeddings, ai-multimodal, ai-ai-safety, ai-ai-testing, ai-ai-cost-optimization, ai-langchain-patterns, ai-mcp-patterns, ai-ai-observability |
+| security (6) | security-sast-dast, security-sbom, security-secrets-management, security-container-security, security-api-security, security-data-security |
+| data (26) | data-etl-pipeline, data-data-warehouse, data-streaming, data-bi-tools, data-data-quality, data-distributed-storage, data-distributed-compute, data-data-lake, data-data-lakehouse, data-batch-processing, data-workflow-orchestration, data-cdc-patterns, data-data-replication, data-data-platform, data-data-catalog, data-data-observability, data-data-contracts, data-data-mesh, data-data-versioning, data-data-api, data-data-virtualization, data-schema-registry, data-relational-database, data-nosql-database, data-graph-database, data-search-engine |
+| ml (15) | ml-experiment-tracking, ml-classical-ml, ml-deep-learning, ml-feature-engineering, ml-hyperparameter-tuning, ml-model-evaluation, ml-model-interpretability, ml-time-series, ml-nlp, ml-computer-vision, ml-recommender, ml-anomaly-detection, ml-ml-pipeline, ml-feature-store, ml-model-serving |
 | design (4) | design-design-systems, design-ux-research, design-accessibility, design-prototyping |
 | quality (4) | quality-e2e-testing, quality-visual-testing, quality-load-testing, quality-contract-testing |
 | enterprise (8) | compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance |
@@ -182,6 +183,56 @@ incident-response/on-call/pagerduty → devops/incident-response
 cost-benefit/roi/tco          → management/cost-benefit
 hiring/interview/recruitment  → management/hiring
 stakeholder/communication/steerco → management/stakeholder
+experiment-tracking/MLflow  → ml/ml-experiment-tracking
+classical-ml/scikit-learn/sklearn  → ml/ml-classical-ml
+deep-learning/PyTorch/tensorflow  → ml/ml-deep-learning
+feature-engineering/feature-creation  → ml/ml-feature-engineering
+hyperparameter-tuning/Optuna/grid-search  → ml/ml-hyperparameter-tuning
+model-evaluation/confusion-matrix/roc  → ml/ml-model-evaluation
+model-interpretability/SHAP/LIME  → ml/ml-model-interpretability
+time-series/prophet/forecasting  → ml/ml-time-series
+nlp/huggingface/transformers  → ml/ml-nlp
+computer-vision/YOLO/object-detection  → ml/ml-computer-vision
+recommender/collaborative-filtering  → ml/ml-recommender
+anomaly-detection/outlier  → ml/ml-anomaly-detection
+ml-pipeline/kubeflow  → ml/ml-ml-pipeline
+feature-store/feast  → ml/ml-feature-store
+model-serving/bentoml/triton  → ml/ml-model-serving
+model-training/fine-tuning/LoRA  → ai/ai-model-training
+embeddings/sentence-transformers  → ai/ai-embeddings
+multimodal/CLIP/LLaVA  → ai/ai-multimodal
+ai-safety/guardrails/content-moderation  → ai/ai-ai-safety
+ai-testing/eval-harness  → ai/ai-ai-testing
+ai-cost-optimization/token-efficiency  → ai/ai-ai-cost-optimization
+langchain/llamaindex  → ai/ai-langchain-patterns
+mcp/model-context-protocol  → ai/ai-mcp-patterns
+ai-observability/langsmith/wandb  → ai/ai-ai-observability
+dataops/data-operations  → devops/dataops
+mlops/ml-operations  → devops/mlops
+kubernetes-for-data/k8s-data  → devops/kubernetes-for-data
+cloud-cost-optimization/cloud-spend  → devops/cloud-cost-optimization
+data-security/data-protection/encryption-at-rest  → security/security-data-security
+distributed-storage/hdfs  → data/data-distributed-storage
+distributed-compute/spark/dask  → data/data-distributed-compute
+data-lake/delta-lake  → data/data-data-lake
+lakehouse/medallion  → data/data-data-lakehouse
+batch-processing/hive  → data/data-batch-processing
+workflow-orchestration/airflow/prefect  → data/data-workflow-orchestration
+cdc/debezium/change-data-capture  → data/data-cdc-patterns
+data-replication/tungsten  → data/data-data-replication
+data-platform/data-engineering-platform  → data/data-data-platform
+data-catalog/datahub/amundsen  → data/data-data-catalog
+data-observability/monte-carlo/sifflet  → data/data-data-observability
+data-contracts/contract-driven  → data/data-data-contracts
+data-mesh/data-product  → data/data-data-mesh
+data-versioning/dvc/data-version  → data/data-data-versioning
+data-api/hasura/data-access  → data/data-data-api
+data-virtualization/trino/presto  → data/data-data-virtualization
+schema-registry/avro/protobuf  → data/data-schema-registry
+relational-database/postgresql/mysql  → data/data-relational-database
+nosql/mongodb/cassandra/dynamodb  → data/data-nosql-database
+graph-database/neo4j/neo4j-cypher  → data/data-graph-database
+search-engine/elasticsearch/solr  → data/data-search-engine
 ```
 
 ## Stack Detection

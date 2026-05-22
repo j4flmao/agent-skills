@@ -906,6 +906,216 @@ State: User asks about stakeholder, stakeholder communication, steerco, status u
   Route: stakeholder
   Reason: "Stakeholder communication request."
 
+### ML Skills
+
+State: User asks about experiment tracking, MLflow, experiment management.
+  Route: ml-experiment-tracking
+  Reason: "Experiment tracking request."
+
+State: User asks about classical ML, scikit-learn, sklearn, regression, classification, clustering.
+  Route: ml-classical-ml
+  Reason: "Classical ML request."
+
+State: User asks about deep learning, PyTorch, TensorFlow, neural networks, CNN, RNN, transformer.
+  Route: ml-deep-learning
+  Reason: "Deep learning request."
+
+State: User asks about feature engineering, feature creation, feature selection, feature transformation.
+  Route: ml-feature-engineering
+  Reason: "Feature engineering request."
+
+State: User asks about hyperparameter tuning, Optuna, grid search, Bayesian optimization.
+  Route: ml-hyperparameter-tuning
+  Reason: "Hyperparameter tuning request."
+
+State: User asks about model evaluation, confusion matrix, ROC AUC, precision recall, cross-validation.
+  Route: ml-model-evaluation
+  Reason: "Model evaluation request."
+
+State: User asks about model interpretability, SHAP, LIME, explainable AI, feature importance.
+  Route: ml-model-interpretability
+  Reason: "Model interpretability request."
+
+State: User asks about time series, Prophet, forecasting, seasonality, trend analysis.
+  Route: ml-time-series
+  Reason: "Time series request."
+
+State: User asks about NLP, HuggingFace, transformers, text classification, NER, sentiment analysis.
+  Route: ml-nlp
+  Reason: "NLP request."
+
+State: User asks about computer vision, YOLO, object detection, image classification, segmentation.
+  Route: ml-computer-vision
+  Reason: "Computer vision request."
+
+State: User asks about recommender system, collaborative filtering, matrix factorization, content-based filtering.
+  Route: ml-recommender
+  Reason: "Recommender system request."
+
+State: User asks about anomaly detection, outlier detection, fraud detection, novelty detection.
+  Route: ml-anomaly-detection
+  Reason: "Anomaly detection request."
+
+State: User asks about ML pipeline, Kubeflow, ML workflow, model training pipeline.
+  Route: ml-ml-pipeline
+  Reason: "ML pipeline request."
+
+State: User asks about feature store, Feast, feature serving, feature registry.
+  Route: ml-feature-store
+  Reason: "Feature store request."
+
+State: User asks about model serving, BentoML, Triton, model deployment, model inference.
+  Route: ml-model-serving
+  Reason: "Model serving request."
+
+### New AI Skills
+
+State: User asks about model training, fine-tuning, LoRA, QLoRA, training loop, distributed training.
+  Route: ai-model-training
+  Reason: "Model training request."
+
+State: User asks about embeddings, sentence-transformers, text embedding, vector embedding.
+  Route: ai-embeddings
+  Reason: "Embeddings request."
+
+State: User asks about multimodal, CLIP, LLaVA, image-text, vision-language model.
+  Route: ai-multimodal
+  Reason: "Multimodal AI request."
+
+State: User asks about AI safety, guardrails, content moderation, responsible AI, model alignment.
+  Route: ai-ai-safety
+  Reason: "AI safety request."
+
+State: User asks about AI testing, LLM testing, eval harness, model evaluation.
+  Route: ai-ai-testing
+  Reason: "AI testing request."
+
+State: User asks about AI cost optimization, token efficiency, model quantization, inference cost.
+  Route: ai-ai-cost-optimization
+  Reason: "AI cost optimization request."
+
+State: User asks about LangChain, LlamaIndex, LangGraph, chain, agent framework.
+  Route: ai-langchain-patterns
+  Reason: "LangChain patterns request."
+
+State: User asks about MCP, Model Context Protocol, context server, tool integration.
+  Route: ai-mcp-patterns
+  Reason: "MCP patterns request."
+
+State: User asks about AI observability, LangSmith, Weights & Biases, tracing LLM, prompt monitoring.
+  Route: ai-ai-observability
+  Reason: "AI observability request."
+
+### New Data Skills
+
+State: User asks about distributed storage, HDFS, distributed file system, object storage.
+  Route: data-distributed-storage
+  Reason: "Distributed storage request."
+
+State: User asks about distributed compute, Spark, Dask, distributed processing, cluster computing.
+  Route: data-distributed-compute
+  Reason: "Distributed compute request."
+
+State: User asks about data lake, Delta Lake, data lake architecture, lake storage.
+  Route: data-data-lake
+  Reason: "Data lake request."
+
+State: User asks about data lakehouse, lakehouse architecture, medallion architecture, Delta Lake.
+  Route: data-data-lakehouse
+  Reason: "Data lakehouse request."
+
+State: User asks about batch processing, Hive, batch ETL, nightly jobs, batch pipeline.
+  Route: data-batch-processing
+  Reason: "Batch processing request."
+
+State: User asks about workflow orchestration, Airflow, Prefect, Dagster, pipeline orchestration.
+  Route: data-workflow-orchestration
+  Reason: "Workflow orchestration request."
+
+State: User asks about CDC, change data capture, Debezium, streaming replication.
+  Route: data-cdc-patterns
+  Reason: "CDC patterns request."
+
+State: User asks about data replication, database replication, cross-region replication.
+  Route: data-data-replication
+  Reason: "Data replication request."
+
+State: User asks about data platform, data engineering platform, platform engineering data.
+  Route: data-data-platform
+  Reason: "Data platform request."
+
+State: User asks about data catalog, DataHub, Amundsen, data discovery, metadata management.
+  Route: data-data-catalog
+  Reason: "Data catalog request."
+
+State: User asks about data observability, Monte Carlo, Sifflet, data monitoring, data downtime.
+  Route: data-data-observability
+  Reason: "Data observability request."
+
+State: User asks about data contracts, contract-driven data, schema contract, data agreement.
+  Route: data-data-contracts
+  Reason: "Data contracts request."
+
+State: User asks about data mesh, data product, domain-driven data, decentralized data.
+  Route: data-data-mesh
+  Reason: "Data mesh request."
+
+State: User asks about data versioning, DVC, data version control, dataset versioning.
+  Route: data-data-versioning
+  Reason: "Data versioning request."
+
+State: User asks about data API, Hasura, data access API, GraphQL data API.
+  Route: data-data-api
+  Reason: "Data API request."
+
+State: User asks about data virtualization, Trino, Presto, federated query, data federation.
+  Route: data-data-virtualization
+  Reason: "Data virtualization request."
+
+State: User asks about schema registry, Avro, schema evolution, schema compatibility.
+  Route: data-schema-registry
+  Reason: "Schema registry request."
+
+State: User asks about relational database, PostgreSQL, MySQL, SQL Server, database design.
+  Route: data-relational-database
+  Reason: "Relational database request."
+
+State: User asks about NoSQL, MongoDB, Cassandra, DynamoDB, document database.
+  Route: data-nosql-database
+  Reason: "NoSQL database request."
+
+State: User asks about graph database, Neo4j, graph DB, Cypher, knowledge graph.
+  Route: data-graph-database
+  Reason: "Graph database request."
+
+State: User asks about search engine, Elasticsearch, Solr, full-text search, search index.
+  Route: data-search-engine
+  Reason: "Search engine request."
+
+### New DevOps Skills
+
+State: User asks about DataOps, data operations, data pipeline ops, data reliability.
+  Route: dataops
+  Reason: "DataOps request."
+
+State: User asks about MLOps, ML operations, model deployment pipeline, model monitoring.
+  Route: mlops
+  Reason: "MLOps request."
+
+State: User asks about Kubernetes for data, K8s data workloads, Spark on K8s, data on Kubernetes.
+  Route: kubernetes-for-data
+  Reason: "Kubernetes for data request."
+
+State: User asks about cloud cost optimization, cloud spend, cost reduction, cloud billing.
+  Route: cloud-cost-optimization
+  Reason: "Cloud cost optimization request."
+
+### New Security Skills
+
+State: User asks about data security, data protection, encryption at rest, data masking, data classification.
+  Route: security-data-security
+  Reason: "Data security request."
+
 ### Step 3: Detect Backend Stack
 Read project files:
 - package.json: if @nestjs/core present -> nestjs
