@@ -46,6 +46,8 @@ Config files: .gitignore, AGENTS.md, docs/
 
 Then output the folder tree as a code block. No commentary. No congratulations.
 
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
 ### Completion Criteria
 - [ ] Folder tree matches the selected stack template.
 - [ ] AGENTS.md contains project-specific rules.
@@ -151,4 +153,3 @@ src/app/features/ src/app/shared/ src/app/core/ src/assets/
 Output: Scaffolded project at {path}
 Next skill: create-brief — to define what gets built.
 Carry forward: project path, stack, framework.
-No filler. Strip articles where unambiguous. Why use many token when few do trick.

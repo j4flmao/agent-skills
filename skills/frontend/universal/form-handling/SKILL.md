@@ -58,6 +58,8 @@ Form implementation with validation schemas and UX patterns.
 Compression footer: frontend-form-handling/v1 | 3 sections | lib: <selected> | schema: <zod|yup>
 ```
 
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
 ### Completion Criteria
 - Validation schema covers all fields including async rules
 - Form state (dirty/touched/submitting) properly managed

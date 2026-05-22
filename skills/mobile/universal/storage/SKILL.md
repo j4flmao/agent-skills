@@ -1,9 +1,24 @@
 ---
 name: mobile-storage
-description: Cross-platform mobile local storage — SQLite, Room, Core Data, Hive, Isar, SharedPreferences, file system, document directory, migration strategies.
+description: >
+  Use this skill when the user asks about mobile local storage, SQLite, Room,
+  Core Data, Hive, Isar, SharedPreferences, UserDefaults, file storage, or
+  database migration.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [mobile, storage, phase-4, universal]
 ---
 
 # Mobile Storage
+
+## Purpose
+Design mobile local storage architectures selecting the right persistence strategy — SQLite, Room, Core Data, Hive, Isar, key-value, or file storage — with migration planning.
 
 ## Agent Protocol
 
@@ -23,8 +38,37 @@ A markdown document containing:
 - CRUD operations
 - Migration plan
 
+### Response Format
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
+——
+
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Select Storage Type
+Choose relational (Room, Core Data) for complex queries, key-value for simple settings, document (Isar, Hive) for JSON-like data.
+
+### Step 2: Design Schema
+Define entities/tables with proper column types, indexes for query paths, and relationships.
+
+### Step 3: Implement CRUD Operations
+Set up DAOs/repositories with insert, read, update, delete operations and query methods.
+
+### Step 4: Plan Migrations
+Version the schema from day one, write migration scripts for each version change, and test rollback paths.
+
+## Rules
+
+- Version the database schema from the first release — migration from v1 is mandatory
+- Key-value storage for user preferences only — never for business data
+- Secure storage (Keychain, EncryptedSharedPrefs) for tokens, never SharedPreferences
+- Index columns used in WHERE and JOIN clauses for query performance
+- File storage for large blobs (images, documents) — not in the database
+- Migration tests must verify data integrity before and after migration
+- AsyncStorage (RN) and SharedPreferences (Flutter) are synchronous — avoid for large datasets
 
 ## Storage Selection
 

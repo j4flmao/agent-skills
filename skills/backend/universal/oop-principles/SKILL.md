@@ -1,9 +1,22 @@
 ---
 name: oop-principles
-description: Language-agnostic OOP, SOLID, GRASP, and foundational software principles for robust backend design.
+description: >
+  Use this skill when evaluating codebase design quality or refactoring — SOLID, GRASP, DRY, KISS, YAGNI, Law of Demeter, Composition over Inheritance, Encapsulation, Coupling & Cohesion. This skill enforces: principle violation detection heuristics, refactoring plans with ordered steps, actionable decision flow. Do NOT use for: language-specific idioms, framework patterns, infrastructure design.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [backend, oop, phase-2, universal]
 ---
 
 # OOP Principles
+
+## Purpose
+Apply and enforce language-agnostic OOP, SOLID, GRASP, and foundational software principles for robust backend design.
 
 ## Agent Protocol
 
@@ -33,50 +46,37 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Overview
+## Workflow
 
-Eight foundational principle groups that transcend programming languages. Every backend codebase must be evaluated against these to ensure maintainability, testability, and evolvability.
+### Step 1: Evaluate SOLID Principles
 
-1. **SOLID** — Class-level design contracts
-2. **GRASP** — Responsibility assignment heuristics
-3. **DRY / WET / AHA** — Duplication philosophy
-4. **KISS / YAGNI** — Simplicity and minimalism
-5. **Law of Demeter** — Coupling boundaries
-6. **Composition over Inheritance** — Reuse strategy
-7. **Encapsulation / Information Hiding** — State protection
-8. **Coupling & Cohesion** — Structural quality metrics
-
-## Principles
-
-### 1. SOLID
-
-#### Single Responsibility Principle (SRP)
+**Single Responsibility Principle (SRP)**
 - A class/module should have one, and only one, reason to change.
 - **Violation heuristics**: class name contains `And`, `Or`, `Manager`, `Util`, `Helper`; class has >4 public methods operating on different data domains.
 - **Example**: `OrderService` that both validates orders and emails invoices → split into `OrderValidator` and `InvoiceNotifier`.
 
-#### Open-Closed Principle (OCP)
+**Open-Closed Principle (OCP)**
 - Software entities should be open for extension, closed for modification.
 - Achieve via polymorphism, strategy pattern, template method, dependency injection.
 - **Violation heuristics**: `switch`/`if-else` chains on type codes; frequent editing of existing classes to add new behavior.
 - **Example**: Payment processor with `if(type == "credit")` → `CreditPayment : IPaymentMethod`.
 
-#### Liskov Substitution Principle (LSP)
+**Liskov Substitution Principle (LSP)**
 - Subtypes must be substitutable for their base types without altering correctness.
 - **Violation heuristics**: derived class throws `NotImplementedException`; derived class strengthens preconditions or weakens postconditions; `is`/`as` checks before using base type.
 - **Example**: `Rectangle` base with `Square` derived that overrides setter behavior → violates LSP.
 
-#### Interface Segregation Principle (ISP)
+**Interface Segregation Principle (ISP)**
 - Clients should not be forced to depend on interfaces they do not use.
 - **Violation heuristics**: interface has >3 methods where implementations throw `NotImplementedException` for some; fat interfaces with mixed responsibilities.
 - **Example**: `IMultiFunctionPrinter` with `Print`, `Scan`, `Fax` → split into `IPrinter`, `IScanner`, `IFax`.
 
-#### Dependency Inversion Principle (DIP)
+**Dependency Inversion Principle (DIP)**
 - Depend on abstractions, not concretions. High-level modules should not depend on low-level modules.
 - **Violation heuristics**: `new` keyword for services inside business logic; static method calls on concrete classes; direct file/system calls in domain code.
 - **Example**: `OrderService` directly creates `SqlOrderRepository` → inject `IOrderRepository` instead.
 
-### 2. GRASP (General Responsibility Assignment Software Patterns)
+### Step 2: Apply GRASP Patterns
 
 | Pattern | Intent | Applies When |
 |---|---|---|
@@ -90,7 +90,7 @@ Eight foundational principle groups that transcend programming languages. Every 
 | **Indirection** | Insert intermediary to decouple components | Direct coupling is too high |
 | **Protected Variations** | Wrap unstable elements behind interface | External systems, third-party APIs, config |
 
-### 3. DRY / WET / AHA
+### Step 3: Apply DRY / WET / AHA
 
 - **DRY** (Don't Repeat Yourself): Every piece of knowledge must have a single, unambiguous representation. Violation = copy-paste code.
 - **WET** (Write Everything Twice): Allowed temporarily during exploration. Must consolidate after stabilization.
@@ -98,33 +98,33 @@ Eight foundational principle groups that transcend programming languages. Every 
 
 **Decision rule**: Duplicate once? Leave it. Duplicate twice? Extract. Duplicate same thing across bounded contexts? Keep separate — duplication may be accidental similarity.
 
-### 4. KISS / YAGNI
+### Step 4: Apply KISS / YAGNI
 
 - **KISS** (Keep It Simple, Stupid): Simplest solution that passes all tests. No clever tricks, no premature optimization, no over-engineering.
 - **YAGNI** (You Ain't Gonna Need It): Build only what is required now. Do not add hooks, extension points, or generalizations for speculated future needs.
 
 **Query to apply before every implementation decision**: "What is the simplest possible thing that works right now?" If answer requires a new abstraction, reject it.
 
-### 5. Law of Demeter (Principle of Least Knowledge)
+### Step 5: Apply Law of Demeter
 
 - A unit should talk only to its immediate friends: itself, its fields, its method parameters, objects it creates.
 - **Violation heuristics**: chained calls: `a.getB().getC().doSomething()`, train wrecks in general.
 - **Exception**: builders, fluent APIs, streams, query objects — these are intentional DSLs.
 
-### 6. Composition over Inheritance
+### Step 6: Apply Composition over Inheritance
 
 - **Rule**: Favor object composition over class inheritance.
 - **When to use inheritance**: True `is-a` relationship, subclass does not override behavior negatively, no need to change behavior at runtime.
 - **When to use composition**: Need runtime behavior swap, cross-cutting concerns, class hierarchy would be deep/complex.
 - **Example**: `Duck` behaviors via `IFlyBehavior`/`IQuackBehavior` composition instead of `FlyingDuck`/`NonFlyingDuck` subclasses.
 
-### 7. Encapsulation / Information Hiding
+### Step 7: Apply Encapsulation / Information Hiding
 
 - Hide internal state and implementation details. Expose only stable interfaces.
 - **Rules**: All fields private by default. No getters/setters for internal collections without defensive copies. Mutable state must be contained within single aggregate.
 - **Violation heuristics**: Public fields, protected fields in non-abstract classes, getter returning reference to mutable internal object.
 
-### 8. Coupling & Cohesion
+### Step 8: Evaluate Coupling & Cohesion
 
 | Metric | High | Low |
 |---|---|---|
@@ -133,7 +133,7 @@ Eight foundational principle groups that transcend programming languages. Every 
 
 **Target**: High cohesion, loose coupling. Measure: a change in module A should affect at most 1-2 other modules on average.
 
-## Principles Application Decision Flow
+### Step 9: Run Principles Application Decision Flow
 
 1. **Does the codebase compile and pass tests?** → Proceed. Not yet? Fix that first.
 2. **Is there a concrete pain point?** (hard to test, hard to change, hard to extend) → Identify which principle addresses it.
@@ -143,6 +143,16 @@ Eight foundational principle groups that transcend programming languages. Every 
 6. **Pain = type-based conditionals?** → Poly → strategy/state pattern.
 7. **Pain = too many classes?** → YAGNI + AHA → collapse unnecessary abstractions.
 8. **Pain = fragile base class?** → LSP check → composition over inheritance.
+
+## Rules
+- No `Manager`, `Util`, or `Helper` classes — they indicate SRP violations.
+- No `switch`/`if-else` on type codes — use polymorphism instead.
+- No chained calls violating Law of Demeter — use method delegation.
+- All fields private by default.
+- Prefer composition over inheritance in all new code.
+- No premature abstractions — wait for 3+ duplications before extracting.
+- No speculatively generic code — build only for current requirements.
+- DRY within a bounded context; OK to duplicate across contexts.
 
 ## References
 
@@ -155,5 +165,4 @@ Eight foundational principle groups that transcend programming languages. Every 
 - `backend/universal/testing/SKILL.md` — Testability principles
 
 ## Handoff
-
 Hand off to `backend/universal/design-patterns/SKILL.md` if concrete pattern selection is required. Hand off to `backend/universal/clean-architecture/SKILL.md` if system architecture restructuring is needed.

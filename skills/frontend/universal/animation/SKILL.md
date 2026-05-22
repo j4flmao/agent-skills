@@ -62,6 +62,8 @@ Animation strategy as text / animation code snippets.
 Compression footer: frontend-animation/v1 | 4 sections | lib: <selected> | perf: <ok|warn>
 ```
 
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
 ### Completion Criteria
 - Animations run at 60fps on mid-range devices
 - prefers-reduced-motion respected globally

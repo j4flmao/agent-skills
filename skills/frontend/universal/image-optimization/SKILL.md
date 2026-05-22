@@ -58,6 +58,8 @@ Image optimization strategy with srcset/picture markup and performance notes.
 Compression footer: frontend-image-optimization/v1 | 3 sections | formats: <avif+webp+jpeg> | LCP: <ok|warn>
 ```
 
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
 ### Completion Criteria
 - All content images use srcset with appropriate breakpoints
 - AVIF with WebP fallback in picture element

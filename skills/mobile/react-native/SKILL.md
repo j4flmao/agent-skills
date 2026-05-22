@@ -1,9 +1,24 @@
 ---
 name: react-native
-description: React Native cross-platform development — TypeScript, Expo, React Navigation, Zustand/TanStack Query, Native Modules, New Architecture, Jest + Detox.
+description: >
+  Use this skill when the user asks about React Native, Expo, React Navigation,
+  Zustand, TanStack Query, native modules, New Architecture, Hermes, or React
+  Native testing.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [mobile, react-native, phase-4]
 ---
 
 # React Native
+
+## Purpose
+Build React Native cross-platform applications with Expo, TanStack Query, Zustand, React Navigation, native modules, and comprehensive testing with Jest and Detox.
 
 ## Agent Protocol
 
@@ -29,8 +44,37 @@ A markdown document containing:
 ### Response Format
 Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick.
 
+——
+
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Set Up Project Structure
+Initialize with Expo and organize code with feature-based folders: features (api, components, hooks, types), shared, lib, and types.
+
+### Step 2: Configure State Management
+Use TanStack Query for server state (caching, refetching, pagination) and Zustand for lightweight client state.
+
+### Step 3: Set Up Navigation
+Configure Expo Router with file-based routing, tab navigation, and deep linking support.
+
+### Step 4: Implement Native Module Bridges
+Create native module interfaces for platform-specific features with Swift (iOS) and Kotlin (Android) implementations.
+
+### Step 5: Write Tests
+Cover queries with Jest unit tests, components with RNTL, and critical flows with Detox E2E tests.
+
+## Rules
+
+- Server state belongs in TanStack Query — not in Zustand or Redux
+- Client state (UI state, selected IDs, filters) belongs in Zustand
+- FlatList over ScrollView for lists with virtualization enabled
+- Native modules must have TypeScript interface + iOS Swift + Android Kotlin implementations
+- Avoid inline styles — use StyleSheet.create or styled components
+- Hermes enabled by default for production builds
+- KeyboardAvoidingView wrapping for text input screens
 
 ## Project Structure (Expo)
 

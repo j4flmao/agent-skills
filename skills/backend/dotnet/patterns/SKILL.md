@@ -1,9 +1,22 @@
 ---
 name: dotnet-patterns
-description: C# .NET-specific patterns — MediatR CQRS, Result pattern, Pipeline Behaviors, Repository, Background Services, SignalR, gRPC.
+description: >
+  Use this skill when implementing C# .NET-specific patterns — MediatR CQRS, Result pattern, Pipeline Behaviors, Repository, Background Services, SignalR, gRPC. This skill enforces: proper pattern selection with trade-off documentation, DI registration conventions, anti-pattern avoidance. Do NOT use for: project structure or architecture setup, database schema design.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [backend, dotnet, patterns, phase-4]
 ---
 
 # C# .NET Patterns
+
+## Purpose
+Implement and document .NET-specific patterns with code examples, trade-offs, and testing strategies.
 
 ## Agent Protocol
 
@@ -35,13 +48,10 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Patterns
+## Workflow
 
-### 1. CQRS with MediatR
-
+### Step 1: Implement CQRS with MediatR
 **When**: Application has different read and write models (most apps do). Read queries outnumber write commands 10:1+.
-
-#### Command/Query Example
 
 ```csharp
 // Command
@@ -83,8 +93,7 @@ public class GetOrderHandler : IRequestHandler<GetOrderQuery, Result<OrderRespon
 }
 ```
 
-#### DI Registration
-
+**DI Registration**
 ```csharp
 builder.Services.AddMediatR(cfg =>
 {
@@ -95,8 +104,7 @@ builder.Services.AddMediatR(cfg =>
 });
 ```
 
-### 2. Result Pattern (FluentResults / Custom)
-
+### Step 2: Implement Result Pattern
 **When**: Replacing exceptions for expected error cases (validation, not found, conflict). Exceptions reserved for truly unexpected failures.
 
 ```csharp
@@ -126,8 +134,7 @@ app.MapPost("/orders", async (CreateOrderCommand cmd, IMediator mediator) =>
 });
 ```
 
-### 3. Pipeline Behaviors (MediatR)
-
+### Step 3: Configure Pipeline Behaviors
 **When**: Cross-cutting concerns applied to all commands/queries.
 
 ```csharp
@@ -158,12 +165,10 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 
 **Pipeline order**: Validation → Logging → Performance → Caching → Handler.
 
-### 4. Repository Pattern
-
+### Step 4: Apply Repository Pattern (When Necessary)
 **When**: ONLY when you need to abstract data access for testing (use InMemory/TestContainers instead), restrict query capabilities (Specification), or cache query results.
 
 If you must use it:
-
 ```csharp
 public interface IOrderRepository
 {
@@ -183,8 +188,7 @@ public class OrderRepository : IOrderRepository
 }
 ```
 
-### 5. Background Services (IHostedService)
-
+### Step 5: Build Background Services
 **When**: Long-running tasks, queue consumers, scheduled jobs, health checks.
 
 ```csharp
@@ -211,8 +215,7 @@ public class OrderExpirationService : BackgroundService
 }
 ```
 
-### 6. SignalR (Real-time)
-
+### Step 6: Set Up SignalR for Real-time
 **When**: Real-time updates (notifications, live dashboards, collaborative editing). NOT for request-response.
 
 ```csharp
@@ -231,8 +234,7 @@ public class OrderStatusUpdater
 }
 ```
 
-### 7. gRPC
-
+### Step 7: Implement gRPC Services
 **When**: Inter-service communication, high-performance streaming, polyglot environments.
 
 ```csharp
@@ -250,7 +252,17 @@ public class OrderGrpcService : OrderService.OrderServiceBase
 
 **Selection rule**: gRPC for internal service-to-service. REST/HTTP for external/public APIs. SignalR for browser real-time.
 
-## Anti-Patterns
+## Rules
+- MediatR for CQRS separation only — not for simple CRUD.
+- Result pattern for expected errors — exceptions for truly exceptional cases.
+- DbContext directly is the repository — no wrapper unless testing requires it.
+- Background services delegate to scoped services — no logic in ExecuteAsync.
+- gRPC for internal communication only — REST for public endpoints.
+- Pipeline behaviors ordered: Validation → Logging → Performance → Caching → Handler.
+- Every pattern must include DI registration and testing strategy.
+- Document trade-offs for every pattern selection.
+
+### Anti-Patterns
 
 | Anti-Pattern | Problem | Fix |
 |---|---|---|
@@ -272,5 +284,4 @@ public class OrderGrpcService : OrderService.OrderServiceBase
 - `backend/universal/testing/SKILL.md` — Testing .NET applications
 
 ## Handoff
-
 Hand off to `backend/dotnet/architecture/SKILL.md` for project structure and DI setup. Hand off to `backend/universal/clean-architecture/SKILL.md` for architectural restructuring.

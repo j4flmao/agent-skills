@@ -1,4 +1,4 @@
-# Routing — 160 skills
+# Routing — 176 skills
 
 No match -> skills/core/master-orchestrator/SKILL.md. Detect stack then route.
 
@@ -12,6 +12,8 @@ mobile/         ios/android/flutter/react-native/kotlin-multiplatform/ionic-capa
 devops/         docker/k8s/terraform/helm/ansible/github-actions/gitops/vault/aws/serverless/monorepo/dep-mgmt/api-doc/argo-cd/azure/gcp/chaos/service-mesh/finops/backup-dr/db-migration
 dev-loop/       review/debug/refactor/git/pr-writer/dev-container/tech-debt/api-client
 management/     pm/ba/qa/qc/security/okr-kpi/sprint-retro/risk
+enterprise/     compliance/multi-tenant/integration/data-governance/sla/legacy/identity/cost
+product/        analytics/ab-test/user-research/growth/pricing/gtm/onboarding/prioritization
 
 ## Compression
 

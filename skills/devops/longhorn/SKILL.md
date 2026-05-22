@@ -1,9 +1,22 @@
 ---
 name: longhorn
-description: Longhorn distributed storage patterns — installation, volume management, backup, disaster recovery, performance tuning, monitoring.
+description: >
+  Use this skill when deploying and managing Longhorn distributed storage on Kubernetes — installation, volume management, backup, disaster recovery, performance tuning, monitoring. This skill enforces: minimum 3 nodes for production, replica count 3 for all production volumes, S3-compatible backup target, monitoring alerts for volume degraded and disk space. Do NOT use for: non-Kubernetes storage solutions, other CSI drivers, cloud-managed storage (EBS, GCE PD).
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [devops, longhorn, phase-5]
 ---
 
 # Longhorn Storage
+
+## Purpose
+Define and enforce Longhorn distributed storage patterns for installation, volume management, backup, and DR.
 
 ## Agent Protocol
 
@@ -40,9 +53,9 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Installation
+## Workflow
 
-### Helm
+### Step 1: Install Longhorn via Helm
 
 ```bash
 helm repo add longhorn https://charts.longhorn.io
@@ -56,7 +69,7 @@ helm install longhorn longhorn/longhorn \
   --version 1.6.0
 ```
 
-### Pre-requisites
+**Pre-requisites**:
 
 | Requirement | Minimum | Recommended |
 |---|---|---|
@@ -70,7 +83,7 @@ helm install longhorn longhorn/longhorn \
 | **open-iscsi** | Required | — |
 | **nfs-client** | Required (for backup) | — |
 
-## StorageClass Configuration
+### Step 2: Configure StorageClasses
 
 ```yaml
 apiVersion: storage.k8s.io/v1
@@ -108,7 +121,7 @@ parameters:
   replicaAutoBalance: "disabled"
 ```
 
-## Replica Strategy
+### Step 3: Apply Replica Strategy
 
 | Replicas | Fault Tolerance | Storage Cost | Use Case |
 |---|---|---|---|
@@ -117,10 +130,9 @@ parameters:
 | 3 | 1 node failure | 3x | Production (default) |
 | 4+ | 2+ node failures | 4x+ | Critical, multi-AZ |
 
-## Backup Configuration
+### Step 4: Configure Backup
 
-### Backup Target Setup
-
+**Backup Target Setup**
 ```yaml
 # Settings → Backup
 backupTarget: "s3://my-backup-bucket@us-east-1/"
@@ -140,8 +152,7 @@ stringData:
   AWS_ENDPOINTS: "https://s3.us-east-1.amazonaws.com"
 ```
 
-### Recurring Job
-
+**Recurring Job**
 ```yaml
 # Recurring backup schedule
 apiVersion: longhorn.io/v1beta2
@@ -158,10 +169,9 @@ spec:
     backup-type: daily
 ```
 
-## Disaster Recovery
+### Step 5: Set Up Disaster Recovery
 
-### DR Volume
-
+**DR Volume**
 ```yaml
 apiVersion: longhorn.io/v1beta2
 kind: Volume
@@ -176,14 +186,13 @@ spec:
     region: dr-region
 ```
 
-### DR Process
-
+**DR Process**:
 1. Create DR volume from backup in DR cluster
 2. Activate DR volume when primary down
 3. Point applications to DR volume
 4. When primary recovered, reverse sync
 
-## Performance Tuning
+### Step 6: Tune Performance
 
 | Parameter | Setting | Rationale |
 |---|---|---|
@@ -195,10 +204,9 @@ spec:
 | **Storage network** | 10GbE+ separate | Storage traffic isolation |
 | **Replica rebalance** | `immediate` | Rebalance when new node added |
 
-## Monitoring
+### Step 7: Configure Monitoring
 
-### Prometheus Metrics
-
+**Prometheus Metrics**
 ```yaml
 # ServiceMonitor for Longhorn
 apiVersion: monitoring.coreos.com/v1
@@ -215,7 +223,7 @@ spec:
       path: /metrics
 ```
 
-### Key Metrics
+**Key Metrics**
 
 | Metric | Alert Threshold | Description |
 |---|---|---|
@@ -225,7 +233,7 @@ spec:
 | `longhorn_volume_robustness` | != healthy | Volume degraded |
 | `longhorn_backup_state` | != Completed | Backup failed |
 
-## Upgrade Procedure
+### Step 8: Upgrade Procedure
 
 ```bash
 # 1. Check current version
@@ -266,5 +274,4 @@ kubectl -n longhorn-system get pods -w
 - `devops/terraform/SKILL.md` — Infrastructure provisioning for storage
 
 ## Handoff
-
 Hand off to `devops/monitoring/SKILL.md` for monitoring integration. Hand off to `devops/helm-patterns/SKILL.md` for Helm deployment best practices.

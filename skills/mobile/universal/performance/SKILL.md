@@ -1,9 +1,24 @@
 ---
 name: mobile-performance
-description: Cross-platform mobile performance optimization — rendering, memory, startup, battery, network, bundle size, profiling tools.
+description: >
+  Use this skill when the user asks about mobile performance optimization, app
+  slow, jank, frame drops, memory leaks, startup time, battery drain, bundle size,
+  or profiling tools.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [mobile, performance, phase-4, universal]
 ---
 
 # Mobile Performance
+
+## Purpose
+Diagnose and optimize mobile app performance across rendering, memory, startup time, battery drain, and bundle size using platform profiling tools.
 
 ## Agent Protocol
 
@@ -22,8 +37,40 @@ A markdown document containing:
 - Code before/after snippets
 - Verification steps
 
+### Response Format
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
+——
+
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Profile and Identify Bottleneck
+Use platform profiling tool to measure frame times, memory allocations, startup duration, and battery impact.
+
+### Step 2: Fix Rendering Performance
+Address jank with virtualization (ListView.builder, FlatList, LazyColumn), const widgets, RepaintBoundary, and proper cell reuse.
+
+### Step 3: Fix Memory Issues
+Eliminate retain cycles, cancel network requests on dispose, use weak references, and profile with heap snapshots.
+
+### Step 4: Optimize Startup Time
+Implement Baseline Profiles (Android), reduce dynamic framework loading (iOS), and defer non-critical initialization.
+
+### Step 5: Reduce Bundle Size
+Enable code splitting, remove unused dependencies, use --split-debug-info, and analyze bundle composition.
+
+## Rules
+
+- Profile before optimizing — never guess at performance bottlenecks
+- Virtualize all lists — no ScrollView wrapping large child lists
+- Cancel network requests and timers on screen dispose
+- Use weak references for all delegates, callbacks, and listeners
+- Startup: defer non-critical SDK initialization to after first frame
+- Bundle: remove unused packages before adding new ones
+- Baseline Profiles for Android — can improve startup by 30%+
 
 ## Rendering Performance
 

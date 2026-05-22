@@ -1,9 +1,24 @@
 ---
 name: mobile-deployment
-description: Mobile app deployment — App Store Connect, Play Console, TestFlight, Fastlane, CI/CD, code signing, beta testing, phased releases.
+description: >
+  Use this skill when the user asks about mobile app deployment, App Store,
+  Play Store, TestFlight, Fastlane, code signing, mobile CI/CD, app release,
+  or beta testing.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [mobile, deployment, phase-4, universal]
 ---
 
 # Mobile Deployment
+
+## Purpose
+Configure mobile app deployment pipelines including Fastlane automation, code signing, CI/CD, App Store Connect, Play Console, TestFlight, and phased releases.
 
 ## Agent Protocol
 
@@ -28,8 +43,37 @@ A markdown document containing:
 ### Response Format
 Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick.
 
+——
+
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Set Up Fastlane
+Configure Fastfile with beta and release lanes for both iOS and Android with proper build and upload steps.
+
+### Step 2: Configure Code Signing
+Set up Fastlane Match for iOS code signing with encrypted certificates or manual signing for specific targets.
+
+### Step 3: Set CI/CD Pipeline
+Create GitHub Actions workflows for iOS (macOS runner) and Android (Ubuntu runner) with secrets management.
+
+### Step 4: Configure Distribution Tracks
+Set up TestFlight Internal/External for iOS and Internal Testing/Closed Alpha/Open Beta for Android.
+
+### Step 5: Enable Phased Releases
+Configure gradual rollout with App Store Connect phased release and Play Console staged rollouts.
+
+## Rules
+
+- Never commit code signing certificates or provisioning profiles to source
+- Fastlane Match with encrypted git repo for iOS certificate management
+- CI/CD must run on macOS for iOS builds — no exceptions
+- Android keystore must be base64-encoded in CI secrets, not in repo
+- TestFlight Internal (100 testers, no review) for rapid iteration
+- Phased releases always start at 1% and ramp based on crash metrics
+- Build number must be derived from commit count for traceability
 
 ## Fastlane Setup
 

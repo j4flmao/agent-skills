@@ -1,9 +1,22 @@
 ---
 name: rails
-description: Ruby on Rails architecture — MVC, ActiveRecord, gems, API mode, testing, background jobs, authentication.
+description: >
+  Use this skill when designing Ruby on Rails backends — MVC, ActiveRecord, gems, API mode, testing, background jobs, authentication. This skill enforces: API-only mode structure, service object pattern, UUID primary keys, RSpec testing conventions. Do NOT use for: frontend Rails views, database schema design outside ActiveRecord, non-Rails Ruby projects.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [backend, ruby, rails, phase-4]
 ---
 
 # Ruby on Rails
+
+## Purpose
+Define and enforce Ruby on Rails backend architecture, API conventions, and service object patterns.
 
 ## Agent Protocol
 
@@ -31,8 +44,9 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Project Structure (API-only)
+## Workflow
 
+### Step 1: Set Up Project Structure (API-only)
 ```
 app/
 ├── controllers/
@@ -58,8 +72,7 @@ app/
     └── order_confirmation_job.rb
 ```
 
-## API Controller
-
+### Step 2: Design API Controller
 ```ruby
 module Api
   module V1
@@ -93,8 +106,7 @@ module Api
 end
 ```
 
-## Service Object Pattern
-
+### Step 3: Implement Service Object Pattern
 ```ruby
 # app/services/orders/create_order.rb
 module Orders
@@ -114,8 +126,7 @@ module Orders
 end
 ```
 
-## Database Migration
-
+### Step 4: Create Database Migration
 ```ruby
 class CreateOrders < ActiveRecord::Migration[7.1]
   def change
@@ -130,8 +141,7 @@ class CreateOrders < ActiveRecord::Migration[7.1]
 end
 ```
 
-## Testing
-
+### Step 5: Write Tests with RSpec
 ```ruby
 RSpec.describe Api::V1::OrdersController, type: :request do
   let(:user) { create(:user) }
@@ -148,6 +158,16 @@ RSpec.describe Api::V1::OrdersController, type: :request do
 end
 ```
 
+## Rules
+- API-only mode for new backends unless views explicitly needed.
+- Service objects encapsulate business logic — keep controllers thin.
+- UUID primary keys for all tables.
+- Serializers for JSON output — never render model attributes directly.
+- Pundit for authorization policies.
+- Sidekiq or GoodJob for background jobs.
+- RSpec + FactoryBot for testing.
+- API versioning via namespace (Api::V1).
+
 ## References
 
 ### Reference Files
@@ -160,5 +180,4 @@ end
 - `backend/universal/design-patterns/SKILL.md` — Service objects, policies
 
 ## Handoff
-
 Hand off to `backend/universal/database-patterns/SKILL.md` for database rules.

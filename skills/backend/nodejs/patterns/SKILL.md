@@ -1,9 +1,22 @@
 ---
 name: nodejs-patterns
-description: Node.js-specific patterns — middleware chain, async error handling, DI, module structure, testing, streaming, clustering.
+description: >
+  Use this skill when implementing Node.js-specific patterns — middleware chain, async error handling, DI, module structure, testing, streaming, clustering. This skill enforces: async error wrapper pattern, manual DI (no framework), Result pattern for error handling. Do NOT use for: framework-specific routing, database patterns, frontend patterns.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [backend, nodejs, patterns, phase-4]
 ---
 
 # Node.js Patterns
+
+## Purpose
+Implement and document Node.js-specific patterns for error handling, DI, and service layer design.
 
 ## Agent Protocol
 
@@ -27,8 +40,9 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Async Error Wrapper
+## Workflow
 
+### Step 1: Implement Async Error Wrapper
 ```typescript
 export function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<void>) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -43,8 +57,7 @@ router.get('/orders/:id', asyncHandler(async (req, res) => {
 }));
 ```
 
-## Service Layer + DI
-
+### Step 2: Implement Service Layer with Manual DI
 ```typescript
 // Manual DI (no framework needed)
 export class OrderService {
@@ -70,8 +83,7 @@ const logger = new Logger();
 export const orderService = new OrderService(orderRepo, paymentService, logger);
 ```
 
-## Result Pattern
-
+### Step 3: Implement Result Pattern
 ```typescript
 export class Result<T, E = AppError> {
   private constructor(
@@ -91,6 +103,14 @@ export class Result<T, E = AppError> {
 }
 ```
 
+## Rules
+- Every async route handler wrapped with asyncHandler — no uncaught promise rejections.
+- Manual DI via constructor injection — no DI framework needed.
+- Composition root at module boundary, not spread across files.
+- Result pattern for expected errors — throw only for truly unexpected failures.
+- Services are stateless — all state passed as parameters.
+- Each service depends on abstractions (interfaces), not concretions.
+
 ## References
 
 ### Reference Files
@@ -102,5 +122,4 @@ export class Result<T, E = AppError> {
 - `backend/universal/design-patterns/SKILL.md` — GoF patterns in Node.js
 
 ## Handoff
-
 Hand off to `backend/nodejs/architecture/SKILL.md` for project structure.

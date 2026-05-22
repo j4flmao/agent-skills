@@ -1,9 +1,24 @@
 ---
 name: mobile-security
-description: Cross-platform mobile security — data protection, network security, authentication, code protection, secure storage, certificate pinning, OWASP Mobile Top 10.
+description: >
+  Use this skill when the user asks about mobile security, secure storage,
+  certificate pinning, SSL pinning, biometric authentication, data encryption,
+  ProGuard, obfuscation, or OWASP Mobile Top 10.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [mobile, security, phase-4, universal]
 ---
 
 # Mobile Security
+
+## Purpose
+Implement mobile security controls covering data-at-rest encryption, network security (certificate pinning), authentication, and code protection against the OWASP Mobile Top 10.
 
 ## Agent Protocol
 
@@ -23,8 +38,41 @@ A markdown document containing:
 - Implementation snippets
 - Verification steps
 
+### Response Format
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
+——
+
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Threat Modeling
+Identify data classification levels, threat vectors (reverse engineering, network interception, device theft), and compliance requirements.
+
+### Step 2: Secure Data at Rest
+Use platform-native secure storage: iOS Keychain, Android EncryptedSharedPreferences, flutter_secure_storage, or react-native-keychain.
+
+### Step 3: Configure Network Security
+Implement certificate pinning with backup pins, disable cleartext traffic, and validate TLS connections.
+
+### Step 4: Implement Authentication
+Integrate biometric authentication (Face ID, fingerprint) for sensitive operations and secure token storage.
+
+### Step 5: Apply Code Protection
+Enable ProGuard/R8 minification, debug detection, and root/jailbreak detection for release builds.
+
+## Rules
+
+- Never store secrets in plain text — use platform secure storage always
+- Certificate pinning with at least two backup pins and an expiration date
+- Biometric auth for sensitive operations (payments, personal data viewing)
+- ProGuard/R8 must be enabled for all release builds
+- Auth tokens must be stored in secure storage, never SharedPreferences or UserDefaults
+- Debug builds must not expose debug endpoints or verbose logging in production
+- Root/jailbreak detection should degrade gracefully, not crash the app
+- All network traffic must use HTTPS with certificate validation enabled
 
 ## Data at Rest
 

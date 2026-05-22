@@ -1,9 +1,24 @@
 ---
 name: mobile-testing
-description: Cross-platform mobile testing strategies — unit, widget/component, integration, E2E, snapshot/golden, mocking, CI integration.
+description: >
+  Use this skill when the user asks about mobile testing strategies, unit tests,
+  widget tests, component tests, integration tests, E2E, golden/snapshot tests,
+  mocking, or CI test integration.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [mobile, testing, phase-4, universal]
 ---
 
 # Mobile Testing
+
+## Purpose
+Design comprehensive mobile test strategies following the test pyramid — unit, widget/component, integration, and E2E — with proper mocking, golden tests, and CI integration.
 
 ## Agent Protocol
 
@@ -22,8 +37,43 @@ A markdown document containing:
 - Key test examples
 - CI pipeline integration
 
+### Response Format
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
+——
+
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Define Test Strategy
+Apply the mobile test pyramid: many unit/widget tests, medium integration tests, few E2E critical journeys.
+
+### Step 2: Write Unit Tests
+Cover business logic, use cases, repositories, and utilities with mocked dependencies and parameterized edge cases.
+
+### Step 3: Write Widget/Component Tests
+Test UI components with mock data, verify rendering, interactions, and state transitions.
+
+### Step 4: Write Integration Tests
+Test feature flows combining multiple components, real API mocking, and database interactions.
+
+### Step 5: Write E2E Tests
+Cover critical user journeys (login, purchase, order flow) on real devices or emulators.
+
+### Step 6: Integrate in CI
+Run unit + widget tests on every PR, integration nightly, E2E before release.
+
+## Rules
+
+- Unit tests cover business logic — never test framework behavior
+- Mock external dependencies (network, DB, platform channels) in unit tests
+- One test file per source file — mirror the source structure
+- Widget tests verify states: loading, error, empty, data
+- Golden/snapshot tests for visual regression on critical screens
+- E2E tests are for critical journeys only — max 5-10 per platform
+- Tests must be deterministic — no time-dependent assertions without mocking time
 
 ## Test Pyramid (Mobile)
 

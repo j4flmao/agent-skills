@@ -1,9 +1,24 @@
 ---
 name: frontend-patterns
-description: Frontend-specific design patterns — Container/Presentational, Compound Components, HOC, Render Props, Hooks patterns, Provider, State Reducer.
+description: >
+  Use this skill when the user asks about frontend design patterns, component
+  patterns, Container/Presentational, Compound Components, HOC, Render Props,
+  Hooks patterns, Provider, or State Reducer.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [frontend, patterns, phase-3, universal]
 ---
 
 # Frontend Design Patterns
+
+## Purpose
+Select and implement frontend component patterns that solve specific architectural problems with idiomatic framework code.
 
 ## Agent Protocol
 
@@ -24,7 +39,9 @@ A markdown document containing:
 - Testing strategy for the pattern
 
 ### Response Format
-Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick. If no pattern applies, output `No pattern required. Current approach is sufficient.` and stop.
+Produce the artifact directly. No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick. If no pattern applies, output `No pattern required. Current approach is sufficient.` and stop.
+
+——
 
 ### Completion Criteria
 - Pattern implementation idiomatic to target framework
@@ -34,6 +51,34 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Identify the Problem
+Analyze component hierarchy, data flow, and current pain points (prop drilling, re-renders, complex state logic).
+
+### Step 2: Select the Pattern
+Use the pattern selection table to match the problem to the appropriate pattern.
+
+### Step 3: Implement the Pattern
+Write idiomatic framework code following the pattern catalog examples.
+
+### Step 4: Write Tests
+Implement tests per pattern type using the testing strategy table.
+
+### Step 5: Review Edge Cases
+Cover loading, error, and empty states for every component.
+
+## Rules
+
+- Prefer hooks over HOC since React 16.8 — use HOC only for legacy components or pre-render wrapping
+- Prefer hooks over Render Props since React 16.8 — use render props only for render-prop-only libraries
+- One hook per concern — single responsibility at the hook level
+- Return stable references from hooks to avoid infinite re-render loops
+- Use Provider only when data is needed by 3+ levels of nesting — prop drilling is fine for 2 levels
+- Compound components are for multi-part UI with shared state (Select, Tabs, Accordion), not single-element components
+- State Reducer pattern is only justified for reusable component libraries, not internal-only components
+- Container/Presentational split when a component has 3+ state variables or data sources
 
 ## Pattern Catalog
 
@@ -148,7 +193,6 @@ function OrderFetcher({ orderId, children }: {
 
 **When**: Component needs to expose state to consumers without dictating rendering.
 **Prefer**: Hooks over Render Props since React 16.8. Use for complex render-props-only libraries (React Motion, Formik).
-**Mutation**: Mutation observer pattern reads data from rendering parent.
 
 ### 5. Hooks Patterns
 

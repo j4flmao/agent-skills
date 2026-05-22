@@ -1,9 +1,22 @@
 ---
 name: helm-patterns
-description: Kubernetes Helm patterns — chart structure, values management, dependency, hooks, templating, testing, CI/CD integration.
+description: >
+  Use this skill when designing Helm charts for Kubernetes — chart structure, values management, dependency, hooks, templating, testing, CI/CD integration. This skill enforces: proper chart directory structure, values hierarchy (global → environment → release), encrypted secrets, _helpers.tpl for reusable templates, pinned image tags. Do NOT use for: infrastructure provisioning (use Terraform), configuration management (use Ansible), cluster setup.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [devops, helm, phase-5]
 ---
 
 # Helm Patterns
+
+## Purpose
+Define and enforce Helm chart structure, values management, templating, and deployment best practices.
 
 ## Agent Protocol
 
@@ -40,8 +53,9 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Chart Structure
+## Workflow
 
+### Step 1: Set Up Chart Structure
 ```
 chart-name/
 ├── Chart.yaml                # Metadata, version, dependencies
@@ -75,7 +89,7 @@ chart-name/
 └── README.md
 ```
 
-## Values Hierarchy
+### Step 2: Define Values Hierarchy
 
 ```yaml
 # values.yaml — defaults
@@ -140,10 +154,7 @@ ingress:
           pathType: Prefix
 ```
 
-## Advanced Templating
-
-### Helpers
-
+### Step 3: Create Template Helpers
 ```yaml
 {{- define "app.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
@@ -170,8 +181,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 ```
 
-### Conditionals
-
+### Step 4: Implement Conditionals and Range
 ```yaml
 # ingress.yaml
 {{- if .Values.ingress.enabled }}
@@ -201,8 +211,6 @@ spec:
 {{- end }}
 ```
 
-### Range and Typed Values
-
 ```yaml
 # configmap.yaml
 apiVersion: v1
@@ -213,8 +221,7 @@ data:
   appsettings.json: {{- toJson .Values.config | nindent 4 }}
 ```
 
-## Dependencies
-
+### Step 5: Manage Dependencies
 ```yaml
 # Chart.yaml
 dependencies:
@@ -228,8 +235,7 @@ dependencies:
     condition: redis.enabled
 ```
 
-## Lifecycle Hooks
-
+### Step 6: Configure Lifecycle Hooks
 ```yaml
 # hooks/pre-upgrade-migration.yaml
 apiVersion: batch/v1
@@ -250,8 +256,7 @@ spec:
           command: ["dotnet", "run", "--project", "Migrator"]
 ```
 
-## Testing
-
+### Step 7: Add Testing
 ```yaml
 # templates/tests/test-connection.yaml
 apiVersion: v1
@@ -269,8 +274,7 @@ spec:
   restartPolicy: Never
 ```
 
-## CI/CD Pipeline Integration
-
+### Step 8: Integrate with CI/CD
 ```bash
 # GitHub Actions step
 - name: Lint and test Helm chart
@@ -300,5 +304,4 @@ spec:
 - `devops/monitoring/SKILL.md` — Monitoring stack deployment via Helm
 
 ## Handoff
-
 Hand off to `devops/terraform/SKILL.md` for K8s cluster provisioning. Hand off to `devops/cicd-pipeline/SKILL.md` for Helm deployment in CI/CD.

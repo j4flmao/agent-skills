@@ -1,9 +1,22 @@
 ---
 name: jenkins
-description: Jenkins patterns — pipeline design, shared libraries, agent strategy, security, secrets, CI/CD best practices.
+description: >
+  Use this skill when designing Jenkins CI/CD pipelines — declarative pipeline, shared libraries, agent strategy, security, secrets, multibranch configuration. This skill enforces: declarative pipeline syntax, shared library functions returning closures, credential injection via withCredentials, cleanWs() in post always block. Do NOT use for: non-Jenkins CI/CD systems, infrastructure provisioning, application code patterns.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [devops, jenkins, phase-5]
 ---
 
 # Jenkins Patterns
+
+## Purpose
+Define and enforce Jenkins pipeline design, shared library structure, agent strategy, and security best practices.
 
 ## Agent Protocol
 
@@ -38,8 +51,9 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Declarative Pipeline
+## Workflow
 
+### Step 1: Write Declarative Pipeline
 ```groovy
 // Jenkinsfile
 pipeline {
@@ -77,58 +91,24 @@ spec:
 
     stages {
         stage('Checkout') {
-            steps {
-                checkout scm
-            }
+            steps { checkout scm }
         }
-
         stage('Install') {
-            steps {
-                container('node') {
-                    sh 'npm ci'
-                }
-            }
+            steps { container('node') { sh 'npm ci' } }
         }
-
         stage('Lint') {
-            steps {
-                container('node') {
-                    sh 'npm run lint'
-                }
-            }
+            steps { container('node') { sh 'npm run lint' } }
         }
-
         stage('Test') {
-            steps {
-                container('node') {
-                    sh 'npm test'
-                }
-            }
-            post {
-                always {
-                    junit 'reports/**/*.xml'
-                }
-            }
+            steps { container('node') { sh 'npm test' } }
+            post { always { junit 'reports/**/*.xml' } }
         }
-
         stage('Build') {
-            steps {
-                container('node') {
-                    sh 'npm run build'
-                }
-            }
+            steps { container('node') { sh 'npm run build' } }
         }
-
         stage('Docker Build') {
-            steps {
-                container('docker') {
-                    script {
-                        docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
-                    }
-                }
-            }
+            steps { container('docker') { script { docker.build("${IMAGE_NAME}:${IMAGE_TAG}") } } }
         }
-
         stage('Docker Push') {
             when { branch 'main' }
             steps {
@@ -142,21 +122,13 @@ spec:
                 }
             }
         }
-
         stage('Deploy') {
             when { branch 'main' }
-            steps {
-                container('node') {
-                    sh "kubectl set image deployment/myapp myapp=${IMAGE_NAME}:${IMAGE_TAG}"
-                }
-            }
+            steps { container('node') { sh "kubectl set image deployment/myapp myapp=${IMAGE_NAME}:${IMAGE_TAG}" } }
         }
     }
-
     post {
-        always {
-            cleanWs()
-        }
+        always { cleanWs() }
         failure {
             slackSend(
                 channel: '#ci-failures',
@@ -175,8 +147,7 @@ spec:
 }
 ```
 
-## Shared Library Structure
-
+### Step 2: Create Shared Library Structure
 ```
 vars/
   dockerBuild.groovy       # dockerBuild(stageName, imageName, tag)
@@ -193,8 +164,7 @@ resources/
     deploy.yaml            # Deployment template snippets
 ```
 
-### Shared Library Functions
-
+### Step 3: Write Shared Library Functions
 ```groovy
 // vars/dockerBuild.groovy
 def call(String imageName, String tag, String dockerfile = 'Dockerfile') {
@@ -223,7 +193,7 @@ def call(String releaseName, String chartPath, Map values = [:]) {
 }
 ```
 
-## Agent Strategy
+### Step 4: Select Agent Strategy
 
 | Agent Type | When | Configuration |
 |---|---|---|
@@ -232,8 +202,7 @@ def call(String releaseName, String chartPath, Map values = [:]) {
 | **Docker agent** | Simple builds, no K8s | `agent { docker { image 'node:20' } }` |
 | **EC2/cloud agent** | AWS native | EC2 Fleet plugin |
 
-## Secret Management
-
+### Step 5: Manage Secrets
 ```groovy
 // Using Jenkins credentials
 withCredentials([
@@ -246,8 +215,7 @@ withCredentials([
 }
 ```
 
-## Multibranch Configuration
-
+### Step 6: Configure Multibranch Pipeline
 ```
 Jenkinsfile at repository root
 Branch sources: GitHub/GitLab/Bitbucket
@@ -260,7 +228,7 @@ Automatic branch discovery:
   - Discover PRs (merged, current)
 ```
 
-## Pipeline Security
+### Step 7: Apply Pipeline Security
 
 | Rule | Implementation |
 |---|---|
@@ -290,5 +258,4 @@ Automatic branch discovery:
 - `devops/docker-patterns/SKILL.md` — Docker build and registry
 
 ## Handoff
-
 Hand off to `devops/cicd-pipeline/SKILL.md` for CI/CD architecture. Hand off to `devops/helm-patterns/SKILL.md` for Helm deployment integration.

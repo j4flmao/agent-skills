@@ -1,9 +1,23 @@
 ---
 name: ios
-description: iOS native development — Swift, SwiftUI, UIKit, MVVM+Coordinator, Combine, async/await, Core Data, XCTest.
+description: >
+  Use this skill when the user asks about iOS development, Swift, SwiftUI, UIKit,
+  iOS architecture, MVVM, Coordinator, Core Data, SwiftData, or iOS testing.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [mobile, ios, phase-4]
 ---
 
 # iOS Native
+
+## Purpose
+Build iOS native applications using Swift, SwiftUI/UIKit, MVVM+Coordinator architecture, Combine/async-await, Core Data, and XCTest.
 
 ## Agent Protocol
 
@@ -28,8 +42,37 @@ A markdown document containing:
 ### Response Format
 Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick.
 
+——
+
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Set Up Project Structure
+Organize code with feature-based folders: App, Features, Core (Network, Persistence, DI), and Common components.
+
+### Step 2: Implement MVVM with Coordinator
+Create ViewModels with ObservableObject, Coordinators for navigation logic, and dependency injection container.
+
+### Step 3: Build UI with SwiftUI or UIKit
+Use SwiftUI with @StateObject/@Published for reactive UI, or UIKit with programmatic view controllers and delegates.
+
+### Step 4: Set Up Persistence
+Configure Core Data or SwiftData with NSPersistentContainer, context management, and save flows.
+
+### Step 5: Write Tests
+Cover ViewModels with XCTest unit tests using mock services and UI flows with XCUITest.
+
+## Rules
+
+- Coordinators own all navigation logic — views never push or present directly
+- ViewModels use @Published properties and are marked @MainActor
+- Core Data operations on background context — never block main thread
+- Use async/await over Combine for simple one-shot network calls
+- SwiftUI views should be lightweight — push business logic to ViewModels
+- Avoid retain cycles: use [weak self] in escaping closures and Combine cancellables
+- All network calls handle errors with do/catch and show user-facing error states
 
 ## Project Structure
 

@@ -58,6 +58,8 @@ Theme system with CSS variables, switching logic, and persistence.
 Compression footer: frontend-theming/v1 | 3 sections | tokens: <count> | modes: <light|dark|system>
 ```
 
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
 ### Completion Criteria
 - All color/spacing/typography values use CSS custom properties
 - Light and dark themes both defined

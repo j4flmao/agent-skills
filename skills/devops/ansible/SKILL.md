@@ -1,9 +1,22 @@
 ---
 name: ansible
-description: Ansible patterns — playbook structure, roles, inventory, vault, modules, idempotency, CI/CD integration.
+description: >
+  Use this skill when implementing Ansible configuration management — playbook structure, roles, inventory, vault, modules, idempotency, CI/CD integration. This skill enforces: Ansible Galaxy role structure, group-based inventory organization, encrypted secrets via ansible-vault, Molecule testing, idempotent playbooks. Do NOT use for: infrastructure provisioning (use Terraform), Kubernetes configuration (use Helm), container orchestration.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [devops, ansible, phase-5]
 ---
 
 # Ansible Patterns
+
+## Purpose
+Define and enforce Ansible playbook structure, role design, inventory organization, and CI/CD integration.
 
 ## Agent Protocol
 
@@ -38,8 +51,9 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Repository Structure
+## Workflow
 
+### Step 1: Set Up Repository Structure
 ```
 ansible/
 ├── playbooks/
@@ -92,9 +106,7 @@ ansible/
 └── requirements.yml
 ```
 
-## Role Design
-
-### Role Structure
+### Step 2: Design Roles
 
 ```yaml
 # roles/nginx/defaults/main.yml
@@ -137,8 +149,7 @@ nginx_ssl_key_path: /etc/ssl/private
     state: restarted
 ```
 
-### Template Example
-
+### Step 3: Create Templates
 ```jinja
 # roles/nginx/templates/nginx.conf.j2
 worker_processes {{ nginx_worker_processes }};
@@ -156,8 +167,7 @@ http {
 }
 ```
 
-## Inventory
-
+### Step 4: Organize Inventory
 ```ini
 # inventories/production/hosts.ini
 [webservers]
@@ -184,8 +194,7 @@ ntp_servers:
   - 1.pool.ntp.org
 ```
 
-## Vault Strategy
-
+### Step 5: Configure Vault Strategy
 ```bash
 # Encrypt entire variable file
 ansible-vault encrypt inventories/production/group_vars/all.yml
@@ -205,8 +214,7 @@ vault_db_password: !vault |
     db_password: "{{ vault_db_password }}"
 ```
 
-## Testing (Molecule)
-
+### Step 6: Test with Molecule
 ```yaml
 # roles/nginx/molecule/default/molecule.yml
 dependency:
@@ -223,8 +231,7 @@ verifier:
   name: ansible
 ```
 
-## CI/CD Integration
-
+### Step 7: Integrate with CI/CD
 ```yaml
 # .github/workflows/ansible.yml
 name: Ansible
@@ -268,5 +275,4 @@ jobs:
 - `devops/monitoring/SKILL.md` — Monitoring agent deployment
 
 ## Handoff
-
 Hand off to `devops/terraform/SKILL.md` for infrastructure provisioning. Hand off to `devops/monitoring/SKILL.md` for monitoring agent configuration.

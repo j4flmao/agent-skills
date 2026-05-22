@@ -1,4 +1,4 @@
-# Routing — 160 skills
+# Routing — 176 skills
 
 ## Entry
 `skills/core/master-orchestrator/SKILL.md` (no trigger match → route here)
@@ -20,6 +20,8 @@ planning → backend → frontend → mobile → dev-loop → devops → managem
 | dev-loop | code-review, debugging-strategy, refactor-guide, git-workflow, security-auditor, performance-profiler, changelog-generator, readme-writer, pr-writer, dev-container, tech-debt-tracker, api-client-generator |
 | devops | docker-patterns, cicd-pipeline, kubernetes-patterns, observability, helm-patterns, terraform, ansible, jenkins, longhorn, monitoring, github-actions, gitops, vault, aws, serverless, monorepo, dependency-management, api-documentation, argo-cd, azure, gcp, chaos-engineering, service-mesh, finops, backup-dr, database-migration |
 | management | pm, ba, qa, qc, team-rules, security, pentesting, alerting, okr-kpi, sprint-retro, risk-management |
+| enterprise (8) | compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance |
+| product (8) | analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization |
 
 ## Trigger Keywords
 ```
@@ -118,6 +120,22 @@ sprint-retro/retrospective    → management/sprint-retro
 risk-management/risk-register → management/risk-management
 onboarding/new-dev           → core/onboarding
 context-compression/token    → core/context-compressor
+compliance/audit/SOC2/GDPR   → enterprise/compliance-audit
+multi-tenant/saas-arch       → enterprise/multi-tenant
+integration/esb              → enterprise/integration-patterns
+data-governance/lineage      → enterprise/data-governance
+sla/slo/error-budget         → enterprise/sla-management
+legacy-migration/strangler   → enterprise/legacy-migration
+identity-provider/sso/oidc   → enterprise/identity-provider
+cost-governance/finops       → enterprise/cost-governance
+product-analytics/funnel     → product/analytics
+ab-test/split-test/experiment → product/ab-testing
+user-research/persona        → product/user-research
+growth-engineering/plg/activation → product/growth-engineering
+pricing-strategy/monetization → product/pricing-strategy
+go-to-market/gtm/product-launch → product/go-to-market
+onboarding-flow/activation   → product/onboarding-flow
+prioritization/rice/kano     → product/feature-prioritization
 ```
 
 ## Stack Detection

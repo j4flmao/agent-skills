@@ -1,9 +1,24 @@
 ---
 name: mobile-patterns
-description: Cross-platform mobile architecture patterns — MVVM, MVI, Clean Architecture, Coordinator/ Navigator pattern, Repository, UseCase, DI.
+description: >
+  Use this skill when the user asks about mobile architecture patterns, MVVM,
+  MVI, Clean Architecture, Coordinator, Navigator, Repository pattern, UseCase,
+  or dependency injection in mobile apps.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [mobile, patterns, phase-4, universal]
 ---
 
 # Mobile Architecture Patterns
+
+## Purpose
+Select and implement cross-platform mobile architecture patterns including MVVM, MVI, Clean Architecture, Coordinator, and Repository patterns.
 
 ## Agent Protocol
 
@@ -22,8 +37,40 @@ A markdown document containing:
 - Data flow diagram (text)
 - Key code snippets for the chosen pattern
 
+### Response Format
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
+——
+
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Identify Architecture Requirements
+Assess team size, app complexity, testing requirements, and platform constraints to select the appropriate pattern.
+
+### Step 2: Select Core Pattern
+Choose MVVM for standard apps with data binding, MVI for complex state with unidirectional flow, or Clean Architecture for large multi-team codebases.
+
+### Step 3: Define Layer Boundaries
+Establish dependency rules: presentation depends on domain, domain is pure business logic, data implements domain interfaces.
+
+### Step 4: Separate Navigation
+Extract navigation logic into Coordinator/Navigator — views should know nothing about other screens.
+
+### Step 5: Set Up Dependency Injection
+Configure DI framework with explicit scopes and clear module organization per layer.
+
+## Rules
+
+- Domain layer must have zero framework dependencies — pure business logic only
+- Data layer depends on domain layer — never the reverse
+- MVVM: View observes ViewModel state; ViewModel never holds View reference
+- MVI: sealed class for intents, single sealed state class, reducer function
+- Clean Architecture: outer layers depend on inner layers, never inward
+- Coordinator owns navigation — views call coordinator callbacks, not navigators directly
+- Repository is the single source of truth — data sources are implementation details
 
 ## MVVM
 

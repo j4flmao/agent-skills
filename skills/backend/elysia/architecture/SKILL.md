@@ -1,9 +1,22 @@
 ---
 name: elysia-architecture
-description: ElysiaJS on Bun — architecture, plugins, lifecycle, validation with TypeScript-first design.
+description: >
+  Use this skill when designing ElysiaJS on Bun backend architecture — plugins, lifecycle, validation with TypeScript-first design. This skill enforces: modular project structure, t validation schemas, lifecycle hook ordering, and Bun-native testing. Do NOT use for: frontend or mobile architecture, non-Elysia Bun scripts.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [backend, elysia, phase-4]
 ---
 
 # ElysiaJS Architecture
+
+## Purpose
+Define and enforce ElysiaJS project structure, plugin setup, validation, and lifecycle patterns.
 
 ## Agent Protocol
 
@@ -30,8 +43,9 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Project Structure
+## Workflow
 
+### Step 1: Set Up Project Structure
 ```
 src/
 ├── modules/
@@ -52,8 +66,7 @@ src/
 └── app.ts
 ```
 
-## App Setup
-
+### Step 2: Configure App with Plugins
 ```typescript
 import { Elysia } from 'elysia';
 import { cors } from '@elysiajs/cors';
@@ -71,8 +84,7 @@ const app = new Elysia()
   .listen(3000);
 ```
 
-## Validation with Elysia t
-
+### Step 3: Add Validation with Elysia t
 ```typescript
 import { t } from 'elysia';
 
@@ -90,6 +102,14 @@ app.post('/orders', ({ body }) => orderService.create(body), {
 });
 ```
 
+## Rules
+- Modules grouped by domain feature, not by technical layer.
+- All input validation uses Elysia `t` schemas — no manual validation.
+- Error handler catches all codes, returns structured JSON.
+- Plugins are scoped and reusable across projects.
+- TypeScript strict mode enabled.
+- Lifecycle hooks ordered: transform → beforeHandle → handler → afterHandle.
+
 ## References
 
 ### Reference Files
@@ -101,5 +121,4 @@ app.post('/orders', ({ body }) => orderService.create(body), {
 - `backend/universal/api-response/SKILL.md` — API response design
 
 ## Handoff
-
 Hand off to `backend/elysia/patterns/SKILL.md` for Elysia patterns.

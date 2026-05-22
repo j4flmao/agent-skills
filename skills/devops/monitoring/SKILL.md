@@ -1,9 +1,22 @@
 ---
 name: monitoring
-description: Monitoring stack configuration — Prometheus, Grafana, Loki, ELK Stack. Metrics, logs, traces, dashboards.
+description: >
+  Use this skill when configuring observability and monitoring stack — Prometheus, Grafana, Loki, ELK Stack. This skill enforces: Prometheus scrape configs with relabeling, Grafana dashboard folder hierarchy, Loki log label strategy, Alertmanager routing by severity, SLO tracking with error budgets. Do NOT use for: application-level instrumentation, CI/CD pipeline monitoring, infrastructure provisioning.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [devops, monitoring, phase-5]
 ---
 
 # Monitoring Stack
+
+## Purpose
+Define and enforce monitoring stack configuration with Prometheus, Grafana, Loki, and ELK for metrics, logs, traces, and alerting.
 
 ## Agent Protocol
 
@@ -41,7 +54,9 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Stack Selection
+## Workflow
+
+### Step 1: Select Stack Components
 
 | Tool | Purpose | When |
 |---|---|---|
@@ -54,9 +69,9 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 | **Filebeat** | Log shipping → ELK | Lightweight, wide format support |
 | **Metricbeat** | System metrics → ELK | Infrastructure metrics |
 
-## Prometheus Configuration
+### Step 2: Configure Prometheus
 
-### Scrape Configs
+**Scrape Configs**
 
 ```yaml
 # prometheus.yml
@@ -101,7 +116,7 @@ scrape_configs:
         target_label: instance
 ```
 
-### Recording Rules
+**Recording Rules**
 
 ```yaml
 # rules/recording.yml
@@ -115,7 +130,7 @@ groups:
         expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))
 ```
 
-### Retention and Sizing
+**Retention and Sizing**
 
 | Metric | Rule |
 |---|---|
@@ -125,7 +140,7 @@ groups:
 | **Cardinality limit** | <500,000 active series per Prometheus |
 | **Storage calculation** | ~1KB per sample → 8M samples/day = ~8GB/day |
 
-### Alerting Rules
+**Alerting Rules**
 
 ```yaml
 # rules/alerts.yml
@@ -237,7 +252,7 @@ groups:
           summary: "Error log rate > 10/s for {{ $labels.job }}"
 ```
 
-### Alertmanager Configuration
+**Alertmanager Configuration**
 
 ```yaml
 # alertmanager.yml
@@ -327,9 +342,9 @@ inhibit_rules:
       - instance
 ```
 
-## Grafana Configuration
+### Step 3: Configure Grafana
 
-### Folder Structure
+**Folder Structure**
 
 ```
 /
@@ -347,7 +362,7 @@ inhibit_rules:
     └── Latency / P50, P95, P99 vs targets
 ```
 
-### Data Source Configuration
+**Data Source Configuration**
 
 ```yaml
 apiVersion: 1
@@ -381,7 +396,7 @@ datasources:
       timeField: "@timestamp"
 ```
 
-## Loki Configuration
+### Step 4: Configure Loki
 
 ```yaml
 # loki-config.yaml
@@ -421,7 +436,7 @@ limits_config:
   max_query_series: 500
 ```
 
-### Log Label Strategy
+**Log Label Strategy**
 
 | Label | Source | Cardinality | Search |
 |---|---|---|---|
@@ -432,9 +447,9 @@ limits_config:
 | `level` | Log line | Very low | Error filtering |
 | `service` | Application | Low | Service-specific logs |
 
-## ELK Stack Configuration
+### Step 5: Configure ELK Stack
 
-### Filebeat Config
+**Filebeat Config**
 
 ```yaml
 # filebeat.yml
@@ -454,7 +469,7 @@ output.elasticsearch:
   index: "logs-%{+yyyy.MM.dd}"
 ```
 
-### Index Lifecycle Policy
+**Index Lifecycle Policy**
 
 ```json
 {
@@ -469,7 +484,7 @@ output.elasticsearch:
 }
 ```
 
-## Monitoring SLOs
+### Step 6: Define Monitoring SLOs
 
 | Signal | Target | Measurement |
 |---|---|---|
@@ -478,6 +493,18 @@ output.elasticsearch:
 | **Log ingestion** | <1 min delay | Current time - max log timestamp |
 | **Metrics freshness** | <30s | Time since last scrape per target |
 | **Alert delivery** | <1 min | Alert fired → notification received |
+
+## Rules
+- Prometheus scrape configs use relabeling for Kubernetes service discovery — never static targets for K8s workloads.
+- Grafana dashboards organized by folder hierarchy: Infrastructure → Applications → Business → SLOs. No unorganized dashboards.
+- Loki labels limited to low-cardinality values — never use `pod` or `traceID` as mandatory labels.
+- Alertmanager routes segregated by severity: P0 → PagerDuty, P1 → Slack warning, P2 → Slack info, P3 → suppressed.
+- Every Prometheus alert has a `runbook` annotation pointing to a recovery procedure.
+- Retention period set per component: Prometheus 15d local, Loki 30d, ELK 90d with tiered lifecycle.
+- Cardinality limit <500,000 active series per Prometheus instance — monitor with `prometheus_tsdb_head_series`.
+- All monitoring components deployed with resource limits and persistent storage.
+- SLOs defined with error budget tracking for every production service.
+- Alert delivery verified with synthetic tests — never trust alerting without validation.
 
 ## References
 

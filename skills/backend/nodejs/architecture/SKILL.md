@@ -1,9 +1,22 @@
 ---
 name: nodejs-architecture
-description: Node.js backend architecture — Express, Fastify, Hono. Project structure, middleware pipeline, routing, error handling, validation.
+description: >
+  Use this skill when designing Node.js backend architecture — Express, Fastify, Hono. Project structure, middleware pipeline, routing, error handling, validation. This skill enforces: separation of concerns, correct middleware ordering, global error handling, Zod/Joi validation integration. Do NOT use for: frontend architecture, database schema design, DevOps configuration.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [backend, nodejs, phase-4]
 ---
 
 # Node.js Architecture
+
+## Purpose
+Define and enforce Node.js backend architecture, framework selection, and middleware pipeline conventions.
 
 ## Agent Protocol
 
@@ -38,8 +51,17 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Project Structure
+## Workflow
 
+### Step 1: Select Framework
+
+| Framework | Performance | Ecosystem | TypeScript | When |
+|---|---|---|---|---|
+| **Express** | Moderate | Largest | Manual setup | Large ecosystem, legacy, most devs know it |
+| **Fastify** | High | Large | Native | Performance-critical, JSON schema validation |
+| **Hono** | Very High | Growing | Native | Edge, Bun, minimal footprint |
+
+### Step 2: Set Up Project Structure
 ```
 src/
 ├── modules/
@@ -73,16 +95,7 @@ src/
 └── server.ts           # Entry point
 ```
 
-## Framework Selection
-
-| Framework | Performance | Ecosystem | TypeScript | When |
-|---|---|---|---|---|
-| **Express** | Moderate | Largest | Manual setup | Large ecosystem, legacy, most devs know it |
-| **Fastify** | High | Large | Native | Performance-critical, JSON schema validation |
-| **Hono** | Very High | Growing | Native | Edge, Bun, minimal footprint |
-
-## Middleware Pipeline (Express)
-
+### Step 3: Order Middleware Pipeline (Express)
 ```typescript
 // app.ts
 app.use(cors());
@@ -96,8 +109,7 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 ```
 
-## Error Handling
-
+### Step 4: Implement Error Handling
 ```typescript
 // common/errors/app-error.ts
 export class AppError extends Error {
@@ -127,6 +139,14 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
 }
 ```
 
+## Rules
+- Framework selected by performance needs and ecosystem requirements.
+- Modules grouped by domain feature, not by technical layer.
+- Middleware ordered: security → parsing → logging → rate-limit → routes → 404 → error.
+- All errors handled by central error handler — no try/catch in controllers.
+- Validation via Zod/Fastify schema — never manual checks.
+- TypeScript strict mode for all new projects.
+
 ## References
 
 ### Reference Files
@@ -139,5 +159,4 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
 - `backend/universal/oop-principles/SKILL.md` — SOLID for Node.js
 
 ## Handoff
-
 Hand off to `backend/nodejs/patterns/SKILL.md` for Node.js-specific patterns.

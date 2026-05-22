@@ -1,9 +1,22 @@
 ---
 name: sveltekit
-description: SvelteKit architecture — routing, loaders, forms, server-side rendering, endpoints, stores, deployment.
+description: >
+  Use this skill when building SvelteKit applications — routing, load functions, form actions, API endpoints, server-side rendering, stores, deployment. This skill enforces: file-based routing conventions, server load functions for data fetching, form actions with validation and redirects, separated API endpoints in routes/api. Do NOT use for: non-Svelte frontend frameworks, backend-only APIs, static site generation without SvelteKit.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [frontend, svelte, sveltekit, phase-3]
 ---
 
 # SvelteKit
+
+## Purpose
+Define and enforce SvelteKit application architecture with routing conventions, data loading, form handling, and deployment patterns.
 
 ## Agent Protocol
 
@@ -32,7 +45,9 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Project Structure
+## Workflow
+
+### Step 1: Set Up Project Structure
 
 ```
 src/
@@ -67,7 +82,7 @@ src/
 └── params.ts
 ```
 
-## Page Load
+### Step 2: Implement Page Load
 
 ```typescript
 // src/routes/orders/+page.server.ts
@@ -87,7 +102,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 };
 ```
 
-## Form Actions
+### Step 3: Implement Form Actions
 
 ```typescript
 // src/routes/orders/create/+page.server.ts
@@ -111,7 +126,7 @@ export const actions: Actions = {
 };
 ```
 
-## Endpoint
+### Step 4: Implement API Endpoints
 
 ```typescript
 // src/routes/api/orders/+server.ts
@@ -129,6 +144,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   return json(order, { status: 201 });
 };
 ```
+
+## Rules
+- All routes follow SvelteKit file-based routing convention with `+page.svelte`, `+layout.svelte`, `+server.ts` naming.
+- Data fetching in `+page.server.ts` load functions — never fetch on client for initial page data.
+- Form mutations use `Actions` with `fail()` for validation errors and `redirect()` for success.
+- API endpoints placed in `routes/api/` directory with `+server.ts` handlers.
+- Server-only code in `lib/server/` — never import in client components.
+- Stores for client-side state only; server state flows through load functions.
+- Parameters validated and parsed before use — never trust URL params directly.
 
 ## References
 

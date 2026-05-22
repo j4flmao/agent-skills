@@ -1,9 +1,24 @@
 ---
 name: flutter
-description: Flutter cross-platform development — Dart, Widgets, Riverpod/BLoC, GoRouter, Clean Architecture, Hive/Isar, Flutter Test.
+description: >
+  Use this skill when the user asks about Flutter, Dart, widgets, Flutter
+  architecture, state management, Riverpod, BLoC, GoRouter, Flutter testing,
+  or Material Design.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [mobile, flutter, phase-4]
 ---
 
 # Flutter
+
+## Purpose
+Build Flutter cross-platform applications with clean architecture, Riverpod or BLoC state management, GoRouter navigation, and layered testing.
 
 ## Agent Protocol
 
@@ -29,8 +44,37 @@ A markdown document containing:
 ### Response Format
 Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick.
 
+——
+
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Set Up Project Structure
+Organize code with feature-first architecture: core, features (data/domain/presentation), and app-level config.
+
+### Step 2: Choose State Management
+Select Riverpod for scalable reactive state or BLoC for event-driven architectures with clear state transitions.
+
+### Step 3: Configure Navigation
+Set up GoRouter with declarative routing, nested routes, and deep linking support.
+
+### Step 4: Implement Data Layer
+Use repository pattern with remote and local data sources, model mapping, and error handling.
+
+### Step 5: Write Tests
+Cover business logic with unit tests, widgets with widget tests, and flows with integration tests.
+
+## Rules
+
+- Prefer Riverpod over BLoC for most apps — BLoC overhead justified only for event-heavy features
+- Use const constructors on all widgets that don't mutate — enables Flutter's rebuild optimization
+- Repository pattern must cache-fallback on network failure — never surface network errors directly
+- BlocListener for side effects (navigation, snackbar), BlocBuilder for UI
+- GoRouter routes defined in one file — never scatter route definitions across features
+- All async operations must handle loading, error, and data states in the UI
+- Keep business logic out of widgets — use providers/blocs for all stateful logic
 
 ## Project Structure
 

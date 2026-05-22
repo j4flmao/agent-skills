@@ -1,9 +1,24 @@
 ---
 name: alerting
-description: Alert rule design — severity classification, threshold tuning, notification routing, escalation, on-call integration.
+description: >
+  Use this skill when the user asks about alert rules, Alertmanager, Prometheus
+  alerts, Grafana alerts, notification routing, PagerDuty, on-call, escalation,
+  alert fatigue, or threshold tuning.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [management, alerting, phase-8]
 ---
 
 # Alert Rules
+
+## Purpose
+Design alert rules following the RED/USE method with severity classification, threshold tuning, notification routing, and escalation paths.
 
 ## Agent Protocol
 
@@ -26,7 +41,9 @@ A markdown document containing:
 - Runbook template for common alerts
 
 ### Response Format
-Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick.
+Produce the artifact directly. No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
+——
 
 ### Completion Criteria
 - Severity levels defined with clear escalation paths
@@ -37,6 +54,40 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Define Severity Levels
+Map severity (P0-P3) to response SLA, notification channels, and escalation paths.
+
+### Step 2: Create RED Method Alerts
+Define rate, error, and duration alerts for application services.
+
+### Step 3: Create USE Method Alerts
+Define utilization, saturation, and error alerts for infrastructure resources.
+
+### Step 4: Add Business Alerts
+Create domain-specific alerts for order failures, payment delays, and other business metrics.
+
+### Step 5: Tune Thresholds
+Apply threshold tuning rules to balance detection speed against alert fatigue.
+
+### Step 6: Configure Notification Routing
+Map severity to notification channels with escalation matrix.
+
+### Step 7: Create Runbooks
+Every alert must have a documented runbook with diagnosis and resolution steps.
+
+## Rules
+
+- Every alert must be actionable — if no action can be taken, it is a dashboard metric, not an alert
+- No alert without a runbook — every alert routes to a document explaining diagnosis and fix
+- No duplicate alerts — group related alerts and suppress cascade alerts
+- Require minimum `for:` duration before firing to prevent flapping
+- Review and adjust thresholds monthly as part of seasonal tuning
+- Scheduled maintenance periods must automatically silence alerts
+- Alert labels must have bounded cardinality (<100 values)
+- P0 alerts go to phone + Slack + PagerDuty with immediate escalation
 
 ## Alert Severity
 

@@ -1,9 +1,22 @@
 ---
 name: dotnet-architecture
-description: C# .NET backend architecture — project structure, API design, middleware, DI, EF Core, configuration patterns.
+description: >
+  Use this skill when designing or reviewing C# .NET backend architecture — project structure, API design, middleware, DI, EF Core, configuration patterns. This skill enforces: Clean Architecture or Feature Slices, proper middleware ordering, DI lifetime rules, and standardized error handling. Do NOT use for: frontend architecture, database schema design, or DevOps pipeline configuration.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [backend, dotnet, csharp, phase-4]
 ---
 
 # C# .NET Architecture
+
+## Purpose
+Define and enforce .NET backend architecture, project structure, and configuration patterns.
 
 ## Agent Protocol
 
@@ -42,9 +55,12 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Project Structure Templates
+## Workflow
 
-### Clean Architecture (Vertical)
+### Step 1: Select Project Structure
+Choose between Clean Architecture (vertical slicing) or Feature Slices (folding) based on project scale.
+
+**Clean Architecture (Vertical)**
 
 ```
 src/
@@ -58,7 +74,7 @@ tests/
   YourApp.ArchTests/
 ```
 
-### Feature Slices (Folding)
+**Feature Slices (Folding)**
 
 ```
 src/
@@ -82,10 +98,9 @@ src/
 
 **Selection rule**: Clean Architecture for large projects (>50 endpoints) or multiple presentation layers. Feature Slices for medium projects where team ownership by feature is needed. Simple folder-per-controller for small APIs (<5 endpoints).
 
-## API Design Patterns
+### Step 2: Choose API Design Pattern
 
-### Controller-based API
-
+**Controller-based API**
 ```csharp
 [ApiController]
 [Route("api/v{version:apiVersion}/[controller]")]
@@ -96,11 +111,9 @@ public class OrdersController : ControllerBase
     public async Task<IActionResult> Get(Guid id, CancellationToken ct) { }
 }
 ```
-
 **When**: Complex APIs with versioning, authorization policies per endpoint, multiple response types, OpenAPI rich metadata.
 
-### Minimal API
-
+**Minimal API**
 ```csharp
 var app = builder.Build();
 app.MapGet("/api/orders/{id:guid}", async (Guid id, IMediator mediator, CancellationToken ct) =>
@@ -110,10 +123,10 @@ app.MapGet("/api/orders/{id:guid}", async (Guid id, IMediator mediator, Cancella
     return result.Match(Results.Ok, Results.NotFound);
 });
 ```
-
 **When**: Small to medium APIs, microservices, simple CRUD, DDD lite. Avoid when endpoint count >50 or complex authorization.
 
-## Middleware Pipeline (Order Matters)
+### Step 3: Configure Middleware Pipeline
+Order matters — incorrect ordering causes silent failures.
 
 ```csharp
 app.UseExceptionHandler();       // 1. Global error handling
@@ -126,7 +139,7 @@ app.UseRateLimiter();            // 7. Rate limiting
 app.MapControllers();            // 8. Endpoints
 ```
 
-## Dependency Injection Rules
+### Step 4: Register Dependencies with Correct Lifetimes
 
 | Component Type | Lifetime | Rule |
 |---|---|---|
@@ -137,9 +150,7 @@ app.MapControllers();            // 8. Endpoints
 | **Transient Services** | Transient | Lightweight, no shared state |
 | **MediatR** | Transient handlers | Each handler is transient |
 
-## Entity Framework Core
-
-### Configuration
+### Step 5: Set Up Entity Framework Core
 
 ```csharp
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -147,23 +158,18 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         x => x.MigrationsHistoryTable("__EFMigrationsHistory", "public")));
 ```
 
-### No-Repository Pattern (Recommended)
-
-EF Core DbContext IS the repository + Unit of Work. Wrapping it in a custom repository layer is unnecessary unless:
+**No-Repository Pattern (Recommended)**: EF Core DbContext IS the repository + Unit of Work. Wrapping it in a custom repository layer is unnecessary unless:
 - Testing requires mockable data access (use InMemory/TestContainers instead)
 - You need to restrict queries (specification pattern)
 - You are caching query results
 
-### Migration Strategy
-
+**Migration Strategy**:
 ```bash
 dotnet ef migrations add InitialCreate --project src/YourApp.Infrastructure
 dotnet ef database update --project src/YourApp.Api
 ```
 
-## Configuration
-
-### Options Pattern
+### Step 6: Configure Options Pattern
 
 ```csharp
 public class JwtOptions
@@ -181,10 +187,9 @@ builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptio
 | **IOptionsSnapshot<T>** | Scoped, reads per request | Config that changes at runtime |
 | **IOptionsMonitor<T>** | Singleton, but updated on config change | Hot-reload config |
 
-## Error Handling
+### Step 7: Implement Error Handling
 
-### ProblemDetails (RFC 7807)
-
+**ProblemDetails (RFC 7807)**
 ```csharp
 app.UseExceptionHandler(exceptionHandlerApp =>
     exceptionHandlerApp.Run(async context =>
@@ -201,9 +206,7 @@ app.UseExceptionHandler(exceptionHandlerApp =>
     }));
 ```
 
-### FluentValidation + MediatR Pipeline
-
-Automatically return 422 with validation errors:
+**FluentValidation + MediatR Pipeline** — Automatically return 422 with validation errors:
 ```csharp
 public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IRequest<TResponse>
@@ -218,6 +221,16 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 }
 ```
 
+## Rules
+- Use latest LTS .NET version unless specified otherwise.
+- DbContext is always scoped — never singleton.
+- No `new HttpClient()` — always use `IHttpClientFactory` or typed clients.
+- Error responses use ProblemDetails (RFC 7807) format.
+- FluentValidation with MediatR pipeline behavior for validation.
+- Configuration uses Options pattern with typed settings classes.
+- Middleware order follows the documented pipeline sequence.
+- Controllers only contain routing/HTTP concerns — all logic in handlers/services.
+
 ## References
 
 ### Reference Files
@@ -231,5 +244,4 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 - `backend/universal/testing/SKILL.md` — Testing strategies for .NET
 
 ## Handoff
-
 Hand off to `backend/dotnet/patterns/SKILL.md` for CQRS/MediatR, Result pattern, Pipeline behaviors. Hand off to `backend/universal/clean-architecture/SKILL.md` for architectural restructuring.

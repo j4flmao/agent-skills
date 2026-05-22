@@ -1,6 +1,6 @@
 # .codex/AGENTS.md -- j4flmao/skills
 
-Codex CLI project config for the agent skill suite. 160 skills, compressed output, stack-based routing.
+Codex CLI project config for the agent skill suite. 176 skills, compressed output, stack-based routing.
 
 ## Compress (ALWAYS)
 
@@ -40,6 +40,12 @@ dev-loop/    -> review, debug, refactor, git, security, performance, changelog, 
                pr-writer, dev-container, tech-debt, api-client
 management/  -> pm, ba, qa, qc, team-rules, security, pentesting, alerting,
                okr-kpi, sprint-retro, risk
+enterprise/  -> compliance-audit, multi-tenant, integration-patterns,
+               data-governance, sla-management, legacy-migration,
+               identity-provider, cost-governance
+product/     -> analytics, ab-testing, user-research, growth-engineering,
+               pricing-strategy, go-to-market, onboarding-flow,
+               feature-prioritization
 ```
 
 ### Stack detection
@@ -65,6 +71,6 @@ agent-skills/
   .gemini/           Gemini
   .cursor/           Cursor
   .codex/            Codex CLI (this file)
-  skills/            160 skills
+  skills/            176 skills
   bundles/           15 bundle definitions
 ```

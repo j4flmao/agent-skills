@@ -57,6 +57,8 @@ Answer exactly:
 - Process improvement: {code review check, lint rule, etc.}
 ```
 
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
 ## References
 No separate reference file — all debugging workflow is inline in this skill.
 

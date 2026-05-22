@@ -1,9 +1,24 @@
 ---
 name: mobile-networking
-description: Cross-platform mobile networking — REST clients, GraphQL, offline-first architecture, caching, retry, interceptors, pagination, background sync.
+description: >
+  Use this skill when the user asks about mobile networking, REST client, GraphQL,
+  offline-first, API caching, retry, pagination, background sync, or API
+  interceptors.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [mobile, networking, phase-4, universal]
 ---
 
 # Mobile Networking
+
+## Purpose
+Design mobile networking layers with offline-first architecture, caching strategy, retry logic, pagination, and authentication interceptors.
 
 ## Agent Protocol
 
@@ -24,8 +39,40 @@ A markdown document containing:
 - Offline-first data flow
 - Pagination approach
 
+### Response Format
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
+——
+
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Set Up HTTP Client
+Configure platform-specific client (Dio, Axios, Retrofit, URLSession) with base URL, timeouts, and default headers.
+
+### Step 2: Add Interceptors
+Implement auth token injection, retry on 401, request logging, and error transformation interceptors.
+
+### Step 3: Implement Offline-First Strategy
+Build cache-check-first flow: return cached data then refresh in background, with network failure fallback to cache.
+
+### Step 4: Implement Pagination
+Use cursor-based pagination with configurable page size, hasMore flag, and append behavior for infinite scroll.
+
+### Step 5: Configure Background Sync
+Queue failed write operations for retry when connectivity resumes, with conflict resolution strategy.
+
+## Rules
+
+- Network layer must be fully abstracted behind repository interfaces
+- Auth token refresh must be transparent — interceptors handle 401 → refresh → retry
+- Offline-first: always show cached data immediately, refresh in background
+- Pagination must track loading state per page, not globally
+- All network errors must be mapped to domain-specific error types
+- Cache staleness TTL must be configurable per data type
+- Retry with exponential backoff for transient failures (429, 503)
 
 ## REST Client Setup
 

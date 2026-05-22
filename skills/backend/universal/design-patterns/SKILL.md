@@ -1,9 +1,22 @@
 ---
 name: design-patterns
-description: GoF and enterprise design patterns with selection decision trees, applicability rules, and trade-off analysis.
+description: >
+  Use this skill when selecting or reviewing GoF and enterprise design patterns — creational, structural, behavioral. This skill enforces: pattern selection decision framework, trade-off analysis, anti-pattern rejection, and explicit elimination criteria for rejected candidates. Do NOT use for: framework-specific patterns, language-specific idioms, infrastructure patterns.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [backend, design-patterns, phase-2, universal]
 ---
 
 # Design Patterns
+
+## Purpose
+Guide pattern selection with decision trees, applicability rules, and trade-off analysis.
 
 ## Agent Protocol
 
@@ -35,8 +48,9 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Pattern Selection Decision Framework
+## Workflow
 
+### Step 1: Apply Pattern Selection Decision Framework
 Before selecting any pattern, answer three questions:
 
 1. **What is changing?** (identify the axis of change) → patterns encapsulate change
@@ -48,7 +62,7 @@ PROBLEM → Identify axis of change → Categorize (creational/structural/behavi
 Filter by binding time → Filter by scope → Apply trade-off matrix → Select
 ```
 
-## Creational Patterns
+### Step 2: Evaluate Creational Patterns
 
 | Pattern | Intent | Binding | Selection Trigger |
 |---|---|---|---|
@@ -58,19 +72,14 @@ Filter by binding time → Filter by scope → Apply trade-off matrix → Select
 | **Builder** | Construct complex objects step-by-step | Runtime | Object has many optional parameters, construction process should produce different representations |
 | **Prototype** | Clone existing instances | Runtime | Cost of creating new instance > cloning; object state is similar |
 
-### Selection Rules
+**Selection Rules**:
+- **Singleton**: Apply ONLY when you need controlled access to a single instance AND cannot use dependency injection to manage lifecycle. Never use for database connections in DI containers — let the container manage singletons.
+- **Factory Method**: Apply when a class cannot anticipate the type of objects it must create. Prefer over `Abstract Factory` when only one product family exists.
+- **Abstract Factory**: Apply when system must be configured with multiple families of products. Replace with simple factory + DI if product families do not grow.
+- **Builder**: Apply when object requires >4 constructor parameters OR when the same construction process can create different representations. Prefer over telescoping constructors.
+- **Prototype**: Apply when instantiation is expensive (database lookup, network call) and object state varies little between instances. Prefer `Factory Method` if object creation is not expensive.
 
-**Singleton**: Apply ONLY when you need controlled access to a single instance AND cannot use dependency injection to manage lifecycle. Never use for database connections in DI containers — let the container manage singletons.
-
-**Factory Method**: Apply when a class cannot anticipate the type of objects it must create. Prefer over `Abstract Factory` when only one product family exists.
-
-**Abstract Factory**: Apply when system must be configured with multiple families of products. Replace with simple factory + DI if product families do not grow.
-
-**Builder**: Apply when object requires >4 constructor parameters OR when the same construction process can create different representations. Prefer over telescoping constructors.
-
-**Prototype**: Apply when instantiation is expensive (database lookup, network call) and object state varies little between instances. Prefer `Factory Method` if object creation is not expensive.
-
-## Structural Patterns
+### Step 3: Evaluate Structural Patterns
 
 | Pattern | Intent | Selection Trigger |
 |---|---|---|
@@ -82,23 +91,16 @@ Filter by binding time → Filter by scope → Apply trade-off matrix → Select
 | **Flyweight** | Share fine-grained objects efficiently | Many similar objects, memory is concern |
 | **Proxy** | Surrogate controls access to another object | Need lazy loading, access control, logging, or remote access |
 
-### Selection Rules
+**Selection Rules**:
+- **Adapter**: Apply when integrating third-party library or legacy code. Distinguish class adapter (inheritance) vs object adapter (composition) — prefer object adapter.
+- **Bridge** vs **Strategy**: Bridge works at structure level (abstraction/implementation separation), Strategy at behavior level (algorithm selection). Bridge is broader.
+- **Composite**: Apply when client code treats leaf and container uniformly AND the structure is hierarchical. Violation = adding child management methods to leaf classes.
+- **Decorator** vs **Proxy**: Decorator adds behavior, Proxy controls access. Both share structure but differ in intent. Use Decorator when client should not know about decoration layer.
+- **Facade**: Apply when subsystem is complex, tightly coupled, or poorly documented. Facade is NOT a mediator — subsystems can still be accessed directly when needed.
+- **Flyweight**: ONLY apply when profiler confirms memory pressure from object count. The complexity cost is high. Premature flyweight is a known anti-pattern.
+- **Proxy**: Four variants — Virtual (lazy loading), Protection (access control), Remote (network proxy), Logging (audit). Choose variant based on cross-cutting concern.
 
-**Adapter**: Apply when integrating third-party library or legacy code. Distinguish class adapter (inheritance) vs object adapter (composition) — prefer object adapter.
-
-**Bridge** vs **Strategy**: Bridge works at structure level (abstraction/implementation separation), Strategy at behavior level (algorithm selection). Bridge is broader.
-
-**Composite**: Apply when client code treats leaf and container uniformly AND the structure is hierarchical. Violation = adding child management methods to leaf classes.
-
-**Decorator** vs **Proxy**: Decorator adds behavior, Proxy controls access. Both share structure but differ in intent. Use Decorator when client should not know about decoration layer.
-
-**Facade**: Apply when subsystem is complex, tightly coupled, or poorly documented. Facade is NOT a mediator — subsystems can still be accessed directly when needed.
-
-**Flyweight**: ONLY apply when profiler confirms memory pressure from object count. The complexity cost is high. Premature flyweight is a known anti-pattern.
-
-**Proxy**: Four variants — Virtual (lazy loading), Protection (access control), Remote (network proxy), Logging (audit). Choose variant based on cross-cutting concern.
-
-## Behavioral Patterns
+### Step 4: Evaluate Behavioral Patterns
 
 | Pattern | Intent | Selection Trigger |
 |---|---|---|
@@ -114,21 +116,15 @@ Filter by binding time → Filter by scope → Apply trade-off matrix → Select
 | **Template Method** | Define skeleton, let subclasses fill steps | Algorithm invariant steps, subclasses override variant steps |
 | **Visitor** | Separate algorithm from object structure | Many unrelated operations on stable object structure |
 
-### Selection Rules
+**Selection Rules**:
+- **Chain of Responsibility**: Apply when handler is unknown upfront AND there are 3+ handlers. Prefer over massive `if-else` chain. Set a chain length limit.
+- **Command**: Apply when you need undo/redo, operation queuing, or transactional behavior. Each command must expose `execute()`, `undo()` and a `CanExecute()` guard.
+- **Mediator** vs **Observer**: Mediator centralizes communication, Observer distributes it. Use Mediator when many-to-many relationships exist; use Observer for one-to-many.
+- **State** vs **Strategy**: State changes behavior automatically when internal state changes. Strategy requires client to swap algorithm. Both use composition but State has state transition logic.
+- **Template Method**: Apply when algorithm invariant steps are known and variant steps are few. Prefer Strategy when entire algorithm varies.
+- **Visitor**: Apply when object structure is stable (rarely changes) but operations on it change frequently. If structure changes often, Visitor becomes unmaintainable.
 
-**Chain of Responsibility**: Apply when handler is unknown upfront AND there are 3+ handlers. Prefer over massive `if-else` chain. Set a chain length limit.
-
-**Command**: Apply when you need undo/redo, operation queuing, or transactional behavior. Each command must expose `execute()`, `undo()` and a `CanExecute()` guard.
-
-**Mediator** vs **Observer**: Mediator centralizes communication, Observer distributes it. Use Mediator when many-to-many relationships exist; use Observer for one-to-many.
-
-**State** vs **Strategy**: State changes behavior automatically when internal state changes. Strategy requires client to swap algorithm. Both use composition but State has state transition logic.
-
-**Template Method**: Apply when algorithm invariant steps are known and variant steps are few. Prefer Strategy when entire algorithm varies.
-
-**Visitor**: Apply when object structure is stable (rarely changes) but operations on it change frequently. If structure changes often, Visitor becomes unmaintainable.
-
-## Anti-Patterns to Reject
+### Step 5: Reject Anti-Patterns
 
 | Anti-Pattern | Why | Replacement |
 |---|---|---|
@@ -137,6 +133,14 @@ Filter by binding time → Filter by scope → Apply trade-off matrix → Select
 | **Spaghetti Code** | No structure, GOTO-like logic | Decompose, apply patterns |
 | **Golden Hammer** | Pattern applied everywhere | Select pattern per problem |
 | **Premature Optimization** | Complex patterns before evidence | YAGNI, refactor when needed |
+
+## Rules
+- Always identify axis of change before selecting pattern.
+- Prefer composition over inheritance for structural patterns.
+- Singleton only when DI container cannot manage lifecycle.
+- Flyweight only when profiler confirms memory pressure.
+- Every pattern selection must document rejected alternatives with reasons.
+- No pattern is universally applicable — context determines fitness.
 
 ## References
 
@@ -150,5 +154,4 @@ Filter by binding time → Filter by scope → Apply trade-off matrix → Select
 - `backend/universal/microservices/SKILL.md` — Microservices-specific patterns
 
 ## Handoff
-
 Hand off to `backend/universal/microservices/SKILL.md` if distributed system patterns (saga, CQRS, event sourcing) are needed. Hand off to `backend/universal/oop-principles/SKILL.md` if foundational refactoring is required first.

@@ -1,9 +1,24 @@
 ---
 name: team-rules
-description: Team collaboration protocols — code review, branch strategy, PR templates, communication, incident response, RFC decision-making.
+description: >
+  Use this skill when the user asks about team rules, collaboration, code review,
+  branch strategy, PR templates, git flow, RFC process, incident response, on-call,
+  or decision making.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [management, team, phase-8]
 ---
 
 # Team Rules
+
+## Purpose
+Establish team collaboration protocols covering code review, branch strategy, communication, incident response, and decision-making processes.
 
 ## Agent Protocol
 
@@ -29,6 +44,8 @@ A markdown document containing:
 ### Response Format
 Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick. Output artifacts rendered as markdown.
 
+——
+
 ### Completion Criteria
 - All protocols are actionable (numbered steps, checklists)
 - Review criteria include clear Accept/Reject conditions
@@ -38,6 +55,45 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Establish Code Review Protocol
+Define review criteria checklist with accept/reject conditions, review process with required approvals, and max review time.
+
+### Step 2: Choose Branch Strategy
+Select trunk-based development (recommended) or GitFlow based on release requirements, with naming conventions and branch lifecycle.
+
+### Step 3: Set Up PR Template
+Standardize pull requests with summary, changes, testing checklist, and related issues.
+
+### Step 4: Establish Communication Protocols
+Define sync and async communication channels with response SLAs, meeting cadence, and agenda requirements.
+
+### Step 5: Implement On-call Rotation
+Set up weekly rotation with primary/secondary roles, alert acknowledgment SLAs, and handoff procedure.
+
+### Step 6: Define Incident Response
+Create 6-step response process (detect, acknowledge, assess, mitigate, resolve, post-mortem) with severity levels.
+
+### Step 7: Adopt RFC Decision-Making Process
+Use lazy consensus with 48-hour comment period for architecture decisions, tool selections, and process changes.
+
+### Step 8: Foster Knowledge Sharing
+Maintain documentation as code, monthly tech talks, pair programming, and ADR decision log.
+
+## Rules
+
+- Every PR must pass all checklist items before merging
+- CI must pass before review starts
+- At least one approval required from team member other than author
+- No force-push after review starts
+- Branch lifetime max 2 days — longer branches must use feature flags or be split
+- Main branch always deployable and protected with no direct pushes
+- PR open for max 24 hours before escalation
+- Standup: no problem-solving during standup
+- Every meeting must have a published agenda 24h before and a note-taker
+- RFC: lazy consensus — if no objections within 48 hours, proposal is accepted
 
 ## 1. Code Review Protocol
 

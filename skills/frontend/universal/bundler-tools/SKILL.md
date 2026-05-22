@@ -61,6 +61,8 @@ Build configuration with optimization strategy.
 Compression footer: frontend-bundler-tools/v1 | 4 sections | bundler: <selected> | size: <current>→<target>
 ```
 
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
 ### Completion Criteria
 - Dev server starts in < 2s (Vite) or < 10s (Webpack)
 - Production build produces optimized bundles with content hashes

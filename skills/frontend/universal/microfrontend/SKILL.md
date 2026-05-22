@@ -1,9 +1,24 @@
 ---
 name: microfrontend
-description: Microfrontend architecture patterns — Module Federation, Web Components, iframe integration, shared dependencies, cross-app communication.
+description: >
+  Use this skill when the user asks about microfrontend, Module Federation, Web
+  Components, iframe integration, shared dependencies, or cross-app communication
+  between frontend applications.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [frontend, microfrontend, phase-3, universal]
 ---
 
 # Microfrontend Architecture
+
+## Purpose
+Design microfrontend architectures with integration strategy, shared dependency management, and cross-app communication protocols.
 
 ## Agent Protocol
 
@@ -28,7 +43,9 @@ A markdown document containing:
 - Migration plan from monolith SPA
 
 ### Response Format
-Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick. If monolith SPA is appropriate, output `Monolith SPA recommended. Reason: [reason].` and stop.
+Produce the artifact directly. No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick. If monolith SPA is appropriate, output `Monolith SPA recommended. Reason: [reason].` and stop.
+
+——
 
 ### Completion Criteria
 - Integration method selected with comparison to alternatives
@@ -39,6 +56,40 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Assess Team and Architecture Context
+Determine number of teams, current architecture, frameworks, build tools, and deployment platform.
+
+### Step 2: Select Integration Pattern
+Choose between Module Federation, Web Components, iframe, or monolith SPA using the selection decision tree.
+
+### Step 3: Define Shared Dependency Strategy
+Specify singleton, shared, or standalone approach per dependency. React/ReactDOM must be singleton.
+
+### Step 4: Design Cross-App Communication
+Select methods: URL-based for navigation, shared state for auth, custom events for domain events, shared event bus for notifications.
+
+### Step 5: Configure Module Federation
+Set up host and remote configurations with appropriate exposes, remotes, and shared dependencies.
+
+### Step 6: Plan Deployment Pipeline
+Each microfrontend gets independent CI/CD with versioned remoteEntry.js and CDN deployment.
+
+### Step 7: Create Migration Plan
+Phase extraction: identify boundaries, extract shell, configure federation, extract features one by one, replace monolith.
+
+## Rules
+
+- Microfrontend overhead only justified at 3+ independent teams on the same product
+- React and react-dom MUST be singleton — two instances break hooks, context, and event system
+- Never share remoteEntry.js directly — use CDN with long cache and versioned paths
+- Group microfrontends by team ownership and deployment boundaries, not by component granularity
+- Every MFE owns its data domain — no shared database between frontends
+- Maintain a shared design system as a federated module for visual consistency
+- Enforce strict dependency graph to prevent circular shared dependencies
+- Use content hash or timestamp versioning on remoteEntry.js for cache busting
 
 ## Integration Patterns
 

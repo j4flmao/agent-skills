@@ -61,6 +61,8 @@ Data fetching architecture with query/mutation patterns and caching strategy.
 Compression footer: frontend-data-fetching/v1 | 4 sections | lib: <selected> | cache: <persisted|memory>
 ```
 
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
 ### Completion Criteria
 - All server data queries cached with appropriate staleTime
 - Mutations invalidate related queries or apply optimistic updates

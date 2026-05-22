@@ -1,9 +1,22 @@
 ---
 name: api-response
-description: Universal API response design — Response<T>, exception handling, error codes, pagination envelopes, standardized payload contracts.
+description: >
+  Use this skill when designing API response contracts — Response<T>, exception handling, error codes, pagination envelopes, standardized payload contracts. This skill enforces: uniform ApiResponse<T> envelope, UPPER_SNAKE_CASE error codes, pagination for list endpoints, ISO 8601 UTC timestamps. Do NOT use for: endpoint routing design, database schema, authentication flows.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [backend, api, response, phase-2, universal]
 ---
 
 # API Response Design
+
+## Purpose
+Define and enforce a universal API response contract with standardized envelopes, error codes, and pagination.
 
 ## Agent Protocol
 
@@ -37,11 +50,11 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Response Envelope
+## Workflow
 
-### Standard `Response<T>`
+### Step 1: Define Response Envelope
 
-Every API response MUST follow this envelope:
+**Standard `Response<T>`** — Every API response MUST follow this envelope:
 
 ```json
 {
@@ -77,10 +90,10 @@ Error response:
 }
 ```
 
-### Generic Type Definition
+### Step 2: Define Generic Type Definitions
 
+**TypeScript**
 ```typescript
-// TypeScript
 interface ApiResponse<T> {
   success: boolean;
   data: T | null;
@@ -107,8 +120,8 @@ interface ResponseMetadata {
 }
 ```
 
+**C#**
 ```csharp
-// C#
 public class ApiResponse<T>
 {
   public bool Success { get; init; }
@@ -127,8 +140,8 @@ public class ApiResponse<T>
 }
 ```
 
+**Go**
 ```go
-// Go
 type ApiResponse[T any] struct {
   Success  bool             `json:"success"`
   Data     *T               `json:"data"`
@@ -137,8 +150,7 @@ type ApiResponse[T any] struct {
 }
 ```
 
-## Pagination Envelope
-
+### Step 3: Define Pagination Envelope
 ```json
 {
   "success": true,
@@ -156,7 +168,7 @@ type ApiResponse[T any] struct {
 }
 ```
 
-## HTTP Status Code Mapping
+### Step 4: Map HTTP Status Codes
 
 | Operation | Success | Validation Error | Not Found | Conflict | Server Error |
 |---|---|---|---|---|---|
@@ -167,7 +179,7 @@ type ApiResponse[T any] struct {
 | PATCH (partial) | 200 | 422 | 404 | 409 | 500 |
 | DELETE | 204 | — | 404 | 409 | 500 |
 
-## Exception-to-Response Mapping
+### Step 5: Map Exceptions to Responses
 
 | Exception | Status | Error Code |
 |---|---|---|
@@ -181,8 +193,7 @@ type ApiResponse[T any] struct {
 | `TimeoutException` | 504 | `GATEWAY_TIMEOUT` |
 | `BusinessRuleException` | 400 | `BUSINESS_RULE_VIOLATION` |
 
-## Error Code Naming Convention
-
+### Step 6: Apply Error Code Naming Convention
 `{DOMAIN}_{ERROR}` in UPPER_SNAKE_CASE:
 - `ORDER_NOT_FOUND` — specific resource
 - `PAYMENT_DECLINED` — business logic failure
@@ -190,10 +201,10 @@ type ApiResponse[T any] struct {
 - `INSUFFICIENT_FUNDS` — business validation
 - `DUPLICATE_ENTRY` — uniqueness violation
 
-## Global Exception Handler
+### Step 7: Implement Global Exception Handler
 
+**.NET global exception filter/middleware**
 ```csharp
-// .NET global exception filter/middleware
 public class GlobalExceptionHandler : IMiddleware
 {
   public async Task InvokeAsync(HttpContext context, RequestDelegate next)
@@ -206,8 +217,8 @@ public class GlobalExceptionHandler : IMiddleware
 }
 ```
 
+**FastAPI exception handler**
 ```python
-# FastAPI exception handler
 @app.exception_handler(NotFoundException)
 async def not_found_handler(request, exc):
     return JSONResponse(
@@ -236,5 +247,4 @@ async def not_found_handler(request, exc):
 - `backend/universal/oop-principles/SKILL.md` — Exception design principles
 
 ## Handoff
-
 Hand off to `backend/universal/api-design/SKILL.md` for endpoint routing and resource design. Hand off to `backend/universal/oop-principles/SKILL.md` for exception class hierarchy design.

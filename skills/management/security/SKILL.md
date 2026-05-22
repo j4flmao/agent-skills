@@ -1,9 +1,24 @@
 ---
 name: security
-description: Security team operations — vulnerability management, security reviews, threat modeling, incident response, compliance.
+description: >
+  Use this skill when the user asks about security team operations, AppSec,
+  vulnerability management, security review, threat modeling, security incident
+  response, CVE, or compliance.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [management, security, phase-8]
 ---
 
 # Security Team
+
+## Purpose
+Define security team operations including vulnerability management, security review gates, incident response, tool selection, and compliance mapping.
 
 ## Agent Protocol
 
@@ -27,7 +42,9 @@ A markdown document containing:
 - Security champions program
 
 ### Response Format
-Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick.
+Produce the artifact directly. No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
+——
 
 ### Completion Criteria
 - Security review process includes gates per SDLC phase
@@ -38,6 +55,36 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Define Security Review Gates
+Map security activities to each SDLC phase from requirements through operations.
+
+### Step 2: Establish Vulnerability Severity Matrix
+Define CVSS ranges, remediation SLAs, and notification paths per severity level.
+
+### Step 3: Create Incident Response Plan
+Define severity levels, response team assignments, escalation paths, and the 6-step response flow.
+
+### Step 4: Select Tool Stack
+Choose SAST, DAST, SCA, secret detection, container scan, IaC scan, cloud security, and SIEM tools.
+
+### Step 5: Map Compliance Controls
+Map security controls to applicable compliance frameworks (SOC2, HIPAA, PCI-DSS, GDPR).
+
+### Step 6: Establish Security Champions Program
+Designate security champions in each dev team for embedded security practices.
+
+## Rules
+
+- Security review is required at every SDLC phase — no phase can be skipped
+- Critical vulnerabilities require CISO notification within 24 hours
+- Incident post-mortem must be completed within 48 hours and be blameless
+- All SAST findings in CI must be triaged before merge
+- Secrets detected in git must be rotated immediately, not just removed
+- Third-party dependencies must be scanned for CVEs on every build
+- Access to production secrets requires approval and is logged
 
 ## Security Review Gates
 

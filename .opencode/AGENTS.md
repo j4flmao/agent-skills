@@ -27,6 +27,8 @@ devops/      → docker, k8s, terraform, helm, github-actions, gitops, vault, aw
 dev-loop/    → review, debug, refactor, pr-writer, dev-container, tech-debt, api-client
 management/  → pm, ba, qa, qc, security, okr-kpi, sprint-retro, risk
 core/        → onboarding, context-compressor
+enterprise/  → compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance
+product/     → analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization
 ```
 
 ### Universal (backend + frontend)
@@ -44,5 +46,5 @@ animation/form/data-fetching/bundler/img-opt/theming → frontend/universal/
 
 ## Project
 ```
-skills/ (160) + bundles/ (15)
+skills/ (176) + bundles/ (15)
 ```

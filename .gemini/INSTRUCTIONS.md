@@ -10,7 +10,7 @@ Full prose: security. destructive.
 ## Routing
 No match → `skills/core/master-orchestrator/SKILL.md`. Detect stack first.
 
-### All Skills (160)
+### All Skills (176)
 ```
 core (4):       master-orchestrator, project-init, onboarding, context-compressor
 planning (8):   create-brief, create-prd, create-adr, create-tech-spec, create-story,
@@ -45,5 +45,11 @@ devops (26):    docker-patterns, cicd-pipeline, kubernetes-patterns, observabili
                 argo-cd, azure, gcp, chaos-engineering, service-mesh, finops, backup-dr, database-migration
 mgt (11):       pm, ba, qa, qc, team-rules, security, pentesting, alerting,
                 okr-kpi, sprint-retro, risk-management
+enterprise (8): compliance-audit, multi-tenant, integration-patterns,
+                data-governance, sla-management, legacy-migration,
+                identity-provider, cost-governance
+product (8):    analytics, ab-testing, user-research, growth-engineering,
+                pricing-strategy, go-to-market,
+                onboarding-flow, feature-prioritization
 ```
 Note: `-a` = architecture, `-p` = patterns.

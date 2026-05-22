@@ -678,6 +678,70 @@ State: User asks about context compression, token budget, summarize.
   Route: core-context-compressor
   Reason: "Context compression request."
 
+State: User asks about compliance, audit, SOC2, ISO27001, GDPR.
+  Route: enterprise-compliance-audit
+  Reason: "Compliance/audit request."
+
+State: User asks about multi-tenant, SaaS architecture, tenant isolation.
+  Route: enterprise-multi-tenant
+  Reason: "Multi-tenant request."
+
+State: User asks about enterprise integration, legacy integration, ESB.
+  Route: enterprise-integration-patterns
+  Reason: "Enterprise integration request."
+
+State: User asks about data governance, data classification, data lineage.
+  Route: enterprise-data-governance
+  Reason: "Data governance request."
+
+State: User asks about SLA, SLO, error budget, uptime, availability.
+  Route: enterprise-sla-management
+  Reason: "SLA management request."
+
+State: User asks about legacy migration, strangler fig, system migration.
+  Route: enterprise-legacy-migration
+  Reason: "Legacy migration request."
+
+State: User asks about identity provider, IdP, SSO, SAML, OIDC, Keycloak.
+  Route: enterprise-identity-provider
+  Reason: "Identity provider request."
+
+State: User asks about cost governance, cloud cost, FinOps, budget management.
+  Route: enterprise-cost-governance
+  Reason: "Cost governance request."
+
+State: User asks about product analytics, event tracking, funnel, retention.
+  Route: product-analytics
+  Reason: "Product analytics request."
+
+State: User asks about A/B test, split test, experiment, hypothesis testing.
+  Route: product-ab-testing
+  Reason: "A/B testing request."
+
+State: User asks about user research, user interview, persona, usability.
+  Route: product-user-research
+  Reason: "User research request."
+
+State: User asks about growth engineering, viral loop, PLG, activation.
+  Route: product-growth-engineering
+  Reason: "Growth engineering request."
+
+State: User asks about pricing, pricing strategy, monetization, tiers.
+  Route: product-pricing-strategy
+  Reason: "Pricing strategy request."
+
+State: User asks about go-to-market, GTM, product launch, market entry.
+  Route: product-go-to-market
+  Reason: "Go-to-market request."
+
+State: User asks about onboarding flow, user activation, product tour.
+  Route: product-onboarding-flow
+  Reason: "Onboarding flow request."
+
+State: User asks about prioritization, RICE, Kano, backlog prioritization.
+  Route: product-feature-prioritization
+  Reason: "Feature prioritization request."
+
 ### Step 3: Detect Backend Stack
 Read project files:
 - package.json: if @nestjs/core present -> nestjs

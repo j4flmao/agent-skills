@@ -1,9 +1,24 @@
 ---
 name: android
-description: Android native development — Kotlin, Jetpack Compose, MVVM+Clean, Coroutines+Flow, Hilt, Room, JUnit+Espresso.
+description: >
+  Use this skill when the user asks about Android development, Kotlin, Jetpack
+  Compose, Android architecture, MVVM, Clean Architecture, Room, Hilt, Retrofit,
+  or Android testing.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [mobile, android, phase-4]
 ---
 
 # Android Native
+
+## Purpose
+Implement Android native applications using Kotlin, Jetpack Compose, MVVM+Clean Architecture, Coroutines+Flow, Hilt DI, Room, and comprehensive testing.
 
 ## Agent Protocol
 
@@ -29,8 +44,40 @@ A markdown document containing:
 ### Response Format
 Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick.
 
+——
+
 ### Max Response Length
 4096 tokens
+
+## Workflow
+
+### Step 1: Set Up Project Structure
+Organize code with Clean Architecture layers: data, domain, ui, and di with feature-based packaging.
+
+### Step 2: Implement Domain Layer
+Define domain models, repository interfaces, and use cases independent of framework dependencies.
+
+### Step 3: Implement Data Layer
+Set up Room database with DAOs and entities, Retrofit API service, and repository implementations bridging local and remote sources.
+
+### Step 4: Configure Dependency Injection
+Set up Hilt modules for database, network, and repository bindings with appropriate scopes.
+
+### Step 5: Build UI with Jetpack Compose
+Create ViewModels with StateFlow, Compose screens with state collection, and handle loading/error/success states.
+
+### Step 6: Write Tests
+Cover domain use cases with JUnit + MockK unit tests and UI screens with Compose + Espresso UI tests.
+
+## Rules
+
+- Repository interfaces belong in domain layer; implementations in data layer
+- ViewModels expose state via StateFlow, never expose mutable state
+- Hilt modules must declare explicit scopes — no unscoped bindings for singletons
+- Room operations on IO thread — use coroutine dispatchers or Room's built-in threading
+- Compose screens collect StateFlow with collectAsStateWithLifecycle, not collectAsState
+- Use sealed classes for UI state to represent loading, success, and error
+- DI modules are in a separate package — never scatter provides across feature packages
 
 ## Project Structure
 

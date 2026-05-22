@@ -1,9 +1,22 @@
 ---
 name: microservices
-description: Microservices architecture patterns — decomposition, communication, data, discovery, observability, deployment.
+description: >
+  Use this skill when designing microservices architecture — decomposition, communication, data, discovery, observability, deployment. This skill enforces: bounded context decomposition, database-per-service ownership, saga patterns for distributed transactions, strangler fig migration. Do NOT use for: monolith application design, frontend architecture, single-service API design.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [backend, microservices, phase-2, universal]
 ---
 
 # Microservices Architecture
+
+## Purpose
+Guide microservices decomposition, communication patterns, data ownership, and migration strategies.
 
 ## Agent Protocol
 
@@ -38,16 +51,16 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Core Patterns
+## Workflow
 
-### 1. Decomposition
+### Step 1: Decompose by Bounded Context
 
 | Pattern | Approach | When |
 |---|---|---|
 | **Business Capability** | Map to business functions (orders, payments, shipping) | Clear organizational boundaries |
 | **Subdomain** | Follow DDD bounded contexts | Complex domain, multiple subdomains |
 | **Strangler Fig** | Incrementally replace monolith features | Brownfield migration |
-| **Self-contained Service** | Service owns its data, API, and logic | Least耦合, maximum autonomy |
+| **Self-contained Service** | Service owns its data, API, and logic | Least coupling, maximum autonomy |
 
 **Decomposition rules**:
 - Service must be independently deployable
@@ -55,7 +68,7 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 - Service must be team-sizable (2-pizza team)
 - Service communication must be via network calls (no in-process)
 
-### 2. Communication
+### Step 2: Select Communication Patterns
 
 | Pattern | Type | Consistency | Latency | Use Case |
 |---|---|---|---|---|
@@ -69,7 +82,7 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 - **Orchestration**: Central coordinator tells each service what to do. Higher complexity, easier to trace, single point of failure.
 - **Selection rule**: 3+ services in saga? Use orchestration. <3? Choreography is acceptable.
 
-### 3. Data
+### Step 3: Define Data Ownership
 
 | Pattern | Description | Trade-off |
 |---|---|---|
@@ -83,7 +96,7 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 - No shared database between services (exception: read-only reference data)
 - Data duplication is acceptable and expected (each service owns its view)
 
-### 4. Discovery
+### Step 4: Configure Service Discovery
 
 | Pattern | Description |
 |---|---|
@@ -93,7 +106,7 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 
 **Recommendation**: Kubernetes-native (DNS for discovery, Service for load balancing). Only use external registry if running outside K8s.
 
-### 5. Observability
+### Step 5: Implement Observability
 
 | Pillar | Tool (Language-agnostic) | What to Capture |
 |---|---|---|
@@ -102,7 +115,7 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 | **Tracing** | OpenTelemetry | Request path across services, span timings |
 | **Health Checks** | Readiness + Liveness probes | Can serve traffic? Is process alive? |
 
-### 6. Deployment
+### Step 6: Choose Deployment Strategy
 
 | Pattern | Strategy | Risk |
 |---|---|---|
@@ -111,7 +124,7 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 | **Rolling** | Incremental instance replacement | Low, slow |
 | **Feature Flags** | Toggle features independently | Low, requires flag infrastructure |
 
-### 7. Resilience
+### Step 7: Apply Resilience Patterns
 
 | Pattern | Description |
 |---|---|
@@ -122,7 +135,7 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 | **Fallback** | Degraded response when service unavailable |
 | **Rate Limiter** | Protect services from overload |
 
-### 8. Security
+### Step 8: Implement Security
 
 | Pattern | Description |
 |---|---|
@@ -131,7 +144,25 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 | **mTLS** | Mutual TLS for service mesh |
 | **Service Mesh** | Istio / Linkerd for transparent mTLS, policy |
 
-## Anti-Patterns
+### Step 9: Plan Migration from Monolith
+
+1. **Identify seams** — areas of code that change independently
+2. **Extract read model first** — read-only microservice serving cached/pre-computed data
+3. **Extract write model** — feature flag to route writes to new service, dual-write during transition
+4. **Strangler** — incrementally replace monolith endpoints with service endpoints
+5. **Monolith retirement** — when all features migrated, decommission monolith
+
+## Rules
+- No shared databases between services — ever.
+- Each service independently deployable with its own CI/CD.
+- 3+ services in a saga? Use orchestration.
+- Kubernetes-native discovery preferred over external registries.
+- OpenTelemetry for all observability pillars.
+- No service calls another service's database directly.
+- Strangler Fig for monolith migration — no big-bang rewrites.
+- Communication patterns documented per service pair with rationale.
+
+### Anti-Patterns
 
 | Anti-Pattern | Problem | Fix |
 |---|---|---|
@@ -140,14 +171,6 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 | **Too Fine-grained** | Excessive network calls, latency | Merge related services |
 | **God Service** | One service does everything | Decompose by capability |
 | **No Monitoring** | Cannot debug production issues | Add OpenTelemetry before going live |
-
-## Migration from Monolith
-
-1. **Identify seams** — areas of code that change independently
-2. **Extract read model first** — read-only microservice serving cached/pre-computed data
-3. **Extract write model** — feature flag to route writes to new service, dual-write during transition
-4. **Strangler** — incrementally replace monolith endpoints with service endpoints
-5. **Monolith retirement** — when all features migrated, decommission monolith
 
 ## References
 
@@ -163,5 +186,4 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 - `devops/containerization/SKILL.md` — Container and orchestration
 
 ## Handoff
-
 Hand off to `devops/containerization/SKILL.md` for container orchestration setup. Hand off to `backend/universal/event-driven/SKILL.md` for detailed event-driven patterns. Hand off to `backend/universal/database-patterns/SKILL.md` for data consistency strategies.

@@ -1,9 +1,22 @@
 ---
 name: terraform
-description: Terraform patterns — module structure, state management, remote backends, workspaces, CI/CD, policy as code.
+description: >
+  Use this skill when provisioning infrastructure with Terraform — module structure, state management, remote backends, workspaces, CI/CD integration, policy as code. This skill enforces: environment directory structure, remote backends with state locking, semantic versioning for modules, no hardcoded values, sensitive output marking, plan review before apply. Do NOT use for: configuration management (use Ansible), Kubernetes application deployment (use Helm), non-HashiCorp IaC tools.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [devops, terraform, phase-5]
 ---
 
 # Terraform Patterns
+
+## Purpose
+Define and enforce Terraform infrastructure provisioning patterns with module design, state management, and CI/CD integration.
 
 ## Agent Protocol
 
@@ -40,7 +53,9 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 ### Max Response Length
 4096 tokens
 
-## Repository Structure
+## Workflow
+
+### Step 1: Set Up Repository Structure
 
 ```
 terraform/
@@ -77,7 +92,7 @@ terraform/
 └── README.md
 ```
 
-## Backend Configuration
+### Step 2: Configure Backend
 
 ```hcl
 # environments/production/main.tf
@@ -93,7 +108,7 @@ terraform {
 }
 ```
 
-### Backend Selection
+**Backend Selection**
 
 | Backend | When |
 |---|---|
@@ -103,9 +118,9 @@ terraform {
 | **Terraform Cloud** | Team collaboration, remote runs |
 | **Consul** | Self-hosted, simple |
 
-## Module Design
+### Step 3: Design Modules
 
-### Module Structure
+**Module Structure**
 
 ```hcl
 # modules/eks/main.tf
@@ -133,7 +148,7 @@ resource "aws_eks_cluster" "this" {
 }
 ```
 
-### Module Output Convention
+**Module Output Convention**
 
 ```hcl
 output "cluster_endpoint" {
@@ -148,7 +163,7 @@ output "cluster_certificate" {
 }
 ```
 
-## Workspace Strategy
+### Step 4: Define Workspace Strategy
 
 | Strategy | When | Structure |
 |---|---|---|
@@ -158,7 +173,7 @@ output "cluster_certificate" {
 
 **Rule**: Prefer directory per environment for production workloads. Workspaces for development/testing.
 
-## CI/CD Pipeline
+### Step 5: Integrate CI/CD Pipeline
 
 ```yaml
 # .github/workflows/terraform.yml
@@ -189,7 +204,7 @@ jobs:
         run: terraform apply tfplan
 ```
 
-## Policy as Code (OPA/Rego)
+### Step 6: Apply Policy as Code (OPA/Rego)
 
 ```rego
 # policies/required_tags.rego
@@ -203,7 +218,7 @@ deny[msg] {
 }
 ```
 
-## Secret Management
+### Step 7: Manage Secrets
 
 | Method | Tool | When |
 |---|---|---|
@@ -219,6 +234,7 @@ deny[msg] {
 - `terraform plan` output must be reviewed before `apply` in CI.
 - No hardcoded values in modules — all configurable via variables.
 - Sensitive outputs marked with `sensitive = true`.
+- Directory per environment for production; workspaces for development/testing.
 
 ## References
 
