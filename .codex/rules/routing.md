@@ -1,4 +1,4 @@
-# Routing -- 109 skills
+# Routing -- 160 skills
 
 ## Entry
 
@@ -58,14 +58,14 @@ planning -> backend -> frontend -> mobile -> dev-loop -> devops -> management
 
 | Phase | Skills |
 |-------|--------|
-| core (2) | master-orchestrator, project-init |
-| planning (5) | create-brief, create-prd, create-adr, create-tech-spec, create-story |
+| core (4) | master-orchestrator, project-init, onboarding, context-compressor |
+| planning (8) | create-brief, create-prd, create-adr, create-tech-spec, create-story, create-roadmap, create-pitch-deck, market-analysis |
 | backend-stack (13) | nestjs, nodejs, elysia, golang, rust, python-fastapi, python-django, spring-boot, dotnet, rails, php-pure, php-laravel, php-zend |
-| backend-universal (17) | oop-principles, design-patterns, microservices, clean-architecture, api-design, api-response, database-patterns, auth-patterns, event-driven, testing, grpc-patterns, websocket-patterns, message-queue, caching, rate-limiting, load-testing, api-gateway |
-| frontend-stack (6) | react, react-nextjs, vue, vue-nuxt, angular, sveltekit |
-| frontend-universal (11) | patterns, state-management, accessibility, design-system, performance, testing, microfrontend, tailwind-css, storybook, pwa, seo |
-| mobile-stack (4) | ios, android, flutter, react-native |
-| mobile-universal (10) | patterns, testing, performance, security, networking, storage, deployment, push-notifications, in-app-purchase, crash-reporting |
-| dev-loop (8) | code-review, debugging-strategy, refactor-guide, git-workflow, security-auditor, performance-profiler, changelog-generator, readme-writer |
-| devops (18) | docker-patterns, cicd-pipeline, kubernetes-patterns, observability, helm-patterns, terraform, ansible, jenkins, longhorn, monitoring, github-actions, gitops, vault, aws, serverless, monorepo, dependency-management, api-documentation |
-| management (8) | pm, ba, qa, qc, team-rules, security, pentesting, alerting |
+| backend-universal (25) | oop-principles, design-patterns, microservices, clean-architecture, api-design, api-response, database-patterns, auth-patterns, event-driven, testing, grpc-patterns, websocket-patterns, message-queue, caching, rate-limiting, load-testing, api-gateway, graphql-patterns, background-jobs, search-patterns, data-streaming, file-storage, feature-flags, internationalization, structured-logging |
+| frontend-stack (14) | react, react-nextjs, vue, vue-nuxt, angular, sveltekit, remix-architecture, remix-patterns, astro-architecture, solidjs-architecture, solidjs-patterns, qwik-architecture, svelte-architecture, svelte-patterns |
+| frontend-universal (17) | patterns, state-management, accessibility, design-system, performance, testing, microfrontend, tailwind-css, storybook, pwa, seo, animation, form-handling, data-fetching, bundler-tools, image-optimization, theming |
+| mobile-stack (7) | ios, android, flutter, react-native, kotlin-multiplatform, ionic-capacitor, dotnet-maui |
+| mobile-universal (16) | patterns, testing, performance, security, networking, storage, deployment, push-notifications, in-app-purchase, crash-reporting, deep-linking, offline-first, biometrics, map-location, camera-media, analytics |
+| dev-loop (12) | code-review, debugging-strategy, refactor-guide, git-workflow, security-auditor, performance-profiler, changelog-generator, readme-writer, pr-writer, dev-container, tech-debt-tracker, api-client-generator |
+| devops (26) | docker-patterns, cicd-pipeline, kubernetes-patterns, observability, helm-patterns, terraform, ansible, jenkins, longhorn, monitoring, github-actions, gitops, vault, aws, serverless, monorepo, dependency-management, api-documentation, argo-cd, azure, gcp, chaos-engineering, service-mesh, finops, backup-dr, database-migration |
+| management (11) | pm, ba, qa, qc, team-rules, security, pentesting, alerting, okr-kpi, sprint-retro, risk-management |

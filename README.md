@@ -1,6 +1,6 @@
 # @j4flmao/agent-skills
 
-105 agent skills for software development — planning, backend, frontend, mobile, devops, management. Each skill is a `SKILL.md` defining triggers, rules, and response format.
+160 agent skills for software development — planning, backend, frontend, mobile, devops, management. Each skill is a `SKILL.md` defining triggers, rules, and response format.
 
 ## Installation
 
@@ -54,7 +54,7 @@ cp -r ~/skills/skills/devops/docker-patterns /path/to/project/skills/
 
 ```bash
 # Requires the repo to be pushed to GitHub
-npx skills add j4flmao/agent-skills            # all 109 skills
+npx skills add j4flmao/agent-skills            # all 160 skills
 npx skills add j4flmao/agent-skills --bundle backend-only
 npx skills add j4flmao/agent-skills -g          # global (every project)
 ```
@@ -67,21 +67,21 @@ npx skills add j4flmao/agent-skills --bundle <name>
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| `fullstack-nestjs-react` | 59 | NestJS + React |
-| `fullstack-golang-vue` | 59 | Go + Vue |
-| `fullstack-rust-angular` | 59 | Rust + Angular |
-| `fullstack-dotnet-react` | 59 | .NET + React |
-| `fullstack-nodejs-react` | 59 | Node.js + React |
-| `fullstack-elysia-react` | 59 | ElysiaJS + React |
-| `fullstack-rails-svelte` | 57 | Rails + SvelteKit |
-| `backend-only` | 61 | Backend only |
-| `frontend-only` | 32 | Frontend only |
-| `devops-only` | 23 | DevOps only |
-| `management-only` | 8 | Management only |
-| `mobile-ios` | 35 | iOS + universal mobile skills + deployment |
-| `mobile-android` | 35 | Android + universal mobile skills + deployment |
-| `mobile-flutter` | 42 | Flutter + universal mobile skills + deployment |
-| `mobile-react-native` | 42 | React Native + universal mobile skills + deployment |
+| `fullstack-nestjs-react` | 88 | NestJS + React |
+| `fullstack-golang-vue` | 88 | Go + Vue |
+| `fullstack-rust-angular` | 88 | Rust + Angular |
+| `fullstack-dotnet-react` | 88 | .NET + React |
+| `fullstack-nodejs-react` | 88 | Node.js + React |
+| `fullstack-elysia-react` | 88 | ElysiaJS + React |
+| `fullstack-rails-svelte` | 86 | Rails + SvelteKit |
+| `backend-only` | 90 | Backend only |
+| `frontend-only` | 52 | Frontend only |
+| `devops-only` | 31 | DevOps only |
+| `management-only` | 11 | Management only |
+| `mobile-ios` | 54 | iOS + universal mobile skills + deployment |
+| `mobile-android` | 54 | Android + universal mobile skills + deployment |
+| `mobile-flutter` | 61 | Flutter + universal mobile skills + deployment |
+| `mobile-react-native` | 61 | React Native + universal mobile skills + deployment |
 
 ## How Skills Work
 
@@ -108,17 +108,17 @@ No keyword match? Agent routes through `master-orchestrator`, detects the projec
 
 | Phase | Skills |
 |-------|--------|
-| **0 — Core** | `master-orchestrator`, `project-init` |
-| **1 — Planning** | `create-brief`, `create-prd`, `create-adr`, `create-tech-spec`, `create-story` |
-| **2 — Backend Universal** | `oop-principles`, `design-patterns`, `microservices`, `clean-architecture`, `api-design`, `api-response`, `database-patterns`, `auth-patterns`, `event-driven`, `backend-testing`, `grpc-patterns`, `websocket-patterns`, `message-queue`, `caching`, `rate-limiting`, `load-testing` |
+| **0 — Core** | `master-orchestrator`, `project-init`, `onboarding`, `context-compressor` |
+| **1 — Planning** | `create-brief`, `create-prd`, `create-adr`, `create-tech-spec`, `create-story`, `create-roadmap`, `create-pitch-deck`, `market-analysis` |
+| **2 — Backend Universal** | `oop-principles`, `design-patterns`, `microservices`, `clean-architecture`, `api-design`, `api-response`, `database-patterns`, `auth-patterns`, `event-driven`, `backend-testing`, `grpc-patterns`, `websocket-patterns`, `message-queue`, `caching`, `rate-limiting`, `load-testing`, `api-gateway`, `graphql-patterns`, `background-jobs`, `search-patterns`, `data-streaming`, `file-storage`, `feature-flags`, `internationalization`, `structured-logging` |
 | **2b — Stack Backend** | `nestjs-a/p`, `nodejs-a/p`, `elysia-a/p`, `golang-a/p`, `rust-a/p`, `python-fastapi`, `python-django`, `spring-boot-a`, `dotnet-a/p`, `rails` |
-| **3 — Frontend Universal** | `design-system`, `state-management`, `performance`, `accessibility`, `frontend-testing`, `patterns`, `microfrontend`, `tailwind-css`, `storybook`, `pwa`, `seo` |
-| **3b — Stack Frontend** | `react-a`, `react-nextjs`, `vue-a`, `vue-nuxt`, `angular-a/p`, `sveltekit` |
-| **4 — Dev Loop** | `code-review`, `debugging-strategy`, `refactor-guide`, `git-workflow`, `security-auditor`, `performance-profiler`, `changelog-generator`, `readme-writer` |
-| **5 — DevOps** | `docker-patterns`, `cicd-pipeline`, `kubernetes-patterns`, `observability`, `helm-patterns`, `terraform`, `ansible`, `jenkins`, `longhorn`, `monitoring`, `github-actions`, `gitops`, `vault`, `aws`, `serverless`, `monorepo`, `dependency-management`, `api-documentation` |
-| **6 — Management** | `pm`, `ba`, `qa`, `qc`, `team-rules`, `security`, `pentesting`, `alerting` |
-| **7 — Mobile Stacks** | `ios`, `android`, `flutter`, `react-native` |
-| **7b — Mobile Universal** | `mobile-patterns`, `mobile-testing`, `mobile-performance`, `mobile-security`, `mobile-networking`, `mobile-storage`, `mobile-deployment`, `push-notifications`, `in-app-purchase`, `crash-reporting` |
+| **3 — Frontend Universal** | `design-system`, `state-management`, `performance`, `accessibility`, `frontend-testing`, `patterns`, `microfrontend`, `tailwind-css`, `storybook`, `pwa`, `seo`, `animation`, `form-handling`, `data-fetching`, `bundler-tools`, `image-optimization`, `theming` |
+| **3b — Stack Frontend** | `react-a`, `react-nextjs`, `vue-a`, `vue-nuxt`, `angular-a/p`, `sveltekit`, `remix-a/p`, `astro-a`, `solidjs-a/p`, `qwik-a`, `svelte-a/p` |
+| **4 — Dev Loop** | `code-review`, `debugging-strategy`, `refactor-guide`, `git-workflow`, `security-auditor`, `performance-profiler`, `changelog-generator`, `readme-writer`, `pr-writer`, `dev-container`, `tech-debt-tracker`, `api-client-generator` |
+| **5 — DevOps** | `docker-patterns`, `cicd-pipeline`, `kubernetes-patterns`, `observability`, `helm-patterns`, `terraform`, `ansible`, `jenkins`, `longhorn`, `monitoring`, `github-actions`, `gitops`, `vault`, `aws`, `serverless`, `monorepo`, `dependency-management`, `api-documentation`, `argo-cd`, `azure`, `gcp`, `chaos-engineering`, `service-mesh`, `finops`, `backup-dr`, `database-migration` |
+| **6 — Management** | `pm`, `ba`, `qa`, `qc`, `team-rules`, `security`, `pentesting`, `alerting`, `okr-kpi`, `sprint-retro`, `risk-management` |
+| **7 — Mobile Stacks** | `ios`, `android`, `flutter`, `react-native`, `kotlin-multiplatform`, `ionic-capacitor`, `dotnet-maui` |
+| **7b — Mobile Universal** | `mobile-patterns`, `mobile-testing`, `mobile-performance`, `mobile-security`, `mobile-networking`, `mobile-storage`, `mobile-deployment`, `push-notifications`, `in-app-purchase`, `crash-reporting`, `deep-linking`, `offline-first`, `biometrics`, `map-location`, `camera-media`, `analytics` |
 
 Mobile universal skills apply across all platforms: patterns, testing, performance, security, networking, storage, deployment, push-notifications, in-app-purchase, crash-reporting.
 
@@ -160,24 +160,27 @@ Agent config files contain the compression rules:
 ├── .windsurf/        Windsurf
 ├── docs/             quickstart, skill-template, team-guide, enterprise-guide, agent-reference
 ├── skills/
-│   ├── core/         2 skills
-│   ├── planning/     5 skills
-│   ├── backend/      30 skills (13 stacks + 17 universal)
-│   ├── frontend/     17 skills (4 stacks + 11 universal)
+│   ├── core/         4 skills
+│   ├── planning/     8 skills
+│   ├── backend/      38 skills (13 stacks + 25 universal)
+│   ├── frontend/     25 skills (8 stacks + 17 universal)
 │   ├── mobile/
 │   │   ├── ios/           iOS native
 │   │   ├── android/       Android native
 │   │   ├── flutter/       Flutter
 │   │   ├── react-native/  React Native
-│   │   └── universal/     10 skills
-│   ├── dev-loop/     8 skills
-│   ├── devops/       18 skills
-│   └── management/   8 skills
+│   │   ├── kotlin-multiplatform/  KMP
+│   │   ├── ionic-capacitor/       Ionic/Capacitor
+│   │   ├── dotnet-maui/           .NET MAUI
+│   │   └── universal/     16 skills
+│   ├── dev-loop/     12 skills
+│   ├── devops/       26 skills
+│   └── management/   11 skills
 └── bundles/
     └── bundle-definitions.json
 ```
 
-Total: **109 SKILL.md** + **254 reference .md files** + **docs/ + agent configs** = **365+ files**.
+Total: **160 SKILL.md** + **348 reference .md files** + **docs/ + agent configs** = **505+ files**.
 
 ## License
 

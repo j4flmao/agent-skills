@@ -1,6 +1,6 @@
 # .codex/AGENTS.md -- j4flmao/skills
 
-Codex CLI project config for the agent skill suite. 109 skills, compressed output, stack-based routing.
+Codex CLI project config for the agent skill suite. 160 skills, compressed output, stack-based routing.
 
 ## Compress (ALWAYS)
 
@@ -19,21 +19,27 @@ Phase order: planning -> backend -> frontend -> mobile -> dev-loop -> devops -> 
 ### Quick map
 
 ```
-planning/    -> brief, prd, adr, tech spec, story
+planning/    -> brief, prd, adr, tech spec, story, roadmap, pitch-deck, market-analysis
 backend/     -> nestjs, nodejs, elysia, go, rust, python, spring, dotnet, rails, php-pure, php-laravel, php-zend
                universal: oop, api-design, api-response, database, auth, testing,
-               grpc, websocket, message-queue, caching, rate-limiting, load-testing, api-gateway
-frontend/    -> react, nextjs, vue, nuxt, angular, sveltekit
+               grpc, websocket, message-queue, caching, rate-limiting, load-testing, api-gateway,
+               graphql, bg-jobs, search, streaming, file-storage, feature-flags, i18n, logging
+frontend/    -> react, nextjs, vue, nuxt, angular, sveltekit,
+               remix, astro, solidjs, qwik, svelte-core
                universal: state, a11y, design-system, performance, testing, microfrontend,
-               tailwind, storybook, pwa, seo
-mobile/      -> ios, android, flutter, react-native
+               tailwind, storybook, pwa, seo, animation, form, data-fetching, bundler, img-opt, theming
+mobile/      -> ios, android, flutter, react-native, kmp, ionic-capacitor, dotnet-maui
                universal: patterns, testing, performance, security, networking, storage, deployment,
-               push-notifications, in-app-purchase, crash-reporting
+               push-notifications, in-app-purchase, crash-reporting,
+               deep-linking, offline-first, biometrics, map-location, camera-media, analytics
 devops/      -> docker, k8s, terraform, helm, ansible, jenkins, longhorn, monitoring,
                github-actions, gitops, vault, aws, serverless, monorepo,
-               dependency-management, api-documentation
-dev-loop/    -> review, debug, refactor, git, security, performance, changelog, readme
-management/  -> pm, ba, qa, qc, team-rules, security, pentesting, alerting
+               dependency-management, api-documentation,
+               argo-cd, azure, gcp, chaos, service-mesh, finops, backup-dr, db-migration
+dev-loop/    -> review, debug, refactor, git, security, performance, changelog, readme,
+               pr-writer, dev-container, tech-debt, api-client
+management/  -> pm, ba, qa, qc, team-rules, security, pentesting, alerting,
+               okr-kpi, sprint-retro, risk
 ```
 
 ### Stack detection
@@ -59,6 +65,6 @@ agent-skills/
   .gemini/           Gemini
   .cursor/           Cursor
   .codex/            Codex CLI (this file)
-  skills/            109 skills
+  skills/            160 skills
   bundles/           15 bundle definitions
 ```

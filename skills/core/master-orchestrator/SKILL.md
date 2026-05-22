@@ -486,6 +486,198 @@ State: User says init, scaffold, new project, start fresh, project setup.
   Route: project-init
   Reason: "Project initialization request."
 
+State: User asks about GraphQL, Apollo, schema design, resolver patterns.
+  Route: backend-graphql-patterns
+  Reason: "GraphQL request."
+
+State: User asks about background jobs, task queues, workers, scheduled tasks.
+  Route: backend-background-jobs
+  Reason: "Background job request."
+
+State: User asks about search, Elasticsearch, Meilisearch, search indexing.
+  Route: backend-search-patterns
+  Reason: "Search request."
+
+State: User asks about data streaming, Kafka, stream processing, event streaming.
+  Route: backend-data-streaming
+  Reason: "Data streaming request."
+
+State: User asks about file storage, object storage, S3, file upload.
+  Route: backend-file-storage
+  Reason: "File storage request."
+
+State: User asks about feature flags, feature toggles, canary release, gradual rollout.
+  Route: backend-feature-flags
+  Reason: "Feature flag request."
+
+State: User asks about i18n, internationalization, localization, translations.
+  Route: backend-internationalization
+  Reason: "Internationalization request."
+
+State: User asks about logging, structured logging, JSON logging, log shipping.
+  Route: backend-structured-logging
+  Reason: "Structured logging request."
+
+State: User asks about Remix, Remix routing, Remix loaders/actions.
+  Route: frontend-remix-architecture or frontend-remix-patterns
+  Reason: "Remix stack request."
+
+State: User asks about Astro, Astro islands, content collections.
+  Route: frontend-astro-architecture
+  Reason: "Astro stack request."
+
+State: User asks about SolidJS, Solid signals, SolidJS reactivity.
+  Route: frontend-solidjs-architecture or frontend-solidjs-patterns
+  Reason: "SolidJS stack request."
+
+State: User asks about Qwik, Qwik resumable, Qwik City.
+  Route: frontend-qwik-architecture
+  Reason: "Qwik stack request."
+
+State: User asks about Svelte core, Svelte runes, Svelte 5.
+  Route: frontend-svelte-architecture or frontend-svelte-patterns
+  Reason: "Svelte core request."
+
+State: User asks about animation, motion, Framer Motion, GSAP.
+  Route: frontend-animation
+  Reason: "Animation request."
+
+State: User asks about forms, form validation, React Hook Form.
+  Route: frontend-form-handling
+  Reason: "Form handling request."
+
+State: User asks about data fetching, TanStack Query, SWR, server state.
+  Route: frontend-data-fetching
+  Reason: "Data fetching request."
+
+State: User asks about bundler, Vite, Webpack, build tools.
+  Route: frontend-bundler-tools
+  Reason: "Bundler/tools request."
+
+State: User asks about image optimization, responsive images, image CDN.
+  Route: frontend-image-optimization
+  Reason: "Image optimization request."
+
+State: User asks about theming, dark mode, design tokens.
+  Route: frontend-theming
+  Reason: "Theming request."
+
+State: User asks about Kotlin Multiplatform, KMP, Compose Multiplatform.
+  Route: mobile-kotlin-multiplatform
+  Reason: "KMP request."
+
+State: User asks about Ionic, Capacitor, hybrid mobile.
+  Route: mobile-ionic-capacitor
+  Reason: "Ionic/Capacitor request."
+
+State: User asks about .NET MAUI, MAUI app, Xamarin.
+  Route: mobile-dotnet-maui
+  Reason: ".NET MAUI request."
+
+State: User asks about deep linking, universal links, app links.
+  Route: mobile-deep-linking
+  Reason: "Deep linking request."
+
+State: User asks about offline-first, offline sync, connectivity.
+  Route: mobile-offline-first
+  Reason: "Offline-first request."
+
+State: User asks about biometrics, Face ID, fingerprint, local auth.
+  Route: mobile-biometrics
+  Reason: "Biometrics request."
+
+State: User asks about maps, location, GPS, map integration.
+  Route: mobile-map-location
+  Reason: "Map/location request."
+
+State: User asks about camera, photo, video, media capture.
+  Route: mobile-camera-media
+  Reason: "Camera/media request."
+
+State: User asks about analytics, event tracking, Firebase Analytics, telemetry.
+  Route: mobile-analytics
+  Reason: "Analytics request."
+
+State: User asks about ArgoCD, GitOps, ArgoCD sync.
+  Route: devops-argo-cd
+  Reason: "ArgoCD/GitOps request."
+
+State: User asks about Azure, Microsoft Azure, AKS.
+  Route: devops-azure
+  Reason: "Azure request."
+
+State: User asks about GCP, Google Cloud, GKE.
+  Route: devops-gcp
+  Reason: "GCP request."
+
+State: User asks about chaos engineering, resilience testing, fault injection.
+  Route: devops-chaos-engineering
+  Reason: "Chaos engineering request."
+
+State: User asks about service mesh, Istio, Linkerd, mTLS.
+  Route: devops-service-mesh
+  Reason: "Service mesh request."
+
+State: User asks about FinOps, cloud cost, cost optimization.
+  Route: devops-finops
+  Reason: "FinOps request."
+
+State: User asks about backup, disaster recovery, DR plan.
+  Route: devops-backup-dr
+  Reason: "Backup/DR request."
+
+State: User asks about database migration, schema migration, Flyway, Liquibase.
+  Route: devops-database-migration
+  Reason: "Database migration request."
+
+State: User asks about PR description, pull request, write PR.
+  Route: dev-loop-pr-writer
+  Reason: "PR writer request."
+
+State: User asks about dev container, devcontainer, dev environment.
+  Route: dev-loop-dev-container
+  Reason: "Dev container request."
+
+State: User asks about tech debt, technical debt, code debt.
+  Route: dev-loop-tech-debt-tracker
+  Reason: "Tech debt tracker request."
+
+State: User asks about API client, curl command, HTTP request generation.
+  Route: dev-loop-api-client
+  Reason: "API client request."
+
+State: User asks about OKR, KPI, goals, key results.
+  Route: management-okr-kpi
+  Reason: "OKR/KPI request."
+
+State: User asks about sprint retro, retrospective, retro.
+  Route: management-sprint-retro
+  Reason: "Sprint retro request."
+
+State: User asks about risk management, risk register, risk assessment.
+  Route: management-risk-management
+  Reason: "Risk management request."
+
+State: User asks about roadmap, product roadmap, feature roadmap.
+  Route: planning-create-roadmap
+  Reason: "Roadmap request."
+
+State: User asks about pitch deck, investor pitch, fundraising.
+  Route: planning-create-pitch-deck
+  Reason: "Pitch deck request."
+
+State: User asks about market analysis, competitive analysis, market sizing.
+  Route: planning-market-analysis
+  Reason: "Market analysis request."
+
+State: User asks about onboarding, new developer setup, getting started.
+  Route: core-onboarding
+  Reason: "Onboarding request."
+
+State: User asks about context compression, token budget, summarize.
+  Route: core-context-compressor
+  Reason: "Context compression request."
+
 ### Step 3: Detect Backend Stack
 Read project files:
 - package.json: if @nestjs/core present -> nestjs
