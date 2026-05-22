@@ -742,6 +742,170 @@ State: User asks about prioritization, RICE, Kano, backlog prioritization.
   Route: product-feature-prioritization
   Reason: "Feature prioritization request."
 
+State: User asks about AI, LLM, prompt engineering, RAG, vector database.
+  Route: ai-prompt-engineering
+  Reason: "AI/prompt engineering request."
+
+State: User asks about RAG, retrieval augmented generation, chunking.
+  Route: ai-rag-patterns
+  Reason: "RAG request."
+
+State: User asks about LLMOps, model serving, fine-tuning, token cost.
+  Route: ai-llm-ops
+  Reason: "LLM Ops request."
+
+State: User asks about vector database, Pinecone, Chroma, Qdrant, Milvus.
+  Route: ai-vector-databases
+  Reason: "Vector database request."
+
+State: User asks about AI agent, agentic, function calling, LangChain, CrewAI.
+  Route: ai-ai-agents
+  Reason: "AI agent request."
+
+State: User asks about AI evaluation, LLM eval, RAGAS, hallucination test.
+  Route: ai-ai-evals
+  Reason: "AI evaluation request."
+
+State: User asks about SAST, DAST, static analysis, Semgrep, SonarQube, code scanning.
+  Route: security-sast-dast
+  Reason: "SAST/DAST request."
+
+State: User asks about SBOM, software bill of materials, supply chain security.
+  Route: security-sbom
+  Reason: "SBOM request."
+
+State: User asks about secrets management, secret scanning, GitLeaks, vault.
+  Route: security-secrets-management
+  Reason: "Secrets management request."
+
+State: User asks about container security, image scanning, Trivy, admission control.
+  Route: security-container-security
+  Reason: "Container security request."
+
+State: User asks about API security, OWASP API top 10, rate limiting.
+  Route: security-api-security
+  Reason: "API security request."
+
+State: User asks about ETL, data pipeline, Airflow, dbt, data transformation.
+  Route: data-etl-pipeline
+  Reason: "ETL pipeline request."
+
+State: User asks about data warehouse, Snowflake, BigQuery, Redshift, dimensional model.
+  Route: data-data-warehouse
+  Reason: "Data warehouse request."
+
+State: User asks about stream processing, Kafka, Flink, real-time data.
+  Route: data-streaming
+  Reason: "Streaming request."
+
+State: User asks about BI, dashboard, Metabase, Superset, Looker.
+  Route: data-bi-tools
+  Reason: "BI tools request."
+
+State: User asks about data quality, Great Expectations, data validation, data contract.
+  Route: data-data-quality
+  Reason: "Data quality request."
+
+State: User asks about design system, design tokens, Storybook, Figma.
+  Route: design-design-systems
+  Reason: "Design system request."
+
+State: User asks about UX research, user research, usability testing, persona.
+  Route: design-ux-research
+  Reason: "UX research request."
+
+State: User asks about accessibility, WCAG, a11y, screen reader, ARIA.
+  Route: design-accessibility
+  Reason: "Accessibility request."
+
+State: User asks about prototyping, design prototype, micro-interaction.
+  Route: design-prototyping
+  Reason: "Prototyping request."
+
+State: User asks about E2E test, Playwright, Cypress, browser test.
+  Route: quality-e2e-testing
+  Reason: "E2E testing request."
+
+State: User asks about visual testing, visual regression, Percy, Chromatic.
+  Route: quality-visual-testing
+  Reason: "Visual testing request."
+
+State: User asks about load testing, k6, Locust, performance test.
+  Route: quality-load-testing
+  Reason: "Load testing request."
+
+State: User asks about contract testing, Pact, consumer-driven contract.
+  Route: quality-contract-testing
+  Reason: "Contract testing request."
+
+State: User asks about Express, Express.js middleware, Express app.
+  Route: nodejs-express
+  Reason: "Express request."
+
+State: User asks about Prisma, Prisma schema, Prisma ORM.
+  Route: prisma
+  Reason: "Prisma ORM request."
+
+State: User asks about Deno, Deno runtime, Deno Deploy.
+  Route: deno
+  Reason: "Deno request."
+
+State: User asks about Bun, Bun runtime, Bun package manager.
+  Route: bun
+  Reason: "Bun request."
+
+State: User asks about Elixir, Phoenix, Erlang, Elixir OTP.
+  Route: elixir
+  Reason: "Elixir/Phoenix request."
+
+State: User asks about Spring Boot patterns, Spring beans, Spring configuration.
+  Route: spring-boot-patterns
+  Reason: "Spring Boot patterns request."
+
+State: User asks about Astro patterns, Astro islands, Astro components.
+  Route: astro-patterns
+  Reason: "Astro patterns request."
+
+State: User asks about Qwik patterns, Qwik City, Qwik components.
+  Route: qwik-patterns
+  Reason: "Qwik patterns request."
+
+State: User asks about Vue patterns, Vue composables, Vue composition API.
+  Route: vue-patterns
+  Reason: "Vue patterns request."
+
+State: User asks about Lit, LitElement, LitHtml, lit-html.
+  Route: lit
+  Reason: "Lit request."
+
+State: User asks about web components, custom elements, shadow DOM, HTML templates.
+  Route: web-components
+  Reason: "Web components request."
+
+State: User asks about AR/VR, augmented reality, virtual reality, WebXR.
+  Route: ar-vr
+  Reason: "AR/VR request."
+
+State: User asks about Nomad, HashiCorp Nomad, job scheduling.
+  Route: nomad
+  Reason: "Nomad request."
+
+State: User asks about incident response, on-call, PagerDuty, incident management.
+  Route: incident-response
+  Reason: "Incident response request."
+
+State: User asks about cost-benefit, ROI, TCO, cost analysis.
+  Route: cost-benefit
+  Reason: "Cost-benefit analysis request."
+
+State: User asks about hiring, interview, recruitment, technical screen.
+  Route: hiring
+  Reason: "Hiring request."
+
+State: User asks about stakeholder, stakeholder communication, steerco, status update.
+  Route: stakeholder
+  Reason: "Stakeholder communication request."
+
 ### Step 3: Detect Backend Stack
 Read project files:
 - package.json: if @nestjs/core present -> nestjs

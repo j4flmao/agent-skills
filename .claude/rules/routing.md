@@ -1,4 +1,4 @@
-# Routing — 176 skills
+# Routing — 217 skills
 
 ## Entry
 `skills/core/master-orchestrator/SKILL.md` (no trigger match → route here)
@@ -20,6 +20,11 @@ planning → backend → frontend → mobile → dev-loop → devops → managem
 | dev-loop | code-review, debugging-strategy, refactor-guide, git-workflow, security-auditor, performance-profiler, changelog-generator, readme-writer, pr-writer, dev-container, tech-debt-tracker, api-client-generator |
 | devops | docker-patterns, cicd-pipeline, kubernetes-patterns, observability, helm-patterns, terraform, ansible, jenkins, longhorn, monitoring, github-actions, gitops, vault, aws, serverless, monorepo, dependency-management, api-documentation, argo-cd, azure, gcp, chaos-engineering, service-mesh, finops, backup-dr, database-migration |
 | management | pm, ba, qa, qc, team-rules, security, pentesting, alerting, okr-kpi, sprint-retro, risk-management |
+| ai (6) | ai-prompt-engineering, ai-rag-patterns, ai-llm-ops, ai-vector-databases, ai-ai-agents, ai-ai-evals |
+| security (5) | security-sast-dast, security-sbom, security-secrets-management, security-container-security, security-api-security |
+| data (5) | data-etl-pipeline, data-data-warehouse, data-streaming, data-bi-tools, data-data-quality |
+| design (4) | design-design-systems, design-ux-research, design-accessibility, design-prototyping |
+| quality (4) | quality-e2e-testing, quality-visual-testing, quality-load-testing, quality-contract-testing |
 | enterprise (8) | compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance |
 | product (8) | analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization |
 
@@ -136,6 +141,47 @@ pricing-strategy/monetization → product/pricing-strategy
 go-to-market/gtm/product-launch → product/go-to-market
 onboarding-flow/activation   → product/onboarding-flow
 prioritization/rice/kano     → product/feature-prioritization
+ai/llm/prompt-engineering    → ai/ai-prompt-engineering
+rag/retrieval/chunking       → ai/ai-rag-patterns
+llmops/model-serving/token   → ai/ai-llm-ops
+vector-db/pinecone/chroma    → ai/ai-vector-databases
+ai-agent/function-calling/langchain → ai/ai-ai-agents
+ai-eval/ragas/hallucination  → ai/ai-ai-evals
+sast/dast/static-analysis/semgrep → security/security-sast-dast
+sbom/software-bill-of-materials → security/security-sbom
+secrets/gitleaks/vault       → security/security-secrets-management
+container-security/trivy/admission → security/security-container-security
+api-security/owasp-api/rate-limit → security/security-api-security
+etl/airflow/dbt/pipeline     → data/data-etl-pipeline
+warehouse/snowflake/bigquery/redshift → data/data-data-warehouse
+streaming/kafka/flink/real-time → data/data-streaming
+bi/metabase/superset/looker  → data/data-bi-tools
+data-quality/great-expectations/contract → data/data-data-quality
+design-system/tokens/storybook/figma → design/design-design-systems
+ux-research/persona/usability → design/design-ux-research
+accessibility/wcag/a11y/aria  → design/design-accessibility
+prototyping/micro-interaction → design/design-prototyping
+e2e-testing/playwright/cypress → quality/quality-e2e-testing
+visual-testing/percy/chromatic → quality/quality-visual-testing
+load-test/k6/locust/performance-test → quality/quality-load-testing
+contract-testing/pact/consumer-driven → quality/quality-contract-testing
+express/expressjs/middleware  → backend/nodejs/express
+prisma/orm/schema             → backend/prisma
+deno/deno-deploy              → backend/deno
+bun/bun-runtime               → backend/bun
+elixir/phoenix/erlang         → backend/elixir
+spring-boot-patterns/spring-beans → backend/spring-boot-patterns
+astro-patterns/astro-islands  → frontend/astro-patterns
+qwik-patterns/qwik-city       → frontend/qwik-patterns
+vue-patterns/vue-composables  → frontend/vue-patterns
+lit/lit-element/lit-html      → frontend/lit
+web-components/custom-elements/shadow-dom → frontend/web-components
+ar-vr/augmented-reality/vr   → mobile/ar-vr
+nomad/hashi-nomad/orchestrator → devops/nomad
+incident-response/on-call/pagerduty → devops/incident-response
+cost-benefit/roi/tco          → management/cost-benefit
+hiring/interview/recruitment  → management/hiring
+stakeholder/communication/steerco → management/stakeholder
 ```
 
 ## Stack Detection

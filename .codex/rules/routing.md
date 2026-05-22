@@ -1,4 +1,4 @@
-# Routing -- 176 skills
+# Routing -- 217 skills
 
 ## Entry
 
@@ -48,6 +48,12 @@ apns/fcm/push-notification -> mobile/universal/push-notifications
 in-app-purchase/subscription -> mobile/universal/in-app-purchase
 sentry/crashlytics        -> mobile/universal/crash-reporting
 pm/ba/qa/qc/security      -> management/
+ai/llm/prompt-engineering -> ai/
+rag/vector-db/llmops      -> ai/
+sast/dast/sbom/secrets    -> security/
+etl/warehouse/streaming/bi -> data/
+design-system/ux/accessibility -> design/
+e2e/visual/load/contract-testing -> quality/
 ```
 
 ## Phase order
@@ -69,5 +75,10 @@ planning -> backend -> frontend -> mobile -> dev-loop -> devops -> management
 | dev-loop (12) | code-review, debugging-strategy, refactor-guide, git-workflow, security-auditor, performance-profiler, changelog-generator, readme-writer, pr-writer, dev-container, tech-debt-tracker, api-client-generator |
 | devops (26) | docker-patterns, cicd-pipeline, kubernetes-patterns, observability, helm-patterns, terraform, ansible, jenkins, longhorn, monitoring, github-actions, gitops, vault, aws, serverless, monorepo, dependency-management, api-documentation, argo-cd, azure, gcp, chaos-engineering, service-mesh, finops, backup-dr, database-migration |
 | management (11) | pm, ba, qa, qc, team-rules, security, pentesting, alerting, okr-kpi, sprint-retro, risk-management |
+| ai (6) | ai-prompt-engineering, ai-rag-patterns, ai-llm-ops, ai-vector-databases, ai-ai-agents, ai-ai-evals |
+| security (5) | security-sast-dast, security-sbom, security-secrets-management, security-container-security, security-api-security |
+| data (5) | data-etl-pipeline, data-data-warehouse, data-streaming, data-bi-tools, data-data-quality |
+| design (4) | design-design-systems, design-ux-research, design-accessibility, design-prototyping |
+| quality (4) | quality-e2e-testing, quality-visual-testing, quality-load-testing, quality-contract-testing |
 | enterprise (8) | compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance |
 | product (8) | analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization |

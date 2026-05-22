@@ -1,4 +1,4 @@
-# .opencode/AGENTS.md — j4flmao/skills
+# .opencode/AGENTS.md — j4flmao/skills (217)
 
 LOCAL MODEL (qwen 14b). CONTEXT LIMITED. EVERY TOKEN COUNTS.
 
@@ -29,6 +29,11 @@ management/  → pm, ba, qa, qc, security, okr-kpi, sprint-retro, risk
 core/        → onboarding, context-compressor
 enterprise/  → compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance
 product/     → analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization
+ai/          → ai-prompt-engineering, ai-rag-patterns, ai-llm-ops, ai-vector-databases, ai-ai-agents, ai-ai-evals
+security/    → security-sast-dast, security-sbom, security-secrets-management, security-container-security, security-api-security
+data/        → data-etl-pipeline, data-data-warehouse, data-streaming, data-bi-tools, data-data-quality
+design/      → design-design-systems, design-ux-research, design-accessibility, design-prototyping
+quality/     → quality-e2e-testing, quality-visual-testing, quality-load-testing, quality-contract-testing
 ```
 
 ### Universal (backend + frontend)
@@ -46,5 +51,5 @@ animation/form/data-fetching/bundler/img-opt/theming → frontend/universal/
 
 ## Project
 ```
-skills/ (176) + bundles/ (15)
+skills/ (217) + bundles/ (15)
 ```

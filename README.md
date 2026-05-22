@@ -1,6 +1,6 @@
 # @j4flmao/agent-skills
 
-176 agent skills for software development — planning, backend, frontend, mobile, devops, management, enterprise, product. Each skill is a `SKILL.md` defining triggers, rules, and response format.
+217 agent skills for software development — planning, backend, frontend, mobile, devops, management, enterprise, product, ai, security, data, design, quality. Each skill is a `SKILL.md` defining triggers, rules, and response format.
 
 ## Installation
 
@@ -54,7 +54,7 @@ cp -r ~/skills/skills/devops/docker-patterns /path/to/project/skills/
 
 ```bash
 # Requires the repo to be pushed to GitHub
-npx skills add j4flmao/agent-skills            # all 176 skills
+npx skills add j4flmao/agent-skills            # all 217 skills
 npx skills add j4flmao/agent-skills --bundle backend-only
 npx skills add j4flmao/agent-skills -g          # global (every project)
 ```
@@ -74,14 +74,14 @@ npx skills add j4flmao/agent-skills --bundle <name>
 | `fullstack-nodejs-react` | 88 | Node.js + React |
 | `fullstack-elysia-react` | 88 | ElysiaJS + React |
 | `fullstack-rails-svelte` | 86 | Rails + SvelteKit |
-| `backend-only` | 90 | Backend only |
-| `frontend-only` | 52 | Frontend only |
-| `devops-only` | 31 | DevOps only |
-| `management-only` | 11 | Management only |
-| `mobile-ios` | 54 | iOS + universal mobile skills + deployment |
-| `mobile-android` | 54 | Android + universal mobile skills + deployment |
-| `mobile-flutter` | 61 | Flutter + universal mobile skills + deployment |
-| `mobile-react-native` | 61 | React Native + universal mobile skills + deployment |
+| `backend-only` | 90+ | Backend only (includes ai, security, data skills) |
+| `frontend-only` | 52+ | Frontend only (includes design skills) |
+| `devops-only` | 31+ | DevOps only (includes security, nomad, incident-response) |
+| `management-only` | 11+ | Management only (includes data, quality, cost-benefit, hiring, stakeholder) |
+| `mobile-ios` | 54+ | iOS + universal mobile skills + deployment |
+| `mobile-android` | 54+ | Android + universal mobile skills + deployment |
+| `mobile-flutter` | 61+ | Flutter + universal mobile skills + deployment |
+| `mobile-react-native` | 61+ | React Native + universal mobile skills + deployment |
 
 ## How Skills Work
 
@@ -117,10 +117,15 @@ No keyword match? Agent routes through `master-orchestrator`, detects the projec
 | **4 — Dev Loop** | `code-review`, `debugging-strategy`, `refactor-guide`, `git-workflow`, `security-auditor`, `performance-profiler`, `changelog-generator`, `readme-writer`, `pr-writer`, `dev-container`, `tech-debt-tracker`, `api-client-generator` |
 | **5 — DevOps** | `docker-patterns`, `cicd-pipeline`, `kubernetes-patterns`, `observability`, `helm-patterns`, `terraform`, `ansible`, `jenkins`, `longhorn`, `monitoring`, `github-actions`, `gitops`, `vault`, `aws`, `serverless`, `monorepo`, `dependency-management`, `api-documentation`, `argo-cd`, `azure`, `gcp`, `chaos-engineering`, `service-mesh`, `finops`, `backup-dr`, `database-migration` |
 | **6 — Management** | `pm`, `ba`, `qa`, `qc`, `team-rules`, `security`, `pentesting`, `alerting`, `okr-kpi`, `sprint-retro`, `risk-management` |
-| **7 — Mobile Stacks** | `ios`, `android`, `flutter`, `react-native`, `kotlin-multiplatform`, `ionic-capacitor`, `dotnet-maui` |
-| **7b — Mobile Universal** | `mobile-patterns`, `mobile-testing`, `mobile-performance`, `mobile-security`, `mobile-networking`, `mobile-storage`, `mobile-deployment`, `push-notifications`, `in-app-purchase`, `crash-reporting`, `deep-linking`, `offline-first`, `biometrics`, `map-location`, `camera-media`, `analytics` |
-| **8 — Enterprise** | `compliance-audit`, `cost-governance`, `data-governance`, `identity-provider`, `integration-patterns`, `legacy-migration`, `multi-tenant`, `sla-management` |
-| **9 — Product** | `ab-testing`, `analytics`, `feature-prioritization`, `go-to-market`, `growth-engineering`, `onboarding-flow`, `pricing-strategy`, `user-research` |
+| **7 — AI** | `ai-prompt-engineering`, `ai-rag-patterns`, `ai-llm-ops`, `ai-vector-databases`, `ai-ai-agents`, `ai-ai-evals` |
+| **7b — Security** | `security-sast-dast`, `security-sbom`, `security-secrets-management`, `security-container-security`, `security-api-security` |
+| **7c — Data** | `data-etl-pipeline`, `data-data-warehouse`, `data-streaming`, `data-bi-tools`, `data-data-quality` |
+| **7d — Design** | `design-design-systems`, `design-ux-research`, `design-accessibility`, `design-prototyping` |
+| **7e — Quality** | `quality-e2e-testing`, `quality-visual-testing`, `quality-load-testing`, `quality-contract-testing` |
+| **8 — Mobile Stacks** | `ios`, `android`, `flutter`, `react-native`, `kotlin-multiplatform`, `ionic-capacitor`, `dotnet-maui` |
+| **8b — Mobile Universal** | `mobile-patterns`, `mobile-testing`, `mobile-performance`, `mobile-security`, `mobile-networking`, `mobile-storage`, `mobile-deployment`, `push-notifications`, `in-app-purchase`, `crash-reporting`, `deep-linking`, `offline-first`, `biometrics`, `map-location`, `camera-media`, `analytics` |
+| **9 — Enterprise** | `compliance-audit`, `cost-governance`, `data-governance`, `identity-provider`, `integration-patterns`, `legacy-migration`, `multi-tenant`, `sla-management` |
+| **10 — Product** | `ab-testing`, `analytics`, `feature-prioritization`, `go-to-market`, `growth-engineering`, `onboarding-flow`, `pricing-strategy`, `user-research` |
 
 Mobile universal skills apply across all platforms: patterns, testing, performance, security, networking, storage, deployment, push-notifications, in-app-purchase, crash-reporting, deep-linking, offline-first, biometrics, map-location, camera-media, analytics.
 
@@ -166,8 +171,8 @@ Agent config files contain the compression rules:
 ├── skills/
 │   ├── core/         4 skills
 │   ├── planning/     8 skills
-│   ├── backend/      44 skills (19 stack files from 13 stacks + 25 universal)
-│   ├── frontend/     32 skills (15 stack files from 8 stacks + 17 universal)
+│   ├── backend/      50 skills (19 stack + 25 universal + 6 new: express, prisma, deno, bun, elixir, spring-boot-patterns)
+│   ├── frontend/     37 skills (15 stack + 17 universal + 5 new: astro-patterns, qwik-patterns, vue-patterns, lit, web-components)
 │   ├── mobile/
 │   │   ├── ios/           iOS native
 │   │   ├── android/       Android native
@@ -176,17 +181,23 @@ Agent config files contain the compression rules:
 │   │   ├── kotlin-multiplatform/  KMP
 │   │   ├── ionic-capacitor/       Ionic/Capacitor
 │   │   ├── dotnet-maui/           .NET MAUI
+│   │   ├── ar-vr/                 AR/VR
 │   │   └── universal/     16 skills
 │   ├── dev-loop/     12 skills
-│   ├── devops/       26 skills
-│   ├── management/   11 skills
+│   ├── devops/       28 skills (26 + nomad, incident-response)
+│   ├── management/   14 skills (11 + cost-benefit, hiring, stakeholder)
 │   ├── enterprise/    8 skills
-│   └── product/       8 skills
+│   ├── product/       8 skills
+│   ├── ai/            6 skills
+│   ├── security/      5 skills
+│   ├── data/          5 skills
+│   ├── design/        4 skills
+│   └── quality/       4 skills
 └── bundles/
     └── bundle-definitions.json
 ```
 
-Total: **176 SKILL.md** + **390+ reference .md files** + **docs/ + agent configs** = **570+ files**.
+Total: **217 SKILL.md** + **474+ reference .md files** + **docs/ + agent configs** = **691+ files**.
 
 ## License
 
