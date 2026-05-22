@@ -1,6 +1,6 @@
 # .codex/AGENTS.md -- j4flmao/skills
 
-Codex CLI project config for the agent skill suite. 106 skills, compressed output, stack-based routing.
+Codex CLI project config for the agent skill suite. 109 skills, compressed output, stack-based routing.
 
 ## Compress (ALWAYS)
 
@@ -20,7 +20,7 @@ Phase order: planning -> backend -> frontend -> mobile -> dev-loop -> devops -> 
 
 ```
 planning/    -> brief, prd, adr, tech spec, story
-backend/     -> nestjs, nodejs, elysia, go, rust, python, spring, dotnet, rails
+backend/     -> nestjs, nodejs, elysia, go, rust, python, spring, dotnet, rails, php-pure, php-laravel, php-zend
                universal: oop, api-design, api-response, database, auth, testing,
                grpc, websocket, message-queue, caching, rate-limiting, load-testing, api-gateway
 frontend/    -> react, nextjs, vue, nuxt, angular, sveltekit
@@ -59,6 +59,6 @@ agent-skills/
   .gemini/           Gemini
   .cursor/           Cursor
   .codex/            Codex CLI (this file)
-  skills/            106 skills
+  skills/            109 skills
   bundles/           15 bundle definitions
 ```

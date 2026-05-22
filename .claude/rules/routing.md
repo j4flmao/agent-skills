@@ -1,4 +1,4 @@
-# Routing — 106 skills
+# Routing — 109 skills
 
 ## Entry
 `skills/core/master-orchestrator/SKILL.md` (no trigger match → route here)
@@ -11,7 +11,7 @@ planning → backend → frontend → mobile → dev-loop → devops → managem
 |-------|--------|
 | core | master-orchestrator, project-init |
 | planning | create-brief, create-prd, create-adr, create-tech-spec, create-story |
-| backend-stack | nestjs, nodejs, elysia, golang, rust, python-fastapi, python-django, spring-boot, dotnet, rails |
+| backend-stack | nestjs, nodejs, elysia, golang, rust, python-fastapi, python-django, spring-boot, dotnet, rails, php-pure, php-laravel, php-zend |
 | backend-universal | oop-principles, design-patterns, microservices, clean-architecture, api-design, api-response, database-patterns, auth-patterns, event-driven, testing, grpc-patterns, websocket-patterns, message-queue, caching, rate-limiting, load-testing, api-gateway |
 | frontend-stack | react, react-nextjs, vue, vue-nuxt, angular, sveltekit |
 | frontend-universal | patterns, state-management, accessibility, design-system, performance, testing, microfrontend |
@@ -27,6 +27,7 @@ brief/prd/adr/story       → planning/
 nestjs/nodejs/elysia/go   → backend/{stack}/
 rust/python/spring/dotnet → backend/{stack}/
 rails                     → backend/ruby/rails
+php/laravel/eloquent/artisan → backend/php/{framework}
 oop/solid/microservices   → backend/universal/
 api-design/api-response   → backend/universal/
 database/auth/event-driven→ backend/universal/

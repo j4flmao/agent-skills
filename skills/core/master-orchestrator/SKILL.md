@@ -215,6 +215,25 @@ State: Ruby on Rails stack detected (Gemfile, rails).
   Route: rails
   Reason: "Ruby on Rails backend detected."
 
+State: PHP stack detected (composer.json, PHP files).
+  1. Read composer.json for framework.
+  2. Route to php-laravel if "laravel/framework" in require.
+  3. Route to php-zend if "laminas/laminas-mvc" or "zendframework/zend-mvc" in require.
+  4. Route to php-pure otherwise.
+  Reason: "PHP stack detected. Routing to appropriate PHP framework."
+
+State: User asks about Laravel, Artisan, Eloquent, Blade.
+  Route: php-laravel
+  Reason: "Laravel framework request."
+
+State: User asks about Zend, Laminas, Zend Framework, ZF3.
+  Route: php-zend
+  Reason: "Zend/Laminas framework request."
+
+State: User asks about plain PHP, pure PHP, PHP without framework, PSR-7, PSR-15.
+  Route: php-pure
+  Reason: "Plain PHP request."
+
 State: SvelteKit stack detected (package.json has @sveltejs/kit).
   Route: sveltekit
   Reason: "SvelteKit frontend detected."

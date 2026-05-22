@@ -17,7 +17,7 @@ No match → `skills/core/master-orchestrator/SKILL.md` then detect stack.
 ### Quick
 ```
 planning/    → brief, prd, adr
-backend/     → {nestjs,nodejs,elysia,go,rust,python,spring,dotnet,rails}
+backend/     → {nestjs,nodejs,elysia,go,rust,python,spring,dotnet,rails,php-pure,php-laravel,php-zend}
 frontend/    → {react,vue,angular,sveltekit}
 mobile/      → ios, android, flutter, react-native
                universal: patterns, testing, performance, security, networking, storage, deployment
@@ -39,5 +39,5 @@ tailwind/storybook/pwa/seo → frontend/universal/
 
 ## Project
 ```
-skills/ (106) + bundles/ (15)
+skills/ (109) + bundles/ (15)
 ```

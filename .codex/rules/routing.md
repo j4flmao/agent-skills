@@ -1,4 +1,4 @@
-# Routing -- 106 skills
+# Routing -- 109 skills
 
 ## Entry
 
@@ -11,6 +11,7 @@ brief/prd/adr/story       -> planning/
 nestjs/nodejs/elysia/go   -> backend/{stack}/
 rust/python/spring/dotnet -> backend/{stack}/
 rails                     -> backend/ruby/rails
+php/laravel/eloquent/artisan -> backend/php/{framework}
 oop/solid/microservices   -> backend/universal/
 api-design/api-response   -> backend/universal/
 database/auth/event-driven-> backend/universal/
@@ -59,7 +60,7 @@ planning -> backend -> frontend -> mobile -> dev-loop -> devops -> management
 |-------|--------|
 | core (2) | master-orchestrator, project-init |
 | planning (5) | create-brief, create-prd, create-adr, create-tech-spec, create-story |
-| backend-stack (10) | nestjs, nodejs, elysia, golang, rust, python-fastapi, python-django, spring-boot, dotnet, rails |
+| backend-stack (13) | nestjs, nodejs, elysia, golang, rust, python-fastapi, python-django, spring-boot, dotnet, rails, php-pure, php-laravel, php-zend |
 | backend-universal (17) | oop-principles, design-patterns, microservices, clean-architecture, api-design, api-response, database-patterns, auth-patterns, event-driven, testing, grpc-patterns, websocket-patterns, message-queue, caching, rate-limiting, load-testing, api-gateway |
 | frontend-stack (6) | react, react-nextjs, vue, vue-nuxt, angular, sveltekit |
 | frontend-universal (11) | patterns, state-management, accessibility, design-system, performance, testing, microfrontend, tailwind-css, storybook, pwa, seo |
