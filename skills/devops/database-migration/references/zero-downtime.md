@@ -3,12 +3,9 @@
 ## Expand-Contract Pattern
 
 ### Phase 1: Expand (Deploy 1)
-
+Add new schema elements without breaking existing code. Application begins dual-write.
 ```sql
--- Add new column as nullable (backward-compatible)
 ALTER TABLE orders ADD COLUMN status_v2 VARCHAR(20);
-
--- Add new table (no impact on existing queries)
 CREATE TABLE order_items_v2 (
     id BIGSERIAL PRIMARY KEY,
     order_id BIGINT REFERENCES orders(id),
@@ -16,23 +13,19 @@ CREATE TABLE order_items_v2 (
     quantity INT NOT NULL,
     unit_price DECIMAL(10,2) NOT NULL
 );
+CREATE INDEX CONCURRENTLY idx_orders_status_v2 ON orders(status_v2);
 ```
-
 ```python
-# Application begins dual-write
 class OrderService:
     def create_order(self, data):
-        # Old path
         order = Order.create(**data)
-        # New path (dual-write)
         order_v2 = OrderV2.create(**data)
         return order
 ```
 
 ### Phase 2: Migrate (Deploy 2)
-
+Backfill existing data, verify consistency, switch reads to new schema.
 ```sql
--- Backfill data in batches
 DO $$
 DECLARE
     batch_size INT := 1000;
@@ -40,9 +33,7 @@ DECLARE
 BEGIN
     LOOP
         UPDATE orders SET status_v2 = status
-        WHERE status_v2 IS NULL
-        LIMIT batch_size;
-
+        WHERE status_v2 IS NULL LIMIT batch_size;
         GET DIAGNOSTICS processed = ROW_COUNT;
         EXIT WHEN processed = 0;
         COMMIT;
@@ -50,39 +41,31 @@ BEGIN
     END LOOP;
 END $$;
 
--- Verify consistency
 SELECT COUNT(*) FROM orders WHERE status_v2 IS NULL;
 ```
-
 ```python
-# Application reads from new schema first, falls back to old
 class OrderService:
     def get_order(self, order_id):
-        # Try new path first
         result = OrderV2.get_by_id(order_id)
         if not result:
-            # Fall back to old
             result = Order.get_by_id(order_id)
         return result
 ```
+Verify consistency: compare row counts, checksums, or run reconciliation query. Rollback plan: keep dual-write, revert reads to old schema.
 
 ### Phase 3: Contract (Deploy 3)
-
+Remove old schema elements after confirming all reads use new schema.
 ```sql
--- Remove old column after verifying all reads use new schema
 ALTER TABLE orders DROP COLUMN status;
-
--- Drop old table after migration complete
 DROP TABLE IF EXISTS order_items CASCADE;
 ```
-
 ```python
-# Clean up dual-write code
 class OrderService:
     def create_order(self, data):
         order = OrderV2.create(**data)
         return order
 ```
+Rollback plan: add old column back, restore dual-write, redeploy. Phase 3 requires confidence in Phase 2 completeness.
 
 ## Backward-Compatible Change Rules
 
@@ -102,30 +85,24 @@ class OrderService:
 ## Rollback Strategies
 
 ### In-Place Rollback (Safe for additive changes)
-
 ```sql
--- Flyway undo
--- U2__remove_orders_v2_table.sql
 ALTER TABLE orders DROP COLUMN IF EXISTS status_v2;
 DROP TABLE IF EXISTS order_items_v2;
-
--- Liquibase rollback
--- <rollback> defined in changeset
+```
+```bash
 liquibase rollbackCount 1
+alembic downgrade -1
 ```
 
 ### Forward Fix (For destructive changes)
-
 ```sql
--- Instead of reverting, add a new migration to fix the issue
 -- V4__fix_user_email_length.sql
 ALTER TABLE users ALTER COLUMN email TYPE VARCHAR(512);
 ```
+Never rollback destructive (DROP, RENAME, type change) — you will lose data or break downstream consumers.
 
 ## CI/CD Integration
-
 ```yaml
-# GitHub Actions migration stage
 jobs:
   migrate:
     runs-on: ubuntu-latest
@@ -133,40 +110,33 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Validate migrations
-      run: |
-        flyway -configFiles=flyway.conf \
-          -url=jdbc:postgresql://staging-db:5432/myapp \
-          validate
+      run: flyway -configFiles=flyway.conf -url=jdbc:postgresql://staging-db:5432/myapp validate
     - name: Apply migrations
-      run: |
-        flyway -configFiles=flyway.conf \
-          -url=jdbc:postgresql://${{ secrets.DB_URL }} \
-          -user=${{ secrets.DB_USER }} \
-          -password=${{ secrets.DB_PASSWORD }} \
-          migrate
+      run: flyway -configFiles=flyway.conf -url=jdbc:postgresql://${{ secrets.DB_URL }} -user=${{ secrets.DB_USER }} -password=${{ secrets.DB_PASSWORD }} migrate
     - name: Smoke test
-      run: |
-        curl -f http://myapp/health/database
+      run: curl -f http://myapp/health/database
     - name: Rollback on failure
       if: failure()
-      run: |
-        flyway -configFiles=flyway.conf \
-          -url=jdbc:postgresql://${{ secrets.DB_URL }} \
-          -user=${{ secrets.DB_USER }} \
-          -password=${{ secrets.DB_PASSWORD }} \
-          undo
+      run: flyway -configFiles=flyway.conf -url=jdbc:postgresql://${{ secrets.DB_URL }} -user=${{ secrets.DB_USER }} -password=${{ secrets.DB_PASSWORD }} undo
 ```
 
 ## Migration Linting
-
 ```bash
-# Check for breaking changes (custom lint script)
 migration-lint check V4__drop_users.sql
-# Output: ERROR: DROP TABLE detected in V4__drop_users.sql — breaking change!
-# Output: WARNING: ALTER COLUMN TYPE detected — potential data loss
-
-# Recommended tools
-# - sqllint: generic SQL linting
-# - sqlcheck: detect anti-patterns in migrations
-# - schemahero: declarative schema management
+# OUTPUT: ERROR: DROP TABLE detected — breaking change!
+# OUTPUT: WARNING: ALTER COLUMN TYPE detected — potential data loss
 ```
+Recommended tools: sqllint (generic SQL linting), sqlcheck (anti-patterns), schemahero (declarative schema management). Integrate linting in CI pre-merge gate to catch breaking changes before they reach production.
+
+## Schema Drift Detection
+Run `flyway validate` or `liquibase status` in CI. Compare expected schema (from migration files) with actual schema (from information_schema). Alert on: missing columns, extra columns, type mismatches, missing indexes. Drift remediation: create migration to align schema or repair baseline.
+
+## Key Points
+- Expand-contract is the only safe pattern for zero-downtime schema changes
+- Three phases, three deployments — no shortcuts
+- Backward-compatible changes only in Phase 1 — test compatibility with CI linting
+- Backfill in batches to avoid long-running locks
+- Forward-fix over in-place rollback for destructive changes
+- Migration linting catches breaking changes before production
+- Schema drift detection runs in CI, alerts on unexpected schema state
+- Rollback automation in CI: if smoke test fails, trigger down migration

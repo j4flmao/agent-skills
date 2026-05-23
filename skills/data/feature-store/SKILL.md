@@ -1,0 +1,389 @@
+---
+name: data-feature-store
+description: >
+  Use this skill when asked about feature store, Feast, Tecton, feature engineering pipeline, online/offline serving, feature registry, point-in-time joins, feature serving, feature retrieval, ML feature pipeline, or feature management. This skill enforces: Feast deployment for feature management with offline and online serving, Tecton for managed feature platform, point-in-time correct feature joins for training datasets, feature registry for discovery and governance, and feature engineering pipeline design with batch and streaming sources. Do NOT use for: ML model training (use ML skill), data pipeline orchestration (use data-etl-pipeline), or real-time streaming infrastructure (use streaming skill).
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsuf: true
+tags: [data, ml, features, mlo, phase-11]
+---
+
+# Feature Store
+
+## Purpose
+Manage ML features through their lifecycle: define feature definitions, compute from batch/streaming sources, serve at low latency for online inference, and generate point-in-time correct training datasets.
+
+## Agent Protocol
+
+### Trigger
+Exact user phrases: "feature store", "Feast", "Tecton", "feature engineering", "feature serving", "feature registry", "point-in-time join", "online features", "offline features", "feature pipeline", "feature retrieval", "feature management", "ML feature".
+
+### Input Context
+Before activating, verify:
+- ML framework (PyTorch, TensorFlow, scikit-learn)
+- Inference mode (batch scoring, real-time API)
+- Feature sources (data warehouse, streaming, real-time APIs)
+- Infrastructure (Kubernetes, cloud provider, on-prem)
+- Online serving requirements (latency, throughput, freshness)
+- Existing feature definitions location
+
+### Output Artifact
+Feature store configuration with Feast deployment, feature definitions, serving infrastructure, and training dataset generation pipeline.
+
+### Response Format
+```yaml
+# Feast feature definitions
+# Serving config
+```
+```python
+# Feature retrieval for training
+# Online feature serving
+# Point-in-time join
+```
+```sql
+# Feature engineering queries
+```
+
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+
+### Completion Criteria
+- [ ] Feast or Tecton deployed with offline and online store
+- [ ] Feature definitions registered with types, sources, and owners
+- [ ] Feature engineering pipeline producing batch and streaming features
+- [ ] Point-in-time correct training dataset generation working
+- [ ] Online serving endpoint providing features under 10ms p99
+- [ ] Feature registry browsable for discovery and documentation
+- [ ] Feature validation and monitoring configured
+
+### Max Response Length
+300 lines of code and configuration.
+
+## Feast Feature Definitions
+
+### Feature Repository Structure
+```
+feature_repo/
+├── feature_store.yaml       # Feast config
+├── features/
+│   ├── user_features.py     # User-related features
+│   ├── order_features.py    # Order-related features
+│   └── merchant_features.py # Merchant features
+└── analysis/
+    └── feature_stats.py     # Feature distribution analysis
+```
+
+### feature_store.yaml
+```yaml
+project: ml_features
+provider: gcp
+registry:
+  path: gs://ml-feature-registry/registry.db
+  cache_ttl_seconds: 3600
+online_store:
+  type: redis
+  connection_string: redis://redis-feast:6379
+offline_store:
+  type: bigquery
+  dataset: feast_offline
+```
+
+### Feature Definition
+```python
+# features/user_features.py
+from datetime import timedelta
+from feast import (
+    Entity, FeatureView, Field, FileSource, ValueType
+)
+from feast.types import Float32, Int32, String
+
+user = Entity(
+    name="user_id",
+    value_type=ValueType.INT64,
+    description="Customer identifier",
+)
+
+user_source = FileSource(
+    path="gs://ml-data/features/users/*.parquet",
+    timestamp_field="event_timestamp",
+    created_timestamp_column="created_at",
+)
+
+user_features = FeatureView(
+    name="user_features",
+    entities=[user],
+    ttl=timedelta(days=30),
+    schema=[
+        Field(name="user_id", dtype=Int32),
+        Field(name="total_orders_30d", dtype=Int32),
+        Field(name="avg_order_value_30d", dtype=Float32),
+        Field(name="days_since_last_order", dtype=Int32),
+        Field(name="customer_tenure_days", dtype=Int32),
+        Field(name="preferred_category", dtype=String),
+    ],
+    source=user_source,
+    tags={"team": "data-science", "domain": "user"},
+)
+```
+
+## Point-in-Time Joins
+
+### Training Dataset Generation
+```python
+import pandas as pd
+from feast import FeatureStore
+
+store = FeatureStore(repo_path="./feature_repo")
+entity_df = pd.DataFrame.from_dict({
+    "user_id": [1001, 1002, 1003, 1004],
+    "event_timestamp": [
+        "2026-05-01 12:00:00",
+        "2026-05-01 13:00:00",
+        "2026-05-02 09:00:00",
+        "2026-05-03 15:00:00",
+    ],
+})
+
+training_data = store.get_historical_features(
+    entity_df=entity_df,
+    features=[
+        "user_features:total_orders_30d",
+        "user_features:avg_order_value_30d",
+        "user_features:days_since_last_order",
+        "user_features:customer_tenure_days",
+        "order_features:order_count_7d",
+        "order_features:total_spend_7d",
+    ],
+).to_df()
+
+# Feast ensures each feature value is the value as-of the event_timestamp
+# No data leaks — features from the future are never included
+print(training_data.head())
+```
+
+### Point-in-Time Join Mechanics
+```
+Entity row: user_id=1001, event_timestamp=2026-05-01 12:00
+    ↓
+Feast looks up user_features table:
+    Finds most recent row with event_timestamp <= 2026-05-01 12:00
+    Returns total_orders_30d=12 (computed at 2026-05-01 06:00)
+    Does NOT use total_orders_30d=14 (computed at 2026-05-01 14:00 — future)
+    ↓
+Result: clean training example with no future data leakage
+```
+
+## Online Feature Serving
+
+### Low-Latency Retrieval
+```python
+from feast import FeatureStore
+import time
+
+store = FeatureStore(repo_path="./feature_repo")
+
+def get_online_features(user_ids: list[int]) -> dict:
+    """Retrieve latest features for real-time inference."""
+    start = time.time()
+
+    features = store.get_online_features(
+        features=[
+            "user_features:total_orders_30d",
+            "user_features:avg_order_value_30d",
+            "user_features:days_since_last_order",
+        ],
+        entity_rows=[{"user_id": uid} for uid in user_ids],
+    ).to_dict()
+
+    latency = (time.time() - start) * 1000
+    return {"features": features, "latency_ms": latency}
+
+# Usage in prediction API
+@app.post("/predict")
+def predict(request: PredictionRequest):
+    features = get_online_features(request.user_ids)
+    predictions = model.predict(features["features"])
+    return {"predictions": predictions.tolist()}
+```
+
+### Redis Online Store Config
+```yaml
+# Redis cluster for production online serving
+online_store:
+  type: redis
+  connection_string: redis://redis-cluster:6379
+  key_ttl_seconds: 86400  # 24 hour TTL on feature keys
+  password_encrypted: ${FEAST_REDIS_PASSWORD}
+
+# Optional: Redis Sentinel
+  redis_type: redis_cluster
+  sentinel_master: feast-master
+  sentinel_set:
+    - host: redis-sentinel-0:26379
+    - host: redis-sentinel-1:26379
+```
+
+## Feast Deployment
+
+### Docker Compose
+```yaml
+version: '3.8'
+services:
+  feast-server:
+    image: feastdev/feature-server:0.38
+    ports:
+      - "6566:6566"
+    environment:
+      FEAST_FEATURE_STORE: /etc/feast/feature_store.yaml
+      FEAST_REDIS_HOST: redis
+      FEAST_REDIS_PORT: 6379
+    volumes:
+      - ./feature_repo:/etc/feast
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+
+  feast-ui:
+    image: feastdev/feast-ui:0.38
+    ports:
+      - "8888:80"
+    environment:
+      FEAST_UI_REGISTRY_URL: gs://ml-feature-registry/registry.db
+```
+
+## Feature Engineering Pipelines
+
+### Batch Feature Pipeline (Spark)
+```python
+# spark_feature_pipeline.py
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, count, sum, avg, datediff, current_date, max as spark_max
+
+spark = SparkSession.builder.appName("user-features").getOrCreate()
+
+orders = spark.table("warehouse.orders")
+customers = spark.table("warehouse.customers")
+
+features = orders.join(customers, "customer_id").groupBy("customer_id").agg(
+    count(when(col("order_date") >= date_sub(current_date(), 30), True)).alias("total_orders_30d"),
+    avg(when(col("order_date") >= date_sub(current_date(), 30), col("amount"))).alias("avg_order_value_30d"),
+    datediff(current_date(), spark_max("order_date")).alias("days_since_last_order"),
+)
+
+features.write.mode("overwrite").parquet("gs://ml-data/features/users/")
+```
+
+### Streaming Feature Pipeline (Kafka + Flink)
+```python
+# streaming_user_features.py
+from pyflink.datastream import StreamExecutionEnvironment
+from pyflink.table import StreamTableEnvironment, DataTypes
+
+env = StreamExecutionEnvironment.get_execution_context()
+t_env = StreamTableEnvironment.create(env)
+
+t_env.execute_sql("""
+    CREATE TABLE user_events (
+        user_id INT,
+        event_type STRING,
+        amount DOUBLE,
+        event_time TIMESTAMP(3),
+        WATERMARK FOR event_time AS event_time - INTERVAL '5' SECOND
+    ) WITH (
+        'connector' = 'kafka',
+        'topic' = 'user-events',
+        'properties.bootstrap.servers' = 'kafka:9092',
+        'format' = 'json'
+    )
+""")
+
+t_env.execute_sql("""
+    CREATE TABLE redis_sink (
+        user_id INT,
+        total_orders_5m BIGINT,
+        total_amount_5m DOUBLE,
+        PRIMARY KEY (user_id) NOT ENFORCED
+    ) WITH (
+        'connector' = 'redis',
+        'format' = 'json',
+        'redis.host' = 'redis-feast',
+        'redis.port' = '6379'
+    )
+""")
+
+t_env.execute_sql("""
+    INSERT INTO redis_sink
+    SELECT
+        user_id,
+        COUNT(*) as total_orders_5m,
+        SUM(amount) as total_amount_5m
+    FROM user_events
+    WHERE event_type = 'order_placed'
+    GROUP BY user_id, TUMBLE(event_time, INTERVAL '5' MINUTE)
+""")
+```
+
+## Feature Validation and Monitoring
+
+### Feature Validation
+```python
+# feature_stats.py
+from feast import FeatureStore
+
+store = FeatureStore(repo_path="./feature_repo")
+fv = store.get_feature_view("user_features")
+features = store.get_historical_features(
+    entity_df=entity_df,
+    features=[f"user_features:{f.name}" for f in fv.schema],
+).to_df()
+
+checks = {
+    "total_orders_30d": {
+        "min": 0,
+        "max": 1000,
+        "null_pct": 0,
+    },
+    "avg_order_value_30d": {
+        "min": 0.0,
+        "max": 50000.0,
+        "null_pct": 0.05,
+    },
+    "days_since_last_order": {
+        "min": 0,
+        "max": 365,
+        "null_pct": 0.1,
+    },
+}
+
+for col, rules in checks.items():
+    null_pct = features[col].isnull().mean()
+    assert null_pct <= rules["null_pct"], f"{col}: null {null_pct:.2%} > {rules['null_pct']:.0%}"
+    assert features[col].min() >= rules["min"], f"{col}: min {features[col].min()} < {rules['min']}"
+    assert features[col].max() <= rules["max"], f"{col}: max {features[col].max()} > {rules['max']}"
+```
+
+## Rules
+- All features have point-in-time correctness — no future data leakage
+- Entity definitions use the same ID type across all feature views
+- Online store supports p99 < 10ms for batch of 100 entity keys
+- Offline store uses columnar format (Parquet) for training data generation
+- Feature TTL prevents staleness — stale features not served online
+- Feature registry is the single source of truth for all feature definitions
+- Feature validation runs before materialization
+- Monitoring tracks feature freshness, serving latency, and retrieval errors
+- Feature engineering pipelines are idempotent and incremental
+
+## References
+- `references/feast-setup-guide.md` — Feast architecture, deployment options (Docker, K8s, cloud), feature repository structure, registry management, online/offline store configuration, serving API
+- `references/feature-engineering-pipeline.md` — Batch (Spark/dbt) and streaming (Flink/Kafka) feature computation, point-in-time join mechanics, feature validation, monitoring, Tecton platform overview
+
+## Handoff
+`streaming` for real-time feature computation with Kafka and Flink
+`etl-pipeline` for batch feature engineering orchestration with Airflow

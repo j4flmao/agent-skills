@@ -188,6 +188,41 @@ event-listener.type=jmx
 # - Active connections
 ```
 
+### Step 8: Deep Dremio and Starburst
+Dremio accelerates federated queries via Reflections — materialized pre-computed views in Dremio's internal Parquet format. Raw reflections aggregate/sort for quick scans; aggregation reflections pre-compute GROUP BY. Data lineage tracks column-level provenance. Key features: VDS (Virtual Datasets) for in-engine transforms without copying data, PDS (Physical Datasets) for source tables, namespace mounting for multi-source federation. Dremio's BI optimizer rewrites dashboard queries (Tableau, Power BI) to use Reflections transparently.
+
+```sql
+-- Dremio: create a Reflection on frequently queried table
+ALTER TABLE "s3"."lake"."orders" CREATE RAW REFLECTION orders_raw REFLECTION
+USING DISPLAY FIELDS (order_id, customer_id, total_amount)
+PARTITION BY (order_date) DISTRIBUTE BY (customer_id);
+
+-- Dremio VDS: virtual dataset without data copy
+CREATE VDS "analytics"."customer_orders" AS
+SELECT c.name, c.segment, o.total_amount, o.order_date
+FROM "postgres"."public"."customers" c
+JOIN "s3"."lake"."orders" o ON c.customer_id = o.customer_id;
+```
+
+Starburst is the enterprise Trino distribution with: data lake caching (auto-caches hot data from S3/ADLS/GCS to local SSD), built-in RBAC (table/row/column-level via Ranger), and Warp Speed native engine. Security: Kerberos, LDAP, OAuth, TLS. Starburst Galaxy offers serverless multi-cloud managed service. Use Starburst for regulated enterprises needing enterprise security or multi-cloud analytics with caching.
+
+### Step 9: Alluxio — Data Virtualization Layer
+Alluxio is a virtual distributed file system that unifies data access across disparate storage. Acts as caching and metadata layer between compute engines and storage backends. Caches hot data on local SSDs/memory for 10-100x faster data access on repeated queries. Supports any storage (S3, ADLS, GCS, HDFS, NFS) and any compute (Spark, Trino, MapReduce, Flink). Namespace service provides a single mounted namespace across storage systems.
+
+```yaml
+# alluxio-site.properties
+alluxio.master.hostname=alluxio-master
+alluxio.underfs.address=s3://data-lake/
+alluxio.user.file.cachepartiallyread.block=true
+alluxio.user.block.size.bytes.default=64MB
+alluxio.worker.memory.size=16GB
+alluxio.worker.tieredstore.level0.alias=SSD
+alluxio.worker.tieredstore.level0.dirs.path=/mnt/ssd/cache
+alluxio.worker.tieredstore.level0.dirs.quota=500GB
+```
+
+Use Alluxio as a transparent caching layer between compute (Trino/Spark) and storage (S3/ADLS) to accelerate federated queries and reduce storage egress costs.
+
 ## Rules
 - Pushdown filters enabled on all connectors — process data at source
 - Cross-source joins use broadcast for small tables, partitioned for large
@@ -200,7 +235,7 @@ event-listener.type=jmx
 
 ## References
 - `references/trino-architecture.md` — Coordinator, worker, connector, query planning, pushdown, federated joins, tuning
-- `references/virtualization-platforms.md` — Trino vs Starburst vs Dremio, reflections, data lake caching, security, deployment
+- `references/virtualization-platforms.md` — Dremio reflections/VDS, Starburst caching/RBAC, Alluxio tiered caching, namespace mounting
 
 ## Handoff
 `data-data-platform` for Trino cluster deployment on K8s. `data-data-catalog` for registering engine as data source. `data-data-observability` for query performance monitoring. `data-data-security` for RBAC and TLS setup.

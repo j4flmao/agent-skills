@@ -55,30 +55,84 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ## Workflow
 
-1. **Hybrid architecture** — Web view renders UI. Capacitor bridge exposes native APIs via plugin system. @capacitor/core provides common APIs (Storage, App, Device). HMR during `ionic serve`, full native builds via Cap CLI.
+1. **Ionic framework overview** — Ionic is a UI toolkit for building cross-platform mobile apps using web technologies (HTML, CSS, JS). It provides a library of mobile-optimized UI components (`ion-*`), gestures, and animations that mimic native platform conventions. Three framework integrations: Ionic React (hooks, fast iteration, largest ecosystem), Ionic Angular (NgModule + standalone, mature routing, full-featured), Ionic Vue (composition API, lightweight, growing ecosystem). All share `@ionic/core` components and CSS custom properties theming.
 
-2. **UI framework selection** — Ionic React (fastest adoption for React devs), Ionic Angular (mature, full-featured), Ionic Vue (lightweight). All share @ionic/core components and theming via CSS custom properties.
+2. **Capacitor vs Cordova** — Capacitor is the successor to Cordova with key advantages: modern plugin API (Promise-based instead of callback), native project files committed to repo (full Xcode/Android Studio control), Swift/Kotlin plugin development (instead of Java/Obj-C), HMR support during development, PWA fallback for web, and unified config (`capacitor.config.ts`). Cordova plugins are compatible via `@capacitor/cordova-plugin-compat`. Migration path: `npx cap init` on existing Cordova project, then replace `cordova plugin add` with `npm install @capacitor/plugin-name`.
 
-3. **Native plugins** — Camera, Geolocation, Push Notifications, Filesystem, Storage, Share, Device installed via `npm install @capacitor/plugin-name`. Run `npx cap sync` after each install. Configure permissions in Info.plist and AndroidManifest.xml.
+3. **Project creation** — `ionic start myApp blank --type=react-ts` creates an Ionic React TypeScript project with Capacitor pre-configured. Key files: `capacitor.config.ts` (app ID, name, server URL for live reload), `ionic.config.json` (project type, integrations), `src/` (web app code), `ios/` (Xcode project after `npx cap add ios`), `android/` (Android Studio project after `npx cap add android`). The web app is the single source of truth — native projects are generated artifacts.
 
-4. **Custom plugin development** — Create Capacitor plugin with Swift (iOS) and Kotlin (Android). Use `CAP_PLUGIN` macro, `CAPPluginCall` for data flow. Register in `+load`/ `init` blocks. Return results via `call.resolve()` / `call.reject()`.
+4. **Live reload development** — `ionic serve` for web-only HMR. For device live reload: `ionic cap run ios -l --external` starts a dev server with your machine's IP, updates `capacitor.config.ts` with `server.url`, then opens Xcode. The device loads web assets from the dev server over the network. Hot Module Replacement preserves component state. For Android: `ionic cap run android -l --external`. Requires device on same network as dev machine. Disable `server.url` for production builds.
 
-5. **Build & deploy** — `ionic build` produces web build. `npx cap copy` copies to native platforms. `npx cap open ios/android` opens Xcode/ Android Studio. Code signing via Xcode Automatic/ Android keystore. Submit to App Store Connect and Google Play Console.
+5. **Capacitor plugin system** — Plugins are npm packages that expose native APIs to JavaScript. Architecture: TypeScript API definition (`@capacitor/plugin-name`) → iOS implementation (Swift, `CAPPlugin` subclass) → Android implementation (Kotlin, `CAPPlugin` subclass) → optional web fallback. Plugin calls are serialized via JSON through the WebView bridge. `npx cap sync` installs plugin pods (iOS) and copies plugin code (Android). Permissions must be configured in native project files before plugin use.
 
-## Rules
+6. **PWA conversion** — Capacitor apps are PWAs by default. The same web code works as a standalone PWA when served over HTTPS. Add a `manifest.json` with icons, `service-worker.js` for caching. Capacitor plugins gracefully degrade: check `Capacitor.isPluginAvailable('Camera')` before calling native APIs. PWA mode runs in the browser, not WebView. Use `@capacitor/filesystem` and `@capacitor/storage` as they have web fallbacks.
 
-- Web code runs on device, not a remote server.
-- Capacitor plugins are the only path to native APIs.
-- iOS and Android project files (ios/, android/) are committed.
-- Custom plugins serialize all data via CAPPluginCall — no direct native-to-web references.
-- Component library matches platform: ion- components for both iOS and Android.
-- Permission strings must exist in Info.plist and AndroidManifest before using plugins.
-- Every npm dependency change requires `npx cap sync`.
+7. **Build & deploy pipeline** — `ionic build --prod` generates optimized web assets in `www/`. `npx cap copy` copies to native platforms, `npx cap sync` also installs native dependencies. Code signing: iOS via Xcode Automatic signing (requires Apple Developer account), Android via keystore (`keytool -genkey` then `./gradlew bundleRelease`). Distribution: App Store Connect (iOS) via Xcode Organizer or Transporter, Google Play Console (Android) via signed AAB upload. Appflow and EAS Build for cloud CI/CD.
+
+## Platform Compatibility
+
+| Feature | iOS | Android | Web/PWA |
+|---------|-----|---------|---------|
+| Core UI components | Full | Full | Full |
+| Native plugins | All | All | Graceful fallback |
+| Push notifications | APNs | FCM | Not supported |
+| Background mode | Limited | Yes | Not supported |
+| Live reload | Yes | Yes | Dev only |
+| HMR | Via server | Via server | Built-in |
+
+## Best Practices
+
+- Use `ion-` components exclusively — avoid mixing with platform-specific UI
+- Commit `ios/` and `android/` directories to version control
+- Test on real devices before each release — simulator misses camera, sensors, push
+- Use `npx cap sync` after every npm dependency change — not just `npx cap copy`
+- Configure all permission strings in Info.plist and AndroidManifest before plugin calls
+- Keep `capacitor.config.ts` environment-aware: different `server.url` for dev/prod
+- Use TypeScript strict mode for plugin call type safety
+- Profile WebView performance: 60fps animations, avoid layout thrashing, lazy-load images
+
+## Common Pitfalls
+
+- **Missing permissions**: Plugin fails silently with no error. Always check Info.plist and AndroidManifest.
+- **Stale native project**: `npx cap sync` must run after every plugin install or npm update.
+- **CORS in WebView**: Capacitor WebView has no CORS restrictions — but PWA mode does. Use `@capacitor/http` for production API calls.
+- **Keyboard overlay**: Use `@capacitor/keyboard` with `ion-content` scroll assistance to handle keyboard show/hide.
+- **Splash screen flicker**: Configure `backgroundColor` in `capacitor.config.ts` to match splash color — prevents white flash.
+- **Plugin call timeout**: Heavy native operations (image processing) may exceed default timeout. Use `call.resolve()` in async callback.
+
+## Configuration Reference
+
+```typescript
+// capacitor.config.ts
+import { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.example.app',
+  appName: 'MyApp',
+  webDir: 'www',
+  server: {
+    url: process.env.NODE_ENV === 'development' ? 'http://192.168.1.100:8100' : undefined,
+    cleartext: true,
+  },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 3000,
+      backgroundColor: '#ffffff',
+    },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
+  },
+  ios: { contentInset: 'always' },
+  android: { allowMixedContent: true },
+};
+export default config;
+```
 
 ## References
 
+- `references/ionic-cli.md` — CLI commands, project creation, live reload, build pipeline
 - `references/capacitor-plugins.md` — Native APIs, custom plugins, permissions, configuration
-- `references/ionic-deployment.md` — Build, sync, code signing, store submission
 
 ## Handoff
 Hand off to native iOS/Android skills when custom plugin development needs deep platform API access beyond Capacitor's bridge.

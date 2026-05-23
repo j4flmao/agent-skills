@@ -54,6 +54,52 @@ Complete onboarding checklist verified. The new developer has a running developm
 ### Max Response Length
 3000 tokens
 
+## Onboarding Flow Design
+
+### Day 1 — Welcome and Environment
+The first day focuses entirely on environment setup and the welcome experience. Before the developer arrives, ensure the following are ready: a GitHub/GitLab repository invitation has been sent, cloud infrastructure access (AWS IAM, GCP project, or Azure subscription) has been provisioned with read-only permissions, a 1Password or Vault entry with shared credentials is created, and the onboarding buddy's calendar is blocked for pairing sessions. The developer starts by cloning the repository, reading the project README, and running the setup script. The buddy pairs on the first setup run to catch any missing dependencies or documentation gaps. By the end of day 1, the developer should have a running dev server confirmed by a health endpoint returning HTTP 200. Any missing or incorrect setup step is immediately filed as a documentation issue and becomes the developer's first task for day 2.
+
+### Day 2 — Architecture Tour
+The second day walks the developer through the project's architecture. The buddy or tech lead leads a 60-minute architecture walkthrough covering: the directory structure (src/, tests/, docs/, scripts/, infra/), the complete request flow from client to database and back, the deployment pipeline stages (commit → CI → build → staging → prod), the event/message topology (queues, topics, streams), and key infrastructure dependencies (databases, caches, search engines, CDNs). The developer draws the request flow from memory at the end of the session. Gaps in the developer's understanding inform the focus for day 3. The architecture walkthrough also covers the code review workflow, testing pyramid expectations, and the definition of done for pull requests.
+
+### Day 3 — First Code Change
+The third day is about making the first meaningful code change. The developer picks a small, well-scoped ticket — typically a documentation fix, a minor bug, or a small feature enhancement with clear acceptance criteria. The buddy pairs on the full workflow: creating a feature branch from main, making the change, writing tests, running the test suite locally, pushing the branch, and opening a draft pull request. The buddy reviews the draft PR focusing on the workflow (branch naming, commit messages, PR description format, CI checks) rather than code quality. The goal is to complete the development cycle, not to produce perfect code. By the end of day 3, a draft PR exists and CI is green.
+
+### Day 4 — PR Review and Merge
+The fourth day completes the first pull request cycle. The buddy and a second reviewer perform a thorough code review covering logic, correctness, design, security, and test quality. The developer responds to each review comment, makes requested changes, and pushes additional commits. The buddy ensures the developer understands every review comment — if a comment is unclear, the buddy rephrases it rather than answering for the developer. The PR is merged using the team's standard merge strategy (squash by default). The developer celebrates the merge and verifies the change in the staging environment.
+
+### Day 5 — Reflect and Plan
+The fifth day consolidates the week's learning. The developer writes a brief retrospective covering: what was confusing, what was most helpful, what documentation was wrong or missing, and what they will focus on in week 2. The engineering manager and buddy review the retro and prioritize the top three documentation or process improvements. The developer is assigned their first independent ticket (still small, still well-scoped) for week 2. The buddy relationship continues but shifts from active pairing to async support with daily check-ins.
+
+### Welcome Message Template
+```
+Welcome to the team! Your onboarding buddy is {buddy_name}. Here is your week 1 plan:
+- Day 1: Environment setup — goal: health endpoint returns 200
+- Day 2: Architecture tour — goal: draw the request flow from memory
+- Day 3: First code change — goal: draft PR open with green CI
+- Day 4: PR review and merge — goal: first PR merged to main
+- Day 5: Retro and planning — goal: documented learnings and next ticket
+Your buddy has blocked time for pairing. Slack channel {#engineering} for questions.
+```
+
+### Environment Setup Checklist
+Before environment setup begins, verify these prerequisites are met: the latest stable version of the OS is installed, at least 16GB RAM and 4 CPU cores are available, Docker Desktop or Rancher Desktop is installed with at least 20GB of disk allocated to containers, Git is configured with the user's name and email and SSH keys are added to GitHub/GitLab, and the appropriate package manager (Homebrew, Chocolatey, apt) is available. The runtime version manager must be installed first: asdf (recommended for polyglot repos with .tool-versions), nvm (Node.js only with .nvmrc), pyenv (Python with .python-version), or rbenv (Ruby with .ruby-version). If the project has a devcontainer configuration (.devcontainer/devcontainer.json), the developer should be offered the option of using it instead of a native setup — devcontainers eliminate environment variance entirely.
+
+### Tool Installation Guide
+Language-specific tools to install: Node.js via the version manager (with npm or pnpm as the package manager), Python via pyenv (with Poetry or pip-tools), Go via gvm or the official installer, Rust via rustup, Java via sdkman (with Maven or Gradle). Database clients: psql for PostgreSQL, mysql CLI for MySQL, redis-cli for Redis, mongosh for MongoDB. Infrastructure CLIs: AWS CLI v2, gcloud SDK, az CLI, kubectl, terraform, helm, docker, docker-compose. Formatters and linters: the project's configured tools such as ESLint, Prettier, ruff, black, gofmt, clippy. All tools should be installed via the version manager where possible to allow easy version switching across projects.
+
+### First-Run Experience
+The first-run experience is the moment of truth for onboarding. The bin/setup script should handle: checking system prerequisites with clear error messages if anything is missing, installing the correct runtime version, installing project dependencies (npm ci, pip install -e ., go mod download), creating the .env file from .env.example with sensible defaults for local development, creating or migrating the local database, running seed data if applicable, starting the dev server with hot-reload, and running a health check to confirm the server is responding. Each step prints a clear status (PASS/FAIL/SKIP) and the overall result is printed at the end. If any step fails, the script prints the exact command that failed and a link to the relevant troubleshooting section in the docs.
+
+### Context Loading and Persistence
+After the setup completes, the developer should understand how the application loads its configuration. Environment variables are loaded from .env by the framework's config module. Feature flags come from LaunchDarkly or a local JSON file. Secrets are fetched from the vault (1Password CLI, AWS Secrets Manager, or Vault agent) using a setup script. The developer's local configuration should persist across sessions — any tool-specific config (editor settings, git hooks, linter overrides) is committed to the repository so all developers share the same defaults.
+
+### Customization
+Allow developers to customize their local setup without affecting the shared configuration. Local override files (.env.local, .eslintrc.local, .prettierrc.local) are gitignored and override the shared defaults. Editor settings go in .vscode/ or .idea/ and are committed as shared team defaults. The developer can enable or disable optional services (mail catcher, job queue worker, asset compilation watcher) via environment variables or docker-compose profiles. Customization always preserves the principle that the dev server is a faithful replica of the production stack at the service level.
+
+### Troubleshooting
+Common setup issues and their solutions: port conflicts (kill the process on the reserved port or change the local port mapping), database connection refused (check that the database container is running and the .env DATABASE_URL is correct), missing system dependencies (install via the system package manager with the command printed by the setup script), node-gyp or native module build failures (install build-essential, python3, and the C++ compiler), Docker resource exhaustion (increase Docker Desktop memory allocation or prune unused containers and images), authentication failures (re-authenticate with the vault or cloud provider CLI), network timeouts behind a corporate proxy (set HTTP_PROXY and HTTPS_PROXY environment variables in .env.local).
+
 ## Workflow
 
 1. **Environment setup** — Produce step-by-step instructions as executable command blocks in strict order. Step 1: clone the repository from the provided URL. Step 2: install the correct language runtime version using the project's version manager (asdf with .tool-versions, nvm with .nvmrc, pyenv with .python-version, rbenv with .ruby-version, sdkman with .sdkmanrc). Step 3: install all project dependencies using the project's package manager. Step 4: configure the environment by copying `.env.example` to `.env` and filling in each variable with a note on where to find the actual value. Step 5: start the development server and confirm the health endpoint returns an HTTP 200 response. Step 6: run the full test suite and confirm all tests pass. If the project lacks a `bin/setup` or equivalent automation script, create one that encapsulates all these steps as part of the onboarding PR.
@@ -74,6 +120,15 @@ Complete onboarding checklist verified. The new developer has a running developm
 | Day 3 end | First meaningful code change made | Draft pull request is open |
 | Day 5 end | First pull request merged to main | PR merged with all checks green |
 
+### Role Responsibilities Matrix
+| Role | Pre-Start | Day 1 | Week 1 | Week 2+ |
+|---|---|---|---|---|
+| Engineering Manager | Provision access, assign buddy | Welcome message, intro to team | Weekly 1:1 check-in | Normal 1:1 cadence |
+| Onboarding Buddy | Block calendar, prepare pairing | Pair on setup, first walkthrough | Pair on first PR, daily check-in | Async check-ins, tapering |
+| Tech Lead | Prepare arch walkthrough | Architecture tour (60 min) | Review first PR | Normal rotation |
+| DevOps Contact | Verify IAM, vault access | Unblock setup issues | Monitor access needs | On-call shadowing |
+| New Developer | Read project docs | Setup, first test run | First PR merged | First independent ticket |
+
 ## Rules
 
 - **First PR merged by end of week 1** — If the new hire has not shipped code to main by the end of their first Friday, the onboarding process or the development environment is the problem. Fix the process, do not pressure the person.
@@ -85,9 +140,50 @@ Complete onboarding checklist verified. The new developer has a running developm
 - **The buddy gets capacity relief during onboarding** — The assigned buddy should have their sprint capacity reduced by approximately 20% during the 2-week buddy period. Effective onboarding requires real-time availability and focused attention — it is real work.
 - **Collect structured retro feedback from the new hire** — After week 1 and again after month 1, collect structured feedback from the new hire: what was confusing, what was most helpful, what documentation was wrong or missing, what improved their confidence. Feed these learnings back into the onboarding plan and project documentation.
 
+## Day-by-Day Activity Table
+
+| Time | Day 1 | Day 2 | Day 3 | Day 4 | Day 5 |
+|---|---|---|---|---|---|
+| 9:00-10:00 | Welcome + manager intro | Architecture walkthrough | Ticket selection + planning | PR review session | Retro writing |
+| 10:00-12:00 | Environment setup pairing | Directory tour + request flow | First code change (pair) | Address review comments | Improvement tickets |
+| 12:00-13:00 | Team lunch | Lunch | Lunch | Lunch | Lunch |
+| 13:00-15:00 | First test suite run | CI/CD pipeline review | Write tests for change | Second reviewer feedback | First independent ticket |
+| 15:00-17:00 | Health check + verify | Meeting the team | Open draft PR | Merge to main + verify | Week 2 planning |
+
+## Communication Schedule
+
+### Week 1 Check-ins
+| When | Who | Duration | Format |
+|---|---|---|---|
+| Daily 9:00 AM | Buddy + new hire | 15 min | Standup-style check-in |
+| Day 1 4:00 PM | Manager + new hire | 30 min | How was day 1? |
+| Day 3 3:00 PM | Buddy + new hire | 60 min | PR pairing session |
+| Day 5 3:00 PM | Manager + buddy + new hire | 30 min | Week 1 retro |
+| Daily (async) | Buddy | 15 min | Slack check-in at noon |
+
+## Buddy Responsibilities
+
+### Week 1 Buddy Checklist
+The onboarding buddy's role is clearly defined and time-boxed. Before day 1, the buddy: blocks calendar for Mon-Wed 9-12 and Thu-Fri 10-11, prepares a small scoped ticket with clear acceptance criteria, reviews any known environment setup issues, and sets up a pairing environment (VS Code Live Share, tmux, or Tuple). During day 1, the buddy: pairs on bin/setup execution, documents any missing setup steps as issues, guides through the first test suite run, and explains the project README and ARCHITECTURE.md. During days 2-3, the buddy: walks through the request flow, explains the deployment pipeline, pairs on the first code change and test writing, and guides through opening a draft PR. During days 4-5, the buddy: reviews the first PR, explains each review comment, celebrates the merge, and leads the retro session. After week 1, the buddy transitions to async support with daily check-ins, reducing to every-other-day in week 2, and weekly in weeks 3-4.
+
+### Buddy Offboarding
+After 4 weeks, the buddy relationship formally ends with a final check-in. The buddy writes a brief handoff note for the manager covering: areas where the new hire is strong, areas that need more support, documentation improvements made, and any ongoing process improvement recommendations. The manager takes over as the primary support contact.
+
+## Continuous Improvement Loop
+
+### Retrospective Structure
+After week 1 and month 1, the new hire provides structured feedback in three categories:
+1. **What worked well**: environment setup, documentation, buddy support, architecture walkthrough
+2. **What was confusing**: unclear documentation, missing steps, unanswered questions, process friction
+3. **What should change**: documentation gaps, tool issues, process improvements, team practices
+
+### Feedback Integration
+Each retro produces actionable items: documentation updates (assigned to the buddy as a ticket), process changes (escalated to the engineering manager for the next sprint), tool improvements (filed in the infrastructure backlog), and team practice updates (raised in the next retro or team meeting). The retro document is stored in the team's shared drive for future reference and trend analysis. After 3 new hires have completed onboarding, the team reviews all retro findings to identify systemic issues.
+
 ## References
 
-- [Onboarding Checklist](references/onboarding-checklist.md)
+- [Onboarding Flow](./references/onboarding-flow.md) — Day-by-day flow design, welcome message templates, first-run experience
+- [Setup Checklist](./references/setup-checklist.md) — Environment prerequisites, tool installation, verification steps, troubleshooting
 
 ## Related Skills
 

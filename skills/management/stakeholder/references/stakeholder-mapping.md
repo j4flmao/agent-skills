@@ -1,10 +1,14 @@
 # Stakeholder Mapping
 
 ## Overview
-Stakeholder mapping identifies who has power over and interest in your project, enabling targeted communication and engagement strategies.
+Stakeholder mapping identifies who has power over and interest in
+your project, enabling targeted communication and engagement.
+A stakeholder is anyone who can affect or is affected by the project:
+internal (team, leadership) and external (clients, regulators, partners).
 
 ## Power/Influence Grid
-Plot each stakeholder on a 2x2 grid:
+Plot each stakeholder on a 2x2 grid based on power (ability to
+influence project outcomes) and interest (level of concern).
 
 | | Low Interest | High Interest |
 |---|---|---|
@@ -12,40 +16,101 @@ Plot each stakeholder on a 2x2 grid:
 | **Low Power** | Monitor | Keep Informed |
 
 ### Quadrant Strategies
-- **Manage Closely**: frequent, deep engagement — involve in decisions, invite to reviews, one-on-one meetings. Danger: they can block the project.
-- **Keep Satisfied**: periodic engagement, focus on outcomes — executive summaries, milestone updates. Danger: they can lose interest and become blockers when decisions are needed.
-- **Keep Informed**: regular updates, no decision input — newsletters, group emails, demos. Danger: they can feel excluded and escalate.
-- **Monitor**: minimal engagement — quarterly newsletters, public dashboards. Danger: they can emerge as unexpected blockers.
+
+**Manage Closely** (High Power + High Interest)
+Can make or break the project. Engage frequently and deeply.
+Involve in decisions, invite to reviews, schedule one-on-ones.
+Examples: executive sponsor, key client, regulatory body.
+Danger: if neglected, they block the project.
+
+**Keep Satisfied** (High Power + Low Interest)
+Have power but don't care about day-to-day details.
+Engage periodically with focus on outcomes.
+Send executive summaries, milestone updates.
+Examples: C-suite not directly involved, board members.
+Danger: lose interest, become blockers when decisions needed.
+
+**Keep Informed** (Low Power + High Interest)
+Care deeply but lack direct authority.
+Provide regular updates: newsletters, group emails, demos.
+Leverage interest for quality feedback and advocacy.
+Examples: end users, subject matter experts, support teams.
+Danger: if excluded, escalate to higher power stakeholders.
+
+**Monitor** (Low Power + Low Interest)
+Minimal engagement: quarterly newsletters only.
+Check periodically that power/interest hasn't changed.
+Examples: peripheral teams, industry observers.
+Danger: can emerge as unexpected blockers.
 
 ## Salience Model (Mitchell, Agle, Wood)
-Stakeholders classified by three attributes: Power (ability to impose will), Legitimacy (socially accepted relationship), Urgency (need for immediate attention). Having 2+ attributes means the stakeholder is highly salient and requires active management.
+
+### Three Attributes
+Classify by: Power (ability to impose will), Legitimacy
+(socially accepted relationship), Urgency (need for attention).
+
+Stakeholders with 2+ attributes are highly salient.
+Require active management.
+Stakeholders with all 3 are definitive — prioritize above all.
+
+Application: map each stakeholder's attribute count.
+3 = definitive (manage extremely closely).
+2 = expectant (active management).
+1 = latent (monitor).
+
+Attribute counts change over time — reassess monthly.
 
 ## RACI Matrix
 
+### Format
 | Decision | Sponsor | PM | Dev Lead | Team | QA | Ops |
 |---|---|---|---|---|---|---|
 | Scope change | A | R | C | C | I | I |
 | Tech stack | I | C | R | C | C | C |
 | Release date | A | R | C | C | I | C |
 | Bug priority | I | A | R | C | R | I |
+| Vendor selection | A | C | C | I | I | I |
 
-**R** = Responsible (does the work), **A** = Accountable (approves, one per row), **C** = Consulted (input before decision), **I** = Informed (notified after decision).
+R = Responsible (does the work, may be multiple).
+A = Accountable (approves, exactly one per row).
+C = Consulted (input before decision, two-way).
+I = Informed (notified after, one-way).
+
+### RACI Rules
+Exactly one Accountable per decision.
+Shared A means no accountability.
+Too many Rs with no A → decisions stall.
+Too many Cs → analysis paralysis and delays.
+Empty rows or columns → missing coverage.
+Review RACI at project phase transitions.
 
 ## Stakeholder Persona Template
-```
+
+### Format
 Name: {individual or group}
 Role: {relationship to project}
 Power score: {1-5}
 Interest score: {1-5}
 Quadrant: {manage closely / keep satisfied / keep informed / monitor}
-Communication preference: {format + frequency}
-Key concerns: {what they care about most}
-Resistance risk: {LOW / MED / HIGH} — {why}
-Engagement approach: {specific strategy}
-```
+Communication preference: {format and frequency}
+Key concerns: {budget, timeline, quality, compliance}
+Resistance risk: {LOW / MED / HIGH} — {why they might resist}
+Engagement approach: {1-on-1s, reports, demos, newsletters}
+
+### Example
+Name: Sarah Chen, VP Engineering
+Role: Executive sponsor
+Power: 5, Interest: 4
+Quadrant: Manage closely
+Communication: Biweekly 1:1 + monthly steering committee
+Key concerns: Timeline, resource allocation, technical quality
+Resistance risk: MED — concerned about team capacity
+Engagement: Proactive risk updates, involve in major decisions, share wins
 
 ## Key Points
-- A stakeholder's power and interest can change during the project — remap monthly
-- High power + high interest stakeholders need a named relationship owner
-- RACI must have exactly one Accountable per decision — no shared accountability
-- Stakeholder resistance is data — understand the concern and address it, don't dismiss it
+Power and interest can change during the project — remap monthly.
+High power + high interest need a named relationship owner.
+RACI must have exactly one Accountable per decision.
+Stakeholder resistance is data — understand and address it, don't dismiss.
+Stakeholder map is a living document, not a one-time exercise.
+Conflicts: facilitate discussion, escalate if needed, document resolution.

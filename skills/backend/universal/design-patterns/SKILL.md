@@ -1,8 +1,8 @@
 ---
 name: design-patterns
 description: >
-  Use this skill when selecting or reviewing GoF and enterprise design patterns — creational, structural, behavioral. This skill enforces: pattern selection decision framework, trade-off analysis, anti-pattern rejection, and explicit elimination criteria for rejected candidates. Do NOT use for: framework-specific patterns, language-specific idioms, infrastructure patterns.
-version: "1.0.0"
+  Use this skill when selecting or reviewing any design pattern — GoF creational/structural/behavioral, enterprise, integration, concurrency, architectural, or anti-pattern avoidance. This skill enforces: pattern selection decision framework, trade-off analysis, anti-pattern rejection, explicit elimination criteria for rejected candidates, and pattern composition rules. Do NOT use for: framework-specific patterns (e.g. Angular DI), language-specific idioms (e.g. Rust ownership), infrastructure patterns (e.g. Kubernetes operators).
+version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -16,142 +16,103 @@ tags: [backend, design-patterns, phase-2, universal]
 # Design Patterns
 
 ## Purpose
-Guide pattern selection with decision trees, applicability rules, and trade-off analysis.
+Guide pattern selection across all categories — GoF, enterprise, integration, concurrency, architectural — with decision trees, applicability rules, trade-off analysis, and composition guidance.
 
 ## Agent Protocol
 
 ### Trigger
-User request includes: `design pattern`, `gof`, `gang of four`, `pattern catalog`, `creational`, `structural`, `behavioral`, `pattern selection`.
+User request includes: `design pattern`, `gof`, `gang of four`, `pattern catalog`, `creational`, `structural`, `behavioral`, `pattern selection`, `enterprise pattern`, `integration pattern`, `concurrency pattern`, `architectural pattern`, `anti-pattern`, `pattern composition`, `CQRS`, `event sourcing`, `saga`, `repository`, `unit of work`, `messaging pattern`, `circuit breaker`, `strangler fig`, `saga pattern`, `hexagonal architecture`, `clean architecture`.
 
 ### Input Context
-- Problem statement (what needs to be solved)
-- Constraints (performance, memory, team size, tech stack)
+- Problem statement with constraints (performance, memory, team size, tech stack)
 - Current architecture description
 - Existing patterns already in use
+- Pattern category preference or openness
 
-### Output Artifact
-A markdown document containing:
-- Selected pattern(s) with rationale
-- Selection criteria checklist showing why other candidates were rejected
-- Implementation sketch with key interfaces/classes
-- Trade-off table (pros/cons/context)
+### Output
+Selected pattern(s) with rationale, rejected candidates with explicit elimination reasons, implementation sketch, trade-off table, and composition rules if multiple patterns are needed.
 
 ### Response Format
-Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick. If no pattern fits, output `No matching pattern. Consider: [alternative approach].` and stop.
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick. If no pattern fits, output `No matching pattern. Consider: [alternative approach].` and stop. For multi-pattern solutions, show composition order.
 
 ### Completion Criteria
-- Selection decision tree is traversed and documented
+- Decision tree traversed and documented
 - Rejected candidates include explicit elimination reason
-- Implementation sketch covers pattern structure only (not full business logic)
-- Trade-offs documented for the selected pattern
-
-### Max Response Length
-4096 tokens
+- Implementation sketch covers pattern structure (not full business logic)
+- Trade-offs documented for each selected pattern
+- Pattern composition rules applied if multiple patterns
 
 ## Workflow
 
-### Step 1: Apply Pattern Selection Decision Framework
-Before selecting any pattern, answer three questions:
+### Step 1: Classify the Problem
+Determine which pattern category applies:
 
-1. **What is changing?** (identify the axis of change) → patterns encapsulate change
-2. **What is the binding time?** (compile-time vs runtime) → determines which patterns apply
-3. **What is the scope?** (class-level vs object-level) → narrows candidate set
-
-```
-PROBLEM → Identify axis of change → Categorize (creational/structural/behavioral) →
-Filter by binding time → Filter by scope → Apply trade-off matrix → Select
-```
-
-### Step 2: Evaluate Creational Patterns
-
-| Pattern | Intent | Binding | Selection Trigger |
-|---|---|---|---|
-| **Singleton** | Ensure one instance, global access | Runtime | Exactly one instance required, shared resource pool |
-| **Factory Method** | Delegate instantiation to subclasses | Compile-time | Class cannot anticipate concrete class to create |
-| **Abstract Factory** | Create families of related objects | Runtime | System must be independent of how products are created |
-| **Builder** | Construct complex objects step-by-step | Runtime | Object has many optional parameters, construction process should produce different representations |
-| **Prototype** | Clone existing instances | Runtime | Cost of creating new instance > cloning; object state is similar |
-
-**Selection Rules**:
-- **Singleton**: Apply ONLY when you need controlled access to a single instance AND cannot use dependency injection to manage lifecycle. Never use for database connections in DI containers — let the container manage singletons.
-- **Factory Method**: Apply when a class cannot anticipate the type of objects it must create. Prefer over `Abstract Factory` when only one product family exists.
-- **Abstract Factory**: Apply when system must be configured with multiple families of products. Replace with simple factory + DI if product families do not grow.
-- **Builder**: Apply when object requires >4 constructor parameters OR when the same construction process can create different representations. Prefer over telescoping constructors.
-- **Prototype**: Apply when instantiation is expensive (database lookup, network call) and object state varies little between instances. Prefer `Factory Method` if object creation is not expensive.
-
-### Step 3: Evaluate Structural Patterns
-
-| Pattern | Intent | Selection Trigger |
+| Problem | Category | Reference |
 |---|---|---|
-| **Adapter** | Convert interface to another | Existing class has wrong interface |
-| **Bridge** | Decouple abstraction from implementation | Abstraction and implementation should vary independently |
-| **Composite** | Treat individual and composite objects uniformly | Tree structure of part-whole hierarchies |
-| **Decorator** | Attach responsibilities dynamically | Need to add behavior without subclassing, at runtime |
-| **Facade** | Unified interface to subsystem | Need simplified interface to complex subsystem |
-| **Flyweight** | Share fine-grained objects efficiently | Many similar objects, memory is concern |
-| **Proxy** | Surrogate controls access to another object | Need lazy loading, access control, logging, or remote access |
+| Object creation, instance management | Creational | `gof-patterns.md` |
+| Class/object composition, interfaces | Structural | `gof-patterns.md` |
+| Object communication, algorithms | Behavioral | `gof-patterns.md` |
+| Business logic organization, persistence | Enterprise | `enterprise-patterns.md` |
+| Service-to-service communication | Integration | `integration-patterns.md` |
+| Thread safety, async coordination | Concurrency | `concurrency-patterns.md` |
+| High-level system structure | Architectural | `enterprise-patterns.md` |
+| Code smells needing refactoring | Anti-patterns | `anti-patterns.md` |
 
-**Selection Rules**:
-- **Adapter**: Apply when integrating third-party library or legacy code. Distinguish class adapter (inheritance) vs object adapter (composition) — prefer object adapter.
-- **Bridge** vs **Strategy**: Bridge works at structure level (abstraction/implementation separation), Strategy at behavior level (algorithm selection). Bridge is broader.
-- **Composite**: Apply when client code treats leaf and container uniformly AND the structure is hierarchical. Violation = adding child management methods to leaf classes.
-- **Decorator** vs **Proxy**: Decorator adds behavior, Proxy controls access. Both share structure but differ in intent. Use Decorator when client should not know about decoration layer.
-- **Facade**: Apply when subsystem is complex, tightly coupled, or poorly documented. Facade is NOT a mediator — subsystems can still be accessed directly when needed.
-- **Flyweight**: ONLY apply when profiler confirms memory pressure from object count. The complexity cost is high. Premature flyweight is a known anti-pattern.
-- **Proxy**: Four variants — Virtual (lazy loading), Protection (access control), Remote (network proxy), Logging (audit). Choose variant based on cross-cutting concern.
+### Step 2: Apply Selection Decision Framework
+1. **What is changing?** (axis of change) — patterns encapsulate change
+2. **What is binding time?** (compile-time vs runtime)
+3. **What is scope?** (class-level vs object-level)
 
-### Step 4: Evaluate Behavioral Patterns
+### Step 3: Evaluate Candidates Within Category
+Consult the relevant reference file. For each candidate pattern, evaluate:
+- **Intent match**: Does the pattern's intent solve the stated problem?
+- **Applicability**: Are the conditions for using this pattern met?
+- **Trade-offs**: What does the pattern cost (complexity, indirection, performance)?
+- **Composition**: Does this pattern combine well with others?
 
-| Pattern | Intent | Selection Trigger |
-|---|---|---|
-| **Chain of Responsibility** | Pass request along handler chain | Multiple handlers may process request; handler unknown upfront |
-| **Command** | Encapsulate request as object | Need parameterize, queue, log, or undo operations |
-| **Interpreter** | Define grammar and interpret sentences | Simple grammar, performance not critical |
-| **Iterator** | Access elements sequentially | Need uniform traversal over different collections |
-| **Mediator** | Centralize complex communication | Many objects communicate in chaotic web |
-| **Memento** | Capture and restore object state | Undo/rollback needed without violating encapsulation |
-| **Observer** | Notify dependents of state changes | One-to-many dependency, state changes should propagate |
-| **State** | Alter behavior when internal state changes | Object behavior depends on its state, state transitions are complex |
-| **Strategy** | Select algorithm at runtime | Family of algorithms, interchangeable, vary independently |
-| **Template Method** | Define skeleton, let subclasses fill steps | Algorithm invariant steps, subclasses override variant steps |
-| **Visitor** | Separate algorithm from object structure | Many unrelated operations on stable object structure |
+### Step 4: Reject Anti-Patterns
+Explicitly check that the selected pattern does not lead to known anti-patterns (see `anti-patterns.md`).
 
-**Selection Rules**:
-- **Chain of Responsibility**: Apply when handler is unknown upfront AND there are 3+ handlers. Prefer over massive `if-else` chain. Set a chain length limit.
-- **Command**: Apply when you need undo/redo, operation queuing, or transactional behavior. Each command must expose `execute()`, `undo()` and a `CanExecute()` guard.
-- **Mediator** vs **Observer**: Mediator centralizes communication, Observer distributes it. Use Mediator when many-to-many relationships exist; use Observer for one-to-many.
-- **State** vs **Strategy**: State changes behavior automatically when internal state changes. Strategy requires client to swap algorithm. Both use composition but State has state transition logic.
-- **Template Method**: Apply when algorithm invariant steps are known and variant steps are few. Prefer Strategy when entire algorithm varies.
-- **Visitor**: Apply when object structure is stable (rarely changes) but operations on it change frequently. If structure changes often, Visitor becomes unmaintainable.
-
-### Step 5: Reject Anti-Patterns
-
-| Anti-Pattern | Why | Replacement |
-|---|---|---|
-| **God Class** | Violates SRP, impossible to test | Split by responsibility |
-| **Singleton Abuse** | Global state, hidden dependencies | DI container singleton scope |
-| **Spaghetti Code** | No structure, GOTO-like logic | Decompose, apply patterns |
-| **Golden Hammer** | Pattern applied everywhere | Select pattern per problem |
-| **Premature Optimization** | Complex patterns before evidence | YAGNI, refactor when needed |
+### Step 5: Document Selection
+For each selected pattern:
+| Field | Value |
+|---|---|
+| Pattern | Name and category |
+| Intent match | Why this pattern fits |
+| Rejected alternatives | Patterns considered but eliminated, with reasons |
+| Composition | How this interacts with existing patterns |
+| Trade-offs | Pros and cons in current context |
+| Sketch | Key interfaces, classes, and relationships |
 
 ## Rules
-- Always identify axis of change before selecting pattern.
-- Prefer composition over inheritance for structural patterns.
-- Singleton only when DI container cannot manage lifecycle.
+- Identify axis of change before selecting pattern.
+- Prefer composition over inheritance.
+- Singleton only when DI cannot manage lifecycle.
 - Flyweight only when profiler confirms memory pressure.
-- Every pattern selection must document rejected alternatives with reasons.
 - No pattern is universally applicable — context determines fitness.
+- Enterprise patterns solve business logic organization — do not mix with GoF concerns.
+- Integration patterns solve service communication — do not apply where in-process patterns suffice.
+- Concurrency patterns add complexity — use only when profiler confirms race conditions or contention.
+- Architectural patterns constrain the entire system — apply early, refactor reluctantly.
+- Every pattern selection must document rejected alternatives with reasons.
 
 ## References
 
 ### Reference Files
-- `references/pattern-catalog.md` — Full pattern catalog with code examples
-- `references/selection-decision-tree.md` — Decision tree for pattern selection
+- `references/gof-patterns.md` — All 23 Gang of Four patterns (creational, structural, behavioral)
+- `references/enterprise-patterns.md` — Enterprise, DDD, and architectural patterns (Repository, CQRS, Event Sourcing, Saga, Hexagonal, Clean)
+- `references/integration-patterns.md` — Enterprise Integration Patterns (messaging, routing, transformation)
+- `references/concurrency-patterns.md` — Concurrency, threading, and parallel patterns
+- `references/anti-patterns.md` — Comprehensive anti-pattern catalog with refactoring paths
+- `references/pattern-relationships.md` — Pattern composition, selection guides, and SOLID mapping
+- `references/selection-decision-tree.md` — Decision tree for quick pattern selection
+- `references/pattern-catalog.md` — Original GoF pattern catalog with code examples
 
 ### Related Skills
-- `backend/universal/oop-principles/SKILL.md` — Foundational design principles
+- `backend/universal/oop-principles/SKILL.md` — Foundational OOP principles
 - `backend/universal/clean-architecture/SKILL.md` — Architectural pattern application
 - `backend/universal/microservices/SKILL.md` — Microservices-specific patterns
+- `backend/universal/event-driven/SKILL.md` — Event-driven architecture patterns
 
 ## Handoff
-Hand off to `backend/universal/microservices/SKILL.md` if distributed system patterns (saga, CQRS, event sourcing) are needed. Hand off to `backend/universal/oop-principles/SKILL.md` if foundational refactoring is required first.
+Hand off to `backend/universal/microservices/SKILL.md` if distributed system patterns (saga, CQRS, event sourcing) need implementation details. Hand off to `backend/universal/clean-architecture/SKILL.md` if structuring the entire application. Hand off to `backend/universal/event-driven/SKILL.md` if event-driven patterns need elaboration.

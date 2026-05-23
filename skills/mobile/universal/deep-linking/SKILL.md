@@ -55,30 +55,66 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ## Workflow
 
-1. **URL scheme vs universal link** — Custom URL scheme (`myapp://path`) for development and internal distribution. Universal link (iOS) / Android App Link (`https://app.example.com/path`) for production verified, secure, no confirmation prompt.
+1. **URI scheme vs universal link vs app link** — Three mechanisms for deep linking with different characteristics. Custom URL scheme (e.g., `myapp://path`): simplest, works in development, shows confirmation dialog on iOS, no HTTPS requirement, no verification, can be claimed by multiple apps. Universal links (iOS): HTTPS URLs that open your app silently, require `apple-app-site-association` file on server, verified by Apple at install, only your app can claim the domain. Android App Links: equivalent to universal links, require `intent-filter` with `autoVerify`, verified by Google via Digital Asset Links JSON. For production, always use universal links / app links — custom schemes are for development only.
 
-2. **Universal link setup** — Host `apple-app-site-association` JSON at `/.well-known/` on HTTPS server. Add `intent-filter` with `autoVerify` in AndroidManifest. Verify Android links via Google Search Console. iOS validates AASA on first launch.
+2. **Route configuration and mapping** — Design a URL structure that mirrors your app's navigation hierarchy. URL path segments map to screen routes, query parameters map to screen arguments. Example: `https://app.example.com/profile/42?tab=orders` → screen `ProfileScreen` with id=42, tab=orders. Maintain a route registry (array/table of pattern → screen mappings) with support for path parameters (`:id`), wildcards (`*`), and optional segments. The parser iterates the registry and returns the first match. Support both path-based and query-based routing.
 
-3. **Deep link routing** — Parse incoming URL → extract path and query params → resolve to route + context → build navigation intent → push screen. Maintain a route registry mapping URL patterns to screens.
+3. **Deep link setup — iOS** — Create `apple-app-site-association` JSON file (no .json extension) and host at `https://{domain}/.well-known/apple-app-site-association`. The file maps `appID` (Team ID + Bundle ID) to allowed URL paths. iOS fetches this file at first install and periodically thereafter. Verify success via device console logs (`swcutil` or search for `[CoreBroker]`). In `AppDelegate.swift`, implement `application(_:continue:restorationHandler:)` to receive incoming `NSUserActivity` of type `NSUserActivityTypeBrowsingWeb`. Extract the `webpageURL` and pass to your deep link router.
 
-4. **Deferred deep linking** — Install app → attribution SDK identifies original link → SDK triggers callback with link data → navigate to expected content. Requires Branch, Adjust, or similar SDK. Works across install attribution window.
+4. **Deep link setup — Android** — Add `intent-filter` to the activity in `AndroidManifest.xml` that should receive deep links. Include `<data android:scheme="https" android:host="app.example.com" />` and `android:autoVerify="true"`. For custom schemes, add a second intent-filter with `android:scheme="myapp"`. Verify app links via Google Search Console: add Digital Asset Links JSON at `https://{domain}/.well-known/assetlinks.json`. Check verification with `adb shell dumpsys package domain-preferred-apps`. Handle incoming links in `MainActivity.onCreate()` or `onNewIntent()` by extracting the intent data URI.
 
-5. **Testing & fallback** — `adb shell am start -W -a android.intent.action.VIEW -d "url"` for Android. `xcrun simctl openurl booted "url"` for iOS. Fallback URL redirects to App Store / Play Store if app missing. Test with and without app installed.
+5. **Deep link handling and routing** — Create a unified deep link handler that: (a) parses incoming URL using platform URL parsing, (b) matches against route registry to extract path and query parameters, (c) validates required parameters, (d) checks authentication requirements — if user not logged in, queue the deep link for post-login navigation, (e) pushes the target screen with extracted parameters, (f) tracks the deep link event in analytics. Support both cold start (app not running) and warm start (app in background) scenarios. Deep links arriving while app is in background should navigate from current state, not reset navigation stack.
 
-## Rules
+6. **Deferred deep linking** — Standard universal links only work if the app is already installed. Deferred deep links work after install: user taps link → opens App Store / Play Store → installs app → first launch → SDK identifies the original link → app navigates to the expected content. Requires an attribution SDK (Branch, Adjust, AppsFlyer, or custom solution). Implementation: SDK generates a tracking link, user taps it, SDK stores click data, on first launch SDK callback delivers the deep link data. Chain: install → SDK init → retrieve deferred link → navigate. Fallback: if no deferred link, navigate to default home screen.
 
-- Universal links / App Links for production — never custom scheme for public links.
-- Custom URL scheme for development only.
-- HTTPS required for universal link verification (no self-signed certs).
-- Single verified domain per app — avoid spreading across domains.
-- Fallback URL must point to App Store / Play Store if app not installed.
-- Deferred links require an attribution provider — not possible with bare universal links.
-- All route parameters validated before navigation — reject malformed links.
+7. **Testing and fallback behavior** — iOS simulator: `xcrun simctl openurl booted "https://app.example.com/profile/42"`. Android emulator: `adb shell am start -W -a android.intent.action.VIEW -d "https://app.example.com/profile/42"`. Test with app in foreground, background, and not running. Test with and without app installed. Fallback: when app is not installed, the OS redirects to the website. Configure the webpage at the same URL to redirect to App Store / Play Store. Server-side redirect logic: detect mobile user-agent, redirect to appropriate store. Test deferred links with clean install (uninstall, tap link, install from test track).
+
+## Platform Differences
+
+| Feature | iOS (Universal Link) | Android (App Link) |
+|---------|---------------------|-------------------|
+| Verification file | `apple-app-site-association` | `.well-known/assetlinks.json` |
+| File format | JSON (no extension) | JSON |
+| Verification timing | App install + periodic | Google Search Console |
+| Confirmation prompt | None | None |
+| HTTPS required | Yes | Yes |
+| Debug verification | Device console logs | `adb shell dumpsys` |
+| Fallback behavior | Opens website | Opens website |
+
+## Best Practices
+
+- Use universal/App Links for all production deep links — never rely on custom URL schemes publicly
+- One verified domain per app — avoid spreading links across multiple domains
+- Route paths should be stable — changing paths breaks existing links shared by users
+- Maintain a route registry as a single source of truth for all deep link patterns
+- Validate all route parameters before navigation — reject malformed or unexpected input
+- Track deep link impressions and conversions in analytics
+- Deep link queue for auth-required routes: store pending link on login screen, replay after auth
+
+## Common Pitfalls
+
+- **AASA not served correctly**: Server must serve `apple-app-site-association` with `Content-Type: application/json` (or `application/pkix-cert` for iOS). No redirect. Must be HTTPS with valid certificate.
+- **iOS simulator cache**: AASA changes aren't picked up quickly. Use `swcutil` to force refresh or test on device.
+- **Multiple apps claim same custom scheme**: iOS picks one arbitrarily. Use universal links to guarantee your app opens.
+- **Android auto-verify timeout**: Verification is asynchronous. May take minutes to hours after first install.
+- **Deferred link race condition**: If SDK initialize before user logs in, the deferred link may be lost. Queue it.
+
+## Configuration Reference
+
+```json
+// apple-app-site-association (no .json extension)
+{
+  "applinks": {
+    "apps": [],
+    "details": [{ "appID": "TEAMID.com.example.app", "paths": ["*"] }]
+  }
+}
+```
 
 ## References
 
-- `references/universal-links.md` — iOS AASA, Android intent filters, verification, testing
-- `references/deep-link-routing.md` — Parsing, navigation, deferred links, fallback, attribution
+- `references/deep-link-setup.md` — AASA, Android intent filters, verification, testing
+- `references/platform-differences.md` — iOS vs Android deep link differences, deferred linking, fallback
 
 ## Handoff
 Hand off to mobile-analytics skill when deep link attribution and conversion tracking is needed.

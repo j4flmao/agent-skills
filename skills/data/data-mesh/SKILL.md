@@ -70,6 +70,44 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 Each domain owns all data it produces. No centralized data team owns domain data. Platform team owns infrastructure, not data.
 
+#### Domain Decomposition Example
+
+```yaml
+domain_decomposition:
+  domain: commerce
+  bounded_context: order_fulfillment
+  capabilities:
+    - name: order_management
+      data_produced:
+        - entity: orders
+          volume: "500K/day"
+          source: shop-api
+        - entity: order_items
+          volume: "1.2M/day"
+          source: shop-api
+      data_consumed:
+        - entity: products
+          from: catalog-domain
+        - entity: customer_360
+          from: customer-domain
+    - name: cart_management
+      data_produced:
+        - entity: carts
+          volume: "800K/day"
+          source: web-app
+      data_consumed:
+        - entity: inventory
+          from: operations-domain
+  domain_team:
+    size: 7
+    roles: [data-engineer(2), backend(3), analytics(1), product-manager(1)]
+    slack: "#domain-commerce"
+  maturity_assessment:
+    data_product_readiness: 4/5
+    documentation_coverage: 60%
+    sla_compliance: 99.2%
+```
+
 ### Step 2: Design Data Products
 
 ```yaml
@@ -174,6 +212,64 @@ Cross-domain sharing rules: consumer discovers data product via catalog. Produce
 | **Access control** | RBAC framework | Domain-managed ACLs |
 
 Global policies set by governance council (data architects + domain leads + compliance). Local policies defined per domain within global constraints.
+
+#### Governance Policy JSON
+
+```json
+{
+  "schema_compatibility": {
+    "global": { "mode": "BACKWARD", "enforced": true },
+    "domain_overrides": {
+      "marketing": { "mode": "FORWARD", "justification": "Rapid iteration on campaign schemas" }
+    }
+  },
+  "pii_classification": {
+    "tiers": [
+      { "level": "public", "storage": "unrestricted" },
+      { "level": "internal", "storage": "encrypted-at-rest" },
+      { "level": "restricted", "storage": "encrypted-at-rest-and-transit" },
+      { "level": "critical", "storage": "encrypted, access-audited, mask-on-read" }
+    ],
+    "default_tier": "internal",
+    "auto_tag_rules": [
+      { "pattern": ".*email.*", "tier": "restricted", "columns": true },
+      { "pattern": ".*ssn.*", "tier": "critical", "columns": true },
+      { "pattern": ".*amount.*", "tier": "internal", "columns": true }
+    ]
+  },
+  "retention": {
+    "global_min_days": 90,
+    "global_max_days": 2555,
+    "overrides": {
+      "logs": { "max_days": 180 },
+      "transactions": { "min_days": 365, "max_days": 2555 }
+    }
+  },
+  "access_control": {
+    "framework": "RBAC",
+    "roles": ["producer", "consumer", "steward", "admin"],
+    "cross_domain": {
+      "default": "deny",
+      "request_workflow": "catalog-based",
+      "auto_approve_patterns": [
+        { "producer": "commerce", "consumer": "finance", "product": "orders" }
+      ]
+    }
+  },
+  "sla_defaults": {
+    "critical": { "freshness_p99": "15m", "availability": 99.99 },
+    "high": { "freshness_p99": "1h", "availability": 99.9 },
+    "medium": { "freshness_p99": "1d", "availability": 99.0 },
+    "low": { "freshness_p99": "7d", "availability": 95.0 }
+  },
+  "governance_council": {
+    "members": ["chief-data-architect", "domain-lead-commerce", "domain-lead-finance",
+                "compliance-officer", "platform-lead"],
+    "meeting_frequency": "biweekly",
+    "escalation_path": "chief-data-officer"
+  }
+}
+```
 
 ### Step 6: Enable Discovery
 

@@ -235,6 +235,12 @@ WHERE _hoodie_commit_time > '20240115100000'
   AND _hoodie_commit_time <= '20240116120000';
 ```
 
+### Step 10: Apache XTable (OneTable)
+Apache XTable provides multi-format table interoperability across Delta Lake, Iceberg, and Hudi. It maintains a primary table format and synchronizes metadata to secondary formats, enabling cross-engine querying without data duplication. For example, maintain as Delta Lake (Databricks) and auto-sync to Iceberg (Trino/Athena). XTable runs as a Spark application or standalone via API. Sync can be incremental (sourcing only changed files from primary format). Use XTable when different teams use different engines requiring different formats, during format migration, or when building a multi-engine data platform.
+
+### Step 11: Nessie Catalog
+Nessie provides Git-like version control for Iceberg tables (and others via REST Catalog API). Branches, tags, commits, and merges operate on catalog metadata — schemas, partitions, table snapshots. A Nessie commit captures the state of all tables atomically, enabling multi-table atomic operations. Integrates as an Iceberg REST catalog. Features: multi-branch development (dev branch for experiments, main for production), zero-copy environment isolation (branching clones catalog state without data duplication), and cross-table time travel. Use Nessie for multi-environment Iceberg tables, CI/CD for data, and consistent multi-table snapshots for ML training.
+
 ## Rules
 - Always enable ACID (Delta, Iceberg, or Hudi) for any production lake table
 - CoW for BI/analytics tables; MoR for high-ingestion CDC tables
@@ -248,6 +254,8 @@ WHERE _hoodie_commit_time > '20240115100000'
 ## References
 - `references/table-formats.md` — Delta Lake, Iceberg, Hudi comparison, manifest files, metadata layer, ACID guarantees
 - `references/lake-operations.md` — Compaction, vacuum, Z-order, schema evolution, time travel, optimization
+- `references/xtable-multi-format.md` — Apache XTable format interoperability, Delta/Iceberg/Hudi sync, incremental sync strategies
+- `references/nessie-catalog.md` — Nessie Git-like catalog for Iceberg, branching, merging, time travel, CI/CD for data
 
 ## Handoff
 `data-distributed-storage` for S3-compatible object store configuration

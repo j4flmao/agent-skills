@@ -212,6 +212,44 @@ jobs:
 | Production schemas require `auto.register.schemas = false` | Prevents accidental schema registration |
 | Schema changes reviewed by schema governance | Catches breaking changes before deploy |
 
+### Step 8: AsyncAPI and JSON Schema
+AsyncAPI is the specification for event-driven API documentation (analogous to OpenAPI for REST). Describes channels (Kafka topics, Pulsar topics, MQTT), messages with payloads (Avro/Protobuf/JSON Schema), and protocol bindings. AsyncAPI pairs with Schema Registry by documenting message flow: topic names, publish/subscribe patterns, payload schemas, correlation IDs. Generates client code, mock servers, and validation tools. Use AsyncAPI as the contract layer above Schema Registry for event-driven architecture governance.
+
+JSON Schema provides conditional validation for JSON payloads. Deep usage: `$defs` for reusable components, `if/then/else` for conditional validation, `oneOf/anyOf/allOf` for composition, `format` (email, date-time, uri) for semantic validation. Use JSON Schema with Schema Registry via Confluent's JsonSchemaSerde or Apicurio. JSON Schema payloads are larger than Avro/Protobuf but offer easier debugging and broader tooling support.
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "order_id": {"type": "string"},
+    "customer": {"$ref": "#/$defs/customer"},
+    "items": {"type": "array", "items": {"$ref": "#/$defs/line_item"}},
+    "status": {"type": "string", "enum": ["pending", "confirmed", "shipped"]}
+  },
+  "required": ["order_id", "items"],
+  "if": {"properties": {"status": {"const": "shipped"}}},
+  "then": {"required": ["tracking_number"]}
+}
+```
+
+### Step 9: Buf for Schema Management
+Buf is a schema management tool for Protobuf enforcing lint rules (naming, field ordering, package structure) and breaking change detection (wire vs source compatibility) in CI/CD. Buf Schema Registry (BSR) manages Protobuf schemas across teams as a hosted registry for gRPC/Protobuf. Generates client/server code for multiple languages from a single schema source. Key commands: `buf breaking --against .git` checks breaking changes against previous commit; `buf lint` enforces 100+ rules. Use Buf for gRPC microservices needing rigorous Protobuf governance and breaking change detection in CI.
+
+```yaml
+# buf.yaml
+version: v2
+lint:
+  use:
+    - STANDARD
+    - COMMENTS
+breaking:
+  use:
+    - FILE
+deps:
+  - buf.build/googleapis/googleapis
+```
+
 ## Rules
 - Every Kafka topic has a registered schema (key + value)
 - Production topics enforce BACKWARD or FULL compatibility
@@ -225,6 +263,7 @@ jobs:
 ## References
 - `references/schema-evolution.md` — Compatibility modes, Avro schema definition, Protobuf vs Avro, evolution best practices
 - `references/registry-setup.md` — Confluent Schema Registry, Apicurio, SerDe, deployment, security, CI/CD integration, governance
+- `references/schema-registry-tools.md` — AsyncAPI event docs, JSON Schema conditional validation, Buf Protobuf governance, CI/CD
 
 ## Handoff
 `data-data-platform` for registry deployment. `data-data-catalog` for schema metadata. `data-data-contracts` for data contract schema integration. `data-data-observability` for schema drift monitoring.

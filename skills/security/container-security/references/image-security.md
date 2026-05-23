@@ -5,29 +5,25 @@
 ### Installation
 ```bash
 brew install trivy
-# or
 docker pull aquasec/trivy:latest
+curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
 ```
 
 ### Scanning Commands
 ```bash
 trivy image --severity CRITICAL,HIGH --exit-code 1 myapp:latest
-trivy image --severity MEDIUM --ignore-unfixed myapp:latest
 trivy fs --severity CRITICAL,HIGH .
 trivy repo https://github.com/org/repo
-trivy sbom bom.json  # scan existing SBOM
+trivy sbom bom.json
+trivy image --format sarif --output results.sarif myapp:latest
 ```
 
 ### CI Integration
 ```yaml
 - name: Scan image
   run: |
-    trivy image \
-      --severity CRITICAL,HIGH \
-      --exit-code 1 \
-      --format sarif \
-      --output trivy-results.sarif \
-      ${{ env.IMAGE }}
+    trivy image --severity CRITICAL,HIGH --exit-code 1 \
+      --format sarif --output trivy-results.sarif ${{ env.IMAGE }}
 - uses: github/codeql-action/upload-sarif@v3
   with:
     sarif_file: trivy-results.sarif
@@ -40,7 +36,6 @@ vuln-type: os,library
 ignore-unfixed: true
 exit-code: 1
 timeout: 10m
-db-repository: ghcr.io/aquasecurity/trivy-db
 ```
 
 ## Grype
@@ -53,24 +48,29 @@ curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh
 
 ### Commands
 ```bash
-grype myapp:latest
 grype myapp:latest --only-fixed --fail-on critical
-grype dir:.  # scan filesystem
-grype sbom:bom.json  # scan SBOM
+grype dir:
+grype sbom:bom.json
+grype myapp:latest -o json > grype-report.json
 ```
 
-### Output Formats
+### Syft SBOM Integration
 ```bash
-grype myapp:latest -o json > grype-report.json
-grype myapp:latest -o table  # human-readable
-grype myapp:latest -o cyclonedx  # convert to SBOM
+syft packages myapp:latest -o cyclonedx-json > sbom.cdx.json
+grype sbom:sbom.cdx.json
 ```
+Syft generates SBOM from images and filesystems. Grype scans SBOM directly without pulling the image.
+
+## Clair
+Registry-side scanning via Clair v4 and Quay. Scans on push and schedule. API-first design. Notification webhooks on new vulnerabilities.
+
+## Snyk
+Developer-first: IDE plugins, CLI, PR checks. Fix advice with actionable version bumps. Reachability analysis flags only used code paths. `docker scan myapp:latest`.
 
 ## Dockerfile Best Practices
 
 ### Multi-stage Builds
 ```dockerfile
-# Build stage
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
@@ -78,7 +78,6 @@ RUN npm ci --only=production
 COPY . .
 RUN npm run build
 
-# Runtime stage
 FROM node:20-alpine AS runtime
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
@@ -90,48 +89,34 @@ CMD ["node", "dist/server.js"]
 ```
 
 ### Distroless Images
-- `gcr.io/distroless/base`: glibc + base utilities (no shell, no package manager)
-- `gcr.io/distroless/static`: for statically linked binaries
-- `gcr.io/distroless/cc`: glibc + C runtime
-- Benefits: minimal attack surface, no shell, no package manager, minimal CVEs
+`gcr.io/distroless/base`: glibc + base, no shell or package manager. `gcr.io/distroless/static`: for Go/Rust binaries. `gcr.io/distroless/cc`: glibc + C runtime. Benefits: minimal attack surface, no shell, minimal CVEs.
 
 ### Hardening Checklist
-- [ ] No root user — use `USER 10001:10001`
-- [ ] No `latest` tag — use semantic versioning or commit SHA
-- [ ] Package versions pinned — no `apt-get install` without version
-- [ ] Build and runtime separated via multi-stage
-- [ ] Distroless or minimal base image for runtime
-- [ ] Package manager cache cleaned in build stage
-- [ ] `RUN --mount=type=cache` for build dependencies
-- [ ] Labels for provenance: `org.opencontainers.image.source`, `org.opencontainers.image.revision`
-- [ ] Healthcheck defined
-- [ ] No sensitive files in build context (`.dockerignore`)
+No root user, no latest tag, pinned package versions, multi-stage separation, distroless base, cache cleaned, provenance labels, healthcheck defined, .dockerignore excludes sensitive files.
 
 ### .dockerignore
 ```
-node_modules
-.git
-*.md
-.env
-.env.*
-Dockerfile
-.dockerignore
-coverage
-test
-dist/*.map
+node_modules, .git, *.md, .env, .env.*, Dockerfile, .dockerignore, coverage, test, dist/*.map
 ```
+
+## Cosign Image Signing
+```bash
+cosign sign --keyless <image>
+cosign verify --keyless <image>
+cosign attest --keyless --type cyclonedx sbom.cdx.json <image>
+```
+Keyless signing uses OIDC identity from CI provider. No key management needed. Signature stored in registry. Verify before deployment via admission controller.
+
+## SBOM Generation
+Syft: `syft packages <image> -o cyclonedx-json > sbom.cdx.json`. Trivy: `trivy image --format cyclonedx --output sbom.cdx.json <image>`. Store as attestation. Required for supply chain transparency.
 
 ## CVE Management
 
 ### Severity Thresholds
-CRITICAL: block build, immediate fix required. HIGH: block build for production images, fix within 7 days. MEDIUM: warn, fix within 30 days. LOW: log, fix within 90 days.
+CRITICAL: block build, fix immediately. HIGH: block build for production, fix within 7 days. MEDIUM: warn, fix within 30 days. LOW: log, fix within 90 days.
 
 ### Resolution Strategy
-1. Update base image to patched version
-2. Pin dependency to fix version
-3. OS-level patch (apt/apk update)
-4. Compensating control (WAF rule, network policy)
-5. Exception with documented risk acceptance
+1. Update base image. 2. Pin dependency to fix version. 3. OS-level patch. 4. Compensating control (WAF, network policy). 5. Exception with documented risk acceptance and expiry.
 
 ### Daily Scan Pipeline
 ```yaml
@@ -141,4 +126,4 @@ CRITICAL: block build, immediate fix required. HIGH: block build for production 
       trivy image --severity CRITICAL,HIGH $image
     done
 ```
-Alert when new CVEs detected on deployed images. Auto-create ticket for critical/high findings. Update vulnerability dashboard daily.
+Alert on new CVEs in deployed images. Auto-create tickets for critical/high. Update vulnerability dashboard daily.

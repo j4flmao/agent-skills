@@ -11,37 +11,45 @@ helm install falco falcosecurity/falco \
 
 ### Default Rules
 - Shell spawned in container not from parent shell
-- Read/write to sensitive paths (/etc/shadow, /var/lib/kubelet)
+- Read/write to sensitive paths (/etc/shadow, /var/lib/kubelet, /var/run/secrets)
 - Outbound network connection to unknown IP
-- Privilege escalation attempt (setuid binary execution)
-- Unexpected process spawned by web server (nginx spawning curl)
-- Container running with privileged flag
+- Privilege escalation attempt (setuid, --privileged)
+- Unexpected process from web server (nginx spawning curl, bash)
+- Container running with privileged security context
+- Host sensitive path mounts (/proc, /var/run/docker.sock)
+- Execution of reverse shell binaries (nc, ncat, socat)
 
 ### Custom Rules
 ```yaml
-- rule: Custom Outbound Crypto Mining
-  desc: detect connection to known mining pools
-  condition: >
-    outbound and
-    fd.sip.name in (mining_pools)
-  output: >
-    Crypto mining connection detected (connection=%fd.name)
+- rule: Crypto Mining Detection
+  desc: connection to known mining pools
+  condition: outbound and fd.sip.name in (mining_pools)
+  output: Crypto mining detected (connection=%fd.name)
   priority: CRITICAL
   tags: [crypto-mining, network]
+
+- rule: Container Breakout
+  desc: mount of host filesystem
+  condition: mount and container and contains(fs.mountpoint, "/host")
+  output: Host mount detected (user=%user.name)
+  priority: CRITICAL
 ```
 
 ### Alert Routing
-Falco → Kubernetes audit events → Falcosidekick → AlertManager → Slack/PagerDuty. Response: annotate pod, terminate pod, trigger incident. Triage: identify if compromise or false positive.
+Falco → K8s audit events → Falcosidekick → AlertManager → Slack/PagerDuty. Response: annotate pod, terminate for critical, trigger incident. Triage: compromise vs false positive.
+
+## Tracee
+eBPF-based runtime security and forensics for Linux. Signature detection: kernel exploits, fileless execution, container breakout. Behavioral anomaly detection in syscall patterns. Event capture for forensic analysis.
+```bash
+tracee --trace container=new
+tracee --trace event=ptrace,execve --capture exec
+tracee --list
+```
 
 ## Admission Control
 
 ### Kyverno
-
-### Policy Types
-- Validate: deny resource creation if rule violated
-- Mutate: auto-modify resource spec (add labels, inject sidecar)
-- Generate: create resources based on trigger
-- VerifyImages: require image signature verification
+Policy types: Validate (deny if violated), Mutate (auto-modify spec), Generate (create resources), VerifyImages (require Cosign). Key policies: require approved registry, require Cosign verification, block privileged containers, enforce read-only root filesystem, require resource limits, block hostNetwork/hostPID, require runAsNonRoot, drop all capabilities.
 
 ### Validation Policies
 ```yaml
@@ -57,17 +65,28 @@ spec:
       resources:
         kinds: ["Pod"]
     validate:
-      message: "Containers must run as non-root user"
+      message: "Containers must run as non-root"
       pattern:
         spec:
           securityContext:
             runAsNonRoot: true
+  - name: require-resource-limits
+    match:
+      resources:
+        kinds: ["Pod"]
+    validate:
+      message: "Resource limits required"
+      pattern:
+        spec:
+          containers:
+          - resources:
+              limits:
+                memory: "?*"
+                cpu: "?*"
 ```
-Other policies: require resource limits, block hostPID/ hostNetwork, require image from approved registry, verify image signature with cosign, block privileged escalation.
 
 ### OPA/Gatekeeper
-
-### Constraint Templates
+Rego policy language for complex cross-resource rules. Dry-run with `enforcementAction: dryrun` for 7 days before enforcing.
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1beta1
 kind: ConstraintTemplate
@@ -84,22 +103,10 @@ spec:
         msg := "Pod must have team label"
       }
 ```
-Rego policy: declarative, testable with `opa test`. Dry-run: enable with `enforcementAction: dryrun` for 7 days before enforcing.
 
 ## Seccomp
-
-### Default Profiles
-- Runtime/default: blocks ~44 syscalls (common attack vectors)
-- Unconfined: all syscalls allowed (not recommended)
-- Custom: allowlist specific syscalls for your application
-
-### Kubernetes Configuration
+Runtime/default: blocks ~44 dangerous syscalls. Unconfined: all allowed (not recommended). Custom: allowlist specific syscalls for your app.
 ```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  annotations:
-    seccomp.security.alpha.kubernetes.io/pod: runtime/default
 spec:
   securityContext:
     seccompProfile:
@@ -107,28 +114,10 @@ spec:
 ```
 
 ## AppArmor
-
-### Profiles
-- `docker-default`: basic container isolation
-- Custom profiles: restrict file access, network capabilities, ptrace
-- Profile naming: must be loaded on each node
-
-### Kubernetes Configuration
-```yaml
-metadata:
-  annotations:
-    container.apparmor.security.beta.kubernetes.io/<container>: localhost/my-custom-profile
-```
-Prefer seccomp over AppArmor for portability. AppArmor is Linux-only.
+Profiles: docker-default (basic), custom (file access, network, ptrace). Must be loaded on each node. Prefer seccomp for portability (Linux-only).
 
 ## Pod Security Standards
-
-### Profiles
-- Privileged: unrestricted, no policy enforcement
-- Baseline: minimal restrictions, prevents known privilege escalations
-- Restricted: hardened, follows pod hardening best practices
-
-### Enforcement via Namespace Labels
+Privileged: unrestricted. Baseline: minimal, prevents known privilege escalation. Restricted: hardened, follows best practices.
 ```yaml
 apiVersion: v1
 kind: Namespace
@@ -138,10 +127,4 @@ metadata:
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/warn: restricted
 ```
-
-### Key Restrictions (Restricted profile)
-- `seLinuxOptions` level must be set
-- `runAsNonRoot: true`
-- `capabilities.drop: ["ALL"]`
-- `allowPrivilegeEscalation: false`
-- `seccompProfile.type: RuntimeDefault`
+Key restrictions: runAsNonRoot, drop ALL capabilities, allowPrivilegeEscalation false, seccomp RuntimeDefault, runAsUser non-root, fsGroup must be set.

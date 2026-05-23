@@ -55,31 +55,64 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ## Workflow
 
-1. **Local data layer** — Local DB (Room/SQLDelight/CoreData) as primary data source. Repository pattern: read from local DB first, refresh from network on cache miss or forced refresh. Write to local DB first, then sync to server.
+1. **Offline-first architecture** — The local database is the single source of truth. All reads go to local DB first. All writes go to local DB first, then sync to server. The network is treated as a sync mechanism, not a data source. Three layers: (a) Local data layer — Room (Android), CoreData (iOS), SQLDelight (KMP), or SQLite (cross-platform) with repository pattern. (b) Sync engine — monitors connectivity, replays queued writes, pulls remote changes, resolves conflicts. (c) UI layer — observes local DB via reactive streams (Flow, Combine, LiveData), displays connectivity state, shows staleness indicators. The architecture must account for: app termination during sync, partial sync failures, concurrent sync from multiple devices.
 
-2. **Sync strategy** — Trigger sync on: app foreground, periodic interval (15-30 min), push notification, user-initiated pull-to-refresh. Bi-directional: push local changes to server, pull server changes to local. Delta sync via timestamp/version cursors.
+2. **Local database selection** — Room (Android): compile-time SQL verification, Flow-based reactive queries, migration support, type converters for custom types. SQLDelight (KMP): cross-platform schema in commonMain, type-safe Kotlin queries, generates drivers for Android/iOS/JVM. CoreData (iOS native): integration with SwiftUI @FetchRequest, iCloud sync, lightweight migration, but iOS-only. Realm (cross-platform): real-time sync via MongoDB Atlas Device Sync, automatic object notifications, simpler API than SQLite, but larger binary size. SQLite directly (via FMDB, sqldelight native): lowest overhead, full SQL control, best for simple key-value or document stores. Selection criteria: cross-platform needs, team expertise, sync requirements, binary size constraints.
 
-3. **Conflict resolution** — Last-write-wins for simple fields. CRDT for concurrent list edits. Timestamp-based resolution with server authority. Three-way merge for document-like entities. Manual resolution for critical data (financial, legal) surfaced via UI.
+3. **Repository pattern with cache-first strategy** — Repository is the single entry point for data access. Read flow: (a) return cached data from local DB immediately, (b) check if cache is stale (based on staleness TTL per entity), (c) if stale and online, fetch from network, update local DB, notify observers, (d) if offline, return cached data with staleness indicator. Write flow: (a) validate data, (b) write to local DB, (c) enqueue sync operation in pending queue, (d) if online, trigger immediate sync, (e) update UI from local DB change. This pattern ensures the app works fully offline while keeping data eventually consistent.
 
-4. **Offline queue** — Pending operation queue persisted in local DB. Each operation: entity type, action (create/update/delete), payload, idempotency key, created timestamp. Sequential replay on connectivity restore. Retry with exponential backoff. Failed queue items surfaced to user.
+4. **Sync triggers and frequency** — App foreground (onResume/applicationDidBecomeActive): immediate sync to refresh data. Periodic: WorkManager (Android) with minimum interval 15 min, BGTaskScheduler (iOS) with `BGProcessingTask` or `BGAppRefreshTask`. Silent push notification: server sends silent push to wake the app for sync. Pull-to-refresh: user gesture triggers on-demand sync. After queue drain: after replaying queued local writes, fetch remote changes. Adaptive sync: increase frequency when on WiFi, decrease on cellular, pause when battery low. Consider sync budget: only sync changed data (delta sync), not full dataset. Use timestamp cursors or version vectors for delta sync.
 
-5. **Connectivity detection** — Android: NetworkCallback via ConnectivityManager. iOS: NWPathMonitor. Cross-platform: reachability library. Graceful degradation: offline badge on nav bar, warning banner, disabled mutation buttons with tooltip.
+5. **Conflict resolution strategies** — Last-write-wins (LWW): simplest, use server timestamp as authority. Acceptable for independent entities (user profile fields that don't conflict). Timestamp-based: each update includes a client timestamp, server compares and keeps the latest. Works for single-writer scenarios. CRDT (Conflict-free Replicated Data Types): mathematically guaranteed convergence. Use for concurrent edits (collaborative lists, counters, text). Implemented correctly, CRDTs never conflict. Three-way merge: base version + local changes + remote changes = merged result. Works for document-like entities with well-defined merge rules. Manual resolution: surface conflict to user with side-by-side comparison, let user choose. Required for financial/legal data where automatic merge could cause harm. Document conflict resolution strategy per entity type — never mix strategies within an entity.
 
-## Rules
+6. **Offline queue management** — Persistent queue stored in local DB. Each operation: id, entity type, entity ID, action (create/update/delete), payload (full entity snapshot), idempotency key (UUID based on content hash), created timestamp, retry count, last error. Queue replay order: FIFO by creation timestamp. On connectivity restore: (a) take all pending operations ordered by timestamp, (b) send each with idempotency key in request header, (c) server deduplicates using idempotency key (returns 200 if already processed), (d) on success, remove from queue, (e) on 409 Conflict, trigger resolution handler, (f) on 5xx, implement exponential backoff (1s, 2s, 5s, 15s, 30s, 60s capped), (g) after max retries, mark as failed and surface to user with retry action.
 
-- Local first, network second — local DB is source of truth until sync confirms.
-- Cache is never invalidated — stale data shown with staleness indicator.
-- Every offline write is queued, never dropped.
-- Conflict resolution strategy documented per entity type — no silent overwrites.
-- Idempotency key on every write operation to prevent duplicate processing.
-- User always informed of offline status via persistent UI indicator.
-- Sync progress visible during background sync (count remaining / last synced).
-- Failed queue items surface with retry action, not silently discarded.
+7. **Connectivity detection and UX** — Android: `ConnectivityManager.NetworkCallback` with `registerDefaultNetworkCallback`. iOS: `NWPathMonitor` from Network framework. Cross-platform: reachability libraries. Detect connectivity type (WiFi vs cellular) to adjust sync behavior. UI states: persistent offline banner at top of screen when disconnected, sync status indicator (last synced timestamp, pending count), disable mutation buttons with tooltip explaining offline state, auto-dismiss banner when connectivity restored. Avoid showing full-screen offline errors — inline indicators are less disruptive. Test connectivity transitions: turn off/on airplane mode while app in foreground, background, and during sync.
+
+## Conflict Resolution Strategies
+
+| Strategy | Use Case | Complexity | Data Loss Risk |
+|----------|----------|-----------|---------------|
+| Last-write-wins | Independent entities, timestamps | Low | Medium |
+| Timestamp authority | Single-user-per-resource | Low | Low |
+| CRDT | Concurrent edits, lists, counters | High | None |
+| Three-way merge | Collaborative documents | Medium | Low |
+| Manual | Financial, legal, medical | High | None (user decides) |
+
+## Best Practices
+
+- Local DB is source of truth until server confirms the write
+- Cache is never invalidated — show stale data with staleness indicator (last updated timestamp + badge)
+- Every offline write is queued — never drop writes under any circumstance
+- Idempotency key on every write to prevent duplicate processing
+- User always informed of offline status via persistent UI indicator
+- Sync progress visible during background sync (count remaining, last synced)
+- Failed queue items surface with retry action, not silently discarded
+
+## Common Pitfalls
+
+- **Offline writes conflict with server-side validation**: Queue a write offline, then server rejects it on sync. Keep validation rules in the local model too.
+- **Background sync killed by OS**: iOS may terminate background tasks. Save sync cursor and resume from last checkpoint.
+- **Idempotency key collision**: Same content + same entity = same key, causing legitimate duplicate writes to be skipped. Include a nonce or timestamp in the key.
+- **Conflict resolution inconsistency**: Different devices resolving the same conflict differently leads to data divergence. Resolution must be deterministic.
+
+## Configuration Reference
+
+```kotlin
+// Sync configuration
+data class SyncConfig(
+    val intervalMs: Long = 15 * 60 * 1000L, // 15 min periodic
+    val retryDelays: List<Long> = listOf(1000, 2000, 5000, 15000, 30000, 60000),
+    val maxRetries: Int = retryDelays.size,
+    val deltaSyncWindow: Long = 7 * 24 * 60 * 60 * 1000L, // 7 days
+    val stalenessTtl: Map<String, Long> = mapOf("product" to 300_000, "user" to 60_000)
+)
+```
 
 ## References
 
-- `references/offline-sync.md` — Sync strategies, conflict resolution, CRDT, pending queue
-- `references/mobile-database.md` — Local DB setup, Room/CoreData/SQLDelight, migration, repository pattern
+- `references/sync-strategies.md` — Sync strategies, conflict resolution, CRDT, pending queue
+- `references/local-storage.md` — Local DB setup, Room/CoreData/SQLDelight, migration, repository pattern
 
 ## Handoff
 Hand off to mobile-networking skill when implementing the sync transport layer, or to mobile-storage for advanced local persistence patterns.

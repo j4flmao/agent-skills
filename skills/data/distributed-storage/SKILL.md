@@ -91,6 +91,42 @@ Client -> NN (metadata) + Client -> DN1 -> DN2 -> DN3 (data pipeline)
    +------------+           +------------+
 ```
 
+### Step 2a: HDFS Configuration
+
+```xml
+<!-- hdfs-site.xml — NameNode HA production -->
+<configuration>
+  <property>
+    <name>dfs.replication</name>
+    <value>3</value>
+  </property>
+  <property>
+    <name>dfs.blocksize</name>
+    <value>268435456</value>
+  </property>
+  <property>
+    <name>dfs.namenode.name.dir</name>
+    <value>/data/hdfs/namenode</value>
+  </property>
+  <property>
+    <name>dfs.datanode.data.dir</name>
+    <value>/data/hdfs/datanode1,/data/hdfs/datanode2</value>
+  </property>
+  <property>
+    <name>dfs.namenode.handler.count</name>
+    <value>64</value>
+  </property>
+  <property>
+    <name>dfs.datanode.handler.count</name>
+    <value>16</value>
+  </property>
+  <property>
+    <name>dfs.heartbeat.interval</name>
+    <value>3</value>
+  </property>
+</configuration>
+```
+
 ### Step 3: Block Replication and Placement
 Placement policy (default): 1st replica on same node as writer (or same rack), 2nd on a different rack, 3rd on same rack as 2nd (different node). Rack awareness: minimize cross-rack write traffic, ensure cross-rack redundancy. Replication factor: 3 for production (2-rack minimum), 2 for dev, 1 for temp data.
 
@@ -158,6 +194,62 @@ services:
       MINIO_STORAGE_CLASS_STANDARD: EC:4   # 4 parity drives
 ```
 
+### Step 6a: Erasure Coding Configuration
+
+```bash
+# HDFS EC policy: RS-6-3 (6 data + 3 parity = 1.5x overhead)
+hdfs ec -enablePolicy -policy RS-6-3-1024k
+hdfs ec -setPolicy -path /data/cold -policy RS-6-3-1024k
+
+# MinIO EC: env vars
+export MINIO_STORAGE_CLASS_STANDARD=EC:4
+export MINIO_STORAGE_CLASS_RRS=EC:2
+
+# Ceph EC profile: tolerate 2 OSD failures
+ceph osd erasure-code-profile set ec-6-2 k=6 m=2 crush-failure-domain=host
+ceph osd pool create ec-data-pool 128 erasure ec-6-2
+```
+
+EC recommended for: cold/warm data (over 30 days old), backup/archival, large files over 1GB. Replication for: hot data, small files, high-write workloads.
+
+### Step 6b: S3-Compatible API Usage
+
+```python
+import boto3
+s3 = boto3.client("s3",
+    endpoint_url="https://minio.datalake.internal:9000",
+    aws_access_key_id="minioadmin",
+    aws_secret_access_key="minioadmin",
+    config=boto3.session.Config(signature_version="s3v4", s3={"addressing_style": "path"}))
+s3.create_bucket(Bucket="analytics-data")
+s3.put_bucket_versioning(Bucket="analytics-data",
+    VersioningConfiguration={"Status": "Enabled"})
+s3.upload_file("/data/export.parquet", "analytics-data", "exports/sales.parquet")
+url = s3.generate_presigned_url("get_object",
+    Params={"Bucket": "analytics-data", "Key": "exports/sales.parquet"},
+    ExpiresIn=604800)
+```
+
+```json
+{
+  "bucket_policy": {
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Effect": "Allow",
+      "Principal": {"AWS": ["arn:aws:iam::123456789012:role/analytics-role"]},
+      "Action": ["s3:GetObject", "s3:ListBucket"],
+      "Resource": ["arn:aws:s3:::analytics-data/*", "arn:aws:s3:::analytics-data"],
+      "Condition": {"IpAddress": {"aws:SourceIp": "10.0.0.0/8"}}
+    }]
+  },
+  "lifecycle_rules": [
+    {"id": "expire_temp", "filter": {"prefix": "temp/"}, "expiration": {"days": 7}},
+    {"id": "tier_to_cold", "filter": {"prefix": "logs/"},
+     "transitions": [{"days": 30, "storage_class": "GLACIER_IR"}]}
+  ]
+}
+```
+
 ### Step 7: Ceph RADOS
 RADOS: Reliable Autonomic Distributed Object Store. OSDs (object storage daemons) per disk. MONs (monitors) for cluster state quorum. CRUSH map controls data placement. Pools: replicated or erasure-coded. PG (placement group) count: (OSDs * 100) / replication factor, rounded to nearest power of 2.
 
@@ -187,6 +279,8 @@ Tier 1 (hot): SSD/NVMe, RF3, low-latency, active workloads. Tier 2 (warm): HDD 1
 ## References
 - `references/hdfs-architecture.md` — NameNode HA, block management, rack awareness, federation, erasure coding, fsimage, edits log
 - `references/s3-compatible.md` — MinIO deployment, Ceph RADOS, bucket policies, versioning, lifecycle, S3 gateway
+- `references/storage-deployment-guide.md` — HDFS config, MinIO K8s deployment, Ceph cluster config, erasure coding profiles
+- `references/s3-compatible-configs.md` — AWS SDK usage, bucket policies, lifecycle rules, multipart upload config, bucket notifications
 
 ## Handoff
 `data-distributed-compute` for Spark/HDFS locality and YARN scheduling

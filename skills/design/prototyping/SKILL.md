@@ -9,19 +9,19 @@ compatibility:
   claude-code: true
   cursor: true
   codex: true
-  windsurf: true
+  windsure: true
 tags: [design, prototyping, phase-10]
 ---
 
 # Design Prototyping
 
 ## Purpose
-Create interactive prototypes with appropriate fidelity, purposeful micro-interactions, and structured developer handoff.
+Create interactive prototypes with appropriate fidelity, purposeful micro-interactions, and structured developer handoff. Covers low-to-high fidelity prototyping, interaction design patterns, animation principles (easing, timing, choreography), tool selection (Figma, ProtoPie, Framer), and comprehensive handoff workflow including design tokens, redlines, and asset export.
 
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "prototype", "interactive prototype", "Figma prototype", "micro-interaction", "animation", "transition", "design handoff", "developer handoff", "high-fidelity", "low-fidelity", "interaction design", "motion design".
+Exact user phrases: "prototype", "interactive prototype", "Figma prototype", "micro-interaction", "animation", "transition", "design handoff", "developer handoff", "high-fidelity", "low-fidelity", "interaction design", "motion design", "ProtoPie", "Framer", "design tokens export", "redlines", "specs".
 
 ### Input Context
 Before activating, verify:
@@ -29,20 +29,17 @@ Before activating, verify:
 - Fidelity level expected (low, mid, high)
 - Target platform (web, mobile, desktop)
 - Handoff audience (developers, stakeholders, clients)
+- Existing design system or component library
+- Animation performance requirements and device constraints
 
 ### Output Artifact
 Prototype specification with interaction design, animation specs, and handoff artifacts.
 
 ### Response Format
-```yaml
-# Prototype plan: fidelity, interactions, tools
-# Animation specs: trigger, duration, easing, state change
-```
-```figma
-# Handoff checklist and spec format
-```
-
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+- Prototype plan: fidelity, interactions, tools
+- Animation specs: trigger, duration, easing, state change
+- Handoff checklist and spec format
+- No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
 
 ### Completion Criteria
 - [ ] Fidelity level selected with rationale
@@ -51,6 +48,7 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 - [ ] Animation specs documented (trigger, duration, easing, target properties)
 - [ ] Developer handoff package prepared (specs, assets, redlines)
 - [ ] Prototype testable or shareable via chosen tool
+- [ ] `prefers-reduced-motion` fallback defined for every animation
 
 ### Max Response Length
 150 lines of spec, configuration, and patterns.
@@ -58,22 +56,104 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ## Workflow
 
 ### Step 1: Select Fidelity Level
-Low-fidelity: wireframes, click-through only, grayscale, placeholder content — use for early concept validation. High-fidelity: pixel-perfect designs, real content, micro-interactions, responsive — use for usability testing and dev handoff. Mid-fidelity bridges the gap with real layout but minimal polish. Fidelity level determines tool choice (Figma for high, Balsamiq for low).
 
-### Step 2: Design Interactions
-Screen transitions: push (drill-down), fade (context change), slide (side panels). Component interaction: hover → state change, tap → ripple or scale, drag → snap to grid. Navigation: tabs switch content pane, accordion expands content, dropdown reveals options. Apply consistent interaction patterns across the prototype — never mix metaphors.
+| Level | Appearance | Interactivity | Tool | Best For |
+|-------|-----------|---------------|------|----------|
+| Low | Grayscale wireframes, placeholder text, rough layout | Click-through only | Figma, Balsamiq, pen & paper | Concept validation, IA testing |
+| Mid | Styled elements, real content, partial polish | Screen transitions + key interactions | Figma, Sketch | Internal reviews, early usability |
+| High | Pixel-perfect, real data, all states | Full interactions + micro-animations | Figma, ProtoPie, Framer | Usability testing, stakeholder sign-off, dev handoff |
 
-### Step 3: Micro-Interactions
-Structure: trigger → rule → feedback → loop (Dan Saffer model). Timing: hover < 200ms, state change 200–300ms, page transitions 300–500ms, loading > 1s (use skeleton). Easing: ease-in-out for UI elements, ease-out for entrances, ease-in for exits, spring/bounce for playful feedback. Every micro-interaction serves a purpose — confirm, notify, or delight.
+### Step 2: Design Interaction Patterns
 
-### Step 4: Animation Principles
-Follow Disney's 12 principles where applicable: easing (no linear animations), squash & stretch (elastic elements), anticipation (pull back before action), follow-through (overshoot then settle). Duration: faster for functional (state change: 200ms), slower for expressive (onboarding: 500ms). Respect `prefers-reduced-motion` — collapse all motion to cross-fade (300ms).
+| Pattern | Behavior | Duration | Use Case |
+|---------|----------|----------|----------|
+| Push | Screen slides left, new in from right | 300-400ms | Drill-down navigation |
+| Fade | Screen fades out/in | 200-300ms | Tab switches, unrelated page change |
+| Slide | Panel slides up/down/left/right | 250-350ms | Drawer, sheet, sidebar |
+| Overlay | Content appears on top, dims background | 200-300ms | Modal, tooltip, menu |
+| Accordion | Content expands/collapses vertically | 200-300ms | FAQ, settings |
+| Carousel | Content slides horizontally | 300-400ms | Image gallery, onboarding |
 
-### Step 5: Developer Handoff
-Figma Dev Mode: inspect mode, redlines for spacing and sizing, export assets (SVG, PNG, WebP). Spec document: component states (default, hover, active, disabled, error), responsive behavior (breakpoints, grid), typography scale (font, size, weight, line-height, letter-spacing). Interactive prototype link for behavior reference.
+### Step 3: Define Micro-Interactions
 
-### Step 6: Spec Documentation
-For each screen: layout grid and breakpoints, component placement with absolute coordinates or constraints, responsive rules (stack, wrap, hide). For each component: states documented visually, spacing/padding within component, typography values, elevation/shadow values. Export assets with naming convention: `component-state-scale` (e.g., `icon-close-active-24.svg`).
+Dan Saffer model: **Trigger** → **Rule** → **Feedback** → **Loop**
+
+| Action | Duration | Easing | Effect |
+|--------|----------|--------|--------|
+| Hover | 150ms | ease-out | Color/scale change |
+| Active/Press | 100ms | ease-in | Scale 0.97 |
+| State change | 200ms | ease-in-out | Toggle, switch, checkbox |
+| Card expand | 300ms | ease-out | Scale + shadow |
+| Page transition | 300ms | ease-in-out | Fade/slide |
+| Toast appear | 250ms | ease-out | Slide in from top |
+| Toast dismiss | 200ms | ease-in | Fade out |
+| Loading skeleton | 400ms | ease-in-out | Pulse animation |
+
+### Step 4: Apply Animation Principles
+
+| Principle | Application |
+|-----------|-------------|
+| Easing | No linear motion — ease-in-out for UI, ease-out for entrances |
+| Stagger | Offset multiple elements by 30-80ms for visual hierarchy |
+| Parenting | Elements move with container (nesting, scrolling) |
+| Transformation | Same element across states — morph, don't replace |
+| Duration curve | Small moves = fast (100ms), big moves = slow (400ms) |
+| Anticipation | Pull back slightly before action (elastic UI) |
+
+### Step 5: Implement Reduced Motion
+```css
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```
+Fallback all motion to 300ms cross-fade — preserves feedback without motion.
+
+### Step 6: Prepare Developer Handoff
+
+| Artifact | Tools | Content |
+|----------|-------|---------|
+| Figma Dev Mode link | Figma | Inspect CSS/iOS/Android values, export assets |
+| Interactive prototype link | Figma, ProtoPie | Behavior reference for all flows |
+| Spec document | Notion, PDF | Component states, typography, colors, spacing, elevation |
+| Asset exports | Figma, Sketch | SVG/PNG/WebP organized by component-state-scale |
+| Design tokens | JSON, CSS custom properties | Colors, typography, spacing, shadows, radii |
+| Motion specs | Documentation | Trigger, duration, easing, state change per interaction |
+
+### Step 7: Export Assets with Naming Convention
+```
+{component}-{variant}-{state}-{size}.{format}
+button-primary-hover-40.svg
+icon-close-active-24.svg
+card-background-default.webp
+```
+
+### Step 8: Spec Documentation Template
+For each screen: layout grid and breakpoints, component placement, responsive rules.
+For each component: all states documented visually, spacing/padding, typography, elevation.
+
+## Best Practices
+
+| Practice | Why |
+|----------|-----|
+| Consistent easing across similar interactions | predictable, cohesive feel |
+| Animation duration < 100ms imperceptible, > 500ms feels slow for UI | follow the timing chart |
+| `prefers-reduced-motion` collapse for every animation | accessibility requirement |
+| Dev mode as source of truth | developers inspect directly |
+| Export assets at 2x resolution | retina display support |
+| Name assets consistently | developer finds assets quickly |
+
+## Pitfalls to Avoid
+
+- **Animation for animation's sake**: Every micro-interaction must confirm, notify, or delight. No gratuitous motion.
+- **Linear easing**: Never use linear — feels robotic. Use ease-in-out, ease-out, or spring.
+- **Inconsistent timing**: All state changes at 200ms, all page transitions at 300ms. Consistency builds muscle memory.
+- **No reduced-motion fallback**: Users with vestibular disorders need motion collapsed. Always implement `prefers-reduced-motion`.
+- **Missing states in handoff**: Developers need default, hover, active, disabled, error, loading for every component.
+- **Vague easing specs**: Don't say "smooth" — specify cubic-bezier or named easing function.
+- **No Interactive prototype**: Specs without behavior context lead to implementation drift. Always link prototype.
 
 ## Rules
 - Micro-interactions serve a purpose — never animate for animation's sake
@@ -83,12 +163,16 @@ For each screen: layout grid and breakpoints, component placement with absolute 
 - Handoff includes interactive prototype for behavior reference
 - No linear easing — use ease-in-out, ease-out, or spring
 - Dev mode in Figma is the handoff source of truth — redlines overlay for details
+- Always export assets at 2x resolution with descriptive naming
 
 ## References
 - `references/prototyping-fidelity.md` — Low/high fidelity, interaction patterns, micro-interactions, animation principles
-- `references/handoff.md` — Figma dev mode, specs, asset export, redlines, specs doc
+- `references/prototyping-tools.md` — Figma, ProtoPie, Framer comparison, tool selection, prototyping workflows
+- `references/handoff-workflow.md` — Dev mode, spec doc, asset export, redlines, design tokens, motion specs
+- `references/handoff.md`
 
 ## Handoff
 `design-ux-research` for usability testing with the prototype.
-`design-accessibility` for a11y review of interactions.
 Carry forward: prototype links, interaction specs, animation timing chart.
+
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.

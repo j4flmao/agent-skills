@@ -305,6 +305,14 @@ with DAG(..., on_failure_callback=alert_failure):
     ...
 ```
 
+### Step 10: Dagster Deep Dive
+Dagster's asset-centric model goes beyond DAGs. Software-defined assets (SDAs) explicitly define what pipelines produce. Auto-materialization evaluates freshness policies and triggers runs automatically. Asset sensors trigger on upstream changes. Dagster's dbt integration loads dbt models as Dagster assets with column-level lineage, test visibility, and health checks. Configurable resources provide dependency injection via I/O managers. Code locations split pipelines across repos with a unified UI. Use Dagster when asset lineage, data quality at transform time, and dbt integration are priorities.
+
+### Step 11: Temporal and Kestra
+Temporal is workflow-as-code for long-running, fault-tolerant stateful workflows. A Temporal Workflow is a function that pauses, awaits signals, executes idempotent activities, and survives process restarts. Guarantees: exactly-once activity execution, infinite retry with backoff, event-sourced workflow state. Use Temporal for multi-step business processes and microservice orchestration where state must survive crashes.
+
+Kestra combines YAML declarative flows with event-driven triggers. Flows define tasks (Python, dbt, shell, API) with dependencies, retries, and error handlers. Supports scheduled, event (S3/Kafka/webhook), and flow-triggered execution. Built-in dashboard for execution history, logs, and SLA tracking. Git-native workflow definitions. Use Kestra for GitOps data pipelines with declarative YAML.
+
 ## Rules
 - Every DAG/flow must be idempotent (rerun produces same result)
 - Set retry with exponential backoff on all tasks (3 retries, 5-10min base)
@@ -318,6 +326,8 @@ with DAG(..., on_failure_callback=alert_failure):
 ## References
 - `references/airflow-architecture.md` — Scheduler, executor types, DAG design, operators, sensors, pools, SLA
 - `references/dagster-prefect.md` — Dagster assets, software-defined assets, sensors; Prefect flows/tasks, deployments; CI/CD, testing, alerting
+- `references/dagster-deep-guide.md` — Dagster SDAs, auto-materialize, dbt integration, asset checks, code locations
+- `references/temporal-workflows.md` — Temporal workflow-as-code, activities, signals, queries, retry policies, data pipeline patterns
 
 ## Handoff
 `data-etl-pipeline` for pipeline design patterns and incremental loading

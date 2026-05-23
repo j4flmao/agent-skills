@@ -134,6 +134,110 @@ Tune per dataset: profile 30 days of historical data, set thresholds at 99th per
 
 SLO: `freshness_pct = successful_runs / total_runs * 100` over 30d rolling window. Violation if below tier threshold for 2 consecutive windows.
 
+#### SLO Definition YAML
+
+```yaml
+# slo-definitions/slo-fct-orders.yaml
+apiVersion: sloth/v1
+kind: PrometheusServiceLevel
+metadata:
+  name: slo-fct-orders
+  namespace: data-observability
+spec:
+  service: analytics.fct_orders
+  labels:
+    tier: critical
+    domain: finance
+    owner: data-engineers
+  slos:
+    - name: freshness-slo
+      objective: 99.9
+      description: "Orders table loaded within 1 hour of source availability"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(data_freshness_breach{table="analytics.fct_orders"}[30d]))
+          totalQuery: |
+            sum(rate(data_freshness_checks{table="analytics.fct_orders"}[30d]))
+      alerting:
+        pageAlert:
+          name: FreshnessSLOPage
+          labels:
+            severity: page
+          annotations:
+            summary: "Freshness SLO breach for fct_orders (99.9% target)"
+    - name: volume-slo
+      objective: 99.0
+      description: "Row count within ±5% of trailing 30-day average"
+      sli:
+        events:
+          errorQuery: |
+            sum(rate(data_volume_anomaly{table="analytics.fct_orders"}[30d]))
+          totalQuery: |
+            sum(rate(data_volume_checks{table="analytics.fct_orders"}[30d]))
+```
+
+#### Bigeye Threshold Examples
+
+```yaml
+# bigeye-monitors.yaml
+monitors:
+  - name: revenue_null_rate
+    metric: NULL_RATE
+    column: revenue_analytics.fct_orders.total_amount
+    threshold:
+      type: STATIC
+      min: 0.0
+      max: 0.05
+    severity: HIGH
+    schedule: EVERY_6_HOURS
+
+  - name: order_count_volume
+    metric: ROW_COUNT
+    table: analytics.fct_orders
+    threshold:
+      type: SEASONAL
+      period: 7d
+      sensitivity: 2.5
+      min: 50000
+      max: 200000
+    severity: MEDIUM
+    schedule: EVERY_HOUR
+
+  - name: total_amount_distribution
+    metric: AVG
+    column: revenue_analytics.fct_orders.total_amount
+    threshold:
+      type: ZSCORE
+      zscore_threshold: 3.0
+      min_training_weeks: 4
+    severity: LOW
+    schedule: DAILY
+
+  - name: schema_change
+    metric: SCHEMA_CHANGE
+    table: analytics.fct_orders
+    threshold:
+      type: STATIC
+      change: DROP_COLUMN
+    severity: CRITICAL
+    schedule: ON_SCHEMA_CHANGE
+
+alerting:
+  - name: critical-pagerduty
+    targets:
+      - type: PAGER_DUTY
+        routing_key: ${PD_ROUTING_KEY}
+    when:
+      severity: [CRITICAL, HIGH]
+  - name: medium-slack
+    targets:
+      - type: SLACK
+        channel: "#data-alerts"
+    when:
+      severity: [MEDIUM, LOW]
+```
+
 ### Step 6: Incident Response
 
 ```

@@ -55,30 +55,58 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ## Workflow
 
-1. **Biometric API choice** — Android: BiometricPrompt (strong) / androidx.biometric. iOS: LocalAuthentication framework (LAContext). Cross-platform: Expo LocalAuthentication or Capacitor biometrics plugin.
+1. **Biometric type detection** — Three categories of biometric authentication with varying security levels. Class 3 (Strong): Face ID (iPhone X+), Touch ID (iPhone 5s+), Pixel Imprint, ultrasonic fingerprint. Class 2 (Weak): face unlock on budget Android devices, iris scanner. Class 1: convenience face unlock. Android: Check with `BiometricManager.canAuthenticate(BIOMETRIC_STRONG)` vs `BIOMETRIC_WEAK`. iOS: `LAContext.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics)` — Face ID on devices with TrueDepth camera, Touch ID on devices with Touch ID sensor. Device credential (PIN, pattern, password) is always available as fallback and is considered a biometric alternative on iOS (`deviceOwnerAuthentication`), but not equivalent to biometric on Android (`DEVICE_CREDENTIAL` flag).
 
-2. **Authentication flow** — Check biometric availability → check if enrolled → check device credential fallback availability → show prompt with reason → handle success → handle failure (retry or fallback). Always chain: biometric → device credential → app password.
+2. **Biometric availability check** — Before showing a biometric prompt, check: (a) Is biometric hardware available? (hardware present). (b) Is biometric enrolled? (user has registered at least one fingerprint/face). (c) Is device credential configured? (PIN/password set — required fallback). (d) Are there any transient issues? (security update required, sensor dirty, too many attempts — lockout). Handle each failure case with a specific user-facing message. On Android, `BiometricManager` returns distinct error codes. On iOS, `LAContext.canEvaluatePolicy` returns `NSError` with `LAError` codes. Never show biometric prompt without first checking availability.
 
-3. **Secure storage** — Android: EncryptedSharedPreferences or Keystore for biometric-protected CryptoObject. iOS: Keychain with `kSecAccessControlBiometryCurrentSet` / `kSecAccessControlUserPresence`. Data encrypted at rest, decryption key released only after biometric verification.
+3. **Authentication prompt flow** — Flow: user triggers protected action → check availability → if biometric available → show biometric prompt with reason string → user authenticates → on success → grant access → on failure → allow retry (up to 5 attempts) → on 5th failure → lockout → force device credential. If biometric not available at start → fall through to device credential. The reason string is mandatory on both platforms and displayed prominently. On iOS, `localizedReason` is shown in the Face ID dialog. On Android, `setTitle` and `setSubtitle` are shown in the system prompt. After successful authentication, the app receives a callback with (optionally) a `CryptoObject` for decryption.
 
-4. **Biometric variants** — Strong biometric: Face ID, Touch ID, Pixel Imprint (Class 3). Weak biometric: face unlock on unsupported hardware (Class 1/2). Device credential: PIN, pattern, password. Treat all strong variants the same in UX — show icon matching device type.
+4. **Secure storage with biometric protection** — Store sensitive data (auth tokens, encryption keys, passwords) in platform secure stores with biometric access control. Android: EncryptedSharedPreferences backed by Android Keystore — set `setUserAuthenticationRequired(true)` on the master key to require biometric before reading. Or use Keystore `SecretKey` with `setUserAuthenticationRequired(true)` and encrypt/decrypt data through `CryptoObject`. `setInvalidatedByBiometricEnrollment(true)` ensures key is destroyed if new biometric is enrolled (prevents stolen biometric from accessing old data). iOS: Keychain with `SecAccessControlCreateWithFlags` using `biometryCurrentSet` — item is only accessible after biometric authentication and is invalidated on biometric enrollment change. For "cache after auth" pattern, use `setUserAuthenticationValidityDurationSeconds` (Android) or `kSecUseAuthenticationUIFallback` (iOS).
 
-5. **UX considerations** — Explicit user opt-in before enrolling. Clear description of what biometrics protect. Fallback to device credential always available. Retry on first failure, lockout after 5 consecutive failures. Time-based lockout with increasing duration.
+5. **Fallback and UX design** — Always provide device credential (PIN/password) as fallback — never block users out. Three-tier fallback chain: Biometric → Device Credential → App Password (optional, for users who can't use either). UX patterns: opt-in onboarding screen explaining what biometrics protect, toggle in Settings to enable/disable, clear description of protected operations, graceful degradation on devices without biometric hardware. Lockout: after 5 consecutive biometric failures, biometric is blocked (iOS indefinitely until device credential used, Android for 30 seconds escalating). After lockout, show device credential prompt automatically. Never let users get stuck — always offer the next fallback option.
 
-## Rules
+6. **Cross-platform implementation** — Using Capacitor Biometric plugin (`@capacitor/biometric`): single API for both platforms, handles availability check, prompt, and fallback. Using Expo LocalAuthentication: similar cross-platform API with `hasHardwareAsync()`, `isEnrolledAsync()`, `authenticateAsync()`. For React Native: `react-native-biometrics` or `react-native-keychain`. Cross-platform wrappers simplify code but may not expose all platform-specific features (CryptoObject, fine-grained error handling, key invalidation control). For sensitive apps, use platform-native implementation with cross-platform coordination.
 
-- Never store raw biometric data — only compare authentication result.
-- Biometric data never leaves the device — no server transmission.
-- Device credential is a mandatory fallback — no biometric-only gates.
-- User must explicitly opt in — no silent enrollment.
-- Require biometrics for sensitive operations: payments, password viewing, profile changes, security settings.
-- Biometric key material automatically invalidated when new biometric is enrolled.
-- 5-failure lockout with time escalation — user must use device credential after lockout.
+## Biometric Strength Comparison
+
+| Level | Android | iOS | Security |
+|-------|---------|-----|----------|
+| Strong (Class 3) | Fingerprint, Face (Class 3) | Face ID, Touch ID | High |
+| Weak (Class 2) | Face unlock, Iris | Face ID with attention not required | Medium |
+| Convenience (Class 1) | Basic face detection | None | Low |
+| Device Credential | PIN, Pattern, Password | PIN, Password | Varies |
+
+## Best Practices
+
+- Never store raw biometric data — only authentication results
+- Biometric data never leaves the device — no server-side biometric matching
+- Device credential fallback is mandatory — no biometric-only gates for critical features
+- User must explicitly opt in — no silent biometric enrollment
+- Protect high-sensitivity operations: payments, password viewing, profile changes, security settings
+
+## Common Pitfalls
+
+- **Lockout without recovery**: If no device credential fallback, user is permanently locked out. Always provide it.
+- **Camera-based face unlock fails in low light**: Advise user or fallback to device credential.
+- **Biometric changed alert ignored**: Apps that don't monitor `onAuthenticationError` with `ERROR_USER_CANCELED` after biometric change leave old data accessible.
+- **Key invalidation surprise**: Keys invalidated on enrollment change delete encrypted data. Migrate before invalidation.
+
+## Configuration Reference
+
+```kotlin
+// Android — BiometricPrompt config
+val promptInfo = BiometricPrompt.PromptInfo.Builder()
+    .setTitle("Verify identity")
+    .setSubtitle("Access your secure vault")
+    .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
+    .setConfirmationRequired(false)
+    .build()
+```
 
 ## References
 
-- `references/biometric-apis.md` — Android BiometricPrompt, iOS LocalAuthentication, cross-platform wrappers
-- `references/secure-storage.md` — Keystore, Keychain, biometric encryption, key invalidation
+- `references/biometric-types.md` — Android BiometricPrompt, iOS LocalAuthentication, cross-platform wrappers
+- `references/auth-flow.md` — Authentication flow, secure storage, key invalidation, migration
 
 ## Handoff
 Hand off to mobile-security skill for threat modeling and penetration testing of biometric auth paths.

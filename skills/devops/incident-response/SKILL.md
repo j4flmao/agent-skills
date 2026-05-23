@@ -21,7 +21,7 @@ Establish a structured incident response framework with clear severity levels, d
 ## Agent Protocol
 
 ### Trigger
-"incident response", "on-call", "PagerDuty", "OpsGenie", "incident management", "postmortem", "runbook", "severity", "escalation", "SEV", "SEV1", "SEV2", "SEV3", "incident command", "IC role", "incident timeline", "blameless postmortem", "incident lifecycle", "incident detection", "incident mitigation".
+"incident response", "on-call", "PagerDuty", "OpsGenie", "incident management", "postmortem", "runbook", "severity", "escalation", "SEV", "SEV1", "SEV2", "SEV3", "incident command", "IC role", "incident timeline", "blameless postmortem", "incident lifecycle", "incident detection", "incident mitigation", "MTTD", "MTTR".
 
 ### Input Context
 - Current incident state (detected, ongoing, mitigated, resolved)
@@ -62,22 +62,71 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ### Max Response Length
 500 lines
 
-## Workflow
+## Components
+
+### Severity Matrix (Detailed)
+| Severity | Definition | Response Time | Escalation | Page |
+|---|---|---|---|---|
+| SEV1 | Complete outage, data loss, security breach, SLA-impacting | 5 min | Full team + management + exec | PagerDuty high-urgency |
+| SEV2 | Major feature degraded, partial outage, >5% errors | 15 min | Primary + secondary on-call | PagerDuty high-urgency |
+| SEV3 | Minor feature issue, single-user impact, non-critical bug | 1 business hour | Slack + ticket | PagerDuty low-urgency |
+| SEV4 | Cosmetic, docs, enhancement, tech debt | Next sprint | Ticket queue | None |
+
+### Incident Command Roles
+IC (Incident Commander): owns incident end-to-end, delegates tasks, communicates with stakeholders, does NOT debug. Scribe: real-time timeline documentation — every action, decision, timestamp. SME: technical investigation and mitigation — one per subsystem, reports to IC. Comms: stakeholder status updates, status page updates, external notifications, regulatory reporting if needed. Role transitions: handoff documented in timeline with verbal 2-min summary.
+
+### Runbook Structure
+Symptoms: what alerts fire, what users experience, error messages. Triage: first checks, quick diagnostics, initial investigation commands. Escalation: conditions for escalation, who to contact (primary -> secondary -> manager). Remediation: step-by-step recovery procedures with exact commands and expected outcomes. Runbooks stored in version control alongside application code, reviewed quarterly at minimum.
+
+### On-Call Scheduling
+Primary on-call: first responder, acknowledges within SLA. Secondary: backup for overflow and deep investigation. Escalation path: primary -> secondary -> engineering manager -> VP. Tools: PagerDuty/OpsGenie for schedules, alert routing, escalation policies, incident tracking. Rotation: weekly shifts, max 7 consecutive days. Follow-the-sun for global teams. Handoff: Friday overlap, written summary of ongoing issues.
+
+### Incident Metrics
+MTTD (Mean Time to Detect): time from incident start to first alert. Target: SEV1 <5min, SEV2 <15min. MTTR (Mean Time to Resolve): time from detection to resolution. Target: SEV1 <1hr, SEV2 <4hrs. Track weekly trends, set improvement targets. Metrics drive investment in detection tooling, runbook quality, and on-call training.
+
+## Incident Lifecycle in Depth
+
+### Detection Phase (T+0 to T+5min)
+Detection sources: monitoring alerts (Prometheus AlertManager, Datadog, CloudWatch), synthetic checks (Playwright/Cypress browser tests, uptime monitors), user reports (support tickets via Zendesk/Intercom, social media mentions), security scanning (Snyk, Trivy, WAF alerts), automated rollback triggers (deploy health check failure, error rate threshold). Validate alert is not a false positive before declaring incident.
+
+### Triage Phase (T+5min to T+15min)
+Validate alert, classify severity using matrix, assign IC, open dedicated incident channel in Slack/Teams. Initial stakeholder notification via PagerDuty status update. Decision: severity upgrade/downgrade. If outside on-call expertise, escalate immediately without attempting deep investigation.
+
+### Investigation Phase (T+15min to T+60min)
+IC delegates investigation to SMEs. Check dashboards (Grafana, Datadog), logs (Loki, ELK, Cloud Logging), traces (Jaeger, Zipkin). Identify blast radius: users affected, services impacted, regions involved. Reproduce in staging or isolated environment. Scribe records every action with precise timestamp.
+
+### Mitigation Phase (T+15min to T+120min)
+Stop the bleed first: feature flag toggle, rollback to last known good, reroute traffic to healthy region, scale up, block malicious IPs. Deploy permanent fix to non-production first, test, then deploy to production with canary. Communicate ETA to stakeholders via Comms at defined cadence. Scribe documents all mitigation steps and outcomes.
+
+### Resolution Phase (T+30min to T+24h)
+Verify metrics return to baseline (p99 latency, error rate, throughput). Run end-to-end validation tests. Post resolution to incident channel. Update status page. Schedule postmortem within SLA window. Archive incident channel. Send post-incident summary to stakeholders.
+
+### Postmortem Phase (T+48h to T+1week)
+Schedule postmortem meeting: SEV1 within 48h, SEV2 within 1 week, SEV3 in next sprint. Write blameless timeline. Conduct 5 Whys root cause analysis. Create action items with single owner and due date. Share postmortem internally — every incident is a learning opportunity. Track action items to completion.
 
 ### Step 1: Classify Severity
-SEV1 (Critical): complete service outage, data loss, security breach — response within 5min, page whole team. SEV2 (High): major feature degraded, partial outage, performance degradation — response within 15min, page primary on-call. SEV3 (Medium): minor feature issue, non-critical bug — response within 1 business hour, create ticket. SEV4 (Low): cosmetic issue, documentation bug, enhancement — next sprint planning, normal ticket.
+SEV1 (Critical): complete service outage, data loss, security breach — response within 5min, page whole team + management. SEV2 (High): major feature degraded, partial outage, performance degradation affecting >5% of users — response within 15min, page primary on-call. SEV3 (Medium): minor feature issue, non-critical bug, single-user impact — response within 1 business hour, create ticket, slack notification. SEV4 (Low): cosmetic issue, documentation bug, enhancement — next sprint planning, normal ticket queue.
 
 ### Step 2: Establish Incident Command
-IC (Incident Commander): owns the incident end-to-end, delegates tasks, does not debug. Scribe: documents timeline, decisions, and actions in real-time. SME (Subject Matter Expert): technical investigation and mitigation — may be multiple. Comms: stakeholder communication, status updates, external notifications.
+IC (Incident Commander): owns the incident end-to-end, delegates tasks, does not debug. Scribe: documents timeline, decisions, and actions in real-time. SME (Subject Matter Expert): technical investigation and mitigation — may be multiple per subsystem. Comms: stakeholder communication, status updates, external notifications, status page updates.
 
 ### Step 3: Detect and Triage
-Detection sources: monitoring alerts (Prometheus, Datadog), user reports, automated health checks, security scanning. Validate alert is not a false positive. Classify severity. Escalate if outside on-call expertise. Open incident channel.
+Detection sources: monitoring alerts (Prometheus, Datadog, CloudWatch), synthetic checks (browser tests, API health probes), user reports (support tickets, social media), automated health checks, security scanning (vulnerability alerts, intrusion detection). Validate alert is not a false positive. Classify severity using matrix. Escalate if outside on-call expertise. Open dedicated incident channel.
 
 ### Step 4: Investigate and Mitigate
-Investigate: check dashboards, logs, metrics. Identify blast radius. Reproduce if safe. Mitigate: stop bleed first (rollback, feature flag, traffic drain), permanent fix second. Document every action in timeline via scribe.
+Investigate: check dashboards, logs, traces. Identify blast radius (users affected, services impacted). Reproduce if safe. Mitigate: stop bleed first (feature flag, rollback, traffic drain, scale up), permanent fix second. Document every action in timeline via scribe. Communicate ETA to stakeholders.
 
-### Step 5: Resolve and Communicate
-Verify mitigation: confirm metrics return to baseline, test end-to-end. Declare resolved: post to incident channel, update status page. Communicate: summary to stakeholders, initial postmortem findings. Schedule postmortem.
+### Step 5: Resolve and Learn
+Verify mitigation: confirm metrics return to baseline, test end-to-end. Declare resolved: post to incident channel, update status page. Communicate: summary to stakeholders, initial postmortem findings. Schedule postmortem within SLA (SEV1: 48h, SEV2: 1 week, SEV3: next sprint). Track action items to completion.
+
+### Step 6: Measure Incident Metrics
+MTTD (Mean Time to Detect): time from incident start to detection. MTTR (Mean Time to Resolve): time from detection to resolution. Track weekly trends, set improvement targets. Use metrics to identify gaps in detection coverage, response speed, and tooling.
+
+### Step 7: On-Call Scheduling
+Primary on-call: first responder, carries phone, acknowledges within SLA. Secondary on-call: backup, handles overflow, covers primary during deep investigation. Escalation path: primary → secondary → engineering manager → VP. Tools: PagerDuty or OpsGenie for scheduling, alert routing, escalation policies, and incident tracking. Rotation: weekly shifts, follow-the-sun for global teams.
+
+### Step 8: Maintain Runbooks
+Runbook structure per service: symptoms (what alerts fire, what users experience), triage (first checks, quick diagnostics), escalation (when to escalate and to whom), remediation (step-by-step recovery procedures). Runbooks stored in version control, reviewed quarterly, tested during game days.
 
 ## Rules
 - IC does not touch the keyboard — IC delegates and coordinates
@@ -87,6 +136,10 @@ Verify mitigation: confirm metrics return to baseline, test end-to-end. Declare 
 - Postmortem must be scheduled before incident is closed — never "postmortem TBD"
 - Communication cadence: SEV1 every 30min, SEV2 every 60min, SEV3 at major changes
 - All incident channels are public by default — transparency over secrecy
+- Runbooks tested quarterly via tabletop exercises
+- MTTD/MTTR tracked weekly and reviewed in team retro
+- On-call shifts max 7 days to prevent burnout
+- Postmortem action items have single owners and due dates
 
 ## References
 - `references/incident-lifecycle.md` — Severity matrix detailed definitions, detection methods, response procedures, mitigation strategies, resolution criteria, incident command system

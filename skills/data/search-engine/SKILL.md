@@ -257,6 +257,62 @@ source = products
 | head 10
 ```
 
+### Step 8: Meilisearch
+Meilisearch is a lightweight search engine in Rust providing instant search-as-you-type (sub-50ms), typo tolerance out of the box, and an intuitive REST API. Features: automatic indexing (no explicit schema), faceted search with filters/ranges, synonym management, geo-search, multi-tenancy via API key scoping. Uses milli (Rust) core with LMDB key-value storage. Single-node only — data must fit on one instance. Use for datasets up to 10M docs, site search, ecommerce product search, and rapid setup.
+
+```json
+// Meilisearch: index creation with searchable attributes
+POST /indexes
+{
+  "uid": "products",
+  "primaryKey": "id"
+}
+
+// Add documents (auto-indexed)
+POST /indexes/products/documents
+[
+  { "id": 1, "title": "Wireless Headphones", "brand": "AudioPro", "price": 89.99, "category": "Electronics" },
+  { "id": 2, "title": "Bluetooth Speaker", "brand": "AudioPro", "price": 49.99, "category": "Electronics" }
+]
+
+// Search with typo tolerance (automatic)
+GET /indexes/products/search?q=wireles&filter=price<100
+// Returns: Wireless Headphones (typo "wireles" matches "Wireless")
+
+// Configure ranking rules
+PATCH /indexes/products/settings
+{
+  "rankingRules": ["words", "typo", "proximity", "attribute", "sort", "exactness"],
+  "sortableAttributes": ["price"],
+  "filterableAttributes": ["category", "brand"]
+}
+```
+
+### Step 9: Typesense
+Typesense is an open-source, typo-tolerant search engine in C++ for sub-50ms search on TB-scale data. Configurable ranking combining text relevance, numeric fields, and custom formulas. Key features: built-in vector search for semantic/embedding-based retrieval alongside full-text, scoped API keys for multi-tenancy, curation rules (pin/boost results), query suggestions via synonyms. High availability via replication-based cluster. Use for apps needing both full-text and vector search in one system, ecommerce with curation, or as an Elasticsearch alternative with simpler ops and better per-node performance.
+
+```json
+// Typesense: schema with vector search
+{
+  "name": "products",
+  "fields": [
+    {"name": "title", "type": "string"},
+    {"name": "description", "type": "string"},
+    {"name": "price", "type": "float", "sort": true},
+    {"name": "category", "type": "string", "facet": true},
+    {"name": "embedding", "type": "float[]", "num_dim": 384}
+  ],
+  "default_sorting_field": "price"
+}
+
+// Hybrid search: text + vector (semantic)
+GET /collections/products/documents/search
+?q=wireless headphones
+&query_by=title,description
+&vector_query=embedding:([0.02, 0.15, ...])  # 384-dim embedding
+&sort_by=price:asc
+```
+
 ## Rules
 - Explicit mapping always, dynamic mapping never in production
 - Multi-fields (`text` + `keyword`) for full-text + sorting/aggregation
@@ -272,6 +328,7 @@ source = products
 ## References
 - `references/elasticsearch-architecture.md` — Node types, shards/replicas, mapping, analysis, indexing, cluster management, ILM
 - `references/search-aggregation.md` — Full-text search, term/boolean/fuzzy queries, aggregations, performance tuning, OpenSearch
+- `references/modern-search-engines.md` — Meilisearch milli/LMDB, Typesense hybrid text+vector search, curation rules, comparison matrix
 
 ## Handoff
 `data-relational-database` for source data

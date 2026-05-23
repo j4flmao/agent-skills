@@ -59,22 +59,171 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ## Workflow
 
 ### Step 1: Log Schema Definition
-Every log entry is a single JSON object with these fields: `timestamp` (ISO 8601, millisecond precision), `level` (ERROR/WARN/INFO/DEBUG), `logger` (source class/module name), `message` (human-readable summary), `structuredContext` (object containing `traceId`, `spanId`, `userId`, `requestId`, `service`, `version`, `environment`, `correlationId`). Additional fields added per log statement as context.
+Every log entry is a single JSON object with required fields: `@timestamp` (ISO 8601, millisecond precision, UTC), `log.level` (ERROR/WARN/INFO/DEBUG), `log.logger` (source class/module), `message` (human-readable summary), `trace.id`, `span.id`, `service.name`, `service.environment`, `event.action`, `http.request.id`. Follow Elastic Common Schema (ECS) for consistency across services.
+
+```json
+{
+  "@timestamp": "2025-01-15T10:30:00.123Z",
+  "log.level": "INFO",
+  "log.logger": "checkout.service",
+  "message": "Order created successfully",
+  "trace.id": "abc123def456",
+  "span.id": "span-789",
+  "service.name": "checkout-service",
+  "service.version": "1.2.3",
+  "service.environment": "production",
+  "event.action": "order.create",
+  "event.outcome": "success",
+  "event.duration": 234,
+  "http.request.id": "req_4444",
+  "http.request.method": "POST",
+  "http.response.status_code": 201,
+  "url.path": "/api/orders",
+  "client.user.id": "user_98765",
+  "labels": { "team": "checkout", "feature": "new-checkout" }
+}
+```
 
 ### Step 2: Log Level Discipline
-ERROR: application cannot fulfill a request — failure, exception, outage. WARN: degradation or unexpected state — retry happened, fallback used, rate limit hit. INFO: state change — request started/completed, user created, payment processed. DEBUG: development detail — query parameters, function entry/exit, variable values. Production: only ERROR, WARN, and INFO. DEBUG enabled per-request via header or temporary config.
+| Level | Numeric | When to Use | Sample in Prod | Example |
+|-------|---------|-------------|----------------|---------|
+| FATAL | 0 | Application cannot continue | 100% | OOM, DB unreachable |
+| ERROR | 1 | Request cannot be served | 100% | External API 500, validation fails |
+| WARN | 2 | Degradation but served | 100% | Circuit breaker opened, fallback used |
+| INFO | 3 | State transition | 10% | User created, order placed |
+| DEBUG | 4 | Development detail | 0-1% | SQL queries, function params |
+| TRACE | 5 | Deep diagnosis | 0% | Variable values, loop iterations |
 
-### Step 3: Log Output Format
-JSON lines format (LDJSON/NDJSON): one JSON object per line, no pretty printing, no multi-line logs. Output to stdout only — never write to files in production. Stderr for fatal/crash errors only. Log shipping via sidecar (Fluentd, Logstash, Vector) or cloud agent (CloudWatch agent, Datadog agent). Never use file appenders in production containers.
+Production: only FATAL (100%), ERROR (100%), WARN (100%), INFO (sampled), DEBUG (disabled or header-activated). Per-request DEBUG: enabled via `X-Debug-Log: true` header for debugging specific requests.
+
+### Step 3: Logger Configuration by Language
+
+```typescript
+// Pino — Node.js (fastest JSON logger)
+import pino from 'pino';
+
+const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  formatters: {
+    level(label) { return { 'log.level': label }; },
+    bindings() { return {}; },
+    log(obj) {
+      obj['@timestamp'] = new Date().toISOString();
+      obj['service.name'] = process.env.SERVICE_NAME || 'unknown';
+      obj['service.environment'] = process.env.NODE_ENV || 'development';
+      return obj;
+    },
+  },
+  redact: {
+    paths: ['password', 'secret', 'token', 'ssn', 'email', 'creditCard', 'authorization'],
+    censor: '[REDACTED]',
+  },
+  serializers: { err: pino.stdSerializers.err, req: pino.stdSerializers.req, res: pino.stdSerializers.res },
+  timestamp: false,
+});
+```
+
+```csharp
+// Serilog — .NET with ECS format
+using Serilog;
+using Serilog.Formatting.Ecs;
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .Enrich.WithProperty("service.name", "checkout-service")
+    .Enrich.WithProperty("service.environment", env)
+    .Enrich.WithCorrelationIdHeader("X-Correlation-ID")
+    .WriteTo.Console(new EcsTextFormatter())
+    .CreateLogger();
+
+Log.Information("Order {OrderId} created with amount {Amount}", orderId, 49.99);
+```
+
+```go
+// Zerolog — Go
+import "github.com/rs/zerolog/log"
+
+zerolog.TimeFieldFormat = time.RFC3339Nano
+zerolog.LevelFieldName = "log.level"
+zerolog.MessageFieldName = "message"
+zerolog.TimestampFieldName = "@timestamp"
+
+logger := log.With().
+  Str("service.name", "checkout-service").
+  Str("service.environment", os.Getenv("ENV")).
+  Logger()
+
+logger.Info().Str("orderId", orderId).Float64("amount", 49.99).Msg("Order created")
+logger.Error().Err(err).Str("orderId", orderId).Msg("Payment failed")
+```
 
 ### Step 4: Context Propagation
-Correlation ID: generated at ingress (API gateway, load balancer, or first service), propagated via HTTP headers (`X-Correlation-ID`, `x-request-id`) through all service calls. Async boundaries: manually pass correlation ID through message headers for queues, streams, and event buses. Include `traceId` and `spanId` for distributed tracing integration. Every log entry includes the correlation context.
+Correlation ID: generated at ingress (API gateway or first service), propagated via HTTP headers (`X-Correlation-ID`, `x-request-id`) through all service calls. Async boundaries: manually pass correlation ID through message headers for queues, streams, and event buses. Every log entry includes the correlation context.
 
-### Step 5: Sensitive Data Redaction
-Pattern-based redaction for: passwords, secrets, tokens, API keys, SSN, email addresses, credit card numbers, phone numbers. Redaction function: matches pattern → replaces with masked value (e.g., `"email": "j***@example.com"`). Reversible format for auditing: store hash of original value alongside masked version. Apply redaction at the logger boundary — never in business logic.
+```typescript
+// Express middleware
+function loggingMiddleware(req: Request, res: Response, next: NextFunction) {
+  const correlationId = req.headers['x-correlation-id'] as string || uuidv4();
+  const requestId = uuidv4();
+  req.logContext = { correlationId, requestId, traceId: req.headers['x-trace-id'] as string };
+  logger.info({ ...req.logContext, 'event.action': 'request.start', 'http.request.method': req.method, 'url.path': req.path });
+  res.on('finish', () => {
+    logger.info({ ...req.logContext, 'event.action': 'request.complete', 'http.response.status_code': res.statusCode, 'event.duration': Date.now() - startTime });
+  });
+  next();
+}
+```
 
-### Step 6: Sampling Strategy
-ERROR: always logged (100% sample). WARN: sampled at 100% (always log warnings). INFO: sampled at 10% for high-traffic endpoints (can be adjusted per endpoint or per user for debugging). DEBUG: sampled at 1% or disabled entirely in production. Dynamic sampling: increase sample rate when error rate increases. Rate limiting: max N log entries per second per service instance, oldest dropped first.
+### Step 5: PII Redaction
+Pattern-based redaction at the logger boundary (never in business logic). Redact: passwords, secrets, tokens, API keys, SSN, email addresses, credit card numbers, phone numbers. Masked format: `j***@example.com`, `****-****-****-1234`. Store reversible hash for audit purposes.
+
+```typescript
+const REDACTION_PATTERNS = [
+  { pattern: /\b[\w.-]+@[\w.-]+\.\w+\b/g, replacement: (m: string) => `${m[0]}***@${m.split('@')[1]}` },
+  { pattern: /\b(?:\d{4}[-\s]?){3}\d{4}\b/g, replacement: '****-****-****-****' },
+  { pattern: /\b(?:password|secret|token|api[_-]?key|authorization)\s*[:=]\s*\S+/gi, replacement: '$1: [REDACTED]' },
+];
+```
+
+### Step 6: Sampling and Rate Limiting
+| Level | Strategy | Rate |
+|-------|----------|------|
+| ERROR | Always log | 100% |
+| WARN | Always log | 100% |
+| INFO | Per-endpoint rate | 10% default, 0% for /health, 100% for /api/orders |
+| DEBUG | Dynamic | 1% or header-activated |
+
+Adaptive sampling: increase INFO sample rate from 10% to 50% when error rate spikes, decrease when stable. Rate limiting: max 5000 entries/second per service instance, drop oldest exceeding limit.
+
+### Step 7: Log Output and Shipping
+JSON lines format (LDJSON/NDJSON): one JSON object per line, no pretty printing. Output to stdout only — never write to files in production. Stderr for fatal/crash errors. Log shipping via sidecar (Vector, Fluentd, Logstash) or cloud agent (CloudWatch agent, Datadog agent). Never use file appenders in containers.
+
+## Configuration Reference
+
+```yaml
+logging:
+  level: info
+  format: json
+  output: stdout
+  ecs_compatible: true
+  sampling:
+    error: { rate: 1.0 }
+    warn: { rate: 1.0 }
+    info: { rate: 0.1, endpoints: { /health: 0.0, default: 0.1 } }
+    debug: { rate: 0.01 }
+  rate_limit:
+    max_per_second: 5000
+    strategy: drop_oldest
+  redaction:
+    enabled: true
+    patterns: [password, secret, token, ssn, email, creditCard, authorization]
+    censor: "[REDACTED]"
+  retention:
+    error: 90d
+    warn: 30d
+    info: 14d
+    debug: 7d
+```
 
 ## Rules
 - Logs are JSON lines — one JSON object per line
@@ -86,9 +235,10 @@ ERROR: always logged (100% sample). WARN: sampled at 100% (always log warnings).
 - Never log in hot paths (>1000/s without sampling)
 - Logs go to stdout — not files
 - Log shipping is infrastructure concern, not application concern
+- Follow ECS (Elastic Common Schema) for field naming
 
 ## References
-- `references/logging-schema.md` — JSON schema, field definitions, context propagation
+- `references/log-format.md` — JSON schema, field definitions, context propagation, ECS format
 - `references/log-shipping.md` — Stdout capture, sidecar config, aggregation pipeline, sampling
 
 ## Handoff

@@ -58,23 +58,157 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ## Workflow
 
-### Step 1: Locale Selection
-Use BCP 47 tags: `en-US`, `vi-VN`, `zh-CN`, `de-DE`, `fr-FR`, `ja-JP`. Define fallback chain per language: `es-MX` → `es-ES` → `es` → `en`. Store supported locales in configuration. Detect user locale from: `Accept-Language` header, user profile preference, geolocation (CloudFront/Cloudflare headers). Never guess locale from IP alone — always respect user preference.
+### Step 1: Library Selection
+| Library | Language | Message Format | Pluralization | ICU Native | Framework |
+|---------|----------|---------------|---------------|------------|-----------|
+| i18next | JS/TS | JSON | 6 forms | Via plugin | Universal |
+| FormatJS | JS/TS | ICU | Built-in | Yes | React |
+| gettext | Multi | PO/MO | 4 forms | Limited | Python/PHP |
+| Fluent (Project Fluent) | Multi | FTL | Unlimited | Yes | Mozilla |
+| Babel | Python | PO | 4 forms | Via babel-icu | Django |
 
-### Step 2: Message Storage
-Use ICU MessageFormat for all user-facing strings — supports pluralization, gender, select, and number formatting. Organize translation files as JSON/YAML per locale: `locales/en-US/common.json`. Key naming convention: `{domain}.{context}.{key}` — e.g., `checkout.error.card_declined`, `email.welcome.subject`. One domain per logical feature area. Shared keys in `common.json`.
+Choose based on: ICU support requirements, framework integration, pluralization rules complexity (some languages have 6+ plural forms), and runtime performance. i18next is most popular for Node.js, FormatJS for React, gettext for Python/Django, Fluent for Mozilla projects.
 
-### Step 3: Translation Workflow
-Extract: CLI scans source code for `t()`/`__()` calls and outputs key catalog. Upload: push key catalog to translation platform (Crowdin, Lokalise, POEditor). Translate: translators work in platform UI or via vendor. Download: pull translated files as locale JSON/YAML. CI validates: every PR checks that all keys have translations, no missing placeholders, ICU syntax is valid. Build: bundle translation files with application.
+### Step 2: Locale Selection and Detection
+Use BCP 47 tags: `en-US`, `vi-VN`, `zh-CN`, `de-DE`, `fr-FR`, `ja-JP`, `ar-SA`. Define fallback chain per language: `es-MX` → `es-ES` → `es` → `en-US`. Store supported locales in configuration. Detect user locale from: `Accept-Language` header (q-value parsing), user profile preference (database), geolocation (CloudFront CloudFront-Viewer-Country header), domain/subdomain (`fr.example.com`). Never guess locale from IP alone — always respect user preference.
 
-### Step 4: API Message Delivery
-Parse `Accept-Language` header using quality factor (q-value). Negotiate best matching locale from supported set. Set `Content-Language` response header to the negotiated locale. Translate error messages on the server side — never send raw keys to client. For emails/push: use user's stored locale preference. Cache loaded translation files in memory with lazy loading per locale.
+```typescript
+function negotiateLocale(acceptLanguage: string): string {
+  const supported = ['en-US', 'vi-VN', 'zh-CN', 'es-MX', 'es-ES', 'fr-FR', 'de-DE', 'ja-JP', 'ar-SA'];
+  const fallbacks: Record<string, string> = { 'es-MX': 'es-ES', 'es-ES': 'es', 'es': 'en-US' };
+  const parsed = acceptLanguage.split(',')
+    .map(s => { const [tag, q = 'q=1'] = s.trim().split(';'); return { tag: tag.trim(), q: parseFloat(q.split('=')[1] || '1') }; })
+    .sort((a, b) => b.q - a.q);
+  for (const { tag } of parsed) {
+    if (supported.includes(tag)) return tag;
+    const base = tag.split('-')[0];
+    if (supported.includes(base)) return base;
+    if (fallbacks[tag]) return fallbacks[tag];
+  }
+  return 'en-US';
+}
+```
 
-### Step 5: Locale-Aware Formatting
-Use ICU for all formatting: `{value, date, medium}`, `{value, number, ::currency/USD}`, `{value, number, ::percent}`. Timezone conversion: store and render in user's timezone, always store in UTC in database. Use `Intl` APIs server-side (Node.js Intl, Java Locale, Python Babel). Never concatenate translated strings with dynamic values — always use placeholders.
+### Step 3: Message Storage and ICU MessageFormat
+Use ICU MessageFormat for all user-facing strings — supports pluralization, gender, select, and number/date formatting. Organize translation files as JSON per locale per domain: `locales/en-US/common.json`. Key naming convention: `{domain}.{context}.{key}` — e.g., `checkout.error.card_declined`, `email.welcome.subject`. One domain per logical feature area. Shared keys in `common.json`.
 
-### Step 6: RTL Support
-Detect RTL languages: `ar`, `he`, `fa`, `ur`. Set `dir="rtl"` attribute in HTML/email response. Handle bidirectional text with Unicode bidi algorithm (UBA). Mirror layout in responses where applicable. Use logical properties (start/end instead of left/right) in CSS.
+```json
+{
+  "checkout.error.card_declined": "Your card was declined. {reason, select, insufficient_funds {Insufficient funds.} expired {Card expired.} fraud {Transaction flagged.} other {Please try another method.}}",
+  "cart.item_count": "You have {count, plural, =0 {no items} one {# item} other {# items}} in your cart.",
+  "invoice.total": "Total: {amount, number, ::currency/USD}",
+  "email.greeting": "Hello {name}, your order {orderId} was shipped on {date, date, medium}.",
+  "notification.new_follower": "{gender, select, male {He} female {She} other {They}} started following you.",
+  "search.ordinal_result": "You are in {n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} place."
+}
+```
+
+ICU MessageFormat patterns reference: `{value, date, medium}` — date formatting. `{value, number, ::currency/USD}` — currency. `{value, number, ::percent}` — percentage. `{count, plural, =0 {none} one {# item} other {# items}}` — pluralization. `{gender, select, male {He} female {She} other {They}}` — gender selection. `{n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}` — ordinal numbering.
+
+### Step 4: Translation Workflow
+Extract: CLI scans source code for `t()`/`__()` calls and outputs key catalog as JSON with context and file location. Upload: push key catalog to translation platform (Crowdin, Lokalise, POEditor) via REST API. Translate: translators work in platform UI with context strings, screenshots, and descriptions. Review: translation reviewers validate accuracy and consistency. Download: pull translated files as locale JSON. CI validates: every PR checks all keys present, no missing placeholders, ICU syntax valid. Build: bundle translation files with application or lazy-load at runtime.
+
+```bash
+# Extract keys with i18next-scanner
+npx i18next-scanner --config i18next-scanner.config.js
+
+# Push to Crowdin
+crowdin upload sources --branch main
+
+# Pull translations (after translators complete)
+crowdin download --branch main --skip-untranslated-strings false
+```
+
+```typescript
+// CI validation script
+async function validateTranslations(): Promise<boolean> {
+  const source = await loadLocale('en-US');
+  const locales = ['vi-VN', 'zh-CN', 'es-MX', 'de-DE', 'fr-FR', 'ja-JP', 'ar-SA'];
+  let valid = true;
+  for (const locale of locales) {
+    const target = await loadLocale(locale);
+    for (const key of Object.keys(source)) {
+      if (!target[key]) { console.error(`Missing key "${key}" in ${locale}`); valid = false; continue; }
+      const sourceArgs = extractICUVars(source[key]);
+      const targetArgs = extractICUVars(target[key]);
+      if (JSON.stringify(sourceArgs.sort()) !== JSON.stringify(targetArgs.sort())) {
+        console.error(`Argument mismatch for "${key}" in ${locale}: expected ${sourceArgs}, got ${targetArgs}`);
+        valid = false;
+      }
+    }
+  }
+  return valid;
+}
+```
+
+### Step 5: API Message Delivery
+Parse `Accept-Language` header using quality factor (q-value). Negotiate best matching locale from supported set. Set `Content-Language` response header to the negotiated locale. Translate error messages on server side — never send raw keys to client. For emails/push: use user's stored locale preference. Cache loaded translation files in memory with LRU (max 50 locales, bound memory). For server-rendered pages, negotiate locale per request.
+
+```typescript
+// Express middleware
+app.use((req, res, next) => {
+  const locale = negotiateLocale(req.headers['accept-language'] || 'en-US');
+  req.locale = locale;
+  req.t = (key: string, params?: Record<string, unknown>) => i18next.t(key, { lng: locale, ...params });
+  res.setHeader('Content-Language', locale);
+  next();
+});
+
+// Error handler with translated messages
+app.use((err: Error, req: Request, res: Response) => {
+  const message = req.t('error.generic_server_error', { errorId: req.id });
+  res.status(500).json({ error: message, errorId: req.id });
+});
+```
+
+### Step 6: Locale-Aware Formatting
+Use ICU for all formatting: `{value, date, medium}`, `{value, number, ::currency/USD}`, `{value, number, ::percent}`. Timezone: store UTC in DB, convert to user timezone at render time. Number formats differ: `1,234.56` vs `1.234,56`. Use `Intl.DateTimeFormat`, `Intl.NumberFormat` server-side. Never concatenate translated strings with dynamic values — always use placeholders.
+
+| Format | en-US | de-DE | vi-VN | fr-FR | ja-JP |
+|--------|-------|-------|-------|-------|-------|
+| Date | Jan 15, 2025 | 15.01.2025 | 15/01/2025 | 15 janv. 2025 | 2025/01/15 |
+| Time | 10:30 AM | 10:30 | 10:30 | 10:30 | 10:30 |
+| Number | 1,234.56 | 1.234,56 | 1.234,56 | 1 234,56 | 1,234.56 |
+| Currency | $1,234.56 | 1.234,56 € | 1.234,56 ₫ | 1 234,56 € | ¥1,235 |
+
+### Step 7: RTL Support
+RTL locales: `ar`, `ar-SA`, `he`, `he-IL`, `fa`, `fa-IR`, `ur`, `ur-PK`. Set `dir="rtl"` attribute in HTML/email response. Handle bidirectional text (BiDi) with Unicode bidi algorithm (UBA). Wrap LTR text in RTL context with Unicode characters: `\u202B` (RTL Embed), `\u202C` (Pop Directional Formatting). Use logical CSS properties: `margin-inline-start` instead of `margin-left`, `padding-inline-end` instead of `padding-right`.
+
+## Lazy Loading Strategy
+
+```typescript
+const translationCache = new Map<string, Record<string, string>>();
+
+async function loadLocale(locale: string, namespace = 'common'): Promise<Record<string, string>> {
+  const key = `${locale}:${namespace}`;
+  if (translationCache.has(key)) return translationCache.get(key)!;
+  const response = await fetch(`/locales/${locale}/${namespace}.json`);
+  const data = await response.json();
+  translationCache.set(key, data);
+  return data;
+}
+```
+
+## Configuration Reference
+
+```yaml
+i18n:
+  defaultLocale: en-US
+  supportedLocales: [en-US, vi-VN, zh-CN, es-MX, es-ES, de-DE, fr-FR, ja-JP, ar-SA]
+  rtlLocales: [ar-SA, he-IL, fa-IR, ur-PK]
+  fallbackStrategy: exact -> parent -> default -> key
+  namespaces: [common, checkout, email, error, notification]
+  cache:
+    type: lru
+    maxSize: 50
+    ttlMs: 3600000
+  lazyLoad: true
+  pseudoLocalization: false
+  ci:
+    validatePlaceholders: true
+    validateSyntax: true
+    requireAllKeys: true
+```
 
 ## Rules
 - Locale = BCP 47 tag. Never language-only (`en` not `english`)
@@ -84,10 +218,12 @@ Detect RTL languages: `ar`, `he`, `fa`, `ur`. Set `dir="rtl"` attribute in HTML/
 - Translation files are version-controlled and CI-validated
 - Every string has a description for translators
 - No concatenation of translated strings — use placeholders
+- Store timestamps in UTC, format at render time
+- RTL languages require `dir="rtl"` attribute and BiDi handling
 
 ## References
-- `references/i18n-architecture.md` — Locale selection, ICU format, translation workflow, API design
-- `references/l10n-workflow.md` — Key extraction, translation platforms, CI integration, QA
+- `references/i18n-libraries.md` — Library comparison, ICU format, locale selection, API design
+- `references/l10n-patterns.md` — Key extraction, translation platforms, CI integration, RTL patterns
 
 ## Handoff
 `frontend-universal/animation` for RTL UI considerations and animation direction

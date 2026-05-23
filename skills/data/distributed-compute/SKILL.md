@@ -226,6 +226,12 @@ class Aggregator:
     def result(self): return self.count
 ```
 
+### Step 10: NVIDIA RAPIDS and GPU-Accelerated Compute
+RAPIDS is a suite of GPU-accelerated data science libraries. cuDF provides a pandas-like DataFrame API on GPU, delivering 10-50x speedups for transformations on large datasets. cuML offers GPU-accelerated ML (XGBoost, Random Forest, KNN, PCA) with scikit-learn API. cuGraph implements GPU graph analytics. RAPIDS integrates with Dask for multi-GPU, multi-node scaling — Dask + cuDF distributes GPU DataFrames across a cluster. Data loading uses Apache Arrow for zero-copy GPU transfer. Memory: set `CUDA_VISIBLE_DEVICES`, monitor with `nvidia-smi`, use spill-to-host for datasets exceeding GPU memory. Best for: ETL on large tabular datasets, feature engineering, ML preprocessing — any task where pandas is the bottleneck.
+
+### Step 11: Polars DataFrame Library
+Polars is a DataFrame library in Rust with Python bindings, leveraging Apache Arrow columnar format with aggressive query optimization (predicate/projection pushdown, query plan optimization). Outperforms pandas by 5-20x through multi-threading, cache-efficient algorithms, and zero-copy Arrow data sharing. Key features: lazy execution (`pl.LazyFrame`) for automatic optimization, streaming mode for out-of-core processing of datasets larger than RAM, expression-based composable API, and no index concept. Use Polars for data manipulation on datasets up to 100GB as a pandas replacement, or as the transformation layer in Rust-based pipelines alongside Spark for cluster-scale operations.
+
 ## Rules
 - Spark on YARN: set spark.yarn.executor.memoryOverhead (10% of executor memory, min 384MB)
 - Never exceed spark.cores.max > cluster capacity * 0.8 (leave room for system)
@@ -239,6 +245,8 @@ class Aggregator:
 ## References
 - `references/spark-execution.md` — Driver/executor, DAG scheduler, shuffle, memory management, tuning
 - `references/distributed-frameworks.md` — MapReduce, Dask, Ray comparison, YARN/K8s integration
+- `references/gpu-accelerated-compute.md` — NVIDIA RAPIDS cuDF, cuML, cuGraph, Dask+cuDF multi-GPU, memory management
+- `references/polars-dataframe.md` — Polars Arrow-native, lazy execution, streaming mode, expression API, query optimization
 
 ## Handoff
 `data-distributed-storage` for HDFS colocation and rack topology

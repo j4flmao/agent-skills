@@ -1,24 +1,18 @@
 # Istio Patterns
 
 ## Installation
-
 ```bash
-# Download istioctl
 curl -sL https://istio.io/downloadIstio | sh -
 export PATH=$PWD/istio-1.20/bin:$PATH
 
-# Install with demo profile (dev)
-istioctl install --set profile=demo -y
+istioctl install --set profile=demo -y      # dev
+istioctl install --set profile=default -y    # prod
 
-# Install with default profile (prod)
-istioctl install --set profile=default -y
-
-# Enable namespace injection
 kubectl label namespace myapp istio-injection=enabled
 ```
+Profiles: default (production), demo (all components), minimal (just ingress/egress), external (for mesh expansion). Custom profile via `istioctl profile dump`.
 
 ## Sidecar Configuration
-
 ```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: Sidecar
@@ -36,9 +30,9 @@ spec:
       number: 443
       protocol: TLS
 ```
+Restrict sidecar egress to only necessary hosts for security. Proxy resource limits via injection template or per-pod annotation.
 
 ## VirtualService
-
 ```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
@@ -73,9 +67,9 @@ spec:
         port:
           number: 8080
 ```
+Fault injection and mirroring also configurable in VirtualService. Timeouts and retries at route level override DestinationRule defaults.
 
 ## DestinationRule
-
 ```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
@@ -107,9 +101,9 @@ spec:
     labels:
       version: v2
 ```
+Subsets correspond to workload version labels. Circuit breaker protects downstream services from cascading failures.
 
 ## Gateway
-
 ```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway
@@ -130,11 +124,10 @@ spec:
     hosts:
     - myapp.example.com
 ```
+Gateway handles TLS termination at edge. Multiple Gateways for different domains or protocols. Combine with VirtualService binding via `gateways` field.
 
 ## mTLS
-
 ```yaml
-# Enable STRICT mTLS per namespace
 apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication
 metadata:
@@ -144,9 +137,9 @@ spec:
   mtls:
     mode: STRICT
 ```
+Also set mesh-wide via `meshConfig.defaultConfig.tlsMode=ISTIO_MUTUAL`. Verification: Kiali edges show lock icon, `istioctl authz check`.
 
 ## AuthorizationPolicy
-
 ```yaml
 apiVersion: security.istio.io/v1beta1
 kind: AuthorizationPolicy
@@ -174,11 +167,36 @@ spec:
         methods: ["GET", "POST"]
         paths: ["/api/*"]
 ```
+Default-deny: add `- action: DENY { rules: [{ to: [{ operation: { paths: ["/*"] } }] }] }` at the end or use mesh-wide default-deny policy.
 
 ## Kiali Dashboard
-
 ```bash
 istioctl dashboard kiali
-# Port-forward to access Kiali UI
 kubectl port-forward -n istio-system svc/kiali 20001:20001
 ```
+
+## Egress Gateway
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: external-api
+spec:
+  hosts:
+  - api.external.com
+  ports:
+  - number: 443
+    name: https
+    protocol: TLS
+  resolution: DNS
+```
+Egress gateway routes traffic through dedicated Envoy instances. Enable TLS origination at gateway for encrypted outbound connections.
+
+## Key Points
+- VirtualService + DestinationRule work together — VS routes, DR applies policies
+- mTLS STRICT mode after PERMISSIVE migration period
+- AuthorizationPolicy default-denies all, then explicitly allows
+- Circuit breakers prevent cascading failures
+- Kiali provides visual service graph and config validation
+- Egress gateway for controlled, logged, and audited outbound traffic
+- Sidecar resource limits prevent OOM under load

@@ -81,6 +81,99 @@ Default: DataHub for lineage-heavy, OpenMetadata for governance-heavy. Amundsen 
 | **Kafka** | Schema Registry poll | Real-time | DataHub Kafka connector |
 | **Tableau/PowerBI** | Metadata API | 6-hourly | DataHub BI ingestion |
 
+#### DataHub Ingestion YAML
+
+```yaml
+# datahub-ingestion-recipe.yaml
+source:
+  type: snowflake
+  config:
+    account_id: xy12345.us-east-1
+    warehouse: COMPUTE_WH
+    role: DATAHUB_ROLE
+    include_views: true
+    include_tables: true
+    database_pattern:
+      allow: ["PROD_DB", "ANALYTICS_DB"]
+    schema_pattern:
+      deny: ["INFORMATION_SCHEMA"]
+    profiling:
+      enabled: true
+      profile_table_level_only: false
+    capture_table_lineage:
+      enabled: true
+    capture_column_lineage:
+      enabled: true
+sink:
+  type: datahub-rest
+  config:
+    server: "http://datahub-gms:8080"
+```
+
+#### Amundsen Metadata API Calls
+
+```bash
+# Register a table in Amundsen
+curl -X PUT "http://amundsen:5002/table" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "table_name": "fct_orders",
+    "schema": "analytics",
+    "database": "snowflake",
+    "cluster": "prod",
+    "description": "Fact table containing processed order transactions",
+    "tags": ["critical", "finance"],
+    "owners": ["data-engineering@org.com"],
+    "columns": [
+      {"name": "order_id", "type": "VARCHAR", "description": "Unique order identifier"},
+      {"name": "total_amount", "type": "NUMBER(12,2)", "description": "Order total in USD"}
+    ]
+  }'
+
+# Get table lineage
+curl -X GET "http://amundsen:5002/table/snowflake/prod/analytics/fct_orders/lineage?depth=3"
+
+# Search for tables by column
+curl -X GET "http://amundsen:5002/search?query=order_id&page_index=0"
+
+# Add tag to table
+curl -X PUT "http://amundsen:5002/table/snowflake/prod/analytics/fct_orders/tag/pii"
+```
+
+#### OpenMetadata Connector Config
+
+```yaml
+# openmetadata-ingestion-config.yml
+source:
+  type: snowflake
+  serviceName: snowflake_prod
+  serviceConnectionType: Snowflake
+  sourceConfig:
+    config:
+      type: DatabaseMetadata
+      markDeletedTables: true
+      includeTables: true
+      includeViews: true
+      includeTags: true
+      databaseFilterPattern:
+        includes: ["PROD_DB"]
+      schemaFilterPattern:
+        excludes: ["INFORMATION_SCHEMA"]
+      tableFilterPattern:
+        includes: ["fct_%", "dim_%", "stg_%"]
+sink:
+  type: metadata-rest
+  config:
+    apiEndpoint: http://openmetadata-server:8585/api
+workflowConfig:
+  loggerLevel: INFO
+  openMetadataServerConfig:
+    hostPort: http://openmetadata-server:8585/api
+    authProvider: openmetadata
+    securityConfig:
+      jwtToken: ${OM_JWT_TOKEN}
+```
+
 ### Step 3: Column-Level Lineage
 
 ```

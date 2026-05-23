@@ -55,31 +55,90 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ## Workflow
 
-1. **Module structure** — Set up commonMain (shared business logic), androidMain (Android-specific), iosMain (iOS-specific). Use expect/actual for platform APIs. Keep platform code thin.
+1. **KMP project structure** — Three-tier source set layout: `commonMain` (shared business logic, domain models, repository interfaces, Ktor client, SQLDelight schema, expect declarations), `androidMain` (Android-specific actual implementations, OkHttp engine, Android Sqlite driver, Context-dependent factories), `iosMain` (iOS-specific actual implementations, Darwin engine, NativeSqlite driver, platform factories). Additional source sets for testing: `commonTest`, `androidUnitTest`, `iosTest`. The shared module is consumed by Android apps as an AAR library and by iOS apps as a Kotlin/Native framework.
 
-2. **Shared logic layers** — Domain models in commonMain. Repository interfaces. Ktor HttpClient with JSON serialization. SQLDelight schema and queries. kotlinx.serialization for all data classes.
+2. **expect/actual pattern** — Declare platform-agnostic interfaces in `commonMain` using `expect` keyword. Provide concrete implementations in platform source sets with `actual`. Three forms: `expect fun` (function), `expect class` (class with actual constructors), `expect object` (singleton), `expect val` (property), `expect typealias` (type alias for platform types). Example: `expect fun generateUuid(): String` with `actual fun generateUuid(): String = UUID.randomUUID().toString()` in Android and `actual fun generateUuid(): String = platform.Foundation.NSUUID().UUIDString()` in iOS. Keep expect declarations in `commonMain/.../platform/` package.
 
-3. **Platform integration** — Declare expect fun/class in commonMain. Provide actual implementations per platform. Platform-specific DI modules. Lifecycle integration via Android Lifecycle / iOS lifecycle callbacks.
+3. **Ktor client configuration** — Single `HttpClient` declaration in `commonMain` with engine-agnostic setup. Use `ktor-client-core` for common code, `ktor-client-okhttp` for Android (supports HTTP/2, caching), `ktor-client-darwin` for iOS (uses NSURLSession, automatic cookie storage). Configure serialization with `kotlinx-serialization-json` using `ContentNegotiation` plugin. Add logging with `Logging` plugin. Timeout configuration: `HttpTimeout` plugin with `requestTimeoutMillis`, `connectTimeoutMillis`, `socketTimeoutMillis`.
 
-4. **Compose Multiplatform UI** — Shared @Composable screens. Material3 theming with platform color adaptation. Navigation with Voyager or Decompose. Platform-specific composables via expect/actual.
+```kotlin
+// commonMain — Ktor client factory
+val httpClient = HttpClient {
+    install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+    install(Logging) { level = LogLevel.HEADERS }
+    install(HttpTimeout) { requestTimeoutMillis = 15_000 }
+    defaultRequest { url("https://api.example.com/") }
+}
+```
 
-5. **Build configuration** — Gradle multi-module. KMP plugin in root build.gradle.kts. Framework export for iOS via embedAndSignAppleFrameworkForXcode. CocoaPods or SPM for iOS dependency distribution.
+4. **kotlinx.serialization** — All data classes in `commonMain` use `@Serializable` annotation. Supports primitives, enums, sealed classes, nullable fields, default values. Custom serializers for non-standard types (Date, BigInteger). `Json` configuration: `ignoreUnknownKeys = true` for forward compatibility, `coerceInputValues = true` for invalid defaults, `encodeDefaults = false` to minimize payload. Use `@SerialName` for property name mapping. Polymorphic serialization for sealed class hierarchies.
 
-## Rules
+5. **Compose Multiplatform UI** — All shared UI in `commonMain` using Jetpack Compose APIs. The `org.jetbrains.compose` plugin compiles Compose code for both platforms. Material3 theming with `MaterialTheme` — customize typography, color scheme, and shapes. Navigation options: Voyager (screen-based, type-safe), Decompose (component-based, lifecycle-aware), or custom state-driven navigation. Platform-specific composables via `expect`/`actual` for views that cannot be shared (maps, WebView, Camera). Performance: `remember` for expensive computations, `derivedStateOf` for computed state, `LaunchedEffect` for side effects.
 
-- Business logic lives in commonMain.
-- Platform APIs accessed exclusively via expect/actual.
-- No android.* or UIKit imports in commonMain — zero tolerance.
-- Compose Multiplatform for all shared UI — no platform-specific layouts.
-- Ktor is the single HTTP client across all platforms.
-- SQLDelight for local persistence — shared schema in commonMain.
-- Network models (DTOs) and database models are shared types.
-- Platform modules contain only actual implementations and thin adapters.
+6. **Platform-specific UI integration** — When Compose Multiplatform cannot render a native component, use `expect` composable functions. Android: wrap Android Views via `AndroidView` composable factory. iOS: wrap UIKit views via `UIKitView` composable (KMP Compose provides interop). Example: MapView, CameraPreview, WebView, NativeTextInput. Keep platform composables thin — minimal wrapper code, pass data via parameters. Platform UI code lives in `androidMain`/`iosMain` Composable files.
+
+7. **Testing strategy** — `commonTest` for shared business logic: domain models, repository logic, ViewModel state. Use kotlin.test for assertions. Mock dependencies with mock libraries that support KMP (MockK, KMM- Mock). Instrumented tests on Android and iOS use platform source sets. UI testing of Compose screens uses Compose UI Test framework in commonTest. Run iOS tests on simulator via Gradle task or Xcode Test Navigator.
+
+## Platform Compatibility
+
+| Feature | commonMain | androidMain | iosMain |
+|---------|-----------|-------------|---------|
+| Business logic | Full | Thin override | Thin override |
+| HTTP client | Ktor declaration | OkHttp engine | Darwin engine |
+| Database | SQLDelight schema | Android driver | Native driver |
+| UI (Compose) | Full | Full | Full |
+| Platform APIs | expect decl | actual impl | actual impl |
+| Dependency injection | Koin module decl | platform bindings | platform bindings |
+
+## Best Practices
+
+- Keep platform code thin — actual implementations should be 1-5 lines wrapping platform APIs
+- Use expect/actual for factory functions, not for large service classes
+- Prefer interface-based abstractions over expect/actual for testability
+- Use Ktor engine selection at compile time, never at runtime
+- Version all shared dependencies in a single `libs.versions.toml` catalog
+- Run `./gradlew allTests` before committing to verify all targets compile
+- Use `kotlinx.datetime` for cross-platform date/time handling
+
+## Common Pitfalls
+
+- **No android.* imports in commonMain**: The compiler enforces this, but watch for transitive dependencies that pull Android types.
+- **iOS framework linking**: Ensure `embedAndSignAppleFrameworkForXcode` is in the build phase of your Xcode project.
+- **Serialization class clashes**: Two modules with the same `@Serializable` class cause linker errors. Use explicit `@SerialName` or module-level serializers.
+- **Generic type erasure**: `expect`/`actual` with generics requires `@Suppress("NO_ACTUAL_FOR_EXPECT")` in some cases.
+- **CocoaPods vs SPM**: CocoaPods + KMP is more mature than SPM integration. Prefer CocoaPods for iOS dependency distribution.
+
+## Configuration Reference
+
+```kotlin
+// build.gradle.kts (shared module)
+plugins {
+    id("org.jetbrains.kotlin.multiplatform") version "2.0.21"
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.21"
+    id("org.jetbrains.compose") version "1.7.1"
+    id("app.cash.sqldelight") version "2.0.2"
+}
+kotlin {
+    androidTarget { compilations.all { kotlinOptions { jvmTarget = "17" } } }
+    listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
+        it.binaries.framework { baseName = "shared"; isStatic = true }
+    }
+    sourceSets {
+        commonMain.dependencies {
+            implementation("io.ktor:ktor-client-core:3.0.3")
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+            implementation("app.cash.sqldelight:runtime:2.0.2")
+            implementation(compose.runtime); implementation(compose.foundation)
+            implementation(compose.material3); implementation(compose.ui)
+        }
+    }
+}
+```
 
 ## References
 
 - `references/kmp-structure.md` — Module setup, expect/actual pattern, dependency injection
-- `references/kmp-compose.md` — Compose Multiplatform, navigation, theming, platform integration
+- `references/platform-specific.md` — Platform-specific implementations, Compose Multiplatform integration
 
 ## Handoff
 Hand off to platform-specific iOS or Android skills when expect/actual implementations need deep platform API knowledge.

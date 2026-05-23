@@ -174,6 +174,34 @@ models:
 
 Run `dbt run --select fct_orders` — contract enforced at build time. Schema mismatch → build failure.
 
+### Step 5a: Schema Evolution Rules
+
+```json
+{
+  "compatibility_modes": {
+    "backward": "New schema reads old data — default for batch",
+    "forward": "Old schema reads new data — stream consumers",
+    "full": "Both directions — strict governance",
+    "none": "Any change — dev only"
+  },
+  "breaking": [
+    "DROP_COLUMN: MAJOR + notify all consumers",
+    "RENAME_COLUMN: add new, deprecate old, remove in MAJOR",
+    "TYPE_NARROWING: widening only (INT->LONG->STRING)",
+    "REQUIRED_ADD: backfill nulls before switching"
+  ],
+  "workflow": [
+    "PR with updated contract → CI compares schemas",
+    "Classify breaking vs non-breaking",
+    "Notify consumers, 14-day review for breaking",
+    "Semver bump: MAJOR(breaking) MINOR(additive) PATCH(fix)",
+    "Consumer acknowledgment required before MAJOR deploy"
+  ]
+}
+```
+
+Policy: BACKWARD default. FORWARD for CDC streams. FULL for regulated data. NONE for dev.
+
 ### Step 6: CI/CD Enforcement
 
 ```yaml
@@ -201,6 +229,10 @@ jobs:
           curl -X POST -H "Content-type: application/json" \
             --data '{"text":"Breaking contract change detected for fct_orders"}' \
             ${{ secrets.SLACK_WEBHOOK }}
+      - name: Validate with dbt
+        run: dbt run --select fct_orders --fail-fast
+      - name: Test Contract Integrity
+        run: dbt test --select tag:contract --store_failures
 ```
 
 ### Step 7: Contract Versioning
@@ -235,6 +267,8 @@ Version scheme: `MAJOR` (breaking), `MINOR` (additive), `PATCH` (fixes). Breakin
 ## References
 - `references/contract-definition.md` — Contract schema, semantic types, SLA terms, ownership, dbt contracts, versioning
 - `references/contract-enforcement.md` — CI/CD contract testing, schema compatibility checks, producer/consumer workflows, breaking change detection
+- `references/contract-examples.md` — Multi-model dbt contracts, Kafka Avro contracts, contract SLA templates
+- `references/schema-evolution-policies.md` — Compatibility modes, breaking vs non-breaking changes, evolution workflow, schema registry integration
 
 ## Handoff
 `data-data-quality` for quality dimension enforcement in contracts. `data-data-catalog` for contract metadata. `data-data-observability` for SLA monitoring. `data-schema-registry` for schema registry integration.

@@ -226,6 +226,43 @@ archive_timeout = 60
 -- pg_basebackup -D /backup/base/$(date +%Y%m%d) -X stream -P -v
 ```
 
+### Step 11: Distributed SQL Databases
+CockroachDB, YugabyteDB, and Google Spanner are distributed SQL databases providing horizontal scalability and global replication with ACID transactions and PostgreSQL-compatible SQL.
+
+CockroachDB is a cloud-native distributed SQL database on a transactional key-value store with Raft consensus. Auto-replicates across nodes/regions with configurable replication factor. Provides serializable isolation, online schema changes (no locks), and geo-partitioning for data residency. Use for multi-region deployments needing strong consistency, SaaS apps needing horizontal scale without manual sharding.
+
+YugabyteDB is a distributed SQL database compatible with PostgreSQL (query layer) via a distributed document store (DocDB) using Raft. Supports hash and range sharding, geo-distributed deployment with zone-aware replicas, and read replicas. Use for PG-compatible workloads needing horizontal write scaling, IoT/time-series with geo-distribution.
+
+```sql
+-- CockroachDB: geo-partitioned table
+CREATE TABLE user_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  region STRING NOT NULL, name STRING, data JSONB
+) PARTITION BY LIST (region) (
+  PARTITION us_east VALUES IN ('us-east-1'),
+  PARTITION eu_west VALUES IN ('eu-west-1')
+);
+ALTER PARTITION us_east OF TABLE user_data
+  CONFIGURE ZONE USING constraints = '[+region=us-east-1]';
+```
+
+### Step 12: Google Cloud Spanner
+Spanner is a globally-distributed, strongly consistent relational database from Google Cloud. Combines relational (ACID, SQL) with NoSQL horizontal scalability. Uses TrueTime (GPS + atomic clocks) for external consistency across global deployments. Key features: interleaved tables (parent-child row locality), automatic sharding, global secondary indexes with consistent reads, multi-region instances. Use for global-scale apps needing strong consistency, financial systems with cross-region ACID, or OLTP that has outgrown single-region databases.
+
+```sql
+CREATE TABLE orders (
+  id INT64 NOT NULL, customer_id INT64 NOT NULL,
+  total NUMERIC NOT NULL, created_at TIMESTAMP NOT NULL
+) PRIMARY KEY (id, created_at);
+
+CREATE TABLE order_items (
+  order_id INT64 NOT NULL, item_id INT64 NOT NULL,
+  product_id INT64 NOT NULL, quantity INT64 NOT NULL,
+  CONSTRAINT FK_order_items FOREIGN KEY (order_id) REFERENCES orders (id)
+) PRIMARY KEY (order_id, item_id),
+  INTERLEAVE IN PARENT orders ON DELETE CASCADE;
+```
+
 ## Rules
 - Normalize to 3NF, denormalize only for specific read-heavy use cases
 - Index every foreign key column
@@ -243,6 +280,8 @@ archive_timeout = 60
 ## References
 - `references/postgres-advanced.md` — MVCC, WAL, vacuum/autovacuum, replication, partitioning, indexing strategies, PgBouncer
 - `references/query-optimization.md` — EXPLAIN ANALYZE, indexing, CTE optimization, window functions, stats, hints, migration
+- `references/distributed-sql-databases.md` — Spanner TrueTime, CockroachDB Raft, YugabyteDB DocDB, geo-partitioning, interleaved tables
+- `references/cockroachdb-yugabyte.md` — CockroachDB/YugabyteDB operations, migration from PostgreSQL, deployment topology, monitoring
 
 ## Handoff
 `data-etl-pipeline` for loading data into relational schemas

@@ -1,6 +1,6 @@
 # Data Skills Guide
 
-23 skills covering the complete data lifecycle: ingestion, storage, compute, orchestration, governance, quality, security, and cost optimization.
+34 skills covering the complete data lifecycle: ingestion, storage, compute, orchestration, governance, quality, security, cost optimization, lineage, testing, clean room, reverse ETL, formats, and feature stores.
 
 ## Skills Overview
 
@@ -84,6 +84,7 @@ Need to trust data?
 
 Need to deploy/manage data pipelines?
   ├─ CI/CD for models/data                    → DataOps + MLOps
+  ├─ CI/CD for data pipelines                 → Data Pipeline CI/CD
   ├─ Containerize data apps                   → Docker Patterns
   ├─ Deploy on Kubernetes                     → Kubernetes for Data
   └─ LLM chain observability                  → AI Observability
@@ -92,7 +93,26 @@ Need to serve data?
   ├─ BI dashboards                            → BI Tools
   ├─ API endpoints                            → Data API
   ├─ Data products for domains                → Data Mesh
+  ├─ Sync warehouse to SaaS tools             → Reverse ETL
   └─ Replica/sync across systems              → Data Replication
+
+Need to understand data?
+  ├─ Column-level lineage, impact analysis    → Data Lineage
+  ├─ Metadata discovery                       → Data Catalog
+  └─ Data observability, freshness            → Data Observability
+
+Need to test or verify data?
+  ├─ dbt tests, data comparison               → Data Testing
+  ├─ Feature engineering for ML               → Feature Store
+  └─ Data contract enforcement                → Data Contracts
+
+Need advanced data collaboration?
+  ├─ Privacy-preserving joins                 → Data Clean Room
+  └─ Cross-org data sharing                   → Data Clean Room
+
+Need to optimize data formats?
+  ├─ Columnar formats (Parquet, Arrow)        → Data Formats
+  └─ In-memory analytics                      → Data Formats (Arrow Flight)
 ```
 
 ## Complete Data Stack Reference

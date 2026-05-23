@@ -1,132 +1,119 @@
-# Virtualization Platforms
+# Data Virtualization Platforms
 
-## Trino vs Starburst vs Dremio
+## Dremio Deep Dive
 
-| Feature | Trino (OSS) | Starburst | Dremio |
-|---|---|---|---|
-| **License** | Apache 2.0 | Commercial | Apache 2.0 + Enterprise |
-| **SQL Support** | ANSI SQL + extensions | Full + Starburst SQL | ANSI SQL + extensions |
-| **Connectors** | 30+ connectors | 50+ (incl. certified) | 15+ connectors |
-| **Caching** | None (vanilla) | Starburst Caching (SSD/NVMe) | Reflections (auto-acceleration) |
-| **Auth** | Pluggable (LDAP, OAuth via module) | Built-in (RBAC, OAuth, SAML, Kerberos) | Built-in (RBAC, AD/LDAP, OAuth) |
-| **Governance** | External (Ranger) | Built-in (Polaris-based, masking, row filter) | Built-in (VDS, row/column-level) |
-| **Deployment** | Docker, K8s, bare | Docker, K8s, SaaS (Galaxy) | Docker, K8s, bare |
-| **Best For** | Open-source federated query | Enterprise governed lakehouse | BI acceleration, self-service |
+### Reflections — Acceleration for BI
+Reflections are materialized pre-computed views stored in Dremio's internal Parquet format. Two types:
+- **Raw Reflections**: store data sorted by specified fields — accelerate filter + sort queries
+- **Aggregation Reflections**: pre-compute GROUP BY aggregations — accelerate dashboard queries
 
-## Starburst Caching
+```sql
+-- Raw reflection: optimize filters on frequently queried columns
+ALTER TABLE "s3"."lake"."orders"
+  CREATE RAW REFLECTION orders_customer_date
+  USING DISPLAY FIELDS (order_id, customer_id, total_amount, status)
+  PARTITION BY (order_date)
+  DISTRIBUTE BY (customer_id);
 
+-- Aggregation reflection: pre-compute dashboard queries
+ALTER TABLE "s3"."lake"."orders"
+  CREATE AGGREGATE REFLECTION orders_daily_revenue
+  USING DIMENSIONS (order_date, status)
+  MEASURES (count(*) AS cnt, sum(total_amount) AS revenue)
+  PARTITION BY (order_date);
+```
+
+Reflections are transparent — queries automatically use them without SQL changes. Dremio's BI optimizer rewrites dashboard queries (Tableau, Power BI) to match available Reflections.
+
+### Virtual Datasets (VDS)
+VDS define transforms without copying data:
+```sql
+CREATE VDS "analytics"."customer_revenue" AS
+SELECT
+  c.customer_id,
+  c.name,
+  c.segment,
+  SUM(o.total_amount) AS lifetime_value,
+  COUNT(o.order_id) AS order_count
+FROM "postgres"."public"."customers" c
+JOIN "s3"."lake"."orders" o ON c.customer_id = o.customer_id
+WHERE o.status = 'delivered'
+GROUP BY c.customer_id, c.name, c.segment;
+```
+
+## Starburst Enterprise
+
+### Data Lake Caching
+Starburst caches hot data from S3/ADLS/GCS to local SSD on workers:
 ```properties
-# Starburst cluster config
+# starburst/catalog/hive.properties
+connector.name=hive
+hive.metastore.uri=thrift://metastore:9083
+
+# Caching configuration
 cache.enabled=true
-cache.base-directory=/mnt/nvme/cache
-cache.ttl=24h
-cache.size-per-node=2TB
-cache.type=alluxio
-
-# Auto-reload stale cache entries
-cache.automatic-reload-enabled=true
-cache.automatic-reload-interval=30m
+cache.base-directory=/mnt/ssd/cache
+cache.ttl=2h
+cache.disk-usage-percentage=80%
+cache.data-sizes=1024MB
 ```
 
-Caches data from slow sources (S3, HDFS) on local NVMe/SSD. Transparent to queries. Common queries served from local cache.
+### Built-in RBAC
+```sql
+-- Access control rules via Starburst's built-in Ranger integration
+CREATE ROLE analytics_users;
+GRANT SELECT ON TABLE iceberg.analytics.* TO ROLE analytics_users;
+GRANT SELECT (customer_name, order_total) ON TABLE iceberg.analytics.customers TO ROLE support_users;
+DENY SELECT ON COLUMN iceberg.analytics.customers.ssn TO ROLE support_users;
+```
 
-## Dremio Reflections
+### Warp Speed Engine
+Starburst's native engine enhancement provides:
+- Native vectorized execution (not JVM-based)
+- LLVM code generation for hot query paths
+- Automatic join order optimization based on table statistics
 
+## Alluxio
+
+### Architecture
+Alluxio sits between compute and storage:
+```
+Compute (Spark/Trino)  ← Alluxio (cache layer) → Storage (S3/ADLS/HDFS)
+```
+
+### Namespace Mounting
+```bash
+# Mount multiple storage systems under a unified namespace
+alluxio fs mount /sales s3://data-lake/sales/
+alluxio fs mount /analytics hdfs://prod-nn:8020/analytics/
+alluxio fs mount /external abfs://partner-data@storage.dfs.core.windows.net/
+
+# Unified path: /sales → S3, /analytics → HDFS, /external → Azure
+```
+
+### Cache Configuration for Trino/Spark
 ```yaml
-# Reflection definition for BI acceleration
-reflections:
-  # Aggregate reflection (pre-computed aggregations)
-  - name: orders_daily_agg
-    type: AGGREGATE
-    displayFields:
-      - order_date
-      - status
-    measureFields:
-      - total_amount (SUM, COUNT, AVG)
-      - order_id (COUNT)
-    partition: order_date (YEAR-MONTH)
-    distribution: HASH(order_id)
-
-  # Raw reflection (columnar layout + sort for fast scans)
-  - name: orders_raw
-    type: RAW
-    displayFields:
-      - order_id
-      - customer_id
-      - total_amount
-      - status
-      - created_at
-    sort: created_at DESC
-    partition: created_date (YEAR-MONTH)
+# alluxio-site.properties
+alluxio.user.file.cachepartiallyread.block=true
+alluxio.user.block.size.bytes.default=64MB
+alluxio.worker.memory.size=32GB
+alluxio.worker.tieredstore.level0.alias=SSD
+alluxio.worker.tieredstore.level0.dirs.path=/mnt/ssd/cache
+alluxio.worker.tieredstore.level0.dirs.quota=1TB
+alluxio.worker.tieredstore.level1.alias=HDD
+alluxio.worker.tieredstore.level1.dirs.path=/mnt/hdd/cache
+alluxio.worker.tieredstore.level1.dirs.quota=10TB
 ```
 
-Reflections are materialized views in Dremio's columnar format. Auto-refreshed incrementally. Queries automatically rewritten to use reflections.
+## Platform Selection
 
-## Security Configuration
-
-```properties
-# Trino TLS
-http-server.https.enabled=true
-http-server.https.port=8443
-http-server.https.keystore.path=/etc/trino/keystore.jks
-http-server.https.keystore.key=password
-
-# Trino LDAP auth
-http-server.authentication.type=LDAP
-http-server.authentication.ldap.url=ldaps://ldap.internal:636
-http-server.authentication.ldap.user-bind-pattern=uid=${USER},ou=users,dc=org,dc=com
-
-# Starburst RBAC
-starburst.access-control=file
-starburst.access-control.config-file=/etc/starburst/rules.json
-
-# System access (admin only)
-system-rules:
-  - schema: system
-    privileges:
-      - SELECT
-    users:
-      - admin
-```
-
-## Deployment Topology
-
-```yaml
-# docker-compose.trino.yaml
-services:
-  coordinator:
-    image: trinodb/trino:450
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./etc:/etc/trino:ro
-    command: coordinator
-
-  worker:
-    image: trinodb/trino:450
-    volumes:
-      - ./etc:/etc/trino:ro
-    deploy:
-      replicas: 5
-      resources:
-        limits:
-          memory: 32G
-          cpus: "16"
-    environment:
-      - JAVA_TOOL_OPTIONS=-Xmx24G
-    command: worker
-```
-
-## Connector Comparison
-
-| Source | Trino Connector | Pushdown | Use Case |
-|---|---|---|---|
-| **Hive/Iceberg** | Native | Filter, partition, LIMIT | Data lake queries |
-| **PostgreSQL** | JDBC | Filter, aggregation, LIMIT | OLTP read replicas |
-| **MySQL** | JDBC | Filter, LIMIT | Web app databases |
-| **MongoDB** | Native | Filter, project | Document stores |
-| **Elasticsearch** | Native | Filter, aggregation | Log analytics |
-| **Kafka** | Native | Topic filter only | Real-time streaming |
-| **BigQuery** | Native | Filter, aggregation, join | Cloud DW |
-| **Snowflake** | JDBC | Filter, aggregation, LIMIT | Cloud DW |
-| **ClickHouse** | JDBC | Filter, aggregation | Real-time analytics |
+| Feature | Dremio | Starburst | Alluxio |
+|---------|--------|-----------|---------|
+| Role | Query engine + acceleration | Enterprise Trino | Caching + namespace |
+| Acceleration | Reflections | Data lake caching | Transparent cache |
+| Lineage | Column-level lineage | Via OpenLineage | N/A |
+| BI integration | Native (rewrites BI queries) | Standard JDBC/ODBC | N/A |
+| Security | RBAC + VDS | Ranger RBAC + column mask | POSIX-style |
+| Deployment | K8s, VMs | K8s, VMs, SaaS | K8s, VMs |
+| Caching tier | Internal Parquet | Local SSD | SSD + memory tiered |
+| Best for | Self-service BI acceleration | Enterprise federated SQL | Accelerating S3 reads |

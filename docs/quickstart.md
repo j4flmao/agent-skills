@@ -57,13 +57,73 @@ cp -r skills/backend/dotnet /path/to/project/skills/
 cp -r skills/devops/docker-patterns /path/to/project/skills/
 ```
 
+## Choosing Your Bundles
+
+Instead of cherry-picking individual skills, choose a **bundle** matching your project type:
+
+```bash
+# List available bundles
+ls bundles/*.json
+
+# Apply a bundle (copies skills into your project)
+# Bundles define skill collections for specific stacks:
+#   fullstack-nestjs-react   — NestJS + React
+#   fullstack-golang-vue     — Go + Vue
+#   fullstack-rust-angular   — Rust + Angular
+#   backend-only             — Backend skills only
+#   frontend-only            — Frontend skills only
+#   devops-only              — DevOps & infrastructure
+#   management-only          — Planning & management
+```
+
+See `docs/agent-reference.md#bundle-system` for details on each bundle.
+
+## Basic Workflow Example
+
+```
+1. User says: "build a task management app"
+2. Agent matches → skills/core/master-orchestrator/SKILL.md
+3. Master orchestrator routes to:
+   a. create-brief → product brief
+   b. create-tech-spec → technical specification
+   c. create-story → sprint stories
+4. For each story, agent routes to domain skills:
+   - backend-api-design + database-patterns
+   - react-architecture + state-management
+   - docker-patterns + github-actions
+5. Each skill follows its SKILL.md protocol, loads reference files,
+   and produces output → next skill picks up handoff
+```
+
+The master orchestrator (`skills/core/master-orchestrator/`) manages the full lifecycle. Individual skills activate by trigger keywords and hand off results to downstream skills.
+
+## Multi-Agent Coordination
+
+When using multi-agent setups (Amp subagents, Codex CLI routing, Claude Code projects), skills coordinate across agents:
+
+```
+User query
+  ├── Router agent (master-orchestrator)
+  │   ├── Frontend agent → frontend skills
+  │   ├── Backend agent → backend skills
+  │   ├── ML agent → ml/ + ai/ skills
+  │   └── DevOps agent → devops skills
+  └── Output assembled by orchestrator
+```
+
+Each agent loads a subset of skills relevant to its domain. The orchestrator agent holds the full skill map and delegates based on trigger keyword matching. For **single-agent setups**, all skills load into one context — the agent self-routes by matching trigger phrases in SKILL.md frontmatter.
+
+**Key distinction:** Bundles define _which skills_ are available; agent configuration defines _how_ they are distributed across agents.
+
 ## Next Steps
 
 - Browse `skills/` directories to explore available skills
 - Each skill has a `SKILL.md` with trigger keywords and rules
 - Reference files in `skills/*/references/` provide deep technical content
-- See `docs/team-guide.md` for team setup
+- Choose a bundle in `bundles/` to get started quickly
 - See `docs/agent-reference.md` for per-agent configuration details
+- See `docs/team-guide.md` for team setup
+- See `docs/skills/README.md` for the full skill index
 
 ## Troubleshooting
 

@@ -189,6 +189,41 @@ jobs:
 
 LakeFS hooks: `pre-commit` (validate schema), `pre-merge` (check compatibility), `post-merge` (trigger pipeline).
 
+### Step 8: Nessie — Git for Iceberg
+Nessie provides Git-like version control for data lakes at the Iceberg catalog level. Unlike LakeFS (object store branching), Nessie operates on table metadata via the Iceberg REST Catalog API. A Nessie commit captures all table states atomically, enabling multi-table atomic operations. Branches are zero-copy — instant creation regardless of data size since only metadata references are copied. Key operations: `CREATE BRANCH dev FROM main` for isolated data development; `MERGE dev INTO main` for atomic promotion of all table changes; `TAG release-1.0` for reproducible snapshots. Integrates with Spark, Flink, Trino, and Dremio. Use Nessie for catalog-level Iceberg versioning, multi-table atomic commits, and CI/CD pipeline isolation for data engineering.
+
+```python
+# Nessie Python API
+from pynessie import NessieClient
+client = NessieClient('http://nessie:19120/api/v2')
+client.create_branch('etl-job-20240501', 'main')
+# Spark reads from branch
+# spark.read.format('iceberg').option('branch', 'etl-job-20240501').table('analytics.orders')
+# After validation:
+client.merge('etl-job-20240501', 'main')
+client.create_tag('prod-20240501', 'main')
+```
+
+### Step 9: DVC Deep Integration
+Beyond basic versioning, DVC provides ML pipeline management. `dvc.yaml` defines stages with dependencies, outputs, parameters, and metrics. `dvc repro` selectively re-runs only stages affected by hash changes. DVC experiments (`dvc exp run`) run pipeline variants with different parameters, track metrics (accuracy, F1), and compare results via `dvc exp show`. `dvc exp apply` rolls back workspace to any experiment state. DVC Studio provides web UI for experiment comparison. For large datasets: shallow checkout (pull only needed files), granular per-file tracking. CI/CD: `dvc pull` → `dvc repro` → `dvc push` → `dvc diff` for data drift detection. Use deep DVC features for ML reproducibility without MLOps platforms.
+
+```bash
+# DVC experiment workflow
+dvc exp run --set-param train.lr=0.001 --name "lr-low"
+dvc exp run --set-param train.lr=0.01 --name "lr-mid"
+dvc exp run --set-param train.lr=0.1 --name "lr-high"
+dvc exp show
+# ─────────────────────────────────────────────────────────
+# Experiment  lr    epochs  accuracy   loss
+# ─────────────────────────────────────────────────────────
+# workspace   -     -       0.923      0.18
+# lr-low      0.001 50      0.912      0.21
+# lr-mid      0.01  50      0.931      0.15
+# lr-high     0.1   50      0.895      0.29
+# ─────────────────────────────────────────────────────────
+dvc exp apply lr-mid  # rollback to best experiment
+```
+
 ## Rules
 - Every data pipeline versioned with DVC or LakeFS
 - main branch is production, all changes go through PR
@@ -202,6 +237,7 @@ LakeFS hooks: `pre-commit` (validate schema), `pre-merge` (check compatibility),
 ## References
 - `references/dvc-patterns.md` — DVC setup, pipeline versioning, remote storage, experiment tracking, metrics comparison
 - `references/lakefs-patterns.md` — LakeFS branches, hooks, diff, merge, rollback, CI/CD integration, Graveler
+- `references/nessie-iceberg-versioning.md` — Nessie Git-for-Iceberg, catalog-level branching, multi-table atomic commits, engine integration, GC
 
 ## Handoff
 `data-data-platform` for versioning infrastructure. `data-data-catalog` for cataloging versioned datasets. `data-data-observability` for monitoring version health. `data-data-quality` for quality gates on merge.

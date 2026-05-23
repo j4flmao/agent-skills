@@ -85,11 +85,118 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 - **Data Mesh**: Domain-oriented data products with federated governance. Each domain owns its data product.
 - **Data Warehouse**: Schema-on-write, highly structured. Best for BI and reporting.
 
+#### Object Store Comparison
+
+| Feature | AWS S3 | ADLS Gen2 | GCS | MinIO |
+|---|---|---|---|---|
+| **Consistency** | Read-after-write | Strong | Strong | Strong |
+| **Auth** | IAM roles, bucket policies | RBAC, SAS tokens | IAM, service accounts | JWT, OIDC, LDAP |
+| **Encryption** | SSE-S3/KMS/CSE | SSE-AES/KMS/CMK | Google-managed/CMEK/CSE | KMS, auto-encryption |
+| **Lifecycle** | Transition, expiry, versioning | Tiering, soft-delete | Nearline/Coldline/Archive | Bucket lifecycle |
+| **Limit (per obj)** | 5 TB | 4.75 TB | 5 TB | 100 TB (config) |
+| **S3 Compatible** | Native | Yes (via gateway) | Yes (XML API) | Native |
+| **Cost (per TB/mo)** | ~$23 | ~$20 | ~$20 | Hardware + ops |
+
+#### Architecture Decision
+
+```yaml
+architecture_decision:
+  scenario: "ISO 27001-compliant analytics platform, 50 TB, hybrid cloud"
+  choice:
+    storage: S3
+    table_format: Apache Iceberg
+    reasons:
+      - "S3: mature IAM policies for compliance, lifecycle transitions for cost"
+      - "Iceberg: multi-engine support (Spark, Trino, Flink), partition evolution"
+  alternatives_considered:
+    - storage: MinIO
+      rejected: "Operational overhead of self-managed, no compliance certs"
+    - table_format: Delta Lake
+      rejected: "Primary engine is Trino/Flink, Databricks dependency"
+  decision_log: "ADR-2026-004 — S3 + Iceberg for compliant lakehouse"
+```
+
 ### Step 2: Storage Layer
 Use Parquet for columnar storage with ZSTD compression. Partition by date or categorical column. Use open table formats: Delta Lake for Databricks/Spark, Iceberg for Trino/Flink, Hudi for upsert-heavy.
 
 ### Step 3: Compute Engine
 Spark for ETL and ML training. Trino/Presto for interactive SQL. Dremio/Starburst for data virtualization (query across sources without moving data). Flink for streaming.
+
+#### Spark Deployment Config (Kubernetes)
+
+```yaml
+# spark-operator config
+apiVersion: spark.apache.org/v1beta2
+kind: SparkApplication
+metadata:
+  name: etl-fct-orders
+  namespace: data-platform
+spec:
+  type: Scala
+  mode: cluster
+  image: ghcr.io/org/spark-iceberg:3.5.0
+  mainClass: com.org.etl.OrdersProcessor
+  sparkVersion: 3.5.0
+  driver:
+    cores: 4
+    memory: 16g
+    serviceAccount: spark-driver
+  executor:
+    instances: 12
+    cores: 8
+    memory: 32g
+    instances: 12
+  hadoopConf:
+    fs.s3a.iam.role: arn:aws:iam::123456:role/SparkExecRole
+  sparkConf:
+    spark.sql.extensions: org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
+    spark.sql.catalog.prod: org.apache.iceberg.spark.SparkCatalog
+    spark.sql.catalog.prod.type: hive
+    spark.sql.catalog.prod.warehouse: s3a://data-lake/warehouse
+    spark.sql.catalog.prod.io-impl: org.apache.iceberg.aws.s3.S3FileIO
+```
+
+#### Trino Deployment Config
+
+```yaml
+# trino-helm-values.yaml
+server:
+  workers: 4
+  worker:
+    resources:
+      requests:
+        cpu: 8
+        memory: 32Gi
+      limits:
+        cpu: 12
+        memory: 48Gi
+  coordinator:
+    resources:
+      requests:
+        cpu: 4
+        memory: 16Gi
+config:
+  query:
+    max-memory-per-node: 24GB
+    max-total-memory-per-node: 40GB
+    max-memory: 120GB
+  catalogs:
+    iceberg:
+      - connector.name: iceberg
+        iceberg.catalog.type: hive
+        iceberg.file-format: PARQUET
+        hive.metastore.uri: thrift://hive-metastore:9083
+    postgresql:
+      - connector.name: postgresql
+        connection-url: jdbc:postgresql://prod-db:5432/analytics
+        connection-user: trino
+        connection-password: ${TRINO_PG_PASSWORD}
+additionalCatalogs:
+  delta-lake:
+    connector.name: delta_lake
+    delta.catalog-type: hive
+    hive.metastore.uri: thrift://hive-metastore:9083
+```
 
 ### Step 4: Data Catalog
 Ingest metadata from all sources via crawlers or API. Enable column-level lineage. Support data discovery (search, tags, descriptions). Track ownership and certification status.

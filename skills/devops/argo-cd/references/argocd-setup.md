@@ -1,39 +1,31 @@
 # ArgoCD Setup
 
 ## Installation
-
 ```bash
 kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 ```
-
 For HA production:
 ```bash
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/ha/install.yaml
 ```
+HA mode creates redundant replicas for API server, repo server, application controller, and Redis with sentinel for high availability.
 
 ## Initial Admin Password
-
 ```bash
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
 ```
+Change password immediately: `argocd account update-password`.
 
 ## CLI Installation
-
 ```bash
-# Windows (scoop)
-scoop install argocd
-# macOS
-brew install argocd
-# Linux
-curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-chmod +x /usr/local/bin/argocd
+scoop install argocd     # Windows
+brew install argocd       # macOS
+curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64 && chmod +x /usr/local/bin/argocd
 ```
+Login: `argocd login <ARGOCD_SERVER> --sso` or `argocd login <ARGOCD_SERVER> --username admin`.
 
-Login: `argocd login <ARGOCD_SERVER> --sso` or `argocd login <ARGOCD_SERVER> --username admin`
-
-## SSO Configuration
-
+## SSO Configuration (Dex)
 Configure Dex in argocd-cm ConfigMap:
 ```yaml
 data:
@@ -52,7 +44,6 @@ data:
 ```
 
 ## AppProject Setup
-
 ```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
@@ -75,20 +66,14 @@ spec:
 ```
 
 ## Cluster Registration
-
 ```bash
-# Register external cluster
 argocd cluster add <kubeconfig-context-name>
-
-# List clusters
 argocd cluster list
-
-# Remove cluster
 argocd cluster rm <server-url>
 ```
+For declarative cluster registration, create a Secret in argocd namespace with label `argocd.argoproj.io/secret-type: cluster`.
 
 ## Application Example
-
 ```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -115,7 +100,6 @@ spec:
 ```
 
 ## Health Check Customization
-
 ```yaml
 resourceCustomizations: |
     argoproj.io/Application:
@@ -124,4 +108,22 @@ resourceCustomizations: |
         hs.status = "Healthy"
         hs.message = "Application is healthy"
         return hs
+    apps/v1/Deployment:
+      health.lua: |
+        hs = {}
+        if obj.status.readyReplicas == obj.spec.replicas then
+          hs.status = "Healthy"
+        else
+          hs.status = "Progressing"
+        end
+        return hs
 ```
+
+## Key Points
+- HA mode required for production — single replica loses sync state on restart
+- SSO via Dex or built-in OIDC — never use local admin accounts for team access
+- AppProject scoping for multi-team isolation — source repos, dest clusters, namespaces
+- Cluster registration declarative via Secret or imperative via argocd CLI
+- revisionHistoryLimit prevents unlimited storage consumption
+- Health checks via lua allow custom resource health assessment
+- CreateNamespace=true sync option simplifies namespace bootstrapping

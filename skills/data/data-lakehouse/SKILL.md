@@ -233,6 +233,25 @@ ANALYZE TABLE silver.orders COMPUTE STATISTICS FOR ALL COLUMNS;
 ALTER TABLE silver.orders CLUSTER BY (customer_id, order_date);
 ```
 
+### Step 8: XTable and Nessie in the Lakehouse
+Apache XTable enables format interoperability — keep a single data copy while exposing it as Delta Lake (Databricks), Iceberg (Trino/Athena), or Hudi (streaming). XTable syncs metadata between formats, eliminating duplication for multi-engine lakehouses. Nessie adds Git-like version control to Iceberg tables for catalog-level branching, tagging, and time travel. In a lakehouse: dev/prod isolation (transform on a branch, merge to main), CI/CD for pipelines (test on branch, validate, merge), and reproducible ML training (tag exact catalog state). Deploy Nessie as the Iceberg REST catalog alongside Unity Catalog for a hybrid governance model.
+
+### Step 9: Apache Paimon Deep Dive
+Paimon is a unified streaming and batch lake format built for Flink using LSM-Tree architecture for high-throughput primary key upserts. LSM flow: MemTable → flush to L0 → compaction into sorted L1+ runs. Four merge engines: deduplicate (latest per key), partial-update (merge columns), aggregation (pre-aggregate metrics), first-row (earliest value). Changelog producers track row-level changes. Bucketing controls parallelism. Integrates with Flink SQL (Table API, Flink CDC), Spark (reads), and Trino. Use Paimon for streaming CDC ingestion into the lakehouse, real-time upserts on object storage, or replacing Kafka topic materialization with persistent, queryable tables.
+
+```sql
+CREATE TABLE paimon_db.sales (
+  order_id BIGINT, product_id INT,
+  amount DECIMAL(10,2), dt STRING,
+  PRIMARY KEY (order_id, dt) NOT ENFORCED
+) WITH (
+  'bucket' = '4',
+  'changelog-producer' = 'input',
+  'snapshot.time-retained' = '7d',
+  'merge-engine' = 'deduplicate'
+);
+```
+
 ## Rules
 - Bronze is append-only, never modified in place
 - Silver enforces schema, deduplicates, and validates
@@ -246,6 +265,7 @@ ALTER TABLE silver.orders CLUSTER BY (customer_id, order_date);
 ## References
 - `references/medallion-architecture.md` — Bronze/silver/gold layers, data flow, quality gates, use cases
 - `references/lakehouse-platform.md` — Databricks, Unity Catalog, Delta Sharing, Apache Paimon, multi-cloud
+- `references/lakehouse-ecosystem-tools.md` — XTable format bridge, Nessie catalog versioning, Paimon LSM streaming, tool selection
 
 ## Handoff
 `data-data-lake` for underlying table format operations (compaction, vacuum, Z-order)

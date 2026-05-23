@@ -78,9 +78,10 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 - **React Hook Form:** Large/complex forms with many fields. Uncontrolled inputs minimize re-renders. Best for: performance-sensitive forms, field arrays, multi-step.
 - **Formik:** Simple to moderate forms. Controlled inputs. Best for: small forms where re-render cost is negligible, teams familiar with Formik patterns.
 - **TanStack Form:** Framework-agnostic (React, Vue, Solid, Svelte). Best for: cross-framework projects or when you need form logic outside React.
+- **Angular Reactive Forms:** Angular-native form handling. Best for: Angular projects, complex dynamic forms with FormArray, custom validators.
 
 ### 2. Schema Validation
-- Define Zod/Yup schemas shared between frontend and backend when possible.
+- Define Zod/Yup/Joi schemas shared between frontend and backend when possible.
 - Infer TypeScript types from schema: `z.infer<typeof schema>`.
 - Field-level validation for immediate feedback; form-level validation for cross-field rules.
 - Async validation (e.g., username uniqueness): debounce 300ms, abort previous on new keystroke.
@@ -106,7 +107,153 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 - Submit button disabled only during submission — not based on form validity. Allow invalid submit to show all errors at once.
 - Focus first field with error on submit.
 
+### 6. Client-Side Validation
+Use Zod for schema-based validation. Define the schema once, reuse across frontend and backend. Field-level validation refines each field with `.min()`, `.max()`, `.email()`, `.url()`, `.regex()`. Form-level validation uses `.refine()` or `.superRefine()` for cross-field rules. Transform input values with `.transform()` and `.coerce()` for type conversion. Error messages are custom strings passed as the second argument to each refinement.
+
+### 7. Server-Side Validation
+Never trust client validation alone — always re-validate on the server. Return server validation errors mapped to field names for inline display. The server response format for validation errors follows a consistent structure: `{ errors: { fieldName: "error message" }, message: "Validation failed" }`. Map server errors to form fields after submission. Generic server errors (network, 500) display in a form-level banner or toast.
+
+### 8. Error Display
+Errors display inline below each field with the `role="alert"` attribute for accessibility. Field errors appear after the user has blurred the field (touched) or after submission. The error message is associated with the input via `aria-describedby`. The first field with an error receives focus on submission failure. Error messages are human-readable, specific, and actionable — not generic "Invalid input" messages.
+
+### 9. Async Validation
+Async validation checks field values against the server (e.g., username availability, email uniqueness). Debounce async validation by 300ms to avoid excessive API calls. Abort the previous in-flight request when the user types again. Show a loading indicator during async validation. Cache validation results to avoid redundant checks. Re-validate when the field value changes after a successful async check passes.
+
+### 10. Multi-Step Wizard Forms
+Divide the form into logical steps with a step indicator. Each step validates independently — only the fields for the current step are validated when advancing. Data from all steps is collected and merged on final submission. Allow back navigation to previous steps without re-validation. Preserve data from previous steps when the user navigates back. Persist partial data to sessionStorage for recovery on browser refresh.
+
+### 11. File Upload
+File upload fields use a controlled component wrapper. Validate file type, size, and count before upload. Show a preview of selected files with upload progress. Support drag-and-drop file selection. Handle upload cancellation and retry. Display server-side file validation errors inline. Support multiple file upload with field array pattern.
+
+### 12. Accessibility
+All form fields have associated `<label>` elements. Error messages use `role="alert"` for screen reader announcement. Required fields are marked with `aria-required="true"`. Submit button shows loading state with `aria-busy="true"`. Focus management: first error field receives focus on failed submission, first field of new step receives focus in wizards, thank-you message receives focus after success. Keyboard navigation: Enter submits the form, Tab moves between fields, Escape closes dialogs or dropdowns within the form.
+
 ---
+
+## Form Architecture Decision Guide
+
+| Scenario | Library | Validation | Strategy |
+|---|---|---|---|
+| Simple contact form (<10 fields) | Formik or RHF | Zod | Client-only |
+| User registration (10-30 fields) | React Hook Form | Zod (shared) | Client + server |
+| Multi-step wizard with persistence | React Hook Form | Zod | Client + server + draft |
+| Dynamic invoice form with line items | React Hook Form | Zod | Client + server |
+| Settings page with auto-save | TanStack Form | Zod | Debounced server |
+| Admin dashboard with file uploads | React Hook Form | Zod | Client + server |
+| Enterprise signup with compliance | Formik or RHF | Yup | Client + server + audit |
+| Angular app with complex validation | Angular Reactive | Built-in + Zod | Client + server |
+
+## Validation Strategy Decision Tree
+
+```
+Form complexity?
+├── Simple (<10 fields)
+│   └── Validation: On blur + On submit → Zod schema
+├── Moderate (10-30 fields)
+│   └── Validation: On blur + On submit + Async → Zod schema
+└── Complex (30+ fields, multi-step, dynamic)
+    └── Validation: On blur + On step change + On submit → Zod schema + server
+    
+Async validation needed?
+├── Yes → Debounce 300ms, abort previous, cache results
+└── No → Synchronous validation only
+
+Multi-step wizard?
+├── Yes → Validate per-step, persist to sessionStorage, merge on submit
+└── No → Single-page form
+
+File upload?
+├── Yes → Validate type/size/count client-side, re-validate server-side
+└── No → Standard fields only
+```
+
+## Error State Decision Flow
+
+```
+User interacts with field
+├── User types (change)
+│   └── Validation: NO (onChange mode disabled by default)
+├── User leaves field (blur)
+│   ├── Field has value → Validate → Error? → Show inline error
+│   └── Field is empty → Check required → Error? → Show on submit
+├── User submits form
+│   ├── All fields validated
+│   ├── Any errors? → Focus first error, show all inline errors
+│   └── No errors → Submit → Server validation
+│       ├── Server OK → Reset form, show success
+│       └── Server error → Map to fields, show inline + banner errors
+└── User navigates away with dirty form
+    └── Show unsaved changes warning dialog
+```
+
+## Unsaved Changes Protection
+
+Prompt the user when they navigate away from a dirty form:
+
+```typescript
+// React Router v6
+import { useBlocker } from 'react-router-dom';
+
+function useUnsavedChanges(isDirty: boolean) {
+  useBlocker(() => {
+    if (isDirty) {
+      return !window.confirm('You have unsaved changes. Leave anyway?');
+    }
+    return false;
+  });
+}
+```
+
+```typescript
+// Next.js App Router
+import { useEffect } from 'react';
+
+function useUnsavedChanges(isDirty: boolean) {
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty) e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+}
+```
+
+## Performance Optimization
+
+### Field Re-render Optimization
+Use `React.memo` on field components to prevent re-renders of unchanged fields. For React Hook Form, use `useWatch` instead of `watch` to subscribe to specific fields without causing the entire form to re-render. Use `Controller` only for custom components — prefer `register` for native inputs. Separate field components into individual memoized components.
+
+### Large Form Optimization
+For forms with 50+ fields, consider: virtualized field list (react-window), deferred field registration (register fields in batches), and lazy validation (validate only visible/required fields initially). Use field-level subscription instead of form-level subscription to minimize re-renders.
+
+## Form Testing Patterns
+
+### React Hook Form Testing
+```typescript
+import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+describe('RegistrationForm', () => {
+  it('shows validation error for empty email', async () => {
+    render(<RegistrationForm />);
+    await userEvent.click(screen.getByText('Submit'));
+    expect(screen.getByText('Invalid email address')).toBeInTheDocument();
+  });
+
+  it('submits valid form data', async () => {
+    const onSubmit = jest.fn();
+    render(<RegistrationForm onSubmit={onSubmit} />);
+    await userEvent.type(screen.getByLabelText('Email'), 'test@example.com');
+    await userEvent.type(screen.getByLabelText('Name'), 'Test User');
+    await userEvent.click(screen.getByText('Submit'));
+    expect(onSubmit).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      name: 'Test User',
+    });
+  });
+});
+```
 
 ## Rules
 
@@ -118,13 +265,17 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 6. Never trust client validation alone — always re-validate server-side.
 7. Debounce async validation with at least 300ms and abort previous requests.
 8. Use unique `key` for each field array row; include index for reorder stability.
+9. Associate errors with inputs via `aria-describedby`.
+10. Focus first error field on submission failure.
+11. Prompt unsaved changes warning on navigation away from dirty forms.
+12. Memoize field components to minimize re-renders on large forms.
 
 ---
 
 ## References
 
-- `references/form-validation.md` — Zod schemas, field-level, async validation, error handling
-- `references/form-patterns.md` — field arrays, wizard forms, dependent fields, form state
+- `references/form-libraries.md` — React Hook Form, Formik, Angular Reactive Forms, TanStack Form, library selection, setup patterns
+- `references/validation-patterns.md` — Zod schemas, field-level, form-level, async validation, error display, accessibility, file upload
 
 ---
 
