@@ -108,23 +108,20 @@ State: User shows code for review.
 State: User describes a bug with error message or stack trace.
   Route: debugging-strategy
 
-State: User says "deploy", "CI/CD", "containerize".
-  Route: docker-patterns, cicd-pipeline
-
 State: User asks about project management, sprint planning, estimation, or risk.
-  Route: pm
+  Route: management-pm
   Reason: "Project management request. Handling sprint planning, estimation, risk, or reporting."
 
 State: User asks about requirements, user stories, acceptance criteria, or business analysis.
-  Route: ba
+  Route: management-ba
   Reason: "Business analysis request. Writing or refining user stories and acceptance criteria."
 
 State: User asks about test strategy, test cases, defect reporting, or test automation.
-  Route: qa
+  Route: management-qa
   Reason: "Quality assurance request. Designing test strategy, test cases, or defect management."
 
 State: User asks about code quality, quality gates, static analysis, or technical debt.
-  Route: qc
+  Route: management-qc
   Reason: "Quality control request. Enforcing quality gates, static analysis, or technical debt tracking."
 
 State: User asks about SOLID, OOP, DRY, GRASP, or design principles.
@@ -136,11 +133,11 @@ State: User asks about design patterns, GoF, pattern selection, creational/struc
   Reason: "Design pattern selection or implementation request."
 
 State: User asks about microservices, saga, CQRS, event sourcing, service decomposition.
-  Route: microservices
+  Route: backend-microservices
   Reason: "Microservices architecture and distributed patterns request."
 
 State: User asks about microfrontend, Module Federation, frontend composition.
-  Route: microfrontend
+  Route: frontend-microfrontend
   Reason: "Microfrontend architecture request."
 
 State: User asks about frontend component patterns, hooks patterns, component design.
@@ -151,28 +148,26 @@ State: User asks about team rules, code review, branch strategy, communication p
   Route: team-rules
   Reason: "Team collaboration protocols request."
 
-State: User asks about frontend design patterns, component patterns, hooks patterns.
-  Route: frontend-patterns
-  Reason: "Frontend component and hooks pattern request."
+
 
 State: User asks about API response format, Response<T>, error handling, exception mapping, error codes.
   Route: api-response
   Reason: "API response standardization request."
 
 State: User asks about security team, appsec, vulnerability management, security review, threat model.
-  Route: security
+  Route: management-security
   Reason: "Security team operations request."
 
 State: User asks about pentesting, penetration test, vulnerability assessment, bug bounty.
-  Route: pentesting
+  Route: management-pentesting
   Reason: "Penetration testing and reporting request."
 
 State: User asks about alert rules, alert fatigue, notification routing, Prometheus alerts, Grafana alerts.
-  Route: alerting
+  Route: management-alerting
   Reason: "Alert rule design request."
 
 State: User asks about monitoring, Prometheus, Grafana, Loki, ELK, metrics, dashboards.
-  Route: monitoring
+  Route: devops-monitoring
   Reason: "Monitoring stack configuration request."
 
 State: User asks about Helm, Helm chart, values management, chart deployment.
@@ -180,19 +175,19 @@ State: User asks about Helm, Helm chart, values management, chart deployment.
   Reason: "Helm chart patterns request."
 
 State: User asks about Terraform, IaC, infrastructure provisioning.
-  Route: terraform
+  Route: devops-terraform
   Reason: "Terraform infrastructure patterns request."
 
 State: User asks about Ansible, playbook, configuration management.
-  Route: ansible
+  Route: devops-ansible
   Reason: "Ansible automation patterns request."
 
 State: User asks about Jenkins, CI/CD pipeline, Jenkinsfile.
-  Route: jenkins
+  Route: devops-jenkins
   Reason: "Jenkins pipeline patterns request."
 
 State: User asks about Longhorn, distributed storage, persistent volumes, backup.
-  Route: longhorn
+  Route: devops-longhorn
   Reason: "Longhorn storage patterns request."
 
 State: Node.js stack detected and user describes a backend task.
@@ -212,7 +207,7 @@ State: ElysiaJS user asks about plugins, guards, Eden Treaty.
   Reason: "ElysiaJS patterns request."
 
 State: Ruby on Rails stack detected (Gemfile, rails).
-  Route: rails
+  Route: backend-rails
   Reason: "Ruby on Rails backend detected."
 
 State: PHP stack detected (composer.json, PHP files).
@@ -234,8 +229,56 @@ State: User asks about plain PHP, pure PHP, PHP without framework, PSR-7, PSR-15
   Route: php-pure
   Reason: "Plain PHP request."
 
+State: User asks about Symfony, Symfony framework, Symfony DI, Doctrine.
+  Route: php-symfony
+  Reason: "Symfony framework request."
+
+State: Python stack detected with Django (Django in dependencies).
+  Route: python-django
+  Reason: "Django backend detected."
+
+State: Python stack detected with FastAPI (fastapi in dependencies).
+  Route: python-fastapi
+  Reason: "FastAPI backend detected."
+
+State: Python stack detected with Flask (flask in dependencies).
+  Route: python-flask
+  Reason: "Flask backend detected."
+
+State: User asks about Hono, Hono backend, Hono middleware.
+  Route: nodejs-hono
+  Reason: "Hono backend request."
+
+State: User asks about Fastify, Fastify backend, Fastify plugins.
+  Route: nodejs-fastify
+  Reason: "Fastify backend request."
+
+State: Deno stack detected with Oak (oak in imports).
+  Route: deno-oak
+  Reason: "Deno Oak backend detected."
+
+State: Swift stack detected with Vapor (Vapor in Package.swift).
+  Route: swift-vapor
+  Reason: "Swift Vapor backend detected."
+
+State: Scala stack detected with Play (Play Framework in build.sbt).
+  Route: scala-play
+  Reason: "Scala Play backend detected."
+
+State: Java stack detected with Micronaut (micronaut in build config).
+  Route: java-micronaut
+  Reason: "Micronaut backend detected."
+
+State: Java stack detected with Quarkus (quarkus in build config).
+  Route: java-quarkus
+  Reason: "Quarkus backend detected."
+
+State: Kotlin stack detected (kotlin in build config, no Android).
+  Route: backend-kotlin-architecture
+  Reason: "Kotlin backend detected."
+
 State: SvelteKit stack detected (package.json has @sveltejs/kit).
-  Route: sveltekit
+  Route: frontend-sveltekit
   Reason: "SvelteKit frontend detected."
 
 State: .NET stack detected and user describes a backend task.
@@ -250,17 +293,89 @@ State: NestJS stack detected and user asks about patterns, modules, guards, inte
   Route: nestjs-patterns
   Reason: "NestJS patterns request."
 
+State: NestJS stack detected and user asks about NestJS project structure, modules architecture.
+  Route: nestjs-architecture
+  Reason: "NestJS architecture request."
+
 State: Go stack detected and user asks about patterns, concurrency, error handling, idiomatic Go.
-  Route: golang-patterns
+  Route: backend-go-patterns
   Reason: "Go patterns request."
+
+State: Go stack detected and user asks about Go project structure, Go architecture.
+  Route: backend-go-architecture
+  Reason: "Go architecture request."
+
+State: Kotlin stack detected and user asks about Kotlin patterns.
+  Route: backend-kotlin-patterns
+  Reason: "Kotlin patterns request."
+
+State: Spring Boot stack detected and user asks about Spring Boot patterns, Spring beans.
+  Route: backend-spring-boot-patterns
+  Reason: "Spring Boot patterns request."
+
+State: Spring Boot stack detected and user asks about Spring Boot project structure.
+  Route: backend-spring-boot-architecture
+  Reason: "Spring Boot architecture request."
 
 State: Rust stack detected and user asks about patterns, error handling, ownership, async Rust.
   Route: rust-patterns
   Reason: "Rust patterns request."
 
+State: Rust stack detected and user asks about Rust project structure, Rust modules.
+  Route: rust-architecture
+  Reason: "Rust architecture request."
+
 State: Angular detected and user asks about patterns, RxJS, NgRx, modules.
   Route: angular-patterns
   Reason: "Angular patterns request."
+
+State: Angular detected and user asks about Angular project structure, Angular architecture.
+  Route: angular-architecture
+  Reason: "Angular architecture request."
+
+State: React detected and user asks about React project structure, React architecture.
+  Route: react-architecture
+  Reason: "React architecture request."
+
+State: React detected and Next.js in dependencies.
+  Route: react-nextjs
+  Reason: "React Next.js request."
+
+State: Vue detected and user asks about Vue project structure, Vue architecture.
+  Route: vue-architecture
+  Reason: "Vue architecture request."
+
+State: Vue detected and Nuxt in dependencies.
+  Route: vue-nuxt
+  Reason: "Vue Nuxt request."
+
+State: Svelte detected and user asks about Svelte project structure, Svelte architecture.
+  Route: svelte-architecture
+  Reason: "Svelte architecture request."
+
+State: Svelte detected and user asks about Svelte patterns, Svelte runes, Svelte 5.
+  Route: svelte-patterns
+  Reason: "Svelte patterns request."
+
+State: SolidJS detected and user asks about SolidJS project structure.
+  Route: solidjs-architecture
+  Reason: "SolidJS architecture request."
+
+State: SolidJS detected and user asks about SolidJS patterns, Solid signals.
+  Route: solidjs-patterns
+  Reason: "SolidJS patterns request."
+
+State: Qwik detected and user asks about Qwik project structure, Qwik City.
+  Route: qwik-architecture
+  Reason: "Qwik architecture request."
+
+State: Remix detected and user asks about Remix architecture.
+  Route: remix-architecture
+  Reason: "Remix architecture request."
+
+State: Remix detected and user asks about Remix patterns, Remix loaders.
+  Route: remix-patterns
+  Reason: "Remix patterns request."
 
 State: User asks about Docker, Dockerfile, docker-compose, containerization.
   Route: docker-patterns
@@ -279,23 +394,23 @@ State: User asks about GitHub Actions, CI/CD workflow, pipeline automation.
   Reason: "GitHub Actions CI/CD request."
 
 State: User asks about GitOps, ArgoCD, Flux, Git-based deployment.
-  Route: gitops
+  Route: devops-gitops
   Reason: "GitOps deployment strategy request."
 
 State: User asks about Vault, secrets management, HashiCorp Vault, secret storage.
-  Route: vault
+  Route: devops-vault
   Reason: "Vault secrets management request."
 
 State: User asks about AWS, EC2, S3, Lambda, RDS, cloud infrastructure.
-  Route: aws
+  Route: devops-aws
   Reason: "AWS cloud infrastructure request."
 
 State: User asks about serverless, Lambda, Cloud Functions, FaaS.
-  Route: serverless
+  Route: devops-serverless
   Reason: "Serverless architecture request."
 
 State: User asks about monorepo, Nx, Turborepo, workspace organization.
-  Route: monorepo
+  Route: devops-monorepo
   Reason: "Monorepo tooling and workspace request."
 
 State: User asks about Dependabot, Renovate, dependency updates, vulnerability scanning.
@@ -307,43 +422,11 @@ State: User asks about API documentation, Swagger, OpenAPI, API spec generation.
   Reason: "API documentation generation request."
 
 State: User asks about observability, tracing, OpenTelemetry, distributed tracing, span.
-  Route: observability
+  Route: devops-observability
   Reason: "Observability and distributed tracing request."
 
-State: User asks about API design, RESTful, OpenAPI, versioning, endpoint structure.
-  Route: backend-api-design
-  Reason: "API design request."
-
-State: User asks about authentication, authorization, JWT, OAuth, SSO, RBAC.
-  Route: backend-auth-patterns
-  Reason: "Authentication and authorization patterns request."
-
-State: User asks about clean architecture, hexagonal, onion, ports and adapters, dependency rule.
-  Route: backend-clean-architecture
-  Reason: "Clean architecture patterns request."
-
-State: User asks about database design, SQL, migrations, ORM, schema design, indexing.
-  Route: backend-database-patterns
-  Reason: "Database design patterns request."
-
-State: User asks about event-driven, messaging, Kafka, RabbitMQ, pub-sub, event bus.
-  Route: backend-event-driven
-  Reason: "Event-driven architecture request."
-
-State: User asks about gRPC, protobuf, streaming, bidirectional RPC.
-  Route: grpc-patterns
-  Reason: "gRPC and protobuf patterns request."
-
-State: User asks about WebSocket, real-time, socket.io, WS, live updates.
-  Route: websocket-patterns
-  Reason: "WebSocket and real-time communication request."
-
-State: User asks about message queue, message broker, RabbitMQ, Kafka, SQS.
-  Route: message-queue
-  Reason: "Message queue and broker patterns request."
-
 State: User asks about caching, Redis cache, CDN, cache strategy, cache invalidation.
-  Route: caching
+  Route: backend-caching
   Reason: "Caching strategy and implementation request."
 
 State: User asks about API gateway, Kong, Nginx reverse proxy, AWS API Gateway, gateway pattern, BFF, API proxy, gateway aggregation.
@@ -387,15 +470,15 @@ State: User asks about Tailwind CSS, utility-first CSS, CSS design tokens.
   Reason: "Tailwind CSS and utility-first styling request."
 
 State: User asks about Storybook, component library, visual testing, component documentation.
-  Route: storybook
+  Route: frontend-storybook
   Reason: "Storybook component documentation request."
 
 State: User asks about PWA, service worker, offline support, manifest, progressive web app.
-  Route: pwa
+  Route: frontend-pwa
   Reason: "Progressive web app implementation request."
 
 State: User asks about SEO, meta tags, Open Graph, structured data, sitemap, search optimization.
-  Route: seo
+  Route: frontend-seo
   Reason: "SEO and search optimization request."
 
 State: User asks about changelog, release notes, semantic versioning.
@@ -423,15 +506,15 @@ State: User asks about security audit, dependency check, SAST, DAST, vulnerabili
   Reason: "Security audit request."
 
 State: User says iOS, Swift, SwiftUI, iPhone, iPad, Xcode.
-  Route: ios
+  Route: mobile-ios
   Reason: "iOS native development request."
 
 State: User says Android, Kotlin, Jetpack Compose, Google Play.
-  Route: android
+  Route: mobile-android
   Reason: "Android native development request."
 
 State: User says Flutter, Dart, cross-platform mobile, widgets, pubspec.
-  Route: flutter
+  Route: mobile-flutter
   Reason: "Flutter cross-platform development request."
 
 State: User says React Native, Expo, RN, react-native, Hermes.
@@ -518,6 +601,62 @@ State: User asks about logging, structured logging, JSON logging, log shipping.
   Route: backend-structured-logging
   Reason: "Structured logging request."
 
+State: User asks about observability, tracing, OpenTelemetry, distributed tracing.
+  Route: backend-observability
+  Reason: "Observability request."
+
+State: User asks about resilience, circuit breaker, retry, bulkhead, rate limiting.
+  Route: backend-resilience-patterns
+  Reason: "Resilience patterns request."
+
+State: User asks about OpenAPI, Swagger, API specification.
+  Route: backend-openapi-documentation
+  Reason: "OpenAPI documentation request."
+
+State: User asks about contract testing, Pact, consumer-driven contracts.
+  Route: backend-contract-testing
+  Reason: "Contract testing request."
+
+State: User asks about idempotency, idempotent API, duplicate detection.
+  Route: backend-idempotency
+  Reason: "Idempotency request."
+
+State: User asks about distributed lock, Redlock, distributed mutex, lease.
+  Route: backend-distributed-locking
+  Reason: "Distributed locking request."
+
+State: User asks about webhook, webhook delivery, outgoing webhook.
+  Route: backend-webhooks
+  Reason: "Webhook request."
+
+State: User asks about API versioning, version strategy, versioning header.
+  Route: backend-api-versioning
+  Reason: "API versioning request."
+
+State: User asks about scheduled tasks, cron jobs, Quartz, job scheduling.
+  Route: backend-scheduling-cron
+  Reason: "Scheduling/cron request."
+
+State: User asks about multi-tenancy, multi-tenant architecture, tenant isolation backend.
+  Route: backend-multi-tenancy
+  Reason: "Multi-tenancy request."
+
+State: User asks about BFF, Backend for Frontend, BFF pattern.
+  Route: backend-bff-pattern
+  Reason: "BFF pattern request."
+
+State: User asks about data masking, data redaction, PII masking.
+  Route: backend-data-masking
+  Reason: "Data masking request."
+
+State: User asks about audit log, audit trail, audit logging.
+  Route: backend-audit-logging
+  Reason: "Audit logging request."
+
+State: User asks about plugin architecture, plugin system, extension point.
+  Route: backend-plugin-architecture
+  Reason: "Plugin architecture request."
+
 State: User asks about Remix, Remix routing, Remix loaders/actions.
   Route: frontend-remix-architecture or frontend-remix-patterns
   Reason: "Remix stack request."
@@ -525,6 +664,320 @@ State: User asks about Remix, Remix routing, Remix loaders/actions.
 State: User asks about Astro, Astro islands, content collections.
   Route: frontend-astro-architecture
   Reason: "Astro stack request."
+
+State: User asks about Astro patterns, Astro integrations, Astro content.
+  Route: frontend-astro-patterns
+  Reason: "Astro patterns request."
+
+State: User asks about Qwik patterns, Qwik City, Qwik components.
+  Route: frontend-qwik-patterns
+  Reason: "Qwik patterns request."
+
+State: User asks about Vue patterns, Vue composables, Vue composition API.
+  Route: vue-patterns
+  Reason: "Vue patterns request."
+
+State: User asks about Lit, LitElement, LitHtml, lit-html.
+  Route: frontend-lit
+  Reason: "Lit request."
+
+State: User asks about web components, custom elements, shadow DOM, HTML templates.
+  Route: frontend-web-components
+  Reason: "Web components request."
+
+State: User asks about AR/VR, augmented reality, virtual reality, WebXR.
+  Route: mobile-ar-vr
+  Reason: "AR/VR request."
+
+State: User asks about Nomad, HashiCorp Nomad, job scheduling.
+  Route: devops-nomad
+  Reason: "Nomad request."
+
+State: User asks about incident response, on-call, PagerDuty, incident management.
+  Route: devops-incident-response
+  Reason: "Incident response request."
+
+State: User asks about cost-benefit, ROI, TCO, cost analysis.
+  Route: management-cost-benefit
+  Reason: "Cost-benefit analysis request."
+
+State: User asks about hiring, interview, recruitment, technical screen.
+  Route: management-hiring
+  Reason: "Hiring request."
+
+State: User asks about stakeholder, stakeholder communication, steerco, status update.
+  Route: management-stakeholder
+  Reason: "Stakeholder communication request."
+
+### ML Skills
+
+State: User asks about experiment tracking, MLflow, experiment management.
+  Route: ml-experiment-tracking
+  Reason: "Experiment tracking request."
+
+State: User asks about classical ML, scikit-learn, sklearn, regression, classification, clustering.
+  Route: ml-classical-ml
+  Reason: "Classical ML request."
+
+State: User asks about deep learning, PyTorch, TensorFlow, neural networks, CNN, RNN, transformer.
+  Route: ml-deep-learning
+  Reason: "Deep learning request."
+
+State: User asks about feature engineering, feature creation, feature selection, feature transformation.
+  Route: ml-feature-engineering
+  Reason: "Feature engineering request."
+
+State: User asks about hyperparameter tuning, Optuna, grid search, Bayesian optimization.
+  Route: ml-hyperparameter-tuning
+  Reason: "Hyperparameter tuning request."
+
+State: User asks about model evaluation, confusion matrix, ROC AUC, precision recall, cross-validation.
+  Route: ml-model-evaluation
+  Reason: "Model evaluation request."
+
+State: User asks about model interpretability, SHAP, LIME, explainable AI, feature importance.
+  Route: ml-model-interpretability
+  Reason: "Model interpretability request."
+
+State: User asks about time series, Prophet, forecasting, seasonality, trend analysis.
+  Route: ml-time-series
+  Reason: "Time series request."
+
+State: User asks about NLP, HuggingFace, transformers, text classification, NER, sentiment analysis.
+  Route: ml-nlp
+  Reason: "NLP request."
+
+State: User asks about computer vision, YOLO, object detection, image classification, segmentation.
+  Route: ml-computer-vision
+  Reason: "Computer vision request."
+
+State: User asks about recommender system, collaborative filtering, matrix factorization, content-based filtering.
+  Route: ml-recommender
+  Reason: "Recommender system request."
+
+State: User asks about anomaly detection, outlier detection, fraud detection, novelty detection.
+  Route: ml-anomaly-detection
+  Reason: "Anomaly detection request."
+
+State: User asks about ML pipeline, Kubeflow, ML workflow, model training pipeline.
+  Route: ml-ml-pipeline
+  Reason: "ML pipeline request."
+
+State: User asks about feature store, Feast, feature serving, feature registry.
+  Route: ml-feature-store
+  Reason: "Feature store request."
+
+State: User asks about model serving, BentoML, Triton, model deployment, model inference.
+  Route: ml-model-serving
+  Reason: "Model serving request."
+
+State: User asks about math foundations, linear algebra, calculus, statistics for ML.
+  Route: ml-math-foundations
+  Reason: "Math foundations for ML request."
+
+### New AI Skills
+
+State: User asks about model training, fine-tuning, LoRA, QLoRA, training loop, distributed training.
+  Route: ai-model-training
+  Reason: "Model training request."
+
+State: User asks about embeddings, sentence-transformers, text embedding, vector embedding.
+  Route: ai-embeddings
+  Reason: "Embeddings request."
+
+State: User asks about multimodal, CLIP, LLaVA, image-text, vision-language model.
+  Route: ai-multimodal
+  Reason: "Multimodal AI request."
+
+State: User asks about AI safety, guardrails, content moderation, responsible AI, model alignment.
+  Route: ai-ai-safety
+  Reason: "AI safety request."
+
+State: User asks about AI testing, LLM testing, eval harness, model evaluation.
+  Route: ai-ai-testing
+  Reason: "AI testing request."
+
+State: User asks about AI cost optimization, token efficiency, model quantization, inference cost.
+  Route: ai-ai-cost-optimization
+  Reason: "AI cost optimization request."
+
+State: User asks about LangChain, LlamaIndex, LangGraph, chain, agent framework.
+  Route: ai-langchain-patterns
+  Reason: "LangChain patterns request."
+
+State: User asks about MCP, Model Context Protocol, context server, tool integration.
+  Route: ai-mcp-patterns
+  Reason: "MCP patterns request."
+
+State: User asks about AI observability, LangSmith, Weights & Biases, tracing LLM, prompt monitoring.
+  Route: ai-ai-observability
+  Reason: "AI observability request."
+
+### New Data Skills
+
+State: User asks about distributed storage, HDFS, distributed file system, object storage.
+  Route: data-distributed-storage
+  Reason: "Distributed storage request."
+
+State: User asks about distributed compute, Spark, Dask, distributed processing, cluster computing.
+  Route: data-distributed-compute
+  Reason: "Distributed compute request."
+
+State: User asks about data lake, Delta Lake, data lake architecture, lake storage.
+  Route: data-data-lake
+  Reason: "Data lake request."
+
+State: User asks about data lakehouse, lakehouse architecture, medallion architecture, Delta Lake.
+  Route: data-data-lakehouse
+  Reason: "Data lakehouse request."
+
+State: User asks about batch processing, Hive, batch ETL, nightly jobs, batch pipeline.
+  Route: data-batch-processing
+  Reason: "Batch processing request."
+
+State: User asks about workflow orchestration, Airflow, Prefect, Dagster, pipeline orchestration.
+  Route: data-workflow-orchestration
+  Reason: "Workflow orchestration request."
+
+State: User asks about CDC, change data capture, Debezium, streaming replication.
+  Route: data-cdc-patterns
+  Reason: "CDC patterns request."
+
+State: User asks about data replication, database replication, cross-region replication.
+  Route: data-data-replication
+  Reason: "Data replication request."
+
+State: User asks about data platform, data engineering platform, platform engineering data.
+  Route: data-data-platform
+  Reason: "Data platform request."
+
+State: User asks about data catalog, DataHub, Amundsen, data discovery, metadata management.
+  Route: data-data-catalog
+  Reason: "Data catalog request."
+
+State: User asks about data observability, Monte Carlo, Sifflet, data monitoring, data downtime.
+  Route: data-data-observability
+  Reason: "Data observability request."
+
+State: User asks about data contracts, contract-driven data, schema contract, data agreement.
+  Route: data-data-contracts
+  Reason: "Data contracts request."
+
+State: User asks about data clean room, clean room, privacy-preserving data.
+  Route: data-clean-room
+  Reason: "Data clean room request."
+
+State: User asks about data cost optimization, data storage cost, query cost.
+  Route: data-cost-optimization
+  Reason: "Data cost optimization request."
+
+State: User asks about data formats, Parquet, Avro, ORC, file format.
+  Route: data-formats
+  Reason: "Data formats request."
+
+State: User asks about data lineage, column lineage, dataset lineage.
+  Route: data-lineage
+  Reason: "Data lineage request."
+
+State: User asks about data pipeline CI/CD, data testing in CI, dbt test, data pipeline test.
+  Route: data-pipeline-cicd
+  Reason: "Data pipeline CI/CD request."
+
+State: User asks about data testing, data quality test, data diff, data validation test.
+  Route: data-testing
+  Reason: "Data testing request."
+
+State: User asks about reverse ETL, reverse ETL pipeline, warehouse to SaaS.
+  Route: data-reverse-etl
+  Reason: "Reverse ETL request."
+
+State: User asks about data mesh, data product, domain-driven data, decentralized data.
+  Route: data-data-mesh
+  Reason: "Data mesh request."
+
+State: User asks about data versioning, DVC, data version control, dataset versioning.
+  Route: data-data-versioning
+  Reason: "Data versioning request."
+
+State: User asks about data API, Hasura, data access API, GraphQL data API.
+  Route: data-data-api
+  Reason: "Data API request."
+
+State: User asks about data virtualization, Trino, Presto, federated query, data federation.
+  Route: data-data-virtualization
+  Reason: "Data virtualization request."
+
+State: User asks about schema registry, Avro, schema evolution, schema compatibility.
+  Route: data-schema-registry
+  Reason: "Schema registry request."
+
+State: User asks about relational database, PostgreSQL, MySQL, SQL Server, database design.
+  Route: data-relational-database
+  Reason: "Relational database request."
+
+State: User asks about NoSQL, MongoDB, Cassandra, DynamoDB, document database.
+  Route: data-nosql-database
+  Reason: "NoSQL database request."
+
+State: User asks about graph database, Neo4j, graph DB, Cypher, knowledge graph.
+  Route: data-graph-database
+  Reason: "Graph database request."
+
+State: User asks about search engine, Elasticsearch, Solr, full-text search, search index.
+  Route: data-search-engine
+  Reason: "Search engine request."
+
+### New DevOps Skills
+
+State: User asks about DataOps, data operations, data pipeline ops, data reliability.
+  Route: devops-dataops
+  Reason: "DataOps request."
+
+State: User asks about MLOps, ML operations, model deployment pipeline, model monitoring.
+  Route: devops-mlops
+  Reason: "MLOps request."
+
+State: User asks about Kubernetes for data, K8s data workloads, Spark on K8s, data on Kubernetes.
+  Route: kubernetes-for-data
+  Reason: "Kubernetes for data request."
+
+State: User asks about cloud cost optimization, cloud spend, cost reduction, cloud billing.
+  Route: cloud-cost-optimization
+  Reason: "Cloud cost optimization request."
+
+### New Security Skills
+
+State: User asks about data security, data protection, encryption at rest, data masking, data classification.
+  Route: security-data-security
+  Reason: "Data security request."
+
+State: User asks about authentication, authorization, JWT, OAuth, SSO, RBAC.
+  Route: backend-auth-patterns
+  Reason: "Authentication and authorization patterns request."
+
+State: User asks about clean architecture, hexagonal, onion, ports and adapters, dependency rule.
+  Route: backend-clean-architecture
+  Reason: "Clean architecture patterns request."
+
+State: User asks about database design, SQL, migrations, ORM, schema design, indexing.
+  Route: backend-database-patterns
+  Reason: "Database design patterns request."
+
+State: User asks about event-driven, messaging, Kafka, RabbitMQ, pub-sub, event bus.
+  Route: backend-event-driven
+  Reason: "Event-driven architecture request."
+
+State: User asks about gRPC, protobuf, streaming, bidirectional RPC.
+  Route: grpc-patterns
+  Reason: "gRPC and protobuf patterns request."
+
+State: User asks about WebSocket, real-time, socket.io, WS, live updates.
+  Route: websocket-patterns
+  Reason: "WebSocket and real-time communication request."
+
+State: User asks about message queue, message broker, RabbitMQ, Kafka, SQS.
+  Route: message-queue
+  Reason: "Message queue and broker patterns request."
 
 State: User asks about SolidJS, Solid signals, SolidJS reactivity.
   Route: frontend-solidjs-architecture or frontend-solidjs-patterns
@@ -643,7 +1096,7 @@ State: User asks about tech debt, technical debt, code debt.
   Reason: "Tech debt tracker request."
 
 State: User asks about API client, curl command, HTTP request generation.
-  Route: dev-loop-api-client
+  Route: dev-loop-api-client-generator
   Reason: "API client request."
 
 State: User asks about OKR, KPI, goals, key results.
@@ -794,10 +1247,6 @@ State: User asks about data warehouse, Snowflake, BigQuery, Redshift, dimensiona
   Route: data-data-warehouse
   Reason: "Data warehouse request."
 
-State: User asks about stream processing, Kafka, Flink, real-time data.
-  Route: data-streaming
-  Reason: "Streaming request."
-
 State: User asks about BI, dashboard, Metabase, Superset, Looker.
   Route: data-bi-tools
   Reason: "BI tools request."
@@ -846,305 +1295,52 @@ State: User asks about Prisma, Prisma schema, Prisma ORM.
   Route: prisma
   Reason: "Prisma ORM request."
 
-State: User asks about Deno, Deno runtime, Deno Deploy.
-  Route: deno
-  Reason: "Deno request."
-
-State: User asks about Bun, Bun runtime, Bun package manager.
-  Route: bun
-  Reason: "Bun request."
-
-State: User asks about Elixir, Phoenix, Erlang, Elixir OTP.
-  Route: elixir
-  Reason: "Elixir/Phoenix request."
-
-State: User asks about Spring Boot patterns, Spring beans, Spring configuration.
-  Route: spring-boot-patterns
-  Reason: "Spring Boot patterns request."
-
-State: User asks about Astro patterns, Astro islands, Astro components.
-  Route: astro-patterns
-  Reason: "Astro patterns request."
-
-State: User asks about Qwik patterns, Qwik City, Qwik components.
-  Route: qwik-patterns
-  Reason: "Qwik patterns request."
-
-State: User asks about Vue patterns, Vue composables, Vue composition API.
-  Route: vue-patterns
-  Reason: "Vue patterns request."
-
-State: User asks about Lit, LitElement, LitHtml, lit-html.
-  Route: lit
-  Reason: "Lit request."
-
-State: User asks about web components, custom elements, shadow DOM, HTML templates.
-  Route: web-components
-  Reason: "Web components request."
-
-State: User asks about AR/VR, augmented reality, virtual reality, WebXR.
-  Route: ar-vr
-  Reason: "AR/VR request."
-
-State: User asks about Nomad, HashiCorp Nomad, job scheduling.
-  Route: nomad
-  Reason: "Nomad request."
-
-State: User asks about incident response, on-call, PagerDuty, incident management.
-  Route: incident-response
-  Reason: "Incident response request."
-
-State: User asks about cost-benefit, ROI, TCO, cost analysis.
-  Route: cost-benefit
-  Reason: "Cost-benefit analysis request."
-
-State: User asks about hiring, interview, recruitment, technical screen.
-  Route: hiring
-  Reason: "Hiring request."
-
-State: User asks about stakeholder, stakeholder communication, steerco, status update.
-  Route: stakeholder
-  Reason: "Stakeholder communication request."
-
-### ML Skills
-
-State: User asks about experiment tracking, MLflow, experiment management.
-  Route: ml-experiment-tracking
-  Reason: "Experiment tracking request."
-
-State: User asks about classical ML, scikit-learn, sklearn, regression, classification, clustering.
-  Route: ml-classical-ml
-  Reason: "Classical ML request."
-
-State: User asks about deep learning, PyTorch, TensorFlow, neural networks, CNN, RNN, transformer.
-  Route: ml-deep-learning
-  Reason: "Deep learning request."
-
-State: User asks about feature engineering, feature creation, feature selection, feature transformation.
-  Route: ml-feature-engineering
-  Reason: "Feature engineering request."
-
-State: User asks about hyperparameter tuning, Optuna, grid search, Bayesian optimization.
-  Route: ml-hyperparameter-tuning
-  Reason: "Hyperparameter tuning request."
-
-State: User asks about model evaluation, confusion matrix, ROC AUC, precision recall, cross-validation.
-  Route: ml-model-evaluation
-  Reason: "Model evaluation request."
-
-State: User asks about model interpretability, SHAP, LIME, explainable AI, feature importance.
-  Route: ml-model-interpretability
-  Reason: "Model interpretability request."
-
-State: User asks about time series, Prophet, forecasting, seasonality, trend analysis.
-  Route: ml-time-series
-  Reason: "Time series request."
-
-State: User asks about NLP, HuggingFace, transformers, text classification, NER, sentiment analysis.
-  Route: ml-nlp
-  Reason: "NLP request."
-
-State: User asks about computer vision, YOLO, object detection, image classification, segmentation.
-  Route: ml-computer-vision
-  Reason: "Computer vision request."
-
-State: User asks about recommender system, collaborative filtering, matrix factorization, content-based filtering.
-  Route: ml-recommender
-  Reason: "Recommender system request."
-
-State: User asks about anomaly detection, outlier detection, fraud detection, novelty detection.
-  Route: ml-anomaly-detection
-  Reason: "Anomaly detection request."
-
-State: User asks about ML pipeline, Kubeflow, ML workflow, model training pipeline.
-  Route: ml-ml-pipeline
-  Reason: "ML pipeline request."
-
-State: User asks about feature store, Feast, feature serving, feature registry.
-  Route: ml-feature-store
-  Reason: "Feature store request."
-
-State: User asks about model serving, BentoML, Triton, model deployment, model inference.
-  Route: ml-model-serving
-  Reason: "Model serving request."
-
-### New AI Skills
-
-State: User asks about model training, fine-tuning, LoRA, QLoRA, training loop, distributed training.
-  Route: ai-model-training
-  Reason: "Model training request."
-
-State: User asks about embeddings, sentence-transformers, text embedding, vector embedding.
-  Route: ai-embeddings
-  Reason: "Embeddings request."
-
-State: User asks about multimodal, CLIP, LLaVA, image-text, vision-language model.
-  Route: ai-multimodal
-  Reason: "Multimodal AI request."
-
-State: User asks about AI safety, guardrails, content moderation, responsible AI, model alignment.
-  Route: ai-ai-safety
-  Reason: "AI safety request."
-
-State: User asks about AI testing, LLM testing, eval harness, model evaluation.
-  Route: ai-ai-testing
-  Reason: "AI testing request."
-
-State: User asks about AI cost optimization, token efficiency, model quantization, inference cost.
-  Route: ai-ai-cost-optimization
-  Reason: "AI cost optimization request."
-
-State: User asks about LangChain, LlamaIndex, LangGraph, chain, agent framework.
-  Route: ai-langchain-patterns
-  Reason: "LangChain patterns request."
-
-State: User asks about MCP, Model Context Protocol, context server, tool integration.
-  Route: ai-mcp-patterns
-  Reason: "MCP patterns request."
-
-State: User asks about AI observability, LangSmith, Weights & Biases, tracing LLM, prompt monitoring.
-  Route: ai-ai-observability
-  Reason: "AI observability request."
-
-### New Data Skills
-
-State: User asks about distributed storage, HDFS, distributed file system, object storage.
-  Route: data-distributed-storage
-  Reason: "Distributed storage request."
-
-State: User asks about distributed compute, Spark, Dask, distributed processing, cluster computing.
-  Route: data-distributed-compute
-  Reason: "Distributed compute request."
-
-State: User asks about data lake, Delta Lake, data lake architecture, lake storage.
-  Route: data-data-lake
-  Reason: "Data lake request."
-
-State: User asks about data lakehouse, lakehouse architecture, medallion architecture, Delta Lake.
-  Route: data-data-lakehouse
-  Reason: "Data lakehouse request."
-
-State: User asks about batch processing, Hive, batch ETL, nightly jobs, batch pipeline.
-  Route: data-batch-processing
-  Reason: "Batch processing request."
-
-State: User asks about workflow orchestration, Airflow, Prefect, Dagster, pipeline orchestration.
-  Route: data-workflow-orchestration
-  Reason: "Workflow orchestration request."
-
-State: User asks about CDC, change data capture, Debezium, streaming replication.
-  Route: data-cdc-patterns
-  Reason: "CDC patterns request."
-
-State: User asks about data replication, database replication, cross-region replication.
-  Route: data-data-replication
-  Reason: "Data replication request."
-
-State: User asks about data platform, data engineering platform, platform engineering data.
-  Route: data-data-platform
-  Reason: "Data platform request."
-
-State: User asks about data catalog, DataHub, Amundsen, data discovery, metadata management.
-  Route: data-data-catalog
-  Reason: "Data catalog request."
-
-State: User asks about data observability, Monte Carlo, Sifflet, data monitoring, data downtime.
-  Route: data-data-observability
-  Reason: "Data observability request."
-
-State: User asks about data contracts, contract-driven data, schema contract, data agreement.
-  Route: data-data-contracts
-  Reason: "Data contracts request."
-
-State: User asks about data mesh, data product, domain-driven data, decentralized data.
-  Route: data-data-mesh
-  Reason: "Data mesh request."
-
-State: User asks about data versioning, DVC, data version control, dataset versioning.
-  Route: data-data-versioning
-  Reason: "Data versioning request."
-
-State: User asks about data API, Hasura, data access API, GraphQL data API.
-  Route: data-data-api
-  Reason: "Data API request."
-
-State: User asks about data virtualization, Trino, Presto, federated query, data federation.
-  Route: data-data-virtualization
-  Reason: "Data virtualization request."
-
-State: User asks about schema registry, Avro, schema evolution, schema compatibility.
-  Route: data-schema-registry
-  Reason: "Schema registry request."
-
-State: User asks about relational database, PostgreSQL, MySQL, SQL Server, database design.
-  Route: data-relational-database
-  Reason: "Relational database request."
-
-State: User asks about NoSQL, MongoDB, Cassandra, DynamoDB, document database.
-  Route: data-nosql-database
-  Reason: "NoSQL database request."
-
-State: User asks about graph database, Neo4j, graph DB, Cypher, knowledge graph.
-  Route: data-graph-database
-  Reason: "Graph database request."
-
-State: User asks about search engine, Elasticsearch, Solr, full-text search, search index.
-  Route: data-search-engine
-  Reason: "Search engine request."
-
-### New DevOps Skills
-
-State: User asks about DataOps, data operations, data pipeline ops, data reliability.
-  Route: dataops
-  Reason: "DataOps request."
-
-State: User asks about MLOps, ML operations, model deployment pipeline, model monitoring.
-  Route: mlops
-  Reason: "MLOps request."
-
-State: User asks about Kubernetes for data, K8s data workloads, Spark on K8s, data on Kubernetes.
-  Route: kubernetes-for-data
-  Reason: "Kubernetes for data request."
-
-State: User asks about cloud cost optimization, cloud spend, cost reduction, cloud billing.
-  Route: cloud-cost-optimization
-  Reason: "Cloud cost optimization request."
-
-### New Security Skills
-
-State: User asks about data security, data protection, encryption at rest, data masking, data classification.
-  Route: security-data-security
-  Reason: "Data security request."
-
 ### Step 3: Detect Backend Stack
 Read project files:
-- package.json: if @nestjs/core present -> nestjs
-- package.json: if elysia present or bun detected -> elysia
-- package.json: if no @nestjs/core, no elysia, has express/fastify/hono -> nodejs
-- go.mod -> golang
-- Cargo.toml -> rust
-- Gemfile -> rails
-- requirements.txt: if fastapi present -> python-fastapi; if django present -> python-django
+- package.json: if @nestjs/core present -> nestjs-patterns
+- package.json: if elysia present or bun detected -> elysia-patterns
+- package.json: if no @nestjs/core, no elysia, has express/fastify/hono -> nodejs-architecture
+- go.mod -> golang-patterns
+- Cargo.toml -> rust-patterns
+- Gemfile -> backend-rails
+- requirements.txt: if fastapi present -> python-fastapi; if django present -> python-django; if flask present -> python-flask
 - pyproject.toml: if django present -> python-django
-- pom.xml or build.gradle -> spring-boot
-- *.csproj or *.sln -> dotnet
-- None detected -> ask user: "Which backend stack does this project use? (nestjs, nodejs, elysia, golang, rust, rails, python, spring, dotnet)"
+- pom.xml -> backend-spring-boot-architecture; if quarkus present -> java-quarkus; if micronaut present -> java-micronaut
+- build.gradle -> backend-spring-boot-architecture; if kotlin -> backend-kotlin-architecture
+- build.gradle.kts: if kotlin and android -> mobile-android; if kotlin only -> backend-kotlin-architecture
+- *.csproj or *.sln -> dotnet-architecture
+- composer.json: if symfony in require -> php-symfony; if laravel in require -> php-laravel; if laminas/zend -> php-zend; else -> php-pure
+- Package.swift: if vapor in deps -> swift-vapor
+- mix.exs -> backend-elixir
+- deno.json / deno.lock -> backend-deno
+- bun.lock / bun.lockb -> backend-bun
+- None detected -> ask user
 
 ### Step 4: Detect Frontend Framework
-- package.json: if @sveltejs/kit present -> sveltekit
+- package.json: if @sveltejs/kit present -> frontend-sveltekit
 - package.json: if next present -> react-nextjs
 - package.json: if react present but no next -> react-architecture
 - package.json: if vue present -> vue-architecture
 - package.json: if nuxt present -> vue-nuxt
+- package.json: if @angular/core -> angular-architecture
 - angular.json -> angular-architecture
+- package.json: if remix -> frontend-remix-architecture
+- package.json: if astro -> frontend-astro-architecture
+- package.json: if solid-js -> solidjs-architecture
+- package.json: if @builder.io/qwik -> qwik-architecture
 - None detected -> ask user
 
 ### Step 5: Detect Mobile Stack
-- pubspec.yaml -> flutter
+- pubspec.yaml -> mobile-flutter
 - package.json: if react-native present -> react-native
-- Package.swift or *.xcworkspace -> ios
-- build.gradle.kts / settings.gradle.kts with kotlin -> android
+- Package.swift or *.xcworkspace -> mobile-ios
+- build.gradle.kts / settings.gradle.kts with kotlin -> mobile-android
 - None detected -> skip mobile stack
+
+### Step 6: Detect Desktop Stack
+- package.json: if electron present -> desktop-electron
+- Cargo.toml: if tauri in deps -> desktop-tauri
+- None detected -> skip desktop stack
 
 ## Rules
 - This skill produces ZERO code. No implementation. No debugging. No advice.

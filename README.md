@@ -1,6 +1,6 @@
 # @j4flmao/agent-skills
 
-321 agent skills for software development — planning, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, design, quality. Each skill is a `SKILL.md` defining triggers, rules, and response format.
+334 agent skills for software development — planning, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, design, quality. Each skill is a `SKILL.md` defining triggers, rules, and response format.
 
 ## Installation
 
@@ -54,7 +54,7 @@ cp -r ~/skills/skills/devops/docker-patterns /path/to/project/skills/
 
 ```bash
 # Requires the repo to be pushed to GitHub
-npx skills add j4flmao/agent-skills            # all 323 skills
+npx skills add j4flmao/agent-skills            # all 334 skills
 npx skills add j4flmao/agent-skills --bundle backend-only
 npx skills add j4flmao/agent-skills -g          # global (every project)
 ```
@@ -96,10 +96,10 @@ No need to remember skill names. Just describe the problem.
 
 ```
 User: "write a brief for a chat app"          → create-brief
-User: "design the order database schema"       → database-patterns
+User: "design the order database schema"       → backend-database-patterns
 User: "review this PR for security issues"     → code-review
 User: "set up Docker for this project"         → docker-patterns
-User: "build an iOS order list screen"         → ios
+User: "build an iOS order list screen"         → mobile-ios
 ```
 
 No keyword match? Agent routes through `master-orchestrator`, detects the project stack, and picks the right skill.
@@ -109,25 +109,25 @@ No keyword match? Agent routes through `master-orchestrator`, detects the projec
 | Phase | Skills |
 |-------|--------|
 | **0 — Core** | `master-orchestrator`, `project-init`, `onboarding`, `context-compressor` |
-| **1 — Planning** | `create-brief`, `create-prd`, `create-adr`, `create-tech-spec`, `create-story`, `create-roadmap`, `create-pitch-deck`, `market-analysis` |
-| **2 — Backend Universal** | `oop-principles`, `design-patterns`, `microservices`, `clean-architecture`, `api-design`, `api-response`, `database-patterns`, `auth-patterns`, `event-driven`, `testing`, `grpc-patterns`, `websocket-patterns`, `message-queue`, `caching`, `rate-limiting`, `load-testing`, `api-gateway`, `graphql-patterns`, `background-jobs`, `search-patterns`, `data-streaming`, `file-storage`, `feature-flags`, `internationalization`, `structured-logging`, `observability`, `resilience-patterns`, `openapi-documentation`, `contract-testing`, `idempotency`, `distributed-locking`, `webhooks`, `api-versioning`, `scheduling-cron`, `multi-tenancy`, `bff-pattern`, `data-masking`, `audit-logging`, `plugin-architecture` |
-| **2b — Stack Backend** | `nestjs-a/p`, `nodejs-a/p`, `elysia-a/p`, `golang-a/p`, `rust-a/p`, `python-fastapi`, `python-django`, `spring-boot-a`, `dotnet-a/p`, `rails`, `php-pure`, `php-laravel`, `php-zend`, `kotlin-a/p`, `java-micronaut`, `java-quarkus`, `scala-play`, `swift-vapor`, `python-flask`, `php-symfony`, `nodejs-hono`, `nodejs-fastify`, `deno-oak`, `bun` |
-| **3 — Frontend Universal** | `design-system`, `state-management`, `performance`, `accessibility`, `testing`, `patterns`, `microfrontend`, `tailwind-css`, `storybook`, `pwa`, `seo`, `animation`, `form-handling`, `data-fetching`, `bundler-tools`, `image-optimization`, `theming`, `internationalization`, `authentication`, `error-handling`, `rendering-strategies`, `css-strategy`, `typescript-patterns`, `security`, `browser-caching`, `responsive-design`, `feature-flags` |
-| **3b — Stack Frontend** | `react-a`, `react-nextjs`, `vue-a`, `vue-nuxt`, `angular-a/p`, `sveltekit`, `remix-a/p`, `astro-a`, `solidjs-a/p`, `qwik-a`, `svelte-a/p`, `lit`, `preact`, `alpinejs`, `htmx`, `ember`, `stencil` |
-| **3c — Desktop** | `electron`, `tauri`, `qt`, `gtk`, `wpf`, `winui3`, `uwp`, `winforms`, `swiftui`, `appkit`, `gnome`, `kde` |
-| **4 — Dev Loop** | `code-review`, `debugging-strategy`, `refactor-guide`, `git-workflow`, `security-auditor`, `performance-profiler`, `changelog-generator`, `readme-writer`, `pr-writer`, `dev-container`, `tech-debt-tracker`, `api-client-generator` |
-| **5 — DevOps** | `docker-patterns`, `cicd-pipeline`, `kubernetes-patterns`, `observability`, `helm-patterns`, `terraform`, `ansible`, `jenkins`, `longhorn`, `monitoring`, `github-actions`, `gitops`, `vault`, `aws`, `serverless`, `monorepo`, `dependency-management`, `api-documentation`, `argo-cd`, `azure`, `gcp`, `chaos-engineering`, `service-mesh`, `finops`, `backup-dr`, `database-migration`, `dataops`, `mlops`, `kubernetes-for-data`, `cloud-cost-optimization` |
-| **6 — Management** | `pm`, `ba`, `qa`, `qc`, `team-rules`, `security`, `pentesting`, `alerting`, `okr-kpi`, `sprint-retro`, `risk-management`, `cost-benefit`, `hiring`, `stakeholder` |
+| **1 — Planning** | `create-brief`, `create-prd`, `create-adr`, `create-tech-spec`, `create-story`, `planning-create-roadmap`, `planning-create-pitch-deck`, `planning-market-analysis`, `management-cost-benefit` |
+| **2 — Backend Universal** | `oop-principles`, `design-patterns`, `backend-microservices`, `backend-clean-architecture`, `backend-api-design`, `api-response`, `backend-database-patterns`, `backend-auth-patterns`, `backend-event-driven`, `backend-testing`, `grpc-patterns`, `websocket-patterns`, `message-queue`, `backend-caching`, `rate-limiting`, `load-testing`, `api-gateway`, `backend-graphql-patterns`, `backend-background-jobs`, `backend-search-patterns`, `backend-data-streaming`, `backend-file-storage`, `backend-feature-flags`, `backend-internationalization`, `backend-structured-logging`, `backend-observability`, `backend-resilience-patterns`, `backend-openapi-documentation`, `backend-contract-testing`, `backend-idempotency`, `backend-distributed-locking`, `backend-webhooks`, `backend-api-versioning`, `backend-scheduling-cron`, `backend-multi-tenancy`, `backend-bff-pattern`, `backend-data-masking`, `backend-audit-logging`, `backend-plugin-architecture` |
+| **2b — Stack Backend** | `nestjs-a/p`, `nodejs-a/p`, `elysia-a/p`, `backend-go-a/p`, `rust-a/p`, `python-fastapi`, `python-django`, `backend-spring-boot-a`, `dotnet-a/p`, `backend-rails`, `php-pure`, `php-laravel`, `php-zend`, `backend-kotlin-a/p`, `java-micronaut`, `java-quarkus`, `scala-play`, `swift-vapor`, `python-flask`, `php-symfony`, `nodejs-hono`, `nodejs-fastify`, `deno-oak`, `backend-bun`, `backend-elixir`, `backend-deno` |
+| **3 — Frontend Universal** | `frontend-design-system`, `frontend-state-management`, `frontend-performance`, `frontend-accessibility`, `frontend-testing`, `frontend-patterns`, `frontend-microfrontend`, `tailwind-css`, `frontend-storybook`, `frontend-pwa`, `frontend-seo`, `frontend-animation`, `frontend-form-handling`, `frontend-data-fetching`, `frontend-bundler-tools`, `frontend-image-optimization`, `frontend-theming`, `frontend-internationalization`, `frontend-authentication`, `frontend-error-handling`, `frontend-rendering-strategies`, `frontend-css-strategy`, `frontend-typescript-patterns`, `frontend-security`, `frontend-browser-caching`, `frontend-responsive-design`, `frontend-feature-flags` |
+| **3b — Stack Frontend** | `react-a`, `react-nextjs`, `vue-a`, `vue-nuxt`, `angular-a/p`, `frontend-sveltekit`, `remix-a/p`, `frontend-astro-a`, `solidjs-a/p`, `qwik-a`, `svelte-a/p`, `frontend-lit`, `frontend-preact`, `frontend-alpinejs`, `frontend-htmx`, `frontend-ember`, `frontend-stencil`, `frontend-web-components` |
+| **3c — Desktop** | `desktop-electron`, `desktop-tauri`, `desktop-qt`, `desktop-gtk`, `desktop-wpf`, `desktop-winui3`, `desktop-uwp`, `desktop-winforms`, `desktop-swiftui`, `desktop-appkit`, `desktop-gnome`, `desktop-kde` |
+| **4 — Dev Loop** | `code-review`, `debugging-strategy`, `refactor-guide`, `git-workflow`, `security-auditor`, `performance-profiler`, `changelog-generator`, `readme-writer`, `dev-loop-pr-writer`, `dev-loop-dev-container`, `dev-loop-tech-debt-tracker`, `dev-loop-api-client-generator` |
+| **5 — DevOps** | `docker-patterns`, `cicd-pipeline`, `kubernetes-patterns`, `devops-observability`, `helm-patterns`, `devops-terraform`, `devops-ansible`, `devops-jenkins`, `devops-longhorn`, `devops-monitoring`, `github-actions`, `devops-gitops`, `devops-vault`, `devops-aws`, `devops-serverless`, `devops-monorepo`, `dependency-management`, `api-documentation`, `devops-argo-cd`, `devops-azure`, `devops-gcp`, `devops-chaos-engineering`, `devops-service-mesh`, `devops-finops`, `devops-backup-dr`, `devops-database-migration`, `devops-incident-response`, `devops-nomad`, `devops-dataops`, `devops-mlops`, `kubernetes-for-data`, `cloud-cost-optimization` |
+| **6 — Management** | `management-pm`, `management-ba`, `management-qa`, `management-qc`, `team-rules`, `management-security`, `management-pentesting`, `management-alerting`, `management-okr-kpi`, `management-sprint-retro`, `management-risk-management`, `management-hiring`, `management-stakeholder` |
 | **7 — AI** | `ai-prompt-engineering`, `ai-rag-patterns`, `ai-llm-ops`, `ai-vector-databases`, `ai-ai-agents`, `ai-ai-evals`, `ai-model-training`, `ai-embeddings`, `ai-multimodal`, `ai-ai-safety`, `ai-ai-testing`, `ai-ai-cost-optimization`, `ai-langchain-patterns`, `ai-mcp-patterns`, `ai-ai-observability` |
 | **7b — Security** | `security-sast-dast`, `security-sbom`, `security-secrets-management`, `security-container-security`, `security-api-security`, `security-data-security` |
-| **7c — Data** | `data-etl-pipeline`, `data-data-warehouse`, `data-streaming`, `data-bi-tools`, `data-data-quality`, `data-distributed-storage`, `data-distributed-compute`, `data-data-lake`, `data-data-lakehouse`, `data-batch-processing`, `data-workflow-orchestration`, `data-cdc-patterns`, `data-data-replication`, `data-data-platform`, `data-data-catalog`, `data-data-observability`, `data-data-contracts`, `data-data-mesh`, `data-data-versioning`, `data-data-api`, `data-data-virtualization`, `data-schema-registry`, `data-relational-database`, `data-nosql-database`, `data-graph-database`, `data-search-engine`, `data-data-lineage`, `data-data-cost-optimization`, `data-data-testing`, `data-feature-store`, `data-reverse-etl`, `data-data-pipeline-cicd`, `data-data-clean-room`, `data-data-formats` |
+| **7c — Data** | `data-etl-pipeline`, `data-data-warehouse`, `data-streaming`, `data-bi-tools`, `data-data-quality`, `data-distributed-storage`, `data-distributed-compute`, `data-data-lake`, `data-data-lakehouse`, `data-batch-processing`, `data-workflow-orchestration`, `data-cdc-patterns`, `data-data-replication`, `data-data-platform`, `data-data-catalog`, `data-data-observability`, `data-data-contracts`, `data-data-mesh`, `data-data-versioning`, `data-data-api`, `data-data-virtualization`, `data-schema-registry`, `data-relational-database`, `data-nosql-database`, `data-graph-database`, `data-search-engine`, `data-lineage`, `data-cost-optimization`, `data-testing`, `data-feature-store`, `data-reverse-etl`, `data-pipeline-cicd`, `data-clean-room`, `data-formats` |
 | **7d — Design** | `design-design-systems`, `design-ux-research`, `design-accessibility`, `design-prototyping` |
 | **7e — Quality** | `quality-e2e-testing`, `quality-visual-testing`, `quality-load-testing`, `quality-contract-testing` |
 | **7f — ML** | `ml-experiment-tracking`, `ml-classical-ml`, `ml-deep-learning`, `ml-feature-engineering`, `ml-hyperparameter-tuning`, `ml-model-evaluation`, `ml-model-interpretability`, `ml-time-series`, `ml-nlp`, `ml-computer-vision`, `ml-recommender`, `ml-anomaly-detection`, `ml-ml-pipeline`, `ml-feature-store`, `ml-model-serving`, `ml-math-foundations` |
-| **8 — Mobile Stacks** | `ios`, `android`, `flutter`, `react-native`, `kotlin-multiplatform`, `ionic-capacitor`, `dotnet-maui` |
-| **8b — Mobile Universal** | `mobile-patterns`, `mobile-testing`, `mobile-performance`, `mobile-security`, `mobile-networking`, `mobile-storage`, `mobile-deployment`, `push-notifications`, `in-app-purchase`, `crash-reporting`, `deep-linking`, `offline-first`, `biometrics`, `map-location`, `camera-media`, `analytics` |
-| **9 — Enterprise** | `compliance-audit`, `cost-governance`, `data-governance`, `identity-provider`, `integration-patterns`, `legacy-migration`, `multi-tenant`, `sla-management` |
-| **10 — Product** | `ab-testing`, `analytics`, `feature-prioritization`, `go-to-market`, `growth-engineering`, `onboarding-flow`, `pricing-strategy`, `user-research` |
+| **8 — Mobile Stacks** | `mobile-ios`, `mobile-android`, `mobile-flutter`, `react-native`, `mobile-kotlin-multiplatform`, `mobile-ionic-capacitor`, `mobile-dotnet-maui` |
+| **8b — Mobile Universal** | `mobile-patterns`, `mobile-testing`, `mobile-performance`, `mobile-security`, `mobile-networking`, `mobile-storage`, `mobile-deployment`, `push-notifications`, `in-app-purchase`, `crash-reporting`, `mobile-deep-linking`, `mobile-offline-first`, `mobile-biometrics`, `mobile-map-location`, `mobile-camera-media`, `mobile-analytics`, `mobile-ar-vr` |
+| **9 — Enterprise** | `enterprise-compliance-audit`, `enterprise-cost-governance`, `enterprise-data-governance`, `enterprise-identity-provider`, `enterprise-integration-patterns`, `enterprise-legacy-migration`, `enterprise-multi-tenant`, `enterprise-sla-management` |
+| **10 — Product** | `product-ab-testing`, `product-analytics`, `product-feature-prioritization`, `product-go-to-market`, `product-growth-engineering`, `product-onboarding-flow`, `product-pricing-strategy`, `product-user-research` |
 
 Mobile universal skills apply across all platforms: patterns, testing, performance, security, networking, storage, deployment, push-notifications, in-app-purchase, crash-reporting, deep-linking, offline-first, biometrics, map-location, camera-media, analytics.
 
@@ -165,6 +165,7 @@ Agent config files contain the compression rules:
 ├── .opencode/        OpenCode
 ├── .amp/             Amp
 ├── .github/          GitHub Copilot
+├── .github/          GitHub Copilot (copilot-instructions.md)
 ├── .gemini/          Gemini
 ├── .cursor/          Cursor
 ├── .codex/           Codex CLI
@@ -248,7 +249,7 @@ Agent config files contain the compression rules:
     └── bundle-definitions.json
 ```
 
-Total: **321 SKILL.md** + **853+ reference .md files** + **17 docs/ guides** + **agent configs** = **1191+ files**.
+Total: **334 SKILL.md** + **890+ reference .md files** + **17 docs/ guides** + **agent configs** = **1241+ files**.
 
 ## License
 
