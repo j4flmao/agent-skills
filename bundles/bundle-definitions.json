@@ -1515,6 +1515,10 @@
       "backend-database-patterns",
       "backend-auth-patterns",
       "backend-event-driven",
+      "backend-cqrs-patterns",
+      "backend-event-sourcing",
+      "backend-saga-patterns",
+      "backend-transactional-outbox",
       "backend-testing",
       "nestjs-architecture",
       "nestjs-patterns",
@@ -2256,6 +2260,87 @@
     ]
   },
   {
+    "name": "soc-all",
+    "description": "SOC: operations, SIEM engineering, SOAR automation, threat intelligence, EDR/XDR",
+    "skills": [
+      "soc-operations",
+      "siem-engineering",
+      "soar-automation",
+      "threat-intelligence",
+      "edr-xdr",
+      "security-sast-dast",
+      "security-sbom",
+      "security-secrets-management",
+      "security-container-security",
+      "security-api-security",
+      "security-data-security",
+      "docker-patterns",
+      "cicd-pipeline",
+      "github-actions",
+      "monitoring",
+      "alerting",
+      "team-rules",
+      "incident-response",
+      "onboarding"
+    ]
+  },
+  {
+    "name": "cloud-architecture",
+    "description": "Cloud architecture: landing zone, well-architected framework, governance, multi-cloud",
+    "skills": [
+      "cloud-architecture",
+      "cloud-cost-optimization",
+      "devops-aws",
+      "devops-azure",
+      "devops-gcp",
+      "terraform",
+      "helm-patterns",
+      "kubernetes-patterns",
+      "docker-patterns",
+      "cicd-pipeline",
+      "monitoring",
+      "alerting",
+      "security",
+      "compliance-audit",
+      "solution-architecture",
+      "enterprise-cost-governance"
+    ]
+  },
+  {
+    "name": "ecommerce-all",
+    "description": "E-commerce: payment processing, checkout and cart, order management",
+    "skills": [
+      "ecommerce-payment-processing",
+      "ecommerce-checkout-cart",
+      "backend-api-design",
+      "backend-auth-patterns",
+      "backend-database-patterns",
+      "backend-testing",
+      "docker-patterns",
+      "cicd-pipeline",
+      "monitoring",
+      "alerting",
+      "security",
+      "compliance-audit"
+    ]
+  },
+  {
+    "name": "api-all",
+    "description": "API ecosystem: GraphQL Federation, API product management, API design, API gateway",
+    "skills": [
+      "api-graphql-federation",
+      "api-product-management",
+      "backend-api-design",
+      "backend-graphql-patterns",
+      "api-gateway",
+      "api-documentation",
+      "backend-openapi-documentation",
+      "backend-api-versioning",
+      "api-response",
+      "grpc-patterns"
+    ]
+  },
+  {
     "name": "desktop-all",
     "description": "Desktop: Electron, Tauri, Qt, Gtk, WPF, WinUI, UWP, WinForms, SwiftUI, AppKit, GNOME, KDE",
     "skills": [
@@ -2341,6 +2426,41 @@
       "security",
       "onboarding",
       "context-compressor"
+    ]
+  },
+  {
+    "name": "backend-patterns",
+    "description": "Advanced backend patterns: CQRS, Event Sourcing, Saga, Transactional Outbox + related universal skills",
+    "skills": [
+      "master-orchestrator",
+      "project-init",
+      "oop-principles",
+      "design-patterns",
+      "microservices",
+      "backend-clean-architecture",
+      "backend-api-design",
+      "api-response",
+      "backend-database-patterns",
+      "backend-auth-patterns",
+      "backend-event-driven",
+      "backend-testing",
+      "backend-cqrs-patterns",
+      "backend-event-sourcing",
+      "backend-saga-patterns",
+      "backend-transactional-outbox",
+      "grpc-patterns",
+      "websocket-patterns",
+      "message-queue",
+      "caching",
+      "rate-limiting",
+      "load-testing",
+      "api-gateway",
+      "code-review",
+      "debugging-strategy",
+      "security-auditor",
+      "git-workflow",
+      "docker-patterns",
+      "cicd-pipeline"
     ]
   }
 ]

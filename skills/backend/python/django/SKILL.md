@@ -175,6 +175,8 @@ def notify_order_created(sender, instance, created, **kwargs):
 
 ## References
 - `references/django-structure.md` — Django project structure, thin models, service layer
+- `references/django-rest-framework.md` — DRF ViewSets, serializers, permissions, filtering
+- `references/django-orm-patterns.md` — N+1 prevention, aggregation, subqueries, bulk operations
 
 ## Handoff
 No artifact produced.

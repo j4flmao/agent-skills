@@ -19,11 +19,12 @@ Phase order: planning -> backend -> frontend -> mobile -> dev-loop -> devops -> 
 ### Quick map
 
 ```
-planning/    -> brief, prd, adr, tech spec, story, roadmap, pitch-deck, market-analysis
+planning/    -> brief, prd, adr, tech spec, story, roadmap, pitch-deck, market-analysis, solution-architecture
 backend/     -> nestjs, nodejs, elysia, go, rust, python, spring, dotnet, rails, php-pure, php-laravel, php-zend
                universal: oop, api-design, api-response, database, auth, testing,
                grpc, websocket, message-queue, caching, rate-limiting, load-testing, api-gateway,
-               graphql, bg-jobs, search, streaming, file-storage, feature-flags, i18n, logging
+               graphql, bg-jobs, search, streaming, file-storage, feature-flags, i18n, logging,
+               cqrs, event-sourcing, saga, outbox
 frontend/    -> react, nextjs, vue, nuxt, angular, sveltekit,
                remix, astro, solidjs, qwik, svelte-core
                universal: state, a11y, design-system, performance, testing, microfrontend,
@@ -36,7 +37,10 @@ devops/      -> docker, k8s, terraform, helm, ansible, jenkins, longhorn, monito
                github-actions, gitops, vault, aws, serverless, monorepo,
                dependency-management, api-documentation,
                argo-cd, azure, gcp, chaos, service-mesh, finops, backup-dr, db-migration,
-               dataops, mlops, kubernetes-for-data, cloud-cost-optimization
+               dataops, mlops, kubernetes-for-data, cloud-cost-optimization, cloud-architecture,
+               platform-engineering, sre-practices, internal-developer-platform,
+               kubernetes-operators, gitops-advanced, progressive-delivery,
+               policy-as-code, cloud-migration
 dev-loop/    -> review, debug, refactor, git, security, performance, changelog, readme,
                pr-writer, dev-container, tech-debt, api-client
 management/  -> pm, ba, qa, qc, team-rules, security, pentesting, alerting,
@@ -54,7 +58,8 @@ ai/          -> ai-prompt-engineering, ai-rag-patterns, ai-llm-ops,
                 ai-langchain-patterns, ai-mcp-patterns, ai-ai-observability
 security/    -> security-sast-dast, security-sbom, security-secrets-management,
                 security-container-security, security-api-security,
-                security-data-security
+                security-data-security, soc-operations, siem-engineering,
+                soar-automation, threat-intelligence, edr-xdr
 ml/          -> ml-experiment-tracking, ml-classical-ml, ml-deep-learning,
                 ml-feature-engineering, ml-hyperparameter-tuning,
                 ml-model-evaluation, ml-model-interpretability, ml-time-series,
@@ -72,9 +77,11 @@ data/        -> data-etl-pipeline, data-data-warehouse, data-streaming,
                 data-nosql-database, data-graph-database,
                 data-search-engine
 design/      -> design-design-systems, design-ux-research, design-accessibility,
-                design-prototyping
+                design-prototyping, visual-design, brand-identity,
+                information-architecture, motion-design
 quality/     -> quality-e2e-testing, quality-visual-testing, quality-load-testing,
-                quality-contract-testing
+                quality-contract-testing, unit-testing, integration-testing,
+                property-based-testing
 ```
 
 ### Stack detection

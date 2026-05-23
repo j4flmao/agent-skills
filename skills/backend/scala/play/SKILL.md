@@ -166,6 +166,8 @@ class OrderController @Inject()(
 ### Reference Files
 - `references/play-setup.md` — Play Framework setup, SBT config, routes
 - `references/play-architecture.md` — Architecture, action composition, error handling
+- `references/play-testing.md` — Play testing with ScalaTest, Mockito, integration specs
+- `references/play-performance.md` — Thread pools, caching, HTTP/2, connection pooling
 
 ### Related Skills
 - `backend/universal/api-response/SKILL.md` — API response envelope

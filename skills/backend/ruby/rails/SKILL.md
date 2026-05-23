@@ -173,6 +173,8 @@ end
 ### Reference Files
 - `references/rails-api-conventions.md` — Rails API conventions, versioning, serialization
 - `references/rails-active-record.md` — AR patterns, scopes, N+1 prevention, migrations
+- `references/rails-performance.md` — Query optimization, caching, background jobs, connection pooling
+- `references/rails-testing.md` — RSpec, factories, request specs, service specs, best practices
 
 ### Related Skills
 - `backend/universal/api-response/SKILL.md` — Response envelope

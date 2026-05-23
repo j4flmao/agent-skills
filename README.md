@@ -1,6 +1,6 @@
 # @j4flmao/agent-skills
 
-334 agent skills for software development — planning, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, design, quality. Each skill is a `SKILL.md` defining triggers, rules, and response format.
+360 agent skills for software development — planning, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, design, quality. Each skill is a `SKILL.md` defining triggers, rules, and response format.
 
 ## Installation
 
@@ -54,7 +54,7 @@ cp -r ~/skills/skills/devops/docker-patterns /path/to/project/skills/
 
 ```bash
 # Requires the repo to be pushed to GitHub
-npx skills add j4flmao/agent-skills            # all 334 skills
+npx skills add j4flmao/agent-skills            # all 360 skills
 npx skills add j4flmao/agent-skills --bundle backend-only
 npx skills add j4flmao/agent-skills -g          # global (every project)
 ```
@@ -74,7 +74,8 @@ npx skills add j4flmao/agent-skills --bundle <name>
 | `fullstack-nodejs-react` | 230+ | Node.js + React |
 | `fullstack-elysia-react` | 230+ | ElysiaJS + React |
 | `fullstack-rails-svelte` | 228+ | Rails + SvelteKit |
-| `backend-only` | 185+ | Backend only (includes ai, ml, security, data skills) |
+| `backend-only` | 190+ | Backend only (includes ai, ml, security, data skills) |
+| `backend-patterns` | 28+ | CQRS, Event Sourcing, Saga, Outbox + universal patterns |
 | `frontend-only` | 80+ | Frontend only (includes design skills) |
 | `devops-only` | 55+ | DevOps only (includes security, nomad, incident-response) |
 | `management-only` | 65+ | Management only (includes data, quality, cost-benefit, hiring, stakeholder) |
@@ -82,6 +83,7 @@ npx skills add j4flmao/agent-skills --bundle <name>
 | `mobile-android` | 95+ | Android + universal mobile skills + deployment |
 | `mobile-flutter` | 98+ | Flutter + universal mobile skills + deployment |
 | `mobile-react-native` | 98+ | React Native + universal mobile skills + deployment |
+| `backend-patterns` | 28+ | CQRS, Event Sourcing, Saga, Outbox + universal patterns |
 
 ## How Skills Work
 
@@ -110,7 +112,7 @@ No keyword match? Agent routes through `master-orchestrator`, detects the projec
 |-------|--------|
 | **0 — Core** | `master-orchestrator`, `project-init`, `onboarding`, `context-compressor` |
 | **1 — Planning** | `create-brief`, `create-prd`, `create-adr`, `create-tech-spec`, `create-story`, `planning-create-roadmap`, `planning-create-pitch-deck`, `planning-market-analysis`, `management-cost-benefit` |
-| **2 — Backend Universal** | `oop-principles`, `design-patterns`, `backend-microservices`, `backend-clean-architecture`, `backend-api-design`, `api-response`, `backend-database-patterns`, `backend-auth-patterns`, `backend-event-driven`, `backend-testing`, `grpc-patterns`, `websocket-patterns`, `message-queue`, `backend-caching`, `rate-limiting`, `load-testing`, `api-gateway`, `backend-graphql-patterns`, `backend-background-jobs`, `backend-search-patterns`, `backend-data-streaming`, `backend-file-storage`, `backend-feature-flags`, `backend-internationalization`, `backend-structured-logging`, `backend-observability`, `backend-resilience-patterns`, `backend-openapi-documentation`, `backend-contract-testing`, `backend-idempotency`, `backend-distributed-locking`, `backend-webhooks`, `backend-api-versioning`, `backend-scheduling-cron`, `backend-multi-tenancy`, `backend-bff-pattern`, `backend-data-masking`, `backend-audit-logging`, `backend-plugin-architecture` |
+| **2 — Backend Universal** | `oop-principles`, `design-patterns`, `backend-microservices`, `backend-clean-architecture`, `backend-api-design`, `api-response`, `backend-database-patterns`, `backend-auth-patterns`, `backend-event-driven`, `backend-testing`, `grpc-patterns`, `websocket-patterns`, `message-queue`, `backend-caching`, `rate-limiting`, `load-testing`, `api-gateway`, `backend-graphql-patterns`, `backend-background-jobs`, `backend-search-patterns`, `backend-data-streaming`, `backend-file-storage`, `backend-feature-flags`, `backend-internationalization`, `backend-structured-logging`, `backend-observability`, `backend-resilience-patterns`, `backend-openapi-documentation`, `backend-contract-testing`, `backend-idempotency`, `backend-distributed-locking`, `backend-webhooks`, `backend-api-versioning`, `backend-scheduling-cron`, `backend-multi-tenancy`, `backend-bff-pattern`, `backend-data-masking`, `backend-audit-logging`, `backend-plugin-architecture`, `backend-cqrs-patterns`, `backend-event-sourcing`, `backend-saga-patterns`, `backend-transactional-outbox` |
 | **2b — Stack Backend** | `nestjs-a/p`, `nodejs-a/p`, `elysia-a/p`, `backend-go-a/p`, `rust-a/p`, `python-fastapi`, `python-django`, `backend-spring-boot-a`, `dotnet-a/p`, `backend-rails`, `php-pure`, `php-laravel`, `php-zend`, `backend-kotlin-a/p`, `java-micronaut`, `java-quarkus`, `scala-play`, `swift-vapor`, `python-flask`, `php-symfony`, `nodejs-hono`, `nodejs-fastify`, `deno-oak`, `backend-bun`, `backend-elixir`, `backend-deno` |
 | **3 — Frontend Universal** | `frontend-design-system`, `frontend-state-management`, `frontend-performance`, `frontend-accessibility`, `frontend-testing`, `frontend-patterns`, `frontend-microfrontend`, `tailwind-css`, `frontend-storybook`, `frontend-pwa`, `frontend-seo`, `frontend-animation`, `frontend-form-handling`, `frontend-data-fetching`, `frontend-bundler-tools`, `frontend-image-optimization`, `frontend-theming`, `frontend-internationalization`, `frontend-authentication`, `frontend-error-handling`, `frontend-rendering-strategies`, `frontend-css-strategy`, `frontend-typescript-patterns`, `frontend-security`, `frontend-browser-caching`, `frontend-responsive-design`, `frontend-feature-flags` |
 | **3b — Stack Frontend** | `react-a`, `react-nextjs`, `vue-a`, `vue-nuxt`, `angular-a/p`, `frontend-sveltekit`, `remix-a/p`, `frontend-astro-a`, `solidjs-a/p`, `qwik-a`, `svelte-a/p`, `frontend-lit`, `frontend-preact`, `frontend-alpinejs`, `frontend-htmx`, `frontend-ember`, `frontend-stencil`, `frontend-web-components` |
@@ -177,7 +179,7 @@ Agent config files contain the compression rules:
 ├── skills/
 │   ├── core/         4 skills
 │   ├── planning/     8 skills
-│   ├── backend/      75 skills (36 stack + 39 universal)
+│   ├── backend/      79 skills (36 stack + 43 universal)
 │   │   ├── nodejs/       Node.js (architecture, patterns, express, prisma, fastify, hono)
 │   │   ├── nestjs/       NestJS (architecture, patterns)
 │   │   ├── go/           Go (architecture, patterns)
@@ -195,7 +197,7 @@ Agent config files contain the compression rules:
 │   │   ├── elixir/       Elixir
 │   │   ├── deno/         Deno (oak)
 │   │   ├── bun/          Bun
-│   │   └── universal/    39 skills
+│   │   └── universal/    43 skills
 │   ├── frontend/     52 skills (25 stack + 27 universal)
 │   │   ├── react/        React (architecture, nextjs)
 │   │   ├── vue/          Vue (architecture, nuxt, patterns)
@@ -249,7 +251,7 @@ Agent config files contain the compression rules:
     └── bundle-definitions.json
 ```
 
-Total: **334 SKILL.md** + **890+ reference .md files** + **17 docs/ guides** + **agent configs** = **1241+ files**.
+Total: **360 SKILL.md** + **920+ reference .md files** + **17 docs/ guides** + **agent configs** = **1297+ files**.
 
 ## License
 

@@ -162,6 +162,8 @@ Orchestration (complex, many services):
 
 ## References
 - `references/messaging-patterns.md` — event schema, consumer idempotency, outbox pattern, retry/DLQ
+- `references/dead-letter-queue.md` — DLQ architecture, monitoring, reprocessing patterns
+- `references/event-notification-patterns.md` — Event notification vs carried state transfer, fan-out, routing
 
 ## Handoff
 No artifact produced.

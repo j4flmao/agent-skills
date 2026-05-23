@@ -152,6 +152,8 @@ describe('PostgresUserRepository', () => {
 
 ## References
 - `references/test-pyramid.md` — test pyramid guide with ratios and examples
+- `references/mocking-strategies.md` — Mock types, what to mock vs not mock, anti-patterns
+- `references/integration-test-patterns.md` — TestContainers, WireMock, transaction rollback, factories
 
 ## Handoff
 No artifact produced.

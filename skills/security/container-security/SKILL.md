@@ -246,6 +246,10 @@ Auto-create tickets for fixable vulnerabilities.
 - `references/runtime-security.md`
   Falco, Tracee, admission control, Kyverno, OPA,
   seccomp, AppArmor, Pod Security Standards
+- `references/admission-controller-policies.md`
+  Policy categories, Pod Security Standards, policy engine comparison
+- `references/container-vulnerability-scanning.md`
+  Scanning strategy by stage, severity thresholds, image best practices
 
 ## Handoff
 `security-secrets-management` for credential injection

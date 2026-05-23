@@ -187,6 +187,8 @@ async def create_user(
 
 ## References
 - `references/fastapi-structure.md` — FastAPI project structure and app setup
+- `references/dependency-injection-patterns.md` — DI layers, request scoping, lifespan management
+- `references/fastapi-testing.md` — Async client, dependency override, TestContainers integration
 
 ## Handoff
 No artifact produced.

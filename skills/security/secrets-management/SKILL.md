@@ -250,6 +250,10 @@ Review weekly for suspicious patterns.
 - `references/secret-storage.md`
   Vault, AWS Secrets Manager, GCP Secret Manager,
   Azure Key Vault, Kubernetes External Secrets, rotation
+- `references/secrets-rotation.md`
+  Rotation strategies, automation patterns, zero-downtime rotation
+- `references/secrets-audit.md`
+  Audit checklist, audit logging format, monitoring alerts
 
 ## Handoff
 `security-container-security` for secrets injection into containers

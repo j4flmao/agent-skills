@@ -132,6 +132,10 @@ State: User asks about design patterns, GoF, pattern selection, creational/struc
   Route: design-patterns
   Reason: "Design pattern selection or implementation request."
 
+State: User asks about solution architecture, high-level design, system design, HLD, architecture overview, architecture decision, tech stack decision, cross-cutting concerns.
+  Route: solution-architecture
+  Reason: "Solution architecture request."
+
 State: User asks about microservices, saga, CQRS, event sourcing, service decomposition.
   Route: backend-microservices
   Reason: "Microservices architecture and distributed patterns request."
@@ -657,6 +661,22 @@ State: User asks about plugin architecture, plugin system, extension point.
   Route: backend-plugin-architecture
   Reason: "Plugin architecture request."
 
+State: User asks about CQRS, command query segregation, read model, write model, command handler, query handler, materialized view.
+  Route: backend-cqrs-patterns
+  Reason: "CQRS patterns request."
+
+State: User asks about event sourcing, event store, event stream, rehydrate, event replay, projection rebuild, append-only log.
+  Route: backend-event-sourcing
+  Reason: "Event sourcing request."
+
+State: User asks about saga, distributed transaction, choreography saga, orchestration saga, compensating transaction, saga state machine, long running transaction.
+  Route: backend-saga-patterns
+  Reason: "Saga patterns request."
+
+State: User asks about transactional outbox, outbox pattern, reliable event publishing, dual write, CDC outbox, message relay, outbox table.
+  Route: backend-transactional-outbox
+  Reason: "Transactional outbox request."
+
 State: User asks about Remix, Remix routing, Remix loaders/actions.
   Route: frontend-remix-architecture or frontend-remix-patterns
   Reason: "Remix stack request."
@@ -945,11 +965,67 @@ State: User asks about cloud cost optimization, cloud spend, cost reduction, clo
   Route: cloud-cost-optimization
   Reason: "Cloud cost optimization request."
 
+State: User asks about cloud architecture, landing zone, well-architected framework, cloud foundation, multi-cloud, cloud governance.
+  Route: cloud-architecture
+  Reason: "Cloud architecture request."
+
+State: User asks about platform engineering, internal developer platform, IDP, Backstage, developer portal, golden path, platform team.
+  Route: devops-platform-engineering
+  Reason: "Platform engineering request."
+
+State: User asks about SRE, site reliability engineering, SLI, SLO, error budget, toil reduction, reliability engineering, production readiness.
+  Route: devops-sre-practices
+  Reason: "SRE practices request."
+
+State: User asks about internal developer platform deep dive, Backstage plugins, software templates, golden path architecture, platform APIs, platform adoption.
+  Route: devops-internal-developer-platform
+  Reason: "Internal developer platform request."
+
+State: User asks about Kubernetes operator, custom controller, CRD, Kubebuilder, operator pattern, reconciliation loop.
+  Route: devops-kubernetes-operators
+  Reason: "Kubernetes operators request."
+
+State: User asks about advanced GitOps, multi-cluster GitOps, ApplicationSet, ArgoCD sync waves, cluster bootstrapping, GitOps at scale.
+  Route: devops-gitops-advanced
+  Reason: "Advanced GitOps request."
+
+State: User asks about progressive delivery, canary deployment, blue-green, traffic shifting, Flagger, Argo Rollouts, gradual rollout, deploy strategy.
+  Route: devops-progressive-delivery
+  Reason: "Progressive delivery request."
+
+State: User asks about policy as code, OPA, Rego, Kyverno, admission controller, policy enforcement, guardrails, policy testing.
+  Route: devops-policy-as-code
+  Reason: "Policy as code request."
+
+State: User asks about cloud migration, lift-and-shift, rehost, replatform, refactor, 6 Rs migration, legacy to cloud, data center migration.
+  Route: devops-cloud-migration
+  Reason: "Cloud migration request."
+
 ### New Security Skills
 
 State: User asks about data security, data protection, encryption at rest, data masking, data classification.
   Route: security-data-security
   Reason: "Data security request."
+
+State: User asks about SOC operations, SOC tier, SOC structure, SOC runbook, security operations center, SOC shift.
+  Route: soc-operations
+  Reason: "SOC operations request."
+
+State: User asks about SIEM, correlation rule, detection rule, log ingestion, SIEM architecture, Splunk, Elastic SIEM, Wazuh, Sentinel.
+  Route: siem-engineering
+  Reason: "SIEM engineering request."
+
+State: User asks about SOAR, playbook automation, security automation, SOAR playbook, incident automation.
+  Route: soar-automation
+  Reason: "SOAR automation request."
+
+State: User asks about threat intelligence, CTI, threat feed, IoC, TTP, threat actor, MITRE ATT&CK, OSINT, threat intel lifecycle.
+  Route: threat-intelligence
+  Reason: "Threat intelligence request."
+
+State: User asks about EDR, XDR, endpoint detection, endpoint response, CrowdStrike, Defender, SentinelOne, endpoint security.
+  Route: edr-xdr
+  Reason: "EDR/XDR request."
 
 State: User asks about authentication, authorization, JWT, OAuth, SSO, RBAC.
   Route: backend-auth-patterns
@@ -1271,6 +1347,22 @@ State: User asks about prototyping, design prototype, micro-interaction.
   Route: design-prototyping
   Reason: "Prototyping request."
 
+State: User asks about visual design, color theory, typography, layout, visual hierarchy, spacing, UI aesthetics.
+  Route: design-visual-design
+  Reason: "Visual design request."
+
+State: User asks about brand identity, brand guidelines, logo design, brand colors, brand voice, visual identity, branding.
+  Route: design-brand-identity
+  Reason: "Brand identity request."
+
+State: User asks about information architecture, sitemap, user flow, content hierarchy, navigation design, taxonomy, labeling.
+  Route: design-information-architecture
+  Reason: "Information architecture request."
+
+State: User asks about motion design, UI animation, micro-interaction, Lottie, transition design, motion guidelines.
+  Route: design-motion-design
+  Reason: "Motion design request."
+
 State: User asks about E2E test, Playwright, Cypress, browser test.
   Route: quality-e2e-testing
   Reason: "E2E testing request."
@@ -1287,6 +1379,18 @@ State: User asks about contract testing, Pact, consumer-driven contract.
   Route: quality-contract-testing
   Reason: "Contract testing request."
 
+State: User asks about unit testing, unit test, TDD, test doubles, mocking, stubbing, FIRST principles, AAA pattern, code coverage.
+  Route: quality-unit-testing
+  Reason: "Unit testing request."
+
+State: User asks about integration testing, API testing, database testing, TestContainers, WireMock, component testing, service testing.
+  Route: quality-integration-testing
+  Reason: "Integration testing request."
+
+State: User asks about property-based testing, fuzzing, generative testing, fast-check, QuickCheck, invariant testing, random testing.
+  Route: quality-property-based-testing
+  Reason: "Property-based testing request."
+
 State: User asks about Express, Express.js middleware, Express app.
   Route: nodejs-express
   Reason: "Express request."
@@ -1294,6 +1398,26 @@ State: User asks about Express, Express.js middleware, Express app.
 State: User asks about Prisma, Prisma schema, Prisma ORM.
   Route: prisma
   Reason: "Prisma ORM request."
+
+State: User asks about payment processing, payment gateway, Stripe, PayPal, subscription billing, PCI DSS, recurring payment.
+  Route: ecommerce-payment-processing
+  Reason: "Payment processing request."
+
+State: User asks about shopping cart, checkout flow, cart management, order management, coupon system, discount engine, tax calculation.
+  Route: ecommerce-checkout-cart
+  Reason: "Checkout and cart request."
+
+State: User asks about GraphQL Federation, Apollo Federation, federated schema, subgraph, supergraph, schema composition, distributed GraphQL.
+  Route: api-graphql-federation
+  Reason: "GraphQL Federation request."
+
+State: User asks about API product management, API strategy, API monetization, developer portal, API lifecycle, API deprecation, API as product.
+  Route: api-product-management
+  Reason: "API product management request."
+
+State: User asks about WebRTC, real-time video/audio, media streaming, SFU, MCU, signaling server, TURN/STUN, live streaming, real-time communication.
+  Route: backend-web-real-time
+  Reason: "Web real-time communication request."
 
 ### Step 3: Detect Backend Stack
 Read project files:

@@ -120,6 +120,8 @@ GDPR: right to access (data portability), right to deletion (erase records), rig
 ## References
 - `references/encryption-key-mgmt.md` — Encryption at rest/transit, envelope encryption, KMS vs HSM, key rotation, TLS
 - `references/data-masking-classification.md` — Static/dynamic masking, tokenization, column-level access, k-anonymity, differential privacy, GDPR/CCPA
+- `references/data-loss-prevention.md` — DLP categories, sensitive data patterns, response actions
+- `references/data-privacy-compliance.md` — Regulatory frameworks, data classification levels, privacy by design
 
 ## Handoff
 For infrastructure security controls, hand off to `devops-cloud-cost-optimization`. For data quality and governance, hand off to `data-quality`.

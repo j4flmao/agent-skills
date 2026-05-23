@@ -260,6 +260,10 @@ top abused endpoints, WAF trigger trends.
 - `references/api-protection.md`
   Auth patterns, rate limiting, WAF, input validation,
   request signing, audit
+- `references/api-security-testing.md`
+  API security testing categories, tools, and checklist
+- `references/api-auth-patterns.md`
+  Auth flow comparison, JWT best practices, OAuth2 flows
 
 ## Handoff
 `security-sast-dast` for API-specific DAST scanning

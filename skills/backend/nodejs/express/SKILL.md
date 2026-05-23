@@ -412,6 +412,8 @@ export function requestLogger(req: Request, res: Response, next: NextFunction) {
 ### Reference Files
 - `references/middleware-patterns.md` — Middleware chain, error handling, validation, rate limiting
 - `references/app-structure.md` — Folder organization, route separation, config, startup
+- `references/performance-optimization.md` — Compression, clustering, connection pooling, caching
+- `references/testing-strategies.md` — Supertest, integration tests, mock middleware, error handler tests
 
 ### Related Skills
 - `backend/nodejs/architecture/SKILL.md` — General Node.js architecture

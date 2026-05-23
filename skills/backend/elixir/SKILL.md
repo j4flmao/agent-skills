@@ -465,6 +465,8 @@ end
 ### Reference Files
 - `references/elixir-otp.md` — Processes, GenServer, supervision trees, OTP patterns
 - `references/phoenix-ecto.md` — Phoenix routes, LiveView, Ecto schema/queries, contexts
+- `references/elixir-testing-exunit.md` — ExUnit, Mox, ExMachina, DataCase, ConnCase patterns
+- `references/elixir-ecto-advanced.md` — Complex queries, Ecto.Multi, dynamic filters, changeset patterns
 
 ### Related Skills
 - `backend/nodejs/express/SKILL.md` — Alternative Node.js approach

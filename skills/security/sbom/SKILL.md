@@ -216,8 +216,10 @@ Push SBOM to Dependency Track or Harbor for continuous monitoring. Configure ale
 - Correlate vulnerabilities by reachability when possible
 
 ## References
-- `sbom-formats.md` — SPDX 2.3 vs 3.0, CycloneDX format comparison, tooling ecosystem
-- `vulnerability-correlation.md` — OSV, NVD, GHSA sources, severity scoring, policy enforcement
+- `references/sbom-formats.md` — SPDX 2.3 vs 3.0, CycloneDX format comparison, tooling ecosystem
+- `references/vulnerability-correlation.md` — OSV, NVD, GHSA sources, severity scoring, policy enforcement
+- `references/sbom-attestation.md` — In-toto attestation, cosign signing, SLSA provenance
+- `references/supply-chain-attacks.md` — Attack vectors, defense in depth, dependency confusion
 
 ## Handoff
 `security-container-security` for image scanning integration
