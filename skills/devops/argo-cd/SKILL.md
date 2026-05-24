@@ -144,6 +144,8 @@ Symptoms: Application status shows "OutOfSync" with "Error" health status, sync 
 ## References
 - [ArgoCD Setup](./references/argocd-setup.md) — installation, config, SSO, projects, cluster registration
 - [ArgoCD Patterns](./references/argocd-patterns.md) — ApplicationSets, sync waves, hooks, rollback, blue-green, canary
+- [ArgoCD Advanced](./references/argocd-advanced.md) — CMP, webhooks, multi-cluster DR, notifications, Argo Rollouts
+- [ArgoCD Operations](./references/argocd-operations.md) — HA, scaling, backup/restore, upgrade, troubleshooting, performance
 
 ## Handoff
 Hand off to ArgoCD when Application manifests or sync policies are needed. Hand off to kubernetes-patterns for general workload manifests. Hand off to helm-patterns for Helm chart-specific concerns. Hand off to observability for monitoring ArgoCD itself. Hand off to cicd-pipeline for ArgoCD integration with CI systems. Hand off to security for SSO configuration and RBAC policy design. Hand off to service-mesh for progressive delivery patterns with Argo Rollouts and Istio integration.

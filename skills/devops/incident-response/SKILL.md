@@ -144,6 +144,8 @@ Runbook structure per service: symptoms (what alerts fire, what users experience
 ## References
 - `references/incident-lifecycle.md` — Severity matrix detailed definitions, detection methods, response procedures, mitigation strategies, resolution criteria, incident command system
 - `references/postmortem.md` — Blameless culture principles, timeline construction, root cause analysis (5 Whys, fishbone), action item tracking, postmortem review meeting
+- `references/incident-runbooks.md` — Runbook template, diagnostic flowcharts, communication templates
+- `references/incident-metrics.md` — MTTD/MTTR tracking, dashboards, improvement targets, action item tracking
 
 ## Handoff
 `dev-loop/tech-debt-tracker` for action items from postmortem

@@ -251,7 +251,10 @@ spec:
 Kubernetes YAML manifests with annotations explaining each section.
 
 ## References
-No separate reference file — all Kubernetes patterns are inline in this skill.
+- `references/k8s-resources.md` — Kubernetes resource YAML patterns and conventions
+- `references/k8s-operations.md` — Kubernetes operational procedures and cluster management
+- `references/k8s-stateful-workloads.md` — StatefulSets, PVC patterns, database on K8s, backup
+- `references/k8s-scheduling.md` — Node affinity, taints/tolerations, topology spread, descheduler
 
 ## Handoff
 After completing this skill:

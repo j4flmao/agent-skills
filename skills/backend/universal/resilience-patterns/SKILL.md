@@ -106,6 +106,8 @@ Decorators.builder()
 ## References
 - `references/resilience4j-guide.md` — Resilience4j implementation guide
 - `references/retry-backoff-strategies.md` — Retry and backoff strategy reference
+- `references/bulkhead-patterns.md` — Thread pool isolation, semaphore, async bulkhead, system resource isolation
+- `references/fallback-strategies.md` — Stale data fallback, degraded mode, default values, circuit breaker integration
 
 ## Handoff
 No artifact produced unless requested.

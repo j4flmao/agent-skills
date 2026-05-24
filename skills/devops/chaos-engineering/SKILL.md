@@ -144,6 +144,8 @@ Hypothesis: "When primary database connection is lost, application fails over to
 ## References
 - [Chaos Principles](./references/chaos-principles.md) — principles, hypothesis design, blast radius, experiment lifecycle
 - [Chaos Tools](./references/chaos-tools.md) — Litmus, Chaos Mesh, Gremlin, AWS FIS — setup and experiment definitions per tool
+- [Chaos Scenarios](./references/chaos-scenarios.md) — detailed scenario templates for pod, network, node, DNS, cert, database failures
+- [Chaos CI/CD](./references/chaos-cicd.md) — CI/CD integration, automated experiment pipeline, blast radius progression, SLO validation
 
 ## Handoff
 Hand off to chaos-engineering when designing resilience experiments. Hand off to monitoring for steady state metric collection and dashboards. Hand off to argo-cd for auto-remediation rollback. Hand off to finops to understand cost of running chaos experiments in prod-like envs. Hand off to incident-response when game day reveals incident response gaps. Hand off to service-mesh when testing mesh resilience features (mTLS, circuit breakers, traffic routing).

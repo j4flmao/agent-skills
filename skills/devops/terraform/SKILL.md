@@ -241,6 +241,8 @@ deny[msg] {
 ### Reference Files
 - `references/terraform-modules.md` — Module design patterns, composition, versioning
 - `references/terraform-state.md` — State management, migration, locking, disaster recovery
+- `references/terraform-advanced.md` — Sentinel/OPA policy, Terraform Cloud, testing, validation
+- `references/terraform-ecosystem.md` — Terragrunt, CDKTF, OpenTofu, module registry, providers
 
 ### Related Skills
 - `devops/helm-patterns/SKILL.md` — Kubernetes deployment via Helm

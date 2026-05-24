@@ -257,7 +257,7 @@ Agent config files contain the compression rules:
     └── bundle-definitions.json
 ```
 
-Total: **412 SKILL.md** + **1165+ reference .md files** + **17 docs/ guides** + **agent configs** = **1419+ files**.
+Total: **412 SKILL.md** + **1191+ reference .md files** + **18 docs/ guides** + **agent configs** = **1446+ files**.
 
 ## License
 

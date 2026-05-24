@@ -58,6 +58,8 @@ Design cloud infrastructure architecture including landing zones, well-architect
 ## References
 - `references/landing-zone.md` — landing zone design patterns
 - `references/well-architected.md` — well-architected framework guide
+- `references/multi-cloud-strategy.md` — multi-cloud architecture patterns, provider comparison, workload placement
+- `references/cloud-migration.md` — migration strategies (6 Rs), phases, tools, pitfalls
 
 ## Handoff
 Architecture implemented via devops-terraform (IaC) and devops-aws/azure/gcp. Security validated via security-* skills.

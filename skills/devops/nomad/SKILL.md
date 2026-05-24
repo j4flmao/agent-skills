@@ -126,6 +126,8 @@ Nomad Autoscaler: horizontal scaling based on CPU/memory utilization or custom m
 ## References
 - `references/nomad-jobs.md` — Job spec syntax, task groups, service/batch job patterns, volume types, update and restart strategies
 - `references/nomad-production.md` — Consul integration details, autoscaling configuration, ACL policies, monitoring with Prometheus, multi-region deployment
+- `references/nomad-operations.md` — Cluster backup/restore, upgrade, monitoring, autoscaler, node management, sizing
+- `references/nomad-integrations.md` — Consul Connect, Vault integration, CSI volumes, multi-region deployment
 
 ## Handoff
 `devops/incident-response` for Nomad cluster incident runbooks (allocation failures, node draining, cluster scale-up)

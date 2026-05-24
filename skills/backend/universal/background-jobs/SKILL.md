@@ -219,6 +219,8 @@ monitoring:
 ## References
 - `references/job-types.md` — Job classification, retry strategies, DLQ, concurrency patterns
 - `references/queue-setup.md` — Queue infrastructure, cron expressions, worker configuration
+- `references/job-monitoring.md` — Dashboard metrics, Prometheus alerts, DLQ management, debugging stuck jobs
+- `references/job-patterns.md` — Chained workflows, saga pattern with compensations, batch processing, rate-limited jobs, exactly-once
 
 ## Handoff
 `backend-event-driven` for job completion events and chained workflows

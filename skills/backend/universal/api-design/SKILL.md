@@ -164,6 +164,8 @@ Every list endpoint uses cursor or offset pagination:
 ## References
 - `references/rest-conventions.md` — REST API design conventions
 - `references/graphql-conventions.md` — GraphQL conventions
+- `references/api-pagination-filtering.md` — Cursor vs offset pagination, filtering, sorting, field selection
+- `references/api-error-handling.md` — Error codes catalog, response envelope, debugging headers, deprecation strategy
 
 ## Handoff
 No artifact produced unless requested.

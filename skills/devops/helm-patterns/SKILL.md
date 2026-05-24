@@ -297,6 +297,8 @@ spec:
 ### Reference Files
 - `references/chart-structure.md` — Detailed chart structure examples and conventions
 - `references/helm-best-practices.md` — Helm best practices, RBAC, security, performance
+- `references/helm-lifecycle.md` — Hooks, tests, subcharts, upgrade strategies, rollback
+- `references/helm-security.md` — Chart signing, OCI registry, RBAC, secrets management (SealedSecrets, ESO)
 
 ### Related Skills
 - `devops/terraform/SKILL.md` — Infrastructure provisioning

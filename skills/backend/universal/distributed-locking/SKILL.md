@@ -109,6 +109,8 @@ Emit metrics: lock acquisition time, hold time, contention rate, timeout rate.
 ## References
 - `references/lock-strategies.md` — Distributed lock strategy comparison
 - `references/lock-providers.md` — Lock provider-specific implementation notes
+- `references/lock-deep-dive.md` — Fencing tokens, lease management, clock drift, Redlock debate, split-brain scenarios, provider comparison
+- `references/lock-implementations.md` — Code examples for Redis/Redlock, ZooKeeper, etcd, PostgreSQL, MySQL, Consul
 
 ## Handoff
 No artifact produced unless requested.
