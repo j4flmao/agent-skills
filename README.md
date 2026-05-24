@@ -1,6 +1,6 @@
 # @j4flmao/agent-skills
 
-360 agent skills for software development — planning, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, design, quality. Each skill is a `SKILL.md` defining triggers, rules, and response format.
+369 agent skills for software development — planning, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, design, quality. Each skill is a `SKILL.md` defining triggers, rules, and response format.
 
 ## Installation
 
@@ -54,7 +54,7 @@ cp -r ~/skills/skills/devops/docker-patterns /path/to/project/skills/
 
 ```bash
 # Requires the repo to be pushed to GitHub
-npx skills add j4flmao/agent-skills            # all 360 skills
+npx skills add j4flmao/agent-skills            # all 369 skills
 npx skills add j4flmao/agent-skills --bundle backend-only
 npx skills add j4flmao/agent-skills -g          # global (every project)
 ```
@@ -118,7 +118,7 @@ No keyword match? Agent routes through `master-orchestrator`, detects the projec
 | **3b — Stack Frontend** | `react-a`, `react-nextjs`, `vue-a`, `vue-nuxt`, `angular-a/p`, `frontend-sveltekit`, `remix-a/p`, `frontend-astro-a`, `solidjs-a/p`, `qwik-a`, `svelte-a/p`, `frontend-lit`, `frontend-preact`, `frontend-alpinejs`, `frontend-htmx`, `frontend-ember`, `frontend-stencil`, `frontend-web-components` |
 | **3c — Desktop** | `desktop-electron`, `desktop-tauri`, `desktop-qt`, `desktop-gtk`, `desktop-wpf`, `desktop-winui3`, `desktop-uwp`, `desktop-winforms`, `desktop-swiftui`, `desktop-appkit`, `desktop-gnome`, `desktop-kde` |
 | **4 — Dev Loop** | `code-review`, `debugging-strategy`, `refactor-guide`, `git-workflow`, `security-auditor`, `performance-profiler`, `changelog-generator`, `readme-writer`, `dev-loop-pr-writer`, `dev-loop-dev-container`, `dev-loop-tech-debt-tracker`, `dev-loop-api-client-generator` |
-| **5 — DevOps** | `docker-patterns`, `cicd-pipeline`, `kubernetes-patterns`, `devops-observability`, `helm-patterns`, `devops-terraform`, `devops-ansible`, `devops-jenkins`, `devops-longhorn`, `devops-monitoring`, `github-actions`, `devops-gitops`, `devops-vault`, `devops-aws`, `devops-serverless`, `devops-monorepo`, `dependency-management`, `api-documentation`, `devops-argo-cd`, `devops-azure`, `devops-gcp`, `devops-chaos-engineering`, `devops-service-mesh`, `devops-finops`, `devops-backup-dr`, `devops-database-migration`, `devops-incident-response`, `devops-nomad`, `devops-dataops`, `devops-mlops`, `kubernetes-for-data`, `cloud-cost-optimization` |
+| **5 — DevOps** | `docker-patterns`, `cicd-pipeline`, `kubernetes-patterns`, `devops-observability`, `helm-patterns`, `devops-terraform`, `devops-ansible`, `devops-jenkins`, `devops-longhorn`, `devops-monitoring`, `github-actions`, `devops-gitops`, `devops-vault`, `devops-aws`, `devops-serverless`, `devops-monorepo`, `dependency-management`, `api-documentation`, `devops-argo-cd`, `devops-azure`, `devops-gcp`, `devops-chaos-engineering`, `devops-service-mesh`, `devops-finops`, `devops-backup-dr`, `devops-database-migration`, `devops-incident-response`, `devops-nomad`, `devops-dataops`, `devops-mlops`, `kubernetes-for-data`, `cloud-cost-optimization`, `devops-bare-metal`, `devops-datacenter`, `devops-network-infrastructure`, `devops-storage-infrastructure`, `devops-cdn-edge`, `devops-hybrid-cloud` |
 | **6 — Management** | `management-pm`, `management-ba`, `management-qa`, `management-qc`, `team-rules`, `management-security`, `management-pentesting`, `management-alerting`, `management-okr-kpi`, `management-sprint-retro`, `management-risk-management`, `management-hiring`, `management-stakeholder` |
 | **7 — AI** | `ai-prompt-engineering`, `ai-rag-patterns`, `ai-llm-ops`, `ai-vector-databases`, `ai-ai-agents`, `ai-ai-evals`, `ai-model-training`, `ai-embeddings`, `ai-multimodal`, `ai-ai-safety`, `ai-ai-testing`, `ai-ai-cost-optimization`, `ai-langchain-patterns`, `ai-mcp-patterns`, `ai-ai-observability` |
 | **7b — Security** | `security-sast-dast`, `security-sbom`, `security-secrets-management`, `security-container-security`, `security-api-security`, `security-data-security` |
@@ -128,12 +128,12 @@ No keyword match? Agent routes through `master-orchestrator`, detects the projec
 | **7f — ML** | `ml-experiment-tracking`, `ml-classical-ml`, `ml-deep-learning`, `ml-feature-engineering`, `ml-hyperparameter-tuning`, `ml-model-evaluation`, `ml-model-interpretability`, `ml-time-series`, `ml-nlp`, `ml-computer-vision`, `ml-recommender`, `ml-anomaly-detection`, `ml-ml-pipeline`, `ml-feature-store`, `ml-model-serving`, `ml-math-foundations` |
 | **8 — Mobile Stacks** | `mobile-ios`, `mobile-android`, `mobile-flutter`, `react-native`, `mobile-kotlin-multiplatform`, `mobile-ionic-capacitor`, `mobile-dotnet-maui` |
 | **8b — Mobile Universal** | `mobile-patterns`, `mobile-testing`, `mobile-performance`, `mobile-security`, `mobile-networking`, `mobile-storage`, `mobile-deployment`, `push-notifications`, `in-app-purchase`, `crash-reporting`, `mobile-deep-linking`, `mobile-offline-first`, `mobile-biometrics`, `mobile-map-location`, `mobile-camera-media`, `mobile-analytics`, `mobile-ar-vr` |
-| **9 — Enterprise** | `enterprise-compliance-audit`, `enterprise-cost-governance`, `enterprise-data-governance`, `enterprise-identity-provider`, `enterprise-integration-patterns`, `enterprise-legacy-migration`, `enterprise-multi-tenant`, `enterprise-sla-management` |
+| **9 — Enterprise** | `enterprise-compliance-audit`, `enterprise-cost-governance`, `enterprise-data-governance`, `enterprise-identity-provider`, `enterprise-integration-patterns`, `enterprise-legacy-migration`, `enterprise-multi-tenant`, `enterprise-sla-management`, `enterprise-high-availability`, `enterprise-business-continuity`, `enterprise-capacity-planning` |
 | **10 — Product** | `product-ab-testing`, `product-analytics`, `product-feature-prioritization`, `product-go-to-market`, `product-growth-engineering`, `product-onboarding-flow`, `product-pricing-strategy`, `product-user-research` |
 
 Mobile universal skills apply across all platforms: patterns, testing, performance, security, networking, storage, deployment, push-notifications, in-app-purchase, crash-reporting, deep-linking, offline-first, biometrics, map-location, camera-media, analytics.
 
-Enterprise skills cover compliance, governance, identity, integration, legacy migration, multi-tenancy, and SLA management. Product skills cover analytics, growth, onboarding, pricing, research, and feature prioritization.
+Enterprise skills cover compliance, governance, identity, integration, legacy migration, multi-tenancy, SLA management, high availability (replica + load balancer + version sync + data migration), business continuity (BCP/DR, vendor risk, ransomware playbook), and capacity planning (forecasting + procurement). Product skills cover analytics, growth, onboarding, pricing, research, and feature prioritization.
 
 `-a` = architecture, `-p` = patterns. Example: `nestjs-a` = `nestjs-architecture`.
 
@@ -237,9 +237,9 @@ Agent config files contain the compression rules:
 │   │   ├── dotnet-maui/           .NET MAUI
 │   │   └── universal/     16 skills
 │   ├── dev-loop/     12 skills
-│   ├── devops/       32 skills (30 + nomad, incident-response)
+│   ├── devops/       47 skills (incl. bare-metal, datacenter, network-infrastructure, storage-infrastructure, cdn-edge, hybrid-cloud, platform-engineering, sre-practices, internal-developer-platform, kubernetes-operators, gitops-advanced, progressive-delivery, policy-as-code, cloud-migration, cloud-architecture)
 │   ├── management/   14 skills (11 + cost-benefit, hiring, stakeholder)
-│   ├── enterprise/    8 skills
+│   ├── enterprise/   11 skills (8 + high-availability, business-continuity, capacity-planning)
 │   ├── product/       8 skills
 │   ├── ai/            15 skills
 │   ├── ml/            16 skills (15 + math-foundations)
@@ -251,7 +251,7 @@ Agent config files contain the compression rules:
     └── bundle-definitions.json
 ```
 
-Total: **360 SKILL.md** + **920+ reference .md files** + **17 docs/ guides** + **agent configs** = **1297+ files**.
+Total: **369 SKILL.md** + **957+ reference .md files** + **17 docs/ guides** + **agent configs** = **1343+ files**.
 
 ## License
 
