@@ -347,6 +347,8 @@ feature_matrix, features = automated_feature_engineering(entities, relationships
 ## References
 - `references/feature-encoding.md` — Categorical encoding, numerical scaling, datetime features, text features, feature interaction
 - `references/automated-fe.md` — Featuretools deep feature synthesis, tsfresh, feature selection (filter/wrapper/embedded), validation
+- `references/text-features.md` — TF-IDF, word embeddings, sentence embeddings, n-gram features, text preprocessing pipelines
+- `references/validation-leakage.md` — Data leakage prevention, feature validation, temporal integrity, cross-validation hygiene for feature engineering
 
 ## Handoff
 `ml-classical-ml` for model training with engineered features

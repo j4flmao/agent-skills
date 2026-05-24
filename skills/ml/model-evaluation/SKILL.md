@@ -168,6 +168,8 @@ Version the test set — document when it was created, its size, and any leakage
 ## References
 - references/metrics-guide.md — Classification metrics with thresholds, regression metrics, probability metrics, multi-class metrics
 - references/evaluation-strategies.md — Cross-validation methods, learning curves, bias-variance analysis, statistical significance, backtesting
+- references/model-comparison.md — Statistical tests (t-test, McNemar, Wilcoxon, Bayesian), A/B testing, model selection, confidence intervals
+- references/ranking-metrics.md — NDCG, MAP, MRR, precision/recall@k, calibration metrics, ranking-specific evaluation protocols
 
 ### Edge Cases and Special Data Types
 Hierarchical classification (multiple levels): evaluate per-level and aggregated metrics separately.

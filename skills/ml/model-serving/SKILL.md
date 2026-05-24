@@ -174,6 +174,8 @@ torch.jit.save(torch.jit.script(model), 'model_quantized.pt')
 ## References
 - `references/serving-frameworks.md` — TorchServe, BentoML, Ray Serve comparison, setup, optimization
 - `references/k8s-serving.md` — KServe, Seldon Core, deployment strategies, autoscaling, canary, monitoring
+- `references/serverless-inference.md` — Serverless deployment (AWS SageMaker, Modal, GCP Cloud Run), cold start optimization, batch inference
+- `references/model-versioning.md` — Versioning schemes, model registry, canary/blue-green/shadow deployment, rollback procedures, metadata
 
 ## Handoff
 For model building and packaging, hand off to `ml-ml-pipeline`. For monitoring inference metrics, hand off to `devops/monitoring`. For feature serving alongside models, hand off to `ml-feature-store`.

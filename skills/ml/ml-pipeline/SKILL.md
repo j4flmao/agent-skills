@@ -196,6 +196,8 @@ def training_pipeline(data_url: str):
 ## References
 - `references/kubeflow-tfx.md` — Kubeflow Pipelines components, TFX pipeline, component patterns
 - `references/ml-cicd.md` — CI/CD for ML pipelines, validation gates, staging, rollback
+- `references/pipeline-monitoring.md` — Pipeline observability, drift detection, alerting, retraining triggers, data quality monitoring
+- `references/pipeline-orchestration.md` — Workflow orchestrators (Airflow, Prefect, Dagster), DAG design, scheduling, dependency management
 
 ## Handoff
 For model serving deployment, hand off to `ml-model-serving`. For feature store configuration, hand off to `ml-feature-store`. For experiment tracking setup, hand off to `ai-model-training`.

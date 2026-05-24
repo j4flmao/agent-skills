@@ -267,6 +267,8 @@ kubectl -n longhorn-system get pods -w
 ### Reference Files
 - `references/longhorn-config.md` — Longhorn settings reference, tuning parameters, troubleshooting
 - `references/longhorn-backup.md` — Backup strategies, DR procedures, restore workflows
+- `references/longhorn-manager.md` — Web UI operations, recurring jobs, encryption, multi-disk, node maintenance, troubleshooting
+- `references/longhorn-perf.md` — RWX volumes, performance tuning, storage classes, IOPS, monitoring, best practices
 
 ### Related Skills
 - `devops/helm-patterns/SKILL.md` — Helm-based deployment

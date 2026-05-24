@@ -149,6 +149,8 @@ Detection: monthly RI/SP report shows coverage dropped from 65% to 45%. Investig
 ## References
 - [Cost Optimization](./references/cost-optimization.md) — right-sizing, reserved instances, spot, storage lifecycle, tagging
 - [FinOps Governance](./references/finops-governance.md) — budgets, anomaly detection, chargeback, reporting, practice maturity
+- [FinOps Practices](./references/finops-practices.md) — FinOps lifecycle (inform → optimize → operate), unit economics, forecasting, budget models, maturity model
+- [FinOps Automation](./references/finops-automation.md) — Automated cost remediation, scheduling, tag enforcement, budget alerts, discount automation
 
 ## Handoff
 Hand off to finops for cost visibility and optimization. Hand off to cloud-specific skills (aws/azure/gcp) for resource provisioning at optimized price. Hand off to monitoring for utilization metrics used in right-sizing.

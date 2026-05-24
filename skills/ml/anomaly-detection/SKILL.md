@@ -170,6 +170,8 @@ Create runbooks for each alert severity level defining investigation and resolut
 ## References
 - references/classical-anomaly.md — Statistical Z-score/IQR/Grubbs, LOF, Isolation Forest, HBOS, one-class SVM, evaluation
 - references/deep-learning-anomaly.md — Autoencoder, VAE, DeepSVDD, LSTM-AD, time-series anomaly, Twitter AD, Prophet, real-time deployment
+- references/online-anomaly.md — Streaming anomaly detection, sliding window, EWMA, CUSUM, real-time scoring, alert fatigue mitigation
+- references/anomaly-evaluation.md — Threshold selection, precision@k, evaluation protocols, alert fatigue management, production monitoring
 
 ### Edge Cases and Special Domains
 Extreme rare anomalies (<0.1%): use one-class learning (DeepSVDD, OCSVM), self-supervised learning (rotation prediction, contrastive).

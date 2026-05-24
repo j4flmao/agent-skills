@@ -268,6 +268,8 @@ jobs:
 ### Reference Files
 - `references/ansible-roles.md` — Role design patterns, dependencies, composition
 - `references/ansible-best-practices.md` — Ansible optimization, security, inventory management
+- `references/ansible-tower.md` — AWX/Tower, job templates, RBAC, workflow, inventory
+- `references/ansible-security.md` — Vault, SSH hardening, secrets management, compliance automation
 
 ### Related Skills
 - `devops/terraform/SKILL.md` — Infrastructure provisioning

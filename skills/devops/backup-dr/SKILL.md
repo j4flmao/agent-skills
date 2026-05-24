@@ -144,6 +144,8 @@ BCP defines organizational response beyond technical DR: alternate work location
 ## References
 - [Backup Strategies](./references/backup-strategies.md) — database backup, K8s Velero, file replication, retention policies
 - [Disaster Recovery](./references/disaster-recovery.md) — DR patterns, RTO/RPO, failover, testing, runbooks
+- [Backup 3-2-1](./references/backup-3-2-1.md) — 3-2-1 rule, backup types, retention policies, Velero, cross-region replication
+- [DR Recovery](./references/dr-recovery.md) — Pilot Light, Warm Standby, Active-Active, failover runbooks, DR testing
 
 ## Handoff
 Hand off to backup-dr for backup strategy and DR planning. Hand off to cloud-specific skills (aws/azure/gcp) for cloud storage and replication. Hand off to kubernetes-patterns for Velero setup. Hand off to monitoring for backup health alerts. Hand off to incident-response when DR failover triggers incident response process. Hand off to security for ransomware protection and backup encryption key management. Hand off to finops for backup storage cost optimization and lifecycle management.

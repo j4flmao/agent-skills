@@ -250,6 +250,8 @@ Automatic branch discovery:
 ### Reference Files
 - `references/jenkins-pipeline.md` — Advanced pipeline patterns, parallel stages, error handling
 - `references/jenkins-best-practices.md` — Jenkins security, performance, plugin management
+- `references/jenkins-shared-libraries.md` — Shared library structure, global variables, class libraries, testing, best practices
+- `references/jenkins-ops.md` — HA, backup/restore, plugin management, security, performance tuning, agent provisioning, monitoring
 
 ### Related Skills
 - `devops/cicd-pipeline/SKILL.md` — CI/CD pipeline design principles

@@ -169,6 +169,8 @@ Record explanation metadata: model version, explainer type, computation time, ba
 ## References
 - references/global-interpretability.md — Permutation importance, partial dependence, SHAP global, feature interaction, inherent methods
 - references/local-interpretability.md — SHAP values, LIME, ICE, waterfall/force/summary plots, counterfactuals
+- references/global-explanations.md — Global explanation methods, surrogate models, H-statistic, SHAP interaction values, visualization techniques
+- references/fairml-auditing.md — Fairness definitions, bias detection, mitigation strategies, model auditing reports, regulatory compliance
 
 ### Edge Cases and Special Data Types
 High-dimensional sparse data: use permutation importance with caching, SHAP with feature grouping, avoid KernelSHAP (slow).

@@ -170,6 +170,8 @@ Version embeddings and ranking models independently to enable isolated rollbacks
 ## References
 - references/cf-matrix-factorization.md — User-based/item-based CF, SVD, ALS for implicit, BPR, evaluation precision@k/recall@k/NDCG
 - references/neural-recommender.md — Two-tower model, embedding layers, negative sampling, cold start, candidate generation, ranking, feature store integration
+- references/cold-start-strategies.md — New user/item cold start, content-based initialization, exploration bonus, multi-armed bandit, onboarding
+- references/recommender-evaluation.md — Offline metrics (NDCG, Recall@k), temporal split, leave-one-out, A/B testing, dashboard metrics, common pitfalls
 
 ### Edge Cases and Special Scenarios
 Sequential/session-based recommendation: use GRU4Rec, SR-GNN, SASRec, BERT4Rec for next-item prediction.

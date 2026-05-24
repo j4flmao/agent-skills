@@ -172,6 +172,8 @@ Pin model and tokenizer versions in deployment configuration for reproducibility
 ## References
 - references/nlp-pipeline.md — spaCy components, tokenization, normalization, POS, NER, dependency parsing, custom training
 - references/huggingface-transformers.md — Tokenizers, models, Trainer API, pipelines, fine-tuning, PEFT, LoRA
+- references/prompt-engineering.md — Zero/few-shot, chain-of-thought, prompt templates, parameter tuning, safety guardrails
+- references/nlp-production.md — ONNX export, vLLM, latency optimization, cost management, preprocessing service, monitoring
 
 ### Edge Cases and Special Domains
 Low-resource languages: use multilingual pretrained models (mBERT, XLM-R), cross-lingual transfer learning, back-translation augmentation.

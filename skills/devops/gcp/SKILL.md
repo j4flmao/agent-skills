@@ -157,6 +157,8 @@ Lift-and-shift: Migrate for Compute Engine (formerly Velostrata) moves VMs with 
 ## References
 - [GCP GKE](./references/gcp-gke.md) — GKE setup, Workload Identity, networking, Autopilot, monitoring
 - [GCP Serverless](./references/gcp-serverless.md) — Cloud Run, Cloud Functions, Eventarc, Cloud Tasks, cost management
+- [GCP Compute](./references/gcp-compute.md) — GCE, GKE Autopilot, Cloud Run, Cloud Functions, App Engine, Batch
+- [GCP Data & AI](./references/gcp-data-ai.md) — BigQuery, Dataflow, Pub/Sub, Vertex AI, Cloud Storage, Dataproc
 
 ## Handoff
 Hand off to GCP for Google Cloud-specific provisioning or CI/CD. Hand off to terraform for multi-cloud IaC. Hand off to kubernetes-patterns for workload manifests on GKE.

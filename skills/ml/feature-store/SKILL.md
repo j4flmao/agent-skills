@@ -181,6 +181,8 @@ store.materialize_incremental(end_date=datetime.now())
 ## References
 - `references/feast-patterns.md` — Feast setup, feature repository, point-in-time join, materialization
 - `references/feature-architecture.md` — Tecton, online/offline architecture, validation, registry
+- `references/feature-computation.md` — Stream feature computation, batch processing, transformation pipelines, feature engineering at scale
+- `references/feature-serving.md` — Online serving, storage backends (Redis/DynamoDB), latency optimization, caching strategies
 
 ## Handoff
 For model training with feature store integration, hand off to `ml-ml-pipeline`. For serving infrastructure, hand off to `ml-model-serving`. For data pipeline orchestration, hand off to `ml-pipeline`.

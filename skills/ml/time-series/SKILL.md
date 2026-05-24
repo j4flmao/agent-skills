@@ -168,6 +168,8 @@ Version the training data by date range to enable exact reproduction.
 ## References
 - references/classical-forecasting.md — Decomposition, stationarity, ARIMA/SARIMA, auto-ARIMA, Prophet, Fourier terms, holidays, changepoints
 - references/deep-learning-ts.md — LSTM, TFT, attention, feature engineering, temporal CV, backtesting, metrics
+- references/forecast-deep-learning.md — TFT, N-BEATS, DeepAR, Informer, data preparation, multi-horizon forecasting, backtesting for DL models
+- references/time-series-feature-store.md — tsfresh extraction, Feast integration, point-in-time correctness, online serving, feature freshness monitoring
 
 ### Edge Cases and Special Patterns
 Intermittent demand (sporadic sales): use Croston's method, TSB (Teunter-Syntetos-Babai), or ADIDA.

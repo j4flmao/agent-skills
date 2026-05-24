@@ -112,6 +112,8 @@ Establish FinOps team (Central + Biz + Eng). Weekly cost review meetings. Tag co
 ## References
 - `references/cost-allocation.md` — Tagging strategy, cost centers, multi-account, chargeback/showback, budget alerts, anomaly detection
 - `references/cost-optimization.md` — Compute right-sizing, spot/reserved/savings plans, storage lifecycle/tiers/compression, data transfer, waste elimination
+- `references/compute-optimization.md` — Right-sizing, spot instances, reserved instances, auto-scaling, container cost optimization
+- `references/storage-network-optimization.md` — Storage tiers, data lifecycle, data transfer costs, CDN, compression, waste elimination
 
 ## Handoff
 For Kubernetes cost optimization, hand off to `devops-kubernetes-for-data`. For general infrastructure DevOps, hand off to `docker-patterns`.

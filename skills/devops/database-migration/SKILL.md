@@ -144,6 +144,8 @@ Goal: add index on orders(user_id) without blocking writes. Safe approach: `CREA
 ## References
 - [Migration Tools](./references/migration-tools.md) — Flyway, Liquibase, Alembic — setup, commands, workflow
 - [Zero Downtime](./references/zero-downtime.md) — expand-contract, backward-compatible changes, rollback, CI/CD integration
+- [Online Migration](./references/online-migration.md) — CDC-based live migration, dual-writes, replication lag, rollback
+- [Schema Migration](./references/schema-migration.md) — Schema versioning, expand-contract, backward compatibility, CI/CD integration, zero-downtime
 
 ## Handoff
 Hand off to database-migration for schema changes and migration tooling. Hand off to cicd-pipeline for migration pipeline integration. Hand off to docker-patterns for ephemeral DB containers for testing. Hand off to terraform for DB instance provisioning.

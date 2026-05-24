@@ -191,6 +191,8 @@ Establish a maximum compute budget per tuning run and enforce it via timeout lim
 ## References
 - references/search-strategies.md — Grid, random, Bayesian optimization, GP, TPE, search space design
 - references/tuning-frameworks.md — Optuna study/trial/pruning, Ray Tune schedulers/search algos, Hyperopt, distributed tuning
+- references/multi-fidelity.md — Successive halving, Hyperband, ASHA, median pruner, multi-fidelity optimization for expensive training runs
+- references/tuning-at-scale.md — Distributed tuning, Ray cluster, Kubernetes, PostgreSQL-backed studies, fault tolerance
 
 ### Advanced Configuration Tips
 Use Optuna's OptunaSearchCV for scikit-learn estimators with built-in cross-validation.

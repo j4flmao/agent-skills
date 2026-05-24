@@ -128,6 +128,8 @@ Set resource quotas per namespace. Use priority classes for critical vs. best-ef
 ## References
 - `references/data-workloads-k8s.md` — Spark Operator, Airflow K8sExecutor/KubernetesPodOperator, Kafka Strimzi, resource sizing
 - `references/gpu-storage-k8s.md` — NVIDIA GPU Operator, Volcano batch scheduling, Karpenter, CSI storage, local SSDs, PVC patterns
+- `references/data-processing-k8s.md` — Spark, Flink, Airflow, Ray on K8s — deployment patterns, resource sizing guide
+- `references/data-infrastructure-k8s.md` — Kafka (Strimzi), databases (CloudNativePG), object store, Alluxio caching, node pool strategy
 
 ## Handoff
 For data pipeline orchestration, hand off to `etl-pipeline`. For streaming infrastructure, hand off to `streaming`.

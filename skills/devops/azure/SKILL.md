@@ -113,6 +113,8 @@ controller (AGIC) for HTTP/S routing. Private Link for PaaS services
   stacks, resource organization
 - [Azure AKS](./references/azure-aks.md) — AKS setup, networking, identity,
   monitoring, autoscaling, cost optimization
+- [Azure Compute](./references/azure-compute.md) — VMs, VMSS, App Service, Functions, Batch, ACI
+- [Azure Networking](./references/azure-networking.md) — VNet, peering, VPN Gateway, Load Balancer, Front Door, DNS
 
 ## Handoff
 

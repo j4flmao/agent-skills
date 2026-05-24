@@ -172,6 +172,8 @@ Log model version, preprocessing config, inference time, and detection results f
 ## References
 - references/detection-segmentation.md — YOLOv8, DETR, Faster-RCNN, U-Net, Mask R-CNN, SAM, training config, metrics mAP/IoU
 - references/image-preprocessing.md — OpenCV operations, albumentations, normalization, data augmentation, pipeline
+- references/cv-deployment.md — Model optimization, ONNX/TensorRT export, quantization, edge deployment, Triton inference server
+- references/video-analysis.md — Object tracking, action recognition, video segmentation, Optical Flow, video preprocessing pipelines
 
 ### Edge Cases and Special Domains
 Small object detection: increase input resolution, use feature pyramid networks (FPN), mosaic augmentation, copy-paste augmentation.

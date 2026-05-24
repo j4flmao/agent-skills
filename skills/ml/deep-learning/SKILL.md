@@ -292,6 +292,8 @@ if __name__ == "__main__":
 ## References
 - `references/pytorch-tensorflow.md` — PyTorch training loop, DataLoader, nn.Module; TensorFlow Keras API, tf.data; CNN, RNN, transformer implementations
 - `references/training-optimization.md` — Distributed training DDP/FSDP, mixed precision, gradient accumulation, CUDA tuning, checkpointing
+- `references/architectures.md` — Modern architectures (ViT, ConvNeXt, MLP-Mixer, EfficientNet, ResNeXt), design principles, scaling laws
+- `references/generative-models.md` — GANs, VAEs, diffusion models, autoregressive models, training strategies, evaluation metrics
 
 ## Handoff
 `ml-experiment-tracking` for logging deep learning experiments

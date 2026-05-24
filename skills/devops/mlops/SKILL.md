@@ -115,6 +115,8 @@ Separate from model pipeline. Validate feature transformations produce expected 
 ## References
 - `references/ml-cicd-pipeline.md` — CI/CD for model training → validation → deployment → monitoring, registry promotion
 - `references/ml-deployment.md` — Canary/blue-green deployment, A/B testing infra, drift monitoring, performance decay, rollback
+- `references/ml-experiment-tracking.md` — MLflow setup, experiment tracking, model registry, artifact storage, CI/CD for experiments
+- `references/ml-retraining.md` — Automated retraining pipeline, data drift detection, model refresh strategies, canary deployment, rollback
 
 ## Handoff
 For data pipeline CI/CD, hand off to `devops-dataops`. For Kubernetes deployment of ML models, hand off to `devops-kubernetes-for-data`.

@@ -286,6 +286,8 @@ predictions = loaded_pipeline.predict(new_data)
 ## References
 - `references/supervised-learning.md` — Regression/classification metrics, ensemble methods, XGBoost/LightGBM/CatBoost, hyperparameter guide, imbalanced data
 - `references/unsupervised-pipeline.md` — Clustering K-means/DBSCAN/HDBSCAN, PCA/UMAP/t-SNE, scikit-learn Pipeline, ColumnTransformer, cross-validation
+- `references/imbalanced-learn.md` — SMOTE, ADASYN, undersampling, class weighting, balanced metrics, threshold tuning for imbalanced classification
+- `references/interpretable-ml.md` — Glass-box models, permutation importance, partial dependence, SHAP for tree models, model debugging
 
 ## Handoff
 `ml-deep-learning` for deep learning/neural network methods
