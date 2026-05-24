@@ -66,8 +66,10 @@ func (r *MyResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 ## References
 - `references/operator-patterns.md` — Operator design patterns and best practices
-- `references/kubebuilder-guide.md` — Kubebuilder setup and development guide
-- `references/reconciliation-logic.md` — Reconciliation loop patterns and error handling
+- `references/operator-sdk-guide.md` — Operator SDK: Golang, Ansible, Helm operator types; scaffolding, controllers, reconciliation loop, watches
+- `references/controller-runtime.md` — controller-runtime deep dive: Manager, Controller, Reconciler, Client, Cache, informers, leader election
+- `references/finalizers-garbage.md` — Finalizers, garbage collection, owner references: block delete, cleanup logic, orphan vs foreground deletion
+- `references/testing-operators.md` — Operator testing: envtest, table-driven reconciliation tests, integration tests, E2E with kind
 
 ## Handoff
 Related skills: kubernetes-patterns, helm-patterns, devops-gitops-advanced, devops-policy-as-code.

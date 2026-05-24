@@ -224,6 +224,8 @@ i18n:
 ## References
 - `references/i18n-libraries.md` — Library comparison, ICU format, locale selection, API design
 - `references/l10n-patterns.md` — Key extraction, translation platforms, CI integration, RTL patterns
+- `references/rtl-i18n.md` — Arabic/Hebrew layout, bidirectional text, CSS logical properties, mirroring UI
+- `references/translation-workflow.md` — Translation management systems, automatic translation, review, context
 
 ## Handoff
 `frontend-universal/animation` for RTL UI considerations and animation direction

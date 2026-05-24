@@ -232,6 +232,8 @@ monitoring:
 ## References
 - `references/hasura-postgrest.md` — Hasura GraphQL engine, PostgREST setup, relationships, permissions, subscriptions
 - `references/data-api-patterns.md` — Authorization, rate limiting, caching, performance, monitoring, security
+- `references/graphql-for-data.md` — Federation, Hasura permissions, caching, subscriptions
+- `references/data-api-security.md` — Auth (API key/JWT/OAuth), RLS, rate limiting, audit
 
 ## Handoff
 `data-data-platform` for deployment infrastructure. `data-data-catalog` for API endpoint documentation. `data-data-observability` for API monitoring. `data-data-contracts` for API schema contracts.

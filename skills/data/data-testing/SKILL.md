@@ -348,6 +348,8 @@ jobs:
 ## References
 - `references/dbt-testing-framework.md` — dbt unit test setup, custom generic tests, snapshot tests, test coverage measurement, CI integration patterns
 - `references/data-comparison-tools.md` — data-diff setup and usage, datafold regression monitoring, Soda check configuration, Great Expectations suite authoring, cross-tool comparison
+- `references/schema-testing.md` — Schema validation (dbt, SodaCL), type checks, nullability, RI
+- `references/data-quality-catalog.md` — Freshness, volume, completeness, accuracy, severity, ownership
 
 ## Handoff
 `data-data-quality` for broader quality framework and data contract enforcement

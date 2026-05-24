@@ -316,6 +316,8 @@ class OrderListScreenTest {
 - `references/jetpack-compose.md` — Compose navigation, state hoisting, animations
 - `references/hilt-di.md` — Hilt modules, scopes, ViewModel injection
 - `references/testing.md` — JUnit, MockK, Espresso, Compose UI test
+- `references/compose-performance.md` — Recomposition optimization, lazy lists, key composition, graphicsLayer, derivedStateOf, snapshot system, baseline profiles
+- `references/android-architecture.md` — MVVM + Clean Architecture, UseCase pattern, Repository pattern, unidirectional data flow (UDF), state hoisting
 
 ### Related Skills
 - `mobile/universal/deployment/SKILL.md` — Play Console, CI/CD, testing

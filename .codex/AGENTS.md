@@ -1,6 +1,6 @@
 # .codex/AGENTS.md -- j4flmao/skills
 
-Codex CLI project config for the agent skill suite. 267 skills, compressed output, stack-based routing.
+Codex CLI project config for the agent skill suite. 288 skills, compressed output, stack-based routing.
 
 ## Compress (ALWAYS)
 
@@ -19,7 +19,7 @@ Phase order: planning -> backend -> frontend -> mobile -> dev-loop -> devops -> 
 ### Quick map
 
 ```
-planning/    -> brief, prd, adr, tech spec, story, roadmap, pitch-deck, market-analysis, solution-architecture
+planning/    -> brief, prd, adr, tech spec, story, roadmap, pitch-deck, market-analysis, solution-architecture, bpmn-modeling, bdd-atdd
 backend/     -> nestjs, nodejs, elysia, go, rust, python, spring, dotnet, rails, php-pure, php-laravel, php-zend
                universal: oop, api-design, api-response, database, auth, testing,
                grpc, websocket, message-queue, caching, rate-limiting, load-testing, api-gateway,
@@ -44,13 +44,15 @@ devops/      -> docker, k8s, terraform, helm, ansible, jenkins, longhorn, monito
 dev-loop/    -> review, debug, refactor, git, security, performance, changelog, readme,
                pr-writer, dev-container, tech-debt, api-client
 management/  -> pm, ba, qa, qc, team-rules, security, pentesting, alerting,
-               okr-kpi, sprint-retro, risk
+                okr-kpi, sprint-retro, risk, agile-scrum-kanban, team-topology,
+                change-management
 enterprise/  -> compliance-audit, multi-tenant, integration-patterns,
                 data-governance, sla-management, legacy-migration,
-                identity-provider, cost-governance
+                identity-provider, cost-governance, togaf-zachman,
+                itil-service-mgmt, vendor-management, architecture-governance
 product/     -> analytics, ab-testing, user-research, growth-engineering,
                 pricing-strategy, go-to-market, onboarding-flow,
-                feature-prioritization
+                feature-prioritization, customer-journey, persona-development
 ai/          -> ai-prompt-engineering, ai-rag-patterns, ai-llm-ops,
                 ai-vector-databases, ai-ai-agents, ai-ai-evals,
                 ai-model-training, ai-embeddings, ai-multimodal,
@@ -75,13 +77,17 @@ data/        -> data-etl-pipeline, data-data-warehouse, data-streaming,
                 data-data-versioning, data-data-api, data-data-virtualization,
                 data-schema-registry, data-relational-database,
                 data-nosql-database, data-graph-database,
-                data-search-engine
+                data-search-engine, data-data-strategy,
+                data-dimensional-modeling
+data-science/ -> statistical-analysis, experimentation, causal-inference,
+                 analytics-engineering
 design/      -> design-design-systems, design-ux-research, design-accessibility,
                 design-prototyping, visual-design, brand-identity,
                 information-architecture, motion-design
 quality/     -> quality-e2e-testing, quality-visual-testing, quality-load-testing,
                 quality-contract-testing, unit-testing, integration-testing,
-                property-based-testing
+                property-based-testing, exploratory-testing, acceptance-testing,
+                regression-testing, smoke-testing
 ```
 
 ### Stack detection
@@ -107,6 +113,6 @@ agent-skills/
   .gemini/           Gemini
   .cursor/           Cursor
   .codex/            Codex CLI (this file)
-  skills/            267 skills
+  skills/            288 skills
   bundles/           15 bundle definitions
 ```

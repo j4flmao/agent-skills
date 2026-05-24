@@ -55,6 +55,9 @@ Design and implement SOAR playbooks for automated incident response, case manage
 ## References
 - `references/soar-playbooks.md` — playbook patterns and templates
 - `references/soar-integrations.md` — common integration patterns
+- `references/playbook-development.md` — playbook structure, logic, error handling, and testing
+- `references/triage-automation.md` — automated triage, enrichment orchestration, and containment
+- `references/soar-platforms.md` — SOAR platform comparison and architecture patterns
 
 ## Handoff
 Playbooks integrate with siem-engineering for triggers, soc-operations for triage workflows, and threat-intelligence for enrichment.

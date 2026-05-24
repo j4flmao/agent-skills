@@ -293,6 +293,8 @@ orders_pipeline (DAG)
 ## References
 - `references/openlineage-integration.md` — OpenLineage client setup for Airflow, dbt, Spark, and custom applications; event schema; Marquez API
 - `references/lineage-graph-model.md` — Column-level lineage, SQL parsing, graph traversal, impact analysis queries, visualization strategies
+- `references/column-lineage.md` — SQL parsing (sqllineage, sqlglot), dbt column lineage, impact/source analysis
+- `references/lineage-tools.md` — DataHub, Marquez, Atlan lineage, visualization, automation
 
 ## Handoff
 `data-data-catalog` for metadata enrichment and dataset discovery

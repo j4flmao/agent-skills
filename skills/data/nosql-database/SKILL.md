@@ -250,6 +250,8 @@ CREATE TABLE sensor_readings (
 ## References
 - `references/mongodb-cassandra.md` — MongoDB sharding, aggregation, indexes; Cassandra partition/clustering, CQL, compaction
 - `references/dynamodb-couchbase.md` — DynamoDB single-table, GSI/LSI, DAX; Couchbase N1QL, buckets; denormalization, consistency
+- `references/document-db.md` — MongoDB schema design, aggregation pipeline, indexing, sharding
+- `references/wide-column.md` — Cassandra data modeling, CQL, DynamoDB single-table design, partition/clustering keys
 
 ## Handoff
 `data-graph-database` for relationship-heavy queries

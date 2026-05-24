@@ -180,6 +180,10 @@ Observability plan: logging format, metrics list, trace sampling strategy, SLOs,
 
 ## References
 - `references/otel-guide.md` — OpenTelemetry setup per stack
+- `references/alerting-strategies.md` — Alerting strategies: alert severity (P0-P3), silencing, aggregation, flapping detection, alert fatigue reduction, on-call integration
+- `references/observability-maturity.md` — Observability maturity model: Level 1 (reactive) to Level 4 (predictive), capability assessment, improvement roadmap
+- `references/log-aggregation.md` — Log aggregation: Loki, Elasticsearch, CloudWatch Logs; log shipping (Fluentd, Fluent Bit, Vector), query patterns, retention
+- `references/custom-metrics.md` — Custom metrics: RED metrics (Rate, Errors, Duration), USE method (Utilization, Saturation, Errors), service-level metrics, business metrics
 
 ## Handoff
 After completing this skill:

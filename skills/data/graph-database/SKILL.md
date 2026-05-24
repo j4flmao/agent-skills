@@ -245,6 +245,8 @@ LIMIT 50
 ## References
 - `references/graph-modeling.md` — Property graph vs RDF, node/label/relationship design, naming conventions, traversal patterns
 - `references/graph-platforms.md` — Neo4j, Neptune, JanusGraph comparison, Cypher vs Gremlin, performance, sharding, deployment
+- `references/query-patterns.md` — Cypher, Gremlin, SPARQL traversal patterns, graph algorithms
+- `references/graph-use-cases.md` — Recommendations, fraud detection, knowledge graphs, identity resolution
 
 ## Handoff
 `data-nosql-database` for non-relational data stores

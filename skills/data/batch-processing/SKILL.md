@@ -261,6 +261,8 @@ spark.sql.codegen.wholeStage = true; (default)
 ## References
 - `references/hive-spark-sql.md` — Hive metastore, Spark SQL Catalyst, Tungsten, HQL vs Spark SQL
 - `references/batch-optimization.md` — Partitioning, bucketing, file format selection, vectorized read, DPP, statistics
+- `references/batch-job-scheduling.md` — Dependency graphs, SLA-based scheduling, retry policies, alerting
+- `references/batch-vs-streaming.md` — Lambda/kappa architecture, latency vs cost decision framework
 
 ## Handoff
 `data-distributed-compute` for Spark cluster tuning and resource management

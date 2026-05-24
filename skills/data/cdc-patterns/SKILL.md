@@ -337,6 +337,8 @@ kafka.connect:type=connect-metrics,client-id=...
 ## References
 - `references/cdc-methods.md` — Log-based vs trigger-based vs timestamp, Debezium connectors, snapshot modes
 - `references/kafka-connect.md` — Source/sink connectors, schema management, parallel loading, error handling, monitoring
+- `references/debezium-deep.md` — MySQL/PG/Mongo connector configuration, snapshot modes, exactly-once semantics
+- `references/kafka-connect-cdc.md` — Source/sink connectors, SMT, offset management, error handling
 
 ## Handoff
 `data-etl-pipeline` for downstream ETL processing of CDC events

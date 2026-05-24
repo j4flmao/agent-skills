@@ -400,6 +400,8 @@ GROUP BY requesting_party;
 ## References
 - `references/clean-room-architecture.md` — Clean room deployment models (AWS Clean Rooms, Snowflake Clean Room, custom PSI), join key strategies, query constraint layer, and audit logging
 - `references/privacy-compute-patterns.md` — PSI protocol comparison (ECDH, Circuit, OPRF), differential privacy budget management, secure multi-party computation patterns, and output suppression techniques
+- `references/clean-room-ops.md` — Snowflake/AWS clean rooms, query approval, privacy budget
+- `references/privacy-compute.md` — Homomorphic encryption, MPC, TEE, federated learning
 
 ## Handoff
 `data-data-security` for broader data security and encryption patterns

@@ -347,6 +347,8 @@ Post-failover validation:
 ## References
 - `references/replication-topologies.md` — Master-slave, multi-master, active-active, sync vs async, conflict resolution, CRDT
 - `references/cross-region.md` — Cross-region replication, latency, consistency, failover, GoldenGate, read replica scaling
+- `references/conflict-resolution.md` — LWW, CRDTs, merge strategies, conflict detection
+- `references/replication-performance.md` — Sync vs async, lag monitoring, compression, parallel apply
 
 ## Handoff
 `data-cdc-patterns` for CDC-based replication (Debezium, Kafka Connect)

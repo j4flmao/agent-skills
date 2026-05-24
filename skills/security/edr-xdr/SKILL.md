@@ -55,6 +55,9 @@ Design and manage endpoint detection and response capabilities including EDR/XDR
 ## References
 - `references/edr-platforms.md` — EDR/XDR platform comparison
 - `references/edr-detection-rules.md` — rule patterns for endpoint detection
+- `references/incident-investigation.md` — endpoint investigation methodology and process tree analysis
+- `references/edr-deployment.md` — sensor deployment at scale and health monitoring
+- `references/detection-engineering.md` — detection lifecycle, Sigma rules, and CI/CD pipeline
 
 ## Handoff
 Alerts flow to siem-engineering for correlation. Investigation results feed threat-intelligence for IoC extraction.

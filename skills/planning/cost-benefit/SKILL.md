@@ -97,6 +97,9 @@ Proceed: positive NPV, strong ROI, acceptable payback period. Reject: negative N
 ## References
 - `references/cost-estimation.md` — Build vs buy detailed comparison, TCO components (labor, infrastructure, maintenance, training, migration, licensing), estimation techniques
 - `references/benefit-analysis.md` — Benefit types and quantification methods, NPV formula and calculation, payback period, sensitivity analysis with tornado charts
+- `references/project-valuation.md` — Project valuation: cost estimation, benefit realization, payback analysis, ROI calculation with examples
+- `references/cba-templates.md` — CBA templates: spreadsheet templates, sensitivity tables, scenario analysis, investment committee presentation
+- `references/portfolio-prioritization.md` — Portfolio prioritization: cost-benefit ranking, weighted scoring, opportunity cost, resource constraints, capacity alignment
 
 ## Handoff
 `planning/create-pitch-deck` for business case presentation with ROI and NPV highlights

@@ -322,6 +322,8 @@ BUDGET_THRESHOLDS = {
 ## References
 - `references/warehouse-cost-optimization.md` — Snowflake credit analysis, warehouse sizing, query tuning, BigQuery slot management, reservation optimization, cost allocation tagging
 - `references/storage-tiering-strategies.md` — S3 lifecycle policies, storage class comparison, intelligent tiering, data retention compliance, cost analysis across cloud providers
+- `references/query-cost-optimization.md` — Query profiling, materialized views, clustering, partitioning
+- `references/data-finops.md` — Resource scheduling, storage tiering, cost allocation, budgets
 
 ## Handoff
 `data-etl-pipeline` for pipeline efficiency and incremental loading

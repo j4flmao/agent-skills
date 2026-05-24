@@ -107,8 +107,11 @@ Send OTLP to an OpenTelemetry Collector. The collector routes to your backend (J
 - Set a minimum of 1 in 1000 sampling rate in production, or use tail-based sampling for high-volume services.
 
 ## References
-- `references/otel-setup.md` — Full OpenTelemetry SDK setup guide
+- `references/business-metrics.md` — Domain events as metrics, business KPI dashboards, revenue-impact correlation
+- `references/cost-of-observability.md` — Data retention tiering, metric cardinality, trace sampling cost, observability budget
+- `references/distributed-tracing.md` — Trace context propagation, W3C trace context, sampling, span attributes, trace analytics
 - `references/observability-pillars.md` — The three pillars: traces, metrics, logs
+- `references/otel-setup.md` — Full OpenTelemetry SDK setup guide
 
 ## Handoff
 No artifact produced unless requested.

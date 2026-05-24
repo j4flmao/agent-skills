@@ -324,6 +324,8 @@ schedule:
 ## References
 - `references/reverse-etl-patterns.md` — Sync model architecture, identity resolution strategies, incremental vs full refresh, rate limiting, error handling, and monitoring
 - `references/sync-config-examples.md` — Production Census, Hightouch, and Grouparoo config examples for Salesforce, HubSpot, Braze, Marketo, Google Ads, and Facebook Audiences
+- `references/identity-resolution.md` — Customer 360, profile unification, merge rules, ID mapping
+- `references/warehouse-activation.md` — Census/Hightouch architecture, audience segmentation, sync strategies
 
 ## Handoff
 `data-data-warehouse` for warehouse data modeling and transformation needed before sync

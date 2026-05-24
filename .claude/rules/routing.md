@@ -1,4 +1,4 @@
-# Routing — 360 skills
+# Routing — 398 skills
 
 ## Entry
 `skills/core/master-orchestrator/SKILL.md` (no trigger match → route here)
@@ -10,7 +10,7 @@ planning → backend → frontend → mobile → desktop → dev-loop → devops
 | Phase | Skills |
 |-------|--------|
 | core (4) | master-orchestrator, project-init, onboarding, context-compressor |
-| planning (10) | create-brief, create-prd, create-adr, create-tech-spec, create-story, create-roadmap, create-pitch-deck, market-analysis, cost-benefit, solution-architecture |
+| planning (12) | create-brief, create-prd, create-adr, create-tech-spec, create-story, create-roadmap, create-pitch-deck, market-analysis, cost-benefit, solution-architecture, bpmn-modeling, bdd-atdd |
 | backend-stack (28) | nestjs, nodejs, elysia, golang, rust, python-fastapi, python-django, python-flask, spring-boot, dotnet, rails, php-pure, php-laravel, php-zend, php-symfony, nodejs-hono, nodejs-express, nodejs-fastify, deno-oak, swift-vapor, scala-play, java-micronaut, java-quarkus, kotlin, elixir, bun, deno, prisma |
 | backend-universal (43) | oop-principles, design-patterns, microservices, clean-architecture, api-design, api-response, database-patterns, auth-patterns, event-driven, testing, grpc-patterns, websocket-patterns, message-queue, caching, rate-limiting, load-testing, api-gateway, graphql-patterns, background-jobs, search-patterns, data-streaming, file-storage, feature-flags, internationalization, structured-logging, observability, resilience-patterns, openapi-documentation, contract-testing, idempotency, distributed-locking, webhooks, api-versioning, scheduling-cron, multi-tenancy, bff-pattern, data-masking, audit-logging, plugin-architecture, cqrs-patterns, event-sourcing, saga-patterns, transactional-outbox |
 | frontend-stack (25) | react, react-nextjs, vue, vue-nuxt, angular, sveltekit, remix-architecture, remix-patterns, astro-architecture, astro-patterns, solidjs-architecture, solidjs-patterns, qwik-architecture, qwik-patterns, svelte-architecture, svelte-patterns, vue-patterns, alpinejs, ember, htmx, preact, stencil, lit, web-components, ar-vr |
@@ -19,17 +19,18 @@ planning → backend → frontend → mobile → desktop → dev-loop → devops
 | mobile-universal (16) | patterns, testing, performance, security, networking, storage, deployment, push-notifications, in-app-purchase, crash-reporting, deep-linking, offline-first, biometrics, map-location, camera-media, analytics |
 | desktop (12) | desktop-electron, desktop-tauri, desktop-qt, desktop-gtk, desktop-wpf, desktop-winui3, desktop-uwp, desktop-winforms, desktop-swiftui, desktop-appkit, desktop-gnome, desktop-kde |
 | dev-loop (12) | code-review, debugging-strategy, refactor-guide, git-workflow, security-auditor, performance-profiler, changelog-generator, readme-writer, pr-writer, dev-container, tech-debt-tracker, api-client-generator |
-| devops (43) | docker-patterns, cicd-pipeline, kubernetes-patterns, observability, helm-patterns, terraform, ansible, jenkins, longhorn, monitoring, github-actions, gitops, vault, aws, serverless, monorepo, dependency-management, api-documentation, argo-cd, azure, gcp, chaos-engineering, service-mesh, finops, backup-dr, database-migration, dataops, mlops, kubernetes-for-data, cloud-cost-optimization, cloud-architecture, nomad, incident-response, cost-benefit, devops-hiring, platform-engineering, sre-practices, internal-developer-platform, kubernetes-operators, gitops-advanced, progressive-delivery, policy-as-code, cloud-migration |
-| management (14) | pm, ba, qa, qc, team-rules, security, pentesting, alerting, okr-kpi, sprint-retro, risk-management, hiring, stakeholder, cost-benefit |
+| devops (56) | docker-patterns, cicd-pipeline, kubernetes-patterns, observability, helm-patterns, terraform, ansible, jenkins, longhorn, monitoring, github-actions, gitops, vault, aws, serverless, monorepo, dependency-management, api-documentation, argo-cd, azure, gcp, chaos-engineering, service-mesh, finops, backup-dr, database-migration, dataops, mlops, kubernetes-for-data, cloud-cost-optimization, cloud-architecture, nomad, incident-response, cost-benefit, devops-hiring, platform-engineering, sre-practices, internal-developer-platform, kubernetes-operators, gitops-advanced, progressive-delivery, policy-as-code, cloud-migration, pulumi, crossplane, gitlab-ci, circleci, kubernetes-autoscaling, apm-observability, cilium-ebpf, opentelemetry, oracle-cloud, digitalocean, ibm-cloud, alibaba-cloud, hetzner |
+| management (17) | pm, ba, qa, qc, team-rules, security, pentesting, alerting, okr-kpi, sprint-retro, risk-management, hiring, stakeholder, cost-benefit, agile-scrum-kanban, team-topology, change-management |
 | ai (15) | ai-prompt-engineering, ai-rag-patterns, ai-llm-ops, ai-vector-databases, ai-ai-agents, ai-ai-evals, ai-model-training, ai-embeddings, ai-multimodal, ai-ai-safety, ai-ai-testing, ai-ai-cost-optimization, ai-langchain-patterns, ai-mcp-patterns, ai-ai-observability |
-| security (11) | security-sast-dast, security-sbom, security-secrets-management, security-container-security, security-api-security, security-data-security, soc-operations, siem-engineering, soar-automation, threat-intelligence, edr-xdr |
-| data (34) | data-etl-pipeline, data-data-warehouse, data-streaming, data-bi-tools, data-data-quality, data-distributed-storage, data-distributed-compute, data-data-lake, data-data-lakehouse, data-batch-processing, data-workflow-orchestration, data-cdc-patterns, data-data-replication, data-data-platform, data-data-catalog, data-data-observability, data-data-contracts, data-data-mesh, data-data-versioning, data-data-api, data-data-virtualization, data-schema-registry, data-relational-database, data-nosql-database, data-graph-database, data-search-engine, data-clean-room, data-cost-optimization, data-formats, data-lineage, data-pipeline-cicd, data-testing, data-reverse-etl |
+| security (15) | security-sast-dast, security-sbom, security-secrets-management, security-container-security, security-api-security, security-data-security, soc-operations, siem-engineering, soar-automation, threat-intelligence, edr-xdr, zero-trust, cspm, penetration-testing, iam-governance |
+| data (36) | data-etl-pipeline, data-data-warehouse, data-streaming, data-bi-tools, data-data-quality, data-distributed-storage, data-distributed-compute, data-data-lake, data-data-lakehouse, data-batch-processing, data-workflow-orchestration, data-cdc-patterns, data-data-replication, data-data-platform, data-data-catalog, data-data-observability, data-data-contracts, data-data-mesh, data-data-versioning, data-data-api, data-data-virtualization, data-schema-registry, data-relational-database, data-nosql-database, data-graph-database, data-search-engine, data-clean-room, data-cost-optimization, data-formats, data-lineage, data-pipeline-cicd, data-testing, data-reverse-etl, data-data-strategy, data-dimensional-modeling |
+| data-science (4) | statistical-analysis, experimentation, causal-inference, analytics-engineering |
 | design (8) | design-design-systems, design-ux-research, design-accessibility, design-prototyping, visual-design, brand-identity, information-architecture, motion-design |
-| quality (7) | quality-e2e-testing, quality-visual-testing, quality-load-testing, quality-contract-testing, unit-testing, integration-testing, property-based-testing |
+| quality (11) | quality-e2e-testing, quality-visual-testing, quality-load-testing, quality-contract-testing, unit-testing, integration-testing, property-based-testing, exploratory-testing, acceptance-testing, regression-testing, smoke-testing |
 | ecommerce (2) | payment-processing, checkout-cart |
 | api (2) | graphql-federation, product-management |
-| enterprise (8) | compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance |
-| product (8) | analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization |
+| enterprise (12) | compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance, togaf-zachman, itil-service-mgmt, vendor-management, architecture-governance |
+| product (10) | analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization, customer-journey, persona-development |
 | ml (16) | ml-experiment-tracking, ml-classical-ml, ml-deep-learning, ml-feature-engineering, ml-hyperparameter-tuning, ml-model-evaluation, ml-model-interpretability, ml-time-series, ml-nlp, ml-computer-vision, ml-recommender, ml-anomaly-detection, ml-ml-pipeline, ml-feature-store, ml-model-serving, ml-math-foundations |
 
 ## Trigger Keywords
@@ -38,6 +39,8 @@ brief/prd/adr/story             → planning/
 roadmap/pitch-deck/market       → planning/
 tech-spec/technical-spec        → planning/create-tech-spec
 cost-benefit/roi/tco            → planning/cost-benefit
+bpmn/process-modeling/business-process → planning/bpmn-modeling
+bdd/atdd/gherkin/behavior-driven → planning/bdd-atdd
 
 nestjs/nodejs/elysia/go         → backend/{stack}/
 rust/python/spring/dotnet       → backend/{stack}/
@@ -200,6 +203,9 @@ sprint-retro/retrospective      → management/sprint-retro
 risk-management/risk-register   → management/risk-management
 hiring/interview/recruitment    → management/hiring
 stakeholder/communication       → management/stakeholder
+agile/scrum/kanban/sprint/velocity/backlog → management/agile-scrum-kanban
+team-topology/conway/squad/team-types     → management/team-topology
+change-management/adkar/kotter/adoption-change → management/change-management
 onboarding/new-dev              → core/onboarding
 context-compression/token       → core/context-compressor
 compliance/audit/SOC2/GDPR      → enterprise/compliance-audit
@@ -210,6 +216,10 @@ sla/slo/error-budget            → enterprise/sla-management
 legacy-migration/strangler      → enterprise/legacy-migration
 identity-provider/sso/oidc      → enterprise/identity-provider
 cost-governance/finops          → enterprise/cost-governance
+togaf/zachman/enterprise-architecture/architecture-framework → enterprise/togaf-zachman
+itil/itsm/service-mgmt/incident-problem-change-release       → enterprise/itil-service-mgmt
+vendor-management/vendor/supplier/procurement                → enterprise/vendor-management
+architecture-governance/architecture-board/arch-review/decision-rights → enterprise/architecture-governance
 product-analytics/funnel        → product/analytics
 ab-test/split-test/experiment   → product/ab-testing
 user-research/persona           → product/user-research
@@ -218,6 +228,8 @@ pricing-strategy/monetization   → product/pricing-strategy
 go-to-market/gtm/product-launch → product/go-to-market
 onboarding-flow/activation      → product/onboarding-flow
 prioritization/rice/kano        → product/feature-prioritization
+customer-journey/journey-map/service-blueprint/touchpoint   → product/customer-journey
+persona/user-persona/empathy-map/persona-creation           → product/persona-development
 ai/llm/prompt-engineering       → ai/ai-prompt-engineering
 rag/retrieval/chunking          → ai/ai-rag-patterns
 llmops/model-serving/token      → ai/ai-llm-ops
@@ -256,6 +268,11 @@ siem/correlation-rules/log-ingestion/splunk     → security/siem-engineering
 soar/playbook-automation/incident-automation    → security/soar-automation
 threat-intelligence/cti/ioc/ttp/mitre-attack    → security/threat-intelligence
 edr/xdr/endpoint-detection/crowdstrike          → security/edr-xdr
+zero-trust/zta/beyondcorp/never-trust               → security/zero-trust
+cspm/cloud-security-posture/wiz/prisma-cloud         → security/cspm
+pentest/penetration-test/ethical-hacking             → security/penetration-testing
+iam-governance/identity-governance/access-review     → security/iam-governance
+
 etl/airflow/dbt/pipeline        → data/data-etl-pipeline
 warehouse/snowflake/bigquery    → data/data-data-warehouse
 streaming/kafka/flink/real-time → data/data-streaming
@@ -289,6 +306,14 @@ data-lineage                    → data/data-lineage
 data-pipeline-cicd              → data/data-pipeline-cicd
 data-testing                    → data/data-testing
 reverse-etl/reverse             → data/data-reverse-etl
+data-strategy/data-vision/data-maturity/data-operating-model → data/data-data-strategy
+dimensional-modeling/kimball/star-schema/data-vault/scd      → data/data-dimensional-modeling
+
+statistical-analysis/hypothesis-testing/bayesian/descriptive-stats → data-science/statistical-analysis
+experimentation/ab-test/experiment-design/metric-selection        → data-science/experimentation
+causal-inference/causal/counterfactual/quasi-experimental         → data-science/causal-inference
+analytics-engineering/dbt/metrics-layer/sql-analytics             → data-science/analytics-engineering
+
 design-system/tokens/figma      → design/design-design-systems
 ux-research/persona/usability   → design/design-ux-research
 accessibility/wcag/a11y/aria    → design/design-accessibility
@@ -304,6 +329,10 @@ contract-testing/pact           → quality/quality-contract-testing
 unit-testing/tdd/test-doubles/mocking → quality/unit-testing
 integration-testing/api-testing/test-containers → quality/integration-testing
 property-based-testing/fuzzing/fast-check → quality/property-based-testing
+exploratory-testing/charter/session-based/test-heuristics → quality/exploratory-testing
+acceptance-testing/uat/alpha-beta/acceptance-criteria → quality/acceptance-testing
+regression-testing/regression-suite/regression-selection → quality/regression-testing
+smoke-testing/smoke/bvt/build-verification/deployment-health → quality/smoke-testing
 experiment-tracking/mlflow      → ml/ml-experiment-tracking
 classical-ml/scikit-learn       → ml/ml-classical-ml
 deep-learning/pytorch/tensorflow → ml/ml-deep-learning
@@ -332,6 +361,19 @@ gitops-advanced/applicationset/multi-cluster → devops/gitops-advanced
 progressive-delivery/canary/blue-green/flagger → devops/progressive-delivery
 policy-as-code/opa/rego/kyverno/admission-controller → devops/policy-as-code
 cloud-migration/lift-and-shift/6-rs → devops/cloud-migration
+pulumi/pulumi-iac/infrastructure-as-code-pulumi → devops/pulumi
+crossplane/crossplane-control-plane/composition      → devops/crossplane
+gitlab-ci/gitlab-pipeline/gitlab-ci-cd               → devops/gitlab-ci
+circleci/circleci-config                              → devops/circleci
+keda/autoscaling/hpa/vpa/cluster-autoscaler           → devops/kubernetes-autoscaling
+datadog/datadog-apm/new-relic/apm-tracing             → devops/apm-observability
+cilium/ebpf/cilium-network/cilium-service-mesh       → devops/cilium-ebpf
+opentelemetry/otel/opentelemetry-collector            → devops/opentelemetry
+oracle-cloud/oci/oke/oracle-kubernetes                → devops/oracle-cloud
+digitalocean/doks/do-app-platform                     → devops/digitalocean
+ibm-cloud/ibm-kubernetes/iks                          → devops/ibm-cloud
+alibaba-cloud/aliyun/ack                               → devops/alibaba-cloud
+hetzner/hetzner-cloud/hcloud                           → devops/hetzner
 ```
 
 ## Stack Detection

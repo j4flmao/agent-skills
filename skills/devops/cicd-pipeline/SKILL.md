@@ -194,6 +194,10 @@ GitHub Actions YAML workflow with stages, caching, and deployment.
 
 ## References
 - `references/github-actions-guide.md` — detailed GitHub Actions patterns
+- `references/pipeline-security.md` — CI/CD pipeline security: secret injection, OIDC authentication, signed commits, SBOM generation, supply chain levels (SLSA)
+- `references/caching-strategies.md` — Pipeline caching: dependency caching (npm, pip, go, maven), Docker layer caching, monorepo cache strategies, cache invalidation
+- `references/multi-environment.md` — Multi-environment pipelines: dev/staging/prod promotion, environment-specific variables, approval gates, manual vs automatic promotion
+- `references/matrix-strategies.md` — Matrix build strategies: parallel job execution, test sharding, cross-version testing (multiple language versions, OS matrix)
 
 ## Handoff
 After completing this skill:

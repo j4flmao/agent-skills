@@ -1001,11 +1001,79 @@ State: User asks about cloud migration, lift-and-shift, rehost, replatform, refa
   Route: devops-cloud-migration
   Reason: "Cloud migration request."
 
+State: User asks about Pulumi, infrastructure as code with programming languages, Pulumi stack, Pulumi state.
+  Route: devops-pulumi
+  Reason: "Pulumi IaC request."
+
+State: User asks about Crossplane, Crossplane composition, managed resource, provider, control plane, Crossplane function.
+  Route: devops-crossplane
+  Reason: "Crossplane control plane request."
+
+State: User asks about GitLab CI, GitLab pipeline, GitLab Runner, GitLab CI/CD.
+  Route: devops-gitlab-ci
+  Reason: "GitLab CI/CD request."
+
+State: User asks about CircleCI, CircleCI config, CircleCI orb, CircleCI pipeline.
+  Route: devops-circleci
+  Reason: "CircleCI request."
+
+State: User asks about autoscaling, HPA, VPA, Keda, Cluster Autoscaler, pod autoscaling, node autoscaling, Kubernetes scaling.
+  Route: devops-kubernetes-autoscaling
+  Reason: "Kubernetes autoscaling request."
+
+State: User asks about APM, Datadog, New Relic, application monitoring, APM instrumentation, synthetic monitoring, observability platform.
+  Route: devops-apm-observability
+  Reason: "APM and observability platform request."
+
+State: User asks about Cilium, eBPF, Cilium network policy, Hubble, Cilium cluster mesh, cloud-native networking.
+  Route: devops-cilium-ebpf
+  Reason: "Cilium/eBPF networking request."
+
+State: User asks about OpenTelemetry, OTel collector, distributed tracing, OpenTelemetry instrumentation, trace sampling.
+  Route: devops-opentelemetry
+  Reason: "OpenTelemetry request."
+
+State: User asks about Oracle Cloud, OCI, OKE, Oracle Kubernetes Engine, Oracle database cloud.
+  Route: devops-oracle-cloud
+  Reason: "Oracle Cloud request."
+
+State: User asks about DigitalOcean, DOKS, DigitalOcean App Platform, Droplet, DigitalOcean Kubernetes.
+  Route: devops-digitalocean
+  Reason: "DigitalOcean request."
+
+State: User asks about IBM Cloud, IBM Kubernetes Service, IBM Cloud Foundry, IBM Cloud VPC.
+  Route: devops-ibm-cloud
+  Reason: "IBM Cloud request."
+
+State: User asks about Alibaba Cloud, Aliyun, ACK, Alibaba Cloud ECS, ApsaraDB.
+  Route: devops-alibaba-cloud
+  Reason: "Alibaba Cloud request."
+
+State: User asks about Hetzner, Hetzner Cloud, Hetzner dedicated server, Hetzner Kubernetes.
+  Route: devops-hetzner
+  Reason: "Hetzner request."
+
 ### New Security Skills
 
 State: User asks about data security, data protection, encryption at rest, data masking, data classification.
   Route: security-data-security
   Reason: "Data security request."
+
+State: User asks about Zero Trust, zero trust architecture, ZTA, BeyondCorp, never trust always verify, identity-aware proxy, microsegmentation.
+  Route: zero-trust
+  Reason: "Zero Trust architecture request."
+
+State: User asks about CSPM, cloud security posture management, Wiz, Prisma Cloud, cloud compliance, cloud misconfiguration, CIEM.
+  Route: cspm
+  Reason: "CSPM request."
+
+State: User asks about penetration testing, pentest, ethical hacking, vulnerability assessment, security testing, web app pentest, network pentest, cloud pentest.
+  Route: penetration-testing
+  Reason: "Penetration testing request."
+
+State: User asks about IAM governance, identity governance, access certification, privileged access management, identity lifecycle, join/move/leave, access review.
+  Route: iam-governance
+  Reason: "IAM governance request."
 
 State: User asks about SOC operations, SOC tier, SOC structure, SOC runbook, security operations center, SOC shift.
   Route: soc-operations

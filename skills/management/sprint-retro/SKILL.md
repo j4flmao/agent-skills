@@ -105,6 +105,10 @@ Retro board populated with categorized team input from the silent writing phase.
 ## References
 
 - [Retro Formats](references/retro-formats.md)
+- [Action Item Tracking](references/action-item-tracking.md)
+- [Retro Techniques](references/retro-techniques.md)
+- [Facilitation Guide](references/facilitation-guide.md)
+- [Retro Metrics](references/retro-metrics.md)
 
 ## Handoff
 sprint-retro (schedule next retro with new action item tracking), okr-kpi (align retro improvement themes with team goals).

@@ -400,6 +400,8 @@ print(f"Result: {table.num_rows} rows, {table.num_columns} columns")
 ## References
 - `references/columnar-format-guide.md` — Parquet row group and page architecture, ORC stripe and index configuration, encoding selection (dictionary, RLE, delta, BPS), compression codec trade-offs, schema evolution strategy, and format comparison benchmarks
 - `references/arrow-flight-protocol.md` — Arrow IPC format, Flight gRPC protocol, Flight SQL, DoExchange streaming, client/server patterns, authentication, and performance optimization
+- `references/columnar-formats.md` — Parquet vs ORC vs Arrow, row groups, encoding, predicate pushdown
+- `references/schema-evolution.md` — Avro compatibility modes, Parquet merge, Iceberg evolution
 
 ## Handoff
 `data-streaming` for Kafka/Avro schema management and stream processing

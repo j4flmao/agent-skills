@@ -61,4 +61,6 @@ class UserRepositoryTest {
 ## References
 - `references/api-testing.md` — API integration testing patterns
 - `references/test-containers.md` — TestContainers setup and patterns
-- `references/external-services.md` — Mocking external services with WireMock
+- `references/database-testing.md` — Database integration testing: testcontainers for DB, repository testing, migration testing, transaction testing, isolation levels
+- `references/messaging-testing.md` — Message queue integration testing: Kafka/RabbitMQ testcontainers, consumer testing, producer testing, schema registry testing
+- `references/contract-driven.md` — Contract-driven integration testing: provider contracts, consumer-driven contracts, Pact, compatibility testing

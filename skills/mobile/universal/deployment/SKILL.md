@@ -270,6 +270,8 @@ appUpdateManager.startUpdateFlow(
 ### Reference Files
 - `references/fastlane-setup.md` — Fastlane lanes, plugins, environment
 - `references/code-signing.md` — iOS code signing, Android keystore, match
+- `references/app-store-connect.md` — App Store Connect submission, TestFlight, app review, marketing optimization, in-app events
+- `references/play-console.md` — Google Play Console submission, testing tracks, staged rollouts, pre-launch reports, Android App Bundle
 
 ### Related Skills
 - `mobile/ios/SKILL.md` — iOS development

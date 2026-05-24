@@ -258,6 +258,8 @@ final class OrderViewModelTests: XCTestCase {
 - `references/swiftui-patterns.md` — SwiftUI navigation, state, animations
 - `references/uikit-interop.md` — SwiftUI/UIKit interoperability
 - `references/testing.md` — XCTest, XCUITest, snapshot testing
+- `references/swiftui-performance.md` — View identity, equatable views, @ViewBuilder optimization, Lazy stacks/grids, Instruments, precomputed layouts
+- `references/ios-architecture.md` — MVVM, Coordinator pattern, Combine framework, async/await concurrency, Swift 6 data race safety, dependency injection
 
 ### Related Skills
 - `mobile/universal/deployment/SKILL.md` — App Store Connect, TestFlight, CI/CD

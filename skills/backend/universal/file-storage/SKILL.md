@@ -185,6 +185,8 @@ processing:
 - Block public access by default at account and bucket level
 
 ## References
+- `references/cdn-origin.md` — CloudFront/S3, CloudFlare R2, Fastly, signed URLs, cache invalidation, origin shield
+- `references/file-processing.md` — Image resizing/optimization, video transcoding, document conversion, PDF generation
 - `references/storage-providers.md` — S3/Azure Blob/GCS/MinIO patterns, security, presigned URLs
 - `references/upload-patterns.md` — Direct upload, CDN strategies, file processing, access control
 

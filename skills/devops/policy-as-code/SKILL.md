@@ -76,8 +76,10 @@ spec:
 | Governance | Require specific annotations, team labels | Generate default NetworkPolicies |
 
 ## References
-- `references/opa-rego-patterns.md` — OPA/Rego policy patterns and best practices
-- `references/kyverno-policies.md` — Kyverno policy examples and cluster policies
+- `references/opa-policy-language.md` — OPA/Rego deep dive: Rego syntax, rules, comprehensions, schema validation, built-in functions, coverage
+- `references/kyverno-policies.md` — Kyverno: policy types (validate, mutate, generate, verifyImages), policy sets, policy reports, policy exceptions
+- `references/opa-k8s-admission.md` — OPA Gatekeeper: ConstraintTemplate, Constraint, enforcement action, dry-run, audit, mutation, data replication
+- `references/policy-ci-cd.md` — Policy-as-code in CI/CD: OPA conftest for IaC scanning, Trivy policies, policy testing in pipelines, gating deployments
 - `references/policy-testing.md` — Policy testing, CI/CD integration, and audit logging
 
 ## Handoff

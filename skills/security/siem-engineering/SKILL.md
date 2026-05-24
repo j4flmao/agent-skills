@@ -58,6 +58,9 @@ Design and maintain SIEM infrastructure, onboard log sources, develop correlatio
 ## References
 - `references/siem-architecture.md` — SIEM components and data flow
 - `references/correlation-rules.md` — rule patterns and examples
+- `references/log-sources-ingestion.md` — log source onboarding, syslog, WEF, and cloud ingestion
+- `references/detection-content.md` — detection content creation, correlation patterns, and rule lifecycle
+- `references/siem-tuning.md` — SIEM tuning, FP/FN optimization, and storage strategy
 
 ## Handoff
 Use cases feed into soc-operations for triage workflows. Rules can be automated via soar-automation.

@@ -136,8 +136,10 @@ Check API compatibility at load time.
 - Test plugins in isolation before production deployment.
 
 ## References
-- `references/plugin-patterns.md` — Plugin architecture design patterns
 - `references/plugin-implementation.md` — Plugin implementation guide
+- `references/plugin-lifecycle.md` — Loading, initialization, dependency resolution, hot-reload, graceful shutdown
+- `references/plugin-patterns.md` — Plugin architecture design patterns
+- `references/plugin-security.md` — Sandboxing, capability systems, permission models, code signing, resource limits
 
 ## Handoff
 No artifact produced unless requested.

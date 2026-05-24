@@ -488,6 +488,8 @@ rollback:
 ## References
 - `references/dbt-ci-cd-pipeline.md` — Full dbt CI/CD pipeline setup including GitHub Actions, dbt Cloud API jobs, environment promotion, and branch strategy
 - `references/sql-linting-and-testing.md` — SQLFluff rule configuration, dbt test patterns (singular, generic, freshness), data-diff comparison, and Atlantis SQL review workflow
+- `references/data-diff-testing.md` — data-diff, row/schema/volume diff, acceptance thresholds
+- `references/data-quality-ci.md` — Great Expectations checkpoints, quality gates, data contracts, guardrails
 
 ## Handoff
 `data-data-quality` for data quality monitoring and alerting in production

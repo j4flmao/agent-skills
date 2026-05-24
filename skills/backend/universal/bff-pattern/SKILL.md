@@ -116,6 +116,8 @@ await cache.set(`checkout:${cartId}`, result, { ttl: 30 });
 
 ## References
 - `references/bff-architecture.md` — BFF architecture and design patterns
+- `references/bff-auth-session.md` — Session management, token exchange, refresh token rotation, cookie security, CSRF
+- `references/bff-orchestration.md` — Data aggregation, API composition, partial response, error handling, caching
 - `references/bff-security.md` — BFF security best practices
 
 ## Handoff

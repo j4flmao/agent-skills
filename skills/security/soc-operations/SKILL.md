@@ -55,6 +55,9 @@ Define SOC structure, analyst workflows, tier responsibilities, escalation paths
 ## References
 - `references/soc-structure.md` — SOC tier model and roles
 - `references/soc-runbooks.md` — runbook templates and workflows
+- `references/triage-procedures.md` — alert triage procedures, severity classification, and SLA
+- `references/threat-hunting.md` — hypothesis-driven hunting, IoC/IoA hunting, and hunting maturity
+- `references/soc-metrics.md` — SOC metrics, KPIs, and executive reporting
 
 ## Handoff
 Output artifacts can be handed to devops-monitoring for SIEM integration, or management for org planning.

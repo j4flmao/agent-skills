@@ -122,6 +122,8 @@ VR requires dedicated headset (Meta Quest, Apple Vision Pro). Mobile VR is prima
 ## References
 - `references/ar-platforms.md` — ARKit vs ARCore deep dive, scene setup, anchors, lighting, session management
 - `references/ar-patterns.md` — Gesture interaction, model loading and optimization, performance budgets, VR integration
+- `references/ar-core-arkit.md` — ARCore vs ARKit feature comparison, session management, anchor systems, environmental understanding, motion tracking
+- `references/vr-development.md` — Unity vs Unreal for mobile VR, 6DoF tracking, performance optimization, hand tracking, foveated rendering
 
 ## Handoff
 `mobile/universal/testing` for AR testing strategy (real device, varied lighting, occlusion scenarios)

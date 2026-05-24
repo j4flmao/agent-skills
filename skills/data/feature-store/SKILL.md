@@ -383,6 +383,7 @@ for col, rules in checks.items():
 ## References
 - `references/feast-setup-guide.md` — Feast architecture, deployment options (Docker, K8s, cloud), feature repository structure, registry management, online/offline store configuration, serving API
 - `references/feature-engineering-pipeline.md` — Batch (Spark/dbt) and streaming (Flink/Kafka) feature computation, point-in-time join mechanics, feature validation, monitoring, Tecton platform overview
+- `references/online-serving.md` — Feast online store (Redis/DynamoDB), feature server, low-latency retrieval
 
 ## Handoff
 `streaming` for real-time feature computation with Kafka and Flink

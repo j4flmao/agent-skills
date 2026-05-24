@@ -182,6 +182,10 @@ Dockerfile or docker-compose.yml with comments explaining each section.
 
 ## References
 - `references/dockerfile-guide.md` — detailed Dockerfile best practices
+- `references/docker-compose-production.md` — Docker Compose in production: health checks, resource limits, restart policies, logging driver, secrets, configs, networks
+- `references/image-optimization.md` — Image optimization: multi-stage build patterns, distroless vs alpine, layer structure, .dockerignore optimization, buildkit caching
+- `references/container-security.md` — Container security: non-root user, read-only rootfs, capability drop, seccomp, AppArmor, image scanning (Trivy, Grype)
+- `references/docker-networking.md` — Docker networking: bridge, host, overlay, macvlan, ipvlan; network plugins, multi-host networking, DNS, network security
 
 ## Handoff
 After completing this skill:
