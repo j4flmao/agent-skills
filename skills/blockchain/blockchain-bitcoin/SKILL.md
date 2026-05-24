@@ -1,7 +1,7 @@
 ---
 name: blockchain-bitcoin
 description: >
-  Use this skill when asked about Bitcoin internals, Bitcoin Core, Bitcoin Script, Taproot, mining, Proof of Work, Lightning Network, BIP standards, and Bitcoin protocol development. Languages: C++, Rust, Python. Covers Bitcoin Core C++ implementation (validation, mempool, wallet, P2P), Bitcoin Script opcodes and programming (P2PKH, P2SH, P2WSH, Taproot MAST), PoW mining mechanics (SHA-256d, difficulty adjustment, ASICs, Stratum), Lightning Network protocol (HTLC, onion routing, channel management, gossip), and BIP standards (BIP-32/39/44/84/86/174/340/341/342). Do NOT use for: Ethereum protocol (use blockchain-ethereum), smart contract development (use blockchain-application), or general blockchain patterns (use blockchain-patterns).
+  Use this skill when asked about Bitcoin internals, Bitcoin Core, Bitcoin Script, Taproot, mining, Proof of Work, Lightning Network, BIP standards, Ordinals, BRC-20, Runes, Bitcoin L2s (Stacks, RSK, Babylon), and Bitcoin protocol development. Languages: C++, Rust, Python, Clarity. Covers Bitcoin Core C++ implementation (validation, mempool, wallet, P2P), Bitcoin Script opcodes and programming (P2PKH, P2SH, P2WSH, Taproot MAST), token protocols (Ordinals inscriptions, BRC-20, Runes), PoW mining mechanics (SHA-256d, difficulty adjustment, ASICs, Stratum), L2 scaling (Lightning Network, Stacks Clarity, RSK EVM, Babylon staking), and BIP standards (BIP-32/39/44/84/86/174/340/341/342). Do NOT use for: Ethereum protocol (use blockchain-ethereum), smart contract development (use blockchain-application), or general blockchain patterns (use blockchain-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -16,7 +16,7 @@ tags: [blockchain, bitcoin, pow, mining, phase-blockchain]
 # blockchain-bitcoin
 
 ## Trigger
-"Bitcoin", "Bitcoin Core", "bitcoind", "Bitcoin Script", "BTC script", "Taproot", "Bitcoin opcode", "P2PKH", "P2SH", "P2WSH", "mining Bitcoin", "Proof of Work Bitcoin", "SHA-256d", "ASIC mining", "Stratum", "Lightning Network", "LN", "HTLC", "onion routing", "channel", "BIP standard", "BIP-32", "BIP-39", "BIP-44", "BIP-340", "BIP-341", "BIP-342", "PSBT", "Bitcoin mempool", "UTXO", "Bitcoin C++", "Bitcoin protocol"
+"Bitcoin", "Bitcoin Core", "bitcoind", "Bitcoin Script", "BTC script", "Taproot", "Bitcoin opcode", "P2PKH", "P2SH", "P2WSH", "mining Bitcoin", "Proof of Work Bitcoin", "SHA-256d", "ASIC mining", "Stratum", "Lightning Network", "LN", "HTLC", "onion routing", "channel", "Ordinals", "inscription", "BRC-20", "Runes", "Bitcoin NFT", "Bitcoin L2", "Stacks", "Clarity", "RSK", "Rootstock", "Babylon", "Bitcoin staking", "BIP standard", "BIP-32", "BIP-39", "BIP-44", "BIP-340", "BIP-341", "BIP-342", "PSBT", "Bitcoin mempool", "UTXO", "Bitcoin C++", "Bitcoin protocol"
 
 ## Rules
 1. Bitcoin Core is written in C++ — reference its source code (src/validation.cpp, src/net_processing.cpp, src/wallet/) for implementation details

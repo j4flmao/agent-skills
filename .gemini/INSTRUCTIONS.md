@@ -10,7 +10,7 @@ Full prose: security. destructive.
 ## Routing
 No match → `skills/core/master-orchestrator/SKILL.md`. Detect stack first.
 
-### All Skills (280)
+### All Skills (283)
 ```
 core (4):       master-orchestrator, project-init, onboarding, context-compressor
 planning (8):   create-brief, create-prd, create-adr, create-tech-spec, create-story,
@@ -74,10 +74,11 @@ enterprise (8): compliance-audit, multi-tenant, integration-patterns,
 product (8):    analytics, ab-testing, user-research, growth-engineering,
                 pricing-strategy, go-to-market,
                 onboarding-flow, feature-prioritization
-blockchain (13): blockchain-core, blockchain-cryptography, blockchain-ethereum,
+blockchain (16): blockchain-core, blockchain-cryptography, blockchain-ethereum,
                  blockchain-bitcoin, blockchain-patterns, blockchain-application,
                  blockchain-web3, blockchain-testing, blockchain-infrastructure,
                  blockchain-security, blockchain-management, blockchain-solana,
-                 blockchain-defi
+                 blockchain-defi, blockchain-cross-chain, blockchain-zk,
+                 blockchain-data-indexing
 ```
 Note: `-a` = architecture, `-p` = patterns.

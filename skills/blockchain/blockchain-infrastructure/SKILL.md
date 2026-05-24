@@ -1,7 +1,7 @@
 ---
 name: blockchain-infrastructure
 description: >
-  Use this skill when asked about blockchain node deployment, RPC infrastructure, CI/CD for smart contracts, monitoring and alerting for blockchain networks, and environment management for devnet/testnet/staging/mainnet. Languages: Go, Rust, TypeScript, Python, Shell. Covers node deployment (archive, full, validator nodes on bare-metal/cloud/K8s), RPC infrastructure (load balancing, caching, WSS, rate limiting), CI/CD pipelines for smart contract testing/deployment/verification, blockchain monitoring (Prometheus exporters, Grafana, Forta, Tenderly), and multi-environment configuration (devnet, testnet, staging, mainnet per chain). Integrates with shared devops skills: ansible, terraform, kubernetes-patterns, monitoring, vault, cdn-edge, and backup-dr for infrastructure operations. Do NOT use for: core protocol development (use blockchain-core), smart contract development (use blockchain-application), or general devops outside blockchain context.
+  Use this skill when asked about blockchain node deployment, RPC infrastructure, CI/CD for smart contracts, monitoring and alerting for blockchain networks, MEV infrastructure (Flashbots, builders, relays), key management (KMS, HSM), and environment management for devnet/testnet/staging/mainnet. Languages: Go, Rust, TypeScript, Python, Shell. Covers node deployment (archive, full, validator nodes on bare-metal/cloud/K8s), RPC infrastructure (load balancing, caching, WSS, rate limiting), MEV infrastructure (builder/relay setup, searcher infrastructure, block building optimization), key management (AWS KMS, Fireblocks, HSMs, MPC signing, validator key management), CI/CD pipelines for smart contract testing/deployment/verification, blockchain monitoring (Prometheus exporters, Grafana, Forta, Tenderly), and multi-environment configuration (devnet, testnet, staging, mainnet per chain). Integrates with shared devops skills: ansible, terraform, kubernetes-patterns, monitoring, vault, cdn-edge, and backup-dr for infrastructure operations. Do NOT use for: core protocol development (use blockchain-core), smart contract development (use blockchain-application), or general devops outside blockchain context.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -16,7 +16,7 @@ tags: [blockchain, infrastructure, devops, deployment, phase-blockchain]
 # blockchain-infrastructure
 
 ## Trigger
-"blockchain deploy", "node deployment", "archive node", "validator node", "RPC infrastructure", "blockchain RPC", "JSON-RPC load balancing", "smart contract CI/CD", "forge CI", "hardhat CI", "blockchain monitoring", "Prometheus blockchain", "Grafana blockchain", "Forta", "Tenderly", "devnet", "testnet", "blockchain environment", "mainnet deploy", "contract verification", "blockchain DevOps"
+"blockchain deploy", "node deployment", "archive node", "validator node", "RPC infrastructure", "blockchain RPC", "JSON-RPC load balancing", "smart contract CI/CD", "forge CI", "hardhat CI", "blockchain monitoring", "Prometheus blockchain", "Grafana blockchain", "Forta", "Tenderly", "devnet", "testnet", "blockchain environment", "mainnet deploy", "contract verification", "blockchain DevOps", "MEV infrastructure", "builder", "relay", "Flashbots", "MEV relay", "block building", "KMS", "HSM", "key management blockchain", "Fireblocks", "HSM blockchain", "validator key management"
 
 ## Rules
 1. Deploy archive nodes for data availability, full nodes for RPC, validator nodes for consensus participation

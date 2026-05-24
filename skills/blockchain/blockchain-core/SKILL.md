@@ -1,7 +1,7 @@
 ---
 name: blockchain-core
 description: >
-  Use this skill when asked about blockchain fundamentals, consensus mechanisms, PoW, PoS, gas, staking, blockchain data structures, cryptography in blockchain, blockchain node implementation. Languages: C++, Go. Covers core protocol engineering including consensus algorithms (Nakamoto, PBFT, HotStuff), cryptographic primitives (hashing, ECDSA, BLS, Merkle proofs), state machine design (UTXO, account model), mempool and transaction pool, P2P networking, and blockchain storage engines. Do NOT use for: smart contract development (use blockchain-application), web3 frontend integration (use blockchain-web3), or general cryptography outside blockchain context.
+  Use this skill when asked about blockchain fundamentals, consensus mechanisms, PoW, PoS, gas, staking, blockchain data structures, DAG consensus, Avalanche, MEV, PBS, economic security, blockchain node implementation. Languages: C++, Go. Covers core protocol engineering including consensus algorithms (Nakamoto, PBFT, HotStuff, Snowman, DAG-BFT), MEV taxonomy and MEV supply chain (PBS, ePBS, MEV-Boost, FOCIL), cryptographic primitives (hashing, ECDSA, BLS, Merkle proofs), state machine design (UTXO, account model), mempool and transaction pool, P2P networking, and blockchain storage engines. Do NOT use for: smart contract development (use blockchain-application), web3 frontend integration (use blockchain-web3), or general cryptography outside blockchain context.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -16,7 +16,7 @@ tags: [blockchain, core, consensus, cryptography, protocol, state-machine, phase
 # blockchain-core
 
 ## Trigger
-"blockchain core", "consensus mechanism", "proof of work", "proof of stake", "PoW", "PoS", "gas", "staking", "blockchain node", "C++ blockchain", "Go blockchain", "blockchain protocol", "mempool", "transaction pool", "block finality", "blockchain data structure", "merkle tree", "cryptography blockchain", "p2p blockchain", "blockchain state machine"
+"blockchain core", "consensus mechanism", "proof of work", "proof of stake", "PoW", "PoS", "DAG consensus", "Avalanche consensus", "Snowman", "Hashgraph", "gas", "staking", "MEV", "miner extractable value", "PBS", "proposer builder separation", "MEV-Boost", "ePBS", "blockchain node", "C++ blockchain", "Go blockchain", "blockchain protocol", "mempool", "transaction pool", "block finality", "blockchain data structure", "merkle tree", "cryptography blockchain", "p2p blockchain", "blockchain state machine", "economic security"
 
 ## Rules
 1. Use C++ for performance-critical blockchain node implementations (Bitcoin Core, geth C++ parts, EOS)

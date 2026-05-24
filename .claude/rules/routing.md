@@ -1,4 +1,4 @@
-# Routing — 411 skills
+# Routing — 414 skills
 
 ## Entry
 `skills/core/master-orchestrator/SKILL.md` (no trigger match → route here)
@@ -32,7 +32,7 @@ planning → backend → frontend → mobile → desktop → dev-loop → devops
 | enterprise (12) | compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance, togaf-zachman, itil-service-mgmt, vendor-management, architecture-governance |
 | product (10) | analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization, customer-journey, persona-development |
 | ml (16) | ml-experiment-tracking, ml-classical-ml, ml-deep-learning, ml-feature-engineering, ml-hyperparameter-tuning, ml-model-evaluation, ml-model-interpretability, ml-time-series, ml-nlp, ml-computer-vision, ml-recommender, ml-anomaly-detection, ml-ml-pipeline, ml-feature-store, ml-model-serving, ml-math-foundations |
-| blockchain (13) | blockchain-core, blockchain-cryptography, blockchain-ethereum, blockchain-bitcoin, blockchain-patterns, blockchain-application, blockchain-web3, blockchain-testing, blockchain-infrastructure, blockchain-security, blockchain-management, blockchain-solana, blockchain-defi |
+| blockchain (16) | blockchain-core, blockchain-cryptography, blockchain-ethereum, blockchain-bitcoin, blockchain-patterns, blockchain-application, blockchain-web3, blockchain-testing, blockchain-infrastructure, blockchain-security, blockchain-management, blockchain-solana, blockchain-defi, blockchain-cross-chain, blockchain-zk, blockchain-data-indexing |
 
 ## Trigger Keywords
 ```
@@ -392,6 +392,9 @@ audit/threat-model/formal-verification                 → blockchain/blockchain
 governance/dao/multisig/tokenomics                     → blockchain/blockchain-management
 solana/poh/anchor/solana-program/spl/solana-validator   → blockchain/blockchain-solana
 defi/amm/lending/uniswap/curve/aave/yearn               → blockchain/blockchain-defi
+cross-chain/ibc/layerzero/wormhole/axelar/ccip          → blockchain/blockchain-cross-chain
+zk/zero-knowledge/circom/noir/zk-rollup/zk-evm          → blockchain/blockchain-zk
+subgraph/the-graph/dune/indexing/blockchain-data         → blockchain/blockchain-data-indexing
 ```
 
 ## Stack Detection

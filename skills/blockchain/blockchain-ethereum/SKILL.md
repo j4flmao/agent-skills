@@ -1,7 +1,7 @@
 ---
 name: blockchain-ethereum
 description: >
-  Use this skill when asked about Ethereum internals, EVM deep dive, Ethereum consensus layer, execution clients, staking, EIPs, layer-2 scaling, Ethereum Virtual Machine opcodes, and Ethereum protocol development. Languages: Go, Rust, C#, C++, Solidity. Covers EVM architecture (opcodes, gas metering, memory/storage model, EOF), execution clients (geth, reth, Nethermind, Erigon), consensus layer (Casper FFG, LMD-GHOST, beacon chain, attestation), staking and validators (32 ETH, withdrawal credentials, MEV-Boost, DVT), critical EIPs (1559, 4844, 4337, 3529, 2718), and L2 scaling (Optimism, Arbitrum, ZKsync, StarkNet, validium, data availability). Do NOT use for: Bitcoin protocol (use blockchain-bitcoin), non-EVM blockchains (use blockchain-core), or smart contract development (use blockchain-application).
+  Use this skill when asked about Ethereum internals, EVM deep dive, Ethereum consensus layer, execution clients, staking, EIPs, layer-2 scaling, account abstraction, PBS/MEV-Boost, Ethereum Virtual Machine opcodes, and Ethereum protocol development. Languages: Go, Rust, C#, C++, Solidity. Covers EVM architecture (opcodes, gas metering, memory/storage model, EOF), execution clients (geth, reth, Nethermind, Erigon), consensus layer (Casper FFG, LMD-GHOST, beacon chain, attestation), staking and validators (32 ETH, withdrawal credentials, MEV-Boost, DVT, ePBS), account abstraction (ERC-4337, EntryPoint, paymasters, UserOp mempool), critical EIPs (1559, 4844, 4337, 3529, 2718), and L2 scaling (Optimism, Arbitrum, ZKsync, StarkNet, validium, data availability). Do NOT use for: Bitcoin protocol (use blockchain-bitcoin), non-EVM blockchains (use blockchain-core), or smart contract development (use blockchain-application).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -16,7 +16,7 @@ tags: [blockchain, ethereum, evm, consensus, phase-blockchain]
 # blockchain-ethereum
 
 ## Trigger
-"Ethereum", "EVM", "Ethereum Virtual Machine", "opcode", "gas", "Ethereum consensus", "beacon chain", "Casper", "LMD-GHOST", "execution client", "geth", "reth", "Nethermind", "Erigon", "Ethereum staking", "validator", "MEV-Boost", "EIP", "EIP-1559", "EIP-4844", "EIP-4337", "Ethereum L2", "rollup", "Optimism", "Arbitrum", "ZKsync", "StarkNet", "layer 2", "data availability", "blob"
+"Ethereum", "EVM", "Ethereum Virtual Machine", "opcode", "gas", "Ethereum consensus", "beacon chain", "Casper", "LMD-GHOST", "execution client", "geth", "reth", "Nethermind", "Erigon", "Ethereum staking", "validator", "MEV-Boost", "EIP", "EIP-1559", "EIP-4844", "EIP-4337", "account abstraction", "ERC-4337", "EntryPoint", "paymaster", "UserOp", "PBS", "proposer builder separation", "ePBS", "FOCIL", "Ethereum L2", "rollup", "Optimism", "Arbitrum", "ZKsync", "StarkNet", "layer 2", "data availability", "blob"
 
 ## Rules
 1. Ethereum is a modular blockchain: execution layer (EVM) + consensus layer (beacon chain) — they run as separate clients

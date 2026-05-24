@@ -1,4 +1,4 @@
-# Routing -- 411 skills
+# Routing -- 414 skills
 
 ## Entry
 
@@ -184,6 +184,9 @@ audit/threat-model/formal-verification                -> blockchain/blockchain-s
 governance/dao/multisig/tokenomics                    -> blockchain/blockchain-management
 solana/poh/anchor/solana-program/spl                   -> blockchain/blockchain-solana
 defi/amm/lending/uniswap/yearn/curve                   -> blockchain/blockchain-defi
+cross-chain/ibc/layerzero/wormhole/axelar               -> blockchain/blockchain-cross-chain
+zk/circom/noir/zk-rollup/zkevm                          -> blockchain/blockchain-zk
+subgraph/dune/indexing/the-graph                        -> blockchain/blockchain-data-indexing
 ```
 
 ## Phase order
@@ -217,4 +220,4 @@ planning -> backend -> frontend -> mobile -> desktop -> dev-loop -> devops -> ma
 | api (2) | graphql-federation, product-management |
 | enterprise (12) | compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance, togaf-zachman, itil-service-mgmt, vendor-management, architecture-governance |
 | product (10) | analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization, customer-journey, persona-development |
-| blockchain (13) | blockchain-core, blockchain-cryptography, blockchain-ethereum, blockchain-bitcoin, blockchain-patterns, blockchain-application, blockchain-web3, blockchain-testing, blockchain-infrastructure, blockchain-security, blockchain-management, blockchain-solana, blockchain-defi |
+| blockchain (16) | blockchain-core, blockchain-cryptography, blockchain-ethereum, blockchain-bitcoin, blockchain-patterns, blockchain-application, blockchain-web3, blockchain-testing, blockchain-infrastructure, blockchain-security, blockchain-management, blockchain-solana, blockchain-defi, blockchain-cross-chain, blockchain-zk, blockchain-data-indexing |
