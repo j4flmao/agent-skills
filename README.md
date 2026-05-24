@@ -1,6 +1,6 @@
 # @j4flmao/agent-skills
 
-407 agent skills for software development — planning, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, data-science, design, quality. Each skill is a `SKILL.md` defining triggers, rules, and response format.
+418 agent skills for software development — planning, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, data-science, design, quality, blockchain. Each skill is a `SKILL.md` defining triggers, rules, and response format.
 
 ## Installation
 
@@ -54,7 +54,7 @@ cp -r ~/skills/skills/devops/docker-patterns /path/to/project/skills/
 
 ```bash
 # Requires the repo to be pushed to GitHub
-npx skills add j4flmao/agent-skills            # all 407 skills
+npx skills add j4flmao/agent-skills            # all 418 skills
 npx skills add j4flmao/agent-skills --bundle backend-only
 npx skills add j4flmao/agent-skills -g          # global (every project)
 ```
@@ -67,6 +67,7 @@ npx skills add j4flmao/agent-skills --bundle <name>
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
+| `blockchain-all` | 11+ | All blockchain: core, cryptography, Ethereum, Bitcoin, patterns, application, web3, testing, infrastructure, security, management |
 | `fullstack-nestjs-react` | 230+ | NestJS + React |
 | `fullstack-golang-vue` | 230+ | Go + Vue |
 | `fullstack-rust-angular` | 230+ | Rust + Angular |
@@ -133,6 +134,7 @@ No keyword match? Agent routes through `master-orchestrator`, detects the projec
 | **8b — Mobile Universal** | `mobile-patterns`, `mobile-testing`, `mobile-performance`, `mobile-security`, `mobile-networking`, `mobile-storage`, `mobile-deployment`, `push-notifications`, `in-app-purchase`, `crash-reporting`, `mobile-deep-linking`, `mobile-offline-first`, `mobile-biometrics`, `mobile-map-location`, `mobile-camera-media`, `mobile-analytics`, `mobile-ar-vr` |
 | **9 — Enterprise** | `enterprise-compliance-audit`, `enterprise-cost-governance`, `enterprise-data-governance`, `enterprise-identity-provider`, `enterprise-integration-patterns`, `enterprise-legacy-migration`, `enterprise-multi-tenant`, `enterprise-sla-management`, `enterprise-high-availability`, `enterprise-business-continuity`, `enterprise-capacity-planning`, `togaf-zachman`, `itil-service-mgmt`, `vendor-management`, `architecture-governance` |
 | **10 — Product** | `product-ab-testing`, `product-analytics`, `product-feature-prioritization`, `product-go-to-market`, `product-growth-engineering`, `product-onboarding-flow`, `product-pricing-strategy`, `product-user-research`, `customer-journey`, `persona-development` |
+| **11 — Blockchain** | `blockchain-core`, `blockchain-cryptography`, `blockchain-ethereum`, `blockchain-bitcoin`, `blockchain-patterns`, `blockchain-application`, `blockchain-web3`, `blockchain-testing`, `blockchain-infrastructure`, `blockchain-security`, `blockchain-management` |
 
 Mobile universal skills apply across all platforms: patterns, testing, performance, security, networking, storage, deployment, push-notifications, in-app-purchase, crash-reporting, deep-linking, offline-first, biometrics, map-location, camera-media, analytics.
 

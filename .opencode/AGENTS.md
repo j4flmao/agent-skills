@@ -1,4 +1,4 @@
-# .opencode/AGENTS.md — j4flmao/skills (267)
+# .opencode/AGENTS.md — j4flmao/skills (278)
 
 LOCAL MODEL (qwen 14b). CONTEXT LIMITED. EVERY TOKEN COUNTS.
 
@@ -36,6 +36,7 @@ ml/          → ml-experiment-tracking, ml-classical-ml, ml-deep-learning, ml-f
 data/        → data-etl-pipeline, data-data-warehouse, data-streaming, data-bi-tools, data-data-quality, data-distributed-storage, data-distributed-compute, data-data-lake, data-data-lakehouse, data-batch-processing, data-workflow-orchestration, data-cdc-patterns, data-data-replication, data-data-platform, data-data-catalog, data-data-observability, data-data-contracts, data-data-mesh, data-data-versioning, data-data-api, data-data-virtualization, data-schema-registry, data-relational-database, data-nosql-database, data-graph-database, data-search-engine
 design/      → design-design-systems, design-ux-research, design-accessibility, design-prototyping
 quality/     → quality-e2e-testing, quality-visual-testing, quality-load-testing, quality-contract-testing
+blockchain/  → blockchain-core, blockchain-cryptography, blockchain-ethereum, blockchain-bitcoin, blockchain-patterns, blockchain-application, blockchain-web3, blockchain-testing, blockchain-infrastructure, blockchain-security, blockchain-management
 ```
 
 ### Universal (backend + frontend)
@@ -53,5 +54,5 @@ animation/form/data-fetching/bundler/img-opt/theming → frontend/universal/
 
 ## Project
 ```
-skills/ (267) + bundles/ (15)
+skills/ (278) + bundles/ (16)
 ```

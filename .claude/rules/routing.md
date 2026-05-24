@@ -1,4 +1,4 @@
-# Routing — 398 skills
+# Routing — 409 skills
 
 ## Entry
 `skills/core/master-orchestrator/SKILL.md` (no trigger match → route here)
@@ -32,6 +32,7 @@ planning → backend → frontend → mobile → desktop → dev-loop → devops
 | enterprise (12) | compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance, togaf-zachman, itil-service-mgmt, vendor-management, architecture-governance |
 | product (10) | analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization, customer-journey, persona-development |
 | ml (16) | ml-experiment-tracking, ml-classical-ml, ml-deep-learning, ml-feature-engineering, ml-hyperparameter-tuning, ml-model-evaluation, ml-model-interpretability, ml-time-series, ml-nlp, ml-computer-vision, ml-recommender, ml-anomaly-detection, ml-ml-pipeline, ml-feature-store, ml-model-serving, ml-math-foundations |
+| blockchain (11) | blockchain-core, blockchain-cryptography, blockchain-ethereum, blockchain-bitcoin, blockchain-patterns, blockchain-application, blockchain-web3, blockchain-testing, blockchain-infrastructure, blockchain-security, blockchain-management |
 
 ## Trigger Keywords
 ```
@@ -374,6 +375,21 @@ digitalocean/doks/do-app-platform                     → devops/digitalocean
 ibm-cloud/ibm-kubernetes/iks                          → devops/ibm-cloud
 alibaba-cloud/aliyun/ack                               → devops/alibaba-cloud
 hetzner/hetzner-cloud/hcloud                           → devops/hetzner
+
+# blockchain
+consensus/pow/pos/pbft/hotstuff                        → blockchain/blockchain-core
+node-implementation/state-machine/mempool              → blockchain/blockchain-core
+cryptography/elliptic-curve/secp256k1/bls              → blockchain/blockchain-cryptography
+hash-function/merkle-tree/zkp/zero-knowledge           → blockchain/blockchain-cryptography
+bitcoin/bitcoin-core/btc/taproot/lightning             → blockchain/blockchain-bitcoin
+ethereum/evm/beacon-chain/execution-client             → blockchain/blockchain-ethereum
+solidity/rust/haskell/move/smart-contract              → blockchain/blockchain-application
+erc20/erc721/erc1155/proxy-pattern/oracle/mev          → blockchain/blockchain-patterns
+web3/ethers/viem/wagmi/dapp/wallet                     → blockchain/blockchain-web3
+testing/foundry/hardhat/fuzz/invariant                 → blockchain/blockchain-testing
+deploy/node/rpc/monitoring/environment                 → blockchain/blockchain-infrastructure
+audit/threat-model/formal-verification                 → blockchain/blockchain-security
+governance/dao/multisig/tokenomics                     → blockchain/blockchain-management
 ```
 
 ## Stack Detection

@@ -1,4 +1,4 @@
-# Routing -- 398 skills
+# Routing -- 409 skills
 
 ## Entry
 
@@ -169,6 +169,19 @@ zero-trust/zta/beyondcorp            -> security/zero-trust
 cspm/wiz/prisma-cloud                 -> security/cspm
 pentest/penetration-test              -> security/penetration-testing
 iam-governance/access-review          -> security/iam-governance
+
+# blockchain
+consensus/pow/pos/pbft/hotstuff/node-implementation  -> blockchain/blockchain-core
+cryptography/elliptic-curve/merkle/zero-knowledge     -> blockchain/blockchain-cryptography
+bitcoin/bitcoin-core/btc/taproot/lightning            -> blockchain/blockchain-bitcoin
+ethereum/evm/execution-client/beacon-chain            -> blockchain/blockchain-ethereum
+solidity/rust/haskell/smart-contract/move             -> blockchain/blockchain-application
+erc20/erc721/proxy/oracle/mev                         -> blockchain/blockchain-patterns
+web3/ethers/viem/wagmi/dapp                           -> blockchain/blockchain-web3
+testing/foundry/hardhat/fuzz/invariant                -> blockchain/blockchain-testing
+deploy/node/rpc/monitoring/environment                -> blockchain/blockchain-infrastructure
+audit/threat-model/formal-verification                -> blockchain/blockchain-security
+governance/dao/multisig/tokenomics                    -> blockchain/blockchain-management
 ```
 
 ## Phase order
@@ -202,3 +215,4 @@ planning -> backend -> frontend -> mobile -> desktop -> dev-loop -> devops -> ma
 | api (2) | graphql-federation, product-management |
 | enterprise (12) | compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance, togaf-zachman, itil-service-mgmt, vendor-management, architecture-governance |
 | product (10) | analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization, customer-journey, persona-development |
+| blockchain (11) | blockchain-core, blockchain-cryptography, blockchain-ethereum, blockchain-bitcoin, blockchain-patterns, blockchain-application, blockchain-web3, blockchain-testing, blockchain-infrastructure, blockchain-security, blockchain-management |

@@ -1,0 +1,37 @@
+---
+name: blockchain-core
+description: >
+  Use this skill when asked about blockchain fundamentals, consensus mechanisms, PoW, PoS, gas, staking, blockchain data structures, cryptography in blockchain, blockchain node implementation. Languages: C++, Go. Covers core protocol engineering including consensus algorithms (Nakamoto, PBFT, HotStuff), cryptographic primitives (hashing, ECDSA, BLS, Merkle proofs), state machine design (UTXO, account model), mempool and transaction pool, P2P networking, and blockchain storage engines. Do NOT use for: smart contract development (use blockchain-application), web3 frontend integration (use blockchain-web3), or general cryptography outside blockchain context.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+compatibility:
+  claude-code: true
+  cursor: true
+  codex: true
+  windsuf: true
+tags: [blockchain, core, consensus, cryptography, protocol, phase-blockchain]
+---
+
+# blockchain-core
+
+## Trigger
+"blockchain core", "consensus mechanism", "proof of work", "proof of stake", "PoW", "PoS", "gas", "staking", "blockchain node", "C++ blockchain", "Go blockchain", "blockchain protocol", "mempool", "transaction pool", "block finality", "blockchain data structure", "merkle tree", "cryptography blockchain", "p2p blockchain", "blockchain state machine"
+
+## Rules
+1. Use C++ for performance-critical blockchain node implementations (Bitcoin Core, geth C++ parts, EOS)
+2. Use Go for production blockchain nodes (go-ethereum, Tendermint/Cosmos, Hyperledger Fabric)
+3. Prefer BFT-based consensus for permissioned networks, Nakamoto consensus for permissionless
+4. Always consider state machine design (UTXO vs account model) based on use case
+5. Follow established blockchain architecture patterns — do not invent custom consensus without rigorous analysis
+6. Reference specific blockchain implementations (Bitcoin, Ethereum, Cosmos, Solana) for real-world context
+7. Use the references in `references/` for deep technical detail
+
+## Response Format
+1. **Architecture overview**: consensus family + state model + network topology
+2. **Key mechanisms**: finality, fork choice, security assumptions, economic security
+3. **Implementation guidance**: C++ or Go patterns, database backend, networking
+4. **Trade-offs**: security vs performance, decentralization vs throughput, latency vs finality
+
+## Phase
+blockchain → blockchain-core
