@@ -1,7 +1,7 @@
 ---
 name: blockchain-application
 description: >
-  Use this skill when asked about smart contract development, Solidity, Rust smart contracts (Solana, NEAR, Polkadot), Haskell/Plutus (Cardano), dApp backend development, Truffle, Hardhat, Foundry, Anchor, and blockchain application patterns. Languages: Solidity, Rust, Haskell. Covers EVM-based development (Ethereum, Polygon, Arbitrum, Optimism), SVM-based development (Solana), eUTxO-based development (Cardano), smart contract security, gas optimization, upgradeable contracts, and cross-contract communication. Do NOT use for: blockchain core protocol (use blockchain-core), web3 frontend (use blockchain-web3), or testing (use blockchain-testing).
+  Use this skill when asked about smart contract development, Solidity, Vyper, Rust smart contracts (Solana, NEAR, Polkadot), Haskell/Plutus (Cardano), Cairo/StarkNet, dApp backend development, Truffle, Hardhat, Foundry, Anchor, and blockchain application patterns. Languages: Solidity, Vyper, Rust, Haskell, Cairo, Move. Covers EVM-based development (Ethereum, Polygon, Arbitrum, Optimism), SVM-based development (Solana), eUTxO-based development (Cardano), StarkNet/STARK-based development (Cairo), smart contract security, gas optimization, upgradeable contracts, and cross-contract communication. Do NOT use for: blockchain core protocol (use blockchain-core), web3 frontend (use blockchain-web3), or testing (use blockchain-testing).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -10,13 +10,13 @@ compatibility:
   cursor: true
   codex: true
   windsuf: true
-tags: [blockchain, smart-contracts, solidity, rust, haskell, application, phase-blockchain]
+tags: [blockchain, smart-contracts, solidity, vyper, rust, haskell, cairo, move, application, phase-blockchain]
 ---
 
 # blockchain-application
 
 ## Trigger
-"smart contract", "solidity", "solidity contract", "evm", "rust smart contract", "solana contract", "anchor framework", "cardano", "plutus", "haskell contract", "marlowe", "eutxo", "hardhat", "foundry", "truffle", "dapp backend", "contract deployment", "gas optimization", "contract security", "cross-contract call", "chainlink", "oracle contract", "defi contract", "nft contract"
+"smart contract", "solidity", "vyper", "vyper contract", "solidity contract", "evm", "rust smart contract", "solana contract", "anchor framework", "cardano", "plutus", "haskell contract", "cairo", "starknet", "starkware", "sierra", "marlowe", "eutxo", "hardhat", "foundry", "truffle", "dapp backend", "contract deployment", "gas optimization", "contract security", "cross-contract call", "chainlink", "oracle contract", "defi contract", "nft contract"
 
 ## Rules
 1. Use Solidity for EVM chains (Ethereum, Polygon, Arbitrum, Optimism, Base, BSC)

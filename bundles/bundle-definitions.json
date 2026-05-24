@@ -2799,7 +2799,7 @@
   },
   {
     "name": "blockchain-all",
-    "description": "All blockchain skills: core, cryptography, Ethereum, Bitcoin, patterns, application, web3, testing, infrastructure, security, management",
+    "description": "All blockchain skills: core, cryptography, Ethereum, Bitcoin, patterns, application, web3, testing, infrastructure, security, management, Solana, DeFi",
     "skills": [
       "blockchain-core",
       "blockchain-cryptography",
@@ -2811,7 +2811,9 @@
       "blockchain-testing",
       "blockchain-infrastructure",
       "blockchain-security",
-      "blockchain-management"
+      "blockchain-management",
+      "blockchain-solana",
+      "blockchain-defi"
     ]
   }
 ]

@@ -1,4 +1,4 @@
-# Routing -- 409 skills
+# Routing -- 411 skills
 
 ## Entry
 
@@ -182,6 +182,8 @@ testing/foundry/hardhat/fuzz/invariant                -> blockchain/blockchain-t
 deploy/node/rpc/monitoring/environment                -> blockchain/blockchain-infrastructure
 audit/threat-model/formal-verification                -> blockchain/blockchain-security
 governance/dao/multisig/tokenomics                    -> blockchain/blockchain-management
+solana/poh/anchor/solana-program/spl                   -> blockchain/blockchain-solana
+defi/amm/lending/uniswap/yearn/curve                   -> blockchain/blockchain-defi
 ```
 
 ## Phase order
@@ -215,4 +217,4 @@ planning -> backend -> frontend -> mobile -> desktop -> dev-loop -> devops -> ma
 | api (2) | graphql-federation, product-management |
 | enterprise (12) | compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance, togaf-zachman, itil-service-mgmt, vendor-management, architecture-governance |
 | product (10) | analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization, customer-journey, persona-development |
-| blockchain (11) | blockchain-core, blockchain-cryptography, blockchain-ethereum, blockchain-bitcoin, blockchain-patterns, blockchain-application, blockchain-web3, blockchain-testing, blockchain-infrastructure, blockchain-security, blockchain-management |
+| blockchain (13) | blockchain-core, blockchain-cryptography, blockchain-ethereum, blockchain-bitcoin, blockchain-patterns, blockchain-application, blockchain-web3, blockchain-testing, blockchain-infrastructure, blockchain-security, blockchain-management, blockchain-solana, blockchain-defi |

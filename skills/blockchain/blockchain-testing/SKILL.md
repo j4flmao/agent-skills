@@ -20,7 +20,7 @@ tags: [blockchain, testing, security, audit, phase-blockchain]
 
 ## Rules
 1. Use Foundry (forge) as the default Solidity testing framework — it is the fastest and most ergonomic
-2. Always write fuzz tests for functions with numeric inputs — edge cases are where bugs live
+2. Always write fuzz tests for functions with numeric inputs — edge cases are where bugs live. Use Foundry fuzz + Echidna for comprehensive coverage.
 3. Write invariant tests for protocol-level properties (total supply, solvency, access control)
 4. Test against a mainnet fork to validate real-world interactions with existing protocols
 5. Use Echidna or Foundry invariant tester for property-based testing

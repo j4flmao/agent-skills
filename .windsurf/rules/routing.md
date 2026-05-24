@@ -1,4 +1,4 @@
-# Routing — 409 skills
+# Routing — 411 skills
 
 No match -> skills/core/master-orchestrator/SKILL.md. Detect stack then route.
 
@@ -20,7 +20,7 @@ security/       sast-dast/sbom/secrets-management/container-security/api-securit
 quality/        e2e-testing/visual/load-testing/contract-testing/unit-testing/integration-testing/property-based/exploratory/acceptance/regression/smoke
 data/           etl/warehouse/streaming/bi/data-quality/distributed-storage/distributed-compute/data-lake/lakehouse/batch-processing/workflow-orchestration/cdc/data-replication/data-platform/data-catalog/data-observability/data-contracts/data-mesh/data-versioning/data-api/data-virtualization/schema-registry/relational-database/nosql/graph-database/search-engine/clean-room/cost-optimization/formats/lineage/pipeline-cicd/testing/reverse-etl/data-strategy/dimensional-modeling
 data-science/   statistical-analysis/experimentation/causal-inference/analytics-engineering
-blockchain/     core/cryptography/ethereum/bitcoin/patterns/application/web3/testing/infrastructure/security/management
+blockchain/     core/cryptography/ethereum/bitcoin/patterns/application/web3/testing/infrastructure/security/management/solana/defi
 
 ## Compression
 

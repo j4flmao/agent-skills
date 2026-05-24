@@ -10,13 +10,13 @@ compatibility:
   cursor: true
   codex: true
   windsuf: true
-tags: [blockchain, patterns, architecture, design, phase-blockchain]
+tags: [blockchain, patterns, architecture, design, tokens, standards, phase-blockchain]
 ---
 
 # blockchain-patterns
 
 ## Trigger
-"blockchain pattern", "token standard", "ERC-20", "ERC-721", "ERC-1155", "ERC-4626", "ERC-4337", "upgradeable contract", "proxy pattern", "UUPS", "oracle pattern", "bridge pattern", "layer 2", "state channel", "sidechain", "MEV", "cross-chain", "blockchain design pattern", "smart contract pattern"
+"blockchain pattern", "token standard", "ERC-20", "ERC-721", "ERC-1155", "ERC-4626", "ERC-4337", "ERC-2612", "ERC-3525", "ERC-3643", "ERC-4907", "ERC-5192", "permit", "upgradeable contract", "proxy pattern", "UUPS", "oracle pattern", "bridge pattern", "layer 2", "state channel", "sidechain", "MEV", "cross-chain", "blockchain design pattern", "smart contract pattern", "vault pattern", "yield-bearing vault", "semi-fungible", "soulbound"
 
 ## Rules
 1. Use UUPS proxy pattern as default for upgradeable contracts (cheaper deployment than transparent)

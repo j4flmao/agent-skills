@@ -1,6 +1,6 @@
 # .codex/AGENTS.md -- j4flmao/skills
 
-Codex CLI project config for the agent skill suite. 299 skills, compressed output, stack-based routing.
+Codex CLI project config for the agent skill suite. 301 skills, compressed output, stack-based routing.
 
 ## Compress (ALWAYS)
 
@@ -91,7 +91,8 @@ quality/     -> quality-e2e-testing, quality-visual-testing, quality-load-testin
 blockchain/  -> blockchain-core, blockchain-cryptography, blockchain-ethereum,
                 blockchain-bitcoin, blockchain-patterns, blockchain-application,
                 blockchain-web3, blockchain-testing, blockchain-infrastructure,
-                blockchain-security, blockchain-management
+                blockchain-security, blockchain-management, blockchain-solana,
+                blockchain-defi
 ```
 
 ### Stack detection
@@ -117,6 +118,6 @@ agent-skills/
   .gemini/           Gemini
   .cursor/           Cursor
   .codex/            Codex CLI (this file)
-  skills/            299 skills
+  skills/            301 skills
   bundles/           16 bundle definitions
 ```

@@ -10,7 +10,7 @@ compatibility:
   cursor: true
   codex: true
   windsuf: true
-tags: [blockchain, core, consensus, cryptography, protocol, phase-blockchain]
+tags: [blockchain, core, consensus, cryptography, protocol, state-machine, phase-blockchain]
 ---
 
 # blockchain-core
