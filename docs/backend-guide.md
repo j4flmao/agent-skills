@@ -22,7 +22,7 @@
 | **Deno** | `backend/deno/` | — | — |
 | **Bun** | `backend/bun/` | — | — |
 
-### Universal Patterns (25 skills)
+### Universal Patterns (26 skills)
 
 | Pattern | Skill | Focus |
 |---------|-------|-------|
@@ -30,6 +30,7 @@
 | API Gateway | `backend/universal/api-gateway/` | Kong, Envoy, Traefik, rate limiting |
 | API Response | `backend/universal/api-response/` | Envelope format, error codes, pagination |
 | Auth Patterns | `backend/universal/auth-patterns/` | JWT, OAuth 2.0, session, MFA |
+| Authorization | `backend/universal/authorization/` | RBAC, ABAC, ReBAC, policy engines, JIT elevation |
 | Background Jobs | `backend/universal/background-jobs/` | Queues, cron, workers |
 | Caching | `backend/universal/caching/` | Redis, CDN, in-memory, cache invalidation |
 | Clean Architecture | `backend/universal/clean-architecture/` | Ports & adapters, dependency rule |
@@ -195,6 +196,7 @@ Problem: I need to secure my backend
 - `skills/backend/universal/api-gateway/SKILL.md`
 - `skills/backend/universal/api-response/SKILL.md`
 - `skills/backend/universal/auth-patterns/SKILL.md`
+- `skills/backend/universal/authorization/SKILL.md`
 - `skills/backend/universal/background-jobs/SKILL.md`
 - `skills/backend/universal/caching/SKILL.md`
 - `skills/backend/universal/clean-architecture/SKILL.md`

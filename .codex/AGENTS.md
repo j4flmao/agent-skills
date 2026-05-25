@@ -1,6 +1,6 @@
 # .codex/AGENTS.md -- j4flmao/skills
 
-Codex CLI project config for the agent skill suite. 417 skills, compressed output, stack-based routing.
+Codex CLI project config for the agent skill suite. 420 skills, compressed output, stack-based routing.
 
 ## Compress (ALWAYS)
 
@@ -24,7 +24,7 @@ backend/     -> nestjs, nodejs, elysia, go, rust, python, spring, dotnet, rails,
                universal: oop, api-design, api-response, database, auth, testing,
                grpc, websocket, message-queue, caching, rate-limiting, load-testing, api-gateway,
                graphql, bg-jobs, search, streaming, file-storage, feature-flags, i18n, logging,
-               cqrs, event-sourcing, saga, outbox
+               cqrs, event-sourcing, saga, outbox, authorization
 frontend/    -> react, nextjs, vue, nuxt, angular, sveltekit,
                remix, astro, solidjs, qwik, svelte-core
                universal: state, a11y, design-system, performance, testing, microfrontend,
@@ -61,7 +61,9 @@ ai/          -> ai-prompt-engineering, ai-rag-patterns, ai-llm-ops,
 security/    -> security-sast-dast, security-sbom, security-secrets-management,
                 security-container-security, security-api-security,
                 security-data-security, soc-operations, siem-engineering,
-                soar-automation, threat-intelligence, edr-xdr
+                soar-automation, threat-intelligence, edr-xdr,
+                zero-trust, cspm, penetration-testing, iam-governance,
+                rbac, abac
 ml/          -> ml-experiment-tracking, ml-classical-ml, ml-deep-learning,
                 ml-feature-engineering, ml-hyperparameter-tuning,
                 ml-model-evaluation, ml-model-interpretability, ml-time-series,
@@ -119,6 +121,6 @@ agent-skills/
   .gemini/           Gemini
   .cursor/           Cursor
   .codex/            Codex CLI (this file)
-  skills/            304 skills
+  skills/            420 skills
   bundles/           16 bundle definitions
 ```

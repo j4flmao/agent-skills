@@ -115,7 +115,7 @@ No keyword match? Agent routes through `master-orchestrator`, detects the projec
 |-------|--------|
 | **0 — Core** | `master-orchestrator`, `project-init`, `onboarding`, `context-compressor` |
 | **1 — Planning** | `create-brief`, `create-prd`, `create-adr`, `create-tech-spec`, `create-story`, `planning-create-roadmap`, `planning-create-pitch-deck`, `planning-market-analysis`, `management-cost-benefit`, `bpmn-modeling`, `bdd-atdd` |
-| **2 — Backend Universal** | `oop-principles`, `design-patterns`, `backend-microservices`, `backend-clean-architecture`, `backend-api-design`, `api-response`, `backend-database-patterns`, `backend-auth-patterns`, `backend-event-driven`, `backend-testing`, `grpc-patterns`, `websocket-patterns`, `message-queue`, `backend-caching`, `rate-limiting`, `load-testing`, `api-gateway`, `backend-graphql-patterns`, `backend-background-jobs`, `backend-search-patterns`, `backend-data-streaming`, `backend-file-storage`, `backend-feature-flags`, `backend-internationalization`, `backend-structured-logging`, `backend-observability`, `backend-resilience-patterns`, `backend-openapi-documentation`, `backend-contract-testing`, `backend-idempotency`, `backend-distributed-locking`, `backend-webhooks`, `backend-api-versioning`, `backend-scheduling-cron`, `backend-multi-tenancy`, `backend-bff-pattern`, `backend-data-masking`, `backend-audit-logging`, `backend-plugin-architecture`, `backend-cqrs-patterns`, `backend-event-sourcing`, `backend-saga-patterns`, `backend-transactional-outbox` |
+| **2 — Backend Universal** | `oop-principles`, `design-patterns`, `backend-microservices`, `backend-clean-architecture`, `backend-api-design`, `api-response`, `backend-database-patterns`, `backend-auth-patterns`, `backend-event-driven`, `backend-testing`, `grpc-patterns`, `websocket-patterns`, `message-queue`, `backend-caching`, `rate-limiting`, `load-testing`, `api-gateway`, `backend-graphql-patterns`, `backend-background-jobs`, `backend-search-patterns`, `backend-data-streaming`, `backend-file-storage`, `backend-feature-flags`, `backend-internationalization`, `backend-structured-logging`, `backend-observability`, `backend-resilience-patterns`, `backend-openapi-documentation`, `backend-contract-testing`, `backend-idempotency`, `backend-distributed-locking`, `backend-webhooks`, `backend-api-versioning`, `backend-scheduling-cron`, `backend-multi-tenancy`, `backend-bff-pattern`, `backend-data-masking`, `backend-audit-logging`, `backend-plugin-architecture`, `backend-cqrs-patterns`, `backend-event-sourcing`, `backend-saga-patterns`, `backend-transactional-outbox`, `backend-authorization` |
 | **2b — Stack Backend** | `nestjs-a/p`, `nodejs-a/p`, `elysia-a/p`, `backend-go-a/p`, `rust-a/p`, `python-fastapi`, `python-django`, `backend-spring-boot-a`, `dotnet-a/p`, `backend-rails`, `php-pure`, `php-laravel`, `php-zend`, `backend-kotlin-a/p`, `java-micronaut`, `java-quarkus`, `scala-play`, `swift-vapor`, `python-flask`, `php-symfony`, `nodejs-hono`, `nodejs-fastify`, `deno-oak`, `backend-bun`, `backend-elixir`, `backend-deno` |
 | **3 — Frontend Universal** | `frontend-design-system`, `frontend-state-management`, `frontend-performance`, `frontend-accessibility`, `frontend-testing`, `frontend-patterns`, `frontend-microfrontend`, `tailwind-css`, `frontend-storybook`, `frontend-pwa`, `frontend-seo`, `frontend-animation`, `frontend-form-handling`, `frontend-data-fetching`, `frontend-bundler-tools`, `frontend-image-optimization`, `frontend-theming`, `frontend-internationalization`, `frontend-authentication`, `frontend-error-handling`, `frontend-rendering-strategies`, `frontend-css-strategy`, `frontend-typescript-patterns`, `frontend-security`, `frontend-browser-caching`, `frontend-responsive-design`, `frontend-feature-flags` |
 | **3b — Stack Frontend** | `react-a`, `react-nextjs`, `vue-a`, `vue-nuxt`, `angular-a/p`, `frontend-sveltekit`, `remix-a/p`, `frontend-astro-a`, `solidjs-a/p`, `qwik-a`, `svelte-a/p`, `frontend-lit`, `frontend-preact`, `frontend-alpinejs`, `frontend-htmx`, `frontend-ember`, `frontend-stencil`, `frontend-web-components` |
@@ -124,7 +124,7 @@ No keyword match? Agent routes through `master-orchestrator`, detects the projec
 | **5 — DevOps** | `docker-patterns`, `cicd-pipeline`, `kubernetes-patterns`, `devops-observability`, `helm-patterns`, `devops-terraform`, `devops-ansible`, `devops-jenkins`, `devops-longhorn`, `devops-monitoring`, `github-actions`, `devops-gitops`, `devops-vault`, `devops-aws`, `devops-serverless`, `devops-monorepo`, `dependency-management`, `api-documentation`, `devops-argo-cd`, `devops-azure`, `devops-gcp`, `devops-chaos-engineering`, `devops-service-mesh`, `devops-finops`, `devops-backup-dr`, `devops-database-migration`, `devops-incident-response`, `devops-nomad`, `devops-dataops`, `devops-mlops`, `kubernetes-for-data`, `cloud-cost-optimization`, `devops-bare-metal`, `devops-datacenter`, `devops-network-infrastructure`, `devops-storage-infrastructure`, `devops-cdn-edge`, `devops-hybrid-cloud`, `devops-pulumi`, `devops-crossplane`, `devops-gitlab-ci`, `devops-circleci`, `devops-kubernetes-autoscaling`, `devops-apm-observability`, `devops-cilium-ebpf`, `devops-opentelemetry`, `devops-oracle-cloud`, `devops-digitalocean`, `devops-ibm-cloud`, `devops-alibaba-cloud`, `devops-hetzner` |
 | **6 — Management** | `management-pm`, `management-ba`, `management-qa`, `management-qc`, `team-rules`, `management-security`, `management-pentesting`, `management-alerting`, `management-okr-kpi`, `management-sprint-retro`, `management-risk-management`, `management-hiring`, `management-stakeholder`, `agile-scrum-kanban`, `team-topology`, `change-management` |
 | **7 — AI** | `ai-prompt-engineering`, `ai-rag-patterns`, `ai-llm-ops`, `ai-vector-databases`, `ai-ai-agents`, `ai-ai-evals`, `ai-model-training`, `ai-embeddings`, `ai-multimodal`, `ai-ai-safety`, `ai-ai-testing`, `ai-ai-cost-optimization`, `ai-langchain-patterns`, `ai-mcp-patterns`, `ai-ai-observability` |
-| **7b — Security** | `security-sast-dast`, `security-sbom`, `security-secrets-management`, `security-container-security`, `security-api-security`, `security-data-security`, `zero-trust`, `cspm`, `penetration-testing`, `iam-governance` |
+| **7b — Security** | `security-sast-dast`, `security-sbom`, `security-secrets-management`, `security-container-security`, `security-api-security`, `security-data-security`, `zero-trust`, `cspm`, `penetration-testing`, `iam-governance`, `rbac`, `abac` |
 | **7c — Data** | `data-etl-pipeline`, `data-data-warehouse`, `data-streaming`, `data-bi-tools`, `data-data-quality`, `data-distributed-storage`, `data-distributed-compute`, `data-data-lake`, `data-data-lakehouse`, `data-batch-processing`, `data-workflow-orchestration`, `data-cdc-patterns`, `data-data-replication`, `data-data-platform`, `data-data-catalog`, `data-data-observability`, `data-data-contracts`, `data-data-mesh`, `data-data-versioning`, `data-data-api`, `data-data-virtualization`, `data-schema-registry`, `data-relational-database`, `data-nosql-database`, `data-graph-database`, `data-search-engine`, `data-lineage`, `data-cost-optimization`, `data-testing`, `data-feature-store`, `data-reverse-etl`, `data-pipeline-cicd`, `data-clean-room`, `data-formats`, `data-data-strategy`, `data-dimensional-modeling` |
 | **7d — Data Science** | `statistical-analysis`, `experimentation`, `causal-inference`, `analytics-engineering` |
 | **7e — Design** | `design-design-systems`, `design-ux-research`, `design-accessibility`, `design-prototyping`, `visual-design`, `brand-identity`, `information-architecture`, `motion-design` |
@@ -202,7 +202,7 @@ Agent config files contain the compression rules:
 │   │   ├── elixir/       Elixir
 │   │   ├── deno/         Deno (oak)
 │   │   ├── bun/          Bun
-│   │   └── universal/    45 skills (incl. firebase, supabase)
+│   │   └── universal/    46 skills (incl. authorization, firebase, supabase)
 │   ├── frontend/     52 skills (25 stack + 27 universal)
 │   │   ├── react/        React (architecture, nextjs)
 │   │   ├── vue/          Vue (architecture, nuxt, patterns)
@@ -248,7 +248,7 @@ Agent config files contain the compression rules:
 │   ├── product/       10 skills (8 + customer-journey, persona-development)
 │   ├── ai/            15 skills
 │   ├── ml/            16 skills (15 + math-foundations)
-│   ├── security/      15 skills
+│   ├── security/      17 skills
 │   ├── data-science/   4 skills
 │   ├── data/          36 skills
 │   ├── design/        8 skills
@@ -257,7 +257,7 @@ Agent config files contain the compression rules:
     └── bundle-definitions.json
 ```
 
-Total: **415 SKILL.md** + **1202+ reference .md files** + **18 docs/ guides** + **agent configs** = **1460+ files**.
+Total: **418 SKILL.md** + **1209+ reference .md files** + **18 docs/ guides** + **agent configs** = **1460+ files**.
 
 ## License
 

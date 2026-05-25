@@ -1,4 +1,4 @@
-# Routing -- 417 skills
+# Routing -- 420 skills
 
 ## Entry
 
@@ -27,6 +27,8 @@ deno/bun/prisma/drizzle           -> backend/{name}
 oop/solid/microservices           -> backend/universal/
 api-design/api-response/database  -> backend/universal/
 auth/event-driven/testing         -> backend/universal/
+authorization/access-control      -> backend/universal/authorization
+rbac/abac/role-hierarchy/casbin   -> backend/universal/authorization
 grpc/protobuf/websocket           -> backend/universal/
 kafka/rabbitmq/message-queue      -> backend/universal/
 redis/caching/cdn                 -> backend/universal/
@@ -171,6 +173,9 @@ zero-trust/zta/beyondcorp            -> security/zero-trust
 cspm/wiz/prisma-cloud                 -> security/cspm
 pentest/penetration-test              -> security/penetration-testing
 iam-governance/access-review          -> security/iam-governance
+rbac/enterprise-rbac/role-engineering/sod -> security/rbac
+admin-pattern/break-glass/super-admin/temporary-elevation/delegation -> security/rbac
+abac/attribute-based/fine-grained/opa-rego/hybrid-rbac-abac -> security/abac
 
 # blockchain
 consensus/pow/pos/pbft/hotstuff/node-implementation  -> blockchain/blockchain-core
@@ -202,7 +207,7 @@ planning -> backend -> frontend -> mobile -> desktop -> dev-loop -> devops -> ma
 | core (4) | master-orchestrator, project-init, onboarding, context-compressor |
 | planning (12) | create-brief, create-prd, create-adr, create-tech-spec, create-story, create-roadmap, create-pitch-deck, market-analysis, cost-benefit, solution-architecture, bpmn-modeling, bdd-atdd |
 | backend-stack (29) | nestjs, nodejs, elysia, golang, rust, python-fastapi, python-django, python-flask, spring-boot, dotnet, rails, php-pure, php-laravel, php-zend, php-symfony, nodejs-hono, nodejs-express, nodejs-fastify, deno-oak, swift-vapor, scala-play, java-micronaut, java-quarkus, kotlin, elixir, bun, deno, prisma, drizzle |
-| backend-universal (45) | oop-principles, design-patterns, microservices, clean-architecture, api-design, api-response, database-patterns, auth-patterns, event-driven, testing, grpc-patterns, websocket-patterns, message-queue, caching, rate-limiting, load-testing, api-gateway, graphql-patterns, background-jobs, search-patterns, data-streaming, file-storage, feature-flags, internationalization, structured-logging, observability, resilience-patterns, openapi-documentation, contract-testing, idempotency, distributed-locking, webhooks, api-versioning, scheduling-cron, multi-tenancy, bff-pattern, data-masking, audit-logging, plugin-architecture, cqrs-patterns, event-sourcing, saga-patterns, transactional-outbox, firebase, supabase |
+| backend-universal (46) | oop-principles, design-patterns, microservices, clean-architecture, api-design, api-response, database-patterns, auth-patterns, event-driven, testing, grpc-patterns, websocket-patterns, message-queue, caching, rate-limiting, load-testing, api-gateway, graphql-patterns, background-jobs, search-patterns, data-streaming, file-storage, feature-flags, internationalization, structured-logging, observability, resilience-patterns, openapi-documentation, contract-testing, idempotency, distributed-locking, webhooks, api-versioning, scheduling-cron, multi-tenancy, bff-pattern, data-masking, audit-logging, plugin-architecture, cqrs-patterns, event-sourcing, saga-patterns, transactional-outbox, authorization, firebase, supabase |
 | frontend-stack (25) | react, react-nextjs, vue, vue-nuxt, angular, sveltekit, remix-architecture, remix-patterns, astro-architecture, astro-patterns, solidjs-architecture, solidjs-patterns, qwik-architecture, qwik-patterns, svelte-architecture, svelte-patterns, vue-patterns, alpinejs, ember, htmx, preact, stencil, lit, web-components, ar-vr |
 | frontend-universal (27) | patterns, state-management, accessibility, design-system, performance, testing, microfrontend, tailwind-css, storybook, pwa, seo, animation, form-handling, data-fetching, bundler-tools, image-optimization, theming, authentication, error-handling, rendering-strategies, css-strategy, typescript-patterns, browser-caching, responsive-design, internationalization, feature-flags, security |
 | mobile-stack (7) | ios, android, flutter, react-native, kotlin-multiplatform, ionic-capacitor, dotnet-maui |
@@ -212,7 +217,7 @@ planning -> backend -> frontend -> mobile -> desktop -> dev-loop -> devops -> ma
 | devops (56) | docker-patterns, cicd-pipeline, kubernetes-patterns, observability, helm-patterns, terraform, ansible, jenkins, longhorn, monitoring, github-actions, gitops, vault, aws, serverless, monorepo, dependency-management, api-documentation, argo-cd, azure, gcp, chaos-engineering, service-mesh, finops, backup-dr, database-migration, dataops, mlops, kubernetes-for-data, cloud-cost-optimization, cloud-architecture, nomad, incident-response, cost-benefit, devops-hiring, platform-engineering, sre-practices, internal-developer-platform, kubernetes-operators, gitops-advanced, progressive-delivery, policy-as-code, cloud-migration, pulumi, crossplane, gitlab-ci, circleci, kubernetes-autoscaling, apm-observability, cilium-ebpf, opentelemetry, oracle-cloud, digitalocean, ibm-cloud, alibaba-cloud, hetzner |
 | management (17) | pm, ba, qa, qc, team-rules, security, pentesting, alerting, okr-kpi, sprint-retro, risk-management, hiring, stakeholder, cost-benefit, agile-scrum-kanban, team-topology, change-management |
 | ai (15) | ai-prompt-engineering, ai-rag-patterns, ai-llm-ops, ai-vector-databases, ai-ai-agents, ai-ai-evals, ai-model-training, ai-embeddings, ai-multimodal, ai-ai-safety, ai-ai-testing, ai-ai-cost-optimization, ai-langchain-patterns, ai-mcp-patterns, ai-ai-observability |
-| security (15) | security-sast-dast, security-sbom, security-secrets-management, security-container-security, security-api-security, security-data-security, soc-operations, siem-engineering, soar-automation, threat-intelligence, edr-xdr, zero-trust, cspm, penetration-testing, iam-governance |
+| security (17) | security-sast-dast, security-sbom, security-secrets-management, security-container-security, security-api-security, security-data-security, soc-operations, siem-engineering, soar-automation, threat-intelligence, edr-xdr, zero-trust, cspm, penetration-testing, iam-governance, rbac, abac |
 | data (36) | data-etl-pipeline, data-data-warehouse, data-streaming, data-bi-tools, data-data-quality, data-distributed-storage, data-distributed-compute, data-data-lake, data-data-lakehouse, data-batch-processing, data-workflow-orchestration, data-cdc-patterns, data-data-replication, data-data-platform, data-data-catalog, data-data-observability, data-data-contracts, data-data-mesh, data-data-versioning, data-data-api, data-data-virtualization, data-schema-registry, data-relational-database, data-nosql-database, data-graph-database, data-search-engine, data-clean-room, data-cost-optimization, data-formats, data-lineage, data-pipeline-cicd, data-testing, data-reverse-etl, data-data-strategy, data-dimensional-modeling |
 | ml (16) | ml-experiment-tracking, ml-classical-ml, ml-deep-learning, ml-feature-engineering, ml-hyperparameter-tuning, ml-model-evaluation, ml-model-interpretability, ml-time-series, ml-nlp, ml-computer-vision, ml-recommender, ml-anomaly-detection, ml-ml-pipeline, ml-feature-store, ml-model-serving, ml-math-foundations |
 | data-science (4) | statistical-analysis, experimentation, causal-inference, analytics-engineering |
