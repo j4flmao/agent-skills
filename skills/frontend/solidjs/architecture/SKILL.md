@@ -126,6 +126,8 @@ Route params are signals: `const params = useParams()`. Prefetch with `<Link>`.
 ## References
 - `references/solid-reactivity.md` — signals, memos, effects, stores, batching
 - `references/solid-components.md` — JSX, control flow, context, portals, lifecycle
+- `references/solidjs-reactivity.md` — signals, createStore, createResource, batching, context API
+- `references/solidjs-optimization.md` — compiler optimizations, avoiding re-renders, memoization, lazy loading
 
 ## Handoff
 No artifact produced.

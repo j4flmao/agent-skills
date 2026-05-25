@@ -8,7 +8,7 @@
 
 | Stack | Architecture | Patterns | Extra |
 |-------|-------------|----------|-------|
-| **Node.js** | `backend/nodejs/architecture/` | `backend/nodejs/patterns/` | express/, prisma/ |
+| **Node.js** | `backend/nodejs/architecture/` | `backend/nodejs/patterns/` | express/, prisma/, drizzle/ |
 | **NestJS** | `backend/nestjs/architecture/` | `backend/nestjs/patterns/` | — |
 | **Go** | `backend/go/architecture/` | `backend/go/patterns/` | — |
 | **Rust** | `backend/rust/architecture/` | `backend/rust/patterns/` | — |
@@ -51,6 +51,8 @@
 | Structured Logging | `backend/universal/structured-logging/` | Winston, Pino, structured context |
 | Testing | `backend/universal/testing/` | Unit, integration, e2e, mocking |
 | WebSocket Patterns | `backend/universal/websocket-patterns/` | WS, Socket.IO, SSE, real-time |
+| Firebase | `backend/universal/firebase/` | Firestore, Auth, Storage, Cloud Functions, Hosting |
+| Supabase | `backend/universal/supabase/` | PostgreSQL, RLS, Auth, Realtime, Edge Functions, pgvector |
 
 ## Decision Framework
 

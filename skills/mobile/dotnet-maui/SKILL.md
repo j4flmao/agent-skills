@@ -107,9 +107,10 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ```
 
 ## References
-
-- `references/maui-architecture.md` — Project setup, Shell, navigation, MVVM basics
-- `references/maui-mvvm.md` — CommunityToolkit.Mvvm, data binding, DI, testing
+- `references/maui-architecture.md` — Maui Architecture
+- `references/maui-controls.md` — Maui Controls
+- `references/maui-mvvm.md` — Maui Mvvm
+- `references/maui-structure.md` — Maui Structure
 
 ## Handoff
 Hand off to iOS/Android native skills when platform handler customization requires deep UIKit or Android Views API knowledge.

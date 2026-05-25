@@ -186,6 +186,7 @@ async function handleOrderPlaced(event: OutboxEvent): Promise<void> {
 - `references/outbox-implementations.md` — Outbox implementations across databases and languages
 - `references/message-relay-strategies.md` — Polling vs CDC relay, idempotent publishing, monitoring
 - `references/deduplication-idempotency.md` — Consumer-side dedup, idempotency keys, exactly-once processing
+- `references/outbox-deployment.md` — Outbox deployment, K8s config, CI/CD, operational monitoring
 
 ## Handoff
 No artifact produced.

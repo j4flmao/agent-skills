@@ -104,6 +104,8 @@ Schedule monthly optimization review with cost center owners. Analyze underutili
 ## References
 - `references/cost-allocation.md` — Tagging strategy and cost allocation models
 - `references/budget-anomaly.md` — Budget management and anomaly detection
+- `references/budget-policies.md` — Budget policy templates and approval workflows
+- `references/cost-governance-practices.md` — Cloud cost governance practices including chargeback/showback
 
 ## Handoff
 For multi-tenant cost tracking, hand off to `enterprise-multi-tenant`. For compliance cost reporting, hand off to `enterprise-compliance-audit`.

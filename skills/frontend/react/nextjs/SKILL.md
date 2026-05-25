@@ -196,6 +196,8 @@ export async function createUser(formData: FormData) {
 ## References
 - `references/app-router.md` — App Router routes, layouts, data fetching, route handlers
 - `references/server-components.md` — Server Component default, `'use client'` rules, composition
+- `references/nextjs-data-fetching.md` — Data fetching strategies, caching, revalidation, streaming
+- `references/nextjs-deployment.md` — Deployment, Docker, CI/CD, build optimization, monitoring
 
 ## Handoff
 No artifact produced.

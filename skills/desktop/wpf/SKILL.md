@@ -209,8 +209,10 @@ public partial class App : Application
 ## References
 
 ### Reference Files
-- `references/wpf-architecture.md` — Project structure, DI, lifecycle, threading
+- `references/wpf-architecture.md` — MVVM pattern, XAML, data binding, dependency properties, commands, attached behaviors, routed events
 - `references/wpf-mvvm-patterns.md` — MVVM patterns, commands, validation, testing
+- `references/wpf-performance.md` — UI virtualization, rendering optimization, memory management, async patterns, profiling tools
+- `references/wpf-best-practices.md` — WPF best practices, MVVM, DI, styling, performance tips
 
 ### Related Skills
 - `desktop/winui3/SKILL.md` — Modern Windows UI with WinAppSDK

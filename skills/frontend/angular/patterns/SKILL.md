@@ -234,6 +234,8 @@ export class TruncatePipe implements PipeTransform {
 ## References
 - `references/di-patterns.md` — InjectionToken, multi providers, factory providers
 - `references/rxjs-patterns.md` — HttpClient, interceptors, RxJS operators by use case
+- `references/angular-testing.md` — component testing, service testing, directive testing, integration tests
+- `references/angular-performance.md` — OnPush, signals, lazy loading, bundle optimization, defer, virtual scroll
 
 ## Handoff
 No artifact produced.

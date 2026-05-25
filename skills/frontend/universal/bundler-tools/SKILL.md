@@ -136,6 +136,8 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 - `references/vite-config.md` — Vite config, plugins, SSR, build optimization, migration from Webpack
 - `references/bundle-optimization.md` — Code splitting, tree shaking, asset pipeline, caching, performance budgets
+- `references/bundler-comparison.md` — Vite vs Webpack vs Turbopack vs Parcel vs Rspack, migration paths, plugin equivalents
+- `references/bundler-optimization.md` — Bundle budgets, vendor splitting, tree shaking, asset pipeline, compression, analysis
 
 ---
 

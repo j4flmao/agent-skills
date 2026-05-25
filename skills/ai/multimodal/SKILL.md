@@ -155,8 +155,10 @@ class MultimodalRAG:
 - Open-source VLMs (LLaVA, Qwen-VL) run on A100s with ~8-16GB VRAM.
 
 ## References
-- `references/vision-language-models.md` — CLIP, LLaVA, BLIP, Qwen-VL, GPT-4V comparison, prompting
-- `references/multimodal-rag.md` — Multimodal RAG architecture, image+text retrieval, video understanding
+- `references/audio-models.md` — Audio Models
+- `references/multimodal-rag.md` — Multimodal Rag
+- `references/vision-language-models.md` — Vision Language Models
+- `references/vision-models.md` — Vision Models
 
 ## Handoff
 For text-only RAG, hand off to `ai-rag-patterns`. For embedding model selection, hand off to `ai-embeddings`. For fine-tuning vision-language models, hand off to `ai-model-training`.

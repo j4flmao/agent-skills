@@ -270,9 +270,9 @@ Actioned feedback encourages more participation.
 
 ## References
 - `references/stakeholder-mapping.md`
-  Power/influence grid, salience model, RACI matrix,
-  stakeholder persona creation, quadrant strategies
 - `references/communication-plan.md`
+- `references/status-report-template.md`
+- `references/stakeholder-management.md`
   Cadence design, channel selection, status reports,
   escalation triggers, feedback loops, surveys
 

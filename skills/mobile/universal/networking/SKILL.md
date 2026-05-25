@@ -161,15 +161,10 @@ class OrderPagination {
 ```
 
 ## References
-
-### Reference Files
-- `references/rest-client.md` — interceptors, error handling, auth headers
-- `references/offline-first.md` — cache strategy, sync queue, conflict resolution
-- `references/caching.md` — HTTP caching, TTL, invalidation, cache-first vs network-first
-
-### Related Skills
-- `mobile/universal/security/SKILL.md` — secure networking, certificate pinning
-- `mobile/universal/storage/SKILL.md` — local cache persistence
+- `references/caching.md` — Caching
+- `references/mobile-networking-patterns.md` — Mobile Networking Patterns
+- `references/offline-first.md` — Offline First
+- `references/rest-client.md` — Rest Client
 
 ## Handoff
 

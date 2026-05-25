@@ -102,8 +102,10 @@ OAuth2:    Authorization: Bearer <access-token> (from token endpoint)
 - **debugging-strategy** — Debug failed API calls using generated curl verbose output for request inspection
 
 ## References
-
-- [API Client Examples](references/api-client-examples.md)
+- `references/api-client-examples.md` — Api Client Examples
+- `references/client-test-patterns.md` — Client Test Patterns
+- `references/client-test-strategies.md` — Client Test Strategies
+- `references/codegen-comparison.md` — Codegen Comparison
 
 ## Handoff
 master-orchestrator. Generated client code examples can be passed to the main orchestrator for integration into test suites, API documentation, example galleries, or application code.

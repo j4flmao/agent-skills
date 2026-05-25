@@ -106,6 +106,9 @@ Risk register populated with at least 5-10 identified risks across multiple cate
 ## References
 
 - [Risk Register Template](references/risk-register.md)
+- [Mitigation Strategies](references/mitigation-strategies.md)
+- [Risk Assessment Matrix](references/risk-assessment-matrix.md)
+- [Risk Management Framework](references/risk-management-framework.md)
 
 ## Handoff
 sprint-retro (the risk register is reviewed at every sprint retro), create-roadmap (risk scores inform timeline adjustments and buffer allocation on the roadmap).

@@ -327,8 +327,9 @@ GET /collections/products/documents/search
 
 ## References
 - `references/elasticsearch-architecture.md` — Node types, shards/replicas, mapping, analysis, indexing, cluster management, ILM
-- `references/search-aggregation.md` — Full-text search, term/boolean/fuzzy queries, aggregations, performance tuning, OpenSearch
 - `references/modern-search-engines.md` — Meilisearch milli/LMDB, Typesense hybrid text+vector search, curation rules, comparison matrix
+- `references/search-aggregation.md` — Full-text search, term/boolean/fuzzy queries, aggregations, performance tuning, OpenSearch
+- `references/search-engine-optimization.md` — ES/OS/Solr tuning, indexing strategies, shard/routing optimization, query performance, relevancy, synonyms, stemming, faceted search
 
 ## Handoff
 `data-relational-database` for source data

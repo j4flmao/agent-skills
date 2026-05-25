@@ -133,6 +133,8 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 - `references/tanstack-query.md` — Queries, mutations, cache, pagination, SSR
 - `references/fetching-patterns.md` — SWR, RTK Query, race conditions, request dedup, retry
+- `references/data-fetching-patterns.md` — Deduplication, race conditions, parallel/dependent queries, pagination, prefetching, optimistic updates
+- `references/data-fetching-caching.md` — Cache architecture, stale time, persistence, cache key design, invalidation, offline support
 
 ---
 

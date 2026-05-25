@@ -206,6 +206,8 @@ function PricingPage() {
 ## References
 - `references/flag-providers.md` — LaunchDarkly, Split.io, Flagsmith integration patterns
 - `references/flag-strategies.md` — targeting rules, percentage rollouts, A/B test design
+- `references/feature-flag-systems.md` — Flag types, provider setups, custom backend, evaluation context, gradual rollout plan
+- `references/feature-flag-testing.md` — Mocking, component tests, integration tests, E2E, flag combinations, rollout logic validation
 
 ## Handoff
 No artifact produced.

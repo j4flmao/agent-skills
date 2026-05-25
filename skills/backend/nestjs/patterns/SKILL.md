@@ -171,6 +171,7 @@ export class OrderConsumer {
 - `references/guards-interceptors.md` — guards, interceptors, middleware
 - `references/pipes-filters.md` — validation pipes, exception filters
 - `references/microservices.md` — message patterns, transport options, client proxy
+- `references/nestjs-testing.md` — Unit tests, integration tests, guards, pipes, mocking
 
 ## Handoff
 No artifact produced.

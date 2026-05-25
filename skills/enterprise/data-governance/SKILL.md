@@ -97,6 +97,8 @@ Define retention schedules per classification (PII: 6 years, logs: 90 days, busi
 ## References
 - `references/data-classification.md` — Classification levels and control mapping
 - `references/data-lineage.md` — Lineage tracking and impact analysis
+- `references/data-policies.md` — Data governance policy templates and compliance mappings
+- `references/data-governance-framework.md` — DAMA-DMBOK framework, data stewardship, catalog, quality, ownership models
 
 ## Handoff
 For compliance requirements on data handling, hand off to `enterprise-compliance-audit`. For multi-tenant data isolation, hand off to `enterprise-multi-tenant`.

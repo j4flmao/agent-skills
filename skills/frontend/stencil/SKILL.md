@@ -178,6 +178,8 @@ npm run build
 ## References
 - `references/stencil-setup.md` — CLI, config, build output, testing, framework bindings
 - `references/stencil-components.md` — decorators, lifecycle, slots, styling, patterns
+- `references/stencil-architecture.md` — component composition, state management, slots, forms, lifecycle
+- `references/stencil-deployment.md` — output targets, framework bindings, NPM publishing, SSR
 
 ## Handoff
 No artifact produced.

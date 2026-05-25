@@ -190,6 +190,8 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
 ## References
 - `references/module-structure.md` — NestJS module organization and dependency direction
 - `references/ddd-nestjs.md` — DDD patterns: entities, value objects, domain events
+- `references/nestjs-modules.md` — Module types, dynamic modules, scopes, encapsulation
+- `references/nestjs-deployment.md` — Docker, CI/CD, platforms, graceful shutdown
 
 ## Handoff
 No artifact produced.

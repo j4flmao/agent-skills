@@ -100,6 +100,8 @@ Automate monthly SLA reports per customer. Track SLA attainment trend. Calculate
 ## References
 - `references/slo-definition.md` — SLO definition guide with SLI measurement
 - `references/error-budget.md` — Error budget calculation and burn rate alerting
+- `references/sla-monitoring.md` — SLA monitoring dashboards and compliance reporting
+- `references/sla-definitions.md` — SLA definition templates and multi-tier service structures
 
 ## Handoff
 For compliance-related SLA requirements, hand off to `enterprise-compliance-audit`. For cost implications of SLA tiers, hand off to `enterprise-cost-governance`.

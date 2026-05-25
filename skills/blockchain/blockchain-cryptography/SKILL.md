@@ -33,5 +33,13 @@ tags: [blockchain, cryptography, security, phase-blockchain]
 3. **Implementation details**: algorithm specifics, edge cases, optimization techniques
 4. **Security considerations**: known attacks, parameter choices, implementation pitfalls
 
+## References
+- references/elliptic-curve-crypto.md — secp256k1, BN254, BLS12-381, Ed25519 curves
+- references/hash-functions.md — SHA-256, Keccak-256, BLAKE2, Poseidon hashes
+- references/key-derivation-management.md — BIP-32/39/44 HD wallets and PSBT
+- references/merkle-trees.md — Binary, Patricia, sparse, and Verkle trees
+- references/signature-schemes.md — ECDSA, Schnorr, BLS, threshold signatures
+- references/zero-knowledge-deep.md — ZK-SNARKs, STARKs, and Bulletproofs
+
 ## Phase
 blockchain → blockchain-cryptography

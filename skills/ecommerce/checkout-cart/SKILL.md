@@ -61,3 +61,4 @@ Cart → Pending → Confirmed → Processing → Shipped → Delivered
 - `references/cart-architecture.md` — Cart data model and state management
 - `references/discount-engine.md` — Coupon and promotion engine design
 - `references/checkout-optimization.md` — Checkout flow optimization and conversion
+- `references/checkout-ux.md` — Checkout UX patterns, cart recovery, promotion integration, conversion

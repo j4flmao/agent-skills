@@ -130,6 +130,7 @@ ABAC (Attribute-Based Access Control):
 - `references/jwt-oauth-guide.md` — JWT structure, token rotation, OAuth2 flows
 - `references/oidc-flows.md` — OIDC authorization code, PKCE, client credentials flows
 - `references/rbac-abac.md` — RBAC vs ABAC decision guide, implementation patterns
+- `references/auth-oauth2.md` — OAuth2 grant types, PKCE, token validation, scope-based auth
 
 ## Handoff
 No artifact produced.

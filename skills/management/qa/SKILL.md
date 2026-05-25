@@ -172,6 +172,8 @@ Attachments: {logs, screenshots}
 ## References
 - `references/test-design-techniques.md` — equivalence partitioning, BVA, state transition, pairwise testing
 - `references/defect-severity-matrix.md` — severity and priority guidelines with examples
+- `references/test-case-examples.md` — Test case examples across common feature types
+- `references/test-plan-template.md` — Test plan template with scope, strategy, and resourcing
 
 ## Handoff
 After completing this skill:

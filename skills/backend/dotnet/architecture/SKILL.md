@@ -236,6 +236,8 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 ### Reference Files
 - `references/project-structure.md` — Detailed project templates with file-by-file guidance
 - `references/api-design.md` — API design patterns, versioning, OpenAPI configuration
+- `references/dotnet-clean-architecture.md` — Layer structure, dependency rule, domain purity
+- `references/dotnet-microservices.md` — Service boundaries, gRPC, messaging, resilience
 
 ### Related Skills
 - `backend/dotnet/patterns/SKILL.md` — .NET-specific patterns (MediatR CQRS, Result pattern)

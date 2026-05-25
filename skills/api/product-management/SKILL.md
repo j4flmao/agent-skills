@@ -62,3 +62,4 @@ Strategy → Design → Build → Publish → Promote → Monitor → Iterate
 - `references/api-strategy.md` — API product strategy and business models
 - `references/developer-portal.md` — Developer portal design and features
 - `references/monetization.md` — API monetization models and pricing
+- `references/product-metrics.md` — API product metrics, adoption tracking, DX measurement

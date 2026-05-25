@@ -253,8 +253,10 @@ public partial class CustomerDialog : Form
 ## References
 
 ### Reference Files
-- `references/winforms-setup.md` — Project setup, layout, data binding, deployment
+- `references/winforms-architecture.md` — Event-driven model, custom controls, data binding, MDI, GDI+ drawing, designer patterns
 - `references/winforms-controls.md` — Controls reference, customization, events
+- `references/winforms-modernization.md` — High DPI support, theming, async/await patterns, interop with WPF, .NET Core migration
+- `references/winforms-setup.md` — Project setup, layout, data binding, deployment
 
 ### Related Skills
 - `desktop/wpf/SKILL.md` — WPF for richer XAML-based Windows UIs

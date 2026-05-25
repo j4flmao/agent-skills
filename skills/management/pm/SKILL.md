@@ -168,6 +168,8 @@ Velocity: {n} / {n} points (on track / at risk / behind)
 ## References
 - `references/ceremony-guide.md` — agile ceremony timing and facilitation
 - `references/estimation-guide.md` — estimation techniques with examples
+- `references/risk-register-template.md` — Risk register template with scoring and response planning
+- `references/estimation-techniques.md` — Additional estimation techniques with worked examples
 
 ## Handoff
 After completing this skill:

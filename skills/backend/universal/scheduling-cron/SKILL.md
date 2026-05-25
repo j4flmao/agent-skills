@@ -107,6 +107,8 @@ Expose metrics: `job.duration`, `job.success`, `job.failure`, `job.last-run-time
 ## References
 - `references/scheduling-patterns.md` — Distributed scheduling patterns
 - `references/distributed-cron.md` — Distributed cron implementation guide
+- `references/scheduling-architecture.md` — Scheduling architecture, leader election, job distribution
+- `references/scheduling-monitoring.md` — Job monitoring, alerting, observability
 
 ## Handoff
 No artifact produced unless requested.

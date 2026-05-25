@@ -176,6 +176,8 @@ datasources:
 ### Reference Files
 - `references/micronaut-setup.md` — Micronaut project setup, configuration, CLI
 - `references/micronaut-testing.md` — Testing strategies, @MicronautTest, mocking
+- `references/micronaut-data.md` — Micronaut Data, repositories, DTO projections, transactions
+- `references/micronaut-deployment.md` — GraalVM native, Docker, CI/CD, AWS Lambda
 
 ### Related Skills
 - `backend/universal/api-response/SKILL.md` — API response envelope

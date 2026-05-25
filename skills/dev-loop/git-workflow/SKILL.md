@@ -156,7 +156,10 @@ git push origin v1.2.0
 Git command sequence or conventional commit template.
 
 ## References
-- `references/conventional-commits.md` — conventional commits specification
+- `references/branch-strategies.md` — Branch Strategies
+- `references/conventional-commits.md` — Conventional Commits
+- `references/git-advanced-workflows.md` — Git Advanced Workflows
+- `references/merge-conflict-resolution.md` — Merge Conflict Resolution
 
 ## Handoff
 After completing this skill:

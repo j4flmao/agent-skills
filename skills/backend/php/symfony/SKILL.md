@@ -214,6 +214,8 @@ class OrderCreatedHandler {
 ### Reference Files
 - `references/symfony-setup.md` — Symfony setup, Flex, bundles, routing
 - `references/symfony-doctrine.md` — Doctrine ORM entities, repositories, migrations
+- `references/symfony-architecture.md` — Service container, bundles, events, DI, controllers
+- `references/symfony-deployment.md` — Docker, CI/CD, platforms, caching, queue workers
 
 ### Related Skills
 - `backend/universal/api-response/SKILL.md` — API response envelope

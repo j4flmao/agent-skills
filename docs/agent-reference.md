@@ -140,7 +140,7 @@ Every skill links to reference files:
 
 ## Reference Files Pattern
 
-Each skill directory contains exactly **2 reference files** in `references/`:
+Each skill directory contains **2-4 reference files** in `references/`:
 
 ```
 skills/<category>/<skill-name>/

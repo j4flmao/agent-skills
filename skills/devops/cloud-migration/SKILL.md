@@ -58,8 +58,8 @@ Wave 4: Legacy (mainframe, specialized hardware)
 ## References
 - `references/migration-strategies.md` — 6 Rs deep dive with decision trees
 - `references/migration-phases.md` — Phased migration plan and wave planning
-- `references/post-migration.md` — Post-migration optimization and operations
 - `references/migration-tools.md` — Server migration, database migration, data transfer tools, cutover checklist, rollback triggers
+- `references/migration-testing.md` — Migration testing, cutover planning, rollback testing
 
 ## Handoff
 Related skills: cloud-architecture (landing zone), devops-aws/azure/gcp (infra setup), enterprise-legacy-migration (legacy modernization), cloud-cost-optimization.

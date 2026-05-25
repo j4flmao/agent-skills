@@ -326,6 +326,8 @@ it('mocks external call', () => {
 ### Reference Files
 - `references/bun-essentials.md` — Runtime features, Bun APIs, SQLite, file I/O
 - `references/bun-tooling.md` — Test runner, package manager, bun build, scripts
+- `references/bun-ecosystem.md` — HTTP frameworks, testing tools, ORM, validation
+- `references/bun-deployment.md` — Docker, binary compilation, CI/CD, platforms
 
 ### Related Skills
 - `backend/elysia/Elysia.md` — Elysia framework on Bun

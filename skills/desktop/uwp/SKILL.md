@@ -199,8 +199,10 @@ ToastNotificationManager.CreateToastNotifier().Show(toast);
 ## References
 
 ### Reference Files
-- `references/uwp-architecture.md` — Project structure, lifecycle, navigation, data binding
+- `references/uwp-architecture.md` — MVVM, adaptive UI, layout panels, data binding, app lifecycle, background tasks, contracts
+- `references/uwp-deployment.md` — Store submission, packaging, capabilities, sideloading, enterprise deployment, versioning
 - `references/uwp-lifecycle.md` — App lifecycle, suspension, background tasks, activation
+- `references/uwp-best-practices.md` — UWP best practices, architecture, data binding, performance
 
 ### Related Skills
 - `desktop/winui3/SKILL.md` — WinUI 3 for modern desktop-only Windows apps

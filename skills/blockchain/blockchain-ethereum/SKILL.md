@@ -34,5 +34,15 @@ tags: [blockchain, ethereum, evm, consensus, phase-blockchain]
 4. **Implementation**: relevant code patterns, configuration, optimization
 5. **Trade-offs**: security vs performance, decentralization vs throughput
 
+## References
+- references/account-abstraction-erc4337.md — ERC-4337 account abstraction with UserOps
+- references/eips-deep-dive.md — Critical EIPs including 1559, 4844, and 4337
+- references/eth-consensus-layer.md — Beacon chain, Casper FFG, and LMD-GHOST
+- references/evm-deep-dive.md — EVM architecture, opcodes, and execution model
+- references/execution-clients.md — Geth, reth, Nethermind, and Erigon internals
+- references/layer2-scaling.md — Rollups, validiums, and L2 scaling taxonomy
+- references/pbs-mev-boost.md — Proposer-builder separation and MEV-Boost
+- references/staking-and-validator.md — ETH staking, validators, and withdrawals
+
 ## Phase
 blockchain → blockchain-ethereum

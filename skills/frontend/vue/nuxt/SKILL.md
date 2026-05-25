@@ -194,6 +194,9 @@ Use layers for: shared UI library across Nuxt apps, white-label apps, base confi
 
 ## References
 - `references/nuxt-conventions.md` — Nuxt directory structure, auto-imports, useFetch, server routes
+- `references/nuxt-modules.md` — official modules, module configuration, custom modules, best practices
+- `references/nuxt-deployment.md` — build commands, deployment targets, env vars, performance budget
+- `references/nuxt-performance.md` — data fetching optimization, images, bundle optimization, lazy hydration
 
 ## Handoff
 No artifact produced.

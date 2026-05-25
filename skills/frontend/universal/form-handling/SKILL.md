@@ -276,6 +276,8 @@ describe('RegistrationForm', () => {
 
 - `references/form-libraries.md` — React Hook Form, Formik, Angular Reactive Forms, TanStack Form, library selection, setup patterns
 - `references/validation-patterns.md` — Zod schemas, field-level, form-level, async validation, error display, accessibility, file upload
+- `references/form-validation.md` — Zod schema patterns, async validation, RHF integration, validation timing, cross-field validation, error display
+- `references/form-state.md` — State machine, dirty tracking, field arrays, draft persistence, submit state, reset patterns
 
 ---
 

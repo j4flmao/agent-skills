@@ -115,6 +115,8 @@ app.post('/orders', ({ body }) => orderService.create(body), {
 ### Reference Files
 - `references/elysia-plugins.md` — Official and custom plugin development
 - `references/elysia-lifecycle.md` — Lifecycle hooks, guards, transforms
+- `references/elysia-deployment.md` — Production build, Docker, CI/CD, platform deployment
+- `references/elysia-custom-plugins.md` — Custom plugins, lifecycle hooks, adapters
 
 ### Related Skills
 - `backend/elysia/patterns/SKILL.md` — Elysia-specific patterns

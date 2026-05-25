@@ -51,4 +51,11 @@ When answering with this skill active, structure answers as:
 - References to appropriate reference file
 ```
 
+## References
+- references/circuit-programming.md — Circom, Noir, Halo2 circuit development
+- references/proof-systems.md — Groth16, PLONK, STARK proof system comparison
+- references/zk-patterns.md — ZK application patterns and use cases
+- references/zk-rollup-architecture.md — Sequencer, prover, verifier rollup design
+- references/zkevm-types.md — Type 1-4 zkEVM classifications and tradeoffs
+
 ## Phase: blockchain → blockchain-zk

@@ -155,14 +155,10 @@ func testCreateOrder() {
 ```
 
 ## References
-
-### Reference Files
-- `references/unit-testing.md` — mocking, parameterized tests, edge cases
-- `references/ui-testing.md` — widget/component test patterns
-- `references/integration-testing.md` — API mocking, DB testing, CI
-
-### Related Skills
-- `mobile/universal/patterns/SKILL.md` — architectures affecting testability
+- `references/integration-testing.md` — Integration Testing
+- `references/mobile-testing-strategies.md` — Mobile Testing Strategies
+- `references/ui-testing.md` — Ui Testing
+- `references/unit-testing.md` — Unit Testing
 
 ## Handoff
 

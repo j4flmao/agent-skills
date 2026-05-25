@@ -213,6 +213,8 @@ export const useAuthStore = defineStore('auth', {
 ## References
 - `references/composition-api.md` — composable naming, lifecycle, reactivity
 - `references/folder-structure.md` — Vue feature-based folder structure
+- `references/vue-composition.md` — composable patterns, async composables, lifecycle composables, guidelines
+- `references/vue-optimization.md` — shallowRef, computed caching, v-memo, lazy routes, Suspense, KeepAlive
 
 ## Handoff
 No artifact produced.

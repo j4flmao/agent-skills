@@ -160,6 +160,7 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 - `references/principles-reference.md` — Full reference for all principles with code examples
 - `references/solid-deep-dive.md` — SOLID principles deep dive with detection heuristics
 - `references/composition-vs-inheritance.md` — When to compose vs inherit, patterns and trade-offs
+- `references/oop-solid.md` — SOLID principles with code examples, violation heuristics, detection
 
 ### Related Skills
 - `backend/universal/design-patterns/SKILL.md` — Concrete pattern implementations

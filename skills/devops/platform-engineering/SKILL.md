@@ -107,6 +107,7 @@ Orchestrator (Terraform/Pulumi/Crossplane)
 - `references/platform-patterns.md` — Platform engineering patterns and anti-patterns
 - `references/backstage-config.md` — Backstage setup, plugins, and software templates
 - `references/idp-blueprint.md` — IDP architecture blueprint and adoption roadmap
+- `references/platform-teams.md` — Platform team models, APIs, internal products, team topology
 
 ## Handoff
 Related skills: devops-sre-practices (reliability), devops-internal-developer-platform (deep IDP), devops-policy-as-code (guardrails), devops-progressive-delivery (deployment strategies).

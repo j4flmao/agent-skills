@@ -181,6 +181,8 @@ button, a, input, select {
 ## References
 - `references/breakpoint-systems.md` — breakpoint strategy, CSS custom properties, Tailwind config
 - `references/container-queries.md` — container query syntax, use cases, fallbacks
+- `references/responsive-patterns.md` — Layout patterns (grid, sidebar, holy grail), fluid typography, responsive nav/table/images
+- `references/responsive-testing.md` — Visual regression, Playwright/Cypress viewport testing, layout tests, container query testing, touch targets
 
 ## Handoff
 No artifact produced.

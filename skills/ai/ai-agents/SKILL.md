@@ -122,8 +122,10 @@ Each tool needs: name (snake_case), description (what it does, when to use), par
 - Multi-agent systems require a termination protocol to avoid infinite delegation.
 
 ## References
-- `references/agent-architectures.md` — ReAct, Plan-and-Execute, reflection, tool-use patterns
-- `references/orchestration.md` — Single-agent, multi-agent, supervisor, sequential, hierarchical
+- `references/agent-architectures.md` — Agent Architectures
+- `references/orchestration.md` — Orchestration
+- `references/tool-use-patterns.md` — Tool Use Patterns
+- `references/agent-multi-agent.md` — Multi-agent systems, communication, coordination
 
 ## Handoff
 For tool implementation details, hand off to `backend-api-client-generator`. For agent evaluation, hand off to `ai-evals`.

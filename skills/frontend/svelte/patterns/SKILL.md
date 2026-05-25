@@ -169,6 +169,8 @@ For SvelteKit, use `load` function in `+page.ts` / `+page.server.ts` for SSR dat
 ## References
 - `references/svelte-forms.md` — bind:value, form actions, validation, file uploads, progressive enhancement
 - `references/svelte-transitions.md` — transition/animate/in view directives, custom transition functions, crossfade
+- `references/svelte-routing.md` — SvelteKit routing, navigation, params, guards, custom routing
+- `references/svelte-state.md` — $state patterns, derived state, shared .svelte.js, context, class-based stores
 
 ## Handoff
 No artifact produced.

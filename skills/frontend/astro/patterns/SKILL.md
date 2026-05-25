@@ -192,6 +192,8 @@ import ReactWidget from '../components/ReactWidget.tsx'
 ## References
 - `references/island-patterns.md` — client directives, island composition, lazy loading, framework islands
 - `references/content-patterns.md` — content collections, schemas, markdown/MDX, SSR/SSG hybrid
+- `references/astro-routing.md` — file-based routing, dynamic routes, redirects, middleware, endpoints
+- `references/astro-ssg.md` — static generation, dynamic pages, RSS, sitemaps, ISR, build output
 
 ## Handoff
 No artifact produced.

@@ -263,9 +263,10 @@ CREATE TABLE paimon_db.sales (
 - Every gold table must have a documented owner and SLA
 
 ## References
-- `references/medallion-architecture.md` — Bronze/silver/gold layers, data flow, quality gates, use cases
-- `references/lakehouse-platform.md` — Databricks, Unity Catalog, Delta Sharing, Apache Paimon, multi-cloud
+- `references/lakehouse-architecture.md` — Lakehouse architecture deep dive, medallion architecture, Delta/Iceberg/Hudi comparison, storage design, catalog integration, ACID transactions
 - `references/lakehouse-ecosystem-tools.md` — XTable format bridge, Nessie catalog versioning, Paimon LSM streaming, tool selection
+- `references/lakehouse-platform.md` — Databricks, Unity Catalog, Delta Sharing, Apache Paimon, multi-cloud
+- `references/medallion-architecture.md` — Bronze/silver/gold layers, data flow, quality gates, use cases
 
 ## Handoff
 `data-data-lake` for underlying table format operations (compaction, vacuum, Z-order)

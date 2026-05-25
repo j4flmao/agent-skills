@@ -188,6 +188,8 @@ public class OrderResourceTest {
 ### Reference Files
 - `references/quarkus-setup.md` — Quarkus project setup, extensions, Dev UI
 - `references/quarkus-extension-guide.md` — Writing and configuring extensions
+- `references/quarkus-reactive.md` — RESTEasy Reactive, Mutiny, Hibernate Reactive, messaging
+- `references/quarkus-deployment.md` — Native image, Docker, CI/CD, platform deployment
 
 ### Related Skills
 - `backend/universal/api-response/SKILL.md` — API response envelope

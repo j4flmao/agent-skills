@@ -144,6 +144,8 @@ Use `@astrojs/netlify`, `@astrojs/vercel`, `@astrojs/cloudflare` adapters. For S
 ## References
 - `references/astro-islands.md` — client directives, hydration strategies, framework components
 - `references/astro-content.md` — collections, schemas, rendering, images
+- `references/astro-collections.md` — advanced content queries, pagination, RSS, MDX, images
+- `references/astro-integrations.md` — framework integrations, official modules, community modules, adapters
 
 ## Handoff
 No artifact produced.

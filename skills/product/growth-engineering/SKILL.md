@@ -101,8 +101,10 @@ Maintain a running backlog of growth experiments. Prioritize using ICE (Impact, 
 - Learning is success even if hypothesis is invalidated.
 
 ## References
-- `references/growth-loops.md` — Growth loop types and design patterns
-- `references/activation-metrics.md` — Activation measurement and optimization
+- `references/activation-metrics.md` — Activation Metrics
+- `references/growth-experiments.md` — Growth Experiments
+- `references/growth-loops.md` — Growth Loops
+- `references/viral-mechanics.md` — Viral Mechanics
 
 ## Handoff
 For analytics tracking of growth metrics, hand off to `product-analytics`. For pricing experiments, hand off to `product-pricing-strategy`.

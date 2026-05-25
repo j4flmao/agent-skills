@@ -53,8 +53,5 @@ Design motion systems for digital products: animation principles, micro-interact
 ## References
 - `references/animation-principles.md` — Easing curves, duration, stagger, orchestration, spring physics
 - `references/lotti-rive.md` — Lottie and Rive animation formats, runtime integration, performance optimization
-- `references/lottie-guide.md` — Lottie animation workflow and optimization
-- `references/micro-interactions.md` — Micro-interaction patterns and examples
 - `references/motion-accessibility.md` — prefers-reduced-motion, vestibular disorders, motion budget, WCAG motion guidelines
-- `references/motion-principles.md` — UI animation principles and timing
 - `references/ui-animation-patterns.md` — Micro-interactions, transitions, loading states, parallax, scroll-triggered animation

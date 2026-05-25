@@ -376,6 +376,8 @@ prisma.$use(async (params, next) => {
 ### Reference Files
 - `references/schema-migrations.md` — Schema design, relations, migrations, seeding
 - `references/query-optimization.md` — Eager loading, pagination, raw queries, connection pooling
+- `references/prisma-advanced.md` — Extensions, soft delete, computed fields, full-text search
+- `references/prisma-deployment.md` — Docker, migration strategy, serverless, CI/CD
 
 ### Related Skills
 - `backend/nodejs/express/SKILL.md` — Express integration with Prisma

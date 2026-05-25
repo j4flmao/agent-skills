@@ -299,6 +299,8 @@ Use named slots for optional sections. Use scoped slots (`v-bind`) to expose com
 ## References
 - `references/composition-patterns.md` — composables, provide/inject, renderless components, slots, directives
 - `references/state-router-patterns.md` — Pinia stores, router guards, lazy routes, navigation guards
+- `references/vue-routing.md` — router setup, guards, lazy loading, search params, route props, navigation
+- `references/vue-state.md` — Pinia setup stores, store composition, state architecture rules, persist plugin
 
 ## Handoff
 No artifact produced.

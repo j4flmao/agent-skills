@@ -210,8 +210,10 @@ Provider Service Development
 - Consumer contracts define what the provider must support
 
 ## References
-- `references/pact-patterns.md` — Pact setup, consumer test patterns, Pact matchers, Pact Broker configuration, message pacts, Spring Cloud Contract
-- `references/provider-verification.md` — Provider verification, CI pipeline, versioning, breaking change detection, canary release, webhook notification, contract lifecycle
+- `references/contract-testing-strategies.md` — Contract Testing Strategies
+- `references/pact-patterns.md` — Pact Patterns
+- `references/pact-setup.md` — Pact Setup
+- `references/provider-verification.md` — Provider Verification
 
 ## Handoff
 `quality-e2e-testing` for E2E tests that complement contract tests.

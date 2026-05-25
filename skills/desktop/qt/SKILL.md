@@ -227,8 +227,10 @@ ApplicationWindow {
 ## References
 
 ### Reference Files
-- `references/qt-setup.md` — Installation, CMake patterns, Qt Creator, debugging
+- `references/qt-architecture.md` — Signal/slot, MOC, QML vs Widgets, model/view, state machine, plugin system, cross-platform patterns
+- `references/qt-performance.md` — OpenGL integration, QML optimization, threading with QtConcurrent, memory management, profiling
 - `references/qt-qml-guide.md` — QML components, layouts, animations, C++ integration
+- `references/qt-setup.md` — Installation, CMake patterns, Qt Creator, debugging
 
 ### Related Skills
 - `desktop/gtk/SKILL.md` — GTK alternative for C/Python/Rust

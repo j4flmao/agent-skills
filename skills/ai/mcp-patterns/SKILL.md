@@ -143,8 +143,10 @@ result = await client.call_tool("my_tool", {"query": "test"})
 - SSE transport requires readiness to handle reconnection.
 
 ## References
-- `references/mcp-architecture.md` — MCP protocol, Server/Client lifecycle, transports, tools/resources/prompts
-- `references/mcp-servers.md` — Building MCP servers, security, authentication, agent integration, SDKs
+- `references/mcp-architecture.md` — Mcp Architecture
+- `references/mcp-servers.md` — Mcp Servers
+- `references/server-implementation.md` — Server Implementation
+- `references/transport-options.md` — Transport Options
 
 ## Handoff
 For LangChain agent integration with MCP tools, hand off to `ai-langchain-patterns`. For observability setup, hand off to `ai-ai-observability`.

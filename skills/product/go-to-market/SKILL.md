@@ -107,8 +107,10 @@ Create launch timeline: internal enablement, beta, announcement day, post-launch
 - Learnings must be documented for future GTM efforts.
 
 ## References
-- `references/launch-tiers.md` — Launch tier definitions and execution playbooks
-- `references/channel-strategy.md` — Channel selection and execution guides
+- `references/channel-strategy.md` — Channel Strategy
+- `references/launch-checklist.md` — Launch Checklist
+- `references/launch-tiers.md` — Launch Tiers
+- `references/positioning-guide.md` — Positioning Guide
 
 ## Handoff
 For pricing strategy support, hand off to `product-pricing-strategy`. For growth experiments post-launch, hand off to `product-growth-engineering`.

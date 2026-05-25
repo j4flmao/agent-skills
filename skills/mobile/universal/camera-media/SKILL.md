@@ -111,9 +111,10 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ```
 
 ## References
-
-- `references/camera-apis.md` — Camera API, permissions, capture flow, QR scanning
-- `references/media-processing.md` — Compression, EXIF stripping, thumbnails, video processing, upload
+- `references/camera-apis.md` — Camera Apis
+- `references/camera-capture.md` — Camera Capture
+- `references/camera-media-capture.md` — Camera Media Capture
+- `references/media-processing.md` — Media Processing
 
 ## Handoff
 Hand off to mobile-networking skill for upload progress tracking and retry logic, or mobile-storage for local media cache management.

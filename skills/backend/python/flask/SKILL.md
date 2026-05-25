@@ -194,6 +194,8 @@ def register_error_handlers(app):
 ### Reference Files
 - `references/flask-setup.md` — Flask setup, configuration, blueprints, deployment
 - `references/flask-extensions.md` — Flask extensions guide: SQLAlchemy, Migrate, CLI
+- `references/flask-deployment.md` — WSGI servers, Docker, Nginx, CI/CD, platforms
+- `references/flask-blueprints-factories.md` — Blueprints, app factories, Flask-SQLAlchemy
 
 ### Related Skills
 - `backend/universal/api-response/SKILL.md` — API response envelope

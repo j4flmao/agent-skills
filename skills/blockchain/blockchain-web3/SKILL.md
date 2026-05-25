@@ -36,5 +36,12 @@ tags: [blockchain, web3, typescript, dapp, wallet, phase-blockchain]
 5. **Transaction flow**: gas estimation, simulation, submission, confirmation tracking
 6. **Error handling**: revert reasons, user rejection, network errors, rate limiting
 
+## References
+- references/dapp-architecture.md — dApp architecture layers and patterns
+- references/ethers-viem-wagmi.md — ethers.js, viem, wagmi TypeScript libraries
+- references/providers-rpc.md — RPC providers and Alchemy/Infura setup
+- references/wallet-integration.md — EIP-1193 and EIP-6963 wallet connection
+- references/web3-hooks.md — React hooks for blockchain interactions
+
 ## Phase
 blockchain → blockchain-web3

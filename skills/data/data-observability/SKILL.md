@@ -268,8 +268,10 @@ Per-dataset tiles showing: health score (0-100), trend (7d sparkline), last chec
 - No dataset promoted to production without monitors
 
 ## References
+- `references/monitor-config-examples.md` — Monitor configuration examples for Monte Carlo, Bigeye, Sifflet, custom SQL monitors, threshold tuning, anomaly rule definition
 - `references/observability-dimensions.md` — Freshness, volume, distribution, schema, lineage detection, anomaly algorithms
 - `references/observability-setup.md` — Monte Carlo, Sifflet, Bigeye integration, SLA definition, alerting, incident response
+- `references/slo-framework.md` — SLO definition framework, Prometheus service level objects, error budgets, burn rates, multi-window alerting
 
 ## Handoff
 `data-data-quality` for detailed quality test configuration. `data-data-platform` for platform monitoring integration. `data-data-catalog` for linking observability metadata to catalog. `data-data-contracts` for SLA enforcement in contracts.

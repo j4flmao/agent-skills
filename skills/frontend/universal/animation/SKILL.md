@@ -138,6 +138,8 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 - `references/animation-libraries.md` — Framer Motion, GSAP, CSS animations, WAAPI patterns
 - `references/animation-performance.md` — GPU compositing, avoid list, will-change, reduced motion, frame budget
+- `references/animation-techniques.md` — Page transitions, stagger, scroll-triggered, SVG morphing, gesture patterns
+- `references/animation-anatomy.md` — Frame budget, easing curves, spring params, composite modes, fill modes
 
 ---
 

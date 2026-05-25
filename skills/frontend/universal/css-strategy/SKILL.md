@@ -246,6 +246,8 @@ export const StyledButton = styled.button<ButtonProps>`
 ## References
 - `references/css-approaches.md` — Detailed comparison, trade-offs, migration paths between approaches
 - `references/css-organization.md` — File structure, naming conventions, global vs component styles, design tokens
+- `references/css-methodology.md` — BEM, CSS Layers, CSS Modules, naming conventions, critical CSS, file organization
+- `references/css-performance.md` — Critical delivery, selector performance, containment, bundle size, layout thrash prevention
 
 ## Handoff
 No artifact produced unless requested.

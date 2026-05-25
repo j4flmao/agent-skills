@@ -127,6 +127,8 @@ Prefetch strategy is critical for instant navigation. Bundle splitting is automa
 ## References
 - `references/qwik-resumable.md` — resumability, serialization, dollar API, fine-grained lazy loading
 - `references/qwik-city.md` — routing, loaders, actions, middleware, deployment
+- `references/qwik-resumability.md` — resumability vs hydration, serialization, optimizer, lazy flow
+- `references/qwik-optimization.md` — prefetch strategy, bundle optimization, visibleTask guidelines, code splitting
 
 ## Handoff
 No artifact produced.

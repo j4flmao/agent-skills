@@ -164,6 +164,8 @@ if errors.Is(err, domain.ErrUserNotFound) {
 ## References
 - `references/project-layout.md` — Go project structure and package organization
 - `references/interface-design.md` — interface at consumer, repository pattern
+- `references/go-concurrency.md` — Goroutines, channels, worker pools, errgroup patterns
+- `references/go-testing.md` — Table-driven tests, mocking, integration tests, HTTP tests
 
 ## Handoff
 No artifact produced.

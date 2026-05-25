@@ -116,6 +116,8 @@ UPDATE users SET email = NULL, name = NULL, anonymized_at = NOW() WHERE id = $1;
 ## References
 - `references/masking-patterns.md` — Data masking implementation patterns
 - `references/encryption-strategies.md` — Encryption and key management strategies
+- `references/data-masking-techniques.md` — Masking techniques, tokenization, and middleware patterns
+- `references/data-masking-compliance.md` — Regulatory masking requirements (GDPR, HIPAA, PCI, CCPA)
 
 ## Handoff
 No artifact produced unless requested.

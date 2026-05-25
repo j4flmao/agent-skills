@@ -107,6 +107,8 @@ Track these metrics per plugin: request count, p50/p95/p99 latency, error rate b
 ## References
 - `references/eden-treaty.md` — Eden Treaty client setup and patterns
 - `references/elysia-performance.md` — Elysia performance optimization
+- `references/elysia-auth.md` — JWT, RBAC, API keys, OAuth2, session auth
+- `references/elysia-validation.md` — Elysia t types, custom validation, type inference
 
 ## Handoff
 Hand off to `backend/universal/api-design/SKILL.md` for REST API design patterns. Carry forward: plugin hierarchy, guard scopes, Eden Treaty type definitions.

@@ -236,15 +236,10 @@ async def not_found_handler(request, exc):
 - Timestamps are always ISO 8601 UTC.
 
 ## References
-
-### Reference Files
-- `references/response-envelope.md` — Full envelope specification with language-specific implementations
-- `references/error-handling-patterns.md` — Exception handling patterns, middleware, error code catalog
-
-### Related Skills
-- `backend/universal/api-design/SKILL.md` — API endpoint design conventions
-- `backend/dotnet/patterns/SKILL.md` — Result pattern implementation in .NET
-- `backend/universal/oop-principles/SKILL.md` — Exception design principles
+- `references/api-response-formats.md` — Api Response Formats
+- `references/client-api-calls.md` — Client Api Calls
+- `references/error-handling-patterns.md` — Error Handling Patterns
+- `references/response-envelope.md` — Response Envelope
 
 ## Handoff
 Hand off to `backend/universal/api-design/SKILL.md` for endpoint routing and resource design. Hand off to `backend/universal/oop-principles/SKILL.md` for exception class hierarchy design.

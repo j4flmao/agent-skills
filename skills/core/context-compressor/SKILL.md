@@ -219,9 +219,10 @@ Before delivering a compressed summary, verify:
 - [ ] Footer is appended as the final line
 
 ## References
-
-- [Compression Strategies](./references/compression-strategies.md) — Truncation, summarization, hierarchical, priority scoring, sliding window, streaming, multi-turn
-- [Token Management](./references/token-management.md) — Token budgeting, context window optimization, relevance ranking, line counting, footer format
+- `references/compression-strategies.md` — Compression Strategies
+- `references/state-management.md` — State Management
+- `references/summary-templates.md` — Summary Templates
+- `references/token-management.md` — Token Management
 
 ## Handoff
 master-orchestrator — the compressed summary is injected at the start of the next work session for the master orchestrator skill to continue the work from where it was interrupted.

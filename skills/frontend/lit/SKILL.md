@@ -257,6 +257,8 @@ export const MyReactComponent = createComponent({
 ## References
 - `references/lit-essentials.md` — component design, reactive properties, lifecycle, shadow DOM
 - `references/lit-advanced.md` — events, directives, SSR, testing, sharing
+- `references/lit-architecture.md` — component composition, state management, routing, context, testing
+- `references/lit-deployment.md` — build config, SSR, CDN delivery, NPM publishing, bundle budgets
 
 ## Handoff
 No artifact produced.

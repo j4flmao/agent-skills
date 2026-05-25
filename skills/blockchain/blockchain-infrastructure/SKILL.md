@@ -35,5 +35,14 @@ tags: [blockchain, infrastructure, devops, deployment, phase-blockchain]
 4. **Configuration**: environment-specific parameters, chain settings
 5. **Monitoring & alerting**: metrics, dashboards, SLOs, runbooks
 
+## References
+- references/ci-cd-smart-contracts.md — CI/CD pipelines for smart contract deployment
+- references/environment-mgmt.md — Multi-environment config for devnet to mainnet
+- references/kms-hsm.md — AWS KMS, HSM, MPC signing, and key management
+- references/mev-infrastructure.md — Builder/relay setup and MEV infrastructure
+- references/monitoring-alerting.md — Prometheus, Grafana, blockchain monitoring
+- references/node-deployment.md — Archive, full, and validator node deployment
+- references/rpc-infrastructure.md — RPC load balancing, caching, and rate limiting
+
 ## Phase
 blockchain → blockchain-infrastructure

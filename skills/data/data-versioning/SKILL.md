@@ -235,6 +235,7 @@ dvc exp apply lr-mid  # rollback to best experiment
 - CI/CD validates data before merge
 
 ## References
+- `references/data-versioning-tools.md` — DVC, lakeFS, Nessie, Delta Lake time travel, Git LFS comparison, CLI workflows, CI/CD integration patterns
 - `references/dvc-patterns.md` — DVC setup, pipeline versioning, remote storage, experiment tracking, metrics comparison
 - `references/lakefs-patterns.md` — LakeFS branches, hooks, diff, merge, rollback, CI/CD integration, Graveler
 - `references/nessie-iceberg-versioning.md` — Nessie Git-for-Iceberg, catalog-level branching, multi-table atomic commits, engine integration, GC

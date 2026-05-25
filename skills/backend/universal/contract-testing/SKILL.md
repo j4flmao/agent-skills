@@ -108,6 +108,8 @@ If verification fails: the provider made a breaking change. Either:
 ## References
 - `references/pact-setup.md` — Pact test framework setup
 - `references/cdc-workflow.md` — Consumer-driven contract workflow
+- `references/contract-testing-tools.md` — Contract testing tool comparison and integration
+- `references/contract-testing-workflow.md` — Full CDC lifecycle and provider state management
 
 ## Handoff
 No artifact produced unless requested.

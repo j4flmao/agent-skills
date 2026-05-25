@@ -203,6 +203,8 @@ Domain tests require no setup — they test pure business logic. Application tes
 ## References
 - `references/layer-structure.md` — detailed layer boundary rules with examples per stack
 - `references/testing-strategy.md` — testing patterns per layer, test isolation, mock strategies
+- `references/clean-arch-layers.md` — Clean architecture layer responsibilities and dependency rules
+- `references/clean-arch-testing.md` — Testing pyramid by layer with test containers and fakes
 
 ## Handoff
 No artifact produced.

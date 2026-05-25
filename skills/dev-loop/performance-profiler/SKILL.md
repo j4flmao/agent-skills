@@ -146,8 +146,10 @@ Re-measure same metrics under same conditions. Record before/after. If improveme
 - Regression test every optimization — performance fixes should not break correctness.
 
 ## References
-- `profiling-tools.md` — Detailed setup and usage guides for perf, PerfView, dotTrace, Py-Spy, pprof, Valgrind
-- `bottleneck-analysis.md` — Analysis patterns for database, network, CPU, memory, and I/O bottlenecks
+- `references/bottleneck-analysis.md` — Bottleneck Analysis
+- `references/bottleneck-patterns.md` — Bottleneck Patterns
+- `references/profiling-tools-comparison.md` — Profiling Tools Comparison
+- `references/profiling-tools.md` — Profiling Tools
 
 ## Handoff
 Next skill: devops-observability for distributed tracing setup.

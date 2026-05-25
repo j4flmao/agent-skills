@@ -214,6 +214,7 @@ async function executeWithRetry(step: () => Promise<void>, maxRetries = 3): Prom
 - `references/choreography-vs-orchestration.md` — Detailed comparison, trade-offs, decision guide
 - `references/saga-state-management.md` — State persistence, recovery, monitoring, timeout handling
 - `references/compensating-transactions.md` — Compensation patterns, idempotency, failure scenarios
+- `references/saga-testing.md` — Saga testing pyramid, state machine tests, compensation tests, recovery
 
 ## Handoff
 No artifact produced.

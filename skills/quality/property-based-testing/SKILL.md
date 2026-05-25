@@ -54,6 +54,7 @@ test('sort should produce sorted array', () => {
 ```
 
 ## References
-- `references/property-patterns.md` — Property types and invariant patterns
-- `references/shrinking-guide.md` — Shrinking strategies and debugging failures
-- `references/stateful-testing.md` — Stateful property-based testing patterns
+- `references/property-based-testing-advanced.md` — Property Based Testing Advanced
+- `references/property-patterns.md` — Property Patterns
+- `references/shrinking-guide.md` — Shrinking Guide
+- `references/stateful-testing.md` — Stateful Testing

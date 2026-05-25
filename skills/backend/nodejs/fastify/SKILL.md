@@ -253,6 +253,8 @@ describe('Order Routes', () => {
 ### Reference Files
 - `references/fastify-setup.md` — Fastify setup, configuration, hooks
 - `references/fastify-plugins.md` — Plugin architecture, encapsulation, ecosystem
+- `references/fastify-validation.md` — Schema validation, TypeBox, serialization, AJV config
+- `references/fastify-advanced-plugins.md` — Advanced plugins, decorators, hooks, encapsulation
 
 ### Related Skills
 - `backend/nodejs/architecture/SKILL.md` — Node.js architecture

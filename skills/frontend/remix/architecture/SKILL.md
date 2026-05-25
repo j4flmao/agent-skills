@@ -141,6 +141,8 @@ export default defineConfig({
 ## References
 - `references/remix-routing.md` — route modules, nested routes, layouts
 - `references/remix-data.md` — loaders, actions, forms, pending UI
+- `references/remix-data-loading.md` — parallel loads, deferred data, caching, pagination, session data
+- `references/remix-deployment.md` — Fly.io, Vercel, Cloudflare, env vars, CI/CD, budgets
 
 ## Handoff
 No artifact produced.

@@ -216,6 +216,8 @@ X-KDE-PluginInfo-EnabledByDefault=true
 
 ### Reference Files
 - `references/kde-dev-setup.md` — KDevelop, KDE Frameworks, CMake, debugging
+- `references/kde-development.md` — CMake build system, KDevelop, Plasma applet development, KPackage, CI with KDE infrastructure
+- `references/kde-framework.md` — Kirigami, KConfig, KIO, solid, phonon, plasma integration, QML components
 - `references/kirigami-guide.md` — Kirigami components, pages, dialogs, responsive layout
 
 ### Related Skills

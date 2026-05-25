@@ -377,6 +377,7 @@ function e(?string $value): string
 - `references/php-basics.md` — PHP 8.x features, types, attributes, named arguments
 - `references/psr-standards.md` — PSR-4, PSR-7, PSR-11, PSR-14, PSR-15, PSR-18
 - `references/php-security.md` — OWASP PHP, crypto, session security, input validation
+- `references/php-modern-practices.md` — PHP 8.x features, enums, attributes, match, readonly
 
 ## Handoff
 Next skill: php-laravel — if user wants Laravel framework instead.

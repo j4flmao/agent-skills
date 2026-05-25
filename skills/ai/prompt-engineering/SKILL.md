@@ -109,8 +109,10 @@ Select 2-5 examples that cover the range of expected inputs. Include edge cases 
 - Prompts targeting code generation must specify language, framework, and style.
 
 ## References
-- `references/prompt-patterns.md` — Zero-shot, few-shot, CoT, tree-of-thought, ReAct patterns
-- `references/prompt-security.md` — Injection, jailbreak, guardrails, output validation
+- `references/prompt-patterns.md` — Prompt Patterns
+- `references/prompt-security.md` — Prompt Security
+- `references/prompt-techniques.md` — Prompt Techniques
+- `references/prompt-templates.md` — Prompt Templates
 
 ## Handoff
 For RAG system integration, hand off to `ai-rag-patterns`. For model serving and deployment, hand off to `ai-llm-ops`.

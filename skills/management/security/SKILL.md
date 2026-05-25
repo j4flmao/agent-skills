@@ -144,6 +144,8 @@ Designate security champions in each dev team for embedded security practices.
 ### Reference Files
 - `references/security-review-checklist.md` — Detailed security review checklist per SDLC phase
 - `references/vuln-management.md` — Vulnerability management workflow and severity definitions
+- `references/security-training.md` — Security awareness training materials and onboarding guides
+- `references/security-policy.md` — Security policy templates and organizational security standards
 
 ### Related Skills
 - `management/pentesting/SKILL.md` — Penetration testing report standards

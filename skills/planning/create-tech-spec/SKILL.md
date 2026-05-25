@@ -170,7 +170,10 @@ Write to `docs/specs/{feature-name}-spec.md`.
 - If the spec is for a frontend feature, replace API contract with component props/events/state spec.
 
 ## References
-- `references/tech-spec-template.md` — technical specification template
+- `references/tech-spec-examples.md` — Tech Spec Examples
+- `references/tech-spec-review-checklist.md` — Tech Spec Review Checklist
+- `references/tech-spec-template.md` — Tech Spec Template
+- `references/tech-spec-templates.md` — Tech Spec Templates
 
 ## Handoff
 Output: `docs/specs/{feature-name}-spec.md`

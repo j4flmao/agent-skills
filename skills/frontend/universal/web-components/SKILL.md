@@ -274,6 +274,8 @@ Key compatibility rules:
 ## References
 - `references/custom-elements.md` — lifecycle, attributes, properties, ElementInternals, form participation
 - `references/shadow-dom.md` — encapsulation, slots, CSS parts, theming, cross-framework
+- `references/web-components-implementation.md` — Complete component patterns (counter, form input), shadow DOM styling, declarative shadow DOM, testing
+- `references/web-components-frameworks.md` — React/Vue/Angular/Svelte/Lit integration, event handling, cross-framework compatibility rules
 
 ## Handoff
 No artifact produced.

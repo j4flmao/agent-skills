@@ -166,9 +166,10 @@ Every finding links to source evidence (participant quote, task metric, screensh
 - Always pilot test the protocol with 1-2 internal participants before real sessions
 
 ## References
-- `references/research-methods.md` — Generative vs evaluative, interviews, surveys, unmoderated testing, method selection
-- `references/synthesis-frameworks.md` — Affinity mapping, persona creation, journey mapping, findings report structure, SUS/NPS/CSAT
-- `references/synthesis.md`
+- `references/research-methods.md` — Research Methods
+- `references/synthesis-frameworks.md` — Synthesis Frameworks
+- `references/synthesis.md` — Synthesis
+- `references/usability-testing-guide.md` — Usability Testing Guide
 
 ## Handoff
 `design-prototyping` for interactive prototypes based on research insights.

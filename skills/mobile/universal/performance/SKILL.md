@@ -155,15 +155,10 @@ npx react-native-bundle-analyzer
 ```
 
 ## References
-
-### Reference Files
-- `references/rendering.md` — jank, frame drops, layout performance
-- `references/memory.md` — leaks, profiling, GC tuning
-- `references/startup.md` — cold start, warm start, splash strategy
-
-### Related Skills
-- `mobile/universal/testing/SKILL.md` — performance regression testing
-- `devops/monitoring/SKILL.md` — production perf monitoring
+- `references/memory.md` — Memory
+- `references/mobile-performance-optimization.md` — Mobile Performance Optimization
+- `references/rendering.md` — Rendering
+- `references/startup.md` — Startup
 
 ## Handoff
 

@@ -34,5 +34,13 @@ tags: [blockchain, security, audit, formal-verification, phase-blockchain]
 4. **Security controls**: mitigations, circuit breakers, monitoring
 5. **Verification**: formal properties, invariants, proof techniques
 
+## References
+- references/audit-methodology.md — Smart contract audit methodology and tools
+- references/bug-bounty-program.md — Bug bounty programs and severity classification
+- references/economic-security.md — Game theory and economic security in DeFi
+- references/formal-verification-deep.md — Certora CVL, Halmos, Scribble verification
+- references/incident-response.md — Blockchain incident response lifecycle
+- references/threat-modeling.md — STRIDE adapted for blockchain threat modeling
+
 ## Phase
 blockchain → blockchain-security

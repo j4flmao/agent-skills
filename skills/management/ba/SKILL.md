@@ -167,6 +167,8 @@ When Mermaid is not available, use step-by-step:
 ## References
 - `references/story-splitting.md` — techniques for splitting large stories
 - `references/gherkin-patterns.md` — common Gherkin patterns and anti-patterns
+- `references/user-story-mapping.md` — User story mapping techniques and workshop facilitation
+- `references/requirements-gathering.md` — Requirements elicitation techniques and interview guides
 
 ## Handoff
 After completing this skill:

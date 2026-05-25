@@ -1,70 +1,50 @@
 # AppKit Architecture Reference
 
-## Project Structure (Xcode)
-
-```
-MyApp/
-├── App/
-│   ├── AppDelegate.swift            # NSApplicationDelegate
-│   └── Info.plist                    # Bundle config, LSUIElement, etc.
-├── Windows/
-│   ├── MainWindowController.swift    # NSWindowController subclass
-│   └── MainWindow.xib                # Window layout in Interface Builder
-├── ViewControllers/
-│   ├── SidebarViewController.swift   # NSSplitView child
-│   ├── DetailViewController.swift
-│   └── PreferencesViewController.swift
-├── Views/
-│   ├── CustomGraphView.swift         # NSView subclass
-│   └── BadgeView.swift
-├── Models/
-│   ├── Document.swift                # NSDocument subclass
-│   └── DataStore.swift
-├── Helpers/
-│   ├── Formatters.swift
-│   └── Extensions.swift
-├── Resources/
-│   ├── Assets.xcassets/
-│   └── Main.storyboard
-└── Supporting/
-    └── MyApp.entitlements           # Sandbox entitlements
-```
-
-## App Lifecycle
+## NSDocument Architecture
 
 ```swift
-@main
-class AppDelegate: NSObject, NSApplicationDelegate {
-    // 1. applicationWillFinishLaunching — before UI is ready
-    func applicationWillFinishLaunching(_ notification: Notification) {
-        // Register defaults, set up logging, migrate data
-        UserDefaults.standard.register(defaults: ["initialSetup": true])
+class MyDocument: NSDocument {
+    @objc dynamic var content = ""
+
+    override class var autosavesInPlace: Bool { true }
+    override var windowNibName: String? { "MyDocument" }
+
+    override func data(ofType typeName: String) throws -> Data {
+        Data(content.utf8)
     }
 
-    // 2. applicationDidFinishLaunching — UI is ready
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        // Show window, check for updates via Sparkle
+    override func read(from data: Data, ofType typeName: String) throws {
+        content = String(data: data, encoding: .utf8) ?? ""
     }
 
-    // 3. applicationDidBecomeActive — app in foreground
-    func applicationDidBecomeActive(_ notification: Notification) {
-        // Refresh UI, check network
+    // Undo support
+    @IBAction func changeContent(_ sender: Any?) {
+        let oldContent = content
+        // ... modify content
+        undoManager?.registerUndo(withTarget: self) { target in
+            target.content = oldContent
+        }
     }
+}
+```
 
-    // 4. applicationDidResignActive — app in background
-    func applicationDidResignActive(_ notification: Notification) {
-        // Pause animations, save autosave
-    }
+## MVC Pattern
 
-    // 5. applicationWillTerminate — about to quit
-    func applicationWillTerminate(_ notification: Notification) {
-        // Final save, clean up temp files
-    }
+```
+Model        → Data + business logic (NSManagedObject, structs)
+View         → NSView subviews, nibs (no logic)
+Controller   → NSViewController, NSWindowController (mediates)
+```
 
-    // 6. applicationShouldTerminate — ask to quit
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        // Check for unsaved documents
-        return .terminateNow
+```swift
+// ViewController — mediates between model and view
+class ListViewController: NSViewController {
+    @objc var items: [Item] = []
+    @IBOutlet var tableView: NSTableView!
+
+    func updateItems(_ newItems: [Item]) {
+        items = newItems
+        tableView.reloadData()
     }
 }
 ```
@@ -72,157 +52,150 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 ## Responder Chain
 
 ```
-NSApplication
-  ↑
-NSWindow
-  ↑
-NSWindowController
-  ↑
-NSViewController
-  ↑
-NSView (first responder)
-  ↓ (default: next responder)
-NSView superview → ... → NSWindow → NSWindowController → NSApplication
+NSApplication → NSWindow → NSWindowController
+  → NSViewController → NSView → subviews (first responder)
+  ↑ validateMenuItem(_:) for state-based menu enabling
 ```
 
 ```swift
-// Validate menu items via responder chain
+// Validate menu items
 override func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
     switch menuItem.action {
-    case #selector(delete(_:)):
-        return hasSelection
-    case #selector(cut(_:)):
-        return hasSelection
-    default:
-        return super.validateMenuItem(menuItem)
+    case #selector(delete(_:)): return hasSelection
+    case #selector(cut(_:)): return hasSelection
+    case #selector(paste(_:)): return NSPasteboard.general.canReadItem()
+    default: return super.validateMenuItem(menuItem)
     }
 }
 
-// Respond to actions
+// Respond to action
 @IBAction func delete(_ sender: Any?) {
     guard hasSelection else { return }
     deleteSelectedItem()
 }
 
 // Become first responder for keyboard events
-override var acceptsFirstResponder: Bool { return true }
-override func keyDown(with event: NSEvent) {
-    if event.keyCode == 51 { // Delete key
-        delete(nil)
-    } else {
-        super.keyDown(with: event)
-    }
-}
+override var acceptsFirstResponder: Bool { true }
+```
+
+## Auto Layout
+
+```swift
+// Programmatic Auto Layout
+let view = NSView()
+view.translatesAutoresizingMaskIntoConstraints = false
+parentView.addSubview(view)
+
+NSLayoutConstraint.activate([
+    view.topAnchor.constraint(equalTo: parentView.topAnchor, constant: 16),
+    view.leadingAnchor.constraint(equalTo: parentView.leadingAnchor, constant: 16),
+    view.trailingAnchor.constraint(equalTo: parentView.trailingAnchor, constant: -16),
+    view.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
+])
+
+// Priority for compression resistance / hugging
+view.setContentHuggingPriority(.required, for: .horizontal)
+view.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+
+// Visual Format Language
+let constraints = NSLayoutConstraint.constraints(
+    withVisualFormat: "H:|-[button]-[textField(>=200)]-|",
+    metrics: nil, views: ["button": button, "textField": textField])
 ```
 
 ## Cocoa Bindings
 
 ```swift
-// Bind NSTextField value to object property
-// In Interface Builder or code:
+// Bind control to object property
 textField.bind(.value,
     to: personObject,
     withKeyPath: "name",
     options: [.continuouslyUpdatesValue: true])
 
-// Using NSObjectController
-let controller = NSObjectController(content: personObject)
-textField.bind(.value, to: controller, withKeyPath: "selection.name", options: nil)
+// Array controller for table binding
+let arrayController = NSArrayController()
+arrayController.content = itemsArray
+tableView.bind(.content, to: arrayController,
+    withKeyPath: "arrangedObjects", options: nil)
 
-// KVO for manual observation
+// KVO observation
 observation = personObject.observe(\.name, options: [.new]) { object, change in
-    self.updateUI()
+    updateUI()
 }
 ```
 
-## Undo Manager
+## Core Data Integration
 
 ```swift
-@IBAction func moveItem(_ sender: Any?) {
-    let oldIndex = selectedIndex
-    let newIndex = oldIndex + 1
-    let item = items[oldIndex]
+// NSPersistentContainer setup
+class DataController {
+    lazy var container: NSPersistentContainer = {
+        let container = NSPersistentContainer(name: "MyApp")
+        container.loadPersistentStores { _, error in
+            if let error = error { fatalError(error.localizedDescription) }
+        }
+        return container
+    }()
 
-    // Perform action
-    items.remove(at: oldIndex)
-    items.insert(item, at: newIndex)
-
-    // Register undo
-    undoManager?.registerUndo(withTarget: self) { target in
-        target.moveItem(from: newIndex, to: oldIndex)
-    }
-    undoManager?.setActionName("Move Item")
+    var context: NSManagedObjectContext { container.viewContext }
 }
 
-// NSUndoManager grouped operations
-undoManager?.beginUndoGrouping()
-// ... multiple operations ...
-undoManager?.endUndoGrouping()
-undoManager?.setActionName("Delete Items")
+// NSManagedObject subclass
+@objc(Item)
+class Item: NSManagedObject {
+    @NSManaged var name: String
+    @NSManaged var createdAt: Date
+}
+
+// Use with NSArrayController for Cocoa Bindings
+arrayController.managedObjectContext = dataController.context
+arrayController.entityName = "Item"
 ```
 
-## Sandbox Entitlements
-
-```xml
-<!-- MyApp.entitlements -->
-<dict>
-    <key>com.apple.security.app-sandbox</key>
-    <true/>
-    <key>com.apple.security.files.user-selected.read-write</key>
-    <true/>
-    <key>com.apple.security.network.client</key>
-    <true/>
-    <key>com.apple.security.print</key>
-    <true/>
-    <key>com.apple.security.device.camera</key>
-    <false/>
-    <key>com.apple.security.device.microphone</key>
-    <false/>
-    <key>com.apple.security.personal-information.addressbook</key>
-    <false/>
-    <key>com.apple.security.files.downloads.read-write</key>
-    <false/>
-</dict>
-```
-
-## NSDocument Architecture
+## Window Management
 
 ```swift
-class MyDocument: NSDocument {
-    @objc var content: String = ""
-
-    override class var autosavesInPlace: Bool { true }
-
-    override var windowNibName: String? { "MyDocument" }
-
-    override func data(ofType typeName: String) throws -> Data {
-        return Data(content.utf8)
-    }
-
-    override func read(from data: Data, ofType typeName: String) throws {
-        content = String(data: data, encoding: .utf8) ?? ""
+// NSWindowController
+class MainWindowController: NSWindowController {
+    convenience init() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 1000, height: 700),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable,
+                        .fullSizeContentView],
+            backing: .buffered, defer: false)
+        window.title = "My App"
+        window.center()
+        self.init(window: window)
     }
 }
-```
 
-## Preferences Window
-
-```swift
-// Preferences window via storyboard
+// Multiple windows
 @IBAction func showPreferences(_ sender: Any?) {
-    let storyboard = NSStoryboard(name: "Preferences", bundle: nil)
-    let windowController = storyboard.instantiateInitialController()
-        as! NSWindowController
-    windowController.showWindow(sender)
+    let prefWC = PreferencesWindowController()
+    prefWC.showWindow(sender)
 }
 
-// Tabbed preferences
-class PrefsTabViewController: NSTabViewController {
-    override func viewDidLoad() {
-        tabViewItems = [
-            NSTabViewItem(viewController: GeneralPrefsVC()),
-            NSTabViewItem(viewController: AdvancedPrefsVC()),
-        ]
-    }
+// Sheet
+presentAsSheet(viewController)
+
+// NSWindowDelegate
+func windowWillClose(_ notification: Notification) {
+    saveState()
+}
+func windowDidResize(_ notification: Notification) {
+    saveWindowFrame()
 }
 ```
+
+## Key Architecture Rules
+
+- NSApplicationDelegate for app lifecycle
+- NSDocument for document-based apps (autosave, versions, iCloud)
+- NSWindowController manages a single window
+- NSSplitViewController for sidebar/detail layouts
+- @IBOutlet/@IBAction for nib/storyboard connections
+- Responder chain for event handling — not direct observation
+- Cocoa Bindings + KVO for model-view synchronization
+- Core Data with NSArrayController for data-bound tables
+- Auto Layout for adaptive layouts
+- NSViewController manages view lifecycle (loadView, viewDidLoad)

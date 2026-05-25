@@ -1,6 +1,6 @@
 # @j4flmao/agent-skills
 
-423 agent skills for software development — planning, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, data-science, design, quality, blockchain. Each skill is a `SKILL.md` defining triggers, rules, and response format.
+426 agent skills for software development — planning, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, data-science, design, quality, blockchain. Each skill is a `SKILL.md` defining triggers, rules, and response format.
 
 ## Installation
 
@@ -54,7 +54,7 @@ cp -r ~/skills/skills/devops/docker-patterns /path/to/project/skills/
 
 ```bash
 # Requires the repo to be pushed to GitHub
-npx skills add j4flmao/agent-skills            # all 423 skills
+npx skills add j4flmao/agent-skills            # all 426 skills
 npx skills add j4flmao/agent-skills --bundle backend-only
 npx skills add j4flmao/agent-skills -g          # global (every project)
 ```
@@ -185,7 +185,7 @@ Agent config files contain the compression rules:
 │   ├── core/         4 skills
 │   ├── planning/     8 skills
 │   ├── backend/      79 skills (36 stack + 43 universal)
-│   │   ├── nodejs/       Node.js (architecture, patterns, express, prisma, fastify, hono)
+│   │   ├── nodejs/       Node.js (architecture, patterns, express, prisma, fastify, hono, drizzle)
 │   │   ├── nestjs/       NestJS (architecture, patterns)
 │   │   ├── go/           Go (architecture, patterns)
 │   │   ├── rust/         Rust (architecture, patterns)
@@ -202,7 +202,7 @@ Agent config files contain the compression rules:
 │   │   ├── elixir/       Elixir
 │   │   ├── deno/         Deno (oak)
 │   │   ├── bun/          Bun
-│   │   └── universal/    43 skills
+│   │   └── universal/    45 skills (incl. firebase, supabase)
 │   ├── frontend/     52 skills (25 stack + 27 universal)
 │   │   ├── react/        React (architecture, nextjs)
 │   │   ├── vue/          Vue (architecture, nuxt, patterns)
@@ -257,7 +257,7 @@ Agent config files contain the compression rules:
     └── bundle-definitions.json
 ```
 
-Total: **412 SKILL.md** + **1191+ reference .md files** + **18 docs/ guides** + **agent configs** = **1446+ files**.
+Total: **415 SKILL.md** + **1202+ reference .md files** + **18 docs/ guides** + **agent configs** = **1460+ files**.
 
 ## License
 

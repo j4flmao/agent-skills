@@ -93,8 +93,10 @@ Map each AARRR stage to tracked events. Acquisition: signups by source, channel 
 - AARRR metrics must be reviewable in a single dashboard.
 
 ## References
-- `references/event-taxonomy.md` — Event naming conventions and tracking schema
-- `references/metric-frameworks.md` — North Star, AARRR, and retention frameworks
+- `references/event-taxonomy.md` — Event Taxonomy
+- `references/event-tracking.md` — Event Tracking
+- `references/funnel-analysis.md` — Funnel Analysis
+- `references/metric-frameworks.md` — Metric Frameworks
 
 ## Handoff
 For A/B testing statistical analysis, hand off to `product-ab-testing`. For user research insights, hand off to `product-user-research`.

@@ -102,8 +102,10 @@ Implement if p<α and effect size > MDE. Roll back if any guardrail metric degra
 - Results must be reproducible with shared analysis code.
 
 ## References
-- `references/experiment-design.md` — Experiment setup and sample size calculation
-- `references/statistical-analysis.md` — Statistical methods and decision framework
+- `references/ab-testing-statistics.md` — Ab Testing Statistics
+- `references/experiment-design.md` — Experiment Design
+- `references/statistical-analysis.md` — Statistical Analysis
+- `references/statistical-methods.md` — Statistical Methods
 
 ## Handoff
 For product analytics event tracking, hand off to `product-analytics`. For user research insights to inform hypotheses, hand off to `product-user-research`.

@@ -167,6 +167,9 @@ it('should have no a11y violations', async () => {
 
 ## References
 - `references/wcag-checklist.md` — WCAG 2.1 AA checklist with implementation examples
+- `references/a11y-testing.md` — axe-core, Cypress/Playwright a11y tests, CI integration, common violations
+- `references/a11y-aria.md` — landmark roles, widget patterns, live regions, ARIA states reference
+- `references/a11y-tools.md` — automated tools, contrast checkers, screen readers, browser extensions, CI
 
 ## Handoff
 No artifact produced.

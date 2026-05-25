@@ -65,6 +65,7 @@ Unlimited — architecture requires thorough analysis.
 - `references/architecture-patterns-catalog.md` — comprehensive pattern catalog
 - `references/architecture-decision-framework.md` — decision framework
 - `references/adr-template.md` — ADR template
+- `references/solution-arch-templates.md` — ADRs, solution context diagrams, template patterns
 
 ## Handoff
 Carry forward: ADR numbers used, decisions made, key trade-offs, outstanding decisions.

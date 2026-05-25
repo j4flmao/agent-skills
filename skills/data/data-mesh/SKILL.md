@@ -295,8 +295,10 @@ All data products registered in catalog with: `name`, `domain`, `description`, `
 - Breaking changes communicated to consumers with 30-day notice
 
 ## References
-- `references/mesh-principles.md` — Four principles, domain decomposition, data product blueprint, ports
+- `references/data-product-template.md` — Data product YAML blueprint, input/output port definitions, schema, SLA, ownership, versioning, consumption contract
+- `references/domain-decomposition-patterns.md` — Domain decomposition strategies, bounded context mapping, capability-driven domain identification, organizational topology patterns
 - `references/mesh-implementation.md` — Platform architecture, cross-domain sharing, discovery, access control, governance, maturity model
+- `references/mesh-principles.md` — Four principles, domain decomposition, data product blueprint, ports
 
 ## Handoff
 `data-data-platform` for platform infrastructure. `data-data-catalog` for discovery. `data-data-contracts` for data product contracts. `data-data-observability` for cross-domain monitoring. `data-data-quality` for quality standards.

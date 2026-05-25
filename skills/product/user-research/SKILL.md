@@ -104,8 +104,10 @@ Create 3-5 distinct personas based on research patterns. Include: demographics, 
 - Research plan must be reviewed before recruiting begins.
 
 ## References
-- `references/research-methods.md` — Qualitative and quantitative research methods
-- `references/synthesis-frameworks.md` — Affinity mapping, journey mapping, and persona creation
+- `references/interview-guide.md` — Interview Guide
+- `references/research-methods.md` — Research Methods
+- `references/synthesis-frameworks.md` — Synthesis Frameworks
+- `references/user-research-methods.md` — User Research Methods
 
 ## Handoff
 For quantitative validation of insights, hand off to `product-analytics`. For running experiments based on findings, hand off to `product-ab-testing`.

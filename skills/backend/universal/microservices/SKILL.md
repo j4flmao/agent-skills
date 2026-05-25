@@ -178,6 +178,7 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 - `references/decomposition-patterns.md` — Detailed decomposition strategies with examples
 - `references/communication-patterns.md` — Sync/async/saga/outbox patterns with code sketches
 - `references/data-patterns.md` — Database-per-service, CQRS, Event Sourcing, Saga patterns
+- `references/microservices-communication.md` — Communication patterns, gRPC, message queues, circuit breakers
 
 ### Related Skills
 - `backend/universal/design-patterns/SKILL.md` — Foundational GoF patterns

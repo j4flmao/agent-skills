@@ -205,6 +205,7 @@ class ErrorBoundary extends React.Component<
 - `references/folder-structure.md` — React feature-based folder structure
 - `references/component-patterns.md` — smart/dumb, composition, compound components
 - `references/hooks-guide.md` — custom hooks naming, rules, and patterns
+- `references/react-compiler.md` — React Compiler setup, rules, migration, ESLint integration, performance benefits
 
 ## Handoff
 No artifact produced.

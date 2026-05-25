@@ -240,6 +240,8 @@ logging:
 ## References
 - `references/log-format.md` — JSON schema, field definitions, context propagation, ECS format
 - `references/log-shipping.md` — Stdout capture, sidecar config, aggregation pipeline, sampling
+- `references/logging-architecture.md` — Log pipeline design, structured logging per language, context propagation
+- `references/logging-aggregation.md` — Log shippers (Vector/Fluentd), storage backends, query patterns
 
 ## Handoff
 `devops-observability` for metrics collection and distributed tracing setup

@@ -143,6 +143,8 @@ No preamble. No postamble. No explanations. Compress output — why use many tok
 ## References
 - `references/alpine-setup.md` — CDN/npm install, globals, plugins, tooling
 - `references/alpine-patterns.md` — components, stores, modifiers, lifecycle
+- `references/alpinejs-advanced.md` — custom directives, magics, plugins, CSP, focus management
+- `references/alpinejs-deployment.md` — build options, CDN vs npm, production optimization, security
 
 ## Handoff
 No artifact produced.

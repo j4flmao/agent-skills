@@ -181,6 +181,7 @@ import { Meta, Story, Canvas, Controls } from '@storybook/blocks';
 ## References
 - `references/storybook-setup.md`
 - `references/story-writing.md` — CSF 3.x patterns, render functions, args composition
+- `references/writing-stories.md` — Story types, decorators, parameters, args composition
 - `references/addons-testing.md` — Interaction tests, a11y, Chromatic, snapshot tests
 - `references/visual-testing.md`
 - `references/addons.md`

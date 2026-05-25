@@ -130,9 +130,10 @@ export default config;
 ```
 
 ## References
-
-- `references/ionic-cli.md` — CLI commands, project creation, live reload, build pipeline
-- `references/capacitor-plugins.md` — Native APIs, custom plugins, permissions, configuration
+- `references/capacitor-plugins.md` — Capacitor Plugins
+- `references/ionic-capacitor-plugins.md` — Ionic Capacitor Plugins
+- `references/ionic-cli.md` — Ionic Cli
+- `references/ionic-deployment.md` — Ionic Deployment
 
 ## Handoff
 Hand off to native iOS/Android skills when custom plugin development needs deep platform API access beyond Capacitor's bridge.

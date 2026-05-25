@@ -104,6 +104,8 @@ Verify zero dependency on legacy. Archive legacy data (compressed, encrypted, ti
 ## References
 - `references/migration-strategies.md` — Migration strategy comparison and selection
 - `references/strangler-fig.md` — Strangler Fig pattern implementation
+- `references/testing-migration.md` — Migration testing strategies and validation frameworks
+- `references/legacy-migration-patterns.md` — Legacy migration patterns: strangler fig, branch-by-abstraction, parallel run, big bang
 
 ## Handoff
 For integration patterns during strangler fig, hand off to `enterprise-integration-patterns`. For data governance during migration, hand off to `enterprise-data-governance`.

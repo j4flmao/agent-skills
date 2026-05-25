@@ -126,7 +126,10 @@ Insert the new version section at the top of the file, under `# Changelog`.
 Append to `CHANGELOG.md` in Keep a Changelog format.
 
 ## References
-No separate reference file — all changelog generation workflow is inline in this skill.
+- `references/auto-changelog-tools.md` — Auto Changelog Tools
+- `references/changelog-format.md` — Changelog Format
+- `references/conventional-commits-guide.md` — Conventional Commits Guide
+- `references/git-log-parsing.md` — Git Log Parsing
 
 ## Handoff
 After completing this skill:

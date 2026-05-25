@@ -148,6 +148,9 @@ E2E rules:
 
 ## References
 - `references/testing-library-guide.md` — Testing Library query priority and testing patterns
+- `references/testing-tools.md` — Vitest, Playwright, Cypress, MSW setup, coverage targets
+- `references/testing-patterns.md` — component test patterns, accessibility patterns, custom render functions
+- `references/testing-ci.md` — CI configuration, parallel execution, visual regression, retries, pre-commit hooks
 
 ## Handoff
 No artifact produced.

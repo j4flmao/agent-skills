@@ -185,6 +185,7 @@ class OrderProjection {
 - `references/cqrs-fundamentals.md` — CQRS core concepts, when to apply, common pitfalls
 - `references/read-model-strategies.md` — Read model projections, materialized views, caching
 - `references/command-validation.md` — Command validation patterns, preconditions, invariants
+- `references/cqrs-testing.md` — CQRS testing pyramid, command/query handler tests, projection tests
 
 ## Handoff
 No artifact produced.

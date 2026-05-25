@@ -161,6 +161,7 @@ class OrderServiceTest {
 - `references/ktor-setup.md` — Ktor configuration and routing
 - `references/kotlin-backend-patterns.md` — Detailed patterns reference
 - `references/coroutines-guide.md` — Coroutine patterns and scopes
+- `references/kotlin-deployment.md` — Shadow jar, Docker, Nginx, CI/CD, health endpoint
 
 ### Related Skills
 - `backend/kotlin/architecture/SKILL.md` — Kotlin backend architecture

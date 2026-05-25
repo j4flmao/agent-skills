@@ -178,6 +178,8 @@ export default class AuthService extends Service {
 ## References
 - `references/ember-setup.md` — CLI, project structure, config, addons
 - `references/ember-patterns.md` — components, routes, data, services, testing
+- `references/ember-architecture.md` — route architecture, module structure, component patterns, services
+- `references/ember-deployment.md` — build pipeline, deployment targets, CI/CD, performance budget
 
 ## Handoff
 No artifact produced.

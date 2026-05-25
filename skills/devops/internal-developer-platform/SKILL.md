@@ -60,3 +60,4 @@ app-backend → plugin-auth-backend → plugin-catalog-backend → plugin-scaffo
 - `references/golden-paths.md` — Golden path design patterns and templates
 - `references/backstage-plugins.md` — Backstage plugin development guide
 - `references/adoption-strategy.md` — Platform adoption and DX measurement
+- `references/idp-adoption.md` — IDP adoption strategies, onboarding, golden paths, DX metrics

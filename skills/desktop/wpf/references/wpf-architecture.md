@@ -1,233 +1,191 @@
 # WPF Architecture Reference
 
-## Project Structure
+## MVVM Pattern
 
 ```
-MyApp/
-├── App.xaml / App.xaml.cs        # Application entry, DI, global styles
-├── Views/
-│   ├── MainWindow.xaml / .cs
-│   ├── CustomerEditView.xaml / .cs
-│   └── SettingsView.xaml / .cs
-├── ViewModels/
-│   ├── MainViewModel.cs
-│   ├── CustomerEditViewModel.cs
-│   └── SettingsViewModel.cs
-├── Models/
-│   ├── Customer.cs
-│   └── Order.cs
-├── Services/
-│   ├── ICustomerService.cs
-│   ├── CustomerService.cs
-│   ├── INavigationService.cs
-│   └── NavigationService.cs
-├── Converters/
-│   ├── BoolToVisibilityConverter.cs
-│   └── DateFormatConverter.cs
-├── Styles/
-│   └── GlobalStyles.xaml
-└── Resources/
-    └── Icons/
+Views/         → XAML UI (data-bound to ViewModel)
+ViewModels/    → Observable state + commands
+Models/        → Domain data + business logic
+Services/      → DI-registered services (data access, navigation)
 ```
-
-## Dependency Injection Setup
 
 ```csharp
-// App.xaml.cs
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-
-public partial class App : Application
+// ViewModel
+public partial class MainViewModel : ObservableObject
 {
-    private static IHost _host;
+    [ObservableProperty]
+    private string name;
 
-    public static IHost Host => _host ??= CreateHostBuilder().Build();
-
-    private static IHostBuilder CreateHostBuilder()
+    [RelayCommand]
+    private async Task Save()
     {
-        return Host.CreateDefaultBuilder()
-            .ConfigureServices((context, services) =>
-            {
-                services.AddSingleton<MainViewModel>();
-                services.AddTransient<CustomerEditViewModel>();
-                services.AddTransient<MainWindow>();
-
-                services.AddScoped<ICustomerService, CustomerService>();
-                services.AddSingleton<INavigationService, NavigationService>();
-            });
-    }
-
-    protected override async void OnStartup(StartupEventArgs e)
-    {
-        await Host.StartAsync();
-        var window = Host.Services.GetRequiredService<MainWindow>();
-        window.DataContext = Host.Services.GetRequiredService<MainViewModel>();
-        window.Show();
-        base.OnStartup(e);
-    }
-
-    protected override async void OnExit(ExitEventArgs e)
-    {
-        await Host.StopAsync();
-        base.OnExit(e);
+        await _service.SaveAsync(Name);
     }
 }
 ```
 
-## Dispatcher and Threading
-
-```csharp
-// Update UI from background thread
-await Task.Run(() =>
-{
-    // Background work
-    var result = ComputeExpensiveOperation();
-
-    // Dispatch to UI thread
-    Application.Current.Dispatcher.Invoke(() =>
-    {
-        ViewModel.Result = result;
-    });
-});
-
-// Using async/await (automatic marshaling)
-private async void LoadButton_Click(object sender, RoutedEventArgs e)
-{
-    StatusText = "Loading...";
-    var data = await _service.FetchDataAsync();  // UI stays responsive
-    Items = new ObservableCollection<Item>(data);
-    StatusText = "Loaded";
-}
-```
-
-## Window Lifecycle
-
-| Event | Trigger | Use |
-|-------|---------|-----|
-| Initialized | Before window shown | Set defaults, wire events |
-| Loaded | Window rendered | Load data, start operations |
-| ContentRendered | First content drawn | Post-layout adjustments |
-| Activated | Window gains focus | Refresh stale data |
-| Deactivated | Window loses focus | Pause animations |
-| Closing | User closing | Confirm unsaved changes |
-| Closed | Window destroyed | Cleanup resources |
-
-## INotifyPropertyChanged with CommunityToolkit
-
-```csharp
-// Using source generators (recommended)
-public partial class CustomerViewModel : ObservableObject
-{
-    [ObservableProperty]
-    private int _id;
-
-    [ObservableProperty]
-    private string _name;
-
-    [ObservableProperty]
-    private string _email;
-
-    [ObservableProperty]
-    private bool _isSelected;
-
-    // Computed property
-    public string DisplayName => $"{Name} ({Email})";
-
-    partial void OnNameChanged(string value)
-    {
-        OnPropertyChanged(nameof(DisplayName));
-    }
-}
-```
-
-## Data Templates
+## XAML & Data Binding
 
 ```xml
-<Window.Resources>
-    <!-- Type-based data templates -->
-    <DataTemplate DataType="{x:Type models:Customer}">
-        <Border BorderBrush="#EEE" BorderThickness="0,0,0,1" Padding="8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <CheckBox IsChecked="{Binding IsSelected}" Grid.Column="0"/>
-                <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                    <TextBlock Text="{Binding Email}" Foreground="Gray"/>
-                </StackPanel>
-            </Grid>
-        </Border>
-    </DataTemplate>
-</Window.Resources>
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-<!-- Implicit template usage -->
-<ListBox ItemsSource="{Binding Customers}"/>
-<!-- Each item renders using Customer DataTemplate -->
+  <!-- OneWay binding (display only) -->
+  <TextBlock Text="{Binding UserName, Mode=OneWay}"/>
+
+  <!-- TwoWay binding (edit) -->
+  <TextBox Text="{Binding UserName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+  <!-- OneTime binding (static data, best perf) -->
+  <TextBlock Text="{Binding Version, Mode=OneTime}"/>
+
+  <!-- Binding to ancestor -->
+  <Button Command="{Binding DataContext.DeleteCommand,
+    RelativeSource={RelativeSource AncestorType=ListBox}}"
+    CommandParameter="{Binding}"/>
+</Window>
+```
+
+## Dependency Properties
+
+```csharp
+// Custom control dependency property
+public class MyControl : Control
+{
+    public static readonly DependencyProperty LabelProperty =
+        DependencyProperty.Register(
+            name: nameof(Label),
+            propertyType: typeof(string),
+            ownerType: typeof(MyControl),
+            typeMetadata: new PropertyMetadata(
+                defaultValue: string.Empty,
+                propertyChangedCallback: OnLabelChanged));
+
+    public string Label
+    {
+        get => (string)GetValue(LabelProperty);
+        set => SetValue(LabelProperty, value);
+    }
+
+    private static void OnLabelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var ctrl = (MyControl)d;
+        ctrl.OnLabelUpdated((string)e.NewValue);
+    }
+}
+```
+
+## Commands
+
+```csharp
+// RelayCommand via CommunityToolkit
+public partial class ViewModel : ObservableObject
+{
+    [RelayCommand]
+    private void Execute() { }
+
+    [RelayCommand(CanExecute = nameof(CanSave))]
+    private async Task SaveAsync() { }
+    private bool CanSave() => IsValid;
+
+    // Parameterized command
+    [RelayCommand]
+    private void DeleteItem(Item item) { }
+}
+```
+
+## Attached Behaviors
+
+```csharp
+public static class TextBoxBehaviors
+{
+    public static readonly DependencyProperty SelectAllOnFocusProperty =
+        DependencyProperty.RegisterAttached(
+            "SelectAllOnFocus", typeof(bool), typeof(TextBoxBehaviors),
+            new PropertyMetadata(false, OnSelectAllOnFocusChanged));
+
+    public static void SetSelectAllOnFocus(TextBox element, bool value)
+        => element.SetValue(SelectAllOnFocusProperty, value);
+
+    public static bool GetSelectAllOnFocus(TextBox element)
+        => (bool)element.GetValue(SelectAllOnFocusProperty);
+
+    private static void OnSelectAllOnFocusChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is TextBox tb)
+        {
+            tb.GotFocus -= SelectAll;
+            if ((bool)e.NewValue) tb.GotFocus += SelectAll;
+        }
+    }
+
+    private static void SelectAll(object sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox tb) tb.SelectAll();
+    }
+}
+```
+
+```xml
+<TextBox Text="{Binding Name}"
+         behaviors:TextBoxBehaviors.SelectAllOnFocus="True"/>
+```
+
+## Routed Events
+
+```csharp
+// Custom routed event
+public partial class MyControl : UserControl
+{
+    public static readonly RoutedEvent ItemSelectedEvent =
+        EventManager.RegisterRoutedEvent(
+            name: "ItemSelected",
+            routingStrategy: RoutingStrategy.Bubble,
+            handlerType: typeof(RoutedEventHandler),
+            ownerType: typeof(MyControl));
+
+    public event RoutedEventHandler ItemSelected
+    {
+        add => AddHandler(ItemSelectedEvent, value);
+        remove => RemoveHandler(ItemSelectedEvent, value);
+    }
+
+    private void RaiseItemSelected()
+    {
+        RaiseEvent(new RoutedEventArgs(ItemSelectedEvent));
+    }
+}
+```
+
+```xml
+<local:MyControl ItemSelected="OnItemSelected"/>
 ```
 
 ## Value Converters
 
 ```csharp
 [ValueConversion(typeof(bool), typeof(Visibility))]
-public class BoolToVisibilityConverter : IValueConverter
+public class BoolToVisConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        bool boolValue = (bool)value;
-        bool invert = parameter?.ToString() == "invert";
-        return (boolValue ^ invert) ? Visibility.Visible : Visibility.Collapsed;
+        bool val = (bool)value;
+        return val ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        var vis = (Visibility)value;
-        bool invert = parameter?.ToString() == "invert";
-        return (vis == Visibility.Visible) ^ invert;
+        return (Visibility)value == Visibility.Visible;
     }
 }
 ```
 
-```xml
-<Window.Resources>
-    <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
-</Window.Resources>
+## Key Rules
 
-<Button Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}"/>
-```
-
-## Resource Dictionaries Merging
-
-```xml
-<Application.Resources>
-    <ResourceDictionary>
-        <ResourceDictionary.MergedDictionaries>
-            <ResourceDictionary Source="Styles/Colors.xaml"/>
-            <ResourceDictionary Source="Styles/Buttons.xaml"/>
-            <ResourceDictionary Source="Styles/DataGrid.xaml"/>
-            <ResourceDictionary Source="Styles/Converters.xaml"/>
-        </ResourceDictionary.MergedDictionaries>
-    </ResourceDictionary>
-</Application.Resources>
-```
-
-## Multi-Window Support
-
-```csharp
-// Open a new window from ViewModel via service
-public class WindowService : IWindowService
-{
-    public void ShowWindow<T>() where T : Window
-    {
-        var window = App.Host.Services.GetRequiredService<T>();
-        window.Show();
-    }
-
-    public bool? ShowDialog<T>() where T : Window
-    {
-        var window = App.Host.Services.GetRequiredService<T>();
-        return window.ShowDialog();
-    }
-}
-```
+- ViewModel never references View types
+- Dependency properties for custom control inheritable values
+- Commands over event handlers for all user actions
+- Attached behaviors for reusable cross-cutting concerns
+- Routed events for composable event handling up the tree
+- Converters for type transformations in bindings
+- ObservableCollection for dynamic lists

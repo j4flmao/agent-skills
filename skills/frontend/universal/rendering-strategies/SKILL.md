@@ -189,6 +189,8 @@ async function ProductPage({ params }: { params: { id: string } }) {
 ## References
 - `references/rendering-comparison.md` — CSR vs SSR vs SSG vs ISR vs RSC detailed comparison, decision trees, metrics
 - `references/hydration-strategies.md` — Full, progressive, partial, selective hydration, islands, hydration pitfalls
+- `references/ssr-csr.md` — CSR vs SSR vs SSG vs ISR deep dive, rendering timeline, streaming, hydration comparison, performance budgets
+- `references/isomorphic-rendering.md` — Universal code, server/client boundaries, data hydration, hydration mismatch, cache sync, environment detection
 
 ## Handoff
 No artifact produced unless requested.

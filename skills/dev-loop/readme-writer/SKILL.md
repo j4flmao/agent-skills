@@ -168,7 +168,10 @@ MIT © {Author}
 Write to `README.md` at the project root.
 
 ## References
-- `references/readme-template.md` — comprehensive README template
+- `references/badge-reference.md` — Badge Reference
+- `references/readme-best-practices.md` — Readme Best Practices
+- `references/readme-sections.md` — Readme Sections
+- `references/readme-template.md` — Readme Template
 
 ## Handoff
 After completing this skill:

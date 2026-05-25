@@ -212,6 +212,8 @@ describe('Order Routes', () => {
 ### Reference Files
 - `references/hono-setup.md` — Hono setup, runtimes, deployment targets
 - `references/hono-middleware.md` — Middleware, validation, RPC, testing
+- `references/hono-deployment.md` — Cloudflare Workers, Deno Deploy, Bun, Node.js, Docker
+- `references/hono-custom-middleware.md` — Custom middleware patterns, composability, error handling
 
 ### Related Skills
 - `backend/nodejs/architecture/SKILL.md` — Node.js architecture

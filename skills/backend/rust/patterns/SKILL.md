@@ -176,6 +176,7 @@ impl CreateUserBuilder {
 - `references/ownership-patterns.md` — ownership, borrowing, interior mutability, builder pattern
 - `references/async-tokio.md` — Tokio runtime, concurrent tasks, channels, graceful shutdown
 - `references/error-handling.md` — custom error types, Result aliases, error propagation
+- `references/rust-testing.md` — unit tests, async tests, mockall, proptest, fixtures
 
 ## Handoff
 No artifact produced.

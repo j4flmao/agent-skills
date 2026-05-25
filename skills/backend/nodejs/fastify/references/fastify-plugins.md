@@ -1,130 +1,207 @@
-# Fastify Plugins Guide
+# Fastify Plugins
 
-## Plugin Pattern
-```typescript
-import { FastifyInstance, FastifyPluginAsync } from "fastify"
-import fp from "fastify-plugin"
+## Plugin Architecture
 
-const orderPlugin: FastifyPluginAsync = fp(async (app: FastifyInstance) => {
-  app.decorate("orderService", new OrderService())
-  app.decorateRequest("user", null)
-
-  app.addHook("onRequest", async (req) => {
-    req.user = await authenticate(req)
-  })
-})
-
-export default orderPlugin
-```
-
-## Encapsulation & Context
-```typescript
-// Each plugin creates a child context.
-// Decorations are scoped unless using fp().
-app.register(async function publicApi(child) {
-  child.decorate("rateLimit", new RateLimiter())
-  // rateLimit accessible only inside this scope
-
-  child.get("/public/orders", async () => {
-    return await child.rateLimit.check()
-  })
-})
-
-app.register(async function adminApi(child) {
-  // rateLimit is NOT accessible here
-  child.get("/admin/orders", handler)
-})
-```
-
-## Hooks Lifecycle
-```
-onRequest → preParsing → preValidation → preHandler
-  → preSerialization → onSend → onResponse
-        ↓ error handler
-```
+Fastify plugins are encapsulated. Each plugin creates a child context that inherits from parent but isolates its own decorators, hooks, and schemas.
 
 ```typescript
-app.addHook("onRequest", async (req, reply) => {
-  req.log.info({ url: req.url }, "incoming")
-})
+import { FastifyPluginAsync } from 'fastify';
 
-app.addHook("preHandler", async (req, reply) => {
-  if (!req.user?.isAdmin && req.url.startsWith("/admin")) {
-    return reply.code(403).send({ error: "Forbidden" })
+// Encapsulated plugin
+export const myPlugin: FastifyPluginAsync = async (fastify, opts) => {
+  // Decorators/hooks here only affect this plugin and its children
+  fastify.decorate('myService', new MyService());
+  fastify.addHook('onRequest', async (req, reply) => {
+    // Runs for routes in this scope
+  });
+};
+```
+
+## Creating Plugins
+
+```typescript
+// Database plugin
+import fp from 'fastify-plugin';
+import { PrismaClient } from '@prisma/client';
+
+export interface DbPluginOptions {
+  url: string;
+}
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    db: PrismaClient;
   }
-})
+}
 
-app.addHook("onSend", async (req, reply, payload) => {
-  reply.header("X-Request-Id", req.id)
-  return payload
-})
-```
+export const dbPlugin = fp<DbPluginOptions>(async (fastify, opts) => {
+  const prisma = new PrismaClient({
+    datasources: { db: { url: opts.url } },
+  });
 
-## Decorators
-```typescript
-app.decorate("config", {
-  dbUrl: process.env.DATABASE_URL,
-  jwtSecret: process.env.JWT_SECRET,
-})
+  await prisma.$connect();
 
-app.decorateRequest("user", null)
+  fastify.decorate('db', prisma);
 
-app.decorateReply("success", function (this: FastifyReply, data: unknown) {
-  this.code(200).send({ ok: true, data })
-})
+  fastify.addHook('onClose', async () => {
+    await prisma.$disconnect();
+  });
+});
 
 // Usage
-app.get("/orders", async (req, reply) => {
-  req.user // decorated
-  reply.success(await db.findOrders()) // decorated
-})
+app.register(dbPlugin, { url: process.env.DATABASE_URL! });
 ```
 
-## Error Handling
-```typescript
-app.setErrorHandler((error, req, reply) => {
-  if (error.validation) {
-    return reply.code(400).send({
-      error: "Validation Error",
-      details: error.validation,
-    })
-  }
-  req.log.error(error)
-  return reply.code(500).send({ error: "Internal Server Error" })
-})
+## Official Plugins
 
-app.setNotFoundHandler((req, reply) => {
-  reply.code(404).send({ error: `Route ${req.method} ${req.url} not found` })
-})
+```typescript
+import Fastify from 'fastify';
+
+const app = Fastify({ logger: true });
+
+// CORS
+await app.register(import('@fastify/cors'), {
+  origin: ['https://app.example.com'],
+  credentials: true,
+});
+
+// Rate limiting
+await app.register(import('@fastify/rate-limit'), {
+  max: 100,
+  timeWindow: '1 minute',
+});
+
+// Swagger/OpenAPI
+await app.register(import('@fastify/swagger'), {
+  openapi: { info: { title: 'API', version: '1.0.0' } },
+});
+await app.register(import('@fastify/swagger-ui'), {
+  routePrefix: '/docs',
+});
+
+// JWT auth
+await app.register(import('@fastify/jwt'), {
+  secret: process.env.JWT_SECRET!,
+});
+
+// Compression
+await app.register(import('@fastify/compress'), {
+  global: true,
+});
+
+// Multipart
+await app.register(import('@fastify/multipart'), {
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 ```
 
-## Content Type Parser
+## Plugin Encapsulation
+
 ```typescript
-app.addContentTypeParser("application/vnd.api+json", {
-  parseAs: "string",
-}, (req, body, done) => {
-  try {
-    done(null, JSON.parse(body as string))
-  } catch (err) {
-    done(new Error("Invalid JSON:API"), undefined)
-  }
-})
+// Parent plugin
+app.register(async function parent(fastify) {
+  fastify.decorate('utility', new Utility());
+
+  // Child inherits parent's decorators
+  fastify.register(async function child(fastify) {
+    fastify.get('/child', async () => {
+      return { utility: fastify.utility.hello() };
+    });
+  });
+});
+
+// Outside — no access to 'utility'
+// ❌ app.utility is undefined
 ```
 
-## Graceful Shutdown
+## Breaking Encapsulation
+
 ```typescript
-const signals = ["SIGINT", "SIGTERM"]
-for (const signal of signals) {
-  process.on(signal, async () => {
-    await app.close()
-    process.exit(0)
-  })
+// Use fastify-plugin to break encapsulation
+import fp from 'fastify-plugin';
+
+export const sharedPlugin = fp(async (fastify) => {
+  fastify.decorate('shared', new SharedService());
+});
+// No parent needed — available everywhere
+```
+
+## Plugin with Options Schema
+
+```typescript
+export interface MetricsPluginOptions {
+  port?: number;
+  route?: string;
 }
+
+const metricsPlugin: FastifyPluginAsync<MetricsPluginOptions> = async (fastify, opts) => {
+  const port = opts.port || 9090;
+  const route = opts.route || '/metrics';
+
+  fastify.get(route, async () => {
+    return { memory: process.memoryUsage(), uptime: process.uptime() };
+  });
+};
+
+// Invalid options will throw at registration
+app.register(metricsPlugin, { port: 'invalid' }); // Type error
 ```
 
-## Serialization
+## Plugin Dependency
+
 ```typescript
-app.setSerializerCompiler(({ schema }) => {
-  return (data) => JSON.stringify(data)
-})
+// Plugin A
+export const pluginA = fp(async (fastify) => {
+  fastify.decorate('pluginA', { name: 'A' });
+});
+
+// Plugin B depends on A
+export const pluginB = fp(async (fastify) => {
+  fastify.decorate('pluginB', {
+    name: 'B',
+    dependency: fastify.pluginA, // Use pluginA's decorator
+  });
+}, { dependencies: ['pluginA'] });
+
+// Registration order
+app.register(pluginA);
+app.register(pluginB); // pluginB requires pluginA
 ```
+
+## Plugin Testing
+
+```typescript
+import { test } from 'vitest';
+import Fastify from 'fastify';
+import { dbPlugin } from '../plugins/db';
+
+test('db plugin connects', async () => {
+  const app = Fastify();
+
+  await app.register(dbPlugin, {
+    url: process.env.TEST_DATABASE_URL || 'postgres://localhost/test',
+  });
+
+  await app.ready();
+
+  expect(app.db).toBeDefined();
+  expect(app.db.$connect).toBeDefined();
+
+  await app.close();
+});
+```
+
+## Plugin Selection Guide
+
+| Plugin | Purpose | Official |
+|--------|---------|----------|
+| @fastify/cors | CORS headers | ✅ |
+| @fastify/helmet | Security headers | ✅ |
+| @fastify/rate-limit | Rate limiting | ✅ |
+| @fastify/swagger | OpenAPI docs | ✅ |
+| @fastify/jwt | JWT auth | ✅ |
+| @fastify/multipart | File uploads | ✅ |
+| @fastify/compress | Response compression | ✅ |
+| @fastify/redis | Redis client | ✅ |
+| @fastify/postgres | PostgreSQL | ✅ |
+| @fastify/session | Sessions | ✅ |

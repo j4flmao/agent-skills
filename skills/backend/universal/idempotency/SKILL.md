@@ -100,6 +100,8 @@ Use a TTL index (Redis) or a background job (PostgreSQL) to delete keys after th
 ## References
 - `references/idempotency-patterns.md` — Idempotency key implementation patterns
 - `references/exactly-once-strategies.md` — Exactly-once semantic strategies
+- `references/idempotency-keys.md` — Idempotency key store backends, middleware, concurrent handling
+- `references/idempotency-distributed.md` — Distributed idempotency, message dedup, saga integration
 
 ## Handoff
 No artifact produced unless requested.

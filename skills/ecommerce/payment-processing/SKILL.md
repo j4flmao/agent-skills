@@ -61,3 +61,4 @@ Plan → Customer → Subscription → Invoice → Payment
 - `references/gateway-patterns.md` — Payment gateway integration patterns
 - `references/subscription-billing.md` — Subscription management and dunning
 - `references/pci-dss-guide.md` — PCI DSS compliance and tokenization
+- `references/payment-security.md` — PCI DSS, tokenization, 3DS, fraud detection, gateway patterns

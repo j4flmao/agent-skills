@@ -116,6 +116,8 @@ export class Result<T, E = AppError> {
 ### Reference Files
 - `references/express-patterns.md` — Express-specific patterns
 - `references/node-testing.md` — Node.js testing with Vitest, Supertest
+- `references/nodejs-error-handling.md` — Error hierarchy, global handler, Result pattern
+- `references/nodejs-streams.md` — Stream types, piping, transform, backpressure
 
 ### Related Skills
 - `backend/nodejs/architecture/SKILL.md` — Node.js project structure

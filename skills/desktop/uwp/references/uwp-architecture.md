@@ -1,228 +1,198 @@
 # UWP Architecture Reference
 
-## Project Structure
+## MVVM in UWP
 
-```
-MyUwpApp/
-├── Package.appxmanifest            # Capabilities, declarations, visuals
-├── App.xaml / App.xaml.cs          # Application lifecycle, activation
-├── MainPage.xaml / MainPage.xaml.cs
-├── Pages/
-│   ├── DashboardPage.xaml
-│   ├── DetailPage.xaml
-│   └── SettingsPage.xaml
-├── ViewModels/
-│   ├── DashboardViewModel.cs
-│   └── DetailViewModel.cs
-├── Models/
-│   └── DataItem.cs
-├── Services/
-│   ├── IDataService.cs
-│   └── DataService.cs
-├── Controls/
-│   └── CustomControl.cs
-├── Converters/
-│   └── StringToVisibilityConverter.cs
-├── Helpers/
-│   └── NavigationHelper.cs
-├── Tasks/
-│   └── BackgroundTask.cs
-├── Assets/
-│   ├── StoreLogo.png
-│   ├── Square150x150Logo.png
-│   └── Wide310x150Logo.png
-└── Strings/
-    └── en-US/
-        └── Resources.resw
+```csharp
+// ViewModel with INotifyPropertyChanged
+public class MainViewModel : INotifyPropertyChanged
+{
+    public event PropertyChangedEventHandler PropertyChanged;
+    private void Set<T>(ref T field, T value, [CallerMemberName] string name = null)
+    {
+        if (!EqualityComparer<T>.Default.Equals(field, value))
+        {
+            field = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
+    }
+
+    private string _status;
+    public string Status { get => _status; set => Set(ref _status, value); }
+
+    private bool _isBusy;
+    public bool IsBusy { get => _isBusy; set => Set(ref _isBusy, value); }
+
+    public async Task InitializeAsync() { /* ... */ }
+}
 ```
 
-## App.xaml.cs Activation
+## Adaptive UI
+
+```xml
+<Page>
+  <Grid x:Name="RootGrid">
+    <VisualStateManager.VisualStateGroups>
+      <VisualStateGroup>
+        <VisualState x:Name="WideView">
+          <VisualState.StateTriggers>
+            <AdaptiveTrigger MinWindowWidth="800"/>
+          </VisualState.StateTriggers>
+          <VisualState.Setters>
+            <Setter Target="ContentPanel.Orientation" Value="Horizontal"/>
+            <Setter Target="Sidebar.Visibility" Value="Visible"/>
+          </VisualState.Setters>
+        </VisualState>
+        <VisualState x:Name="NarrowView">
+          <VisualState.StateTriggers>
+            <AdaptiveTrigger MinWindowWidth="0"/>
+          </VisualState.StateTriggers>
+          <VisualState.Setters>
+            <Setter Target="ContentPanel.Orientation" Value="Vertical"/>
+            <Setter Target="Sidebar.Visibility" Value="Collapsed"/>
+          </VisualState.Setters>
+        </VisualState>
+      </VisualStateGroup>
+    </VisualStateManager.VisualStateGroups>
+  </Grid>
+</Page>
+```
+
+## Layout Panels
+
+```xml
+<!-- RelativePanel for flexible layouts -->
+<RelativePanel>
+  <TextBox x:Name="SearchBox" RelativePanel.AlignLeftWithPanel="True"
+           RelativePanel.AlignRightWithPanel="True"/>
+  <ListView x:Name="ResultsList" RelativePanel.Below="SearchBox"
+            RelativePanel.AlignLeftWithPanel="True"
+            RelativePanel.AlignRightWithPanel="True"
+            RelativePanel.Above="StatusBar"/>
+  <TextBlock x:Name="StatusBar" RelativePanel.AlignBottomWithPanel="True"/>
+</RelativePanel>
+
+<!-- VariableSizedWrapGrid for galleries -->
+<VariableSizedWrapGrid ItemHeight="200" ItemWidth="200"
+                        MaximumRowsOrColumns="4">
+  <Rectangle Height="200" Width="400"/> <!-- spans 2 columns -->
+  <Rectangle Height="200" Width="200"/>
+</VariableSizedWrapGrid>
+```
+
+## Data Binding
+
+```xml
+<!-- x:Bind compile-time binding -->
+<TextBlock Text="{x:Bind ViewModel.Title, Mode=OneWay}"/>
+<TextBox Text="{x:Bind ViewModel.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+<Button Command="{x:Bind ViewModel.SaveCommand}"/>
+
+<!-- {Binding} for DataTemplates (runtime) -->
+<ListView ItemsSource="{x:Bind ViewModel.Items}">
+  <ListView.ItemTemplate>
+    <DataTemplate>
+      <TextBlock Text="{Binding Name}" FontSize="14"/>
+    </DataTemplate>
+  </ListView.ItemTemplate>
+</ListView>
+```
+
+## App Lifecycle
 
 ```csharp
 sealed partial class App : Application
 {
-    public App()
-    {
-        InitializeComponent();
-    }
-
     protected override void OnLaunched(LaunchActivatedEventArgs e)
     {
+        if (e.PrelaunchActivated) return;
+
         if (Window.Current.Content is not Frame rootFrame)
         {
             rootFrame = new Frame();
             Window.Current.Content = rootFrame;
         }
 
-        if (e.PrelaunchActivated == false)
+        if (rootFrame.Content == null)
+            rootFrame.Navigate(typeof(MainPage), e.Arguments);
+
+        Window.Current.Activate();
+    }
+
+    // Suspension
+    protected override void OnSuspending(object sender, SuspendingEventArgs e)
+    {
+        var deferral = e.SuspendingOperation.GetDeferral();
+        // Save state
+        deferral.Complete();
+    }
+
+    // Extended execution
+    protected override void OnBackgroundActivated(BackgroundActivatedEventArgs args)
+    {
+        var deferral = args.TaskInstance.GetDeferral();
+        // Background work
+        deferral.Complete();
+    }
+}
+```
+
+## Background Tasks
+
+```csharp
+[BackgroundTask(EntryPoint = "Tasks.TimerTask")]
+public sealed class TimerTask : IBackgroundTask
+{
+    public void Run(IBackgroundTaskInstance taskInstance)
+    {
+        var deferral = taskInstance.GetDeferral();
+        try
         {
-            if (rootFrame.Content == null)
-            {
-                rootFrame.Navigate(typeof(MainPage), e.Arguments);
-            }
-            Window.Current.Activate();
+            var settings = ApplicationData.Current.LocalSettings;
+            settings.Values["LastRun"] = DateTime.Now.ToString();
         }
-    }
-
-    protected override void OnActivated(IActivatedEventArgs args)
-    {
-        if (args.Kind == ActivationKind.ToastNotification)
-        {
-            var toastArgs = args as ToastNotificationActivatedEventArgs;
-            var frame = Window.Current.Content as Frame;
-            frame.Navigate(typeof(DetailPage), toastArgs.Argument);
-        }
+        finally { deferral.Complete(); }
     }
 }
 ```
 
-## Frame-Based Navigation
+```xml
+<Extensions>
+  <Extension Category="windows.backgroundTasks"
+             EntryPoint="Tasks.TimerTask">
+    <BackgroundTasks>
+      <Task Type="timer"/>
+    </BackgroundTasks>
+  </Extension>
+</Extensions>
+```
+
+## Contracts (Share, Search, etc.)
 
 ```csharp
-// Navigate with parameter
-Frame.Navigate(typeof(DetailPage), itemId);
-
-// Go back
-if (Frame.CanGoBack) Frame.GoBack();
-
-// Pass complex navigation args
-Frame.Navigate(typeof(DetailPage), new NavigationArgs { Id = 42, Source = "dashboard" });
-
-// Handle navigation in Page
-protected override void OnNavigatedTo(NavigationEventArgs e)
+// Share contract
+ protected override void OnShareTargetActivated(ShareTargetActivatedEventArgs args)
 {
-    base.OnNavigatedTo(e);
-    if (e.Parameter is int id)
-    {
-        ViewModel.LoadItem(id);
-    }
+    var shareOperation = args.ShareOperation;
+    var page = new ShareTargetPage(shareOperation);
+    Window.Current.Content = page;
+    Window.Current.Activate();
 }
 
-protected override void OnNavigatedFrom(NavigationEventArgs e)
+// File open picker contract
+protected override void OnFileOpenPickerActivated(FileOpenPickerActivatedEventArgs args)
 {
-    base.OnNavigatedFrom(e);
-    ViewModel.Cleanup();
+    var page = new FilePickerPage(args.FileOpenPickerUI);
+    Window.Current.Content = page;
+    Window.Current.Activate();
 }
 ```
 
-## Data Binding with x:Bind (Compile-Time)
+## Key Architecture Rules
 
-```xaml
-<Page x:Class="MyUwpApp.Pages.DetailPage"
-      x:Name="PageRoot">
-
-    <!-- x:Bind binds to Page by default -->
-    <TextBlock Text="{x:Bind ViewModel.Title, Mode=OneWay}"/>
-    <TextBox Text="{x:Bind ViewModel.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-
-    <!-- Event via x:Bind -->
-    <Button Click="{x:Bind ViewModel.SaveClick}"/>
-
-    <!-- Function binding -->
-    <TextBlock Text="{x:Bind local:FormatHelper.FormatDate(ViewModel.Date)}"/>
-</Page>
-```
-
-## Data Binding with {Binding} (Runtime)
-
-```xaml
-<!-- Runtime binding for templates and dynamic targets -->
-<ListView ItemsSource="{Binding Items}">
-    <ListView.ItemTemplate>
-        <DataTemplate>
-            <StackPanel>
-                <TextBlock Text="{Binding Title}"/>
-                <TextBlock Text="{Binding Subtitle, FallbackValue='N/A'}"
-                           Foreground="Gray"/>
-            </StackPanel>
-        </DataTemplate>
-    </ListView.ItemTemplate>
-</ListView>
-```
-
-## Adaptive UI with VisualStateManager
-
-```xaml
-<Page>
-    <Grid>
-        <VisualStateManager.VisualStateGroups>
-            <VisualStateGroup>
-                <VisualState x:Name="DefaultState"/>
-                <VisualState x:Name="WideState">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowWidth="800"/>
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="LayoutRoot.Margin" Value="40"/>
-                        <Setter Target="ContentGrid.ColumnDefinitions[1].MinWidth" Value="400"/>
-                    </VisualState.Setters>
-                </VisualState>
-                <VisualState x:Name="TallState">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowHeight="600"/>
-                    </VisualState.StateTriggers>
-                </VisualState>
-            </VisualStateGroup>
-        </VisualStateManager.VisualStateGroups>
-    </Grid>
-</Page>
-```
-
-## Data Binding Converter Example
-
-```csharp
-public class BoolToVisibilityConverter : IValueConverter
-{
-    public object Convert(object value, Type targetType, object parameter, string language)
-    {
-        bool val = (bool)value;
-        bool invert = parameter?.ToString() == "invert";
-        return (val ^ invert) ? Visibility.Visible : Visibility.Collapsed;
-    }
-
-    public object ConvertBack(object value, Type targetType, object parameter, string language)
-    {
-        var val = (Visibility)value;
-        bool invert = parameter?.ToString() == "invert";
-        return (val == Visibility.Visible) ^ invert;
-    }
-}
-```
-
-## Storage Patterns
-
-```csharp
-// Local settings
-ApplicationData.Current.LocalSettings.Values["theme"] = "dark";
-var theme = ApplicationData.Current.LocalSettings.Values["theme"] as string;
-
-// Local folder for files
-var localFolder = ApplicationData.Current.LocalFolder;
-var file = await localFolder.CreateFileAsync("data.json", CreationCollisionOption.ReplaceExisting);
-await FileIO.WriteTextAsync(file, jsonContent);
-
-// Roaming settings (syncs across devices)
-ApplicationData.Current.RoamingSettings.Values["preference"] = value;
-
-// Temporary folder
-var tempFolder = ApplicationData.Current.TemporaryFolder;
-```
-
-## Capabilities Reference
-
-| Capability | XML | Use Case |
-|------------|-----|----------|
-| Internet (Client) | `<Capability Name="internetClient"/>` | HTTP API calls |
-| Internet (Client & Server) | `<Capability Name="internetClientServer"/>` | Network server |
-| Location | `<DeviceCapability Name="location"/>` | GPS |
-| Webcam | `<DeviceCapability Name="webcam"/>` | Camera |
-| Microphone | `<DeviceCapability Name="microphone"/>` | Recording |
-| Pictures Library | `<Capability Name="picturesLibrary"/>` | Photo access |
-| Music Library | `<Capability Name="musicLibrary"/>` | Audio library |
-| Removable Storage | `<Capability Name="removableStorage"/>` | USB drives |
-| Shared User Certificates | `<Capability Name="sharedUserCertificates"/>` | Digital signatures |
-| Enterprise Auth | `<Capability Name="enterpriseAuthentication"/>` | Domain resources |
-| AllJoyn | `<DeviceCapability Name="alljoyn"/>` | IoT device comm |
-| Bluetooth | `<DeviceCapability Name="bluetooth"/>` | Bluetooth LE |
-| Proximity | `<DeviceCapability Name="proximity"/>` | NFC |
-| Run Full Trust | `<rescap:Capability Name="runFullTrust"/>` | Win32 interop |
+- Frame/Page for navigation, SuspensionManager for state persistence
+- AdaptiveTrigger + VisualStateManager for responsive layouts
+- x:Bind over {Binding} for performance (compiled bindings)
+- Background tasks declare entry point in manifest and code
+- ApplicationData.LocalSettings for key-value, LocalFolder for files
+- Capabilities declared in manifest match actual API usage
+- Contracts (Share, Search, FilePicker) handled via OnActivated

@@ -100,8 +100,10 @@ Log all findings in remediation tracker. Assign severity-appropriate SLAs. Track
 - All evidence collection must be automated where technically feasible.
 
 ## References
-- `references/compliance-frameworks.md` — SOC2/ISO/GDPR/HIPAA control mapping reference
+- `references/compliance-frameworks.md` — SOC2/ISO/GDPR/HIPAA/PCI-DSS compliance audit processes and evidence collection
 - `references/audit-evidence.md` — Evidence collection and preservation procedures
+- `references/audit-checklist.md` — Pre-audit readiness checklist and walkthrough preparation
+- `references/audit-automation.md` — Evidence collection, continuous compliance monitoring, audit automation
 
 ## Handoff
 For remediation implementation, hand off to `enterprise-sla-management` for tracking remediation SLAs, or `enterprise-cost-governance` for budgeting remediation costs.

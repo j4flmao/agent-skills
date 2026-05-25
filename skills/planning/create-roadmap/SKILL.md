@@ -105,8 +105,10 @@ This split is based on industry benchmarks from teams practicing sustainable pac
 - **create-prd** — Write detailed product requirement documents for major roadmap initiatives
 
 ## References
-
-- [Roadmap Template](references/roadmap-template.md)
+- `references/roadmap-examples.md` — Roadmap Examples
+- `references/roadmap-strategies.md` — Roadmap Strategies
+- `references/roadmap-template.md` — Roadmap Template
+- `references/roadmap-tools.md` — Roadmap Tools
 
 ## Handoff
 create-story (decompose roadmap features into individual user stories), create-tech-spec (write technical specifications for complex or high-risk roadmap features).

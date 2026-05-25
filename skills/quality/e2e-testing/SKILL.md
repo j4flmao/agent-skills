@@ -126,8 +126,10 @@ Store baselines in version control. Update baselines intentionally: `npx playwri
 - Retry flaky tests in CI, but flag and fix them
 
 ## References
-- `references/framework-selection.md` — Playwright vs Cypress vs Selenium, project setup, configuration
-- `references/test-patterns.md` — Page object, component fixtures, parallel exec, CI integration, retry
+- `references/cypress-guide.md` — Cypress Guide
+- `references/framework-selection.md` — Framework Selection
+- `references/playwright-guide.md` — Playwright Guide
+- `references/test-patterns.md` — Test Patterns
 
 ## Handoff
 `quality-visual-testing` for visual regression setup alongside E2E tests.

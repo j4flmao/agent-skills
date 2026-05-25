@@ -143,6 +143,8 @@ const html = render(<App />)
 ## References
 - `references/preact-setup.md` — Vite/WMR setup, compat config, CLI
 - `references/preact-vs-react.md` — API differences, bundle size, migration guide
+- `references/preact-architecture.md` — component patterns, signal stores, routing, data fetching, testing
+- `references/preact-deployment.md` — Vite config, bundle comparison, SSR, code splitting, CI/CD
 
 ## Handoff
 No artifact produced.

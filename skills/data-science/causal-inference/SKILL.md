@@ -305,8 +305,9 @@ def double_ml(X, y, t, model_y=None, model_t=None):
 
 ## References
 - `references/causal-frameworks.md` — Potential outcomes, DAGs, do-calculus, counterfactual reasoning, structural causal models
-- `references/quasi-experimental.md` — DiD, RDD, IV, PSM, synthetic control
+- `references/causal-inference-methods.md` — DAGs, do-calculus, propensity score matching, DiD, IV, RDD, A/B testing vs causal inference, sensitivity analysis
 - `references/causal-ml.md` — Uplift modeling, CATE, meta-learners, causal forests, double ML
+- `references/quasi-experimental.md` — DiD, RDD, IV, PSM, synthetic control
 
 ## Handoff
 `data-science-statistical-analysis` for foundational statistical methods

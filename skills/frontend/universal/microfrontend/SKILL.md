@@ -267,6 +267,8 @@ orders-app/
 ### Reference Files
 - `references/module-federation.md` — Detailed Module Federation configuration with examples
 - `references/communication-strategies.md` — Inter-MFE communication protocols
+- `references/microfrontend-architecture.md` — Architecture patterns, shell responsibilities, shared dependencies, monorepo structure, migration strategy
+- `references/microfrontend-integration.md` — Module Federation config (Webpack 5, Vite, Rspack), dynamic loading, communication, CSS isolation, error handling
 
 ### Related Skills
 - `frontend/universal/patterns/SKILL.md` — Frontend component and hooks patterns

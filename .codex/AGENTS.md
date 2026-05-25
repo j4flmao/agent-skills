@@ -1,6 +1,6 @@
 # .codex/AGENTS.md -- j4flmao/skills
 
-Codex CLI project config for the agent skill suite. 304 skills, compressed output, stack-based routing.
+Codex CLI project config for the agent skill suite. 417 skills, compressed output, stack-based routing.
 
 ## Compress (ALWAYS)
 

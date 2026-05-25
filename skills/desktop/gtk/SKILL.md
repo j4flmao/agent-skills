@@ -225,8 +225,10 @@ fn main() {
 ## References
 
 ### Reference Files
-- `references/gtk-setup.md` — Installation, build systems, debugging, deployment
+- `references/gtk-architecture.md` — Widget tree, signal system, CSS styling, GObject, GLib, custom widgets, layout management
 - `references/gtk-builder-guide.md` — GtkBuilder XML, widgets, signals, Blueprint
+- `references/gtk-deployment.md` — Flatpak, Snap, AppImage, cross-compilation, theming, accessibility
+- `references/gtk-setup.md` — Installation, build systems, debugging, deployment
 
 ### Related Skills
 - `desktop/qt/SKILL.md` — Qt alternative for C++/QML

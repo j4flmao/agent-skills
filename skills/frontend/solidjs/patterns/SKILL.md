@@ -130,6 +130,8 @@ const [pending, startTransition] = createTransition(() => setTab('settings'))
 ## References
 - `references/solid-data.md` — createResource, Suspense, error boundaries, lazy loading
 - `references/solid-forms.md` — controlled inputs, validation, field arrays, custom form state
+- `references/solidjs-routing.md` — router setup, dynamic params, navigation, search params, guards
+- `references/solidjs-state.md` — local state, form state, global state, context, decision guide
 
 ## Handoff
 No artifact produced.

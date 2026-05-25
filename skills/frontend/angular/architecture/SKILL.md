@@ -250,6 +250,7 @@ export class UserService {
 - `references/module-structure.md` — Angular standalone component structure and routing
 - `references/signals-guide.md` — Signals, Signal Store, input/output with signals
 - `references/standalone-components.md` — bootstrapApplication, lazy loading, migration
+- `references/angular-routing.md` — route configuration, lazy loading, guards, resolvers, navigation, NgModule
 
 ## Handoff
 No artifact produced.

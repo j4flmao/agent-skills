@@ -112,9 +112,10 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ```
 
 ## References
-
-- `references/deep-link-setup.md` — AASA, Android intent filters, verification, testing
-- `references/platform-differences.md` — iOS vs Android deep link differences, deferred linking, fallback
+- `references/deep-link-routing.md` — Deep Link Routing
+- `references/deep-link-setup.md` — Deep Link Setup
+- `references/platform-differences.md` — Platform Differences
+- `references/universal-links.md` — Universal Links
 
 ## Handoff
 Hand off to mobile-analytics skill when deep link attribution and conversion tracking is needed.

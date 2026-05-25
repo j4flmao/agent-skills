@@ -234,6 +234,8 @@ function renderWithI18n(ui: React.ReactElement) {
 ## References
 - `references/i18n-libraries.md` — i18next, react-intl, vue-i18n, FormatJS, Angular i18n, setup patterns, lazy loading
 - `references/rtl-support.md` — CSS logical properties, dir attribute, RTL testing, layout adaptation
+- `references/i18n-implementation.md` — i18next setup, locale switching, namespace loading, SSR, type-safe keys, locale files
+- `references/i18n-workflow.md` — Key extraction, translation platforms, CI/CD, missing key detection, pseudolocalization, RTL testing
 
 ## Handoff
 No artifact produced unless requested.

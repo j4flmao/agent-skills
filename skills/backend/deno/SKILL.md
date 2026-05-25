@@ -269,6 +269,8 @@ export default function SearchBar() {
 ### Reference Files
 - `references/deno-essentials.md` — Permissions, modules, std lib, testing
 - `references/fresh-framework.md` — Routes, islands, SSR, deployment
+- `references/deno-runtime.md` — Permissions model, runtime APIs, module resolution, std lib
+- `references/deno-deployment.md` — Deno Deploy, Docker, compile, CI/CD, platforms
 
 ### Related Skills
 - `backend/nodejs/express/SKILL.md` — Alternative Node.js approach

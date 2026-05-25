@@ -236,6 +236,8 @@ labels:
 ### Reference Files
 - `references/alert-rules-catalog.md` — Complete alert rules catalog for infrastructure, application, business
 - `references/notification-routing.md` — Notification routing rules, escalation matrix, integration configs
+- `references/alert-rules-templates.md` — Reusable alert rule templates with configurable thresholds
+- `references/escalation-policies.md` — Escalation policy definitions and on-call rotation templates
 
 ### Related Skills
 - `devops/monitoring/SKILL.md` — Monitoring stack configuration

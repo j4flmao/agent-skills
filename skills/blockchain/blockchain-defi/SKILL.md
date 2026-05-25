@@ -34,5 +34,12 @@ tags: [blockchain, defi, finance, protocol, phase-blockchain]
 4. Implementation — key contract architecture, integration points, Solidity/EVM patterns
 5. Risk analysis — smart contract risk, IL, depeg risk, regulatory exposure, composability risk
 
+## References
+- references/amm-mechanics.md — Constant product, stable swap, weighted pools
+- references/derivatives-perps.md — Perpetual futures and derivatives mechanisms
+- references/lending-borrowing.md — Interest rate models and liquidation logic
+- references/lsd-lrt-restaking.md — Liquid staking derivatives and restaking
+- references/yield-strategies.md — Yearn vault design and yield optimization
+
 ## Phase
 blockchain → blockchain-defi

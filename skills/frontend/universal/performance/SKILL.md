@@ -129,6 +129,9 @@ Bundle budget:
 
 ## References
 - `references/web-vitals.md` — Core Web Vitals targets (LCP, INP, CLS) and optimization
+- `references/perf-bundling.md` — bundle analysis, code splitting, Vite/Webpack config, budgets, compression
+- `references/perf-monitoring.md` — RUM, Core Web Vitals, Lighthouse CI, long tasks, budget enforcement
+- `references/perf-patterns.md` — image optimization, lazy loading, virtual scroll, debounce, fonts, critical CSS
 
 ## Handoff
 No artifact produced.

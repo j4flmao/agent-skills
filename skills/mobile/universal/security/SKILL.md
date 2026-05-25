@@ -157,15 +157,10 @@ buildTypes {
 ```
 
 ## References
-
-### Reference Files
-- `references/data-protection.md` — encryption, key management, secure storage APIs
-- `references/network-security.md` — SSL pinning, certificate validation, proxy prevention
-- `references/auth.md` — OAuth, JWT, biometric, session management
-
-### Related Skills
-- `mobile/universal/networking/SKILL.md` — secure networking patterns
-- `management/security/SKILL.md` — security auditing, compliance
+- `references/auth.md` — Auth
+- `references/data-protection.md` — Data Protection
+- `references/mobile-security-best-practices.md` — Mobile Security Best Practices
+- `references/network-security.md` — Network Security
 
 ## Handoff
 

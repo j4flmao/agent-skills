@@ -131,7 +131,10 @@ Write to `docs/stories/STORY-{NNN}.md`.
 - Do not create stories for work that is already in progress (Status: "In Progress" in existing stories).
 
 ## References
-- `references/story-template.md` — story template with acceptance criteria
+- `references/acceptance-criteria.md` — Acceptance Criteria
+- `references/story-examples.md` — Story Examples
+- `references/story-refinement.md` — Story Refinement
+- `references/story-template.md` — Story Template
 
 ## Handoff
 Output: `docs/stories/STORY-{NNN}.md`

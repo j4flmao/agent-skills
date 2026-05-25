@@ -184,7 +184,10 @@ add_header Permissions-Policy "geolocation=(), microphone=(), camera=()";
 ```
 
 ## References
-- `references/owasp-top10.md` — detailed OWASP Top 10 with exploitation scenarios
+- `references/audit-checklist.md` — Audit Checklist
+- `references/owasp-top10.md` — Owasp Top10
+- `references/remediation-guide.md` — Remediation Guide
+- `references/security-audit-automation.md` — Security Audit Automation
 
 ## Handoff
 After completing this skill:

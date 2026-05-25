@@ -187,6 +187,8 @@ const tokens = await api.post('/auth/token', { code, verifier, redirect_uri: RED
 ## References
 - `references/auth-flows.md` — OAuth PKCE, Auth Code flow, passwordless, magic link, MFA, SSO
 - `references/token-management.md` — JWT storage, refresh rotation, interceptor patterns, session recovery
+- `references/auth-security.md` — CSRF, SameSite, rate limiting, session fingerprinting, secure logout, theft detection
+- `references/auth-providers.md` — Auth0, Clerk, Supabase, Firebase, Cognito setup patterns, provider abstraction
 
 ## Handoff
 No artifact produced unless requested.

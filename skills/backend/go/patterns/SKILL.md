@@ -178,6 +178,7 @@ if err := server.Shutdown(shutdownCtx); err != nil {
 - `references/concurrency-patterns.md` — goroutines, worker pools, fan-out/fan-in
 - `references/error-handling.md` — error wrapping, sentinel errors, domain errors
 - `references/http-server.md` — server setup, middleware chain, response envelope
+- `references/go-microservices.md` — service layout, circuit breaker, discovery, graceful shutdown
 
 ## Handoff
 No artifact produced.

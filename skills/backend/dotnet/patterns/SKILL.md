@@ -277,6 +277,8 @@ public class OrderGrpcService : OrderService.OrderServiceBase
 ### Reference Files
 - `references/cqrs-mediatr.md` — Full MediatR CQRS implementation with examples
 - `references/ef-core-patterns.md` — EF Core optimization, migrations, performance patterns
+- `references/dotnet-cqrs.md` — CQRS command/query separation, MediatR pipelines, validation
+- `references/dotnet-event-sourcing.md` — Event store, aggregate replay, projections, snapshots
 
 ### Related Skills
 - `backend/dotnet/architecture/SKILL.md` — .NET project structure and DI

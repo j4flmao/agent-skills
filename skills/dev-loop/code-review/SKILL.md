@@ -149,7 +149,10 @@ Review in order: correctness → architecture → clarity → performance → se
 ```
 
 ## References
-- `references/review-checklist.md` — expanded review checklist with examples
+- `references/review-checklist.md` — Review Checklist
+- `references/review-workflow.md` — Review Workflow
+- `references/security-review-checklist.md` — Security Review Checklist
+- `references/security-review-guide.md` — Security Review Guide
 
 ## Handoff
 After completing this skill:

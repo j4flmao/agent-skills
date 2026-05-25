@@ -137,6 +137,9 @@ const orderMachine = createMachine({
 
 ## References
 - `references/state-patterns.md` — state decision tree, server state, global store, local state
+- `references/state-comparison.md` — framework-native solutions, library comparison, decision matrix, migration
+- `references/state-architecture.md` — state categories, location rules, store design, normalization, anti-patterns
+- `references/state-testing.md` — testing stores (Zustand/Pinia/NgRx), server state, async operations
 
 ## Handoff
 No artifact produced.

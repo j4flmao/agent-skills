@@ -186,6 +186,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ## References
 - `references/workspace-layout.md` — Rust workspace structure and crate dependency graph
 - `references/trait-design.md` — repository traits, associated types, trait objects
+- `references/rust-async.md` — Async Rust, Tokio, async/await patterns
+- `references/rust-web-frameworks.md` — Axum, Actix, Rocket web framework patterns
 
 ## Handoff
 No artifact produced.

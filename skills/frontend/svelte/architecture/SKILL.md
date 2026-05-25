@@ -156,6 +156,8 @@ For global state, use $state class instances in a module `.svelte.js` file: `exp
 ## References
 - `references/svelte-runes.md` — $state, $derived, $effect, $props, $bindable usage
 - `references/svelte-components.md` — slots, context, lifecycle, events, actions, transitions
+- `references/svelte-reactivity.md` — runes deep dive, $state, $derived, $effect, shared state patterns
+- `references/svelte-optimization.md` — compile-time optimization, keyed each, lazy loading, transitions
 
 ## Handoff
 No artifact produced.

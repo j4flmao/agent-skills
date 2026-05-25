@@ -127,6 +127,8 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 - `references/design-tokens.md` — Naming conventions, CSS variables, token categories, theme definitions
 - `references/theme-implementation.md` — Per-framework patterns, switching, persistence, anti-flicker, Tailwind theming
+- `references/theming-architecture.md` — Theme layers, token categories, switching logic, anti-flicker, provider, toggle, multi-brand
+- `references/theming-tokens.md` — Token naming, hierarchy, file organization, documentation, consumption rules, audit, migration
 
 ---
 

@@ -34,5 +34,12 @@ tags: [blockchain, management, governance, dao, phase-blockchain]
 4. **Token economics**: supply model, distribution, incentives, emission schedule
 5. **Project methodology**: development lifecycle, audit gates, community involvement
 
+## References
+- references/dao-governance.md — DAO governance frameworks and voting systems
+- references/multi-sig-operations.md — Gnosis Safe, timelocks, proposal lifecycle
+- references/project-methodology.md — Web3 project methodology and progressive decentralization
+- references/tokenomics-design.md — Token supply, inflation, vesting schedules
+- references/treasury-management.md — Treasury allocation, diversification, yield
+
 ## Phase
 blockchain → blockchain-management

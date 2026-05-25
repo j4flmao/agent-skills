@@ -186,6 +186,7 @@ TABLE + FK: >20 values, has attributes, admin-managed, multi-language
 - `references/query-optimization.md` — index strategy, N+1 prevention, pagination, EXPLAIN PLAN
 - `references/migration-guide.md` — backward-compatible migration rules
 - `references/table-design-rules.md` — table structure, soft delete, indexing & partitioning, PK/FK rules
+- `references/database-migration-patterns.md` — Database migration patterns, two-phase changes, zero-downtime
 
 ## Handoff
 No artifact produced.

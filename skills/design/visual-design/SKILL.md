@@ -65,6 +65,5 @@ Apply visual design principles: color theory, typography, layout grids, spacing 
 - `references/color-theory.md` — Color theory, wheel, harmony, contrast, WCAG, dark mode
 - `references/layout-principles.md` — Grid systems, spacing, and composition
 - `references/spacing-grid.md` — 8px grid, baseline grid, spacing scale, container queries, responsive breakpoints
-- `references/typography-guide.md` — Typography selection and pairing
 - `references/typography.md` — Typeface selection, font pairing, hierarchy, responsive type scales, variable fonts
 - `references/visual-hierarchy.md` — F-pattern, Z-pattern, focal points, proximity, Gestalt principles

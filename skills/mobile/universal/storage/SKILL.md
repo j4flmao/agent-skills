@@ -157,15 +157,10 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
 ```
 
 ## References
-
-### Reference Files
-- `references/sqlite.md` — migrations, indexes, queries, performance
-- `references/preferences.md` — K/V storage patterns, type adapters
-- `references/file-system.md` — directories, file encryption, cache management
-
-### Related Skills
-- `mobile/universal/networking/SKILL.md` — caching layer integration
-- `mobile/universal/performance/SKILL.md` — storage performance optimization
+- `references/file-system.md` — File System
+- `references/mobile-storage-patterns.md` — Mobile Storage Patterns
+- `references/preferences.md` — Preferences
+- `references/sqlite.md` — Sqlite
 
 ## Handoff
 

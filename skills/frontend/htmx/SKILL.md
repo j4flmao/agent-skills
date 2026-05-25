@@ -134,6 +134,8 @@ def delete_contact(request, pk):
 ## References
 - `references/htmx-setup.md` — CDN/npm, config, extensions, tooling
 - `references/htmx-patterns.md` — triggers, swaps, indicators, HATEOAS, server examples
+- `references/htmx-advanced.md` — WebSocket, SSE, history, cascading selects, custom events, extensions
+- `references/htmx-deployment.md` — CDN delivery, backend integration, CSP, caching, security
 
 ## Handoff
 No artifact produced.

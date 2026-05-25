@@ -125,6 +125,8 @@ Include `X-Webhook-ID` header. Consumers deduplicate by this ID.
 ## References
 - `references/webhook-setup.md` — Webhook setup and delivery infrastructure
 - `references/webhook-security.md` — Webhook security best practices
+- `references/webhooks-architecture.md` — Webhook service design, routing, delivery, subscription management
+- `references/webhooks-delivery.md` — Webhook signing, verification, secret rotation, security
 
 ## Handoff
 No artifact produced unless requested.

@@ -166,10 +166,11 @@ For each component: all states documented visually, spacing/padding, typography,
 - Always export assets at 2x resolution with descriptive naming
 
 ## References
-- `references/prototyping-fidelity.md` — Low/high fidelity, interaction patterns, micro-interactions, animation principles
-- `references/prototyping-tools.md` — Figma, ProtoPie, Framer comparison, tool selection, prototyping workflows
-- `references/handoff-workflow.md` — Dev mode, spec doc, asset export, redlines, design tokens, motion specs
-- `references/handoff.md`
+- `references/handoff-workflow.md` — Handoff Workflow
+- `references/handoff.md` — Handoff
+- `references/interactive-prototypes.md` — Interactive Prototypes
+- `references/prototyping-fidelity.md` — Prototyping Fidelity
+- `references/prototyping-tools.md` — Prototyping Tools
 
 ## Handoff
 `design-ux-research` for usability testing with the prototype.

@@ -377,6 +377,8 @@ public class AsyncOrderHandler {
 ### Reference Files
 - `references/spring-patterns.md` — DI, AOP, transaction, event-driven patterns
 - `references/spring-testing.md` — Unit test, slice tests, TestContainers, WireMock
+- `references/spring-boot-deployment.md` — Docker, profiles, health checks, performance tuning
+- `references/spring-boot-observability.md` — Actuator, metrics, tracing, logging, health indicators
 
 ### Related Skills
 - `backend/spring-boot/architecture/SKILL.md` — Spring Boot project structure

@@ -166,8 +166,10 @@ D, I = index.search(query_embedding, k=10)
 - Monitor embedding drift over time — data distribution changes degrade quality.
 
 ## References
-- `references/embedding-models.md` — Sentence-transformers, BGE/Instructor/OpenAI/Cohere comparison, MTEB
-- `references/embedding-training.md` — Contrastive learning, Matryoshka, quantization, caching, indexing
+- `references/embedding-models.md` — Embedding Models
+- `references/embedding-training.md` — Embedding Training
+- `references/vector-indexing.md` — Vector Indexing
+- `references/embedding-optimization.md` — Compression, quantization, caching, batch processing
 
 ## Handoff
 For RAG pipeline with these embeddings, hand off to `ai-rag-patterns`. For vector database operations, hand off to `ai-vector-databases`. For multimodal embeddings, hand off to `ai-multimodal`.

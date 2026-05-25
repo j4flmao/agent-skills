@@ -98,6 +98,8 @@ Stream all IdP events to SIEM (logins, failures, role changes, MFA registration)
 ## References
 - `references/idp-setup.md` — IdP installation and configuration
 - `references/federation-sso.md` — SSO integration and federation patterns
+- `references/idp-migration.md` — Identity provider migration strategies and cutover planning
+- `references/saml-oidc.md` — SAML vs OIDC protocol comparison and integration patterns
 
 ## Handoff
 For compliance requirements on identity governance, hand off to `enterprise-compliance-audit`. For cost tracking of IdP licensing, hand off to `enterprise-cost-governance`.

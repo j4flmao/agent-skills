@@ -135,6 +135,8 @@ npx @openapitools/openapi-generator-cli generate -i openapi.yaml -g typescript-a
 ## References
 - `references/openapi-setup.md` — OpenAPI project setup guide
 - `references/openapi-codegen.md` — OpenAPI code generation patterns
+- `references/openapi-tools.md` — OpenAPI tooling ecosystem, linting, mock servers, breaking change detection
+- `references/openapi-versioning-strategies.md` — API versioning strategies, migration guides, spec management
 
 ## Handoff
 No artifact produced unless requested.

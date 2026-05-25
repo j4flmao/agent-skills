@@ -147,7 +147,10 @@ src/app/features/ src/app/shared/ src/app/core/ src/assets/
 - If the project already exists, ask: "The directory {name} already exists. Overwrite specific files? (yes/no/list)"
 
 ## References
-- `scripts/scaffold.sh` — programmatic project scaffolding script
+- `references/config-reference.md` — Project configuration files reference
+- `references/config-templates.md` — Configuration templates for common stacks
+- `references/project-scaffold.md` — Project scaffolding patterns and directory structures
+- `references/stack-templates.md` — Stack-specific project templates and conventions
 
 ## Handoff
 Output: Scaffolded project at {path}

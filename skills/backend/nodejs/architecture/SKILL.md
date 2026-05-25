@@ -152,6 +152,8 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
 ### Reference Files
 - `references/express-setup.md` — Express configuration, middleware patterns, security
 - `references/fastify-setup.md` — Fastify configuration, plugins, hooks
+- `references/nodejs-event-loop.md` — Event loop phases, microtasks, blocking, worker threads
+- `references/nodejs-clustering.md` — Cluster module, PM2, IPC, zero-downtime restart
 
 ### Related Skills
 - `backend/nodejs/patterns/SKILL.md` — Node.js-specific patterns

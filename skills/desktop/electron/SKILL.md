@@ -209,6 +209,8 @@ app.whenReady().then(() => {
 ### Reference Files
 - `references/electron-architecture.md` — Process model, IPC patterns, window management
 - `references/electron-packaging.md` — Build configs, code signing, auto-update, CI
+- `references/electron-performance.md` — V8 memory management, window management, GPU acceleration, lazy loading, profiling
+- `references/electron-security.md` — Security best practices: contextIsolation, preload scripts, CSP, sandbox, IPC hardening, auto-updater security
 
 ### Related Skills
 - `desktop/tauri/SKILL.md` — Lighter alternative to Electron

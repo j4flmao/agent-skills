@@ -300,6 +300,8 @@ Closes #ISSUE_NUMBER
 - `references/code-review-protocol.md` — Detailed code review guidelines with examples
 - `references/branch-strategy.md` — Git branching strategies and lifecycle management
 - `references/communication-protocol.md` — Meeting templates, async communication standards
+- `references/conflict-resolution.md` — Team conflict resolution frameworks and mediation guides
+- `references/working-agreements.md` — Team working agreements templates and facilitation guides
 
 ### Related Skills
 - `management/pm/SKILL.md` — Sprint ceremonies, estimation, stakeholder communication

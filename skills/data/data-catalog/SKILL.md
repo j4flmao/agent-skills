@@ -238,7 +238,9 @@ Track: `dataset_queries`, `column_access_frequency`, `top_users`, `search_querie
 - No undocumented dataset promoted to production
 
 ## References
+- `references/catalog-api-examples.md` — API examples for DataHub GraphQL, Amundsen REST, OpenMetadata API, programmatic metadata management, automation, bulk operations
 - `references/catalog-platforms.md` — DataHub vs Amundsen vs OpenMetadata vs Atlas, ingestion, lineage, search
+- `references/metadata-ingestion-patterns.md` — Ingestion patterns for Snowflake, BigQuery, dbt, Spark, Airflow, Kafka — crawler, push, event-based, incremental
 - `references/metadata-management.md` — Business glossary, ownership, stewardship, usage analytics, certification
 
 ## Handoff

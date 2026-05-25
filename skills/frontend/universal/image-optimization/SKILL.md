@@ -136,6 +136,8 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 - `references/image-formats.md` — AVIF/WebP/JPEG, srcset, picture, CDN transforms, placeholders
 - `references/image-performance.md` — LCP optimization, lazy loading, preload, budgets, Core Web Vitals
+- `references/image-delivery.md` — CDN providers (Cloudinary, Imgix), responsive images, picture element, art direction, progressive loading, LCP preloading
+- `references/image-components.md` — Next.js Image, custom image component, skeleton placeholders, aspect ratio, avatar, gallery grid, comparison slider
 
 ---
 

@@ -179,6 +179,8 @@ const buttonVariants = cva(
 ## References
 - `references/design-tokens.md` — token hierarchy (primitive / semantic / component)
 - `references/component-api.md` — CVA pattern, slot pattern, component API rules
+- `references/design-system-implementation.md` — Project structure, component API design, CVA patterns, slot pattern, distribution
+- `references/design-system-testing.md` — Unit tests, a11y tests, visual regression, interaction tests, snapshot strategy
 
 ## Handoff
 No artifact produced.

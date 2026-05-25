@@ -125,8 +125,10 @@ Map task to eval categories: generation (quality, coherence), RAG (faithfulness,
 - Automate eval runs but require human review for regression in critical metrics.
 
 ## References
-- `references/eval-metrics.md` — Faithfulness, relevance, answer relevance, context precision, RAGAS, custom metrics
-- `references/eval-pipeline.md` — Dataset creation, automated eval, regression, CI integration
+- `references/eval-datasets.md` — Eval Datasets
+- `references/eval-metrics.md` — Eval Metrics
+- `references/eval-pipeline.md` — Eval Pipeline
+- `references/metrics-reference.md` — Metrics Reference
 
 ## Handoff
 For prompt optimization to improve eval scores, hand off to `ai-prompt-engineering`. For RAG pipeline changes evaluated by this skill, hand off to `ai-rag-patterns`.

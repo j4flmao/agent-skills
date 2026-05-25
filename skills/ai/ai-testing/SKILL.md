@@ -187,8 +187,10 @@ jobs:
 - Stale golden dataset detected via production drift monitoring.
 
 ## References
-- `references/llm-testing.md` — Test types (factuality, consistency, safety, format), golden dataset, assertions
-- `references/ci-cd-for-llm.md` — CI/CD pipeline, quality gates, regression detection, model comparison, prompt versioning
+- `references/ci-cd-for-llm.md` — Ci Cd For Llm
+- `references/llm-testing.md` — Llm Testing
+- `references/regression-testing.md` — Regression Testing
+- `references/test-cases.md` — Test Cases
 
 ## Handoff
 For safety-specific testing, hand off to `ai-ai-safety`. For embedding quality evaluation, hand off to `ai-embeddings`. For training-time evaluation, hand off to `ai-model-training`.

@@ -107,7 +107,10 @@ For large-scale changes (module extraction, framework migration):
 Proposed refactoring plan: {current code} → {refactored code} → {justification}. Tests before/after.
 
 ## References
-- `references/refactor-patterns.md` — expanded refactoring catalog with examples
+- `references/migration-strategies.md` — Migration Strategies
+- `references/refactor-patterns.md` — Refactor Patterns
+- `references/refactoring-patterns.md` — Refactoring Patterns
+- `references/refactoring-techniques.md` — Refactoring Techniques
 
 ## Handoff
 After completing this skill:

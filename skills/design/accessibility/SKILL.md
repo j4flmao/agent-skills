@@ -91,8 +91,10 @@ Automated (axe DevTools, Lighthouse in CI): catches 30% of issues — contrast, 
 - Disable animations with `prefers-reduced-motion`
 
 ## References
-- `references/wcag-guide.md` — WCAG levels, POUR principles, common violations, semantic markup, ARIA
-- `references/testing-tools.md` — axe DevTools, Lighthouse, WAVE, screen reader testing, keyboard audits
+- `references/aria-patterns.md` — Aria Patterns
+- `references/testing-tools.md` — Testing Tools
+- `references/wcag-checklist.md` — Wcag Checklist
+- `references/wcag-guide.md` — Wcag Guide
 
 ## Handoff
 `design-design-systems` for accessible component library integration.

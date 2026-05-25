@@ -556,6 +556,7 @@ class ListUsersHandler implements RequestHandlerInterface
 - `references/laminas-mvc.md` — Module system, EventManager, plugins, console routes
 - `references/laminas-db-doctrine.md` — laminas-db TableGateway, Doctrine ORM, migrations
 - `references/mezzio-api.md` — Mezzio middleware, PSR-15 handlers, API development
+- `references/zend-migration.md` — Migration from ZF3 to Laminas, namespace changes, checklist
 
 ## Handoff
 Next skill: php-laravel — if user prefers Laravel's opinionated conventions.

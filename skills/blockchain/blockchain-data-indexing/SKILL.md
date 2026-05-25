@@ -56,6 +56,12 @@ When asked about blockchain data indexing, respond with:
 4.  **Reorg & safety** – how the design handles reorgs, missing blocks, and data consistency.
 5.  **Alternatives / trade-offs** – when another approach would be better and why.
 
+## References
+- references/dune-analytics.md — Dune Analytics SQL queries and spellbook
+- references/goldsky-chainindex.md — Goldsky pipelines and ChainIndex indexers
+- references/indexer-architecture.md — Indexer architecture patterns and ETL
+- references/the-graph-subgraph.md — The Graph subgraph manifest and handlers
+
 ## Phase: blockchain → blockchain-data-indexing
 
 This skill belongs to the `blockchain` phase group. Activate it when the user's question matches any trigger keyword above.

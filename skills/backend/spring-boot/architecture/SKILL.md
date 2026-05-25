@@ -199,6 +199,8 @@ feature:
 ## References
 - `references/layered-architecture.md` — hexagonal architecture, constructor injection, dependency rule
 - `references/reactive-webflux.md` — WebFlux controllers, R2DBC, reactive error handling
+- `references/spring-boot-data-access.md` — JPA, R2DBC, transactions, locking, batch operations
+- `references/spring-boot-security.md` — security chain, JWT, CORS, method security, testing
 
 ## Handoff
 No artifact produced.

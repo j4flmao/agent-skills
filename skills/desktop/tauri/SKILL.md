@@ -161,6 +161,8 @@ async function handleGreet() {
 ## References
 
 ### Reference Files
+- `references/tauri-architecture.md` — Rust backend, webview frontend, IPC commands, file system access, system tray, window management
+- `references/tauri-deployment.md` — Bundling, code signing, auto-updater, CI/CD for Windows/Mac/Linux, app store distribution
 - `references/tauri-setup.md` — Project setup, Rust commands, plugins, debugging
 - `references/tauri-vs-electron.md` — Comparison, migration guide, trade-offs
 

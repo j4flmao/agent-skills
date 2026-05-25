@@ -296,6 +296,8 @@ Register common queries by hash to reduce request size and prevent arbitrary que
 ## References
 - `references/schema-resolvers.md` — Naming conventions, type design, nullability rules, resolver patterns, DataLoader, N+1 prevention, pagination, error handling
 - `references/federation-subscriptions.md` — Federation directives, gateway configuration, entity resolution, subscription patterns, WebSocket, SSE
+- `references/graphql-federation.md` — Apollo Federation architecture, subgraph design, router configuration, query planning
+- `references/graphql-performance.md` — N+1 prevention, DataLoader, query complexity, caching, persisted queries
 
 ## Handoff
 `backend-api-design` for REST-GraphQL coexistence strategy

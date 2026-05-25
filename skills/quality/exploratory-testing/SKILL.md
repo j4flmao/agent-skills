@@ -94,7 +94,7 @@ Problem → Select Heuristic → Apply & Observe → Record Finding → (Optiona
 - `references/session-based.md` — Session-Based Test Management (SBTM)
 - `references/test-heuristics.md` — Test heuristics and mnemonic guides
 - `references/charter-design.md` — Charter design and types
-- `references/exploratory-tools.md` — Tools for exploratory testing
+- `references/exploratory-session.md` — Session-based testing, charter templates, debriefing, notes
 
 ## Handoff
 After session completion, hand off to:

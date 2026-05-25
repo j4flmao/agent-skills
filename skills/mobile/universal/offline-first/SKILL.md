@@ -110,9 +110,10 @@ data class SyncConfig(
 ```
 
 ## References
-
-- `references/sync-strategies.md` — Sync strategies, conflict resolution, CRDT, pending queue
-- `references/local-storage.md` — Local DB setup, Room/CoreData/SQLDelight, migration, repository pattern
+- `references/local-storage.md` — Local Storage
+- `references/mobile-database.md` — Mobile Database
+- `references/offline-sync.md` — Offline Sync
+- `references/sync-strategies.md` — Sync Strategies
 
 ## Handoff
 Hand off to mobile-networking skill when implementing the sync transport layer, or to mobile-storage for advanced local persistence patterns.

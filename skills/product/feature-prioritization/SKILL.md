@@ -99,8 +99,10 @@ Sort features by score within chosen framework. Assign priority buckets: P0 = sh
 - Re-prioritization must happen quarterly or when strategy changes.
 
 ## References
-- `references/prioritization-frameworks.md` — Framework selection and comparison
-- `references/scoring-models.md` — RICE, Kano, and Opportunity scoring details
+- `references/prioritization-frameworks.md` — Prioritization Frameworks
+- `references/prioritization-matrix.md` — Prioritization Matrix
+- `references/roadmap-planning.md` — Roadmap Planning
+- `references/scoring-models.md` — Scoring Models
 
 ## Handoff
 For analytics data to inform prioritization, hand off to `product-analytics`. For user research to validate priorities, hand off to `product-user-research`.

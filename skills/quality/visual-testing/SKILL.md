@@ -93,8 +93,10 @@ Block PR merge on visual diffs unless reviewed and approved.
 - Percy parallel build flag for CI: `--parallel-nonce` + `--parallel-total-to`
 
 ## References
-- `references/visual-test-setup.md` — Percy, Chromatic, Storybook integration, diff thresholds
-- `references/baseline-management.md` — CI pipeline, cross-browser, component-level, review workflow
+- `references/baseline-management.md` — Baseline Management
+- `references/screenshot-comparison.md` — Screenshot Comparison
+- `references/visual-regression-tools.md` — Visual Regression Tools
+- `references/visual-test-setup.md` — Visual Test Setup
 
 ## Handoff
 `quality-e2e-testing` for combined E2E + visual test suite.

@@ -67,9 +67,10 @@ Structured report:
 6. Smoke tests must not require complex test data setup — use defaults or existing data
 
 ## References
-- `references/bvt-strategy.md` — Build Verification Testing strategy
-- `references/smoke-automation.md` — Smoke test automation in CI/CD
-- `references/deployment-health.md` — Deployment health checks
+- `references/bvt-strategy.md` — Bvt Strategy
+- `references/deployment-health.md` — Deployment Health
+- `references/smoke-automation.md` — Smoke Automation
+- `references/smoke-testing-strategies.md` — Smoke Testing Strategies
 
 ## Handoff
 After smoke testing, hand off to:

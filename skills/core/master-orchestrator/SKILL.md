@@ -1543,7 +1543,10 @@ Read project files:
 - If the user asks a question outside routing (e.g., "how do I do X"), respond with: "That question should be handled by {skill-name}. Activate that skill with: {trigger phrase}"
 
 ## References
-This skill uses no external reference files — all routing logic is inline.
+- `references/phase-workflow.md` — Phase workflow orchestration and progression rules
+- `references/routing-decision-tree.md` — Decision tree for routing user requests to correct skills
+- `references/skill-routing.md` — Skill routing matrix and handoff protocols
+- `references/skill-registry.md` — Skill registration, discovery, dependency resolution
 
 ## Handoff
 This skill does not produce artifacts. It routes to the appropriate next skill.

@@ -152,15 +152,10 @@ final class AppCoordinator: Coordinator {
 ```
 
 ## References
-
-### Reference Files
-- `references/mvvm-mvi.md` — MVVM vs MVI deep dive, state management
-- `references/coordinator.md` — Coordinator / Navigator pattern variants
-- `references/clean-arch.md` — Clean Architecture rules, layer maps
-
-### Related Skills
-- `mobile/universal/state-management/SKILL.md` — cross-platform state patterns
-- `mobile/testing/SKILL.md` — testing architectures
+- `references/clean-arch.md` — Clean Arch
+- `references/coordinator.md` — Coordinator
+- `references/mobile-architecture-patterns.md` — Mobile Architecture Patterns
+- `references/mvvm-mvi.md` — Mvvm Mvi
 
 ## Handoff
 

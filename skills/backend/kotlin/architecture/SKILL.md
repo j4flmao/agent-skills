@@ -164,6 +164,7 @@ sealed class AppException(val statusCode: Int, val code: String, override val me
 - `references/ktor-setup.md` — Ktor configuration, routing, plug-ins
 - `references/kotlin-backend-patterns.md` — Kotlin backend patterns, DI, testing
 - `references/coroutines-guide.md` — Coroutine scopes, flows, structured concurrency
+- `references/kotlin-testing.md` — Kotest, coroutine testing, MockK, TestContainers, best practices
 
 ### Related Skills
 - `backend/kotlin/patterns/SKILL.md` — Kotlin-specific backend patterns

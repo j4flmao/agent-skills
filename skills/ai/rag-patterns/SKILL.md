@@ -113,8 +113,10 @@ Build context within LLM token limit. Prioritize highest-scoring chunks. Track s
 - Track full provenance (doc ID, chunk index, source URL) per chunk.
 
 ## References
-- `references/chunking-strategies.md` — Semantic, recursive, sentence, token chunking
-- `references/retrieval-techniques.md` — Dense, sparse, hybrid, re-ranking, MMR
+- `references/chunking-strategies.md` — Chunking Strategies
+- `references/retrieval-optimization.md` — Retrieval Optimization
+- `references/retrieval-techniques.md` — Retrieval Techniques
+- `references/rag-hybrid.md` — Hybrid search, re-ranking, evaluation, production optimization
 
 ## Handoff
 For vector database deployment, hand off to `ai-vector-databases`. For prompt integration with retrieved context, hand off to `ai-prompt-engineering`.

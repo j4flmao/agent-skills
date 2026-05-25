@@ -128,7 +128,10 @@ Write to `docs/brief-{YYYY-MM-DD}.md`.
 - Do NOT ask for confirmation before writing the file. Write it and show it.
 
 ## References
-- `references/brief-template.md` — one-page brief template
+- `references/brief-examples.md` — Brief Examples
+- `references/brief-strategies.md` — Brief Strategies
+- `references/brief-template.md` — Brief Template
+- `references/brief-templates.md` — Brief Templates
 
 ## Handoff
 Output: `docs/brief-{YYYY-MM-DD}.md`

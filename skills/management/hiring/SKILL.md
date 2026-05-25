@@ -240,9 +240,9 @@ Track demographics to detect pipeline bias.
 
 ## References
 - `references/interview-rubrics.md`
-  Rubric design, coding criteria, system design scoring,
-  behavioral competencies, calibration
 - `references/interview-process.md`
+- `references/evaluation-rubric.md`
+- `references/interview-questions.md`
   Pipeline stages, phone screen, onsite structure,
   debrief protocol, offer framework, candidate experience
 

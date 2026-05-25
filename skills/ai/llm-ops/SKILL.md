@@ -115,8 +115,10 @@ Determine: model size (parameters), context length, expected requests/minute, pe
 - Monitor for drift: input distribution, output length, refusal rate.
 
 ## References
-- `references/model-serving.md` — vLLM, TGI, Ollama, Triton, deployment patterns
-- `references/fine-tuning.md` — LoRA, QLoRA, data prep, evaluation, cost
+- `references/deployment-patterns.md` — Deployment Patterns
+- `references/fine-tuning.md` — Fine Tuning
+- `references/model-serving.md` — Model Serving
+- `references/prompt-management.md` — Prompt Management
 
 ## Handoff
 For serving infrastructure scaling, hand off to `ai-vector-databases`. For evaluation after deployment, hand off to `ai-evals`.

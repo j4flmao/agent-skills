@@ -138,7 +138,10 @@ Write to `docs/decisions/ADR-{NNN}-{kebab-case-title}.md`.
 - Include compliance mechanism for every decision. If you cannot enforce it, it is not a real decision.
 
 ## References
-- `references/adr-template.md` — ADR template with status and options
+- `references/adr-best-practices.md` — Adr Best Practices
+- `references/adr-examples.md` — Adr Examples
+- `references/adr-template.md` — Adr Template
+- `references/adr-workflow.md` — Adr Workflow
 
 ## Handoff
 Output: ADR files in docs/decisions/

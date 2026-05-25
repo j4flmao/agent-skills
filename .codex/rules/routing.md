@@ -1,4 +1,4 @@
-# Routing -- 414 skills
+# Routing -- 417 skills
 
 ## Entry
 
@@ -23,7 +23,7 @@ micronaut/quarkus                 -> backend/java/{framework}
 django/fastapi/flask              -> backend/python/{framework}
 kotlin/ktor                       -> backend/kotlin
 elixir/phoenix                    -> backend/elixir
-deno/bun/prisma                   -> backend/{name}
+deno/bun/prisma/drizzle           -> backend/{name}
 oop/solid/microservices           -> backend/universal/
 api-design/api-response/database  -> backend/universal/
 auth/event-driven/testing         -> backend/universal/
@@ -76,6 +76,8 @@ argo-cd/azure/gcp/chaos           -> devops/
 service-mesh/finops/backup-dr     -> devops/
 db-migration/nomad/incident-response -> devops/
 dataops/mlops/k8s-data/cloud-cost/cloud-arch/platform-eng/sre/operator/gitops-adv/progressive/policy/cloud-mig -> devops/
+firebase/firestore/fcm           -> backend/universal/firebase
+supabase/supabase-db/rls         -> backend/universal/supabase
 pm/ba/qa/qc/security              -> management/
 okr-kpi/sprint-retro/risk         -> management/
 hiring/interview/stakeholder      -> management/
@@ -199,8 +201,8 @@ planning -> backend -> frontend -> mobile -> desktop -> dev-loop -> devops -> ma
 |-------|--------|
 | core (4) | master-orchestrator, project-init, onboarding, context-compressor |
 | planning (12) | create-brief, create-prd, create-adr, create-tech-spec, create-story, create-roadmap, create-pitch-deck, market-analysis, cost-benefit, solution-architecture, bpmn-modeling, bdd-atdd |
-| backend-stack (28) | nestjs, nodejs, elysia, golang, rust, python-fastapi, python-django, python-flask, spring-boot, dotnet, rails, php-pure, php-laravel, php-zend, php-symfony, nodejs-hono, nodejs-express, nodejs-fastify, deno-oak, swift-vapor, scala-play, java-micronaut, java-quarkus, kotlin, elixir, bun, deno, prisma |
-| backend-universal (43) | oop-principles, design-patterns, microservices, clean-architecture, api-design, api-response, database-patterns, auth-patterns, event-driven, testing, grpc-patterns, websocket-patterns, message-queue, caching, rate-limiting, load-testing, api-gateway, graphql-patterns, background-jobs, search-patterns, data-streaming, file-storage, feature-flags, internationalization, structured-logging, observability, resilience-patterns, openapi-documentation, contract-testing, idempotency, distributed-locking, webhooks, api-versioning, scheduling-cron, multi-tenancy, bff-pattern, data-masking, audit-logging, plugin-architecture, cqrs-patterns, event-sourcing, saga-patterns, transactional-outbox |
+| backend-stack (29) | nestjs, nodejs, elysia, golang, rust, python-fastapi, python-django, python-flask, spring-boot, dotnet, rails, php-pure, php-laravel, php-zend, php-symfony, nodejs-hono, nodejs-express, nodejs-fastify, deno-oak, swift-vapor, scala-play, java-micronaut, java-quarkus, kotlin, elixir, bun, deno, prisma, drizzle |
+| backend-universal (45) | oop-principles, design-patterns, microservices, clean-architecture, api-design, api-response, database-patterns, auth-patterns, event-driven, testing, grpc-patterns, websocket-patterns, message-queue, caching, rate-limiting, load-testing, api-gateway, graphql-patterns, background-jobs, search-patterns, data-streaming, file-storage, feature-flags, internationalization, structured-logging, observability, resilience-patterns, openapi-documentation, contract-testing, idempotency, distributed-locking, webhooks, api-versioning, scheduling-cron, multi-tenancy, bff-pattern, data-masking, audit-logging, plugin-architecture, cqrs-patterns, event-sourcing, saga-patterns, transactional-outbox, firebase, supabase |
 | frontend-stack (25) | react, react-nextjs, vue, vue-nuxt, angular, sveltekit, remix-architecture, remix-patterns, astro-architecture, astro-patterns, solidjs-architecture, solidjs-patterns, qwik-architecture, qwik-patterns, svelte-architecture, svelte-patterns, vue-patterns, alpinejs, ember, htmx, preact, stencil, lit, web-components, ar-vr |
 | frontend-universal (27) | patterns, state-management, accessibility, design-system, performance, testing, microfrontend, tailwind-css, storybook, pwa, seo, animation, form-handling, data-fetching, bundler-tools, image-optimization, theming, authentication, error-handling, rendering-strategies, css-strategy, typescript-patterns, browser-caching, responsive-design, internationalization, feature-flags, security |
 | mobile-stack (7) | ios, android, flutter, react-native, kotlin-multiplatform, ionic-capacitor, dotnet-maui |

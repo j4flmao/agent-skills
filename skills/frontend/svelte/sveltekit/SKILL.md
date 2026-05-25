@@ -159,6 +159,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 ### Reference Files
 - `references/sveltekit-routing.md` — Advanced routing, params, layouts, error pages
 - `references/sveltekit-deployment.md` — Deployment to Vercel, Netlify, Cloudflare, Docker
+- `references/sveltekit-data.md` — page loads, server loads, form actions, invalidation, data flow
+- `references/sveltekit-auth.md` — session setup, login actions, protected routes, API endpoints, security
 
 ### Related Skills
 - `frontend/universal/state-management/SKILL.md` — Svelte stores

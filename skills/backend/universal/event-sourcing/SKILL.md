@@ -213,6 +213,7 @@ async function loadWithSnapshot(aggregateId: string): Promise<OrderAggregate> {
 - `references/event-store-patterns.md` — Event store implementations, storage strategies, querying
 - `references/aggregate-design.md` — Aggregate boundaries, invariants, event sourcing aggregates
 - `references/event-versioning.md` — Event schema evolution, versioning strategies, migration
+- `references/event-sourcing-projections.md` — Projection types, rebuild management, categorized projections
 
 ## Handoff
 No artifact produced.

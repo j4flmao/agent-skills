@@ -59,6 +59,7 @@ expect(result).toBe(5);
 - Don't chase 100% — it's a metric, not a goal
 
 ## References
-- `references/test-patterns.md` — Unit test patterns and naming conventions
-- `references/test-doubles.md` — Mocking, stubbing, and test double strategies
-- `references/tdd-guide.md` — TDD workflow and red-green-refactor cycle
+- `references/tdd-guide.md` — Tdd Guide
+- `references/test-doubles.md` — Test Doubles
+- `references/test-patterns.md` — Test Patterns
+- `references/unit-testing-patterns.md` — Unit Testing Patterns

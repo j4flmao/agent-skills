@@ -200,6 +200,8 @@ jobs:
 ## References
 - `references/quality-gates-matrix.md` — quality gates per language with tool-specific configs
 - `references/technical-debt-register.md` — technical debt tracking template
+- `references/inspection-process.md` — Code inspection process and peer review checklists
+- `references/qc-checklists.md` — Quality control checklists per development phase
 
 ## Handoff
 After completing this skill:

@@ -106,6 +106,9 @@ For committed OKRs, all KRs should score 1.0. They are delivery commitments, not
 ## References
 
 - [OKR Template](references/okr-template.md)
+- [OKR Examples](references/okr-examples.md)
+- [KPI Dashboard](references/kpi-dashboard.md)
+- [OKR vs KPI Frameworks](references/okr-kpi-frameworks.md)
 
 ## Handoff
 sprint-retro (review OKR progress during the sprint retrospective), create-roadmap (align the product roadmap themes with OKR objectives and KRs).

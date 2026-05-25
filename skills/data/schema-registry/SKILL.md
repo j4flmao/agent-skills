@@ -261,8 +261,9 @@ deps:
 - No schema change without compatibility check in CI/CD
 
 ## References
-- `references/schema-evolution.md` — Compatibility modes, Avro schema definition, Protobuf vs Avro, evolution best practices
 - `references/registry-setup.md` — Confluent Schema Registry, Apicurio, SerDe, deployment, security, CI/CD integration, governance
+- `references/schema-evolution.md` — Compatibility modes, Avro schema definition, Protobuf vs Avro, evolution best practices
+- `references/schema-registry-operations.md` — Schema registry operations, Confluent SR API, Apicurio rules, serialization patterns, CI/CD pipeline integration
 - `references/schema-registry-tools.md` — AsyncAPI event docs, JSON Schema conditional validation, Buf Protobuf governance, CI/CD
 
 ## Handoff

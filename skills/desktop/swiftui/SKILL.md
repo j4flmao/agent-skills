@@ -233,8 +233,10 @@ struct MyMacApp: App {
 ## References
 
 ### Reference Files
-- `references/swiftui-setup.md` — Project setup, Xcode, previews, debugging, deployment
+- `references/swiftui-architecture.md` — View protocol, @State/@Binding/@ObservedObject, data flow, navigation stack, layout system
+- `references/swiftui-deployment.md` — Mac App Store, code signing, notarization, Swift Packages, CI/CD for macOS, sandboxing
 - `references/swiftui-macos-patterns.md` — macOS-specific patterns, menus, windows, app lifecycle
+- `references/swiftui-setup.md` — Project setup, Xcode, previews, debugging, deployment
 
 ### Related Skills
 - `desktop/appkit/SKILL.md` — AppKit for legacy or NSView-level macOS apps

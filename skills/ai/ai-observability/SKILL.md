@@ -132,8 +132,10 @@ Key metrics: total calls, token usage, cost, latency (P50/P95/P99), error rates,
 - Feedback must be linkable to specific traces.
 
 ## References
-- `references/llm-tracing.md` — LangSmith traces/runs/projects, LangFuse traces/observations/scores, Arize phoenix, trace structure, metadata
-- `references/llm-monitoring.md` — Token tracking, cost attribution, latency monitoring, feedback collection, guardrail effectiveness, alerts, dashboards
+- `references/cost-tracking.md` — Cost Tracking
+- `references/llm-monitoring.md` — Llm Monitoring
+- `references/llm-tracing.md` — Llm Tracing
+- `references/observability-metrics.md` — Latency tracking, quality metrics, drift monitoring
 
 ## Handoff
 For LangChain-specific observability, hand off to `ai-langchain-patterns`. For MCP server observability, hand off to `ai-mcp-patterns`.

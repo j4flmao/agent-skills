@@ -139,6 +139,8 @@ SELECT COUNT(*) FROM (
 ## References
 - `references/audit-trail.md` — Immutable audit trail implementation
 - `references/compliance-logging.md` — Compliance logging patterns
+- `references/audit-log-architecture.md` — Audit log architecture and pipeline patterns
+- `references/audit-log-compliance.md` — Audit log regulatory compliance and retention
 
 ## Handoff
 No artifact produced unless requested.

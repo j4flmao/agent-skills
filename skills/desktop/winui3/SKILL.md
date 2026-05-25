@@ -195,8 +195,10 @@ public class HomeViewModel : INotifyPropertyChanged
 ## References
 
 ### Reference Files
-- `references/winui3-setup.md` — Project setup, MSIX packaging, Win32 interop, debugging
+- `references/winui3-architecture.md` — MVVM, XAML controls, data templates, custom controls, navigation, resource management
 - `references/winui3-controls.md` — Controls reference, templates, styles, behaviors
+- `references/winui3-deployment.md` — Packaging, MSIX, sideloading, Windows Store, CI/CD, native AOT
+- `references/winui3-setup.md` — Project setup, MSIX packaging, Win32 interop, debugging
 
 ### Related Skills
 - `desktop/wpf/SKILL.md` — WPF for legacy .NET Framework apps

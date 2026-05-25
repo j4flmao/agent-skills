@@ -34,5 +34,13 @@ tags: [blockchain, patterns, architecture, design, tokens, standards, phase-bloc
 4. Security considerations and known pitfalls
 5. Code example or reference to canonical implementation
 
+## References
+- references/advanced-token-standards.md — ERC-2612, ERC-3525, ERC-3643, ERC-4907
+- references/erc-4626-vault.md — ERC-4626 yield-bearing vault standard
+- references/mev-and-order-flow.md — MEV strategies and order flow patterns
+- references/oracle-and-bridge-patterns.md — Oracle and bridge design patterns
+- references/token-standards.md — ERC-20, ERC-721, ERC-1155 token standards
+- references/upgradeable-contracts.md — UUPS, transparent, beacon proxy patterns
+
 ## Phase
 blockchain → blockchain-patterns

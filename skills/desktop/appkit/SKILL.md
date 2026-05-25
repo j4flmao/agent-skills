@@ -222,8 +222,10 @@ class GraphView: NSView {
 ## References
 
 ### Reference Files
-- `references/appkit-architecture.md` — Project structure, responder chain, lifecycle
+- `references/appkit-architecture.md` — NSDocument, MVC, responder chain, Auto Layout, bindings, Core Data integration, window management
 - `references/appkit-controls.md` — Controls reference, customization, data sources
+- `references/appkit-modernization.md` — SwiftUI hosting, Combine, async/await, Catalyst, dark mode, sandboxing, accessibility
+- `references/appkit-best-practices.md` — AppKit best practices, structure, lifecycle, performance
 
 ### Related Skills
 - `desktop/swiftui/SKILL.md` — Modern declarative alternative to AppKit

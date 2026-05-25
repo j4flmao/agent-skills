@@ -95,6 +95,7 @@ Toil categories: manual operations, repetitive tasks, overhead, context switches
 - `references/sli-slo-guide.md` — SLI/SLO definition patterns and examples
 - `references/toil-automation.md` — Toil assessment and automation strategies
 - `references/incident-analysis.md` — Incident analysis and postmortem framework
+- `references/sre-slos.md` — SLO/SLI/SLA definitions, error budgets, burn rate alerts
 
 ## Handoff
 Related skills: devops-platform-engineering (IDP), devops-incident-response (on-call), devops-chaos-engineering (resilience testing), devops-monitoring (observability stack).

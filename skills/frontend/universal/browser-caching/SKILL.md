@@ -152,6 +152,8 @@ import('/assets/app-abc123def.js')
 ## References
 - `references/cache-strategies.md` — network-first, cache-first, SWR, race strategies
 - `references/sw-caching.md` — service worker lifecycle, fetch interception, offline patterns
+- `references/caching-strategies.md` — Resource-specific strategy map, CDN caching, invalidation, cache warming, size management
+- `references/caching-headers.md` — Cache-Control directives, ETag, Vary, Surrogate-Control, cache-busting, debug headers
 
 ## Handoff
 No artifact produced.

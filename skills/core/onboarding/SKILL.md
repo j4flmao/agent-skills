@@ -181,9 +181,10 @@ After week 1 and month 1, the new hire provides structured feedback in three cat
 Each retro produces actionable items: documentation updates (assigned to the buddy as a ticket), process changes (escalated to the engineering manager for the next sprint), tool improvements (filed in the infrastructure backlog), and team practice updates (raised in the next retro or team meeting). The retro document is stored in the team's shared drive for future reference and trend analysis. After 3 new hires have completed onboarding, the team reviews all retro findings to identify systemic issues.
 
 ## References
-
-- [Onboarding Flow](./references/onboarding-flow.md) — Day-by-day flow design, welcome message templates, first-run experience
-- [Setup Checklist](./references/setup-checklist.md) — Environment prerequisites, tool installation, verification steps, troubleshooting
+- `references/buddy-system-guide.md` — Buddy System Guide
+- `references/onboarding-flow.md` — Onboarding Flow
+- `references/ramp-up-plan.md` — Ramp Up Plan
+- `references/setup-checklist.md` — Setup Checklist
 
 ## Related Skills
 

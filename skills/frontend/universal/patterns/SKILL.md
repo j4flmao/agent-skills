@@ -340,6 +340,8 @@ const { open, toggle } = useDropdown(
 ### Reference Files
 - `references/component-patterns.md` — Full component pattern catalog with framework-specific examples
 - `references/hooks-patterns.md` — Hook design patterns, composition rules, testing
+- `references/rendering-patterns.md` — Conditional rendering, list rendering, composition, portals, render delegation, layout patterns
+- `references/composition-patterns.md` — Compound components, component injection, render props, polymorphic components, composition vs configuration
 
 ### Related Skills
 - `frontend/universal/state-management/SKILL.md` — State management integration

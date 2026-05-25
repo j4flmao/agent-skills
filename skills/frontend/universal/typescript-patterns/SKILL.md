@@ -180,6 +180,8 @@ const variantStyles: Record<ButtonVariant, string> = {
 ## References
 - `references/ts-react-patterns.md` — generic components, hooks, prop patterns in React
 - `references/ts-type-safety.md` — type narrowing, branded types, Nominal typing patterns
+- `references/typescript-advanced.md` — Branded types, template literals, conditional types, key remapping, satisfies, typed events
+- `references/typescript-config.md` — tsconfig recommendations, strict mode, path aliases, module resolution, incremental builds, ESLint
 
 ## Handoff
 No artifact produced.

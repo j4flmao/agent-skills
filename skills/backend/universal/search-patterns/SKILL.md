@@ -187,6 +187,8 @@ monitoring:
 ## References
 - `references/search-engines.md` — Mapping, query DSL, aggregations, cluster configuration
 - `references/indexing-strategies.md` — BM25 tuning, boosting, synonyms, function scoring
+- `references/search-architecture.md` — Search architecture, indexing pipeline, query service, faceted search
+- `references/search-performance.md` — Relevance tuning, BM25 parameters, query optimization, cluster tuning
 
 ## Handoff
 `backend-database-patterns` for indexing source data schema design

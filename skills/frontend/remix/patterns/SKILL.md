@@ -123,6 +123,8 @@ Place `sw.js` in `public/`. Register from root.tsx `<Scripts>` after. Manifest a
 ## References
 - `references/remix-forms.md` — validation, progressive enhancement, pending states
 - `references/remix-seo.md` — meta, sitemap, JSON-LD, canonical
+- `references/remix-routing.md` — route validation, nested data access, multiple actions, progressive enhancement
+- `references/remix-validation.md` — Zod validation, useFetcher patterns, file uploads, optimistic UI
 
 ## Handoff
 No artifact produced.

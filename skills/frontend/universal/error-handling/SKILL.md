@@ -216,6 +216,8 @@ window.addEventListener('unhandledrejection', (event) => {
 ## References
 - `references/error-boundary-patterns.md` — Framework-specific boundaries, recovery patterns, retry logic
 - `references/error-reporting.md` — Sentry, Datadog RUM, LogRocket, source maps, breadcrumbs, alerting
+- `references/error-boundaries.md` — Boundary placement architecture, per-framework implementations, recovery patterns, checklist
+- `references/error-monitoring.md` — Provider comparison, Sentry integration, source maps, breadcrumbs, alert thresholds, dashboard metrics
 
 ## Handoff
 No artifact produced unless requested.
