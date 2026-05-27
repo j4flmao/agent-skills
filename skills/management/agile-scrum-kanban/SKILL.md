@@ -93,11 +93,12 @@ Scrum: velocity trend, completed vs committed ratio, sprint predictability. Kanb
 - Daily standup is about coordination and blockers, not status reporting to management
 
 ## References
-- `references/scrum-framework.md` — Scrum roles, events, artifacts, definition of done
-- `references/kanban-method.md` — Kanban principles, WIP limits, flow metrics, board design
-- `references/backlog-management.md` — Backlog refinement, prioritization methods, slicing, estimation
-- `references/velocity-metrics.md` — Velocity, capacity planning, sprint commitment, predictability
-- `references/scaled-agile.md` — SAFe, LeSS, Nexus, Scrum@Scale, coordination mechanisms
-
+  - references/agile-scrum-kanban-advanced.md — Agile Scrum Kanban Advanced Topics
+  - references/agile-scrum-kanban-fundamentals.md — Agile Scrum Kanban Fundamentals
+  - references/backlog-management.md — Backlog Management
+  - references/kanban-method.md — Kanban Method
+  - references/scaled-agile.md — Scaled Agile Frameworks
+  - references/scrum-framework.md — Scrum Framework
+  - references/velocity-metrics.md — Velocity and Capacity Metrics
 ## Handoff
 `sprint-retro` for improvement action items from metrics review. `okr-kpi` for aligning team metrics to organizational goals. `pm` for cross-team coordination and dependency management.

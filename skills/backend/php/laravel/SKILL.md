@@ -400,11 +400,12 @@ it('prevents unauthorized access', function () {
 - Use Pest for testing — Feature tests for HTTP, Unit tests for services.
 
 ## References
-- `references/artisan-commands.md` — Artisan CLI, make commands, custom commands, schedules
-- `references/eloquent-orm.md` — Eloquent relations, scopes, accessors, mutators, cast, factories
-- `references/laravel-middleware-validation.md` — Middleware pipeline, Form Requests, custom rules
-- `references/laravel-testing.md` — Pest tests, feature tests, HTTP tests, mocking
-
+  - references/artisan-commands.md — Laravel Artisan Commands
+  - references/eloquent-orm.md — Laravel Eloquent ORM
+  - references/laravel-middleware-validation.md — Laravel Middleware & Validation
+  - references/laravel-queues.md — Laravel Queue Jobs
+  - references/laravel-service-layer.md — Laravel Service Layer Pattern
+  - references/laravel-testing.md — Laravel Testing
 ## Handoff
 Next skill: php-pure — if user wants lightweight PHP without framework.
 Next skill: php-zend — if user wants Laminas/Zend MVC framework.

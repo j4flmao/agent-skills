@@ -187,10 +187,15 @@ jobs:
 - Stale golden dataset detected via production drift monitoring.
 
 ## References
-- `references/ci-cd-for-llm.md` — Ci Cd For Llm
-- `references/llm-testing.md` — Llm Testing
-- `references/regression-testing.md` — Regression Testing
-- `references/test-cases.md` — Test Cases
-
+  - references/ai-testing-advanced.md — Ai Testing Advanced Topics
+  - references/ai-testing-fundamentals.md — Ai Testing Fundamentals
+  - references/assertion-library.md — Assertion Library
+  - references/ci-cd-for-llm.md — CI/CD for LLM Testing
+  - references/llm-testing.md — LLM Testing Framework
+  - references/model-comparison.md — Model Comparison and Regression Detection
+  - references/regression-testing.md — Regression Testing for LLMs
+  - references/test-cases.md — LLM Test Case Design
+  - references/testing-data-management.md — Testing Data Management
+  - references/testing-framework-comparison.md — Testing Framework Comparison
 ## Handoff
 For safety-specific testing, hand off to `ai-ai-safety`. For embedding quality evaluation, hand off to `ai-embeddings`. For training-time evaluation, hand off to `ai-model-training`.

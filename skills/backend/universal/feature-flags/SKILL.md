@@ -279,10 +279,11 @@ Kill switch: master flag that disables a feature globally regardless of other ta
 - Flag name matches codebase convention: `kebab-case` with domain prefix
 
 ## References
-- `references/experimentation.md` — A/B testing, traffic splitting, statistical significance, multivariate testing, holdout groups
-- `references/flag-evaluation.md` — Server-side vs client-side evaluation, caching, SDK bootstrapping, streaming updates
-- `references/flag-management.md` — Flag types, targeting rules, evaluation patterns, cleanup
-- `references/flag-strategies.md` — Canary release, gradual rollout, auto-rollback, kill switch strategies
-
+  - references/experimentation.md — A/B Testing and Experimentation Reference
+  - references/flag-evaluation.md — Flag Evaluation Strategies Reference
+  - references/flag-governance.md — Flag Governance
+  - references/flag-management.md — Flag Management
+  - references/flag-sdk-integration.md — Flag SDK Integration
+  - references/flag-strategies.md — Flag Strategies
 ## Handoff
 `backend-testing` for flag toggle testing and integration test patterns

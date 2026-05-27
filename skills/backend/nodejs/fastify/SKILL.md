@@ -249,17 +249,11 @@ describe('Order Routes', () => {
 - fastify.inject for tests — no HTTP server needed.
 
 ## References
-
-### Reference Files
-- `references/fastify-setup.md` — Fastify setup, configuration, hooks
-- `references/fastify-plugins.md` — Plugin architecture, encapsulation, ecosystem
-- `references/fastify-validation.md` — Schema validation, TypeBox, serialization, AJV config
-- `references/fastify-advanced-plugins.md` — Advanced plugins, decorators, hooks, encapsulation
-
-### Related Skills
-- `backend/nodejs/architecture/SKILL.md` — Node.js architecture
-- `backend/nodejs/hono/SKILL.md` — Hono alternative
-- `backend/universal/api-response/SKILL.md` — API response envelope
-
+  - references/fastify-advanced-plugins.md — Fastify Advanced Plugin Patterns
+  - references/fastify-hooks.md — Fastify Hook Reference
+  - references/fastify-plugins.md — Fastify Plugins
+  - references/fastify-setup.md — Fastify Setup Guide
+  - references/fastify-testing.md — Fastify Testing Reference
+  - references/fastify-validation.md — Fastify Validation
 ## Handoff
 Hand off to `backend/nodejs/architecture/SKILL.md` for full Node.js architecture.

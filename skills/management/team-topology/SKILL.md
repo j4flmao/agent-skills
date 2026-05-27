@@ -91,10 +91,11 @@ Identify what changes incrementally. Use reverse Conway maneuver: change org str
 - Every team has a clear purpose statement and internal API.
 
 ## References
-- `references/team-types.md` — Team types, Conway's Law, cognitive load
-- `references/topology-patterns.md` — Interaction patterns and topology transitions
-- `references/squad-health.md` — Squad health checks and team maturity
-- `references/org-design.md` — Organizational design patterns and processes
-
+  - references/org-design.md — Organizational Design
+  - references/squad-health.md — Squad Health
+  - references/team-topology-advanced.md — Team Topology Advanced Topics
+  - references/team-topology-fundamentals.md — Team Topology Fundamentals
+  - references/team-types.md — Team Types
+  - references/topology-patterns.md — Topology Patterns
 ## Handoff
 For OKR alignment with team topology, hand off to `management-okr-kpi`. For agile process design, hand off to `management-agile-scrum-kanban`. For hiring to fill team gaps, hand off to `management-hiring`.

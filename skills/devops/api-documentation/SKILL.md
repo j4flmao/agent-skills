@@ -348,11 +348,12 @@ npx @openapitools/openapi-generator-cli generate -i openapi.yaml -g java -o gene
 OpenAPI 3.x YAML/JSON spec file, code annotations, or generated documentation.
 
 ## References
-- `references/openapi-basics.md` — spec structure, paths, schemas, parameters, responses
-- `references/code-first.md` — generating specs from NestJS, FastAPI, Spring, others
-- `references/design-first.md` — spec-first workflow, contract testing, mock servers
-- `references/documentation-tools.md` — Swagger UI, Redoc, Stoplight, doc generation
-
+  - references/api-documentation-advanced.md — Api Documentation Advanced Topics
+  - references/api-documentation-fundamentals.md — Api Documentation Fundamentals
+  - references/code-first.md — Code-First API Documentation
+  - references/design-first.md — Design-First API Development
+  - references/documentation-tools.md — Documentation Tools
+  - references/openapi-basics.md — OpenAPI Basics
 ## Handoff
 After completing this skill:
 - Next skill: **dependency-management** — keeping API tooling deps updated

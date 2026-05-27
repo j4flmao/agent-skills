@@ -143,10 +143,15 @@ Wire `LangChainTracer` for LangSmith observability. Use `ConsoleCallbackHandler`
 - Streaming is mandatory for chat applications.
 
 ## References
-- `references/lcel-patterns.md` — Lcel Patterns
-- `references/retriever-agent-patterns.md` — Retriever Agent Patterns
-- `references/tool-integration.md` — Tool Integration
-- `references/langchain-production.md` — Production deployment, error handling, monitoring, versioning
-
+  - references/callback-streaming.md — Callbacks and Streaming
+  - references/document-pipeline.md — Document Pipeline
+  - references/langchain-memory-persistence.md — LangChain Memory Persistence
+  - references/langchain-patterns-advanced.md — Langchain Patterns Advanced Topics
+  - references/langchain-patterns-fundamentals.md — Langchain Patterns Fundamentals
+  - references/langchain-production.md — LangChain Production Deployment
+  - references/langchain-testing.md — LangChain Testing
+  - references/lcel-patterns.md — LCEL (LangChain Expression Language) Patterns
+  - references/retriever-agent-patterns.md — Retriever & Agent Patterns
+  - references/tool-integration.md — Tool Integration Patterns
 ## Handoff
 For vector database setup, hand off to `ai-vector-databases`. For MCP tool integration, hand off to `ai-mcp-patterns`. For observability, hand off to `ai-ai-observability`.

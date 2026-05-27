@@ -130,14 +130,12 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ---
 
 ## References
-
-- `references/tanstack-query.md` — Queries, mutations, cache, pagination, SSR
-- `references/fetching-patterns.md` — SWR, RTK Query, race conditions, request dedup, retry
-- `references/data-fetching-patterns.md` — Deduplication, race conditions, parallel/dependent queries, pagination, prefetching, optimistic updates
-- `references/data-fetching-caching.md` — Cache architecture, stale time, persistence, cache key design, invalidation, offline support
-
----
-
+  - references/data-fetching-caching.md — Data Fetching Caching
+  - references/data-fetching-patterns.md — Data Fetching Patterns
+  - references/fetching-patterns.md — Fetching Patterns
+  - references/react-query-patterns.md — React Query Patterns
+  - references/swr-patterns.md — SWR Patterns
+  - references/tanstack-query.md — TanStack Query
 ## Handoff
 
 If data fetching requires complex WebSocket sync, optimistic offline queue with conflict resolution, or server-side data hydration beyond basic SSR, flag for senior engineer review. Otherwise implement complete fetching layer.

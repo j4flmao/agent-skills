@@ -156,17 +156,11 @@ class OrderServiceTest {
 - runTest for coroutine tests, TestCoroutineDispatcher for time control.
 
 ## References
-
-### Reference Files
-- `references/ktor-setup.md` — Ktor configuration and routing
-- `references/kotlin-backend-patterns.md` — Detailed patterns reference
-- `references/coroutines-guide.md` — Coroutine patterns and scopes
-- `references/kotlin-deployment.md` — Shadow jar, Docker, Nginx, CI/CD, health endpoint
-
-### Related Skills
-- `backend/kotlin/architecture/SKILL.md` — Kotlin backend architecture
-- `backend/universal/api-response/SKILL.md` — Unified API responses
-- `backend/universal/oop-principles/SKILL.md` — SOLID principles
-
+  - references/coroutines-guide.md — Coroutines Guide
+  - references/kotlin-backend-patterns.md — Kotlin Backend Patterns
+  - references/kotlin-deployment.md — Kotlin Deployment
+  - references/kotlin-di-koin.md — Kotlin DI with Koin Reference
+  - references/kotlin-testing-mockk.md — Kotlin Testing with MockK Reference
+  - references/ktor-setup.md — Ktor Setup Guide
 ## Handoff
 Hand off to `backend/kotlin/architecture/SKILL.md` for overall architecture guidance.

@@ -67,11 +67,14 @@ Structured report:
 6. Smoke tests must not require complex test data setup — use defaults or existing data
 
 ## References
-- `references/bvt-strategy.md` — Bvt Strategy
-- `references/deployment-health.md` — Deployment Health
-- `references/smoke-automation.md` — Smoke Automation
-- `references/smoke-testing-strategies.md` — Smoke Testing Strategies
-
+  - references/bvt-strategy.md — Build Verification Testing (BVT)
+  - references/canary-testing.md — Canary Testing
+  - references/deployment-health.md — Deployment Health Checks
+  - references/health-check-patterns.md — Health Check Patterns
+  - references/smoke-automation.md — Smoke Test Automation
+  - references/smoke-testing-advanced.md — Smoke Testing Advanced Topics
+  - references/smoke-testing-fundamentals.md — Smoke Testing Fundamentals
+  - references/smoke-testing-strategies.md — Smoke Testing Strategies
 ## Handoff
 After smoke testing, hand off to:
 - `quality-regression-testing` — if smoke passes, run targeted regression

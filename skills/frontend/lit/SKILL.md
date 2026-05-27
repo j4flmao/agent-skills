@@ -255,11 +255,12 @@ export const MyReactComponent = createComponent({
 - Lit SSR is required for server rendering — lit-html templates render to string synchronously.
 
 ## References
-- `references/lit-essentials.md` — component design, reactive properties, lifecycle, shadow DOM
-- `references/lit-advanced.md` — events, directives, SSR, testing, sharing
-- `references/lit-architecture.md` — component composition, state management, routing, context, testing
-- `references/lit-deployment.md` — build config, SSR, CDN delivery, NPM publishing, bundle budgets
-
+  - references/lit-advanced.md — Lit Advanced
+  - references/lit-architecture.md — Lit Architecture Patterns
+  - references/lit-deployment.md — Lit Deployment
+  - references/lit-essentials.md — Lit Essentials
+  - references/lit-fundamentals.md — Lit Fundamentals
+  - references/lit-testing.md — Lit Testing Reference
 ## Handoff
 No artifact produced.
 Next skill: frontend-universal-web-components for vanilla custom elements and cross-framework compatibility.

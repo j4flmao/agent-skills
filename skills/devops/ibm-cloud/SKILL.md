@@ -270,11 +270,12 @@ resource "ibm_cos_bucket" "backups" {
 - Prefer multi-zone regions (MZR) for HA deployments
 
 ## References
-- `references/ibm-kubernetes.md` — IKS, OpenShift, worker nodes, ingress, logging
-- `references/vpc-compute.md` — VPC, subnets, security groups, VSIs, LB, VPN
-- `references/cloud-foundry.md` — Cloud Foundry, Code Engine, buildpacks
-- `references/cos-databases.md` — COS, IBM Db2, PostgreSQL, backup/DR
-
+  - references/cloud-foundry.md — Cloud Foundry and Code Engine
+  - references/cos-databases.md — COS and Databases
+  - references/ibm-cloud-advanced.md — Ibm Cloud Advanced Topics
+  - references/ibm-cloud-fundamentals.md — Ibm Cloud Fundamentals
+  - references/ibm-kubernetes.md — IBM Cloud Kubernetes
+  - references/vpc-compute.md — VPC and Compute
 ## Handoff
 After completing this skill:
 - Next skill: **observability** — Monitoring, logging, and alerting with IBM Cloud

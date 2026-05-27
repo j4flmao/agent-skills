@@ -222,11 +222,12 @@ vault write -f auth/approle/role/my-role/secret-id
 Vault CLI commands, policy HCL files, Terraform resources for Vault configuration.
 
 ## References
-- `references/vault-basics.md` — architecture, deployment, unsealing, HA
-- `references/secrets-engines.md` — kv, database, PKI, transit, AWS engines
-- `references/vault-policies.md` — policy syntax, capabilities, templating
-- `references/vault-integration.md` — Kubernetes injector, Terraform, SDK, CI/CD
-
+  - references/secrets-engines.md — Secrets Engines
+  - references/vault-advanced.md — Vault Advanced Topics
+  - references/vault-basics.md — Vault Basics
+  - references/vault-fundamentals.md — Vault Fundamentals
+  - references/vault-integration.md — Vault Integration
+  - references/vault-policies.md — Vault Policies
 ## Handoff
 After completing this skill:
 - Next skill: **aws** — IAM roles for Vault AWS engine, Vault on EKS

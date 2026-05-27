@@ -124,14 +124,12 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ---
 
 ## References
-
-- `references/design-tokens.md` — Naming conventions, CSS variables, token categories, theme definitions
-- `references/theme-implementation.md` — Per-framework patterns, switching, persistence, anti-flicker, Tailwind theming
-- `references/theming-architecture.md` — Theme layers, token categories, switching logic, anti-flicker, provider, toggle, multi-brand
-- `references/theming-tokens.md` — Token naming, hierarchy, file organization, documentation, consumption rules, audit, migration
-
----
-
+  - references/design-tokens.md — Design Tokens
+  - references/theme-implementation.md — Theme Implementation
+  - references/theme-performance.md — Theme Performance
+  - references/theme-testing.md — Theme Testing
+  - references/theming-architecture.md — Theming Architecture
+  - references/theming-tokens.md — Theming Tokens
 ## Handoff
 
 If project requires complex design token management tooling (Style Dictionary, Token Studio) or multi-brand theming (3+ themes), flag for design systems handoff. Otherwise implement complete theming system.

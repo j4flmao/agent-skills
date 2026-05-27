@@ -113,10 +113,13 @@ Build context within LLM token limit. Prioritize highest-scoring chunks. Track s
 - Track full provenance (doc ID, chunk index, source URL) per chunk.
 
 ## References
-- `references/chunking-strategies.md` — Chunking Strategies
-- `references/retrieval-optimization.md` — Retrieval Optimization
-- `references/retrieval-techniques.md` — Retrieval Techniques
-- `references/rag-hybrid.md` — Hybrid search, re-ranking, evaluation, production optimization
-
+  - references/chunking-strategies.md — Chunking Strategies
+  - references/rag-evaluation-metrics.md — RAG Evaluation Metrics
+  - references/rag-hybrid.md — Hybrid RAG
+  - references/rag-patterns-advanced.md — Rag Patterns Advanced Topics
+  - references/rag-patterns-fundamentals.md — Rag Patterns Fundamentals
+  - references/rag-production-deployment.md — RAG Production Deployment
+  - references/retrieval-optimization.md — Retrieval Optimization
+  - references/retrieval-techniques.md — Retrieval Techniques
 ## Handoff
 For vector database deployment, hand off to `ai-vector-databases`. For prompt integration with retrieved context, hand off to `ai-prompt-engineering`.

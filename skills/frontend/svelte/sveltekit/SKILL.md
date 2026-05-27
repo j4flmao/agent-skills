@@ -155,18 +155,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 - Parameters validated and parsed before use — never trust URL params directly.
 
 ## References
-
-### Reference Files
-- `references/sveltekit-routing.md` — Advanced routing, params, layouts, error pages
-- `references/sveltekit-deployment.md` — Deployment to Vercel, Netlify, Cloudflare, Docker
-- `references/sveltekit-data.md` — page loads, server loads, form actions, invalidation, data flow
-- `references/sveltekit-auth.md` — session setup, login actions, protected routes, API endpoints, security
-
-### Related Skills
-- `frontend/universal/state-management/SKILL.md` — Svelte stores
-- `frontend/universal/performance/SKILL.md` — SvelteKit performance
-- `frontend/universal/testing/SKILL.md` — Svelte testing
-
+  - references/endpoints-loading.md — SvelteKit Endpoints and Data Loading
+  - references/stores-context.md — Svelte Stores and Context API
+  - references/sveltekit-auth.md — SvelteKit Auth & Security Patterns
+  - references/sveltekit-data.md — SvelteKit Data Loading Patterns
+  - references/sveltekit-deployment.md — SvelteKit Deployment
+  - references/sveltekit-routing.md — SvelteKit Routing
 ## Handoff
 
 Hand off to `frontend/universal/state-management/SKILL.md` for store patterns. Hand off to `frontend/universal/performance/SKILL.md` for optimization.

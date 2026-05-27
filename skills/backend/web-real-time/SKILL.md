@@ -58,7 +58,11 @@ STUN/TURN Server ← → ICE Negotiation ← → STUN/TURN Server
 | TURN | Relay media when P2P fails (NAT/firewall) | coturn (self-hosted), Twilio Network Traversal |
 
 ## References
-- `references/live-streaming.md` — Live streaming infrastructure and protocols
-- `references/websocket-optimization.md` — WebSocket optimization: connection pooling, backpressure, compression, reconnection strategies, scaling WebSocket servers horizontally
-- `references/sse-vs-websocket.md` — SSE vs WebSocket vs Long Polling: protocol comparison, use cases, browser support, performance characteristics, fallback strategies
-- `references/webrtc-architecture.md` — WebRTC architecture: signaling, ICE/STUN/TURN, peer connection, data channels, media streams, SFU/MCU topologies
+  - references/live-streaming.md — WebRTC Signaling
+  - references/real-time-architecture.md — Real-Time Web Architecture
+  - references/real-time-delivery.md — Real-Time Delivery Strategies
+  - references/sse-vs-websocket.md — SSE vs WebSocket vs Long Polling
+  - references/web-real-time-advanced.md — Web Real Time Advanced Topics
+  - references/web-real-time-fundamentals.md — Web Real Time Fundamentals
+  - references/webrtc-architecture.md — WebRTC Architecture
+  - references/websocket-optimization.md — WebSocket Optimization

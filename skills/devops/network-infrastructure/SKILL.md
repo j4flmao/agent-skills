@@ -238,11 +238,12 @@ Tools: librenms, observium, Prometheus + snmp_exporter, flow collector (akvorado
 - Quarterly fail-test: pull one uplink / one switch and verify auto-recovery.
 
 ## References
-- `references/bgp-anycast.md` — BGP policy, RPKI, anycast routing, multi-homing
-- `references/leaf-spine.md` — Clos fabric, ECMP, oversubscription, EVPN/VXLAN
-- `references/sd-wan-mpls.md` — Branch connectivity, SD-WAN vs MPLS, hybrid
-- `references/vrrp-hsrp.md` — L2 redundancy patterns, MLAG, gateway failover
-
+  - references/bgp-anycast.md — BGP + Anycast — Policy, RPKI, Multi-Homing
+  - references/leaf-spine.md — Leaf-Spine — Clos Fabric, ECMP, EVPN/VXLAN
+  - references/network-infrastructure-advanced.md — Network Infrastructure Advanced Topics
+  - references/network-infrastructure-fundamentals.md — Network Infrastructure Fundamentals
+  - references/sd-wan-mpls.md — SD-WAN vs MPLS — Branch + Hybrid Connectivity
+  - references/vrrp-hsrp.md — L2 Redundancy — VRRP / HSRP / CARP / MLAG
 ## Handoff
 - `devops-datacenter` for physical cabling and patch panels.
 - `devops-cdn-edge` for global anycast and DDoS scrubbing.

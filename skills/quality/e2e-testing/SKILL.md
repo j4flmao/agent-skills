@@ -126,11 +126,12 @@ Store baselines in version control. Update baselines intentionally: `npx playwri
 - Retry flaky tests in CI, but flag and fix them
 
 ## References
-- `references/cypress-guide.md` — Cypress Guide
-- `references/framework-selection.md` — Framework Selection
-- `references/playwright-guide.md` — Playwright Guide
-- `references/test-patterns.md` — Test Patterns
-
+  - references/cypress-guide.md — Cypress Guide
+  - references/e2e-testing-advanced.md — E2e Testing Advanced Topics
+  - references/e2e-testing-fundamentals.md — E2e Testing Fundamentals
+  - references/framework-selection.md — Framework Selection
+  - references/playwright-guide.md — Playwright Guide
+  - references/test-patterns.md — Test Patterns
 ## Handoff
 `quality-visual-testing` for visual regression setup alongside E2E tests.
 `quality-contract-testing` for API contract verification.

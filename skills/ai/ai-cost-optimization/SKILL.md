@@ -216,10 +216,15 @@ class BatchInference:
 - Simulate savings before deploying — compare with/without optimization on historical data.
 
 ## References
-- `references/inference-optimization.md` — Inference Optimization
-- `references/model-selection-guide.md` — Model Selection Guide
-- `references/token-optimization.md` — Token Optimization
-- `references/cost-optimization-patterns.md` — Token caching, model selection, batch optimization
-
+  - references/ai-cost-optimization-advanced.md — Ai Cost Optimization Advanced Topics
+  - references/ai-cost-optimization-fundamentals.md — Ai Cost Optimization Fundamentals
+  - references/batching-throughput.md — Batching and Throughput Optimization
+  - references/budget-monitoring-alerting.md — Budget Monitoring and Alerting
+  - references/cache-optimization-patterns.md — Cache Optimization Patterns
+  - references/cost-optimization-patterns.md — Cost Optimization Patterns
+  - references/inference-optimization.md — Inference Optimization
+  - references/model-selection-guide.md — Model Selection Guide
+  - references/prompt-compression-strategies.md — Prompt Compression Strategies
+  - references/token-optimization.md — Token Optimization
 ## Handoff
 For model selection for routing, hand off to `ml-model-serving`. For embedding model for semantic cache, hand off to `ai-embeddings`. For testing cost-quality tradeoffs, hand off to `ai-ai-testing`.

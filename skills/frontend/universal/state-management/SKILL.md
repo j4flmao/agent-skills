@@ -136,11 +136,12 @@ const orderMachine = createMachine({
 - If two pieces of state change together, they belong together. If they change independently, split them.
 
 ## References
-- `references/state-patterns.md` — state decision tree, server state, global store, local state
-- `references/state-comparison.md` — framework-native solutions, library comparison, decision matrix, migration
-- `references/state-architecture.md` — state categories, location rules, store design, normalization, anti-patterns
-- `references/state-testing.md` — testing stores (Zustand/Pinia/NgRx), server state, async operations
-
+  - references/client-state.md — Client State
+  - references/server-state.md — Server State
+  - references/state-architecture.md — State Architecture Patterns
+  - references/state-comparison.md — State Management Library Comparison
+  - references/state-patterns.md — State Management Patterns
+  - references/state-testing.md — State Testing Patterns
 ## Handoff
 No artifact produced.
 Next skill: frontend-performance — optimize rendering and bundle size.

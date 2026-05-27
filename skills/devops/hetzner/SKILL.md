@@ -283,11 +283,12 @@ resource "hcloud_snapshot" "app" {
 - Monitor with Hetzner Cloud API metrics or external monitoring (Prometheus, Grafana)
 
 ## References
-- `references/hetzner-cloud.md` — Cloud instances, networks, firewalls, volumes, LB
-- `references/dedicated-servers.md` — Server models (AX/EX/SX), auction, Robot, rescue
-- `references/hetzner-kubernetes.md` — K3s, Rancher, cluster-api, CSI, CCM
-- `references/storage-backup.md` — Storage Box, backup space, snapshots, automation
-
+  - references/dedicated-servers.md — Hetzner Dedicated Servers
+  - references/hetzner-advanced.md — Hetzner Advanced Topics
+  - references/hetzner-cloud.md — Hetzner Cloud
+  - references/hetzner-fundamentals.md — Hetzner Fundamentals
+  - references/hetzner-kubernetes.md — Kubernetes on Hetzner
+  - references/storage-backup.md — Storage and Backup
 ## Handoff
 After completing this skill:
 - Next skill: **kubernetes-patterns** — Advanced K8s on Hetzner with monitoring and GitOps

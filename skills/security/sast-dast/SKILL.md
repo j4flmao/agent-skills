@@ -185,11 +185,12 @@ New Finding → Automated Dedup → Categorize Severity
 - Container image scanning is handled by a separate skill
 
 ## References
-- `references/sast-tools.md` — Semgrep, CodeQL, SonarQube, Snyk Code, rule writing, custom queries, CI integration, false positive management
-- `references/dast-tools.md` — OWASP ZAP, Burp Suite, Acunetix, authenticated scanning, session handling, scan scope, CI pipeline
-- `references/sast-rules-customization.md` — Custom Semgrep rules, rule tuning, language-specific rules
-- `references/dast-automation.md` — DAST in CI/CD, scan types, best practices
-
+  - references/dast-automation.md — DAST Automation
+  - references/dast-tools.md — DAST Tools
+  - references/sast-dast-advanced.md — Sast Dast Advanced Topics
+  - references/sast-dast-fundamentals.md — Sast Dast Fundamentals
+  - references/sast-rules-customization.md — SAST Rule Customization
+  - references/sast-tools.md — SAST Tools
 ## Handoff
 `security-api-security` for API-specific scanning and protection rules
 `devops-ci-cd` for pipeline integration and deployment gates

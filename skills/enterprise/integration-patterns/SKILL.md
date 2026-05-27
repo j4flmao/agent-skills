@@ -99,10 +99,11 @@ End-to-end distributed tracing with trace ID propagation. SLA tracking (latency,
 - Every integration flow must have a circuit breaker.
 
 ## References
-- `references/integration-styles.md` — Integration style comparison and selection
-- `references/message-routing.md` — Message routing patterns and implementation
-- `references/etl-integration.md` — ETL integration patterns and data transformation strategies
-- `references/integration-architectures.md` — Enterprise integration architecture patterns and topology
-
+  - references/etl-integration.md — ETL Integration Patterns
+  - references/integration-architectures.md — Integration Architectures
+  - references/integration-patterns-advanced.md — Integration Patterns Advanced Topics
+  - references/integration-patterns-fundamentals.md — Integration Patterns Fundamentals
+  - references/integration-styles.md — Enterprise Integration Styles
+  - references/message-routing.md — Message Routing Patterns
 ## Handoff
 For monitoring integration SLAs, hand off to `enterprise-sla-management`. For data governance across integrations, hand off to `enterprise-data-governance`.

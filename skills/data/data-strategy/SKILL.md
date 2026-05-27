@@ -90,12 +90,13 @@ Define data domains aligned with business functions (customer, product, finance,
 - Review and update strategy annually based on progress and changing business needs
 
 ## References
-- `references/data-maturity.md` — Data maturity models, assessment framework, capability mapping
-- `references/data-vision.md` — Data vision and strategy, strategic pillars, use case prioritization, investment roadmap
-- `references/data-operating-model.md` — Data operating model, org structures, CDO, RACI
-- `references/data-culture.md` — Data culture, literacy program, champions, decision framework
-- `references/data-ownership.md` — Data ownership, stewardship, accountability matrix, SLAs
-
+  - references/data-culture.md — Data Culture Reference
+  - references/data-ethics-framework.md — Data Ethics Framework
+  - references/data-maturity.md — Data Maturity Reference
+  - references/data-operating-model.md — Data Operating Model Reference
+  - references/data-ownership.md — Data Ownership Reference
+  - references/data-strategy-metrics.md — Data Strategy Metrics
+  - references/data-vision.md — Data Vision and Strategy Reference
 ## Handoff
 `data-data-platform` for platform architecture aligned with strategy
 `data-data-governance` for governance policy execution

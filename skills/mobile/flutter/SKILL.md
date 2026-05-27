@@ -238,18 +238,14 @@ void main() {
 ```
 
 ## References
-
-### Reference Files
-- `references/architecture.md` — Clean Architecture, folder structure, DI
-- `references/state-management.md` — Riverpod, BLoC, Provider patterns
-- `references/testing.md` — unit, widget, integration, golden tests
-- `references/widgets.md` — custom widgets, layout patterns, theming
-
-### Related Skills
-- `mobile/android/SKILL.md` — Android-specific integration
-- `mobile/ios/SKILL.md` — iOS-specific integration
-- `mobile/universal/deployment/SKILL.md` — app store deployment
-
+  - references/architecture.md — Flutter Architecture
+  - references/flutter-advanced.md — Flutter Advanced Topics
+  - references/flutter-fundamentals.md — Flutter Fundamentals
+  - references/platform-channels.md — Flutter Platform Channels
+  - references/state-management-provider.md — Flutter State Management with Provider
+  - references/state-management.md — Flutter State Management
+  - references/testing.md — Flutter Testing
+  - references/widgets.md — Flutter Widgets
 ## Handoff
 
 Hand off to `mobile/universal/deployment/SKILL.md` for build and deployment.

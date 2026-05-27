@@ -345,11 +345,12 @@ feature_matrix, features = automated_feature_engineering(entities, relationships
 - Drop near-zero variance features before model training
 
 ## References
-- `references/feature-encoding.md` — Categorical encoding, numerical scaling, datetime features, text features, feature interaction
-- `references/automated-fe.md` — Featuretools deep feature synthesis, tsfresh, feature selection (filter/wrapper/embedded), validation
-- `references/text-features.md` — TF-IDF, word embeddings, sentence embeddings, n-gram features, text preprocessing pipelines
-- `references/validation-leakage.md` — Data leakage prevention, feature validation, temporal integrity, cross-validation hygiene for feature engineering
-
+  - references/automated-fe.md — Automated Feature Engineering
+  - references/feature-encoding.md — Feature Encoding Reference
+  - references/feature-engineering-advanced.md — Feature Engineering Advanced Topics
+  - references/feature-engineering-fundamentals.md — Feature Engineering Fundamentals
+  - references/text-features.md — Text Feature Engineering
+  - references/validation-leakage.md — Feature Engineering Validation
 ## Handoff
 `ml-classical-ml` for model training with engineered features
 `ml-deep-learning` for deep learning feature extraction (embeddings)

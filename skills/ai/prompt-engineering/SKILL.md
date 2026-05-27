@@ -109,10 +109,13 @@ Select 2-5 examples that cover the range of expected inputs. Include edge cases 
 - Prompts targeting code generation must specify language, framework, and style.
 
 ## References
-- `references/prompt-patterns.md` — Prompt Patterns
-- `references/prompt-security.md` — Prompt Security
-- `references/prompt-techniques.md` — Prompt Techniques
-- `references/prompt-templates.md` — Prompt Templates
-
+  - references/prompt-engineering-advanced.md — Prompt Engineering Advanced Topics
+  - references/prompt-engineering-fundamentals.md — Prompt Engineering Fundamentals
+  - references/prompt-patterns.md — Prompt Design Patterns
+  - references/prompt-performance-tuning.md — Prompt Performance Tuning
+  - references/prompt-security.md — Prompt Security
+  - references/prompt-techniques.md — Prompt Techniques
+  - references/prompt-templates.md — Prompt Templates
+  - references/prompt-testing-framework.md — Prompt Testing Framework
 ## Handoff
 For RAG system integration, hand off to `ai-rag-patterns`. For model serving and deployment, hand off to `ai-llm-ops`.

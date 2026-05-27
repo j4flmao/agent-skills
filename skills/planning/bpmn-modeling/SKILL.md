@@ -101,10 +101,11 @@ Map the BPMN model to the target automation platform. Service tasks call automat
 - Every process must have exactly one start event and one or more end events
 
 ## References
-- `references/bpmn-elements.md` — BPMN 2.0 elements: events, activities, gateways, swimlanes
-- `references/process-modeling.md` — AS-IS vs TO-BE, process discovery, levels, catalog, ownership
-- `references/bpmn-patterns.md` — Common patterns: gateways, subprocesses, loops, error handling
-- `references/process-automation.md` — BPMN to workflow: Camunda, Flowable, Temporal, DMN
-
+  - references/bpmn-elements.md — BPMN 2.0 Elements
+  - references/bpmn-modeling-advanced.md — Bpmn Modeling Advanced Topics
+  - references/bpmn-modeling-fundamentals.md — Bpmn Modeling Fundamentals
+  - references/bpmn-patterns.md — BPMN Patterns
+  - references/process-automation.md — Process Automation
+  - references/process-modeling.md — Process Modeling
 ## Handoff
 `create-tech-spec` for automation implementation specifications. `solution-architecture` for integration architecture design. `create-story` for breaking automation into user stories.

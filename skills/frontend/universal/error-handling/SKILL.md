@@ -214,11 +214,12 @@ window.addEventListener('unhandledrejection', (event) => {
 10. Network errors show a distinct "You appear to be offline" message vs application errors.
 
 ## References
-- `references/error-boundary-patterns.md` — Framework-specific boundaries, recovery patterns, retry logic
-- `references/error-reporting.md` — Sentry, Datadog RUM, LogRocket, source maps, breadcrumbs, alerting
-- `references/error-boundaries.md` — Boundary placement architecture, per-framework implementations, recovery patterns, checklist
-- `references/error-monitoring.md` — Provider comparison, Sentry integration, source maps, breadcrumbs, alert thresholds, dashboard metrics
-
+  - references/error-boundaries.md — Error Boundaries
+  - references/error-boundary-patterns.md — Error Boundary Patterns
+  - references/error-logging-best-practices.md — Error Logging Best Practices
+  - references/error-monitoring.md — Error Monitoring
+  - references/error-reporting.md — Error Reporting
+  - references/error-ui-patterns.md — Error UI Patterns
 ## Handoff
 No artifact produced unless requested.
 Next skill: `frontend-performance` — error boundaries affect perceived performance, coordinate loading/error states.

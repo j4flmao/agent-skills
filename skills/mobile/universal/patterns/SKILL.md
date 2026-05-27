@@ -152,11 +152,12 @@ final class AppCoordinator: Coordinator {
 ```
 
 ## References
-- `references/clean-arch.md` — Clean Arch
-- `references/coordinator.md` — Coordinator
-- `references/mobile-architecture-patterns.md` — Mobile Architecture Patterns
-- `references/mvvm-mvi.md` — Mvvm Mvi
-
+  - references/architecture-patterns.md — Mobile Architecture Patterns
+  - references/clean-arch.md — Clean Architecture for Mobile
+  - references/coordinator.md — Coordinator / Navigator
+  - references/design-patterns.md — Mobile Design Patterns
+  - references/mobile-architecture-patterns.md — Mobile Architecture Patterns
+  - references/mvvm-mvi.md — MVVM vs MVI
 ## Handoff
 
 Hand off to stack-specific skill (`ios`, `android`, `flutter`, `react-native`) for implementation.

@@ -421,18 +421,16 @@ Combine re_data (baseline tracking) + dbt-audit-helper (migration validation) + 
 - Referential integrity verified across all related tables
 
 ## References
-- `references/quality-dimensions.md`
-  Completeness, accuracy, consistency, timeliness,
-  uniqueness, integrity measurement
-- `references/quality-automation.md`
-  Great Expectations, dbt tests, Soda, Monte Carlo,
-  data contracts, alerting, data observability
-- `references/data-quality-ecosystem.md`
-  re_data baseline tracking, dbt-audit-helper migration validation,
-  ODD observability, data-diff cross-database comparison
-- `references/ge-advanced-patterns.md` — Multi-layer expectation suites, custom expectations, checkpoint config, data docs hosting, CI integration
-- `references/soda-check-examples.md` — Table-level, column-level, cross-table checks, anomaly detection, Soda configuration
-
+  - references/data-quality-automation.md — Data Quality Automation
+  - references/data-quality-ecosystem.md — Data Quality Ecosystem Tools
+  - references/data-quality-incident-management.md — Data Quality Incident Management
+  - references/data-quality-management.md — Data Quality Management
+  - references/data-quality-metrics.md — Data Quality Metrics
+  - references/data-quality-monitoring.md — Data Quality Monitoring
+  - references/ge-advanced-patterns.md — Great Expectations Advanced Patterns
+  - references/quality-automation.md — Quality Automation
+  - references/quality-dimensions.md — Data Quality Dimensions
+  - references/soda-check-examples.md — Soda Check Examples
 ## Handoff
 `data-etl-pipeline` for embedding quality checks into pipeline
 `data-bi-tools` for displaying quality metadata on dashboards

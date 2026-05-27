@@ -322,17 +322,11 @@ it('mocks external call', () => {
 - bun build for bundling — supports target=bun, target=node, target=browser.
 
 ## References
-
-### Reference Files
-- `references/bun-essentials.md` — Runtime features, Bun APIs, SQLite, file I/O
-- `references/bun-tooling.md` — Test runner, package manager, bun build, scripts
-- `references/bun-ecosystem.md` — HTTP frameworks, testing tools, ORM, validation
-- `references/bun-deployment.md` — Docker, binary compilation, CI/CD, platforms
-
-### Related Skills
-- `backend/elysia/Elysia.md` — Elysia framework on Bun
-- `backend/deno/SKILL.md` — Alternative approach with Deno
-- `backend/nodejs/express/SKILL.md` — Alternative Node.js approach
-
+  - references/bun-advanced.md — Bun Advanced Topics
+  - references/bun-deployment.md — Bun Deployment
+  - references/bun-ecosystem.md — Bun Ecosystem
+  - references/bun-essentials.md — Bun Essentials
+  - references/bun-fundamentals.md — Bun Fundamentals
+  - references/bun-tooling.md — Bun Tooling
 ## Handoff
 Hand off to `backend/elysia/SKILL.md` for Elysia framework or `backend/universal/testing/SKILL.md` for testing patterns.

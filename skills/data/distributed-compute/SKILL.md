@@ -243,11 +243,14 @@ Polars is a DataFrame library in Rust with Python bindings, leveraging Apache Ar
 - Ray: set object_store_memory = heap_memory for data-intensive tasks
 
 ## References
-- `references/spark-execution.md` — Driver/executor, DAG scheduler, shuffle, memory management, tuning
-- `references/distributed-frameworks.md` — MapReduce, Dask, Ray comparison, YARN/K8s integration
-- `references/gpu-accelerated-compute.md` — NVIDIA RAPIDS cuDF, cuML, cuGraph, Dask+cuDF multi-GPU, memory management
-- `references/polars-dataframe.md` — Polars Arrow-native, lazy execution, streaming mode, expression API, query optimization
-
+  - references/distributed-compute-advanced.md — Distributed Compute Advanced Topics
+  - references/distributed-compute-fundamentals.md — Distributed Compute Fundamentals
+  - references/distributed-compute-memory.md — Distributed Compute Memory Management
+  - references/distributed-compute-scheduling.md — Distributed Compute Scheduling
+  - references/distributed-frameworks.md — Distributed Frameworks Comparison Reference
+  - references/gpu-accelerated-compute.md — GPU-Accelerated Compute with RAPIDS
+  - references/polars-dataframe.md — Polars DataFrame Library
+  - references/spark-execution.md — Spark Execution Model Reference
 ## Handoff
 `data-distributed-storage` for HDFS colocation and rack topology
 `data-batch-processing` for Spark SQL optimization and file format tuning

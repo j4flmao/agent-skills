@@ -155,11 +155,12 @@ func testCreateOrder() {
 ```
 
 ## References
-- `references/integration-testing.md` — Integration Testing
-- `references/mobile-testing-strategies.md` — Mobile Testing Strategies
-- `references/ui-testing.md` — Ui Testing
-- `references/unit-testing.md` — Unit Testing
-
+  - references/integration-testing.md — Mobile Integration Testing
+  - references/manual-testing.md — Manual Testing — Mobile
+  - references/mobile-testing-strategies.md — Mobile Testing Strategies
+  - references/test-automation-frameworks.md — Test Automation Frameworks — Mobile
+  - references/ui-testing.md — Mobile UI Testing
+  - references/unit-testing.md — Mobile Unit Testing
 ## Handoff
 
 No further handoff. Testing is integrated into the development loop.

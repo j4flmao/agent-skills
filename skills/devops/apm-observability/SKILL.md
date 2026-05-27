@@ -118,12 +118,13 @@ resource "datadog_monitor" "high_latency" {
 - Never send production data to non-production environments.
 
 ## References
-- `references/datadog-setup.md` — Agent, integrations, APM, logs, dashboards
-- `references/new-relic-setup.md` — New Relic One, APM, NRQL, alerts
-- `references/grafana-cloud.md` — Loki, Tempo, Mimir, k6, on-call
-- `references/apm-instrumentation.md` — OpenTelemetry, agent config, sampling
-- `references/synthetic-monitoring.md` — Browser/API checks, locations
-
+  - references/apm-instrumentation.md — APM Instrumentation Patterns
+  - references/apm-observability-advanced.md — Apm Observability Advanced Topics
+  - references/apm-observability-fundamentals.md — Apm Observability Fundamentals
+  - references/datadog-setup.md — Datadog Setup
+  - references/grafana-cloud.md — Grafana Cloud
+  - references/new-relic-setup.md — New Relic Setup
+  - references/synthetic-monitoring.md — Synthetic Monitoring
 ## Handoff
 After completing this skill:
 - Next skill: **devops-opentelemetry** — OpenTelemetry as the instrumentation layer

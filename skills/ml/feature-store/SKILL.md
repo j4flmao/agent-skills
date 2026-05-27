@@ -179,10 +179,11 @@ store.materialize_incremental(end_date=datetime.now())
 - Feature drift triggers validation alert — automate monitoring.
 
 ## References
-- `references/feast-patterns.md` — Feast setup, feature repository, point-in-time join, materialization
-- `references/feature-architecture.md` — Tecton, online/offline architecture, validation, registry
-- `references/feature-computation.md` — Stream feature computation, batch processing, transformation pipelines, feature engineering at scale
-- `references/feature-serving.md` — Online serving, storage backends (Redis/DynamoDB), latency optimization, caching strategies
-
+  - references/feast-patterns.md — Feast Patterns
+  - references/feature-architecture.md — Feature Architecture & Tecton
+  - references/feature-computation.md — Feature Computation
+  - references/feature-serving.md — Feature Serving
+  - references/feature-store-advanced.md — Feature Store Advanced Topics
+  - references/feature-store-fundamentals.md — Feature Store Fundamentals
 ## Handoff
 For model training with feature store integration, hand off to `ml-ml-pipeline`. For serving infrastructure, hand off to `ml-model-serving`. For data pipeline orchestration, hand off to `ml-pipeline`.

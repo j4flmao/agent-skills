@@ -155,10 +155,13 @@ class MultimodalRAG:
 - Open-source VLMs (LLaVA, Qwen-VL) run on A100s with ~8-16GB VRAM.
 
 ## References
-- `references/audio-models.md` — Audio Models
-- `references/multimodal-rag.md` — Multimodal Rag
-- `references/vision-language-models.md` — Vision Language Models
-- `references/vision-models.md` — Vision Models
-
+  - references/audio-models.md — Audio Models
+  - references/multimodal-advanced.md — Multimodal Advanced Topics
+  - references/multimodal-deployment.md — Multimodal Deployment
+  - references/multimodal-evaluation.md — Multimodal Evaluation
+  - references/multimodal-fundamentals.md — Multimodal Fundamentals
+  - references/multimodal-rag.md — Multimodal RAG
+  - references/vision-language-models.md — Vision-Language Models
+  - references/vision-models.md — Vision Models
 ## Handoff
 For text-only RAG, hand off to `ai-rag-patterns`. For embedding model selection, hand off to `ai-embeddings`. For fine-tuning vision-language models, hand off to `ai-model-training`.

@@ -398,11 +398,14 @@ print(f"Result: {table.num_rows} rows, {table.num_columns} columns")
 - Use RLE encoding for boolean and low-cardinality enum columns
 
 ## References
-- `references/columnar-format-guide.md` — Parquet row group and page architecture, ORC stripe and index configuration, encoding selection (dictionary, RLE, delta, BPS), compression codec trade-offs, schema evolution strategy, and format comparison benchmarks
-- `references/arrow-flight-protocol.md` — Arrow IPC format, Flight gRPC protocol, Flight SQL, DoExchange streaming, client/server patterns, authentication, and performance optimization
-- `references/columnar-formats.md` — Parquet vs ORC vs Arrow, row groups, encoding, predicate pushdown
-- `references/schema-evolution.md` — Avro compatibility modes, Parquet merge, Iceberg evolution
-
+  - references/arrow-flight-protocol.md — Arrow Flight Protocol
+  - references/columnar-format-guide.md — Columnar Format Guide
+  - references/columnar-formats.md — Columnar Formats Deep Dive Reference
+  - references/compression-encoding.md — Compression and Encoding
+  - references/data-serialization-patterns.md — Data Serialization Patterns
+  - references/file-format-benchmarks.md — File Format Benchmarks
+  - references/format-migration-strategies.md — Format Migration Strategies
+  - references/schema-evolution.md — Schema Evolution Reference
 ## Handoff
 `data-streaming` for Kafka/Avro schema management and stream processing
 `data-data-lake` for Parquet/ORC file organization in data lake storage

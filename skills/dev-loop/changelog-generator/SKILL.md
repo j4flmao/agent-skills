@@ -126,11 +126,12 @@ Insert the new version section at the top of the file, under `# Changelog`.
 Append to `CHANGELOG.md` in Keep a Changelog format.
 
 ## References
-- `references/auto-changelog-tools.md` — Auto Changelog Tools
-- `references/changelog-format.md` — Changelog Format
-- `references/conventional-commits-guide.md` — Conventional Commits Guide
-- `references/git-log-parsing.md` — Git Log Parsing
-
+  - references/auto-changelog-tools.md — Automatic Changelog Tools
+  - references/changelog-format.md — Changelog Format Reference
+  - references/changelog-generator-advanced.md — Changelog Generator Advanced Topics
+  - references/changelog-generator-fundamentals.md — Changelog Generator Fundamentals
+  - references/conventional-commits-guide.md — Conventional Commits Guide
+  - references/git-log-parsing.md — Git Log Parsing Reference
 ## Handoff
 After completing this skill:
 - Next skill: **readme-writer** — if the release needs updated project documentation

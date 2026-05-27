@@ -287,11 +287,12 @@ resources:
 `serverless.yml`, SAM `template.yaml`, or Terraform Lambda resources.
 
 ## References
-- `references/lambda-basics.md` — function configuration, runtimes, invocation modes
-- `references/function-optimization.md` — cold starts, memory tuning, bundling
-- `references/serverless-framework.md` — `serverless.yml`, plugins, stages, deployment
-- `references/event-sources.md` — API Gateway, SQS, S3, DynamoDB, EventBridge
-
+  - references/event-sources.md — Event Sources
+  - references/function-optimization.md — Function Optimization
+  - references/lambda-basics.md — Lambda Basics
+  - references/serverless-advanced.md — Serverless Advanced Topics
+  - references/serverless-framework.md — Serverless Framework
+  - references/serverless-fundamentals.md — Serverless Fundamentals
 ## Handoff
 After completing this skill:
 - Next skill: **aws** — VPC, IAM roles, API Gateway configuration

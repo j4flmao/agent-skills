@@ -166,10 +166,15 @@ D, I = index.search(query_embedding, k=10)
 - Monitor embedding drift over time — data distribution changes degrade quality.
 
 ## References
-- `references/embedding-models.md` — Embedding Models
-- `references/embedding-training.md` — Embedding Training
-- `references/vector-indexing.md` — Vector Indexing
-- `references/embedding-optimization.md` — Compression, quantization, caching, batch processing
-
+  - references/embedding-api-integration.md — Embedding API Integration
+  - references/embedding-deployment.md — Embedding Deployment
+  - references/embedding-evaluation.md — Embedding Evaluation
+  - references/embedding-models.md — Embedding Models Comparison
+  - references/embedding-optimization.md — Embedding Optimization
+  - references/embedding-training.md — Embedding Training
+  - references/embedding-use-cases.md — Embedding Use Cases
+  - references/embeddings-advanced.md — Embeddings Advanced Topics
+  - references/embeddings-fundamentals.md — Embeddings Fundamentals
+  - references/vector-indexing.md — Vector Indexing
 ## Handoff
 For RAG pipeline with these embeddings, hand off to `ai-rag-patterns`. For vector database operations, hand off to `ai-vector-databases`. For multimodal embeddings, hand off to `ai-multimodal`.

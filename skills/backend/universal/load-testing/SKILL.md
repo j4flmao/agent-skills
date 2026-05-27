@@ -205,11 +205,13 @@ Interpretation:
 - Run in an environment that mirrors production (same instance size, same replicas, same DB config).
 
 ## References
-- `references/k6-guide.md` — k6 scripting and configuration
-- `references/test-types.md` — Load test types deep-dive
-- `references/results-analysis.md` — Analyzing load test results
-- `references/ci-integration.md` — CI/CD pipeline integration
-
+  - references/ci-integration.md — CI Integration
+  - references/k6-guide.md — k6 Guide
+  - references/k6-scripting.md — k6 Scripting Guide
+  - references/load-testing-infrastructure.md — Load Test Infrastructure
+  - references/load-testing-scenarios.md — Load Test Scenarios
+  - references/results-analysis.md — Load Test Results Analysis
+  - references/test-types.md — Load Test Types
 ## Handoff
 No artifact produced unless requested.
 Next skill: backend-caching — if the load test reveals cache-related bottlenecks.

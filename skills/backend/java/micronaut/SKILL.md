@@ -172,16 +172,11 @@ datasources:
 - Native-image builds require explicit reflection hints.
 
 ## References
-
-### Reference Files
-- `references/micronaut-setup.md` — Micronaut project setup, configuration, CLI
-- `references/micronaut-testing.md` — Testing strategies, @MicronautTest, mocking
-- `references/micronaut-data.md` — Micronaut Data, repositories, DTO projections, transactions
-- `references/micronaut-deployment.md` — GraalVM native, Docker, CI/CD, AWS Lambda
-
-### Related Skills
-- `backend/universal/api-response/SKILL.md` — API response envelope
-- `backend/universal/oop-principles/SKILL.md` — SOLID for Java
-
+  - references/micronaut-configuration.md — Micronaut Configuration Reference
+  - references/micronaut-data.md — Micronaut Data
+  - references/micronaut-deployment.md — Micronaut Deployment
+  - references/micronaut-security.md — Micronaut Security Reference
+  - references/micronaut-setup.md — Micronaut Setup Guide
+  - references/micronaut-testing.md — Micronaut Testing Guide
 ## Handoff
 Hand off to `backend/universal/api-response/SKILL.md` for API response standards.

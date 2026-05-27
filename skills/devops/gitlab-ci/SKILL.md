@@ -141,12 +141,13 @@ deploy-production:
 - Never run production deployments automatically — require manual approval.
 
 ## References
-- `references/pipeline-structure.md` — Stages, jobs, needs, artifacts, cache
-- `references/advanced-patterns.md` — Child pipelines, multi-project, rules, anchors
-- `references/container-integration.md` — Container Registry, Kaniko, scanning
-- `references/security-scanning.md` — SAST, DAST, secret detection, dependency
-- `references/gitlab-runners.md` — Runner types, autoscaling, cache
-
+  - references/advanced-patterns.md — GitLab CI Advanced Patterns
+  - references/container-integration.md — GitLab CI Container Integration
+  - references/gitlab-ci-advanced.md — Gitlab Ci Advanced Topics
+  - references/gitlab-ci-fundamentals.md — Gitlab Ci Fundamentals
+  - references/gitlab-runners.md — GitLab Runners
+  - references/pipeline-structure.md — GitLab CI Pipeline Structure
+  - references/security-scanning.md — GitLab CI Security Scanning
 ## Handoff
 After completing this skill:
 - Next skill: **devops-circleci** — CircleCI CI/CD pipeline configuration

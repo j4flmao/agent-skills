@@ -205,17 +205,11 @@ app.whenReady().then(() => {
 - Preload script is the ONLY bridge between processes.
 
 ## References
-
-### Reference Files
-- `references/electron-architecture.md` — Process model, IPC patterns, window management
-- `references/electron-packaging.md` — Build configs, code signing, auto-update, CI
-- `references/electron-performance.md` — V8 memory management, window management, GPU acceleration, lazy loading, profiling
-- `references/electron-security.md` — Security best practices: contextIsolation, preload scripts, CSP, sandbox, IPC hardening, auto-updater security
-
-### Related Skills
-- `desktop/tauri/SKILL.md` — Lighter alternative to Electron
-- `desktop/wpf/SKILL.md` — Windows-native alternative for .NET ecosystem
-- `desktop/swiftui/SKILL.md` — macOS-native alternative
-
+  - references/electron-advanced.md — Electron Advanced Topics
+  - references/electron-architecture.md — Electron Architecture Reference
+  - references/electron-fundamentals.md — Electron Fundamentals
+  - references/electron-packaging.md — Electron Packaging Reference
+  - references/electron-performance.md — Electron Performance Reference
+  - references/electron-security.md — Electron Security Reference
 ## Handoff
 Hand off to `desktop/tauri/SKILL.md` for performance-critical apps needing smaller binary size. Hand off to `backend/nodejs/architecture/SKILL.md` if app requires complex Node.js server logic.

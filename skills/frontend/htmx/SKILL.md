@@ -132,11 +132,12 @@ def delete_contact(request, pk):
 - Keep server endpoints idempotent when possible (GET for reads, POST for mutations).
 
 ## References
-- `references/htmx-setup.md` — CDN/npm, config, extensions, tooling
-- `references/htmx-patterns.md` — triggers, swaps, indicators, HATEOAS, server examples
-- `references/htmx-advanced.md` — WebSocket, SSE, history, cascading selects, custom events, extensions
-- `references/htmx-deployment.md` — CDN delivery, backend integration, CSP, caching, security
-
+  - references/htmx-advanced.md — htmx Advanced Patterns
+  - references/htmx-deployment.md — htmx Deployment
+  - references/htmx-fundamentals.md — Htmx Fundamentals
+  - references/htmx-patterns.md — htmx Patterns & Best Practices
+  - references/htmx-setup.md — htmx Setup Guide
+  - references/htmx-testing.md — htmx Testing Reference
 ## Handoff
 No artifact produced.
 Next skill: htmx-hyperscript (if client-side logic needed) or backend-htmx-integration.

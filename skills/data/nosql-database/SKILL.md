@@ -248,11 +248,12 @@ CREATE TABLE sensor_readings (
 - No cross-partition queries in Cassandra
 
 ## References
-- `references/mongodb-cassandra.md` — MongoDB sharding, aggregation, indexes; Cassandra partition/clustering, CQL, compaction
-- `references/dynamodb-couchbase.md` — DynamoDB single-table, GSI/LSI, DAX; Couchbase N1QL, buckets; denormalization, consistency
-- `references/document-db.md` — MongoDB schema design, aggregation pipeline, indexing, sharding
-- `references/wide-column.md` — Cassandra data modeling, CQL, DynamoDB single-table design, partition/clustering keys
-
+  - references/document-db.md — Document Database Reference
+  - references/dynamodb-couchbase.md — DynamoDB and Couchbase Reference
+  - references/mongodb-cassandra.md — MongoDB and Cassandra Reference
+  - references/nosql-cap-theorem.md — NoSQL CAP Theorem
+  - references/nosql-performance-tuning.md — NoSQL Performance Tuning
+  - references/wide-column.md — Wide-Column Database Reference
 ## Handoff
 `data-graph-database` for relationship-heavy queries
 `data-search-engine` for full-text search over NoSQL data

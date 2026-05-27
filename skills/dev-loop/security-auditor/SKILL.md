@@ -184,11 +184,12 @@ add_header Permissions-Policy "geolocation=(), microphone=(), camera=()";
 ```
 
 ## References
-- `references/audit-checklist.md` — Audit Checklist
-- `references/owasp-top10.md` — Owasp Top10
-- `references/remediation-guide.md` — Remediation Guide
-- `references/security-audit-automation.md` — Security Audit Automation
-
+  - references/audit-checklist.md — Security Audit Checklist
+  - references/owasp-top10.md — OWASP Top 10 (2021) — Exploitation Scenarios & Fixes
+  - references/remediation-guide.md — Security Remediation Guide
+  - references/security-audit-automation.md — Security Audit Automation
+  - references/security-auditor-advanced.md — Security Auditor Advanced Topics
+  - references/security-auditor-fundamentals.md — Security Auditor Fundamentals
 ## Handoff
 After completing this skill:
 - Next skill: **performance-profiler** — if performance also needs review

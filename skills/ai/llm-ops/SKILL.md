@@ -115,10 +115,13 @@ Determine: model size (parameters), context length, expected requests/minute, pe
 - Monitor for drift: input distribution, output length, refusal rate.
 
 ## References
-- `references/deployment-patterns.md` — Deployment Patterns
-- `references/fine-tuning.md` — Fine Tuning
-- `references/model-serving.md` — Model Serving
-- `references/prompt-management.md` — Prompt Management
-
+  - references/deployment-patterns.md — LLM Deployment Patterns
+  - references/fine-tuning.md — Fine-Tuning
+  - references/llm-ops-advanced.md — Llm Ops Advanced Topics
+  - references/llm-ops-cost-management.md — LLM Ops Cost Management
+  - references/llm-ops-fundamentals.md — Llm Ops Fundamentals
+  - references/llm-ops-incident-management.md — LLM Ops Incident Management
+  - references/model-serving.md — Model Serving Frameworks
+  - references/prompt-management.md — Prompt Management
 ## Handoff
 For serving infrastructure scaling, hand off to `ai-vector-databases`. For evaluation after deployment, hand off to `ai-evals`.

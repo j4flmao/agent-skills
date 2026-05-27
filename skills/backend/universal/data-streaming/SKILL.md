@@ -186,10 +186,11 @@ streams:
 - Use `read_committed` isolation for exactly-once consumers
 
 ## References
-- `references/streaming-patterns.md` — Topic design, producer/consumer patterns, stream processing, backpressure
-- `references/exactly-once.md` — Exactly-once semantics, checkpointing, windowing, Kappa architecture
-- `references/streaming-architecture.md` — Streaming topology patterns, schema registry, CDC, multi-DC
-- `references/streaming-operations.md` — Cluster sizing, performance tuning, monitoring, disaster recovery
-
+  - references/exactly-once.md — Exactly-Once Semantics
+  - references/streaming-architecture.md — Streaming Architecture
+  - references/streaming-operations.md — Streaming Operations
+  - references/streaming-patterns.md — Streaming Patterns
+  - references/streaming-security.md — Streaming Security
+  - references/streaming-testing.md — Streaming Testing
 ## Handoff
 `backend-event-driven` for domain event design and event sourcing patterns

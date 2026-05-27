@@ -94,10 +94,11 @@ Conduct architecture reviews per defined tiers. Manage exception requests with t
 - Principle violations require formal exception or waiver process.
 
 ## References
-- `references/architecture-board.md` -- ARB charter, membership, meeting cadence
-- `references/architecture-reviews.md` -- Review tiers, process, checklists
-- `references/decision-rights.md` -- Decision categories, RACI, delegation
-- `references/architecture-principles.md` -- Principle catalog, template, governance
-
+  - references/architecture-board.md — Architecture Review Board (ARB)
+  - references/architecture-governance-advanced.md — Architecture Governance Advanced Topics
+  - references/architecture-governance-fundamentals.md — Architecture Governance Fundamentals
+  - references/architecture-principles.md — Architecture Principles
+  - references/architecture-reviews.md — Architecture Review Process
+  - references/decision-rights.md — Architecture Decision Rights
 ## Handoff
 For architecture development method, hand off to `enterprise-togaf-zachman` for ADM phase execution. For vendor technology evaluations, hand off to `enterprise-vendor-management` for procurement alignment.

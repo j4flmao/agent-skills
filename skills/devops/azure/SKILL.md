@@ -108,14 +108,14 @@ controller (AGIC) for HTTP/S routing. Private Link for PaaS services
 8. Diagnostic settings enabled on all services for audit and monitoring.
 
 ## References
-
-- [Azure IaC](./references/azure-iac.md) — Bicep, ARM, modules, deployment
-  stacks, resource organization
-- [Azure AKS](./references/azure-aks.md) — AKS setup, networking, identity,
-  monitoring, autoscaling, cost optimization
-- [Azure Compute](./references/azure-compute.md) — VMs, VMSS, App Service, Functions, Batch, ACI
-- [Azure Networking](./references/azure-networking.md) — VNet, peering, VPN Gateway, Load Balancer, Front Door, DNS
-
+  - references/azure-advanced.md — Azure Advanced Topics
+  - references/azure-aks.md — Azure AKS
+  - references/azure-compute.md — Azure Compute
+  - references/azure-devops-pipelines.md — Azure DevOps Pipelines
+  - references/azure-fundamentals.md — Azure Fundamentals
+  - references/azure-iac.md — Azure IaC
+  - references/azure-networking.md — Azure Networking
+  - references/azure-resource-management.md — Azure Resource Management
 ## Handoff
 
 Hand off to Azure when provisioning Azure-specific infrastructure or

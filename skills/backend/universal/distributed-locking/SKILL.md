@@ -107,11 +107,12 @@ Emit metrics: lock acquisition time, hold time, contention rate, timeout rate.
 - If a lock cannot be acquired, degrade gracefully — do not block indefinitely.
 
 ## References
-- `references/lock-strategies.md` — Distributed lock strategy comparison
-- `references/lock-providers.md` — Lock provider-specific implementation notes
-- `references/lock-deep-dive.md` — Fencing tokens, lease management, clock drift, Redlock debate, split-brain scenarios, provider comparison
-- `references/lock-implementations.md` — Code examples for Redis/Redlock, ZooKeeper, etcd, PostgreSQL, MySQL, Consul
-
+  - references/lock-contention-analysis.md — Lock Contention Analysis
+  - references/lock-deep-dive.md — Distributed Locking — Deep Dive
+  - references/lock-implementations.md — Distributed Lock Implementations
+  - references/lock-providers.md — Lock Provider Implementation Notes
+  - references/lock-strategies.md — Distributed Lock Strategies
+  - references/lock-testing.md — Lock Testing
 ## Handoff
 No artifact produced unless requested.
 Next skill: webhooks — deliver events from the service to external subscribers.

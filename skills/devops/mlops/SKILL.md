@@ -113,10 +113,11 @@ Separate from model pipeline. Validate feature transformations produce expected 
 - A/B tests must reach statistical significance before declaring winner.
 
 ## References
-- `references/ml-cicd-pipeline.md` — CI/CD for model training → validation → deployment → monitoring, registry promotion
-- `references/ml-deployment.md` — Canary/blue-green deployment, A/B testing infra, drift monitoring, performance decay, rollback
-- `references/ml-experiment-tracking.md` — MLflow setup, experiment tracking, model registry, artifact storage, CI/CD for experiments
-- `references/ml-retraining.md` — Automated retraining pipeline, data drift detection, model refresh strategies, canary deployment, rollback
-
+  - references/ml-cicd-pipeline.md — ML CI/CD Pipeline
+  - references/ml-deployment.md — ML Deployment & Monitoring
+  - references/ml-experiment-tracking.md — ML Experiment Tracking
+  - references/ml-retraining.md — ML Model Retraining
+  - references/mlops-advanced.md — Mlops Advanced Topics
+  - references/mlops-fundamentals.md — Mlops Fundamentals
 ## Handoff
 For data pipeline CI/CD, hand off to `devops-dataops`. For Kubernetes deployment of ML models, hand off to `devops-kubernetes-for-data`.

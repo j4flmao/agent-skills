@@ -161,11 +161,14 @@ Orchestration (complex, many services):
 - Every event carries a traceId for distributed tracing across service boundaries.
 
 ## References
-- `references/messaging-patterns.md` — event schema, consumer idempotency, outbox pattern, retry/DLQ
-- `references/dead-letter-queue.md` — DLQ architecture, monitoring, reprocessing patterns
-- `references/event-notification-patterns.md` — Event notification vs carried state transfer, fan-out, routing
-- `references/event-driven-testing.md` — Event-driven testing pyramid, consumer/producer tests, integration tests
-
+  - references/dead-letter-queue.md — Dead Letter Queue
+  - references/event-driven-monitoring.md — Event-Driven Monitoring
+  - references/event-driven-testing.md — Event-Driven Testing
+  - references/event-governance.md — Event Governance
+  - references/event-notification-patterns.md — Event Notification Patterns
+  - references/event-schema-management.md — Event Schema Management
+  - references/messaging-patterns.md — Messaging & Event-Driven Patterns
+  - references/saga-choreography.md — Saga and Choreography Patterns
 ## Handoff
 No artifact produced.
 Next skill: backend-testing — test event consumers, idempotency, DLQ handling.

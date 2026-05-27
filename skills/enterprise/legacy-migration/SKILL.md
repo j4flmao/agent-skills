@@ -102,10 +102,11 @@ Verify zero dependency on legacy. Archive legacy data (compressed, encrypted, ti
 - All team members must practice cutover in staging environment.
 
 ## References
-- `references/migration-strategies.md` — Migration strategy comparison and selection
-- `references/strangler-fig.md` — Strangler Fig pattern implementation
-- `references/testing-migration.md` — Migration testing strategies and validation frameworks
-- `references/legacy-migration-patterns.md` — Legacy migration patterns: strangler fig, branch-by-abstraction, parallel run, big bang
-
+  - references/legacy-migration-advanced.md — Legacy Migration Advanced Topics
+  - references/legacy-migration-fundamentals.md — Legacy Migration Fundamentals
+  - references/legacy-migration-patterns.md — Legacy Migration Patterns
+  - references/migration-strategies.md — Migration Strategies
+  - references/strangler-fig.md — Strangler Fig Pattern
+  - references/testing-migration.md — Testing Legacy Migrations
 ## Handoff
 For integration patterns during strangler fig, hand off to `enterprise-integration-patterns`. For data governance during migration, hand off to `enterprise-data-governance`.

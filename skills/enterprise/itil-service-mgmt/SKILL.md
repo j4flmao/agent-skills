@@ -97,10 +97,11 @@ Integrate incident, problem, change, release, and service level processes. Maint
 - CSI register items must have assigned owners and target dates.
 
 ## References
-- `references/service-lifecycle.md` -- ITIL service lifecycle stages and processes
-- `references/incident-problem-mgmt.md` -- Incident and problem management procedures
-- `references/change-release-mgmt.md` -- Change and release management processes
-- `references/service-level-mgmt.md` -- Service level management and SLA framework
-
+  - references/change-release-mgmt.md — Change and Release Management
+  - references/incident-problem-mgmt.md — Incident and Problem Management
+  - references/itil-service-mgmt-advanced.md — Itil Service Mgmt Advanced Topics
+  - references/itil-service-mgmt-fundamentals.md — Itil Service Mgmt Fundamentals
+  - references/service-level-mgmt.md — Service Level Management
+  - references/service-lifecycle.md — ITIL Service Lifecycle
 ## Handoff
 For compliance alignment, hand off to `enterprise-compliance-audit` for regulatory control mapping. For architecture decisions, hand off to `enterprise-architecture-governance` for review board approvals.

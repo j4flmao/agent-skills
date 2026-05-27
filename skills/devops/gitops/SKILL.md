@@ -225,11 +225,12 @@ spec:
 ArgoCD Application YAML, Flux GitRepository + Kustomization YAML, and directory structure.
 
 ## References
-- `references/gitops-principles.md` — core GitOps concepts and benefits
-- `references/argocd-setup.md` — ArgoCD installation, configuration, and management
-- `references/flux-setup.md` — Flux bootstrap, sources, and kustomizations
-- `references/sync-strategies.md` — sync waves, prune policies, drift detection
-
+  - references/argocd-setup.md — ArgoCD Setup
+  - references/flux-setup.md — Flux Setup
+  - references/gitops-advanced.md — Gitops Advanced Topics
+  - references/gitops-fundamentals.md — Gitops Fundamentals
+  - references/gitops-principles.md — GitOps Principles
+  - references/sync-strategies.md — Sync Strategies
 ## Handoff
 After completing this skill:
 - Next skill: **kubernetes-patterns** — pod specs, services, ingress

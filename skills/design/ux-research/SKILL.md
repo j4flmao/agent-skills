@@ -166,11 +166,12 @@ Every finding links to source evidence (participant quote, task metric, screensh
 - Always pilot test the protocol with 1-2 internal participants before real sessions
 
 ## References
-- `references/research-methods.md` — Research Methods
-- `references/synthesis-frameworks.md` — Synthesis Frameworks
-- `references/synthesis.md` — Synthesis
-- `references/usability-testing-guide.md` — Usability Testing Guide
-
+  - references/research-methods.md — Research Methods Reference
+  - references/synthesis-frameworks.md — Synthesis Frameworks Reference
+  - references/synthesis.md — Synthesis
+  - references/usability-testing-guide.md — Usability Testing Guide
+  - references/ux-research-advanced.md — Ux Research Advanced Topics
+  - references/ux-research-fundamentals.md — Ux Research Fundamentals
 ## Handoff
 `design-prototyping` for interactive prototypes based on research insights.
 Carry forward: research findings, persona profiles, journey maps.

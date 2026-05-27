@@ -252,11 +252,14 @@ Nessie provides Git-like version control for Iceberg tables (and others via REST
 - Test schema evolution on staging before production
 
 ## References
-- `references/table-formats.md` — Delta Lake, Iceberg, Hudi comparison, manifest files, metadata layer, ACID guarantees
-- `references/lake-operations.md` — Compaction, vacuum, Z-order, schema evolution, time travel, optimization
-- `references/xtable-multi-format.md` — Apache XTable format interoperability, Delta/Iceberg/Hudi sync, incremental sync strategies
-- `references/nessie-catalog.md` — Nessie Git-like catalog for Iceberg, branching, merging, time travel, CI/CD for data
-
+  - references/data-lake-advanced.md — Data Lake Advanced Topics
+  - references/data-lake-fundamentals.md — Data Lake Fundamentals
+  - references/lake-gov-access.md — Data Lake Governance and Access Control
+  - references/lake-operations.md — Lake Operations Reference
+  - references/lake-performance-tuning.md — Data Lake Performance Tuning
+  - references/nessie-catalog.md — Nessie Catalog — Git for Iceberg
+  - references/table-formats.md — Table Formats Reference
+  - references/xtable-multi-format.md — Apache XTable Multi-Format Interoperability
 ## Handoff
 `data-distributed-storage` for S3-compatible object store configuration
 `data-batch-processing` for Spark SQL optimization on lake tables

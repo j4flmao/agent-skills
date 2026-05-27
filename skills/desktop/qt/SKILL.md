@@ -225,17 +225,11 @@ ApplicationWindow {
 - C++ objects exposed to QML via setContextProperty or qmlRegisterType.
 
 ## References
-
-### Reference Files
-- `references/qt-architecture.md` — Signal/slot, MOC, QML vs Widgets, model/view, state machine, plugin system, cross-platform patterns
-- `references/qt-performance.md` — OpenGL integration, QML optimization, threading with QtConcurrent, memory management, profiling
-- `references/qt-qml-guide.md` — QML components, layouts, animations, C++ integration
-- `references/qt-setup.md` — Installation, CMake patterns, Qt Creator, debugging
-
-### Related Skills
-- `desktop/gtk/SKILL.md` — GTK alternative for C/Python/Rust
-- `desktop/kde/SKILL.md` — KDE-specific Qt/Kirigami development
-- `backend/cpp/core/SKILL.md` — C++ language fundamentals
-
+  - references/qt-advanced.md — Qt Advanced Topics
+  - references/qt-architecture.md — Qt Architecture Reference
+  - references/qt-fundamentals.md — Qt Fundamentals
+  - references/qt-performance.md — Qt Performance Reference
+  - references/qt-qml-guide.md — Qt QML Guide Reference
+  - references/qt-setup.md — Qt Setup Reference
 ## Handoff
 Hand off to `desktop/kde/SKILL.md` when building KDE Plasma extensions or Kirigami convergent apps. Hand off to `desktop/gtk/SKILL.md` when GNOME integration preferred.

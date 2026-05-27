@@ -147,11 +147,12 @@ E2E rules:
 - All tests are deterministic. No Math.random(), no Date.now() without mocking.
 
 ## References
-- `references/testing-library-guide.md` — Testing Library query priority and testing patterns
-- `references/testing-tools.md` — Vitest, Playwright, Cypress, MSW setup, coverage targets
-- `references/testing-patterns.md` — component test patterns, accessibility patterns, custom render functions
-- `references/testing-ci.md` — CI configuration, parallel execution, visual regression, retries, pre-commit hooks
-
+  - references/component-test-patterns.md — Component Test Patterns
+  - references/msw-api-mocking.md — MSW API Mocking
+  - references/testing-ci.md — Testing CI/CD Integration
+  - references/testing-library-guide.md — Testing Library Guide
+  - references/testing-patterns.md — Testing Patterns
+  - references/testing-tools.md — Testing Tools Guide
 ## Handoff
 No artifact produced.
 Next skill: {framework}-architecture or code-review.

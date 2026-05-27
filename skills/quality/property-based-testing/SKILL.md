@@ -54,7 +54,10 @@ test('sort should produce sorted array', () => {
 ```
 
 ## References
-- `references/property-based-testing-advanced.md` — Property Based Testing Advanced
-- `references/property-patterns.md` — Property Patterns
-- `references/shrinking-guide.md` — Shrinking Guide
-- `references/stateful-testing.md` — Stateful Testing
+  - references/custom-generators.md — Custom Generators for Property-Based Testing
+  - references/property-based-testing-advanced.md — Advanced Property-Based Testing
+  - references/property-based-testing-fundamentals.md — Property Based Testing Fundamentals
+  - references/property-patterns.md — External Service Mocking with WireMock
+  - references/shrinking-guide.md — Shrinking Strategy Guide
+  - references/stateful-testing-deep.md — Stateful Testing (Deep)
+  - references/stateful-testing.md — Stateful Property-Based Testing

@@ -155,11 +155,12 @@ npx react-native-bundle-analyzer
 ```
 
 ## References
-- `references/memory.md` — Memory
-- `references/mobile-performance-optimization.md` — Mobile Performance Optimization
-- `references/rendering.md` — Rendering
-- `references/startup.md` — Startup
-
+  - references/memory.md — Mobile Memory
+  - references/mobile-performance-optimization.md — Mobile Performance Optimization
+  - references/mobile-performance.md — Mobile Performance Optimization
+  - references/network-performance.md — Network Performance
+  - references/rendering.md — Rendering Performance
+  - references/startup.md — Mobile Startup
 ## Handoff
 
 Hand off to stack-specific skill for implementation fixes.

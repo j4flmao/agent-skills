@@ -96,10 +96,11 @@ Stream all IdP events to SIEM (logins, failures, role changes, MFA registration)
 - Audit events must be immutable and retained per compliance requirements.
 
 ## References
-- `references/idp-setup.md` — IdP installation and configuration
-- `references/federation-sso.md` — SSO integration and federation patterns
-- `references/idp-migration.md` — Identity provider migration strategies and cutover planning
-- `references/saml-oidc.md` — SAML vs OIDC protocol comparison and integration patterns
-
+  - references/federation-sso.md — Federation and SSO Patterns
+  - references/identity-provider-advanced.md — Identity Provider Advanced Topics
+  - references/identity-provider-fundamentals.md — Identity Provider Fundamentals
+  - references/idp-migration.md — Identity Provider Migration
+  - references/idp-setup.md — Identity Provider Setup
+  - references/saml-oidc.md — SAML vs OIDC
 ## Handoff
 For compliance requirements on identity governance, hand off to `enterprise-compliance-audit`. For cost tracking of IdP licensing, hand off to `enterprise-cost-governance`.

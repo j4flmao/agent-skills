@@ -168,38 +168,13 @@ Set up periodic retraining on schedule (daily/weekly) with automatic rollback on
 Create runbooks for each alert severity level defining investigation and resolution steps.
 
 ## References
-- references/classical-anomaly.md — Statistical Z-score/IQR/Grubbs, LOF, Isolation Forest, HBOS, one-class SVM, evaluation
-- references/deep-learning-anomaly.md — Autoencoder, VAE, DeepSVDD, LSTM-AD, time-series anomaly, Twitter AD, Prophet, real-time deployment
-- references/online-anomaly.md — Streaming anomaly detection, sliding window, EWMA, CUSUM, real-time scoring, alert fatigue mitigation
-- references/anomaly-evaluation.md — Threshold selection, precision@k, evaluation protocols, alert fatigue management, production monitoring
-
-### Edge Cases and Special Domains
-Extreme rare anomalies (<0.1%): use one-class learning (DeepSVDD, OCSVM), self-supervised learning (rotation prediction, contrastive).
-Adversarial anomalies (trying to evade detection): use robust training, adversarial training, ensemble diversification.
-Multi-modal data (text + image + numeric): use joint embedding models, separate detectors per modality + fusion layer.
-High-frequency streaming (millions per second): use online methods (EWMA, CUSUM), sketch-based algorithms, lightweight HBOS.
-Semi-supervised (few labeled anomalies): use PU learning (Positive-Unlabeled), label propagation, anomaly-informed contrastive learning.
-Contextual anomalies (e.g., purchase amount normal but unusual for this user): use residual from prediction model, autoencoder of conditional normal behavior.
-Group/collective anomalies (unusual set of transactions rather than individual): use scan statistics (Kulldorff), frequent subgraph mining, community detection on graph representations.
-
-### Framework Integration
-PyOD: 40+ anomaly detection algorithms (Isolation Forest, LOF, HBOS, AutoEncoder, VAE, DeepSVDD, SO_GAAL).
-Scikit-learn: IsolationForest, LocalOutlierFactor, OneClassSVM, EllipticEnvelope with consistent API.
-PyTorch: custom autoencoders, VAEs, DeepSVDD for deep learning anomaly detection.
-TensorFlow: Keras autoencoders, KNN for reconstruction-based anomaly detection.
-ADTK (Anomaly Detection Toolkit): time series anomaly detection with seasonal decomposition and rule-based methods.
-Merlion: auto-encoders, isolation forest, statistical methods, explainability, and evaluation in unified API.
-TODS (Time-series Outlier Detection): automated machine learning for time series anomaly detection.
-
-### Advanced Anomaly Detection Tips
-Use feature bagging: train multiple detectors on random feature subsets and aggregate for robust scoring.
-For categorical features with many levels, use frequency encoding or target encoding before detection.
-Implement online statistical methods (EWMA, CUSUM) for real-time univariate anomaly detection.
-Use spectral methods (PCA reconstruction error, robust PCA) for high-dimensional correlated data.
-For graph anomaly detection, use Graph Neural Networks on relational/network data.
-Implement seasonal-trend decomposition with LOESS (STL) before detecting anomalies in residuals.
-Use extreme value theory (EVT) for setting statistically principled thresholds on anomaly scores.
-For interpretable autoencoders, use feature-wise reconstruction error to identify which features are anomalous.
-
+  - references/anomaly-detection-advanced.md — Anomaly Detection Advanced Topics
+  - references/anomaly-detection-fundamentals.md — Anomaly Detection Fundamentals
+  - references/anomaly-evaluation.md — Anomaly Detection Evaluation
+  - references/classical-anomaly.md — Classical Anomaly Detection
+  - references/deep-learning-anomaly.md — Deep Learning Anomaly Detection
+  - references/ml-based-detection.md — ML-Based Anomaly Detection
+  - references/online-anomaly.md — Online Anomaly Detection
+  - references/statistical-methods.md — Statistical Anomaly Detection
 ## Handoff
 Hand off to devops-observability for alerting and monitoring infrastructure. For time-series forecasting to model normal behavior first, hand off to ml-time-series.

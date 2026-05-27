@@ -70,11 +70,12 @@ Wave -5: Cluster bootstrap (operators, cert-manager)
 | A/B Testing | Istio VirtualService + ArgoCD | Traffic shift |
 
 ## References
-- `references/multi-cluster-management.md` — Multi-cluster GitOps: app-of-apps pattern, cluster registration, hub-spoke model, cluster labels, selective sync
-- `references/applicationset-generators.md` — ArgoCD ApplicationSet generators: cluster, git, matrix, merge, SCM provider, pull request
-- `references/sync-phases-hooks.md` — Sync phases, waves, hooks: pre-sync, sync, post-sync, sync-wave annotation, hook deletion policy, resource ordering
-- `references/argocd-image-updater.md` — ArgoCD Image Updater: automatic image updates, update strategies (semver, latest, digest), commit message templates
-- `references/gitops-secrets.md` — Secrets in GitOps: SealedSecrets, External Secrets Operator, SOPS + age, Vault Agent Sidecar, CSI driver
-
+  - references/applicationset-generators.md — ArgoCD ApplicationSet Generators
+  - references/argocd-image-updater.md — ArgoCD Image Updater
+  - references/gitops-advanced-advanced.md — Gitops Advanced Advanced Topics
+  - references/gitops-advanced-fundamentals.md — Gitops Advanced Fundamentals
+  - references/gitops-secrets.md — Secrets in GitOps
+  - references/multi-cluster-management.md — Multi-Cluster GitOps Management
+  - references/sync-phases-hooks.md — Sync Phases, Waves, and Hooks
 ## Handoff
 Related skills: devops-progressive-delivery, devops-argo-cd, devops-gitops, kubernetes-patterns.

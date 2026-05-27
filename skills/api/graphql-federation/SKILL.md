@@ -61,11 +61,16 @@ rover supergraph compose --config ./supergraph.yaml > supergraph.graphql
 ```
 
 ## References
-- `references/entity-resolution.md` — Entity Resolution
-- `references/federation-architecture.md` — Federation Architecture
-- `references/federation-deployment.md` — Federation Deployment
-- `references/federation-testing.md` — Federation Testing
-
+  - references/entity-resolution.md — Supergraph Composition
+  - references/federation-architecture.md — Federation Architecture
+  - references/federation-deployment.md — Federation Deployment
+  - references/federation-performance.md — Federation Performance Optimization
+  - references/federation-security.md — Federation Security
+  - references/federation-testing.md — Federation Testing & Debugging
+  - references/graphql-federation-advanced.md — Graphql Federation Advanced Topics
+  - references/graphql-federation-fundamentals.md — Graphql Federation Fundamentals
+  - references/supergraph-composition.md — Supergraph Composition
+  - references/supergraph-config.md — Supergraph Configuration
 ## References
 - `references/entity-resolution.md` — Entity Resolution
 - `references/federation-architecture.md` — Federation Architecture

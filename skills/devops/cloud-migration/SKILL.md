@@ -56,10 +56,11 @@ Wave 4: Legacy (mainframe, specialized hardware)
 - Cost validation: actual spend vs projected
 
 ## References
-- `references/migration-strategies.md` — 6 Rs deep dive with decision trees
-- `references/migration-phases.md` — Phased migration plan and wave planning
-- `references/migration-tools.md` — Server migration, database migration, data transfer tools, cutover checklist, rollback triggers
-- `references/migration-testing.md` — Migration testing, cutover planning, rollback testing
-
+  - references/cloud-migration-advanced.md — Cloud Migration Advanced Topics
+  - references/cloud-migration-fundamentals.md — Cloud Migration Fundamentals
+  - references/migration-phases.md — Migration Phases
+  - references/migration-strategies.md — Migration Strategies Deep Dive
+  - references/migration-testing.md — Migration Testing
+  - references/migration-tools.md — Cloud Migration Tools
 ## Handoff
 Related skills: cloud-architecture (landing zone), devops-aws/azure/gcp (infra setup), enterprise-legacy-migration (legacy modernization), cloud-cost-optimization.

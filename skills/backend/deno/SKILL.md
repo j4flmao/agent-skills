@@ -265,16 +265,11 @@ export default function SearchBar() {
 - All env vars loaded via `std/dotenv` in dev, env vars in production.
 
 ## References
-
-### Reference Files
-- `references/deno-essentials.md` — Permissions, modules, std lib, testing
-- `references/fresh-framework.md` — Routes, islands, SSR, deployment
-- `references/deno-runtime.md` — Permissions model, runtime APIs, module resolution, std lib
-- `references/deno-deployment.md` — Deno Deploy, Docker, compile, CI/CD, platforms
-
-### Related Skills
-- `backend/nodejs/express/SKILL.md` — Alternative Node.js approach
-- `backend/bun/SKILL.md` — Alternative Bun approach
-
+  - references/deno-advanced.md — Deno Advanced Topics
+  - references/deno-deployment.md — Deno Deployment
+  - references/deno-essentials.md — Deno Essentials
+  - references/deno-fundamentals.md — Deno Fundamentals
+  - references/deno-runtime.md — Deno Runtime Deep Dive
+  - references/fresh-framework.md — Fresh Framework
 ## Handoff
 Hand off to `backend/universal/api-response/SKILL.md` for API response formatting or backend-testing skill for test patterns.

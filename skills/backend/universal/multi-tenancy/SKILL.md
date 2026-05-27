@@ -110,11 +110,12 @@ SELECT migrate_tenant('tenant_{id}');
 - Log all cross-tenant access attempts as security events.
 
 ## References
-- `references/data-partitioning.md` — Per-tenant vs pooled databases, shard management, tenant migration, noisy neighbor
-- `references/isolation-strategies.md` — Tenant isolation strategy comparison
-- `references/tenant-provisioning.md` — Automated tenant provisioning guide
-- `references/tenant-routing.md` — Subdomain vs path routing, custom domains, tenant resolution middleware
-
+  - references/data-partitioning.md — Data Partitioning at Scale Reference
+  - references/isolation-strategies.md — Isolation Strategies
+  - references/multi-tenancy-monitoring.md — Multi-Tenancy Monitoring
+  - references/multi-tenancy-testing.md — Multi-Tenancy Testing
+  - references/tenant-provisioning.md — Tenant Provisioning
+  - references/tenant-routing.md — Tenant Routing Reference
 ## Handoff
 No artifact produced unless requested.
 Next skill: bff-pattern — create tenant-specific BFFs for different client types.

@@ -142,10 +142,13 @@ Hypothesis: "When CPU stress consumes 80% of allocated CPU on myapp-api pods, HP
 Hypothesis: "When primary database connection is lost, application fails over to read replica within 30 seconds with <5% error rate." Experiment: block database port or kill database connection using Chaos Mesh NetworkChaos or custom fault injection. Steady state check: write success rate, read success rate, application error rate. Expected behavior: application detects connection failure, retries with exponential backoff, reads served from replica, writes queued or fail gracefully. Failure mode: no read replica configured, application crashes on DB connection failure, retry logic loops infinitely. Remediation: configure read replicas for failover, implement circuit breaker on DB client, set query timeout, handle DB errors gracefully with degraded mode.
 
 ## References
-- [Chaos Principles](./references/chaos-principles.md) — principles, hypothesis design, blast radius, experiment lifecycle
-- [Chaos Tools](./references/chaos-tools.md) — Litmus, Chaos Mesh, Gremlin, AWS FIS — setup and experiment definitions per tool
-- [Chaos Scenarios](./references/chaos-scenarios.md) — detailed scenario templates for pod, network, node, DNS, cert, database failures
-- [Chaos CI/CD](./references/chaos-cicd.md) — CI/CD integration, automated experiment pipeline, blast radius progression, SLO validation
-
+  - references/chaos-cicd.md — Chaos Engineering CI/CD Integration
+  - references/chaos-engineering-advanced.md — Chaos Engineering Advanced Topics
+  - references/chaos-engineering-fundamentals.md — Chaos Engineering Fundamentals
+  - references/chaos-experiments.md — Chaos Engineering Experiments
+  - references/chaos-practices.md — Chaos Engineering Practices
+  - references/chaos-principles.md — Chaos Principles
+  - references/chaos-scenarios.md — Chaos Engineering Scenarios
+  - references/chaos-tools.md — Chaos Tools
 ## Handoff
 Hand off to chaos-engineering when designing resilience experiments. Hand off to monitoring for steady state metric collection and dashboards. Hand off to argo-cd for auto-remediation rollback. Hand off to finops to understand cost of running chaos experiments in prod-like envs. Hand off to incident-response when game day reveals incident response gaps. Hand off to service-mesh when testing mesh resilience features (mTLS, circuit breakers, traffic routing).

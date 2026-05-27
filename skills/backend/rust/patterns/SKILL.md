@@ -173,11 +173,16 @@ impl CreateUserBuilder {
 - Implement Send + Sync on types that cross .await points.
 
 ## References
-- `references/ownership-patterns.md` — ownership, borrowing, interior mutability, builder pattern
-- `references/async-tokio.md` — Tokio runtime, concurrent tasks, channels, graceful shutdown
-- `references/error-handling.md` — custom error types, Result aliases, error propagation
-- `references/rust-testing.md` — unit tests, async tests, mockall, proptest, fixtures
-
+  - references/async-tokio.md — Rust Async with Tokio
+  - references/concurrency-sync.md — Concurrency and Synchronization in Rust
+  - references/error-handling.md — Rust Error Handling
+  - references/ownership-patterns.md — Rust Ownership Patterns
+  - references/rust-api-patterns.md — Rust API Patterns
+  - references/rust-error-handling.md — Rust Error Handling Patterns
+  - references/rust-ffi.md — Rust FFI and C Bindings
+  - references/rust-serialization.md — Rust Serialization with Serde
+  - references/rust-testing.md — Rust Testing Guide
+  - references/serde-patterns.md — Serde Patterns for Serialization
 ## Handoff
 No artifact produced.
 Next skill: backend-testing — test Rust code.

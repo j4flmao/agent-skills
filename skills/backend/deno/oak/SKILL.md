@@ -241,16 +241,11 @@ Deno.test('POST /api/orders creates order', async () => {
 - deno.json for imports — import_map.json for legacy projects.
 
 ## References
-
-### Reference Files
-- `references/oak-setup.md` — Oak setup, routing, middleware, deployment
-- `references/deno-runtime-guide.md` — Deno runtime, permissions, standard library
-- `references/oak-middleware.md` — Middleware pipeline, auth, CORS, error handling, composition
-- `references/oak-testing.md` — Integration tests, superdeno, mocking, test fixtures
-
-### Related Skills
-- `backend/universal/api-response/SKILL.md` — API response envelope
-- `backend/universal/oop-principles/SKILL.md` — SOLID for Deno
-
+  - references/deno-runtime-guide.md — Deno Runtime Guide
+  - references/oak-middleware.md — Oak Middleware
+  - references/oak-performance.md — Oak Performance Optimization
+  - references/oak-routing-deployment.md — Oak Routing and Deployment
+  - references/oak-setup.md — Oak Setup Guide
+  - references/oak-testing.md — Oak Testing
 ## Handoff
 Hand off to `backend/universal/api-response/SKILL.md` for API response standards.

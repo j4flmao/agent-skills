@@ -67,11 +67,14 @@ Structured recommendation with:
 6. Coverage gaps identified during regression must be tracked for new test creation
 
 ## References
-- `references/test-selection.md` — Regression test selection strategies
-- `references/regression-suites.md` — Regression suite design and maintenance
-- `references/automation-maintenance.md` — Test automation maintenance best practices
-- `references/regression-metrics.md` — Regression metrics and dashboards
-
+  - references/automation-maintenance.md — Test Automation Maintenance
+  - references/flaky-test-management.md — Flaky Test Management
+  - references/regression-metrics.md — Regression Metrics
+  - references/regression-suites.md — Regression Suite Design
+  - references/regression-testing-advanced.md — Regression Testing Advanced Topics
+  - references/regression-testing-fundamentals.md — Regression Testing Fundamentals
+  - references/risk-based-selection.md — Risk-Based Test Selection
+  - references/test-selection.md — Regression Test Selection
 ## Handoff
 After regression testing, hand off to:
 - `quality-smoke-testing` — for BVT smoke suite updates on new critical paths

@@ -213,11 +213,12 @@ export const createUser = server$(async (data: CreateUserInput) => {
 - Serialized state stays in HTML — never rely on sessionStorage for critical app state.
 
 ## References
-- `references/resumable-patterns.md` — resumability vs hydration, lazy loading, serialization, optimizer
-- `references/qwik-city-patterns.md` — routes, layout, server functions, middleware, actions
-- `references/qwik-routing.md` — Qwik City routing structure, loaders, actions, layouts, navigation
-- `references/qwik-data.md` — data loading, actions, server functions, caching, error handling
-
+  - references/qwik-city-patterns.md — Qwik City Patterns
+  - references/qwik-component-patterns.md — Qwik Component Patterns
+  - references/qwik-data.md — Qwik Data Patterns
+  - references/qwik-routing.md — Qwik Routing Patterns
+  - references/qwik-state-management.md — Qwik State Management
+  - references/resumable-patterns.md — Qwik Resumable Patterns
 ## Handoff
 No artifact produced.
 Next skill: frontend-universal-testing for Qwik component tests. Or frontend-universal-performance.

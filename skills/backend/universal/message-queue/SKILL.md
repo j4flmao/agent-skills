@@ -170,11 +170,14 @@ SQS:
 - Never commit offsets before processing is complete (at-least-once).
 
 ## References
-- `references/broker-comparison.md` — Kafka vs RabbitMQ vs SQS
-- `references/kafka-patterns.md` — Apache Kafka patterns
-- `references/rabbitmq-patterns.md` — RabbitMQ patterns
-- `references/message-design.md` — Message schema design
-
+  - references/broker-comparison.md — Message Broker Comparison
+  - references/consumer-patterns.md — Consumer Patterns
+  - references/kafka-patterns.md — Kafka Patterns
+  - references/message-design.md — Message Schema Design
+  - references/message-queue-monitoring.md — Message Queue Monitoring
+  - references/message-queue-security.md — Message Queue Security
+  - references/producer-patterns.md — Producer Patterns
+  - references/rabbitmq-patterns.md — RabbitMQ Patterns
 ## Handoff
 No artifact produced unless requested.
 Next skill: backend-caching — if the event-driven system needs to cache materialized views or read models.

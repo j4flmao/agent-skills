@@ -276,11 +276,12 @@ jobs:
 `dependabot.yml`, `renovate.json`, and auto-merge CI workflow.
 
 ## References
-- `references/dependabot-setup.md` — Dependabot config, ecosystems, versioning strategies
-- `references/renovate-config.md` — Renovate presets, package rules, presets
-- `references/vulnerability-scanning.md` — npm audit, Snyk, Trivy, CodeQL, SBOM
-- `references/update-strategies.md` — semver strategies, grouping, pinning, batching
-
+  - references/dependabot-setup.md — Dependabot Setup
+  - references/dependency-management-advanced.md — Dependency Management Advanced Topics
+  - references/dependency-management-fundamentals.md — Dependency Management Fundamentals
+  - references/renovate-config.md — Renovate Configuration
+  - references/update-strategies.md — Update Strategies
+  - references/vulnerability-scanning.md — Vulnerability Scanning
 ## Handoff
 After completing this skill:
 - Next skill: **monorepo** — workspace dependency graph, internal packages

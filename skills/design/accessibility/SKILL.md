@@ -91,11 +91,12 @@ Automated (axe DevTools, Lighthouse in CI): catches 30% of issues — contrast, 
 - Disable animations with `prefers-reduced-motion`
 
 ## References
-- `references/aria-patterns.md` — Aria Patterns
-- `references/testing-tools.md` — Testing Tools
-- `references/wcag-checklist.md` — Wcag Checklist
-- `references/wcag-guide.md` — Wcag Guide
-
+  - references/accessible-forms.md — Accessible Forms
+  - references/aria-patterns.md — ARIA Patterns
+  - references/color-contrast-design.md — Color Contrast Design
+  - references/testing-tools.md — Testing Tools
+  - references/wcag-checklist.md — WCAG Checklist
+  - references/wcag-guide.md — WCAG Guide
 ## Handoff
 `design-design-systems` for accessible component library integration.
 `quality-visual-testing` for visual regression with a11y states.

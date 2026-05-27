@@ -102,10 +102,11 @@ Schedule monthly optimization review with cost center owners. Analyze underutili
 - Cost governance policies must be deployed via IaC.
 
 ## References
-- `references/cost-allocation.md` — Tagging strategy and cost allocation models
-- `references/budget-anomaly.md` — Budget management and anomaly detection
-- `references/budget-policies.md` — Budget policy templates and approval workflows
-- `references/cost-governance-practices.md` — Cloud cost governance practices including chargeback/showback
-
+  - references/budget-anomaly.md — Budget Management and Anomaly Detection
+  - references/budget-policies.md — Budget Policies
+  - references/cost-allocation.md — Cost Allocation Models
+  - references/cost-governance-advanced.md — Cost Governance Advanced Topics
+  - references/cost-governance-fundamentals.md — Cost Governance Fundamentals
+  - references/cost-governance-practices.md — Cloud Cost Governance Practices
 ## Handoff
 For multi-tenant cost tracking, hand off to `enterprise-multi-tenant`. For compliance cost reporting, hand off to `enterprise-compliance-audit`.

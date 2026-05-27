@@ -76,11 +76,12 @@ spec:
 | Governance | Require specific annotations, team labels | Generate default NetworkPolicies |
 
 ## References
-- `references/opa-policy-language.md` — OPA/Rego deep dive: Rego syntax, rules, comprehensions, schema validation, built-in functions, coverage
-- `references/kyverno-policies.md` — Kyverno: policy types (validate, mutate, generate, verifyImages), policy sets, policy reports, policy exceptions
-- `references/opa-k8s-admission.md` — OPA Gatekeeper: ConstraintTemplate, Constraint, enforcement action, dry-run, audit, mutation, data replication
-- `references/policy-ci-cd.md` — Policy-as-code in CI/CD: OPA conftest for IaC scanning, Trivy policies, policy testing in pipelines, gating deployments
-- `references/policy-testing.md` — Policy testing, CI/CD integration, and audit logging
-
+  - references/kyverno-policies.md — Kyverno Policies
+  - references/opa-k8s-admission.md — OPA Gatekeeper for Kubernetes Admission Control
+  - references/opa-policy-language.md — OPA/Rego Deep Dive
+  - references/policy-as-code-advanced.md — Policy As Code Advanced Topics
+  - references/policy-as-code-fundamentals.md — Policy As Code Fundamentals
+  - references/policy-ci-cd.md — Policy-as-Code in CI/CD
+  - references/policy-testing.md — OPA/Rego Policy Patterns
 ## Handoff
 Related skills: devops-platform-engineering, devops-gitops-advanced, enterprise-compliance-audit, security-container-security.

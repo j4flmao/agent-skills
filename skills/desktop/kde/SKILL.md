@@ -213,16 +213,11 @@ X-KDE-PluginInfo-EnabledByDefault=true
 - KPackage for installable app module distribution.
 
 ## References
-
-### Reference Files
-- `references/kde-dev-setup.md` — KDevelop, KDE Frameworks, CMake, debugging
-- `references/kde-development.md` — CMake build system, KDevelop, Plasma applet development, KPackage, CI with KDE infrastructure
-- `references/kde-framework.md` — Kirigami, KConfig, KIO, solid, phonon, plasma integration, QML components
-- `references/kirigami-guide.md` — Kirigami components, pages, dialogs, responsive layout
-
-### Related Skills
-- `desktop/qt/SKILL.md` — Qt 6 foundational toolkit skill
-- `desktop/gnome/SKILL.md` — GNOME alternative with libadwaita
-
+  - references/kde-advanced.md — Kde Advanced Topics
+  - references/kde-dev-setup.md — KDE Dev Setup Reference
+  - references/kde-development.md — KDE Development Reference
+  - references/kde-framework.md — KDE Frameworks Reference
+  - references/kde-fundamentals.md — Kde Fundamentals
+  - references/kirigami-guide.md — Kirigami Guide Reference
 ## Handoff
 Hand off to `desktop/qt/SKILL.md` for generic Qt 6 apps without KDE Frameworks. Hand off to `desktop/gnome/SKILL.md` when targeting GNOME desktop.

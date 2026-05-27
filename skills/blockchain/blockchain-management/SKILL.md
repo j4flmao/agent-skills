@@ -35,11 +35,12 @@ tags: [blockchain, management, governance, dao, phase-blockchain]
 5. **Project methodology**: development lifecycle, audit gates, community involvement
 
 ## References
-- references/dao-governance.md — DAO governance frameworks and voting systems
-- references/multi-sig-operations.md — Gnosis Safe, timelocks, proposal lifecycle
-- references/project-methodology.md — Web3 project methodology and progressive decentralization
-- references/tokenomics-design.md — Token supply, inflation, vesting schedules
-- references/treasury-management.md — Treasury allocation, diversification, yield
-
+  - references/blockchain-management-advanced.md — Blockchain Management Advanced Topics
+  - references/blockchain-management-fundamentals.md — Blockchain Management Fundamentals
+  - references/dao-governance.md — DAO Governance
+  - references/multi-sig-operations.md — Multi-Sig Operations
+  - references/project-methodology.md — Web3 Project Methodology
+  - references/tokenomics-design.md — Tokenomics Design
+  - references/treasury-management.md — Treasury Management
 ## Phase
 blockchain → blockchain-management

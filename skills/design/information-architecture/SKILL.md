@@ -44,7 +44,9 @@ Design information architecture: organize content, create navigation systems, de
 - Tags: flexible, user-generated categorization
 
 ## References
-- `references/content-modeling.md` — Content types, attributes, relationships, taxonomies, metadata schemas
-- `references/ia-methods.md` — Card sorting, tree testing, open/closed sorting, first-click testing
-- `references/navigation-design.md` — Global, local, contextual navigation, breadcrumb, hub-and-spoke, mega menu
-- `references/sitemap-taxonomy.md` — Visual sitemaps, hierarchical structures, labeling, synonym rings, polyhierarchy
+  - references/content-modeling.md — Content Modeling Reference
+  - references/ia-methods.md — Information Architecture Methods Reference
+  - references/information-architecture-advanced.md — Information Architecture Advanced Topics
+  - references/information-architecture-fundamentals.md — Information Architecture Fundamentals
+  - references/navigation-design.md — Navigation Design Reference
+  - references/sitemap-taxonomy.md — Sitemaps and Taxonomy Reference

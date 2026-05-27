@@ -35,12 +35,14 @@ tags: [blockchain, security, audit, formal-verification, phase-blockchain]
 5. **Verification**: formal properties, invariants, proof techniques
 
 ## References
-- references/audit-methodology.md — Smart contract audit methodology and tools
-- references/bug-bounty-program.md — Bug bounty programs and severity classification
-- references/economic-security.md — Game theory and economic security in DeFi
-- references/formal-verification-deep.md — Certora CVL, Halmos, Scribble verification
-- references/incident-response.md — Blockchain incident response lifecycle
-- references/threat-modeling.md — STRIDE adapted for blockchain threat modeling
-
+  - references/audit-methodology.md — Smart Contract Audit Methodology
+  - references/blockchain-security-advanced.md — Blockchain Security Advanced Topics
+  - references/blockchain-security-fundamentals.md — Blockchain Security Fundamentals
+  - references/bug-bounty-program.md — Bug Bounty Programs for Blockchain Projects
+  - references/economic-security.md — Economic Security in Blockchain Systems
+  - references/formal-verification-deep.md — Formal Verification for Smart Contracts
+  - references/incident-response.md — Blockchain Incident Response
+  - references/smart-contract-security.md — Smart Contract Security
+  - references/threat-modeling.md — Threat Modeling for Blockchain Systems
 ## Phase
 blockchain → blockchain-security

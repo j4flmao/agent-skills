@@ -169,17 +169,11 @@ end
 - API versioning via namespace (Api::V1).
 
 ## References
-
-### Reference Files
-- `references/rails-api-conventions.md` — Rails API conventions, versioning, serialization
-- `references/rails-active-record.md` — AR patterns, scopes, N+1 prevention, migrations
-- `references/rails-performance.md` — Query optimization, caching, background jobs, connection pooling
-- `references/rails-testing.md` — RSpec, factories, request specs, service specs, best practices
-
-### Related Skills
-- `backend/universal/api-response/SKILL.md` — Response envelope
-- `backend/universal/database-patterns/SKILL.md` — Database design
-- `backend/universal/design-patterns/SKILL.md` — Service objects, policies
-
+  - references/rails-active-record.md — Rails ActiveRecord Patterns
+  - references/rails-api-conventions.md — Rails API Conventions
+  - references/rails-background-jobs.md — Rails Background Jobs Reference
+  - references/rails-performance.md — Rails Performance
+  - references/rails-security.md — Rails Security Reference
+  - references/rails-testing.md — Rails Testing
 ## Handoff
 Hand off to `backend/universal/database-patterns/SKILL.md` for database rules.

@@ -189,20 +189,13 @@ Define a rollback plan: store previous best config and study snapshot for easy r
 Establish a maximum compute budget per tuning run and enforce it via timeout limits.
 
 ## References
-- references/search-strategies.md — Grid, random, Bayesian optimization, GP, TPE, search space design
-- references/tuning-frameworks.md — Optuna study/trial/pruning, Ray Tune schedulers/search algos, Hyperopt, distributed tuning
-- references/multi-fidelity.md — Successive halving, Hyperband, ASHA, median pruner, multi-fidelity optimization for expensive training runs
-- references/tuning-at-scale.md — Distributed tuning, Ray cluster, Kubernetes, PostgreSQL-backed studies, fault tolerance
-
-### Advanced Configuration Tips
-Use Optuna's OptunaSearchCV for scikit-learn estimators with built-in cross-validation.
-For distributed Optuna: set shared PostgreSQL storage, use --storage flag across workers.
-Ray Tune with GPU: set resources_per_trial={gpu: 0.25} to run 4 trials per GPU.
-Enable trial checkpointing for expensive trials: resume from checkpoint on worker failure.
-Use study.enqueue_trial() to inject known-good parameter configurations as seed trials.
-Warm-start successive studies by passing study object to create_study with load_if_exists=True.
-For Hyperopt: use Trials object to persist and analyze full trial history across runs.
-Set direction=minimize for loss/error, direction=maximize for accuracy/F1.
-
+  - references/automl-tuning.md — AutoML Tuning
+  - references/hyperparameter-tuning-advanced.md — Hyperparameter Tuning Advanced Topics
+  - references/hyperparameter-tuning-fundamentals.md — Hyperparameter Tuning Fundamentals
+  - references/multi-fidelity.md — Multi-Fidelity Optimization
+  - references/optimization-methods.md — Hyperparameter Optimization
+  - references/search-strategies.md — Search Strategies for Hyperparameter Tuning
+  - references/tuning-at-scale.md — Distributed Hyperparameter Tuning
+  - references/tuning-frameworks.md — Tuning Frameworks
 ## Handoff
 Pass tuned hyperparameters to ml-experiment-tracking for logging. Hand off to ml-model-evaluation for evaluating tuned model performance. For model architecture search (NAS), use a separate neural architecture search skill.

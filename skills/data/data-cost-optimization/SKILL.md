@@ -320,11 +320,12 @@ BUDGET_THRESHOLDS = {
 - Set budget alerts at 50%, 80%, 90%, and 100% of monthly budget
 
 ## References
-- `references/warehouse-cost-optimization.md` — Snowflake credit analysis, warehouse sizing, query tuning, BigQuery slot management, reservation optimization, cost allocation tagging
-- `references/storage-tiering-strategies.md` — S3 lifecycle policies, storage class comparison, intelligent tiering, data retention compliance, cost analysis across cloud providers
-- `references/query-cost-optimization.md` — Query profiling, materialized views, clustering, partitioning
-- `references/data-finops.md` — Resource scheduling, storage tiering, cost allocation, budgets
-
+  - references/data-cost-budgeting.md — Data Cost Budgeting
+  - references/data-cost-optimization-framework.md — Data Cost Optimization Framework
+  - references/data-finops.md — Data FinOps Reference
+  - references/query-cost-optimization.md — Query Cost Optimization Reference
+  - references/storage-tiering-strategies.md — Storage Tiering Strategies
+  - references/warehouse-cost-optimization.md — Warehouse Cost Optimization
 ## Handoff
 `data-etl-pipeline` for pipeline efficiency and incremental loading
 `data-data-warehouse` for schema design that minimizes compute

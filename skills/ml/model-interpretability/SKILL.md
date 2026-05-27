@@ -167,38 +167,13 @@ Establish explanation generation SLAs based on latency requirements (batch vs re
 Record explanation metadata: model version, explainer type, computation time, background dataset hash.
 
 ## References
-- references/global-interpretability.md — Permutation importance, partial dependence, SHAP global, feature interaction, inherent methods
-- references/local-interpretability.md — SHAP values, LIME, ICE, waterfall/force/summary plots, counterfactuals
-- references/global-explanations.md — Global explanation methods, surrogate models, H-statistic, SHAP interaction values, visualization techniques
-- references/fairml-auditing.md — Fairness definitions, bias detection, mitigation strategies, model auditing reports, regulatory compliance
-
-### Edge Cases and Special Data Types
-High-dimensional sparse data: use permutation importance with caching, SHAP with feature grouping, avoid KernelSHAP (slow).
-Image data: use Grad-CAM, Integrated Gradients, perturbation-based methods (occlusion sensitivity).
-Text data: use attention visualization, LIME text, Integrated Gradients for token-level attributions.
-Time series data: use feature importance on lag features, temporal SHAP, window-based attribution methods.
-Tabular data with mixed types: use SHAP for both numerical and categorical (one-hot) features consistently.
-Graph data: use GNNExplainer, integrated gradients for edges and nodes, attention weights for GAT.
-Multiple models (ensemble): use SHAP for each model and average, or use model-specific explanations combined.
-
-### Framework Integration
-SHAP: TreeExplainer for XGBoost/LightGBM/RF, LinearExplainer for linear models, KernelExplainer for black-box.
-LIME: LimeTabularExplainer for tabular, LimeTextExplainer for NLP, LimeImageExplainer for vision.
-InterpretML: glassbox models (EBM, LogisticRegression, DecisionTree) and blackbox explainers.
-Eli5: permutation importance, text explanation, sklearn and XGBoost support.
-Alibi: anchor explanations, counterfactual explanations, integrated gradients.
-Captum: integrated gradients, DeepLIFT, feature ablation for PyTorch models.
-DALEX: model-agnostic explainers for R and Python with consistent API.
-
-### Advanced Interpretability Techniques
-Use SHAP interaction values to discover feature synergies: shap_interaction_values returns (n_samples, n_features, n_features) matrix.
-For tree models, SHAP.TreeExplainer supports feature perturbation and interventional feature importance.
-Compute global feature importance as mean absolute SHAP across background dataset.
-For deep learning, use IntegratedGradients from captum library which satisfies sensitivity and implementation invariance axioms.
-Apply SmoothGrad to reduce noise in gradient-based explanations by averaging over N noisy samples.
-For NLP models, use attention rollout or attention flow for transformer interpretability.
-For computer vision, use Grad-CAM to generate class activation maps showing which image regions drive predictions.
-For model comparison, SHAP can compute feature importance difference between two models.
-
+  - references/fairml-auditing.md — Fairness & Model Auditing
+  - references/global-explanations.md — Global Explanation Methods
+  - references/global-interpretability.md — Global Interpretability
+  - references/interpretability-visualization.md — Model Interpretability Visualization
+  - references/local-interpretability.md — Local Interpretability
+  - references/model-interpretability-advanced.md — Model Interpretability Advanced Topics
+  - references/model-interpretability-fundamentals.md — Model Interpretability Fundamentals
+  - references/shap-lime-pdp.md — Model Interpretability Methods
 ## Handoff
 Hand off findings to ml-model-evaluation if interpretability reveals data quality issues. For feature engineering improvements, hand off to ml-feature-engineering.

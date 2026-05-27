@@ -470,16 +470,17 @@ test('authorization matrix', () => {
 - Permission changes propagate immediately (no cache) or with documented delay.
 
 ## References
-- `references/authorization-models.md` — RBAC vs ABAC vs ReBAC comparison and decision guide
-- `references/permission-architecture.md` — Permission levels, granularity, scope design
-- `references/rbac-hierarchy.md` — Role hierarchy, inheritance, SoD, admin/master admin patterns
-- `references/fine-grained-policies.md` — ABAC implementation, attribute sources, policy structure
-- `references/temporary-delegated-access.md` — JIT elevation, permission delegation, break-glass
-- `references/policy-engines-comparison.md` — Casbin, OPA, Cerbos, Permit.io comparison and integration
-- `references/authorization-testing.md` — Authorization testing strategies, matrix, regression
-- `references/authorization-middleware.md` — Auth middleware in Express, NestJS, FastAPI, Spring Boot, ASP.NET, Go
-- `references/data-level-authorization.md` — PostgreSQL RLS, Prisma policies, field-level access, GraphQL auth
-
+  - references/authorization-audit.md — Authorization Audit
+  - references/authorization-delegation.md — Authorization Delegation
+  - references/authorization-middleware.md — Authorization Middleware — Framework Integration
+  - references/authorization-models.md — Authorization Models Comparison
+  - references/authorization-testing.md — Authorization Testing
+  - references/data-level-authorization.md — Data-Level Authorization
+  - references/fine-grained-policies.md — Fine-Grained Access Policies (ABAC)
+  - references/permission-architecture.md — Permission Architecture
+  - references/policy-engines-comparison.md — Policy Engines Comparison
+  - references/rbac-hierarchy.md — RBAC Hierarchy & Admin Patterns
+  - references/temporary-delegated-access.md — Temporary & Delegated Access
 ## Handoff
 No artifact produced unless requested.
 Next skill: authentication (frontend) — implement login UI, route guards, token storage for the auth system.

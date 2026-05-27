@@ -59,7 +59,11 @@ expect(result).toBe(5);
 - Don't chase 100% — it's a metric, not a goal
 
 ## References
-- `references/tdd-guide.md` — Tdd Guide
-- `references/test-doubles.md` — Test Doubles
-- `references/test-patterns.md` — Test Patterns
-- `references/unit-testing-patterns.md` — Unit Testing Patterns
+  - references/mocking-strategies.md — Mocking Strategies
+  - references/tdd-guide.md — TDD Guide
+  - references/test-doubles.md — Test Doubles Guide
+  - references/test-organization.md — Test Organization
+  - references/test-patterns.md — Unit Test Patterns
+  - references/unit-testing-advanced.md — Unit Testing Advanced Topics
+  - references/unit-testing-fundamentals.md — Unit Testing Fundamentals
+  - references/unit-testing-patterns.md — Unit Testing Patterns

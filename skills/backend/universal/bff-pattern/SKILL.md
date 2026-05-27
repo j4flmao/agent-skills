@@ -115,11 +115,12 @@ await cache.set(`checkout:${cartId}`, result, { ttl: 30 });
 - Security boundaries: BFFs must never bypass backend authorization.
 
 ## References
-- `references/bff-architecture.md` — BFF architecture and design patterns
-- `references/bff-auth-session.md` — Session management, token exchange, refresh token rotation, cookie security, CSRF
-- `references/bff-orchestration.md` — Data aggregation, API composition, partial response, error handling, caching
-- `references/bff-security.md` — BFF security best practices
-
+  - references/bff-architecture.md — BFF Architecture
+  - references/bff-auth-session.md — BFF Auth and Session Reference
+  - references/bff-orchestration.md — BFF Orchestration Reference
+  - references/bff-performance.md — BFF Performance
+  - references/bff-security.md — BFF Security
+  - references/bff-testing.md — BFF Testing
 ## Handoff
 No artifact produced unless requested.
 Next skill: data-masking — protect sensitive data flowing through BFF responses.

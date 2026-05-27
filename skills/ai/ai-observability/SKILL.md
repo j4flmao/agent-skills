@@ -132,10 +132,15 @@ Key metrics: total calls, token usage, cost, latency (P50/P95/P99), error rates,
 - Feedback must be linkable to specific traces.
 
 ## References
-- `references/cost-tracking.md` — Cost Tracking
-- `references/llm-monitoring.md` — Llm Monitoring
-- `references/llm-tracing.md` — Llm Tracing
-- `references/observability-metrics.md` — Latency tracking, quality metrics, drift monitoring
-
+  - references/ai-observability-advanced.md — Ai Observability Advanced Topics
+  - references/ai-observability-fundamentals.md — Ai Observability Fundamentals
+  - references/cost-tracking.md — Cost Tracking
+  - references/dashboard-alerting.md — Dashboard and Alerting
+  - references/feedback-collection.md — Feedback Collection
+  - references/llm-monitoring.md — LLM Monitoring
+  - references/llm-tracing.md — LLM Tracing
+  - references/observability-incident-response.md — Observability Incident Response
+  - references/observability-metrics.md — Observability Metrics for AI Systems
+  - references/observability-tooling-comparison.md — Observability Tooling Comparison
 ## Handoff
 For LangChain-specific observability, hand off to `ai-langchain-patterns`. For MCP server observability, hand off to `ai-mcp-patterns`.

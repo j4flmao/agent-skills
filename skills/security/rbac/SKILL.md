@@ -657,13 +657,14 @@ allow {
 - Never assign users directly — always go through role assignment.
 
 ## References
-- `references/role-engineering.md` — Role design process, naming conventions, role lifecycle
-- `references/enterprise-org-structure.md` — Multi-org, subsidiary, department, and team RBAC models
-- `references/admin-break-glass.md` — Admin role patterns, break-glass access, emergency procedures
-- `references/temporary-delegation-workflows.md` — JIT elevation, permission delegation, approval workflows
-- `references/framework-integration.md` — RBAC in NestJS/CASL, Spring Security, ASP.NET, Go/Casbin, FastAPI
-- `references/rbac-migration.md` — Flat permissions to RBAC migration, privilege creep detection, access certification
-
+  - references/admin-break-glass.md — Admin & Break-Glass Patterns
+  - references/enterprise-org-structure.md — Enterprise Org Structure RBAC
+  - references/framework-integration.md — RBAC Framework Integration
+  - references/rbac-advanced.md — Rbac Advanced Topics
+  - references/rbac-fundamentals.md — Rbac Fundamentals
+  - references/rbac-migration.md — RBAC Migration & Audit
+  - references/role-engineering.md — Role Engineering
+  - references/temporary-delegation-workflows.md — Temporary Elevation & Delegation Workflows
 ## Handoff
 No artifact produced unless requested.
 Next skill: authorization (backend) — choose the right model, integrate RBAC into application.

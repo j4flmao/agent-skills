@@ -168,11 +168,14 @@ export class OrderConsumer {
 - CQRS: CommandBus for writes, QueryBus for reads. Never in the same handler.
 
 ## References
-- `references/guards-interceptors.md` — guards, interceptors, middleware
-- `references/pipes-filters.md` — validation pipes, exception filters
-- `references/microservices.md` — message patterns, transport options, client proxy
-- `references/nestjs-testing.md` — Unit tests, integration tests, guards, pipes, mocking
-
+  - references/cqrs-events.md — CQRS and Events in NestJS
+  - references/decorators-metadata.md — Decorators and Metadata in NestJS
+  - references/guards-interceptors.md — NestJS Guards & Interceptors
+  - references/microservices.md — NestJS Microservices
+  - references/nestjs-guards-interceptors.md — NestJS Guards and Interceptors
+  - references/nestjs-providers-patterns.md — NestJS Providers and DI
+  - references/nestjs-testing.md — NestJS Testing
+  - references/pipes-filters.md — NestJS Pipes & Filters
 ## Handoff
 No artifact produced.
 Next skill: backend-testing — test NestJS patterns.

@@ -35,11 +35,13 @@ tags: [blockchain, defi, finance, protocol, phase-blockchain]
 5. Risk analysis — smart contract risk, IL, depeg risk, regulatory exposure, composability risk
 
 ## References
-- references/amm-mechanics.md — Constant product, stable swap, weighted pools
-- references/derivatives-perps.md — Perpetual futures and derivatives mechanisms
-- references/lending-borrowing.md — Interest rate models and liquidation logic
-- references/lsd-lrt-restaking.md — Liquid staking derivatives and restaking
-- references/yield-strategies.md — Yearn vault design and yield optimization
-
+  - references/amm-mechanics.md — AMM Mechanics
+  - references/blockchain-defi-advanced.md — Blockchain Defi Advanced Topics
+  - references/blockchain-defi-fundamentals.md — Blockchain Defi Fundamentals
+  - references/defi-risk-management.md — DeFi Risk Management
+  - references/derivatives-perps.md — Derivatives & Perpetual Futures
+  - references/lending-borrowing.md — Lending & Borrowing Protocols
+  - references/lsd-lrt-restaking.md — Liquid Staking & Restaking
+  - references/yield-strategies.md — Yield Strategies
 ## Phase
 blockchain → blockchain-defi

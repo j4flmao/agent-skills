@@ -156,11 +156,12 @@ git push origin v1.2.0
 Git command sequence or conventional commit template.
 
 ## References
-- `references/branch-strategies.md` — Branch Strategies
-- `references/conventional-commits.md` — Conventional Commits
-- `references/git-advanced-workflows.md` — Git Advanced Workflows
-- `references/merge-conflict-resolution.md` — Merge Conflict Resolution
-
+  - references/branch-strategies.md — Branch Strategies
+  - references/conventional-commits.md — Conventional Commits Specification
+  - references/git-advanced-workflows.md — Advanced Git Workflows
+  - references/git-workflow-advanced.md — Git Workflow Advanced Topics
+  - references/git-workflow-fundamentals.md — Git Workflow Fundamentals
+  - references/merge-conflict-resolution.md — Merge Conflict Resolution
 ## Handoff
 After completing this skill:
 - Next skill: **security-auditor** — ensure git practices are secure

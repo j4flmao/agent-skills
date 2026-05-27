@@ -294,10 +294,13 @@ Register common queries by hash to reduce request size and prevent arbitrary que
 - Rate limit: 1000 reads/min/user, 100 writes/min/user
 
 ## References
-- `references/schema-resolvers.md` — Naming conventions, type design, nullability rules, resolver patterns, DataLoader, N+1 prevention, pagination, error handling
-- `references/federation-subscriptions.md` — Federation directives, gateway configuration, entity resolution, subscription patterns, WebSocket, SSE
-- `references/graphql-federation.md` — Apollo Federation architecture, subgraph design, router configuration, query planning
-- `references/graphql-performance.md` — N+1 prevention, DataLoader, query complexity, caching, persisted queries
-
+  - references/federation-subscriptions.md — Federation and Subscriptions
+  - references/graphql-federation.md — GraphQL Federation
+  - references/graphql-migration.md — GraphQL Migration
+  - references/graphql-monitoring.md — GraphQL Monitoring
+  - references/graphql-performance.md — GraphQL Performance
+  - references/graphql-security.md — GraphQL Security
+  - references/graphql-tooling.md — GraphQL Tooling and Code Generation
+  - references/schema-resolvers.md — Schema and Resolvers
 ## Handoff
 `backend-api-design` for REST-GraphQL coexistence strategy

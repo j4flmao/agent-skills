@@ -295,19 +295,13 @@ Closes #ISSUE_NUMBER
 - Decision log: every architecture decision documented in ADR format with date and rationale
 
 ## References
-
-### Reference Files
-- `references/code-review-protocol.md` — Detailed code review guidelines with examples
-- `references/branch-strategy.md` — Git branching strategies and lifecycle management
-- `references/communication-protocol.md` — Meeting templates, async communication standards
-- `references/conflict-resolution.md` — Team conflict resolution frameworks and mediation guides
-- `references/working-agreements.md` — Team working agreements templates and facilitation guides
-
-### Related Skills
-- `management/pm/SKILL.md` — Sprint ceremonies, estimation, stakeholder communication
-- `management/ba/SKILL.md` — Requirements gathering and story splitting
-- `management/qc/SKILL.md` — Quality gates and enforcement in CI
-
+  - references/branch-strategy.md — Branch Strategy Reference
+  - references/code-review-protocol.md — Code Review Protocol Reference
+  - references/communication-protocol.md — Communication Protocol Reference
+  - references/conflict-resolution.md — Conflict Resolution
+  - references/team-rules-advanced.md — Team Rules Advanced Topics
+  - references/team-rules-fundamentals.md — Team Rules Fundamentals
+  - references/working-agreements.md — Working Agreements
 ## Handoff
 
 Hand off to `management/pm/SKILL.md` for sprint planning and estimation ceremonies. Hand off to `management/qc/SKILL.md` for quality gates integration in CI pipeline.

@@ -151,11 +151,12 @@ Invalidation order (write-through):
 - Cache null results (with short TTL) to prevent repeated DB misses on missing data.
 
 ## References
-- `references/cache-strategies.md` — Cache strategy deep-dive
-- `references/redis-patterns.md` — Redis-specific patterns
-- `references/cache-invalidation.md` — Invalidation strategies
-- `references/cdn-caching.md` — CDN caching patterns
-
+  - references/cache-invalidation.md — Cache Invalidation
+  - references/cache-monitoring.md — Cache Monitoring
+  - references/cache-strategies.md — Cache Strategies
+  - references/cache-testing.md — Cache Testing
+  - references/cdn-caching.md — CDN Caching
+  - references/redis-patterns.md — Redis Patterns
 ## Handoff
 No artifact produced unless requested.
 Next skill: backend-rate-limiting — if the cache layer needs protection against traffic spikes.

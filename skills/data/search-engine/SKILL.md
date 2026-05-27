@@ -326,11 +326,12 @@ GET /collections/products/documents/search
 - Use search templates client-side, not stored scripts
 
 ## References
-- `references/elasticsearch-architecture.md` — Node types, shards/replicas, mapping, analysis, indexing, cluster management, ILM
-- `references/modern-search-engines.md` — Meilisearch milli/LMDB, Typesense hybrid text+vector search, curation rules, comparison matrix
-- `references/search-aggregation.md` — Full-text search, term/boolean/fuzzy queries, aggregations, performance tuning, OpenSearch
-- `references/search-engine-optimization.md` — ES/OS/Solr tuning, indexing strategies, shard/routing optimization, query performance, relevancy, synonyms, stemming, faceted search
-
+  - references/elasticsearch-architecture.md — Elasticsearch Architecture
+  - references/modern-search-engines.md — Modern Search Engines — Meilisearch and Typesense
+  - references/search-aggregation.md — Search Queries and Aggregations
+  - references/search-engine-optimization.md — Search Engine Optimization Reference
+  - references/search-operations.md — Search Operations
+  - references/search-relevance-tuning.md — Search Relevance Tuning
 ## Handoff
 `data-relational-database` for source data
 `ml-feature-engineering` for text feature extraction from search data

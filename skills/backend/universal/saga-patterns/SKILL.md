@@ -211,11 +211,13 @@ async function executeWithRetry(step: () => Promise<void>, maxRetries = 3): Prom
 - Log every saga state transition for observability and debugging.
 
 ## References
-- `references/choreography-vs-orchestration.md` — Detailed comparison, trade-offs, decision guide
-- `references/saga-state-management.md` — State persistence, recovery, monitoring, timeout handling
-- `references/compensating-transactions.md` — Compensation patterns, idempotency, failure scenarios
-- `references/saga-testing.md` — Saga testing pyramid, state machine tests, compensation tests, recovery
-
+  - references/choreography-vs-orchestration.md — Choreography vs Orchestration
+  - references/compensating-transactions.md — Compensating Transactions
+  - references/saga-observability.md — Saga Observability
+  - references/saga-orchestration.md — Saga Orchestration Patterns
+  - references/saga-state-management.md — Saga State Management
+  - references/saga-testing.md — Saga Testing
+  - references/saga-timeout-handling.md — Saga Timeout Handling
 ## Handoff
 No artifact produced.
 Next skill: event-driven — for event-based communication in choreography sagas.

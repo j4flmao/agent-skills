@@ -140,19 +140,12 @@ Designate security champions in each dev team for embedded security practices.
 | **SIEM** | Wazuh, Elastic Security, Sentinel | Log aggregation |
 
 ## References
-
-### Reference Files
-- `references/security-review-checklist.md` — Detailed security review checklist per SDLC phase
-- `references/vuln-management.md` — Vulnerability management workflow and severity definitions
-- `references/security-training.md` — Security awareness training materials and onboarding guides
-- `references/security-policy.md` — Security policy templates and organizational security standards
-
-### Related Skills
-- `management/pentesting/SKILL.md` — Penetration testing report standards
-- `management/alerting/SKILL.md` — Security alert rule design
-- `devops/monitoring/SKILL.md` — Monitoring and SIEM integration
-- `devops/cicd-pipeline/SKILL.md` — Security gates in CI/CD
-
+  - references/security-advanced.md — Security Advanced Topics
+  - references/security-fundamentals.md — Security Fundamentals
+  - references/security-policy.md — Security Policy
+  - references/security-review-checklist.md — Security Review Checklist
+  - references/security-training.md — Security Training
+  - references/vuln-management.md — Vulnerability Management Reference
 ## Handoff
 
 Hand off to `management/pentesting/SKILL.md` for pentest execution and reporting. Hand off to `management/alerting/SKILL.md` for security alert rule configuration.

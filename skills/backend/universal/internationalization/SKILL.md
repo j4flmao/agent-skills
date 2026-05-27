@@ -222,10 +222,13 @@ i18n:
 - RTL languages require `dir="rtl"` attribute and BiDi handling
 
 ## References
-- `references/i18n-libraries.md` — Library comparison, ICU format, locale selection, API design
-- `references/l10n-patterns.md` — Key extraction, translation platforms, CI integration, RTL patterns
-- `references/rtl-i18n.md` — Arabic/Hebrew layout, bidirectional text, CSS logical properties, mirroring UI
-- `references/translation-workflow.md` — Translation management systems, automatic translation, review, context
-
+  - references/i18n-architecture.md — Internationalization Architecture
+  - references/i18n-frontend.md — Frontend Internationalization
+  - references/i18n-libraries.md — i18n Libraries
+  - references/i18n-performance.md — i18n Performance
+  - references/i18n-testing.md — i18n Testing
+  - references/l10n-patterns.md — L10n Patterns
+  - references/rtl-i18n.md — RTL and Complex Scripts Reference
+  - references/translation-workflow.md — Translation Workflow Reference
 ## Handoff
 `frontend-universal/animation` for RTL UI considerations and animation direction

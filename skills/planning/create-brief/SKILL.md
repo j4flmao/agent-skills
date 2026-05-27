@@ -128,11 +128,12 @@ Write to `docs/brief-{YYYY-MM-DD}.md`.
 - Do NOT ask for confirmation before writing the file. Write it and show it.
 
 ## References
-- `references/brief-examples.md` — Brief Examples
-- `references/brief-strategies.md` — Brief Strategies
-- `references/brief-template.md` — Brief Template
-- `references/brief-templates.md` — Brief Templates
-
+  - references/brief-examples.md — Brief Examples
+  - references/brief-strategies.md — Brief Writing Strategies
+  - references/brief-template.md — Product Brief: {Project Name}
+  - references/brief-templates.md — Brief Templates
+  - references/create-brief-advanced.md — Create Brief Advanced Topics
+  - references/create-brief-fundamentals.md — Create Brief Fundamentals
 ## Handoff
 Output: `docs/brief-{YYYY-MM-DD}.md`
 Next skill: create-prd

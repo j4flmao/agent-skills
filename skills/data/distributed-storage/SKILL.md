@@ -277,11 +277,12 @@ Tier 1 (hot): SSD/NVMe, RF3, low-latency, active workloads. Tier 2 (warm): HDD 1
 - Block size 128MB minimum for HDFS, larger for bigger datasets (256MB-1GB)
 
 ## References
-- `references/hdfs-architecture.md` — NameNode HA, block management, rack awareness, federation, erasure coding, fsimage, edits log
-- `references/s3-compatible.md` — MinIO deployment, Ceph RADOS, bucket policies, versioning, lifecycle, S3 gateway
-- `references/storage-deployment-guide.md` — HDFS config, MinIO K8s deployment, Ceph cluster config, erasure coding profiles
-- `references/s3-compatible-configs.md` — AWS SDK usage, bucket policies, lifecycle rules, multipart upload config, bucket notifications
-
+  - references/distributed-storage-advanced.md — Distributed Storage Advanced Topics
+  - references/distributed-storage-fundamentals.md — Distributed Storage Fundamentals
+  - references/hdfs-architecture.md — HDFS Architecture Reference
+  - references/s3-compatible-configs.md — S3-Compatible Configurations
+  - references/s3-compatible.md — S3-Compatible Object Store Reference
+  - references/storage-deployment-guide.md — Storage Deployment Guide
 ## Handoff
 `data-distributed-compute` for Spark/HDFS locality and YARN scheduling
 `data-data-lake` for object store as lake storage backend

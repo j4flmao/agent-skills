@@ -170,11 +170,12 @@ Attachments: {logs, screenshots}
 - Test environment must match production configuration as closely as possible
 
 ## References
-- `references/test-design-techniques.md` — equivalence partitioning, BVA, state transition, pairwise testing
-- `references/defect-severity-matrix.md` — severity and priority guidelines with examples
-- `references/test-case-examples.md` — Test case examples across common feature types
-- `references/test-plan-template.md` — Test plan template with scope, strategy, and resourcing
-
+  - references/defect-severity-matrix.md — Defect Severity & Priority Matrix
+  - references/qa-advanced.md — Qa Advanced Topics
+  - references/qa-fundamentals.md — Qa Fundamentals
+  - references/test-case-examples.md — Test Case Examples
+  - references/test-design-techniques.md — Test Design Techniques
+  - references/test-plan-template.md — Test Plan Template
 ## Handoff
 After completing this skill:
 - Next skill: **qc** — to enforce code quality gates and standards

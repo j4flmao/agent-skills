@@ -176,10 +176,13 @@ deepspeed --num_gpus=8 train.py \
 - Training run logged with all hyperparameters, metrics, and model checkpoints.
 
 ## References
-- `references/fine-tuning-guide.md` — Fine Tuning Guide
-- `references/fine-tuning-strategies.md` — Fine Tuning Strategies
-- `references/rlhf-dpo.md` — Rlhf Dpo
-- `references/training-pipeline.md` — Training Pipeline
-
+  - references/fine-tuning-guide.md — Fine-Tuning Guide
+  - references/fine-tuning-strategies.md — Fine-Tuning Strategies
+  - references/model-training-advanced.md — Model Training Advanced Topics
+  - references/model-training-data-prep.md — Model Training Data Preparation
+  - references/model-training-evaluation.md — Model Training Evaluation
+  - references/model-training-fundamentals.md — Model Training Fundamentals
+  - references/rlhf-dpo.md — RLHF & DPO
+  - references/training-pipeline.md — Training Pipeline
 ## Handoff
 For model evaluation and testing, hand off to `ai-ai-testing`. For serving the fine-tuned model, hand off to `ml-model-serving`. For embedding model training, hand off to `ai-embeddings`.

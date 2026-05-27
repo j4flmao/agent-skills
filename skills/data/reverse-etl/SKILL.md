@@ -322,11 +322,12 @@ schedule:
 - Document field mappings between warehouse column names and destination API fields
 
 ## References
-- `references/reverse-etl-patterns.md` — Sync model architecture, identity resolution strategies, incremental vs full refresh, rate limiting, error handling, and monitoring
-- `references/sync-config-examples.md` — Production Census, Hightouch, and Grouparoo config examples for Salesforce, HubSpot, Braze, Marketo, Google Ads, and Facebook Audiences
-- `references/identity-resolution.md` — Customer 360, profile unification, merge rules, ID mapping
-- `references/warehouse-activation.md` — Census/Hightouch architecture, audience segmentation, sync strategies
-
+  - references/identity-resolution.md — Identity Resolution Reference
+  - references/identity-strategies.md — Identity Strategies for Reverse ETL
+  - references/reverse-etl-monitoring.md — Reverse ETL Monitoring
+  - references/reverse-etl-patterns.md — Reverse ETL Patterns
+  - references/sync-config-examples.md — Sync Configuration Examples
+  - references/warehouse-activation.md — Warehouse Activation Reference
 ## Handoff
 `data-data-warehouse` for warehouse data modeling and transformation needed before sync
 `data-etl-pipeline` for traditional batch ETL (warehouse as target, not source)

@@ -340,16 +340,17 @@ backend users
 - Track RED metrics (Rate, Errors, Duration) for every route.
 
 ## References
-- `references/gateway-comparison.md` — Comprehensive comparison of 12 gateway providers
-- `references/gateway-patterns.md` — All gateway patterns: routing, aggregation, BFF, offloading, security, resilience, deployment
-- `references/kong-config.md` — Kong declarative config, plugins, DB-less, K8s ingress
-- `references/nginx-config.md` — NGINX reverse proxy, auth subrequest, rate limiting, caching, WebSocket, canary
-- `references/aws-api-gateway.md` — AWS API Gateway REST/HTTP/WebSocket/Private, SAM, Cognito, WAF, VPC Link
-- `references/envoy-gateway.md` — Envoy static config, xDS, JWT, rate limiting, WASM
-- `references/spring-cloud-gateway.md` — Spring Cloud Gateway reactive routes, filters, security, rate limiting
-- `references/apache-apisix.md` — Apache APISIX routes, upstream, plugins, admin API
-- `references/azure-api-management.md` — Azure API Management policies, products, subscriptions, APIM gateway
-
+  - references/apache-apisix.md — Apache APISIX Gateway Configuration
+  - references/aws-api-gateway.md — AWS API Gateway
+  - references/azure-api-management.md — Azure API Management
+  - references/envoy-gateway.md — Envoy Gateway Configuration
+  - references/gateway-comparison.md — API Gateway Comparison
+  - references/gateway-observability.md — API Gateway Observability
+  - references/gateway-patterns.md — API Gateway Patterns
+  - references/gateway-testing.md — API Gateway Testing
+  - references/kong-config.md — Kong Gateway Configuration
+  - references/nginx-config.md — Nginx / OpenResty Gateway Configuration
+  - references/spring-cloud-gateway.md — Spring Cloud Gateway
 ## Handoff
 No artifact produced unless requested.
 Next skill: backend-rate-limiting — enforce rate limits per client.

@@ -104,14 +104,12 @@ val promptInfo = BiometricPrompt.PromptInfo.Builder()
 ```
 
 ## References
-
-- `references/biometric-types.md` — Android BiometricPrompt, iOS LocalAuthentication, cross-platform wrappers
-- `references/auth-flow.md` — Authentication flow, secure storage, key invalidation, migration
-- `references/secure-storage.md` — Keychain, Keystore, EncryptedSharedPreferences, biometric key protection
-- `references/biometric-apis.md` — Platform API reference for biometric availability, enrollment, and authentication
-- `references/biometric-auth.md` — Face ID, Touch ID, Android Biometric API, fingerprint, face unlock; fallback strategies, security considerations
-- `references/biometric-security.md` — Liveness detection, presentation attacks, matching thresholds, template storage (Secure Enclave, TEE, KeyStore), privacy
-- `references/multi-factor.md` — Device-bound credentials, FIDO2/WebAuthn, passkeys, TOTP apps, push MFA, SMS fallback, recovery codes
-
+  - references/auth-flow.md — Biometric Authentication Flow
+  - references/biometric-apis.md — Biometric APIs
+  - references/biometric-auth.md — Mobile Biometric Authentication
+  - references/biometric-security.md — Biometric Security — Liveness, Spoofing, and Template Protection
+  - references/biometric-types.md — Biometric Types
+  - references/multi-factor.md — Mobile Multi-Factor Authentication
+  - references/secure-storage.md — Secure Storage with Biometrics
 ## Handoff
 Hand off to mobile-security skill for threat modeling and penetration testing of biometric auth paths.

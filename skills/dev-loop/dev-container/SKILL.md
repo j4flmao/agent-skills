@@ -102,10 +102,11 @@ Project has a working dev container configuration in `.devcontainer/`. Running `
 - **debugging-strategy** — Debug container build failures, dependency issues, and port conflicts
 
 ## References
-- `references/devcontainer-advanced.md` — Devcontainer Advanced
-- `references/devcontainer-setup.md` — Devcontainer Setup
-- `references/dockerfile-patterns.md` — Dockerfile Patterns
-- `references/vscode-extensions.md` — Vscode Extensions
-
+  - references/dev-container-advanced.md — Dev Container Advanced Topics
+  - references/dev-container-fundamentals.md — Dev Container Fundamentals
+  - references/devcontainer-advanced.md — Advanced Dev Container Configuration
+  - references/devcontainer-setup.md — Dev Container Setup Reference
+  - references/dockerfile-patterns.md — Dockerfile Patterns for Dev Containers
+  - references/vscode-extensions.md — VS Code Extensions for Dev Containers
 ## Handoff
 master-orchestrator. After the dev container configuration is created, tested on a clean clone, and committed, hand off to master-orchestrator for the next development task.

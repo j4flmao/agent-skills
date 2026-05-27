@@ -112,12 +112,13 @@ spec:
 - Hubble relay requires sufficient memory for flow storage.
 
 ## References
-- `references/cilium-architecture.md` — eBPF data path, identity, CNI, kube-proxy
-- `references/network-policies.md` — L3/L4/L7 policies, HTTP/gRPC/Kafka/DNS
-- `references/cluster-mesh.md` — Multi-cluster networking, service mirroring
-- `references/observability-hubble.md` — Service map, flows, metrics, CLI, UI
-- `references/ebpf-deep-dive.md` — BPF programs, maps, kprobes, XDP, CO-RE
-
+  - references/cilium-architecture.md — Cilium Architecture
+  - references/cilium-ebpf-advanced.md — Cilium Ebpf Advanced Topics
+  - references/cilium-ebpf-fundamentals.md — Cilium Ebpf Fundamentals
+  - references/cluster-mesh.md — Cilium ClusterMesh
+  - references/ebpf-deep-dive.md — eBPF Deep Dive
+  - references/network-policies.md — Cilium Network Policies
+  - references/observability-hubble.md — Hubble Observability
 ## Handoff
 After completing this skill:
 - Next skill: **devops-opentelemetry** — Integrate Hubble metrics with OTel Collector

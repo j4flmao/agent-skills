@@ -179,13 +179,12 @@ import { Meta, Story, Canvas, Controls } from '@storybook/blocks';
 - Always wrap async interactions in `play` with `await` — missing await = flaky tests
 
 ## References
-- `references/storybook-setup.md`
-- `references/story-writing.md` — CSF 3.x patterns, render functions, args composition
-- `references/writing-stories.md` — Story types, decorators, parameters, args composition
-- `references/addons-testing.md` — Interaction tests, a11y, Chromatic, snapshot tests
-- `references/visual-testing.md`
-- `references/addons.md`
-
+  - references/addons-testing.md — Addons & Testing Reference
+  - references/addons.md — Storybook Addons Reference
+  - references/story-writing.md — Story Writing Reference
+  - references/storybook-setup.md — Storybook Setup Reference
+  - references/visual-testing.md — Visual Testing Reference
+  - references/writing-stories.md — Writing Stories Reference
 ## Handoff
 No artifact produced unless requested.
 Next skill: `frontend-pwa` (if the component needs offline support or a service worker)

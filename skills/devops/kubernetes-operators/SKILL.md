@@ -65,11 +65,12 @@ func (r *MyResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 ```
 
 ## References
-- `references/operator-patterns.md` — Operator design patterns and best practices
-- `references/operator-sdk-guide.md` — Operator SDK: Golang, Ansible, Helm operator types; scaffolding, controllers, reconciliation loop, watches
-- `references/controller-runtime.md` — controller-runtime deep dive: Manager, Controller, Reconciler, Client, Cache, informers, leader election
-- `references/finalizers-garbage.md` — Finalizers, garbage collection, owner references: block delete, cleanup logic, orphan vs foreground deletion
-- `references/testing-operators.md` — Operator testing: envtest, table-driven reconciliation tests, integration tests, E2E with kind
-
+  - references/controller-runtime.md — Controller Runtime Deep Dive
+  - references/finalizers-garbage.md — Finalizers, Garbage Collection, and Owner References
+  - references/kubernetes-operators-advanced.md — Kubernetes Operators Advanced Topics
+  - references/kubernetes-operators-fundamentals.md — Kubernetes Operators Fundamentals
+  - references/operator-patterns.md — Kubernetes Operator Design Patterns
+  - references/operator-sdk-guide.md — Operator SDK Guide
+  - references/testing-operators.md — Operator Testing
 ## Handoff
 Related skills: kubernetes-patterns, helm-patterns, devops-gitops-advanced, devops-policy-as-code.

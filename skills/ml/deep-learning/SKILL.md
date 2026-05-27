@@ -290,11 +290,12 @@ if __name__ == "__main__":
 - Set deterministic flags for reproducibility (at the cost of speed)
 
 ## References
-- `references/pytorch-tensorflow.md` — PyTorch training loop, DataLoader, nn.Module; TensorFlow Keras API, tf.data; CNN, RNN, transformer implementations
-- `references/training-optimization.md` — Distributed training DDP/FSDP, mixed precision, gradient accumulation, CUDA tuning, checkpointing
-- `references/architectures.md` — Modern architectures (ViT, ConvNeXt, MLP-Mixer, EfficientNet, ResNeXt), design principles, scaling laws
-- `references/generative-models.md` — GANs, VAEs, diffusion models, autoregressive models, training strategies, evaluation metrics
-
+  - references/architectures.md — Modern Deep Learning Architectures
+  - references/deep-learning-advanced.md — Deep Learning Advanced Topics
+  - references/deep-learning-fundamentals.md — Deep Learning Fundamentals
+  - references/generative-models.md — Generative Models
+  - references/pytorch-tensorflow.md — PyTorch and TensorFlow Reference
+  - references/training-optimization.md — Training Optimization Reference
 ## Handoff
 `ml-experiment-tracking` for logging deep learning experiments
 `ml-feature-engineering` for deep learning feature extraction

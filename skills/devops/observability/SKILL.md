@@ -179,12 +179,13 @@ async function placeOrder(command: PlaceOrderCommand) {
 Observability plan: logging format, metrics list, trace sampling strategy, SLOs, alert rules.
 
 ## References
-- `references/otel-guide.md` — OpenTelemetry setup per stack
-- `references/alerting-strategies.md` — Alerting strategies: alert severity (P0-P3), silencing, aggregation, flapping detection, alert fatigue reduction, on-call integration
-- `references/observability-maturity.md` — Observability maturity model: Level 1 (reactive) to Level 4 (predictive), capability assessment, improvement roadmap
-- `references/log-aggregation.md` — Log aggregation: Loki, Elasticsearch, CloudWatch Logs; log shipping (Fluentd, Fluent Bit, Vector), query patterns, retention
-- `references/custom-metrics.md` — Custom metrics: RED metrics (Rate, Errors, Duration), USE method (Utilization, Saturation, Errors), service-level metrics, business metrics
-
+  - references/alerting-strategies.md — Alerting Strategies
+  - references/custom-metrics.md — Custom Metrics
+  - references/log-aggregation.md — Log Aggregation
+  - references/observability-advanced.md — Observability Advanced Topics
+  - references/observability-fundamentals.md — Observability Fundamentals
+  - references/observability-maturity.md — Observability Maturity Model
+  - references/otel-guide.md — OpenTelemetry Setup per Stack
 ## Handoff
 After completing this skill:
 - Next skill: **performance-profiler** — using observability data to find bottlenecks

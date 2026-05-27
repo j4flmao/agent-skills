@@ -183,11 +183,14 @@ TABLE + FK: >20 values, has attributes, admin-managed, multi-language
 - Transactions are Application-layer concerns. Domain entities have no transaction logic.
 
 ## References
-- `references/query-optimization.md` — index strategy, N+1 prevention, pagination, EXPLAIN PLAN
-- `references/migration-guide.md` — backward-compatible migration rules
-- `references/table-design-rules.md` — table structure, soft delete, indexing & partitioning, PK/FK rules
-- `references/database-migration-patterns.md` — Database migration patterns, two-phase changes, zero-downtime
-
+  - references/connection-pooling.md — Connection Pooling
+  - references/database-migration-patterns.md — Database Migration Patterns
+  - references/database-sharding.md — Database Sharding
+  - references/database-testing.md — Database Testing
+  - references/migration-guide.md — Database Migration Guide
+  - references/migration-strategies.md — Migration Strategies
+  - references/query-optimization.md — Database Query Optimization Guide
+  - references/table-design-rules.md — Table Design Rules
 ## Handoff
 No artifact produced.
 Next skill: backend-auth-patterns — secure the data layer.

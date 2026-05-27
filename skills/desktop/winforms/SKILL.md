@@ -251,16 +251,11 @@ public partial class CustomerDialog : Form
 - Dispose database contexts (using pattern) after each operation.
 
 ## References
-
-### Reference Files
-- `references/winforms-architecture.md` — Event-driven model, custom controls, data binding, MDI, GDI+ drawing, designer patterns
-- `references/winforms-controls.md` — Controls reference, customization, events
-- `references/winforms-modernization.md` — High DPI support, theming, async/await patterns, interop with WPF, .NET Core migration
-- `references/winforms-setup.md` — Project setup, layout, data binding, deployment
-
-### Related Skills
-- `desktop/wpf/SKILL.md` — WPF for richer XAML-based Windows UIs
-- `desktop/winui3/SKILL.md` — Modern Windows UI with Fluent Design
-
+  - references/winforms-advanced.md — Winforms Advanced Topics
+  - references/winforms-architecture.md — WinForms Architecture Reference
+  - references/winforms-controls.md — Windows Forms Controls Reference
+  - references/winforms-fundamentals.md — Winforms Fundamentals
+  - references/winforms-modernization.md — WinForms Modernization Reference
+  - references/winforms-setup.md — Windows Forms Setup Reference
 ## Handoff
 Hand off to `desktop/wpf/SKILL.md` when need MVVM architecture, XAML templates, or richer UI capabilities. Hand off to `desktop/winui3/SKILL.md` when Fluent Design required.

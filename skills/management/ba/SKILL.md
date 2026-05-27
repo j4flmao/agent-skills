@@ -165,11 +165,12 @@ When Mermaid is not available, use step-by-step:
 - INVEST checklist mandatory before a story is ready for development
 
 ## References
-- `references/story-splitting.md` — techniques for splitting large stories
-- `references/gherkin-patterns.md` — common Gherkin patterns and anti-patterns
-- `references/user-story-mapping.md` — User story mapping techniques and workshop facilitation
-- `references/requirements-gathering.md` — Requirements elicitation techniques and interview guides
-
+  - references/ba-advanced.md — Ba Advanced Topics
+  - references/ba-fundamentals.md — Ba Fundamentals
+  - references/gherkin-patterns.md — Gherkin Patterns
+  - references/requirements-gathering.md — Requirements Gathering
+  - references/story-splitting.md — Story Splitting Techniques
+  - references/user-story-mapping.md — User Story Mapping
 ## Handoff
 After completing this skill:
 - Next skill: **qa** — to plan testing for the defined requirements

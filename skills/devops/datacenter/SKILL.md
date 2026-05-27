@@ -227,11 +227,12 @@ Ticket template:
 - Remote-hands tickets reference cage/rack/U position with photo.
 
 ## References
-- `references/rack-power-cooling.md` — Rack elevation, PDU types, BTU math, airflow
-- `references/tier-classification.md` — Uptime Institute Tiers I–IV explained
-- `references/dcim.md` — Tools, schema, automation
-- `references/cabling.md` — Fiber types, structured cabling, labeling
-
+  - references/cabling.md — Structured Cabling — Fiber + Copper, Labeling, Hygiene
+  - references/datacenter-advanced.md — Datacenter Advanced Topics
+  - references/datacenter-fundamentals.md — Datacenter Fundamentals
+  - references/dcim.md — DCIM — Datacenter Infrastructure Management
+  - references/rack-power-cooling.md — Rack, Power, Cooling — Practical Math
+  - references/tier-classification.md — Uptime Institute Tier Classification
 ## Handoff
 - `devops-bare-metal` for what goes in the racks.
 - `devops-network-infrastructure` for switching/routing inside the DC.

@@ -127,11 +127,12 @@ ABAC (Attribute-Based Access Control):
 - Brute force protection on login is mandatory. IP-based rate limiting. Account lockout after 5 failures.
 
 ## References
-- `references/jwt-oauth-guide.md` — JWT structure, token rotation, OAuth2 flows
-- `references/oidc-flows.md` — OIDC authorization code, PKCE, client credentials flows
-- `references/rbac-abac.md` — RBAC vs ABAC decision guide, implementation patterns
-- `references/auth-oauth2.md` — OAuth2 grant types, PKCE, token validation, scope-based auth
-
+  - references/auth-oauth2.md — OAuth2 Flows
+  - references/auth-passwordless.md — Passwordless Authentication
+  - references/auth-testing.md — Authentication Testing
+  - references/jwt-oauth-guide.md — JWT & OAuth Guide
+  - references/oidc-flows.md — OIDC Flows
+  - references/rbac-abac.md — RBAC vs ABAC
 ## Handoff
 No artifact produced.
 Next skill: backend-testing — test auth flows, verify auth middleware, test rate limiting.

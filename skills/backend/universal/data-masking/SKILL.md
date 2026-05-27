@@ -114,11 +114,14 @@ UPDATE users SET email = NULL, name = NULL, anonymized_at = NOW() WHERE id = $1;
 - Classify data at the schema level with database comments or tags.
 
 ## References
-- `references/masking-patterns.md` — Data masking implementation patterns
-- `references/encryption-strategies.md` — Encryption and key management strategies
-- `references/data-masking-techniques.md` — Masking techniques, tokenization, and middleware patterns
-- `references/data-masking-compliance.md` — Regulatory masking requirements (GDPR, HIPAA, PCI, CCPA)
-
+  - references/data-classification.md — Data Classification
+  - references/data-masking-audit.md — Data Masking Audit
+  - references/data-masking-compliance.md — Data Masking Compliance
+  - references/data-masking-performance.md — Data Masking Performance
+  - references/data-masking-techniques.md — Data Masking Techniques
+  - references/encryption-strategies.md — Encryption Strategies
+  - references/masking-patterns.md — Data Masking Patterns
+  - references/pii-detection.md — PII Detection
 ## Handoff
 No artifact produced unless requested.
 Next skill: audit-logging — log all access to sensitive data for compliance.

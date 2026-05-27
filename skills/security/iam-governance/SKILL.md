@@ -81,11 +81,12 @@ Design and implement identity governance programs covering the full identity lif
 - Break glass credentials must be vaulted with approval workflow
 
 ## References
-- `references/identity-lifecycle.md` — Identity lifecycle: joiner/mover/leaver, SCIM, HR integration
-- `references/access-certification.md` — Access certification campaigns and attestation
-- `references/privileged-access.md` — PAM: JIT access, vaulting, session recording
-- `references/sso-federation.md` — SSO federation: SAML, OIDC, OAuth, LDAP, Keycloak, Okta
-- `references/iam-policy-as-code.md` — IAM as code: Terraform, policy simulation, least privilege
-
+  - references/access-certification.md — Access Certification
+  - references/iam-governance-advanced.md — Iam Governance Advanced Topics
+  - references/iam-governance-fundamentals.md — Iam Governance Fundamentals
+  - references/iam-policy-as-code.md — IAM Policy as Code
+  - references/identity-lifecycle.md — Identity Lifecycle Management
+  - references/privileged-access.md — Privileged Access Management (PAM)
+  - references/sso-federation.md — SSO and Federation
 ## Handoff
 IAM governance outputs can be handed to devops for Terraform IAM module consumption, IT for SCIM provisioning configuration, and compliance for audit reporting.

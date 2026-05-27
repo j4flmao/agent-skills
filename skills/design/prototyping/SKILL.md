@@ -166,12 +166,13 @@ For each component: all states documented visually, spacing/padding, typography,
 - Always export assets at 2x resolution with descriptive naming
 
 ## References
-- `references/handoff-workflow.md` — Handoff Workflow
-- `references/handoff.md` — Handoff
-- `references/interactive-prototypes.md` — Interactive Prototypes
-- `references/prototyping-fidelity.md` — Prototyping Fidelity
-- `references/prototyping-tools.md` — Prototyping Tools
-
+  - references/handoff-workflow.md — Developer Handoff Workflow Reference
+  - references/handoff.md — Developer Handoff
+  - references/interactive-prototypes.md — Interactive Prototypes
+  - references/prototyping-advanced.md — Prototyping Advanced Topics
+  - references/prototyping-fidelity.md — Prototyping Fidelity
+  - references/prototyping-fundamentals.md — Prototyping Fundamentals
+  - references/prototyping-tools.md — Prototyping Tools Reference
 ## Handoff
 `design-ux-research` for usability testing with the prototype.
 Carry forward: prototype links, interaction specs, animation timing chart.

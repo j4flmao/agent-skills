@@ -174,11 +174,12 @@ Q+1 day 1:  autoscale max raised
 - Procurement signed off by finance + engineering jointly for items > 1 quarter cost.
 
 ## References
-- `references/forecasting.md` — Models, fit, confidence intervals
-- `references/headroom-math.md` — Headroom formulas, N+1 / N+2, spike handling
-- `references/procurement.md` — Lead times, vendor matrix, contract patterns
-- `references/growth-modeling.md` — Business-to-infra translation, scenario planning
-
+  - references/capacity-planning-advanced.md — Capacity Planning Advanced Topics
+  - references/capacity-planning-fundamentals.md — Capacity Planning Fundamentals
+  - references/forecasting.md — Forecasting — Models, Fit, Confidence Intervals
+  - references/growth-modeling.md — Growth Modeling — Business → Infra Translation
+  - references/headroom-math.md — Headroom Math — Sizing With Failures, Spikes, Maintenance
+  - references/procurement.md — Procurement — Lead Times, Vendor Matrix, Contract Patterns
 ## Handoff
 - `devops-cloud-cost-optimization` for spot/RI/savings-plan optimization within forecast.
 - `devops-finops` for chargeback, showback, multi-team allocation.

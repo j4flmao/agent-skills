@@ -263,17 +263,11 @@ kubectl -n longhorn-system get pods -w
 - Network between nodes must have <1ms latency for sync.
 
 ## References
-
-### Reference Files
-- `references/longhorn-config.md` — Longhorn settings reference, tuning parameters, troubleshooting
-- `references/longhorn-backup.md` — Backup strategies, DR procedures, restore workflows
-- `references/longhorn-manager.md` — Web UI operations, recurring jobs, encryption, multi-disk, node maintenance, troubleshooting
-- `references/longhorn-perf.md` — RWX volumes, performance tuning, storage classes, IOPS, monitoring, best practices
-
-### Related Skills
-- `devops/helm-patterns/SKILL.md` — Helm-based deployment
-- `devops/monitoring/SKILL.md` — Prometheus monitoring integration
-- `devops/terraform/SKILL.md` — Infrastructure provisioning for storage
-
+  - references/longhorn-advanced.md — Longhorn Advanced Topics
+  - references/longhorn-backup.md — Longhorn Backup & DR
+  - references/longhorn-config.md — Longhorn Configuration Reference
+  - references/longhorn-fundamentals.md — Longhorn Fundamentals
+  - references/longhorn-manager.md — Longhorn Management
+  - references/longhorn-perf.md — Longhorn Performance
 ## Handoff
 Hand off to `devops/monitoring/SKILL.md` for monitoring integration. Hand off to `devops/helm-patterns/SKILL.md` for Helm deployment best practices.

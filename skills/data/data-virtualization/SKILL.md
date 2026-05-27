@@ -234,10 +234,13 @@ Use Alluxio as a transparent caching layer between compute (Trino/Spark) and sto
 - Each connector configured with timeouts and retry limits
 
 ## References
-- `references/trino-architecture.md` — Coordinator, worker, connector, query planning, pushdown, federated joins, tuning
-- `references/virtualization-platforms.md` — Dremio reflections/VDS, Starburst caching/RBAC, Alluxio tiered caching, namespace mounting
-- `references/federation-optimization.md` — Pushdown, stats-based optimization, caching, join strategies
-- `references/virtualization-security.md` — Data masking, RLS across sources, credential management, audit
-
+  - references/federation-deployment.md — Federation Deployment
+  - references/federation-optimization.md — Federation Query Optimization Reference
+  - references/trino-architecture.md — Trino Architecture
+  - references/virtualization-connectors.md — Virtualization Connectors
+  - references/virtualization-cost-analysis.md — Virtualization Cost Analysis
+  - references/virtualization-platforms.md — Data Virtualization Platforms
+  - references/virtualization-query-optimization.md — Virtualization Query Optimization
+  - references/virtualization-security.md — Virtualization Security Reference
 ## Handoff
 `data-data-platform` for Trino cluster deployment on K8s. `data-data-catalog` for registering engine as data source. `data-data-observability` for query performance monitoring. `data-data-security` for RBAC and TLS setup.

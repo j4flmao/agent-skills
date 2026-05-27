@@ -188,10 +188,15 @@ dpo_trainer.train()
 - Regular red teaming schedule: monthly automated, quarterly manual penetration test.
 
 ## References
-- `references/bias-alignment.md` — Bias Alignment
-- `references/guardrails.md` — Guardrails
-- `references/red-teaming-guardrails.md` — Red Teaming Guardrails
-- `references/red-teaming.md` — Red Teaming
-
+  - references/ai-safety-advanced.md — Ai Safety Advanced Topics
+  - references/ai-safety-fundamentals.md — Ai Safety Fundamentals
+  - references/bias-alignment.md — Bias Detection & Alignment
+  - references/content-moderation.md — Content Moderation
+  - references/guardrails.md — Guardrails Implementation
+  - references/red-teaming-guardrails.md — Red Teaming & Guardrails
+  - references/red-teaming.md — Red Teaming for LLMs
+  - references/safety-monitoring.md — Safety Monitoring
+  - references/safety-policy-frameworks.md — Safety Policy Frameworks
+  - references/safety-testing-automation.md — Safety Testing Automation
 ## Handoff
 For model training with alignment, hand off to `ai-model-training`. For testing safety measures, hand off to `ai-ai-testing`. For cost-optimized guardrail deployment, hand off to `ai-ai-cost-optimization`.

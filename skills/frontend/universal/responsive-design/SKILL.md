@@ -179,11 +179,12 @@ button, a, input, select {
 - Spacing: use `rem` for padding/margin, not px.
 
 ## References
-- `references/breakpoint-systems.md` — breakpoint strategy, CSS custom properties, Tailwind config
-- `references/container-queries.md` — container query syntax, use cases, fallbacks
-- `references/responsive-patterns.md` — Layout patterns (grid, sidebar, holy grail), fluid typography, responsive nav/table/images
-- `references/responsive-testing.md` — Visual regression, Playwright/Cypress viewport testing, layout tests, container query testing, touch targets
-
+  - references/breakpoint-systems.md — Breakpoint Systems
+  - references/container-queries.md — Container Queries
+  - references/responsive-images.md — Responsive Images
+  - references/responsive-patterns.md — Responsive Patterns
+  - references/responsive-testing.md — Responsive Testing
+  - references/responsive-typography.md — Responsive Typography
 ## Handoff
 No artifact produced.
 Next skill: `tailwind-css` — implement breakpoints via Tailwind utility classes.

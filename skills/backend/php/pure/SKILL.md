@@ -374,11 +374,12 @@ function e(?string $value): string
 - Use `error_log()` for logging, not `echo`/`var_dump` in production.
 
 ## References
-- `references/php-basics.md` — PHP 8.x features, types, attributes, named arguments
-- `references/psr-standards.md` — PSR-4, PSR-7, PSR-11, PSR-14, PSR-15, PSR-18
-- `references/php-security.md` — OWASP PHP, crypto, session security, input validation
-- `references/php-modern-practices.md` — PHP 8.x features, enums, attributes, match, readonly
-
+  - references/php-basics.md — PHP Basics
+  - references/php-database.md — Pure PHP Database Patterns
+  - references/php-modern-practices.md — PHP Modern Practices
+  - references/php-routing.md — Pure PHP Routing
+  - references/php-security.md — PHP Security
+  - references/psr-standards.md — PSR Standards Reference
 ## Handoff
 Next skill: php-laravel — if user wants Laravel framework instead.
 Next skill: php-zend — if user wants Laminas/Zend framework instead.

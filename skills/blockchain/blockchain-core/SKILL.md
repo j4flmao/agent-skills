@@ -34,15 +34,16 @@ tags: [blockchain, core, consensus, cryptography, protocol, state-machine, phase
 4. **Trade-offs**: security vs performance, decentralization vs throughput, latency vs finality
 
 ## References
-- references/blockchain-data-structures.md — Block structure, headers, and on-disk formats
-- references/consensus-deep-dive.md — Nakamoto, BFT, HotStuff, and Snowman consensus
-- references/cryptography-foundations.md — Core cryptography primitives for blockchain
-- references/dag-consensus.md — DAG-based consensus (Avalanche, Hashgraph)
-- references/economic-security-mev.md — MEV taxonomy, PBS, and economic security
-- references/gas-and-staking.md — Gas metering, fee models, and staking mechanics
-- references/node-implementation.md — Bitcoin Core, geth, and node architecture
-- references/p2p-networking.md — Peer discovery, gossip, and block propagation
-- references/state-machines.md — UTXO, account model, and state transitions
-
+  - references/blockchain-core-advanced.md — Blockchain Core Advanced Topics
+  - references/blockchain-core-fundamentals.md — Blockchain Core Fundamentals
+  - references/blockchain-data-structures.md — Blockchain Data Structures
+  - references/consensus-deep-dive.md — Consensus Mechanisms Deep Dive
+  - references/cryptography-foundations.md — Cryptography Foundations for Blockchain
+  - references/dag-consensus.md — DAG-Based Consensus
+  - references/economic-security-mev.md — Economic Security & MEV
+  - references/gas-and-staking.md — Gas, Fees & Staking Mechanics
+  - references/node-implementation.md — Node Implementation Deep Dive
+  - references/p2p-networking.md — P2P Networking for Blockchain
+  - references/state-machines.md — Blockchain State Machine Design
 ## Phase
 blockchain → blockchain-core

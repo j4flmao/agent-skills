@@ -142,10 +142,13 @@ Phase 1 — DISABLE to PERMISSIVE: deploy PeerAuthentication with PERMISSIVE mod
 6. Multi-domain Gateway: add multiple servers with different hostnames and credential names
 
 ## References
-- [Istio Patterns](./references/istio-patterns.md) — VirtualService, DestinationRule, Gateway, mTLS, AuthorizationPolicy
-- [Linkerd Patterns](./references/linkerd-patterns.md) — Linkerd setup, mTLS, traffic split, multi-cluster, observability
-- [Mesh Observability](./references/mesh-observability.md) — metrics, tracing, access logging, WASM extensions, Kiali, Grafana
-- [Mesh Operations](./references/mesh-operations.md) — upgrade, troubleshooting, performance tuning, multi-cluster, VM expansion, egress
-
+  - references/istio-patterns.md — Istio Patterns
+  - references/linkerd-patterns.md — Linkerd Patterns
+  - references/mesh-observability.md — Service Mesh Observability
+  - references/mesh-operations.md — Service Mesh Operations
+  - references/service-mesh-advanced.md — Service Mesh Advanced Topics
+  - references/service-mesh-architecture.md — Service Mesh Architecture
+  - references/service-mesh-fundamentals.md — Service Mesh Fundamentals
+  - references/service-mesh-security.md — Service Mesh Security
 ## Handoff
 Hand off to service-mesh for Istio/Linkerd operations. Hand off to kubernetes-patterns for workload manifests. Hand off to monitoring for Prometheus/Grafana dashboards. Hand off to security for PKI and certificate management. Hand off to argo-cd for progressive delivery patterns (canary/blue-green) with Istio integration. Hand off to chaos-engineering for mesh resilience testing (mTLS failure, sidecar injection issues). Hand off to observability for distributed tracing with Jaeger/Zipkin integration.

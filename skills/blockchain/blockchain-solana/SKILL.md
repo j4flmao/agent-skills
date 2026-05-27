@@ -35,11 +35,13 @@ tags: [blockchain, solana, rust, anchor, phase-blockchain]
 5. **Deployment**: solana CLI deploy, program upgrade authority, verifiable build, IDL publishing
 
 ## References
-- references/solana-architecture.md — Proof of History, Tower BFT, Turbine
-- references/solana-ecosystem.md — Jupiter, Raydium, Metaplex ecosystem
-- references/solana-programming.md — Anchor framework and Solana account model
-- references/solana-runtime.md — BPF loaders, compute budget, runtime
-- references/solana-tools.md — Solana CLI, SDKs, and developer tools
-
+  - references/blockchain-solana-advanced.md — Blockchain Solana Advanced Topics
+  - references/blockchain-solana-fundamentals.md — Blockchain Solana Fundamentals
+  - references/solana-architecture.md — Solana Architecture
+  - references/solana-ecosystem.md — Solana Ecosystem
+  - references/solana-programming.md — Solana Programming
+  - references/solana-runtime.md — Solana Runtime
+  - references/solana-token-program.md — Solana Token Program
+  - references/solana-tools.md — Solana Tools & SDKs
 ## Phase
 blockchain → blockchain-solana

@@ -231,16 +231,11 @@ struct MyMacApp: App {
 - Menu commands via .commands modifier on Scene.
 
 ## References
-
-### Reference Files
-- `references/swiftui-architecture.md` — View protocol, @State/@Binding/@ObservedObject, data flow, navigation stack, layout system
-- `references/swiftui-deployment.md` — Mac App Store, code signing, notarization, Swift Packages, CI/CD for macOS, sandboxing
-- `references/swiftui-macos-patterns.md` — macOS-specific patterns, menus, windows, app lifecycle
-- `references/swiftui-setup.md` — Project setup, Xcode, previews, debugging, deployment
-
-### Related Skills
-- `desktop/appkit/SKILL.md` — AppKit for legacy or NSView-level macOS apps
-- `desktop/electron/SKILL.md` — Cross-platform alternative for macOS + Windows
-
+  - references/swiftui-advanced.md — Swiftui Advanced Topics
+  - references/swiftui-architecture.md — SwiftUI Architecture Reference
+  - references/swiftui-deployment.md — SwiftUI Deployment Reference
+  - references/swiftui-fundamentals.md — Swiftui Fundamentals
+  - references/swiftui-macos-patterns.md — SwiftUI macOS Patterns Reference
+  - references/swiftui-setup.md — SwiftUI Setup Reference
 ## Handoff
 Hand off to `desktop/appkit/SKILL.md` when need NSView/NSViewController, AppKit-level control, or backward compatibility with older macOS.

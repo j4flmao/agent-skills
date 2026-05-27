@@ -110,10 +110,11 @@ Establish FinOps team (Central + Biz + Eng). Weekly cost review meetings. Tag co
 - Never over-provision for peak — use auto-scaling.
 
 ## References
-- `references/cost-allocation.md` — Tagging strategy, cost centers, multi-account, chargeback/showback, budget alerts, anomaly detection
-- `references/cost-optimization.md` — Compute right-sizing, spot/reserved/savings plans, storage lifecycle/tiers/compression, data transfer, waste elimination
-- `references/compute-optimization.md` — Right-sizing, spot instances, reserved instances, auto-scaling, container cost optimization
-- `references/storage-network-optimization.md` — Storage tiers, data lifecycle, data transfer costs, CDN, compression, waste elimination
-
+  - references/cloud-cost-optimization-advanced.md — Cloud Cost Optimization Advanced Topics
+  - references/cloud-cost-optimization-fundamentals.md — Cloud Cost Optimization Fundamentals
+  - references/compute-optimization.md — Compute Cost Optimization
+  - references/cost-allocation.md — Cloud Cost Allocation
+  - references/cost-optimization.md — Cloud Cost Optimization Techniques
+  - references/storage-network-optimization.md — Storage and Network Cost Optimization
 ## Handoff
 For Kubernetes cost optimization, hand off to `devops-kubernetes-for-data`. For general infrastructure DevOps, hand off to `docker-patterns`.

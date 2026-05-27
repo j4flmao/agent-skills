@@ -244,17 +244,12 @@ Review weekly for suspicious patterns.
 - Audit every secret access — who, what, when, why
 
 ## References
-- `references/secret-detection.md`
-  GitLeaks, truffleHog, ggshield, pre-commit hooks,
-  CI scanning integration, false positive management
-- `references/secret-storage.md`
-  Vault, AWS Secrets Manager, GCP Secret Manager,
-  Azure Key Vault, Kubernetes External Secrets, rotation
-- `references/secrets-rotation.md`
-  Rotation strategies, automation patterns, zero-downtime rotation
-- `references/secrets-audit.md`
-  Audit checklist, audit logging format, monitoring alerts
-
+  - references/secret-detection.md — Secret Detection
+  - references/secret-storage.md — Secret Storage
+  - references/secrets-audit.md — Secrets Audit
+  - references/secrets-management-advanced.md — Secrets Management Advanced Topics
+  - references/secrets-management-fundamentals.md — Secrets Management Fundamentals
+  - references/secrets-rotation.md — Secrets Rotation Patterns
 ## Handoff
 `security-container-security` for secrets injection into containers
 `security-api-security` for API key management and JWT signing secrets

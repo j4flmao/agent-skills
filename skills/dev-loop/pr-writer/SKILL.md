@@ -102,10 +102,11 @@ docs(readme): update quickstart with new env vars
 - **PR title and branch prefix match** — If the branch starts with `fix/`, the PR title should use `fix(scope)`. Branch prefix and conventional commit type should align.
 
 ## References
-- `references/pr-review-automation.md` — Pr Review Automation
-- `references/pr-review-workflow.md` — Pr Review Workflow
-- `references/pr-template.md` — Pr Template
-- `references/pr-templates.md` — Pr Templates
-
+  - references/pr-review-automation.md — PR Review Automation
+  - references/pr-review-workflow.md — PR Review Workflow
+  - references/pr-template.md — PR Template
+  - references/pr-templates.md — Pull Request Templates
+  - references/pr-writer-advanced.md — Pr Writer Advanced Topics
+  - references/pr-writer-fundamentals.md — Pr Writer Fundamentals
 ## Handoff
 git-workflow for commit + push. After the PR body is written, hand off to the git-workflow skill to commit the changes and push the branch for review.

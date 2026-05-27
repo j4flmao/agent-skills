@@ -37,11 +37,13 @@ tags: [blockchain, web3, typescript, dapp, wallet, phase-blockchain]
 6. **Error handling**: revert reasons, user rejection, network errors, rate limiting
 
 ## References
-- references/dapp-architecture.md — dApp architecture layers and patterns
-- references/ethers-viem-wagmi.md — ethers.js, viem, wagmi TypeScript libraries
-- references/providers-rpc.md — RPC providers and Alchemy/Infura setup
-- references/wallet-integration.md — EIP-1193 and EIP-6963 wallet connection
-- references/web3-hooks.md — React hooks for blockchain interactions
-
+  - references/blockchain-web3-advanced.md — Blockchain Web3 Advanced Topics
+  - references/blockchain-web3-fundamentals.md — Blockchain Web3 Fundamentals
+  - references/dapp-architecture.md — dApp Architecture
+  - references/ethers-viem-wagmi.md — ethers.js, viem & wagmi
+  - references/providers-rpc.md — Providers & RPC
+  - references/wallet-integration.md — Wallet Integration
+  - references/web3-hooks.md — Web3 React Hooks
+  - references/web3-react-patterns.md — Web3 React Integration
 ## Phase
 blockchain → blockchain-web3

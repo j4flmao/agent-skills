@@ -136,11 +136,12 @@ function SafeHtml({ html }: { html: string }) {
 - `dangerouslySetInnerHTML` is banned unless paired with DOMPurify.
 
 ## References
-- `references/web-security-headers.md` — full security header guide with configs
-- `references/xss-prevention.md` — XSS types, sanitization libraries, encoding context
-- `references/xss-protection.md` — XSS types, framework escaping, DOMPurify, context encoding, URL validation, CSP as XSS defense
-- `references/csp-implementation.md` — CSP directives, strict CSP, nonce/hash, reporting, framework integration, third-party directives
-
+  - references/csp-implementation.md — CSP Implementation
+  - references/csrf-protection.md — CSRF Protection
+  - references/dependency-security.md — Dependency Security
+  - references/web-security-headers.md — Web Security Headers
+  - references/xss-prevention.md — XSS Prevention Guide
+  - references/xss-protection.md — XSS Protection
 ## Handoff
 No artifact produced.
 Next skill: `authentication` — integrate CSRF with auth token flow.

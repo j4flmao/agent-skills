@@ -293,17 +293,13 @@ spec:
 - All images pinned to specific tags (not `latest`) in production values.
 
 ## References
-
-### Reference Files
-- `references/chart-structure.md` — Detailed chart structure examples and conventions
-- `references/helm-best-practices.md` — Helm best practices, RBAC, security, performance
-- `references/helm-lifecycle.md` — Hooks, tests, subcharts, upgrade strategies, rollback
-- `references/helm-security.md` — Chart signing, OCI registry, RBAC, secrets management (SealedSecrets, ESO)
-
-### Related Skills
-- `devops/terraform/SKILL.md` — Infrastructure provisioning
-- `devops/cicd-pipeline/SKILL.md` — CI/CD integration for Helm
-- `devops/monitoring/SKILL.md` — Monitoring stack deployment via Helm
-
+  - references/chart-structure.md — Chart Structure Reference
+  - references/chart-testing.md — Chart Testing
+  - references/helm-best-practices.md — Helm Best Practices
+  - references/helm-lifecycle.md — Helm Lifecycle Management
+  - references/helm-patterns-advanced.md — Helm Patterns Advanced Topics
+  - references/helm-patterns-fundamentals.md — Helm Patterns Fundamentals
+  - references/helm-security.md — Helm Security
+  - references/helmfile-deploy.md — Helmfile Deploy
 ## Handoff
 Hand off to `devops/terraform/SKILL.md` for K8s cluster provisioning. Hand off to `devops/cicd-pipeline/SKILL.md` for Helm deployment in CI/CD.

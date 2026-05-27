@@ -59,7 +59,11 @@ Strategy → Design → Build → Publish → Promote → Monitor → Iterate
 5. Remove after all consumers migrated
 
 ## References
-- `references/api-strategy.md` — API product strategy and business models
-- `references/developer-portal.md` — Developer portal design and features
-- `references/monetization.md` — API monetization models and pricing
-- `references/product-metrics.md` — API product metrics, adoption tracking, DX measurement
+  - references/api-lifecycle-management.md — API Lifecycle Management
+  - references/api-strategy.md — API Product Strategy
+  - references/developer-experience.md — Developer Experience (DX)
+  - references/developer-portal.md — Developer Portal Design
+  - references/monetization.md — API Monetization
+  - references/product-management-advanced.md — Product Management Advanced Topics
+  - references/product-management-fundamentals.md — Product Management Fundamentals
+  - references/product-metrics.md — API Product Metrics

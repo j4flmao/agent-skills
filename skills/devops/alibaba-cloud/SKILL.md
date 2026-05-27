@@ -270,11 +270,12 @@ resource "alicloud_kms_key" "app" {
 - Tag all resources with Environment, Project, and Owner
 
 ## References
-- `references/aliyun-ecs-vpc.md` — ECS instance types, VPC, security groups, SLB
-- `references/aliyun-kubernetes.md` — ACK, node pools, Container Registry, ASM
-- `references/aliyun-database.md` — ApsaraDB (MySQL, PG, SQL Server, PolarDB, Redis)
-- `references/aliyun-security.md` — RAM, KMS, WAF, Security Center, Anti-DDoS
-
+  - references/alibaba-cloud-advanced.md — Alibaba Cloud Advanced Topics
+  - references/alibaba-cloud-fundamentals.md — Alibaba Cloud Fundamentals
+  - references/aliyun-database.md — Alibaba Cloud Databases
+  - references/aliyun-ecs-vpc.md — Alibaba Cloud ECS and VPC
+  - references/aliyun-kubernetes.md — ACK (Alibaba Container Service for Kubernetes)
+  - references/aliyun-security.md — Alibaba Cloud Security
 ## Handoff
 After completing this skill:
 - Next skill: **backup-dr** — Cross-region DR, OSS cross-region replication

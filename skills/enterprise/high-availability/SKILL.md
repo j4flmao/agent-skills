@@ -393,12 +393,13 @@ Required signals (alert before users notice):
 - Never deploy on Friday afternoon to a 99.99% system without senior approval.
 
 ## References
-- `references/availability-tiers.md` — Tier definitions, error-budget math, cost multipliers
-- `references/replica-topologies.md` — Single → multi-region active-active, sync modes, slave promotion
-- `references/load-balancing.md` — L4 vs L7, health-check contracts, drain, HAProxy / Nginx / Envoy / ALB
-- `references/version-sync.md` — N/N+1 compatibility, feature flags, rolling / blue-green / canary
-- `references/data-sync-migration.md` — Expand-contract, dual-write, outbox, backfill, verification
-
+  - references/availability-tiers.md — Availability Tiers — Budget, Cost, Architecture
+  - references/data-sync-migration.md — Data Sync & Migration — Expand-Contract, Dual-Write, Backfill, Verify
+  - references/high-availability-advanced.md — High Availability Advanced Topics
+  - references/high-availability-fundamentals.md — High Availability Fundamentals
+  - references/load-balancing.md — Load Balancing — L4/L7, Health Contracts, Drain
+  - references/replica-topologies.md — Replica Topologies — Master-Slave to Multi-Region Active-Active
+  - references/version-sync.md — Version Sync — N / N+1 Compatibility, Rollout Strategies
 ## Handoff
 - `enterprise-sla-management` for SLA contract wording, customer credits, multi-tier SLA structure.
 - `data-data-replication` for deep dive on database-specific replication internals (GoldenGate, Patroni, etc).

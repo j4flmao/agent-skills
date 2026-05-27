@@ -237,19 +237,13 @@ deny[msg] {
 - Directory per environment for production; workspaces for development/testing.
 
 ## References
-
-### Reference Files
-- `references/terraform-modules.md` — Module design patterns, composition, versioning
-- `references/terraform-state.md` — State management, migration, locking, disaster recovery
-- `references/terraform-advanced.md` — Sentinel/OPA policy, Terraform Cloud, testing, validation
-- `references/terraform-ecosystem.md` — Terragrunt, CDKTF, OpenTofu, module registry, providers
-
-### Related Skills
-- `devops/helm-patterns/SKILL.md` — Kubernetes deployment via Helm
-- `devops/ansible/SKILL.md` — Configuration management
-- `devops/cicd-pipeline/SKILL.md` — CI/CD for Terraform
-- `devops/monitoring/SKILL.md` — Monitoring infrastructure provisioning
-
+  - references/modules-composition.md — Terraform Modules and Composition
+  - references/state-management.md — Terraform State Management
+  - references/terraform-advanced.md — Terraform Advanced
+  - references/terraform-ecosystem.md — Terraform Ecosystem
+  - references/terraform-fundamentals.md — Terraform Fundamentals
+  - references/terraform-modules.md — Terraform Module Design
+  - references/terraform-state.md — Terraform State Management
 ## Handoff
 
 Hand off to `devops/helm-patterns/SKILL.md` for K8s application deployment. Hand off to `devops/ansible/SKILL.md` for post-provisioning configuration.

@@ -252,11 +252,12 @@ Cross-cloud egress spike:     billing surprise; set budget alarms
 - Hybrid K8s: single cluster only when latency permits; otherwise federate.
 
 ## References
-- `references/direct-connect.md` — AWS DX / Azure ER / GCP Interconnect setup, BGP, redundancy
-- `references/identity-federation.md` — AD, AAD, Okta, SAML/OIDC, AWS IAM IC, GCP WIF
-- `references/data-gravity.md` — Placement decisions, CDC, federated query
-- `references/multi-cloud-dns.md` — Authoritative, split-horizon, latency routing
-
+  - references/data-gravity.md — Data Gravity — Placement Decisions
+  - references/direct-connect.md — Direct Connect / ExpressRoute / Cloud Interconnect
+  - references/hybrid-cloud-advanced.md — Hybrid Cloud Advanced Topics
+  - references/hybrid-cloud-fundamentals.md — Hybrid Cloud Fundamentals
+  - references/identity-federation.md — Identity Federation — AD, AAD, Okta, SAML, OIDC
+  - references/multi-cloud-dns.md — Multi-Cloud DNS — Authoritative, Split-Horizon, Routing Policies
 ## Handoff
 - `devops-aws / gcp / azure` for cloud-side specifics.
 - `devops-network-infrastructure` for on-prem BGP, fabric, MPLS.

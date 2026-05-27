@@ -102,10 +102,11 @@ Implement if p<α and effect size > MDE. Roll back if any guardrail metric degra
 - Results must be reproducible with shared analysis code.
 
 ## References
-- `references/ab-testing-statistics.md` — Ab Testing Statistics
-- `references/experiment-design.md` — Experiment Design
-- `references/statistical-analysis.md` — Statistical Analysis
-- `references/statistical-methods.md` — Statistical Methods
-
+  - references/ab-testing-advanced.md — Ab Testing Advanced Topics
+  - references/ab-testing-fundamentals.md — Ab Testing Fundamentals
+  - references/ab-testing-statistics.md — A/B Testing Statistics
+  - references/experiment-design.md — Experiment Design
+  - references/statistical-analysis.md — Statistical Analysis
+  - references/statistical-methods.md — Statistical Methods for A/B Testing
 ## Handoff
 For product analytics event tracking, hand off to `product-analytics`. For user research insights to inform hypotheses, hand off to `product-user-research`.

@@ -226,16 +226,11 @@ await db.transaction(async (tx) => {
 - Version control migration files and `drizzle.config.ts`.
 
 ## References
-
-### Reference Files
-- `references/schema-types.md` — Schema definition, types, columns, migrations, seeding
-- `references/query-optimization.md` — Relational queries, prepared statements, raw SQL, pagination, connection pooling
-- `references/drizzle-advanced.md` — Drizzle Kit, edge/serverless deployment, multi-provider, views, enums
-
-### Related Skills
-- `backend/nodejs/prisma/SKILL.md` — Prisma ORM (alternative)
-- `backend/nodejs/express/SKILL.md` — Express integration
-- `backend/universal/database-patterns/SKILL.md` — General database patterns
-
+  - references/drizzle-advanced.md — Drizzle Advanced
+  - references/drizzle-edge-deployment.md — Drizzle Edge Deployment Reference
+  - references/drizzle-relations.md — Drizzle Relations Reference
+  - references/migration-patterns.md — Migration Patterns
+  - references/query-optimization.md — Query Optimization
+  - references/schema-types.md — Schema Types
 ## Handoff
 Hand off to `backend/nodejs/hono/SKILL.md` or `backend/nodejs/fastify/SKILL.md` for API integration. Hand off to `devops/database-migration/SKILL.md` for migration CI/CD pipeline.

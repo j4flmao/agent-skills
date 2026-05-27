@@ -177,10 +177,11 @@ FirebaseCrashlytics.getInstance().setCustomKey("plan", "premium")
 - Never log authentication tokens or secrets in breadcrumbs.
 
 ## References
-- `references/sentry-setup.md` — Full Sentry configurations, sampling, release tracking, environments
-- `references/crashlytics-setup.md` — Crashlytics Gradle/SPM setup, debug/prod conditional, analytics integration
-- `references/symbolication.md` — dSYM upload, ProGuard mapping, source maps, Bitcode caveats
-- `references/breadcrumbs.md` — Manual and automatic breadcrumbs, level filtering, custom context
-
+  - references/breadcrumbs.md — Breadcrumbs
+  - references/crash-analysis-workflow.md — Crash Analysis Workflow
+  - references/crash-reporting-architecture.md — Crash Reporting Architecture
+  - references/crashlytics-setup.md — Crashlytics Setup
+  - references/sentry-setup.md — Sentry Setup
+  - references/symbolication.md — Symbolication
 ## Handoff
 No further handoff. Crash reporting is self-contained after initial setup.

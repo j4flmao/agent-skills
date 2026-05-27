@@ -180,11 +180,14 @@ message ErrorInfo {
 - Client-streaming and bidi RPCs must handle client disconnect gracefully.
 
 ## References
-- `references/protobuf-basics.md` — Protocol Buffer fundamentals
-- `references/grpc-streaming.md` — Streaming pattern deep-dive
-- `references/grpc-interceptors.md` — Interceptor chains and middleware
-- `references/grpc-vs-rest.md` — When to choose gRPC over REST
-
+  - references/grpc-error-handling.md — gRPC Error Handling
+  - references/grpc-interceptors.md — gRPC Interceptors
+  - references/grpc-performance.md — gRPC Performance
+  - references/grpc-security.md — gRPC Security
+  - references/grpc-streaming.md — gRPC Streaming Patterns
+  - references/grpc-testing.md — gRPC Testing
+  - references/grpc-vs-rest.md — gRPC vs REST
+  - references/protobuf-basics.md — Protocol Buffer Basics
 ## Handoff
 No artifact produced unless requested.
 Next skill: backend-message-queue — if the service needs async communication or event-driven patterns.

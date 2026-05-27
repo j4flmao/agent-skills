@@ -265,10 +265,13 @@ Version scheme: `MAJOR` (breaking), `MINOR` (additive), `PATCH` (fixes). Breakin
 - SLA breach triggers contract violation notification
 
 ## References
-- `references/contract-definition.md` — Contract schema, semantic types, SLA terms, ownership, dbt contracts, versioning
-- `references/contract-enforcement.md` — CI/CD contract testing, schema compatibility checks, producer/consumer workflows, breaking change detection
-- `references/contract-examples.md` — Multi-model dbt contracts, Kafka Avro contracts, contract SLA templates
-- `references/schema-evolution-policies.md` — Compatibility modes, breaking vs non-breaking changes, evolution workflow, schema registry integration
-
+  - references/contract-definition.md — Data Contract Definition
+  - references/contract-enforcement.md — Contract Enforcement
+  - references/contract-examples.md — Data Contract Examples
+  - references/contract-integration-patterns.md — Contract Integration Patterns
+  - references/contract-lifecycle-management.md — Contract Lifecycle Management
+  - references/contract-migration-strategies.md — Contract Migration Strategies
+  - references/contract-monitoring-enforcement.md — Contract Monitoring and Enforcement
+  - references/schema-evolution-policies.md — Schema Evolution Policies
 ## Handoff
 `data-data-quality` for quality dimension enforcement in contracts. `data-data-catalog` for contract metadata. `data-data-observability` for SLA monitoring. `data-schema-registry` for schema registry integration.

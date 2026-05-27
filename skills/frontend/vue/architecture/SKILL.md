@@ -211,11 +211,12 @@ export const useAuthStore = defineStore('auth', {
 - Never mutate props. Use emit to communicate changes to the parent.
 
 ## References
-- `references/composition-api.md` — composable naming, lifecycle, reactivity
-- `references/folder-structure.md` — Vue feature-based folder structure
-- `references/vue-composition.md` — composable patterns, async composables, lifecycle composables, guidelines
-- `references/vue-optimization.md` — shallowRef, computed caching, v-memo, lazy routes, Suspense, KeepAlive
-
+  - references/composition-api.md — Vue Composition API
+  - references/folder-structure.md — Vue Folder Structure
+  - references/vue-composition.md — Vue Composition API Patterns
+  - references/vue-error-handling.md — Vue Error Handling
+  - references/vue-optimization.md — Vue Optimization Patterns
+  - references/vue-testing.md — Vue Testing
 ## Handoff
 No artifact produced.
 Next skill: vue-nuxt (if using Nuxt) or frontend-testing.

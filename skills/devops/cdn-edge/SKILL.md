@@ -236,11 +236,12 @@ Cost: roughly 1.5-2× single-CDN; ops complexity higher
 - Multi-CDN if a single-CDN outage = > 1h of MAO.
 
 ## References
-- `references/cdn-providers.md` — Provider comparison, pricing, features
-- `references/waf-rules.md` — OWASP CRS, custom rules, tuning, false-positive workflow
-- `references/ddos-mitigation.md` — L3/L4 and L7 attacks, mitigation tiers, runbook
-- `references/edge-functions.md` — Workers, Lambda@Edge, Compute@Edge patterns
-
+  - references/cdn-edge-advanced.md — Cdn Edge Advanced Topics
+  - references/cdn-edge-fundamentals.md — Cdn Edge Fundamentals
+  - references/cdn-providers.md — CDN Providers — Comparison + Selection
+  - references/ddos-mitigation.md — DDoS Mitigation — L3/L4 and L7 Defense
+  - references/edge-functions.md — Edge Functions — Workers, Lambda@Edge, Compute@Edge
+  - references/waf-rules.md — WAF Rules — OWASP CRS, Tuning, False Positives
 ## Handoff
 - `devops-network-infrastructure` for BGP / anycast / scrubbing transport.
 - `enterprise-high-availability` for app-layer LB behind CDN.

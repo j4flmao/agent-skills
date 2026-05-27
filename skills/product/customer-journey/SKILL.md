@@ -90,10 +90,11 @@ Prioritize optimization opportunities by pain point severity and business impact
 - Omnichannel analysis must cover all touchpoints, not just digital.
 
 ## References
-- `references/journey-mapping.md` — Journey mapping methodology and lifecycle stages
-- `references/service-blueprint.md` — Service blueprinting and process layers
-- `references/journey-analytics.md` — Funnel analysis and journey metrics
-- `references/journey-optimization.md` — Experimentation and optimization techniques
-
+  - references/customer-journey-advanced.md — Customer Journey Advanced Topics
+  - references/customer-journey-fundamentals.md — Customer Journey Fundamentals
+  - references/journey-analytics.md — Journey Analytics
+  - references/journey-mapping.md — Journey Mapping
+  - references/journey-optimization.md — Journey Optimization
+  - references/service-blueprint.md — Service Blueprinting
 ## Handoff
 For persona insights to inform journey stages, hand off to `product-persona-development`. For analytics event tracking, hand off to `product-analytics`. For user research validation, hand off to `product-user-research`.

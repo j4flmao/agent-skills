@@ -235,10 +235,13 @@ dvc exp apply lr-mid  # rollback to best experiment
 - CI/CD validates data before merge
 
 ## References
-- `references/data-versioning-tools.md` — DVC, lakeFS, Nessie, Delta Lake time travel, Git LFS comparison, CLI workflows, CI/CD integration patterns
-- `references/dvc-patterns.md` — DVC setup, pipeline versioning, remote storage, experiment tracking, metrics comparison
-- `references/lakefs-patterns.md` — LakeFS branches, hooks, diff, merge, rollback, CI/CD integration, Graveler
-- `references/nessie-iceberg-versioning.md` — Nessie Git-for-Iceberg, catalog-level branching, multi-table atomic commits, engine integration, GC
-
+  - references/data-versioning-branching.md — Data Versioning Branching
+  - references/data-versioning-gc-retention.md — Data Versioning GC and Retention
+  - references/data-versioning-strategy.md — Data Versioning Strategy
+  - references/data-versioning-tools.md — Data Versioning Tools Reference
+  - references/delta-lake-time-travel.md — Delta Lake Time Travel
+  - references/dvc-patterns.md — DVC Patterns
+  - references/lakefs-patterns.md — LakeFS Patterns
+  - references/nessie-iceberg-versioning.md — Nessie — Git for Iceberg
 ## Handoff
 `data-data-platform` for versioning infrastructure. `data-data-catalog` for cataloging versioned datasets. `data-data-observability` for monitoring version health. `data-data-quality` for quality gates on merge.

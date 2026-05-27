@@ -124,11 +124,12 @@ Nomad Autoscaler: horizontal scaling based on CPU/memory utilization or custom m
 - Autoscaling policies must have min/max bounds to prevent runaway scaling
 
 ## References
-- `references/nomad-jobs.md` — Job spec syntax, task groups, service/batch job patterns, volume types, update and restart strategies
-- `references/nomad-production.md` — Consul integration details, autoscaling configuration, ACL policies, monitoring with Prometheus, multi-region deployment
-- `references/nomad-operations.md` — Cluster backup/restore, upgrade, monitoring, autoscaler, node management, sizing
-- `references/nomad-integrations.md` — Consul Connect, Vault integration, CSI volumes, multi-region deployment
-
+  - references/nomad-advanced.md — Nomad Advanced Topics
+  - references/nomad-fundamentals.md — Nomad Fundamentals
+  - references/nomad-integrations.md — Nomad Integrations
+  - references/nomad-jobs.md — Nomad Job Specifications
+  - references/nomad-operations.md — Nomad Operations
+  - references/nomad-production.md — Nomad Production Operations
 ## Handoff
 `devops/incident-response` for Nomad cluster incident runbooks (allocation failures, node draining, cluster scale-up)
 `planning/create-adr` for Nomad architecture decisions (job structure, multi-region topology, Consul mesh)

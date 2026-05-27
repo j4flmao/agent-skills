@@ -45,7 +45,9 @@ Create and document brand identity: logo systems, brand guidelines, color palett
 7. Applications: business cards, social media, presentations
 
 ## References
-- `references/brand-guidelines.md` — Brand Guidelines
-- `references/brand-voice.md` — Brand Voice
-- `references/logo-systems.md` — Logo Systems
-- `references/brand-consistency.md` — Brand consistency guidelines, asset management, audits
+  - references/brand-consistency.md — Brand Consistency
+  - references/brand-guidelines.md — Brand Guidelines Structure
+  - references/brand-identity-advanced.md — Brand Identity Advanced Topics
+  - references/brand-identity-fundamentals.md — Brand Identity Fundamentals
+  - references/brand-voice.md — Brand Voice Guide
+  - references/logo-systems.md — Logo Systems

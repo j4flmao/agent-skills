@@ -142,10 +142,13 @@ Goal: rename `status` to `order_status` in orders table without downtime. Phase 
 Goal: add index on orders(user_id) without blocking writes. Safe approach: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_user_id ON orders(user_id)`. Concurrently creates index without table lock, allows reads and writes during index build, takes longer (full table scan). Cannot run in transaction — must be standalone. Monitor index build progress via `pg_stat_progress_create_index`. Rollback: `DROP INDEX CONCURRENTLY IF EXISTS idx_orders_user_id` — also non-blocking.
 
 ## References
-- [Migration Tools](./references/migration-tools.md) — Flyway, Liquibase, Alembic — setup, commands, workflow
-- [Zero Downtime](./references/zero-downtime.md) — expand-contract, backward-compatible changes, rollback, CI/CD integration
-- [Online Migration](./references/online-migration.md) — CDC-based live migration, dual-writes, replication lag, rollback
-- [Schema Migration](./references/schema-migration.md) — Schema versioning, expand-contract, backward compatibility, CI/CD integration, zero-downtime
-
+  - references/database-migration-advanced.md — Database Migration Advanced Topics
+  - references/database-migration-fundamentals.md — Database Migration Fundamentals
+  - references/migration-strategies.md — Database Migration Strategies
+  - references/migration-tools.md — Migration Tools
+  - references/online-migration.md — Online Database Migration
+  - references/schema-migration-tools.md — Schema Migration Tools
+  - references/schema-migration.md — Schema Migration Management
+  - references/zero-downtime.md — Zero-Downtime Migrations
 ## Handoff
 Hand off to database-migration for schema changes and migration tooling. Hand off to cicd-pipeline for migration pipeline integration. Hand off to docker-patterns for ephemeral DB containers for testing. Hand off to terraform for DB instance provisioning.

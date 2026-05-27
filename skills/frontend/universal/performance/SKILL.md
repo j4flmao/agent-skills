@@ -128,11 +128,12 @@ Bundle budget:
 - Images are the #1 cause of poor LCP. Optimize them first.
 
 ## References
-- `references/web-vitals.md` — Core Web Vitals targets (LCP, INP, CLS) and optimization
-- `references/perf-bundling.md` — bundle analysis, code splitting, Vite/Webpack config, budgets, compression
-- `references/perf-monitoring.md` — RUM, Core Web Vitals, Lighthouse CI, long tasks, budget enforcement
-- `references/perf-patterns.md` — image optimization, lazy loading, virtual scroll, debounce, fonts, critical CSS
-
+  - references/bundle-optimization.md — Bundle Optimization
+  - references/perf-bundling.md — Performance Bundling & Build Optimization
+  - references/perf-monitoring.md — Performance Monitoring
+  - references/perf-patterns.md — Performance Patterns
+  - references/rendering-performance.md — Rendering Performance
+  - references/web-vitals.md — Core Web Vitals
 ## Handoff
 No artifact produced.
 Next skill: frontend-accessibility — ensure optimizations do not break accessibility.

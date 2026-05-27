@@ -131,12 +131,13 @@ spec:
 - Cluster Autoscaler requires proper IAM permissions for node group management.
 
 ## References
-- `references/hpa-patterns.md` — CPU/memory, custom, external metrics, behavior
-- `references/vpa-config.md` — Update modes, recommender, limits vs requests
-- `references/keda-scalers.md` — ScaledObject, ScaledJob, 50+ scalers
-- `references/cluster-autoscaler.md` — Node groups, expansion, scale-down
-- `references/autoscaling-strategies.md` — Combined HPA+VPA+CA, predictive
-
+  - references/autoscaling-strategies.md — Combined Autoscaling Strategy
+  - references/cluster-autoscaler.md — Cluster Autoscaler
+  - references/hpa-patterns.md — Horizontal Pod Autoscaler (HPA)
+  - references/keda-scalers.md — Keda Scalers
+  - references/kubernetes-autoscaling-advanced.md — Kubernetes Autoscaling Advanced Topics
+  - references/kubernetes-autoscaling-fundamentals.md — Kubernetes Autoscaling Fundamentals
+  - references/vpa-config.md — Vertical Pod Autoscaler (VPA)
 ## Handoff
 After completing this skill:
 - Next skill: **devops-apm-observability** — Observability to monitor and inform autoscaling

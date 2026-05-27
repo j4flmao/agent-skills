@@ -336,19 +336,12 @@ const { open, toggle } = useDropdown(
 | **Provider** | Consumer components render correctly | Wrap test with provider, assert children |
 
 ## References
-
-### Reference Files
-- `references/component-patterns.md` — Full component pattern catalog with framework-specific examples
-- `references/hooks-patterns.md` — Hook design patterns, composition rules, testing
-- `references/rendering-patterns.md` — Conditional rendering, list rendering, composition, portals, render delegation, layout patterns
-- `references/composition-patterns.md` — Compound components, component injection, render props, polymorphic components, composition vs configuration
-
-### Related Skills
-- `frontend/universal/state-management/SKILL.md` — State management integration
-- `frontend/universal/microfrontend/SKILL.md` — Component patterns in MFE context
-- `frontend/universal/design-system/SKILL.md` — Design system component architecture
-- `frontend/universal/testing/SKILL.md` — Frontend testing strategies
-
+  - references/component-patterns.md — Component Patterns Reference
+  - references/composition-patterns.md — Composition Patterns
+  - references/frontend-security.md — Frontend Security Reference
+  - references/frontend-testing.md — Frontend Testing Reference
+  - references/hooks-patterns.md — Hooks Patterns Reference
+  - references/rendering-patterns.md — Rendering Patterns
 ## Handoff
 
 Hand off to `frontend/universal/state-management/SKILL.md` if state management pattern selection is needed. Hand off to `frontend/universal/testing/SKILL.md` for testing strategy.

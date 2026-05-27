@@ -66,23 +66,16 @@ Provide the mathematical content directly. Use standard mathematical notation. N
 - Cross-reference related concepts across files (e.g., KL divergence in information-theory ↔ loss-functions).
 
 ## References
-
-### Reference Files
-- `references/linear-algebra.md` — Vectors, matrices, SVD, eigendecomposition, norms
-- `references/calculus.md` — Derivatives, gradients, chain rule, backprop, autodiff
-- `references/probability-statistics.md` — Distributions, MLE, MAP, Bayes, bias-variance
-- `references/information-theory.md` — Entropy, cross-entropy, KL divergence, mutual information
-- `references/optimization.md` — GD variants, Adam, SGD, LR schedules, regularization
-- `references/loss-functions.md` — All loss functions with derivatives
-- `references/deep-learning-math.md` — Backprop through CNN/RNN/LSTM/Transformer, normalization
-- `references/ml-algorithms.md` — SVM, trees, XGBoost, PCA, EM algorithm math
-- `references/notation-reference.md` — Quick symbol lookup table
-
-### Related Skills
-- `ml/classical-ml/SKILL.md` — ML algorithm implementations
-- `ml/deep-learning/SKILL.md` — Deep learning implementations
-- `ml/hyperparameter-tuning/SKILL.md` — Optimization in practice
-- `ml/model-evaluation/SKILL.md` — Evaluation metrics math
-
+  - references/calculus.md — Calculus for Machine Learning
+  - references/deep-learning-math.md — Deep Learning Mathematics
+  - references/information-theory.md — Information Theory for Machine Learning
+  - references/linear-algebra.md — Linear Algebra for Machine Learning
+  - references/loss-functions.md — Loss Functions for Machine Learning
+  - references/math-foundations-advanced.md — Math Foundations Advanced Topics
+  - references/math-foundations-fundamentals.md — Math Foundations Fundamentals
+  - references/ml-algorithms.md — Machine Learning Algorithms — Mathematical Derivations
+  - references/notation-reference.md — Notation Reference for Machine Learning Mathematics
+  - references/optimization.md — Optimization for Machine Learning
+  - references/probability-statistics.md — Probability and Statistics for Machine Learning
 ## Handoff
 Hand off to `ml/classical-ml/SKILL.md` if the user needs implementation rather than mathematical understanding. Hand off to `ml/deep-learning/SKILL.md` for DL-specific implementation patterns.

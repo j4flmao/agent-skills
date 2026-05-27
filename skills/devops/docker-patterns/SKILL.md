@@ -181,12 +181,13 @@ USER nonroot
 Dockerfile or docker-compose.yml with comments explaining each section.
 
 ## References
-- `references/dockerfile-guide.md` — detailed Dockerfile best practices
-- `references/docker-compose-production.md` — Docker Compose in production: health checks, resource limits, restart policies, logging driver, secrets, configs, networks
-- `references/image-optimization.md` — Image optimization: multi-stage build patterns, distroless vs alpine, layer structure, .dockerignore optimization, buildkit caching
-- `references/container-security.md` — Container security: non-root user, read-only rootfs, capability drop, seccomp, AppArmor, image scanning (Trivy, Grype)
-- `references/docker-networking.md` — Docker networking: bridge, host, overlay, macvlan, ipvlan; network plugins, multi-host networking, DNS, network security
-
+  - references/container-security.md — Container Security
+  - references/docker-compose-production.md — Docker Compose in Production
+  - references/docker-networking.md — Docker Networking
+  - references/docker-patterns-advanced.md — Docker Patterns Advanced Topics
+  - references/docker-patterns-fundamentals.md — Docker Patterns Fundamentals
+  - references/dockerfile-guide.md — Dockerfile Best Practices
+  - references/image-optimization.md — Image Optimization
 ## Handoff
 After completing this skill:
 - Next skill: **cicd-pipeline** — CI/CD for the containerized app

@@ -183,11 +183,14 @@ async function handleOrderPlaced(event: OutboxEvent): Promise<void> {
 - Consumers always check for duplicate event processing before acting.
 
 ## References
-- `references/outbox-implementations.md` — Outbox implementations across databases and languages
-- `references/message-relay-strategies.md` — Polling vs CDC relay, idempotent publishing, monitoring
-- `references/deduplication-idempotency.md` — Consumer-side dedup, idempotency keys, exactly-once processing
-- `references/outbox-deployment.md` — Outbox deployment, K8s config, CI/CD, operational monitoring
-
+  - references/deduplication-idempotency.md — Deduplication & Idempotency
+  - references/message-relay-strategies.md — Message Relay Strategies
+  - references/outbox-advanced-scenarios.md — Advanced Outbox Scenarios
+  - references/outbox-alternatives.md — Outbox Pattern Alternatives
+  - references/outbox-deployment.md — Outbox Deployment
+  - references/outbox-implementation.md — Transactional Outbox Pattern
+  - references/outbox-implementations.md — Outbox Implementations
+  - references/outbox-monitoring.md — Outbox Monitoring and Recovery
 ## Handoff
 No artifact produced.
 Next skill: message-queue — for message broker configuration once outbox is in place.

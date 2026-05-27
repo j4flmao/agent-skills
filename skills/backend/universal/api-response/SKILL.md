@@ -236,10 +236,11 @@ async def not_found_handler(request, exc):
 - Timestamps are always ISO 8601 UTC.
 
 ## References
-- `references/api-response-formats.md` — Api Response Formats
-- `references/client-api-calls.md` — Client Api Calls
-- `references/error-handling-patterns.md` — Error Handling Patterns
-- `references/response-envelope.md` — Response Envelope
-
+  - references/api-response-formats.md — API Response Formats
+  - references/api-response-testing.md — API Response Testing
+  - references/api-response-validation.md — API Response Validation
+  - references/client-api-calls.md — Client API Call Patterns
+  - references/error-handling-patterns.md — Error Handling Patterns Reference
+  - references/response-envelope.md — Response Envelope Reference
 ## Handoff
 Hand off to `backend/universal/api-design/SKILL.md` for endpoint routing and resource design. Hand off to `backend/universal/oop-principles/SKILL.md` for exception class hierarchy design.

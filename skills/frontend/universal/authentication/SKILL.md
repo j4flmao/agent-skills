@@ -185,11 +185,12 @@ const tokens = await api.post('/auth/token', { code, verifier, redirect_uri: RED
 10. OAuth state parameter is always validated on callback to prevent CSRF on the redirect.
 
 ## References
-- `references/auth-flows.md` — OAuth PKCE, Auth Code flow, passwordless, magic link, MFA, SSO
-- `references/token-management.md` — JWT storage, refresh rotation, interceptor patterns, session recovery
-- `references/auth-security.md` — CSRF, SameSite, rate limiting, session fingerprinting, secure logout, theft detection
-- `references/auth-providers.md` — Auth0, Clerk, Supabase, Firebase, Cognito setup patterns, provider abstraction
-
+  - references/auth-flows.md — Auth Flows
+  - references/auth-providers.md — Auth Providers
+  - references/auth-security.md — Auth Security
+  - references/auth-ui-patterns.md — Authentication UI Patterns
+  - references/oauth-pkce-flow.md — OAuth PKCE Flow
+  - references/token-management.md — Token Management
 ## Handoff
 No artifact produced unless requested.
 Next skill: `frontend-security` — CSP headers, XSS prevention for auth pages.

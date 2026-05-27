@@ -311,18 +311,13 @@ class OrderListScreenTest {
 ```
 
 ## References
-
-### Reference Files
-- `references/jetpack-compose.md` — Compose navigation, state hoisting, animations
-- `references/hilt-di.md` — Hilt modules, scopes, ViewModel injection
-- `references/testing.md` — JUnit, MockK, Espresso, Compose UI test
-- `references/compose-performance.md` — Recomposition optimization, lazy lists, key composition, graphicsLayer, derivedStateOf, snapshot system, baseline profiles
-- `references/android-architecture.md` — MVVM + Clean Architecture, UseCase pattern, Repository pattern, unidirectional data flow (UDF), state hoisting
-
-### Related Skills
-- `mobile/universal/deployment/SKILL.md` — Play Console, CI/CD, testing
-- `backend/universal/api-response/SKILL.md` — REST API response design
-
+  - references/android-advanced.md — Android Advanced Topics
+  - references/android-architecture.md — Android Architecture — MVVM + Clean Architecture
+  - references/android-fundamentals.md — Android Fundamentals
+  - references/compose-performance.md — Jetpack Compose Performance Optimization
+  - references/hilt-di.md — Hilt Dependency Injection
+  - references/jetpack-compose.md — Jetpack Compose
+  - references/testing.md — Android Testing
 ## Handoff
 
 Hand off to `mobile/universal/deployment/SKILL.md` for deployment.

@@ -170,11 +170,12 @@ Write to `docs/specs/{feature-name}-spec.md`.
 - If the spec is for a frontend feature, replace API contract with component props/events/state spec.
 
 ## References
-- `references/tech-spec-examples.md` — Tech Spec Examples
-- `references/tech-spec-review-checklist.md` — Tech Spec Review Checklist
-- `references/tech-spec-template.md` — Tech Spec Template
-- `references/tech-spec-templates.md` — Tech Spec Templates
-
+  - references/create-tech-spec-advanced.md — Create Tech Spec Advanced Topics
+  - references/create-tech-spec-fundamentals.md — Create Tech Spec Fundamentals
+  - references/tech-spec-examples.md — Tech Spec Examples
+  - references/tech-spec-review-checklist.md — Tech Spec Review Checklist
+  - references/tech-spec-template.md — Technical Specification: {Feature Name}
+  - references/tech-spec-templates.md — Technical Specification Templates
 ## Handoff
 Output: `docs/specs/{feature-name}-spec.md`
 Next skill: stack-specific implementation skill (e.g., nestjs-architecture, react-architecture)

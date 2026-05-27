@@ -111,10 +111,11 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ```
 
 ## References
-- `references/camera-apis.md` — Camera Apis
-- `references/camera-capture.md` — Camera Capture
-- `references/camera-media-capture.md` — Camera Media Capture
-- `references/media-processing.md` — Media Processing
-
+  - references/camera-apis.md — Camera APIs
+  - references/camera-capture.md — Camera Capture
+  - references/camera-media-capture.md — Camera & Media Capture Patterns
+  - references/camera-permissions.md — Camera Permissions — iOS & Android
+  - references/media-processing.md — Media Processing
+  - references/video-recording.md — Video Recording — Mobile
 ## Handoff
 Hand off to mobile-networking skill for upload progress tracking and retry logic, or mobile-storage for local media cache management.

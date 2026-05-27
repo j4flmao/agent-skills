@@ -193,17 +193,11 @@ public class HomeViewModel : INotifyPropertyChanged
 - .NET 8+ with Windows-specific TFMs.
 
 ## References
-
-### Reference Files
-- `references/winui3-architecture.md` — MVVM, XAML controls, data templates, custom controls, navigation, resource management
-- `references/winui3-controls.md` — Controls reference, templates, styles, behaviors
-- `references/winui3-deployment.md` — Packaging, MSIX, sideloading, Windows Store, CI/CD, native AOT
-- `references/winui3-setup.md` — Project setup, MSIX packaging, Win32 interop, debugging
-
-### Related Skills
-- `desktop/wpf/SKILL.md` — WPF for legacy .NET Framework apps
-- `desktop/uwp/SKILL.md` — UWP for Store-only deployment
-- `desktop/winforms/SKILL.md` — WinForms for rapid legacy forms
-
+  - references/winui3-advanced.md — Winui3 Advanced Topics
+  - references/winui3-architecture.md — WinUI 3 Architecture Reference
+  - references/winui3-controls.md — WinUI 3 Controls Reference
+  - references/winui3-deployment.md — WinUI 3 Deployment Reference
+  - references/winui3-fundamentals.md — Winui3 Fundamentals
+  - references/winui3-setup.md — WinUI 3 Setup Reference
 ## Handoff
 Hand off to `desktop/wpf/SKILL.md` when need mature ecosystem or third-party controls unavailable in WinUI 3. Hand off to `desktop/uwp/SKILL.md` when Windows Store distribution required.

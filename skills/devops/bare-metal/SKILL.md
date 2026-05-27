@@ -239,11 +239,12 @@ Inventory: serial, asset tag, location → CMDB (NetBox)
 - ECC RAM mandatory for any persistent-state workload.
 
 ## References
-- `references/provisioning-pxe-maas.md` — PXE/iPXE chain, MAAS/Tinkerbell setup, cloud-init
-- `references/ipmi-bmc.md` — IPMI/Redfish ops, BMC hardening, OOB network
-- `references/firmware-lifecycle.md` — Tracking, cadence, rollout, rollback
-- `references/burn-in.md` — Hardware acceptance testing, soak protocols
-
+  - references/bare-metal-advanced.md — Bare Metal Advanced Topics
+  - references/bare-metal-fundamentals.md — Bare Metal Fundamentals
+  - references/burn-in.md — Hardware Burn-In — Acceptance Testing
+  - references/firmware-lifecycle.md — Firmware Lifecycle — Tracking, Cadence, Rollout
+  - references/ipmi-bmc.md — IPMI / BMC / Redfish — Out-of-Band Management
+  - references/provisioning-pxe-maas.md — PXE / iPXE / MAAS / Tinkerbell — Provisioning
 ## Handoff
 - `devops-datacenter` for rack / power / cooling design.
 - `devops-network-infrastructure` for leaf-spine, BGP, switch config.

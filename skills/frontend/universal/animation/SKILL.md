@@ -135,14 +135,12 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ---
 
 ## References
-
-- `references/animation-libraries.md` — Framer Motion, GSAP, CSS animations, WAAPI patterns
-- `references/animation-performance.md` — GPU compositing, avoid list, will-change, reduced motion, frame budget
-- `references/animation-techniques.md` — Page transitions, stagger, scroll-triggered, SVG morphing, gesture patterns
-- `references/animation-anatomy.md` — Frame budget, easing curves, spring params, composite modes, fill modes
-
----
-
+  - references/animation-accessibility.md — Animation Accessibility
+  - references/animation-anatomy.md — Animation Anatomy
+  - references/animation-libraries.md — Animation Libraries
+  - references/animation-performance.md — Animation Performance
+  - references/animation-techniques.md — Animation Techniques
+  - references/animation-tools.md — Animation Tools Reference
 ## Handoff
 
 When complete, output the animation strategy with implementation snippets. If the request scope exceeds page transitions + micro-interactions (e.g., full motion design system), flag for a dedicated motion designer handoff.

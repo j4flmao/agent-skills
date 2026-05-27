@@ -78,11 +78,12 @@ Implement CSPM to continuously monitor cloud environments for misconfigurations,
 - Changes to IAM policies must trigger immediate permission analysis
 
 ## References
-- `references/cspm-platforms.md` — CSPM platform comparison (Wiz, Prisma, Security Hub)
-- `references/compliance-frameworks.md` — Compliance mapping for CIS, SOC 2, PCI DSS, HIPAA
-- `references/automated-remediation.md` — Automated remediation with AWS Config, Azure Policy
-- `references/ciem-permissions.md` — CIEM and cloud entitlement management
-- `references/cspm-integration.md` — CSPM integration with SIEM, SOAR, and IT ticketing
-
+  - references/automated-remediation.md — Automated Remediation for CSPM
+  - references/ciem-permissions.md — CIEM — Cloud Infrastructure Entitlement Management
+  - references/compliance-frameworks.md — Compliance Frameworks for CSPM
+  - references/cspm-advanced.md — Cspm Advanced Topics
+  - references/cspm-fundamentals.md — Cspm Fundamentals
+  - references/cspm-integration.md — CSPM Integration
+  - references/cspm-platforms.md — CSPM Platforms
 ## Handoff
 CSPM outputs can be handed to devops for IaC policy enforcement, security-engineering for SIEM tuning, and compliance for audit evidence collection.

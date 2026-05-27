@@ -104,11 +104,13 @@ Risk register populated with at least 5-10 identified risks across multiple cate
 - **security-auditor** — Integrate security vulnerability risks into the risk register
 
 ## References
-
-- [Risk Register Template](references/risk-register.md)
-- [Mitigation Strategies](references/mitigation-strategies.md)
-- [Risk Assessment Matrix](references/risk-assessment-matrix.md)
-- [Risk Management Framework](references/risk-management-framework.md)
-
+  - references/mitigation-strategies.md — Mitigation Strategies
+  - references/risk-assessment-matrix.md — Risk Assessment Matrix
+  - references/risk-management-advanced.md — Risk Management Advanced Topics
+  - references/risk-management-framework.md — Risk Management Framework
+  - references/risk-management-fundamentals.md — Risk Management Fundamentals
+  - references/risk-monitoring.md — Risk Monitoring
+  - references/risk-register.md — Risk Register Template
+  - references/risk-reporting.md — Risk Reporting
 ## Handoff
 sprint-retro (the risk register is reviewed at every sprint retro), create-roadmap (risk scores inform timeline adjustments and buffer allocation on the roadmap).

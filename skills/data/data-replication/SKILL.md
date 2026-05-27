@@ -345,11 +345,14 @@ Post-failover validation:
 - Document runbook for failover: detect -> promote -> reroute -> validate
 
 ## References
-- `references/replication-topologies.md` — Master-slave, multi-master, active-active, sync vs async, conflict resolution, CRDT
-- `references/cross-region.md` — Cross-region replication, latency, consistency, failover, GoldenGate, read replica scaling
-- `references/conflict-resolution.md` — LWW, CRDTs, merge strategies, conflict detection
-- `references/replication-performance.md` — Sync vs async, lag monitoring, compression, parallel apply
-
+  - references/conflict-resolution.md — Conflict Resolution Reference
+  - references/cross-region.md — Cross-Region Replication Reference
+  - references/replication-cdc-vs-etl.md — Replication Strategies: CDC vs ETL
+  - references/replication-monitoring.md — Replication Monitoring
+  - references/replication-performance.md — Replication Performance Reference
+  - references/replication-security.md — Data Replication Security
+  - references/replication-tools.md — Replication Tools
+  - references/replication-topologies.md — Replication Topologies Reference
 ## Handoff
 `data-cdc-patterns` for CDC-based replication (Debezium, Kafka Connect)
 `data-distributed-storage` for HDFS and object store replication

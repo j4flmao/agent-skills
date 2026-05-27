@@ -150,11 +150,12 @@ import('/assets/app-abc123def.js')
 - Use `Cache-Control: private` for authenticated responses.
 
 ## References
-- `references/cache-strategies.md` — network-first, cache-first, SWR, race strategies
-- `references/sw-caching.md` — service worker lifecycle, fetch interception, offline patterns
-- `references/caching-strategies.md` — Resource-specific strategy map, CDN caching, invalidation, cache warming, size management
-- `references/caching-headers.md` — Cache-Control directives, ETag, Vary, Surrogate-Control, cache-busting, debug headers
-
+  - references/cache-strategies.md — Cache Strategies
+  - references/caching-headers.md — Caching Headers
+  - references/caching-strategies.md — Caching Strategies
+  - references/local-storage-strategies.md — Local Storage and Cache Strategies
+  - references/service-worker-caching.md — Service Worker Caching
+  - references/sw-caching.md — Service Worker Caching
 ## Handoff
 No artifact produced.
 Next skill: `performance` — combine caching with other perf optimization.

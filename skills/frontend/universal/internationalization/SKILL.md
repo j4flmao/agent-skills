@@ -232,11 +232,12 @@ function renderWithI18n(ui: React.ReactElement) {
 10. Translation interpolation escapes HTML by default to prevent XSS.
 
 ## References
-- `references/i18n-libraries.md` — i18next, react-intl, vue-i18n, FormatJS, Angular i18n, setup patterns, lazy loading
-- `references/rtl-support.md` — CSS logical properties, dir attribute, RTL testing, layout adaptation
-- `references/i18n-implementation.md` — i18next setup, locale switching, namespace loading, SSR, type-safe keys, locale files
-- `references/i18n-workflow.md` — Key extraction, translation platforms, CI/CD, missing key detection, pseudolocalization, RTL testing
-
+  - references/i18n-build-optimization.md — i18n Build Optimization
+  - references/i18n-implementation.md — i18n Implementation
+  - references/i18n-libraries.md — i18n Libraries
+  - references/i18n-testing.md — i18n Testing
+  - references/i18n-workflow.md — i18n Workflow
+  - references/rtl-support.md — RTL Support
 ## Handoff
 No artifact produced unless requested.
 Next skill: `frontend-accessibility` — RTL a11y overlaps with i18n, pass locale direction config.

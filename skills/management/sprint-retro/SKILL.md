@@ -103,12 +103,12 @@ Retro board populated with categorized team input from the silent writing phase.
 - **pm** — Coordinate retro findings with the product manager for process and priority adjustments
 
 ## References
-
-- [Retro Formats](references/retro-formats.md)
-- [Action Item Tracking](references/action-item-tracking.md)
-- [Retro Techniques](references/retro-techniques.md)
-- [Facilitation Guide](references/facilitation-guide.md)
-- [Retro Metrics](references/retro-metrics.md)
-
+  - references/action-item-tracking.md — Action Item Tracking
+  - references/facilitation-guide.md — Retro Facilitation Guide
+  - references/retro-formats.md — Retro Formats
+  - references/retro-metrics.md — Retro Metrics
+  - references/retro-techniques.md — Retro Techniques
+  - references/sprint-retro-advanced.md — Sprint Retro Advanced Topics
+  - references/sprint-retro-fundamentals.md — Sprint Retro Fundamentals
 ## Handoff
 sprint-retro (schedule next retro with new action item tracking), okr-kpi (align retro improvement themes with team goals).

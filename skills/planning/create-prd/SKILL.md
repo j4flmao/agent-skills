@@ -133,11 +133,12 @@ Write to `docs/prd-{YYYY-MM-DD}.md`.
 - If the brief lacks detail for a section, write "TBD — to be decided during implementation" rather than inventing requirements.
 
 ## References
-- `references/prd-collaboration.md` — Prd Collaboration
-- `references/prd-examples.md` — Prd Examples
-- `references/prd-review-checklist.md` — Prd Review Checklist
-- `references/prd-template.md` — Prd Template
-
+  - references/create-prd-advanced.md — Create Prd Advanced Topics
+  - references/create-prd-fundamentals.md — Create Prd Fundamentals
+  - references/prd-collaboration.md — PRD Collaboration
+  - references/prd-examples.md — PRD Examples
+  - references/prd-review-checklist.md — PRD Review Checklist
+  - references/prd-template.md — Product Requirements Document: {Project Name}
 ## Handoff
 Output: `docs/prd-{YYYY-MM-DD}.md`
 Next skill: create-adr

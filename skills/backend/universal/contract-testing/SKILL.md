@@ -106,11 +106,12 @@ If verification fails: the provider made a breaking change. Either:
 - Breaking a contract should fail the provider's CI build.
 
 ## References
-- `references/pact-setup.md` — Pact test framework setup
-- `references/cdc-workflow.md` — Consumer-driven contract workflow
-- `references/contract-testing-tools.md` — Contract testing tool comparison and integration
-- `references/contract-testing-workflow.md` — Full CDC lifecycle and provider state management
-
+  - references/cdc-workflow.md — Consumer-Driven Contract Workflow
+  - references/contract-testing-advanced.md — Contract Testing Advanced Patterns
+  - references/contract-testing-ci.md — Contract Testing CI Pipeline
+  - references/contract-testing-tools.md — Contract Testing Tools
+  - references/contract-testing-workflow.md — Contract Testing Workflow
+  - references/pact-setup.md — Pact Contract Testing Setup
 ## Handoff
 No artifact produced unless requested.
 Next skill: idempotency — add safe retry semantics to the API endpoints.

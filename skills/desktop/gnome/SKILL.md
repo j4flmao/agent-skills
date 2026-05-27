@@ -181,16 +181,11 @@ modules:
 - SVGs for icons and artwork.
 
 ## References
-
-### Reference Files
-- `references/gnome-architecture.md` — GNOME Shell, Mutter, GSettings, D-Bus, portals, GNOME Circle, HIG guidelines
-- `references/gnome-dev-setup.md` — GNOME Builder, Flatpak, GJS, debugging
-- `references/gnome-development.md` — GTK4, libadwaita, Blueprint UI language, GNOME Builder, extensions, Flatpak
-- `references/libadwaita-guide.md` — libadwaita widgets, adaptive patterns, HIG
-
-### Related Skills
-- `desktop/gtk/SKILL.md` — GTK 4 foundational toolkit skill
-- `desktop/kde/SKILL.md` — KDE alternative with Qt/Kirigami
-
+  - references/gnome-advanced.md — Gnome Advanced Topics
+  - references/gnome-architecture.md — GNOME Architecture Reference
+  - references/gnome-dev-setup.md — GNOME Dev Setup Reference
+  - references/gnome-development.md — GNOME Development Reference
+  - references/gnome-fundamentals.md — Gnome Fundamentals
+  - references/libadwaita-guide.md — libadwaita Guide Reference
 ## Handoff
 Hand off to `desktop/gtk/SKILL.md` for generic GTK 4 cross-platform apps without GNOME dependencies. Hand off to `desktop/kde/SKILL.md` when targeting KDE Plasma.

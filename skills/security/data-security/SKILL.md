@@ -118,10 +118,11 @@ GDPR: right to access (data portability), right to deletion (erase records), rig
 - Anonymization must be validated against re-identification risk.
 
 ## References
-- `references/encryption-key-mgmt.md` — Encryption at rest/transit, envelope encryption, KMS vs HSM, key rotation, TLS
-- `references/data-masking-classification.md` — Static/dynamic masking, tokenization, column-level access, k-anonymity, differential privacy, GDPR/CCPA
-- `references/data-loss-prevention.md` — DLP categories, sensitive data patterns, response actions
-- `references/data-privacy-compliance.md` — Regulatory frameworks, data classification levels, privacy by design
-
+  - references/data-loss-prevention.md — Data Loss Prevention (DLP)
+  - references/data-masking-classification.md — Data Masking, Classification & Compliance
+  - references/data-privacy-compliance.md — Data Privacy Compliance
+  - references/data-security-advanced.md — Data Security Advanced Topics
+  - references/data-security-fundamentals.md — Data Security Fundamentals
+  - references/encryption-key-mgmt.md — Encryption & Key Management
 ## Handoff
 For infrastructure security controls, hand off to `devops-cloud-cost-optimization`. For data quality and governance, hand off to `data-quality`.

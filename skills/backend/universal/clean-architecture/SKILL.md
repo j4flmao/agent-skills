@@ -201,11 +201,14 @@ Domain tests require no setup — they test pure business logic. Application tes
 - If you cannot classify code into one of the four layers, the architecture is wrong.
 
 ## References
-- `references/layer-structure.md` — detailed layer boundary rules with examples per stack
-- `references/testing-strategy.md` — testing patterns per layer, test isolation, mock strategies
-- `references/clean-arch-layers.md` — Clean architecture layer responsibilities and dependency rules
-- `references/clean-arch-testing.md` — Testing pyramid by layer with test containers and fakes
-
+  - references/clean-arch-errors.md — Clean Architecture Error Handling
+  - references/clean-arch-events.md — Clean Architecture Domain Events
+  - references/clean-arch-layers.md — Clean Architecture Layers
+  - references/clean-arch-testing.md — Clean Architecture Testing
+  - references/dependency-injection.md — Dependency Injection
+  - references/layer-structure.md — Layer Structure
+  - references/testing-strategy.md — Testing Strategy
+  - references/use-case-patterns.md — Use Case Patterns
 ## Handoff
 No artifact produced.
 Next skill: backend-api-design — after layers are defined, design API contracts that respect layer boundaries.

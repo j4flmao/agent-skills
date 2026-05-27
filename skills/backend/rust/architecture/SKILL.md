@@ -184,11 +184,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 - Workspace Cargo.toml lists all crate members explicitly.
 
 ## References
-- `references/workspace-layout.md` — Rust workspace structure and crate dependency graph
-- `references/trait-design.md` — repository traits, associated types, trait objects
-- `references/rust-async.md` — Async Rust, Tokio, async/await patterns
-- `references/rust-web-frameworks.md` — Axum, Actix, Rocket web framework patterns
-
+  - references/crate-strategy.md — Crate Strategy and Workspace Design
+  - references/rust-async.md — Rust Async Programming
+  - references/rust-concurrency.md — Rust Concurrency
+  - references/rust-config.md — Rust Configuration Management
+  - references/rust-di.md — Rust Dependency Injection Patterns
+  - references/rust-memory-management.md — Rust Memory Management
+  - references/rust-web-frameworks.md — Rust Web Frameworks
+  - references/testing-benchmarking.md — Testing and Benchmarking Rust Applications
+  - references/trait-design.md — Rust Trait Design
+  - references/workspace-layout.md — Rust Workspace Layout
 ## Handoff
 No artifact produced.
 Next skill: rust-patterns — ownership, async Tokio, error handling.

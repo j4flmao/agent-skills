@@ -251,11 +251,12 @@ spec:
 Kubernetes YAML manifests with annotations explaining each section.
 
 ## References
-- `references/k8s-resources.md` — Kubernetes resource YAML patterns and conventions
-- `references/k8s-operations.md` — Kubernetes operational procedures and cluster management
-- `references/k8s-stateful-workloads.md` — StatefulSets, PVC patterns, database on K8s, backup
-- `references/k8s-scheduling.md` — Node affinity, taints/tolerations, topology spread, descheduler
-
+  - references/k8s-operations.md — Kubernetes Operations Reference
+  - references/k8s-resources.md — Kubernetes Resources Reference
+  - references/k8s-scheduling.md — Kubernetes Scheduling
+  - references/k8s-stateful-workloads.md — Kubernetes Stateful Workloads
+  - references/kubernetes-patterns-advanced.md — Kubernetes Patterns Advanced Topics
+  - references/kubernetes-patterns-fundamentals.md — Kubernetes Patterns Fundamentals
 ## Handoff
 After completing this skill:
 - Next skill: **observability** — configure monitoring, logging, and tracing for the K8s deployment

@@ -175,11 +175,12 @@ if err := server.Shutdown(shutdownCtx); err != nil {
 - Never copy a sync.Mutex. Always pass as pointer.
 
 ## References
-- `references/concurrency-patterns.md` — goroutines, worker pools, fan-out/fan-in
-- `references/error-handling.md` — error wrapping, sentinel errors, domain errors
-- `references/http-server.md` — server setup, middleware chain, response envelope
-- `references/go-microservices.md` — service layout, circuit breaker, discovery, graceful shutdown
-
+  - references/concurrency-patterns.md — Go Concurrency Patterns
+  - references/error-handling.md — Go Error Handling
+  - references/go-cli-patterns.md — Go CLI Application Patterns
+  - references/go-microservices.md — Go Microservices Patterns
+  - references/go-middleware.md — Go HTTP Middleware Patterns
+  - references/http-server.md — Go HTTP Server
 ## Handoff
 No artifact produced.
 Next skill: backend-testing — test Go patterns.

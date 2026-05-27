@@ -104,11 +104,13 @@ For committed OKRs, all KRs should score 1.0. They are delivery commitments, not
 - **pm** — Coordinate OKR definition with product management and stakeholders
 
 ## References
-
-- [OKR Template](references/okr-template.md)
-- [OKR Examples](references/okr-examples.md)
-- [KPI Dashboard](references/kpi-dashboard.md)
-- [OKR vs KPI Frameworks](references/okr-kpi-frameworks.md)
-
+  - references/kpi-dashboard.md — KPI Dashboard
+  - references/kpi-tracking-tools.md — KPI Tracking Tools
+  - references/okr-alignment.md — OKR Alignment
+  - references/okr-examples.md — OKR Examples
+  - references/okr-kpi-advanced.md — Okr Kpi Advanced Topics
+  - references/okr-kpi-frameworks.md — OKR vs KPI Frameworks
+  - references/okr-kpi-fundamentals.md — Okr Kpi Fundamentals
+  - references/okr-template.md — OKR Template
 ## Handoff
 sprint-retro (review OKR progress during the sprint retrospective), create-roadmap (align the product roadmap themes with OKR objectives and KRs).

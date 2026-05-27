@@ -57,11 +57,14 @@ When asked about blockchain data indexing, respond with:
 5.  **Alternatives / trade-offs** – when another approach would be better and why.
 
 ## References
-- references/dune-analytics.md — Dune Analytics SQL queries and spellbook
-- references/goldsky-chainindex.md — Goldsky pipelines and ChainIndex indexers
-- references/indexer-architecture.md — Indexer architecture patterns and ETL
-- references/the-graph-subgraph.md — The Graph subgraph manifest and handlers
-
+  - references/blockchain-data-indexing-advanced.md — Blockchain Data Indexing Advanced Topics
+  - references/blockchain-data-indexing-fundamentals.md — Blockchain Data Indexing Fundamentals
+  - references/blockchain-data-query.md — Blockchain Data Query Patterns
+  - references/dune-analytics.md — Dune Analytics Reference
+  - references/event-processing.md — Blockchain Event Processing
+  - references/goldsky-chainindex.md — Goldsky & ChainIndex Reference
+  - references/indexer-architecture.md — Indexer Architecture Patterns
+  - references/the-graph-subgraph.md — The Graph — Subgraph Reference
 ## Phase: blockchain → blockchain-data-indexing
 
 This skill belongs to the `blockchain` phase group. Activate it when the user's question matches any trigger keyword above.

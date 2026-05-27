@@ -190,16 +190,11 @@ def register_error_handlers(app):
 - pytest fixtures for app and client — never global app instance.
 
 ## References
-
-### Reference Files
-- `references/flask-setup.md` — Flask setup, configuration, blueprints, deployment
-- `references/flask-extensions.md` — Flask extensions guide: SQLAlchemy, Migrate, CLI
-- `references/flask-deployment.md` — WSGI servers, Docker, Nginx, CI/CD, platforms
-- `references/flask-blueprints-factories.md` — Blueprints, app factories, Flask-SQLAlchemy
-
-### Related Skills
-- `backend/universal/api-response/SKILL.md` — API response envelope
-- `backend/universal/oop-principles/SKILL.md` — SOLID for Python
-
+  - references/flask-blueprints-factories.md — Flask Blueprints and Application Factories
+  - references/flask-deployment.md — Flask Deployment
+  - references/flask-extensions.md — Flask Extensions
+  - references/flask-security.md — Flask Security Reference
+  - references/flask-setup.md — Flask Setup Guide
+  - references/flask-testing.md — Flask Testing Reference
 ## Handoff
 Hand off to `backend/universal/api-response/SKILL.md` for API response standards.

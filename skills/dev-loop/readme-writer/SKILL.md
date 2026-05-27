@@ -168,11 +168,12 @@ MIT © {Author}
 Write to `README.md` at the project root.
 
 ## References
-- `references/badge-reference.md` — Badge Reference
-- `references/readme-best-practices.md` — Readme Best Practices
-- `references/readme-sections.md` — Readme Sections
-- `references/readme-template.md` — Readme Template
-
+  - references/badge-reference.md — Badge Reference
+  - references/readme-best-practices.md — README Best Practices
+  - references/readme-sections.md — README Sections Guide
+  - references/readme-template.md — README Template
+  - references/readme-writer-advanced.md — Readme Writer Advanced Topics
+  - references/readme-writer-fundamentals.md — Readme Writer Fundamentals
 ## Handoff
 After completing this skill:
 - Next skill: **changelog-generator** — if release is upcoming

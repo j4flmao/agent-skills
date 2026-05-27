@@ -97,22 +97,15 @@ For each selected pattern:
 - Every pattern selection must document rejected alternatives with reasons.
 
 ## References
-
-### Reference Files
-- `references/gof-patterns.md` — All 23 Gang of Four patterns (creational, structural, behavioral)
-- `references/enterprise-patterns.md` — Enterprise, DDD, and architectural patterns (Repository, CQRS, Event Sourcing, Saga, Hexagonal, Clean)
-- `references/integration-patterns.md` — Enterprise Integration Patterns (messaging, routing, transformation)
-- `references/concurrency-patterns.md` — Concurrency, threading, and parallel patterns
-- `references/anti-patterns.md` — Comprehensive anti-pattern catalog with refactoring paths
-- `references/pattern-relationships.md` — Pattern composition, selection guides, and SOLID mapping
-- `references/selection-decision-tree.md` — Decision tree for quick pattern selection
-- `references/pattern-catalog.md` — Original GoF pattern catalog with code examples
-
-### Related Skills
-- `backend/universal/oop-principles/SKILL.md` — Foundational OOP principles
-- `backend/universal/clean-architecture/SKILL.md` — Architectural pattern application
-- `backend/universal/microservices/SKILL.md` — Microservices-specific patterns
-- `backend/universal/event-driven/SKILL.md` — Event-driven architecture patterns
-
+  - references/anti-patterns.md — Anti-Patterns Reference
+  - references/concurrency-patterns.md — Concurrency Patterns
+  - references/domain-driven-design-patterns.md — Domain-Driven Design Patterns
+  - references/enterprise-patterns.md — Enterprise & Architectural Patterns
+  - references/gof-patterns.md — GoF (Gang of Four) Design Patterns Reference
+  - references/integration-patterns.md — Enterprise Integration Patterns (EIP) Reference
+  - references/pattern-catalog.md — Pattern Catalog
+  - references/pattern-relationships.md — Pattern Relationships & Selection Reference
+  - references/selection-decision-tree.md — Pattern Selection Decision Tree
+  - references/testing-patterns.md — Testing Design Patterns
 ## Handoff
 Hand off to `backend/universal/microservices/SKILL.md` if distributed system patterns (saga, CQRS, event sourcing) need implementation details. Hand off to `backend/universal/clean-architecture/SKILL.md` if structuring the entire application. Hand off to `backend/universal/event-driven/SKILL.md` if event-driven patterns need elaboration.

@@ -112,16 +112,11 @@ export class Result<T, E = AppError> {
 - Each service depends on abstractions (interfaces), not concretions.
 
 ## References
-
-### Reference Files
-- `references/express-patterns.md` — Express-specific patterns
-- `references/node-testing.md` — Node.js testing with Vitest, Supertest
-- `references/nodejs-error-handling.md` — Error hierarchy, global handler, Result pattern
-- `references/nodejs-streams.md` — Stream types, piping, transform, backpressure
-
-### Related Skills
-- `backend/nodejs/architecture/SKILL.md` — Node.js project structure
-- `backend/universal/design-patterns/SKILL.md` — GoF patterns in Node.js
-
+  - references/express-patterns.md — Express Patterns
+  - references/node-testing.md — Node.js Testing
+  - references/nodejs-async-patterns.md — Node.js Async Patterns Reference
+  - references/nodejs-di.md — Node.js Dependency Injection Reference
+  - references/nodejs-error-handling.md — Node.js Error Handling
+  - references/nodejs-streams.md — Node.js Streams
 ## Handoff
 Hand off to `backend/nodejs/architecture/SKILL.md` for project structure.

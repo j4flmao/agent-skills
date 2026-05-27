@@ -100,12 +100,13 @@ For enterprise-scale data platforms, consider Data Vault 2.0. Hubs store busines
 - Test grain by querying: can I aggregate to the right level?
 
 ## References
-- `references/kimball-methodology.md` — Kimball 4-step process, bus matrix, conformed dimensions
-- `references/star-schema.md` — Star schema design, fact/dimension tables, surrogate keys, degenerate dimensions
-- `references/scd-types.md` — SCD Types 0-6 implementation, trade-offs, selection guide
-- `references/fact-table-design.md` — Fact table types, additive/semi-additive/non-additive facts, factless facts
-- `references/data-vault.md` — Data Vault 2.0 hubs, links, satellites, hash keys, loading patterns
-
+  - references/data-vault.md — Data Vault 2.0 Reference
+  - references/dimensional-modeling-etl.md — Dimensional Modeling ETL
+  - references/dimensional-modeling-performance.md — Dimensional Modeling Performance
+  - references/fact-table-design.md — Fact Table Design Reference
+  - references/kimball-methodology.md — Kimball Methodology Reference
+  - references/scd-types.md — Slowly Changing Dimensions Reference
+  - references/star-schema.md — Star Schema Design Reference
 ## Handoff
 `data-etl-pipeline` for ETL/ELT implementation of dimensional models
 `data-data-warehouse` for warehouse platform-specific optimizations

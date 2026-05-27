@@ -124,11 +124,12 @@ Route params are signals: `const params = useParams()`. Prefetch with `<Link>`.
 - createStore path syntax for targeted updates. Avoid replacing entire objects.
 
 ## References
-- `references/solid-reactivity.md` — signals, memos, effects, stores, batching
-- `references/solid-components.md` — JSX, control flow, context, portals, lifecycle
-- `references/solidjs-reactivity.md` — signals, createStore, createResource, batching, context API
-- `references/solidjs-optimization.md` — compiler optimizations, avoiding re-renders, memoization, lazy loading
-
+  - references/solid-components.md — SolidJS Components — JSX, Control Flow, Context, Portals, Lifecycle
+  - references/solid-reactivity.md — SolidJS Reactivity — Signals, Memos, Effects, Stores, Batching
+  - references/solidjs-component-architecture.md — SolidJS Component Architecture
+  - references/solidjs-optimization.md — SolidJS Optimization Patterns
+  - references/solidjs-reactivity.md — SolidJS Reactivity Patterns
+  - references/solidjs-signal-patterns.md — SolidJS Signal Patterns
 ## Handoff
 No artifact produced.
 Next skill: frontend-solidjs-patterns for data fetching, forms, composition, and animation.

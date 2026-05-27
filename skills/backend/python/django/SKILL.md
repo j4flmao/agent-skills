@@ -174,11 +174,12 @@ def notify_order_created(sender, instance, created, **kwargs):
 - DRF serializers act as DTOs at the boundary. They convert between request/response formats and domain/service calls.
 
 ## References
-- `references/django-structure.md` — Django project structure, thin models, service layer
-- `references/django-rest-framework.md` — DRF ViewSets, serializers, permissions, filtering
-- `references/django-orm-patterns.md` — N+1 prevention, aggregation, subqueries, bulk operations
-- `references/django-advanced.md` — Custom middleware, commands, ORM optimization, Celery
-
+  - references/django-advanced.md — Django Advanced Patterns
+  - references/django-celery.md — Django Celery Integration
+  - references/django-orm-patterns.md — Django ORM Patterns
+  - references/django-rest-framework.md — Django REST Framework Patterns
+  - references/django-signals.md — Django Signal Patterns
+  - references/django-structure.md — Django Project Structure
 ## Handoff
 No artifact produced.
 Next skill: backend-testing — test Django with pytest.

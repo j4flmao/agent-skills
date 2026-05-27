@@ -372,16 +372,11 @@ prisma.$use(async (params, next) => {
 - Prisma migration files committed to git. Never run migrate dev in prod.
 
 ## References
-
-### Reference Files
-- `references/schema-migrations.md` — Schema design, relations, migrations, seeding
-- `references/query-optimization.md` — Eager loading, pagination, raw queries, connection pooling
-- `references/prisma-advanced.md` — Extensions, soft delete, computed fields, full-text search
-- `references/prisma-deployment.md` — Docker, migration strategy, serverless, CI/CD
-
-### Related Skills
-- `backend/nodejs/express/SKILL.md` — Express integration with Prisma
-- `backend/nodejs/architecture/SKILL.md` — General Node.js architecture
-
+  - references/prisma-advanced.md — Prisma Advanced Patterns
+  - references/prisma-deployment.md — Prisma Deployment
+  - references/prisma-middleware.md — Prisma Middleware Reference
+  - references/prisma-relations.md — Prisma Relations Reference
+  - references/query-optimization.md — Query Optimization
+  - references/schema-migrations.md — Schema & Migrations
 ## Handoff
 Hand off to `backend/nodejs/express/SKILL.md` for API layer integration or `backend/universal/api-response/SKILL.md` for response formatting.

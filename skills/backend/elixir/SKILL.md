@@ -461,16 +461,11 @@ end
 - Config per environment with runtime.exs for production secrets.
 
 ## References
-
-### Reference Files
-- `references/elixir-otp.md` — Processes, GenServer, supervision trees, OTP patterns
-- `references/phoenix-ecto.md` — Phoenix routes, LiveView, Ecto schema/queries, contexts
-- `references/elixir-testing-exunit.md` — ExUnit, Mox, ExMachina, DataCase, ConnCase patterns
-- `references/elixir-ecto-advanced.md` — Complex queries, Ecto.Multi, dynamic filters, changeset patterns
-
-### Related Skills
-- `backend/nodejs/express/SKILL.md` — Alternative Node.js approach
-- `backend/universal/api-response/SKILL.md` — API response formatting
-
+  - references/elixir-advanced.md — Elixir Advanced Topics
+  - references/elixir-ecto-advanced.md — Elixir Ecto Advanced Patterns
+  - references/elixir-fundamentals.md — Elixir Fundamentals
+  - references/elixir-otp.md — Elixir & OTP
+  - references/elixir-testing-exunit.md — Elixir Testing with ExUnit
+  - references/phoenix-ecto.md — Phoenix & Ecto
 ## Handoff
 Hand off to `backend/universal/testing/SKILL.md` for ExUnit testing patterns or backend-deployment skill for Elixir releases.

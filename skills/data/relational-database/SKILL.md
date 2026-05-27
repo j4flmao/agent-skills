@@ -278,11 +278,12 @@ CREATE TABLE order_items (
 - Every migration must have a rollback script
 
 ## References
-- `references/postgres-advanced.md` — MVCC, WAL, vacuum/autovacuum, replication, partitioning, indexing strategies, PgBouncer
-- `references/query-optimization.md` — EXPLAIN ANALYZE, indexing, CTE optimization, window functions, stats, hints, migration
-- `references/distributed-sql-databases.md` — Spanner TrueTime, CockroachDB Raft, YugabyteDB DocDB, geo-partitioning, interleaved tables
-- `references/cockroachdb-yugabyte.md` — CockroachDB/YugabyteDB operations, migration from PostgreSQL, deployment topology, monitoring
-
+  - references/cockroachdb-yugabyte.md — CockroachDB and YugabyteDB Operational Guide
+  - references/database-indexing.md — Database Indexing Reference
+  - references/database-migration-strategies.md — Database Migration Strategies Reference
+  - references/distributed-sql-databases.md — Distributed SQL Databases
+  - references/postgres-advanced.md — PostgreSQL Advanced Internals
+  - references/query-optimization.md — Query Optimization
 ## Handoff
 `data-etl-pipeline` for loading data into relational schemas
 `data-data-warehouse` for dimensional modeling from relational sources

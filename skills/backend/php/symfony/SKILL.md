@@ -210,16 +210,11 @@ class OrderCreatedHandler {
 - PHPUnit with WebTestCase for functional tests.
 
 ## References
-
-### Reference Files
-- `references/symfony-setup.md` — Symfony setup, Flex, bundles, routing
-- `references/symfony-doctrine.md` — Doctrine ORM entities, repositories, migrations
-- `references/symfony-architecture.md` — Service container, bundles, events, DI, controllers
-- `references/symfony-deployment.md` — Docker, CI/CD, platforms, caching, queue workers
-
-### Related Skills
-- `backend/universal/api-response/SKILL.md` — API response envelope
-- `backend/universal/oop-principles/SKILL.md` — SOLID for PHP
-
+  - references/symfony-architecture.md — Symfony Architecture
+  - references/symfony-deployment.md — Symfony Deployment
+  - references/symfony-doctrine.md — Symfony Doctrine Guide
+  - references/symfony-security.md — Symfony Security Reference
+  - references/symfony-setup.md — Symfony Setup Guide
+  - references/symfony-testing.md — Symfony Testing Reference
 ## Handoff
 Hand off to `backend/universal/api-response/SKILL.md` for API response standards.

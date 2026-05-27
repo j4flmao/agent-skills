@@ -128,11 +128,12 @@ const [pending, startTransition] = createTransition(() => setTab('settings'))
 - Avoid createEffect for data fetching — use createResource.
 
 ## References
-- `references/solid-data.md` — createResource, Suspense, error boundaries, lazy loading
-- `references/solid-forms.md` — controlled inputs, validation, field arrays, custom form state
-- `references/solidjs-routing.md` — router setup, dynamic params, navigation, search params, guards
-- `references/solidjs-state.md` — local state, form state, global state, context, decision guide
-
+  - references/solid-data.md — SolidJS Data — createResource, Suspense, Error Boundaries, Lazy Loading
+  - references/solid-forms.md — SolidJS Forms — Controlled Inputs, Validation, Field Arrays, Custom Form State
+  - references/solidjs-routing.md — SolidJS Routing Patterns
+  - references/solidjs-state.md — SolidJS State Management Patterns
+  - references/solidjs-testing.md — SolidJS Testing Reference
+  - references/solidjs-ui-patterns.md — SolidJS Patterns
 ## Handoff
 No artifact produced.
 Next skill: frontend-universal-testing for unit/integration tests in SolidJS.

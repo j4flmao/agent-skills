@@ -166,11 +166,12 @@ Velocity: {n} / {n} points (on track / at risk / behind)
 - Sprint goal must be achievable within the sprint — not aspirational
 
 ## References
-- `references/ceremony-guide.md` — agile ceremony timing and facilitation
-- `references/estimation-guide.md` — estimation techniques with examples
-- `references/risk-register-template.md` — Risk register template with scoring and response planning
-- `references/estimation-techniques.md` — Additional estimation techniques with worked examples
-
+  - references/ceremony-guide.md — Agile Ceremony Guide
+  - references/estimation-guide.md — Estimation Guide
+  - references/estimation-techniques.md — Estimation Techniques
+  - references/pm-advanced.md — Pm Advanced Topics
+  - references/pm-fundamentals.md — Pm Fundamentals
+  - references/risk-register-template.md — Risk Register Template
 ## Handoff
 After completing this skill:
 - Next skill: **ba** — to elaborate requirements for planned stories

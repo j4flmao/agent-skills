@@ -129,12 +129,13 @@ pulumi up --yes
 - Use `ignoreChanges` sparingly and document why.
 
 ## References
-- `references/programming-models.md` — TypeScript, Python, Go, C# project structure
-- `references/state-backends.md` — S3, Azure Blob, GCS, Cloud, self-managed
-- `references/aws-resources.md` — AWS provider: VPC, EKS, S3, IAM, Lambda
-- `references/kubernetes-provider.md` — Kubernetes provider, Helm, CRDs, operator
-- `references/automation-api.md` — Self-service infra, multi-stage deployments
-
+  - references/automation-api.md — Pulumi Automation API
+  - references/aws-resources.md — Pulumi AWS Provider
+  - references/kubernetes-provider.md — Pulumi Kubernetes Provider
+  - references/programming-models.md — Pulumi Programming Models
+  - references/pulumi-advanced.md — Pulumi Advanced Topics
+  - references/pulumi-fundamentals.md — Pulumi Fundamentals
+  - references/state-backends.md — Pulumi State Backends
 ## Handoff
 After completing this skill:
 - Next skill: **devops-crossplane** — control plane abstractions on top of Pulumi-provisioned infrastructure

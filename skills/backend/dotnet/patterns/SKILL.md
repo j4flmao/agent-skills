@@ -273,17 +273,11 @@ public class OrderGrpcService : OrderService.OrderServiceBase
 | **gRPC for public API** | Browser incompatibility | Use REST with JSON for public endpoints |
 
 ## References
-
-### Reference Files
-- `references/cqrs-mediatr.md` — Full MediatR CQRS implementation with examples
-- `references/ef-core-patterns.md` — EF Core optimization, migrations, performance patterns
-- `references/dotnet-cqrs.md` — CQRS command/query separation, MediatR pipelines, validation
-- `references/dotnet-event-sourcing.md` — Event store, aggregate replay, projections, snapshots
-
-### Related Skills
-- `backend/dotnet/architecture/SKILL.md` — .NET project structure and DI
-- `backend/universal/design-patterns/SKILL.md` — Foundational GoF patterns
-- `backend/universal/testing/SKILL.md` — Testing .NET applications
-
+  - references/cqrs-mediatr.md — CQRS with MediatR Reference
+  - references/dotnet-cqrs.md — .NET CQRS with MediatR
+  - references/dotnet-event-sourcing.md — .NET Event Sourcing
+  - references/dotnet-pipeline-behaviors.md — .NET Pipeline Behaviors
+  - references/dotnet-result-pattern.md — .NET Result Pattern
+  - references/ef-core-patterns.md — EF Core Patterns Reference
 ## Handoff
 Hand off to `backend/dotnet/architecture/SKILL.md` for project structure and DI setup. Hand off to `backend/universal/clean-architecture/SKILL.md` for architectural restructuring.

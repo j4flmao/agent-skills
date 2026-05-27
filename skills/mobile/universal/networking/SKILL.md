@@ -161,11 +161,12 @@ class OrderPagination {
 ```
 
 ## References
-- `references/caching.md` — Caching
-- `references/mobile-networking-patterns.md` — Mobile Networking Patterns
-- `references/offline-first.md` — Offline First
-- `references/rest-client.md` — Rest Client
-
+  - references/caching.md — Mobile Caching
+  - references/graphql-mobile.md — Mobile GraphQL Integration
+  - references/mobile-networking-patterns.md — Mobile Networking Patterns
+  - references/network-layer-architecture.md — Cross-Platform Network Layer Architecture
+  - references/offline-first.md — Offline-First Architecture
+  - references/rest-client.md — REST Client Setup
 ## Handoff
 
 Hand off to stack-specific skill for implementation.

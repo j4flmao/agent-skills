@@ -204,11 +204,12 @@ function PricingPage() {
 - Clean up flags within 2 releases — dead flag code is technical debt.
 
 ## References
-- `references/flag-providers.md` — LaunchDarkly, Split.io, Flagsmith integration patterns
-- `references/flag-strategies.md` — targeting rules, percentage rollouts, A/B test design
-- `references/feature-flag-systems.md` — Flag types, provider setups, custom backend, evaluation context, gradual rollout plan
-- `references/feature-flag-testing.md` — Mocking, component tests, integration tests, E2E, flag combinations, rollout logic validation
-
+  - references/feature-flag-systems.md — Feature Flag Systems
+  - references/feature-flag-testing.md — Feature Flag Testing
+  - references/flag-lifecycle-management.md — Flag Lifecycle Management
+  - references/flag-providers.md — Feature Flag Providers
+  - references/flag-sdk-customization.md — Flag SDK Customization
+  - references/flag-strategies.md — Feature Flag Strategies
 ## Handoff
 No artifact produced.
 Next skill: `testing` — mock flag client for component tests.

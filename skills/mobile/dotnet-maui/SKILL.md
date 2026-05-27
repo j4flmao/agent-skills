@@ -107,10 +107,11 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ```
 
 ## References
-- `references/maui-architecture.md` — Maui Architecture
-- `references/maui-controls.md` — Maui Controls
-- `references/maui-mvvm.md` — Maui Mvvm
-- `references/maui-structure.md` — Maui Structure
-
+  - references/dotnet-maui-advanced.md — Dotnet Maui Advanced Topics
+  - references/dotnet-maui-fundamentals.md — Dotnet Maui Fundamentals
+  - references/maui-architecture.md — MAUI Architecture
+  - references/maui-controls.md — MAUI Controls
+  - references/maui-mvvm.md — MAUI MVVM with CommunityToolkit
+  - references/maui-structure.md — MAUI Project Structure
 ## Handoff
 Hand off to iOS/Android native skills when platform handler customization requires deep UIKit or Android Views API knowledge.

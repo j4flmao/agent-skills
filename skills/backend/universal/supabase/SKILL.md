@@ -254,18 +254,11 @@ serve(async (req) => {
 - Set up database webhooks for async workflows instead of triggers when possible.
 
 ## References
-
-### Reference Files
-- `references/postgres-rls.md` — PostgreSQL schema, RLS policies, pgvector, indexes, migrations
-- `references/supabase-auth.md` — Auth providers, RLS integration, user management, SSO, magic link
-- `references/supabase-storage.md` — Storage buckets, policies, CDN, image optimization, signed URLs
-- `references/edge-functions.md` — Edge Functions, deployment, webhooks, CORS, secrets, warm starts
-
-### Related Skills
-- `backend/universal/firebase/SKILL.md` — Firebase (alternative BaaS)
-- `backend/universal/database-patterns/SKILL.md` — General database patterns
-- `backend/nodejs/drizzle/SKILL.md` — Drizzle ORM (alternative query builder)
-- `ai/vector-databases/SKILL.md` — Vector DB patterns (pgvector)
-
+  - references/edge-functions.md — Edge Functions
+  - references/postgres-rls.md — PostgreSQL & Row Level Security
+  - references/supabase-auth.md — Supabase Auth
+  - references/supabase-backup-migration.md — Supabase Backup and Migration
+  - references/supabase-realtime.md — Supabase Realtime
+  - references/supabase-storage.md — Supabase Storage
 ## Handoff
 Hand off to `ai/vector-databases/SKILL.md` for pgvector embedding workflows or `mobile/*/SKILL.md` for client SDK integration.

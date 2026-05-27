@@ -113,10 +113,11 @@ class AnalyticsService(private val providers: List<AnalyticsProvider>) {
 ```
 
 ## References
-- `references/analytics-privacy.md` — Analytics Privacy
-- `references/analytics-sdks.md` — Analytics Sdks
-- `references/analytics-setup.md` — Analytics Setup
-- `references/event-tracking.md` — Event Tracking
-
+  - references/analytics-privacy.md — Analytics Privacy
+  - references/analytics-reporting.md — Analytics Dashboards and Reporting
+  - references/analytics-sdks.md — Analytics SDKs
+  - references/analytics-setup.md — Analytics Setup
+  - references/event-tracking.md — Event Tracking & Privacy
+  - references/mobile-analytics.md — Mobile Analytics Implementation
 ## Handoff
 Hand off to mobile-crash-reporting skill when Crashlytics integration is needed, or to mobile-networking when custom analytics server endpoint is required.

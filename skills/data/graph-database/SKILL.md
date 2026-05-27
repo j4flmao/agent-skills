@@ -243,11 +243,12 @@ LIMIT 50
 - Avoid fan-out patterns that explode cardinality
 
 ## References
-- `references/graph-modeling.md` — Property graph vs RDF, node/label/relationship design, naming conventions, traversal patterns
-- `references/graph-platforms.md` — Neo4j, Neptune, JanusGraph comparison, Cypher vs Gremlin, performance, sharding, deployment
-- `references/query-patterns.md` — Cypher, Gremlin, SPARQL traversal patterns, graph algorithms
-- `references/graph-use-cases.md` — Recommendations, fraud detection, knowledge graphs, identity resolution
-
+  - references/graph-algorithms.md — Graph Algorithms
+  - references/graph-modeling.md — Graph Data Modeling
+  - references/graph-performance.md — Graph Database Performance
+  - references/graph-platforms.md — Graph Database Platforms
+  - references/graph-use-cases.md — Graph Database Use Cases Reference
+  - references/query-patterns.md — Graph Query Patterns Reference
 ## Handoff
 `data-nosql-database` for non-relational data stores
 `ml-feature-engineering` for graph feature extraction (PageRank, embeddings)

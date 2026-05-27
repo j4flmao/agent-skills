@@ -154,11 +154,12 @@ For global state, use $state class instances in a module `.svelte.js` file: `exp
 - Svelte 5 retains backward compatibility with legacy syntax.
 
 ## References
-- `references/svelte-runes.md` — $state, $derived, $effect, $props, $bindable usage
-- `references/svelte-components.md` — slots, context, lifecycle, events, actions, transitions
-- `references/svelte-reactivity.md` — runes deep dive, $state, $derived, $effect, shared state patterns
-- `references/svelte-optimization.md` — compile-time optimization, keyed each, lazy loading, transitions
-
+  - references/svelte-5-runes.md — Svelte 5 Runes
+  - references/svelte-components.md — Svelte Components — Slots, Context, Lifecycle, Events, Actions, Transitions
+  - references/svelte-optimization.md — Svelte Optimization Patterns
+  - references/svelte-reactivity.md — Svelte Reactivity Patterns
+  - references/svelte-runes.md — Svelte 5 Runes — $state, $derived, $effect, $props, $bindable
+  - references/svelte-testing.md — Svelte Testing Reference
 ## Handoff
 No artifact produced.
 Next skill: frontend-svelte-patterns for forms, animations, actions, and data fetching.

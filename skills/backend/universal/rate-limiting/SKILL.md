@@ -207,11 +207,14 @@ Server-side backpressure:
 - Never use fixed window for production APIs — always use sliding window or token bucket.
 
 ## References
-- `references/algorithms.md` — Rate limiting algorithms deep-dive
-- `references/implementation-patterns.md` — Implementation patterns
-- `references/distributed-rate-limiting.md` — Distributed coordination
-- `references/backpressure.md` — Backpressure and circuit breakers
-
+  - references/algorithms.md — Rate Limiting Algorithms
+  - references/backpressure.md — Backpressure
+  - references/distributed-rate-limiting.md — Distributed Rate Limiting
+  - references/implementation-patterns.md — Rate Limiting Implementation Patterns
+  - references/rate-limiting-api-gateway.md — API Gateway Rate Limiting
+  - references/rate-limiting-implementations.md — Rate Limiting Implementation Patterns
+  - references/rate-limiting-monitoring.md — Rate Limiting Monitoring
+  - references/rate-limiting-queuing.md — Request Queuing and Prioritization
 ## Handoff
 No artifact produced unless requested.
 Next skill: backend-load-testing — to verify rate limits under traffic.

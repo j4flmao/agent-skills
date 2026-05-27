@@ -170,38 +170,13 @@ Log model version, inference time, and input metadata for every prediction.
 Pin model and tokenizer versions in deployment configuration for reproducibility.
 
 ## References
-- references/nlp-pipeline.md — spaCy components, tokenization, normalization, POS, NER, dependency parsing, custom training
-- references/huggingface-transformers.md — Tokenizers, models, Trainer API, pipelines, fine-tuning, PEFT, LoRA
-- references/prompt-engineering.md — Zero/few-shot, chain-of-thought, prompt templates, parameter tuning, safety guardrails
-- references/nlp-production.md — ONNX export, vLLM, latency optimization, cost management, preprocessing service, monitoring
-
-### Edge Cases and Special Domains
-Low-resource languages: use multilingual pretrained models (mBERT, XLM-R), cross-lingual transfer learning, back-translation augmentation.
-Code-switching text: use multilingual tokenizers, language identification preprocessing, mixed-language models.
-Domain-specific jargon (medical, legal): continue pretraining on domain corpus, add domain-specific tokenization.
-Long documents (>512 tokens): use Longformer, BigBird, Sliding Window attention, or hierarchical models.
-OCR text with errors: use robust tokenizers, character-level augmentation, edit-distance tolerant evaluation.
-Multimodal text + images: use CLIP, LLaVA, or BLIP for combined understanding tasks.
-Real-time streaming text: use incremental parsing (spaCy nlp.pipe streaming), lightweight models (DistilBERT, ALBERT).
-
-### Framework Integration
-HuggingFace Transformers: 100K+ models, Trainer API, pipelines, PEFT, TRL for RLHF.
-spaCy: production pipeline, custom training, transformer support, linguistic annotations.
-NLTK: education, prototyping, corpora, tokenization, stemming, tagging.
-Flair: sequence labeling, text classification, stacked embeddings, BERT + Flair embeddings.
-Stanza: Stanford NLP group, multilingual, tokenization, POS, NER, dependency parsing.
-Sentence-Transformers: BERT-based sentence embeddings, semantic similarity, clustering.
-Rasa: conversational AI with NLU pipeline, intent classification, entity extraction.
-
-### Advanced NLP Tips
-For domain-specific tasks, continue pretraining on unlabeled domain data before fine-tuning on labeled data.
-Use label smoothing (epsilon=0.1) to prevent overconfidence and improve generalization in classification tasks.
-For NER, use CRF (Conditional Random Field) layer on top of transformer for structured prediction.
-Implement early stopping with patience=3 based on validation loss to prevent overfitting.
-For multi-lingual tasks, train on XLM-R or mT5 which support 100+ languages in a single model.
-Use sentence-transformers for efficient sentence embedding and semantic search applications.
-For long documents (>512 tokens), use Longformer, BigBird, or sliding window attention.
-Implement gradient checkpointing for training models >1B parameters on limited GPU memory.
-
+  - references/huggingface-transformers.md — HuggingFace Transformers
+  - references/nlp-advanced.md — Nlp Advanced Topics
+  - references/nlp-fundamentals.md — Nlp Fundamentals
+  - references/nlp-model-training.md — NLP Model Training
+  - references/nlp-pipeline.md — NLP Pipeline
+  - references/nlp-production.md — NLP Production Deployment
+  - references/prompt-engineering.md — Prompt Engineering for NLP
+  - references/text-processing.md — NLP Text Processing
 ## Handoff
 Hand off to ml-experiment-tracking for training runs. For LLM-specific optimization (prompting, RAG), hand off to ai-prompt-engineering or ai-rag-patterns.

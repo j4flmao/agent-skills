@@ -133,14 +133,12 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ---
 
 ## References
-
-- `references/image-formats.md` — AVIF/WebP/JPEG, srcset, picture, CDN transforms, placeholders
-- `references/image-performance.md` — LCP optimization, lazy loading, preload, budgets, Core Web Vitals
-- `references/image-delivery.md` — CDN providers (Cloudinary, Imgix), responsive images, picture element, art direction, progressive loading, LCP preloading
-- `references/image-components.md` — Next.js Image, custom image component, skeleton placeholders, aspect ratio, avatar, gallery grid, comparison slider
-
----
-
+  - references/image-accessibility.md — Image Accessibility
+  - references/image-cdn-configuration.md — Image CDN Configuration
+  - references/image-components.md — Image Components
+  - references/image-delivery.md — Image Delivery
+  - references/image-formats.md — Image Formats & Delivery
+  - references/image-performance.md — Image Performance
 ## Handoff
 
 If project requires real-time image transformation pipeline setup (Cloudinary, Imgix, or custom), deliver CDN configuration. For build-time image processing pipeline, hand off to bundler-tools skill. Otherwise implement complete image optimization.

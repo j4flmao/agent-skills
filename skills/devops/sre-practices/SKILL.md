@@ -92,10 +92,13 @@ Toil categories: manual operations, repetitive tasks, overhead, context switches
 - Any service can have a production readiness review requested
 
 ## References
-- `references/sli-slo-guide.md` — SLI/SLO definition patterns and examples
-- `references/toil-automation.md` — Toil assessment and automation strategies
-- `references/incident-analysis.md` — Incident analysis and postmortem framework
-- `references/sre-slos.md` — SLO/SLI/SLA definitions, error budgets, burn rate alerts
-
+  - references/error-budget-policy.md — Error Budget Policy Design
+  - references/incident-analysis.md — Incident Analysis Framework
+  - references/incident-command.md — Incident Command Structure
+  - references/sli-slo-guide.md — SLI/SLO Definition Guide
+  - references/sre-practices-advanced.md — Sre Practices Advanced Topics
+  - references/sre-practices-fundamentals.md — Sre Practices Fundamentals
+  - references/sre-slos.md — SLO / SLI / SLA Definitions
+  - references/toil-automation.md — Toil Reduction Guide
 ## Handoff
 Related skills: devops-platform-engineering (IDP), devops-incident-response (on-call), devops-chaos-engineering (resilience testing), devops-monitoring (observability stack).

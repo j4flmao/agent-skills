@@ -80,11 +80,12 @@ Conduct structured penetration tests following industry-standard methodology (PT
 - Retesting must verify all remediated findings
 
 ## References
-- `references/methodology-phases.md` — Pentest phases: recon through reporting
-- `references/web-app-testing.md` — Web application testing: OWASP Top 10, Burp Suite, ZAP
-- `references/network-pentest.md` — Network penetration testing: AD, Kerberos, pivot tunnels
-- `references/cloud-pentest.md` — Cloud pentesting: AWS, Azure, GCP specific attacks
-- `references/reporting-template.md` — Pentest reporting with executive summary and CVSS
-
+  - references/cloud-pentest.md — Cloud Penetration Testing
+  - references/methodology-phases.md — Pentest Methodology Phases
+  - references/network-pentest.md — Network Penetration Testing
+  - references/penetration-testing-advanced.md — Penetration Testing Advanced Topics
+  - references/penetration-testing-fundamentals.md — Penetration Testing Fundamentals
+  - references/reporting-template.md — Pentest Reporting Template
+  - references/web-app-testing.md — Web Application Penetration Testing
 ## Handoff
 Pentest findings can be handed to development for code fixes, infrastructure for network remediation, and management for risk acceptance decisions.

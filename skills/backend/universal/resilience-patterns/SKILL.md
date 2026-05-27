@@ -104,11 +104,14 @@ Decorators.builder()
 - Monitor circuit breaker metrics (state, call count, failure ratio).
 
 ## References
-- `references/resilience4j-guide.md` — Resilience4j implementation guide
-- `references/retry-backoff-strategies.md` — Retry and backoff strategy reference
-- `references/bulkhead-patterns.md` — Thread pool isolation, semaphore, async bulkhead, system resource isolation
-- `references/fallback-strategies.md` — Stale data fallback, degraded mode, default values, circuit breaker integration
-
+  - references/bulkhead-patterns.md — Bulkhead Patterns
+  - references/circuit-breaker-patterns.md — Circuit Breaker Patterns
+  - references/fallback-strategies.md — Fallback Strategies
+  - references/resilience-cache.md — Caching as a Resilience Pattern
+  - references/resilience-testing.md — Resilience Testing
+  - references/resilience4j-guide.md — Resilience4j Implementation Guide
+  - references/retry-backoff-strategies.md — Retry and Backoff Strategies
+  - references/timeout-retry-patterns.md — Timeout and Retry Patterns
 ## Handoff
 No artifact produced unless requested.
 Next skill: openapi-documentation — document the resilient API endpoints.

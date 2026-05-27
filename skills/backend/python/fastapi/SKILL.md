@@ -186,11 +186,16 @@ async def create_user(
 - All business logic lives in use cases. Zero business logic in routers or repository implementations.
 
 ## References
-- `references/fastapi-structure.md` — FastAPI project structure and app setup
-- `references/dependency-injection-patterns.md` — DI layers, request scoping, lifespan management
-- `references/fastapi-testing.md` — Async client, dependency override, TestContainers integration
-- `references/fastapi-advanced.md` — Advanced DI, lifespan, background tasks, WebSocket, middleware
-
+  - references/dependency-injection-patterns.md — FastAPI Dependency Injection Patterns
+  - references/fastapi-advanced.md — FastAPI Advanced Patterns
+  - references/fastapi-background.md — FastAPI Background Tasks
+  - references/fastapi-dependency-injection.md — FastAPI Dependency Injection
+  - references/fastapi-routing-patterns.md — FastAPI Routing Patterns
+  - references/fastapi-structure.md — FastAPI Project Structure
+  - references/fastapi-testing.md — FastAPI Testing
+  - references/fastapi-websocket.md — FastAPI WebSocket and Real-Time Patterns
+  - references/middleware-background.md — Middleware, Background Tasks, and WebSockets in FastAPI
+  - references/testing-debugging.md — Testing and Debugging FastAPI Applications
 ## Handoff
 No artifact produced.
 Next skill: backend-testing — test FastAPI with pytest.

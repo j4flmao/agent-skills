@@ -159,17 +159,11 @@ sealed class AppException(val statusCode: Int, val code: String, override val me
 - Build system: Gradle Kotlin DSL.
 
 ## References
-
-### Reference Files
-- `references/ktor-setup.md` — Ktor configuration, routing, plug-ins
-- `references/kotlin-backend-patterns.md` — Kotlin backend patterns, DI, testing
-- `references/coroutines-guide.md` — Coroutine scopes, flows, structured concurrency
-- `references/kotlin-testing.md` — Kotest, coroutine testing, MockK, TestContainers, best practices
-
-### Related Skills
-- `backend/kotlin/patterns/SKILL.md` — Kotlin-specific backend patterns
-- `backend/universal/api-response/SKILL.md` — API response envelope
-- `backend/universal/oop-principles/SKILL.md` — SOLID for Kotlin
-
+  - references/coroutines-guide.md — Coroutines Guide
+  - references/kotlin-backend-patterns.md — Kotlin Backend Patterns
+  - references/kotlin-error-handling.md — Kotlin Error Handling Reference
+  - references/kotlin-project-structure.md — Kotlin Project Structure Reference
+  - references/kotlin-testing.md — Kotlin Testing Guide
+  - references/ktor-setup.md — Ktor Setup Guide
 ## Handoff
 Hand off to `backend/kotlin/patterns/SKILL.md` for Kotlin-specific backend patterns.

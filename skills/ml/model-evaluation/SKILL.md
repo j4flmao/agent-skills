@@ -166,37 +166,13 @@ Pin random seed for all splits to enable exact reproduction of evaluation result
 Version the test set — document when it was created, its size, and any leakage considerations.
 
 ## References
-- references/metrics-guide.md — Classification metrics with thresholds, regression metrics, probability metrics, multi-class metrics
-- references/evaluation-strategies.md — Cross-validation methods, learning curves, bias-variance analysis, statistical significance, backtesting
-- references/model-comparison.md — Statistical tests (t-test, McNemar, Wilcoxon, Bayesian), A/B testing, model selection, confidence intervals
-- references/ranking-metrics.md — NDCG, MAP, MRR, precision/recall@k, calibration metrics, ranking-specific evaluation protocols
-
-### Edge Cases and Special Data Types
-Hierarchical classification (multiple levels): evaluate per-level and aggregated metrics separately.
-Multi-output regression: use multi-output R-squared, mean column-wise RMSE, average correlation.
-Sparse high-dimensional data (text, genomics): evaluate on non-zero predictions only, use ranking metrics.
-Imbalanced regression: use weighted RMSE, stratified sampling in CV, SMOGN for synthetic oversampling.
-Survival analysis: use concordance index (C-index), Brier score at specified time points.
-Sequential data (user sessions): evaluate per-session, per-step metrics, cumulative accuracy.
-Paired/matched data: use paired evaluation, McNemar test, account for within-pair correlation.
-
-### Cross-Framework Support
-Scikit-learn: cross_val_score, cross_validate, learning_curve, validation_curve, permutation_test_score.
-XGBoost/LightGBM: built-in eval_set with early_stopping_rounds, cv function with custom feval.
-PyTorch: custom evaluation loop with torch.no_grad(), sklearn metrics via sklearn.metrics.
-TensorFlow/Keras: model.evaluate() with custom metrics, callbacks for early stopping and checkpointing.
-HuggingFace: Trainer with compute_metrics callback, built-in eval on every epoch.
-Libraries: scikit-learn for general metrics, scipy for statistical tests, mlxtend for paired tests.
-
-### Advanced Evaluation Tips
-Use Bootstrap resampling for confidence intervals on any metric without normality assumptions.
-For imbalanced datasets, use stratified sampling in train/test split and CV.
-Set random_state in all splitters for exact reproducibility across evaluation runs.
-Use scipy.stats.bootstrap for computing confidence intervals of metric differences between models.
-For multi-label classification, use hamming loss, subset accuracy, and per-label F1 separately.
-Evaluate subgroup performance when fairness is a concern: ensure consistent metrics across groups.
-Use lift charts and cumulative gain charts to communicate model value to business stakeholders.
-Compute feature importance on evaluation folds to assess feature stability across data splits.
-
+  - references/evaluation-metrics.md — Model Evaluation Metrics
+  - references/evaluation-strategies.md — Evaluation Strategies
+  - references/evaluation-techniques.md — Model Evaluation Techniques
+  - references/metrics-guide.md — Metrics Guide
+  - references/model-comparison.md — Model Comparison
+  - references/model-evaluation-advanced.md — Model Evaluation Advanced Topics
+  - references/model-evaluation-fundamentals.md — Model Evaluation Fundamentals
+  - references/ranking-metrics.md — Ranking & Recommendation Evaluation
 ## Handoff
 Hand off to ml-experiment-tracking for logging evaluation results. Hand off to ml-hyperparameter-tuning if model needs optimization based on eval results.

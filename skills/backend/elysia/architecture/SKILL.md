@@ -111,16 +111,11 @@ app.post('/orders', ({ body }) => orderService.create(body), {
 - Lifecycle hooks ordered: transform → beforeHandle → handler → afterHandle.
 
 ## References
-
-### Reference Files
-- `references/elysia-plugins.md` — Official and custom plugin development
-- `references/elysia-lifecycle.md` — Lifecycle hooks, guards, transforms
-- `references/elysia-deployment.md` — Production build, Docker, CI/CD, platform deployment
-- `references/elysia-custom-plugins.md` — Custom plugins, lifecycle hooks, adapters
-
-### Related Skills
-- `backend/elysia/patterns/SKILL.md` — Elysia-specific patterns
-- `backend/universal/api-response/SKILL.md` — API response design
-
+  - references/elysia-custom-plugins.md — Elysia Custom Plugins
+  - references/elysia-deployment.md — Elysia Deployment
+  - references/elysia-lifecycle.md — Elysia Lifecycle Reference
+  - references/elysia-plugins.md — Elysia Plugins Reference
+  - references/elysia-routing-validation.md — Elysia Routing and Validation
+  - references/elysia-testing.md — Elysia Testing
 ## Handoff
 Hand off to `backend/elysia/patterns/SKILL.md` for Elysia patterns.

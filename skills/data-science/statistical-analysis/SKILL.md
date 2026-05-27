@@ -264,11 +264,12 @@ def bayesian_linear_regression(X, y, draws=2000):
 - Sample size must be justified with power analysis for inferential studies
 
 ## References
-- `references/descriptive-stats.md` — Central tendency, dispersion, distribution shapes, outliers, visualization
-- `references/hypothesis-testing.md` — Null/alternative, p-values, t-tests, chi-square, ANOVA, power analysis
-- `references/bayesian-methods.md` — Bayes theorem, priors/posteriors, MCMC, Bayesian A/B testing
-- `references/regression-analysis.md` — Linear/logistic regression, assumptions, diagnostics, regularization
-
+  - references/bayesian-methods.md — Bayesian Methods Reference
+  - references/descriptive-stats.md — Descriptive Statistics Reference
+  - references/hypothesis-testing.md — Hypothesis Testing Reference
+  - references/regression-analysis.md — Regression Analysis Reference
+  - references/statistical-analysis-advanced.md — Statistical Analysis Advanced Topics
+  - references/statistical-analysis-fundamentals.md — Statistical Analysis Fundamentals
 ## Handoff
 `data-science-experimentation` for experiment design and A/B testing
 `data-science-causal-inference` for causal effect estimation

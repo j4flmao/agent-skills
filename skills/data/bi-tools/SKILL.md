@@ -334,15 +334,14 @@ Review subscriptions quarterly, remove stale.
 - Embed tokens short-lived (1 hour max)
 
 ## References
-- `references/tool-selection.md`
-  Metabase, Superset, Looker, Tableau, PowerBI comparison,
-  semantic layer design, data source configuration
-- `references/dashboard-design.md`
-  KPI selection, layout patterns, embedding, permissions,
-  caching, performance, scheduling
-- `references/lookml-examples.md` — View, explore, model definitions, persistent derived tables, best practices
-- `references/semantic-layer-patterns.md` — Metric definition templates, cross-tool pattern mapping, naming conventions, cache/refresh strategy
-
+  - references/bi-security-governance.md — BI Security and Governance
+  - references/bi-tools-architecture.md — BI Tools Architecture
+  - references/bi-tools-performance.md — BI Tools Performance Optimization
+  - references/dashboard-design.md — Dashboard Design
+  - references/embedding-analytics.md — Embedded Analytics
+  - references/lookml-examples.md — LookML Examples
+  - references/semantic-layer-patterns.md — Semantic Layer Patterns
+  - references/tool-selection.md — BI Tool Selection
 ## Handoff
 `data-data-warehouse` for optimizing warehouse for BI queries
 `data-data-quality` for validating dashboard data accuracy

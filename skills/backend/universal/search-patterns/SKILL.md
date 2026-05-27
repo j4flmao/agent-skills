@@ -185,10 +185,13 @@ monitoring:
 - Synonyms should be content-managed, not hardcoded
 
 ## References
-- `references/search-engines.md` — Mapping, query DSL, aggregations, cluster configuration
-- `references/indexing-strategies.md` — BM25 tuning, boosting, synonyms, function scoring
-- `references/search-architecture.md` — Search architecture, indexing pipeline, query service, faceted search
-- `references/search-performance.md` — Relevance tuning, BM25 parameters, query optimization, cluster tuning
-
+  - references/indexing-strategies.md — Indexing Strategies and Relevance
+  - references/search-architecture.md — Search Architecture
+  - references/search-engines.md — Search Engines Reference
+  - references/search-faceted-navigation.md — Faceted Search Navigation
+  - references/search-implementation.md — Search Implementation Patterns
+  - references/search-optimization.md — Search Optimization and Performance
+  - references/search-performance.md — Search Performance
+  - references/search-synonyms.md — Search Synonyms
 ## Handoff
 `backend-database-patterns` for indexing source data schema design

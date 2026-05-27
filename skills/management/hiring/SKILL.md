@@ -239,13 +239,12 @@ Track demographics to detect pipeline bias.
 - Track funnel metrics to identify and fix bias
 
 ## References
-- `references/interview-rubrics.md`
-- `references/interview-process.md`
-- `references/evaluation-rubric.md`
-- `references/interview-questions.md`
-  Pipeline stages, phone screen, onsite structure,
-  debrief protocol, offer framework, candidate experience
-
+  - references/evaluation-rubric.md — Evaluation Rubric
+  - references/hiring-advanced.md — Hiring Advanced Topics
+  - references/hiring-fundamentals.md — Hiring Fundamentals
+  - references/interview-process.md — Interview Process Design
+  - references/interview-questions.md — Interview Questions
+  - references/interview-rubrics.md — Interview Rubrics
 ## Handoff
 `management/team-rules` for onboarding new hires
 `planning/create-roadmap` for capacity planning

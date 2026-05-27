@@ -53,11 +53,12 @@ Design and manage endpoint detection and response capabilities including EDR/XDR
 - [ ] Response actions defined (isolation, containment)
 
 ## References
-- `references/edr-platforms.md` — EDR/XDR platform comparison
-- `references/edr-detection-rules.md` — rule patterns for endpoint detection
-- `references/incident-investigation.md` — endpoint investigation methodology and process tree analysis
-- `references/edr-deployment.md` — sensor deployment at scale and health monitoring
-- `references/detection-engineering.md` — detection lifecycle, Sigma rules, and CI/CD pipeline
-
+  - references/detection-engineering.md — Detection Engineering
+  - references/edr-deployment.md — EDR Deployment
+  - references/edr-detection-rules.md — EDR Detection Rule Patterns
+  - references/edr-platforms.md — EDR/XDR Platform Comparison
+  - references/edr-xdr-advanced.md — Edr Xdr Advanced Topics
+  - references/edr-xdr-fundamentals.md — Edr Xdr Fundamentals
+  - references/incident-investigation.md — EDR Incident Investigation
 ## Handoff
 Alerts flow to siem-engineering for correlation. Investigation results feed threat-intelligence for IoC extraction.

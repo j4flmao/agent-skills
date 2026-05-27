@@ -98,10 +98,11 @@ Design analytics pipeline that aggregates across tenants without exposing indivi
 - Rate limits and resource quotas enforced per tenant.
 
 ## References
-- `references/tenant-isolation.md` — Isolation model comparison and implementation
-- `references/tenant-lifecycle.md` — Tenant state machine and operations
-- `references/tenant-provisioning.md` — Tenant provisioning automation and configuration management
-- `references/multi-tenant-architecture.md` — Multi-tenant architecture patterns: silo, pool, bridge
-
+  - references/multi-tenant-advanced.md — Multi Tenant Advanced Topics
+  - references/multi-tenant-architecture.md — Multi-Tenant Architecture Patterns
+  - references/multi-tenant-fundamentals.md — Multi Tenant Fundamentals
+  - references/tenant-isolation.md — Tenant Isolation Models
+  - references/tenant-lifecycle.md — Tenant Lifecycle Management
+  - references/tenant-provisioning.md — Tenant Provisioning
 ## Handoff
 For compliance requirements on tenant isolation, hand off to `enterprise-compliance-audit`. For cost allocation per tenant, hand off to `enterprise-cost-governance`.

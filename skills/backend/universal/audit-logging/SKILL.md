@@ -137,11 +137,12 @@ SELECT COUNT(*) FROM (
 - Test tamper detection regularly (at least quarterly for SOC 2).
 
 ## References
-- `references/audit-trail.md` — Immutable audit trail implementation
-- `references/compliance-logging.md` — Compliance logging patterns
-- `references/audit-log-architecture.md` — Audit log architecture and pipeline patterns
-- `references/audit-log-compliance.md` — Audit log regulatory compliance and retention
-
+  - references/audit-log-architecture.md — Audit Log Architecture
+  - references/audit-log-compliance.md — Audit Log Compliance
+  - references/audit-log-implementation.md — Audit Log Implementation
+  - references/audit-log-monitoring.md — Audit Log Monitoring
+  - references/audit-trail.md — Audit Trail
+  - references/compliance-logging.md — Compliance Logging
 ## Handoff
 No artifact produced unless requested.
 Next skill: plugin-architecture — extend the audit system with custom event handlers.

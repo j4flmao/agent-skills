@@ -247,11 +247,12 @@ export class UserService {
 - OnPush change detection is default for standalone components.
 
 ## References
-- `references/module-structure.md` — Angular standalone component structure and routing
-- `references/signals-guide.md` — Signals, Signal Store, input/output with signals
-- `references/standalone-components.md` — bootstrapApplication, lazy loading, migration
-- `references/angular-routing.md` — route configuration, lazy loading, guards, resolvers, navigation, NgModule
-
+  - references/angular-module-architecture.md — Angular Module Architecture
+  - references/angular-performance.md — Angular Performance
+  - references/angular-routing.md — Angular Modules & Routing
+  - references/module-structure.md — Angular Module Structure
+  - references/signals-guide.md — Angular Signals Guide
+  - references/standalone-components.md — Angular Standalone Components
 ## Handoff
 No artifact produced.
 Next skill: angular-patterns — DI, interceptors, guards, NgRx vs Signal Store.

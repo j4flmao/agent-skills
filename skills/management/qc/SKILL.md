@@ -198,11 +198,12 @@ jobs:
 - Coverage without test quality is meaningless — review test assertions, not just lines
 
 ## References
-- `references/quality-gates-matrix.md` — quality gates per language with tool-specific configs
-- `references/technical-debt-register.md` — technical debt tracking template
-- `references/inspection-process.md` — Code inspection process and peer review checklists
-- `references/qc-checklists.md` — Quality control checklists per development phase
-
+  - references/inspection-process.md — Inspection Process
+  - references/qc-advanced.md — Qc Advanced Topics
+  - references/qc-checklists.md — QC Checklists
+  - references/qc-fundamentals.md — Qc Fundamentals
+  - references/quality-gates-matrix.md — Quality Gates per Language
+  - references/technical-debt-register.md — Technical Debt Register Template
 ## Handoff
 After completing this skill:
 - Next skill: **code-review** — detailed code review on the implementation

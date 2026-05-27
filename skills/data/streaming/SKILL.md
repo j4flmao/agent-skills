@@ -236,11 +236,12 @@ Both provide incremental materialized views on streaming data using PostgreSQL-c
 - Set retention based on replay and audit requirements
 
 ## References
-- `references/kafka-architecture.md` — Kafka topics, partitions, replication, Schema Registry, Avro/Protobuf, consumer groups, rebalancing, monitoring
-- `references/flink-streaming.md` — Flink job structure, event time, watermarks, windowing, state management, checkpointing, exactly-once semantics, ksqlDB, CDC, monitoring
-- `references/pulsar-patterns.md` — Pulsar broker/bookie separation, subscription types, geo-replication, tiered storage, Functions
-- `references/streaming-databases.md` — Materialize incremental views, RisingWave cloud-native streaming SQL, stream-table joins
-
+  - references/flink-streaming.md — Flink Streaming
+  - references/kafka-architecture.md — Kafka Architecture
+  - references/pulsar-patterns.md — Apache Pulsar Patterns
+  - references/streaming-architecture.md — Streaming Architecture
+  - references/streaming-databases.md — Streaming Databases
+  - references/streaming-monitoring.md — Streaming Monitoring
 ## Handoff
 `data-data-warehouse` for streaming data landing in the warehouse
 `data-etl-pipeline` for batch processing of streamed data

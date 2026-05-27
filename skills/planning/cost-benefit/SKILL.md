@@ -95,12 +95,13 @@ Proceed: positive NPV, strong ROI, acceptable payback period. Reject: negative N
 - Do-nothing baseline must be documented — "no investment" is a valid scenario
 
 ## References
-- `references/cost-estimation.md` — Build vs buy detailed comparison, TCO components (labor, infrastructure, maintenance, training, migration, licensing), estimation techniques
-- `references/benefit-analysis.md` — Benefit types and quantification methods, NPV formula and calculation, payback period, sensitivity analysis with tornado charts
-- `references/project-valuation.md` — Project valuation: cost estimation, benefit realization, payback analysis, ROI calculation with examples
-- `references/cba-templates.md` — CBA templates: spreadsheet templates, sensitivity tables, scenario analysis, investment committee presentation
-- `references/portfolio-prioritization.md` — Portfolio prioritization: cost-benefit ranking, weighted scoring, opportunity cost, resource constraints, capacity alignment
-
+  - references/benefit-analysis.md — Benefit Analysis
+  - references/cba-templates.md — CBA Templates
+  - references/cost-benefit-advanced.md — Cost Benefit Advanced Topics
+  - references/cost-benefit-fundamentals.md — Cost Benefit Fundamentals
+  - references/cost-estimation.md — Cost Estimation
+  - references/portfolio-prioritization.md — Portfolio Prioritization
+  - references/project-valuation.md — Project Valuation
 ## Handoff
 `planning/create-pitch-deck` for business case presentation with ROI and NPV highlights
 `planning/create-adr` for recording the investment decision with rationale

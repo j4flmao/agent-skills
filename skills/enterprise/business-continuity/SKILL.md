@@ -182,11 +182,13 @@ On change: re-test affected runbook within 30 days of architectural change
 - Ransomware playbook assumes backups also compromised; document immutable backup location.
 
 ## References
-- `references/bcp-plan.md` — BCP document structure, BIA template, tier matrix
-- `references/vendor-risk.md` — Vendor classification, fallback patterns, SLA monitoring
-- `references/regional-failure.md` — Multi-region playbook, GeoDNS cutover, data reconciliation
-- `references/ransomware-playbook.md` — Detection, isolation, immutable backup, negotiation policy
-
+  - references/bcp-plan.md — BCP Plan — Structure, BIA, Tier Matrix
+  - references/business-continuity-advanced.md — Business Continuity Advanced Topics
+  - references/business-continuity-fundamentals.md — Business Continuity Fundamentals
+  - references/holding-statements.md — Holding Statement Templates
+  - references/ransomware-playbook.md — Ransomware Playbook
+  - references/regional-failure.md — Regional Failure — Multi-Region Playbook
+  - references/vendor-risk.md — Vendor Risk — Classification, Fallback, SLA Monitoring
 ## Handoff
 - `enterprise-high-availability` for technical replication / failover design.
 - `enterprise-sla-management` for customer SLA structure and credit calculations.

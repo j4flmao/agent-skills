@@ -67,11 +67,14 @@ Structured report with:
 6. Blocking defects stop sign-off — document workarounds if accepting with known issues
 
 ## References
-- `references/uat-process.md` — User Acceptance Testing process
-- `references/alpha-beta.md` — Alpha and beta testing programs
-- `references/business-scenarios.md` — Business scenario testing
-- `references/acceptance-criteria.md` — Acceptance criteria and Gherkin
-
+  - references/acceptance-criteria.md — Acceptance Criteria Deep Dive
+  - references/acceptance-testing-advanced.md — Acceptance Testing Advanced Topics
+  - references/acceptance-testing-fundamentals.md — Acceptance Testing Fundamentals
+  - references/alpha-beta.md — Alpha and Beta Testing
+  - references/beta-program-management.md — Beta Program Management
+  - references/business-scenarios.md — Business Scenario Testing
+  - references/gherkin-best-practices.md — Gherkin Best Practices
+  - references/uat-process.md — User Acceptance Testing (UAT) Process
 ## Handoff
 After acceptance testing completion, hand off to:
 - `quality-regression-testing` — for regression suite updates from accepted changes

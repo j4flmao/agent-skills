@@ -105,11 +105,12 @@ Or use a translation layer that adapts v2 response to v1 format.
 - Never version by date alone — combine with semver or release-based numbering.
 
 ## References
-- `references/breaking-change-mgmt.md` — Breaking change management workflow
-- `references/version-discovery.md` — Content negotiation, version negotiation, sunset/deprecation headers, API changelog
-- `references/version-lifecycle.md` — Deprecation policy, sunset headers, migration windows, breaking change windows
-- `references/versioning-strategies.md` — Versioning strategy comparison
-
+  - references/breaking-change-mgmt.md — Breaking Change Management
+  - references/version-compatibility-testing.md — API Versioning — Compatibility Testing
+  - references/version-discovery.md — Version Discovery Reference
+  - references/version-lifecycle.md — API Version Lifecycle Reference
+  - references/version-migration-automation.md — API Version Migration Automation
+  - references/versioning-strategies.md — API Versioning Strategies
 ## Handoff
 No artifact produced unless requested.
 Next skill: scheduling-cron — schedule background jobs for version migration tasks.

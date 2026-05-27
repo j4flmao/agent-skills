@@ -104,10 +104,11 @@ Orchestrator (Terraform/Pulumi/Crossplane)
 - All platform components must have documented SLAs for the platform team
 
 ## References
-- `references/platform-patterns.md` — Platform engineering patterns and anti-patterns
-- `references/backstage-config.md` — Backstage setup, plugins, and software templates
-- `references/idp-blueprint.md` — IDP architecture blueprint and adoption roadmap
-- `references/platform-teams.md` — Platform team models, APIs, internal products, team topology
-
+  - references/backstage-config.md — Backstage Configuration Guide
+  - references/idp-blueprint.md — IDP Architecture Blueprint
+  - references/platform-engineering-advanced.md — Platform Engineering Advanced Topics
+  - references/platform-engineering-fundamentals.md — Platform Engineering Fundamentals
+  - references/platform-patterns.md — Platform Engineering Patterns
+  - references/platform-teams.md — Platform Team Models
 ## Handoff
 Related skills: devops-sre-practices (reliability), devops-internal-developer-platform (deep IDP), devops-policy-as-code (guardrails), devops-progressive-delivery (deployment strategies).

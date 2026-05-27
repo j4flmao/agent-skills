@@ -142,11 +142,12 @@ Use `@astrojs/netlify`, `@astrojs/vercel`, `@astrojs/cloudflare` adapters. For S
 - Frontmatter runs on server/build — keep data fetching there.
 
 ## References
-- `references/astro-islands.md` — client directives, hydration strategies, framework components
-- `references/astro-content.md` — collections, schemas, rendering, images
-- `references/astro-collections.md` — advanced content queries, pagination, RSS, MDX, images
-- `references/astro-integrations.md` — framework integrations, official modules, community modules, adapters
-
+  - references/astro-collections.md — Astro Collections & Content Management
+  - references/astro-content.md — Astro Content — Collections, Schemas, Rendering, Images
+  - references/astro-data-loading.md — Astro Data Loading
+  - references/astro-integrations.md — Astro Integrations
+  - references/astro-islands.md — Astro Islands — Client Directives, Hydration Strategies, Framework Components
+  - references/astro-project-architecture.md — Astro Architecture
 ## Handoff
 No artifact produced.
 Next skill: frontend-universal-seo for meta, sitemap, structured data. Or frontend-universal-pwa for service worker.

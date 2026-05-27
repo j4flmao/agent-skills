@@ -281,11 +281,12 @@ models:
 - Document column descriptions and model relationships
 
 ## References
-- `references/dbt-core.md` — Models, materializations, Jinja/macros, ref/source, tests, docs
-- `references/metrics-layer.md` — dbt Metrics, MetricFlow, Cube.js, semantic layer design, metric definitions
-- `references/data-modeling.md` — Marts approach, OBT, dimensional modeling, medallion architecture
-- `references/sql-analytics.md` — Window functions, CTEs, pivot/unpivot, statistical SQL, time series, UDFs
-
+  - references/data-modeling.md — Data Modeling for Analytics Reference
+  - references/data-quality-testing.md — Data Quality Testing
+  - references/data-warehouse-architecture.md — Data Warehouse Architecture
+  - references/dbt-core.md — dbt Core Reference
+  - references/metrics-layer.md — Metrics Layer Reference
+  - references/sql-analytics.md — SQL for Analytics Reference
 ## Handoff
 `data-science-statistical-analysis` for analytical statistical methods
 `data-science-experimentation` for experiment metric pipelines

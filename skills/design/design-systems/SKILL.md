@@ -98,11 +98,12 @@ Options ranked by maturity: 1) Design Token plugin (Tokens Studio) → JSON → 
 - Storybook stories cover every component variant + state
 
 ## References
-- `references/component-library.md` — Component Library
-- `references/design-system-tokens.md` — Design System Tokens
-- `references/design-system-workflow.md` — Design System Workflow
-- `references/design-tokens.md` — Design Tokens
-
+  - references/component-library.md — Component Library
+  - references/design-system-tokens.md — Design System Tokens
+  - references/design-system-workflow.md — Design System Workflow
+  - references/design-systems-advanced.md — Design Systems Advanced Topics
+  - references/design-systems-fundamentals.md — Design Systems Fundamentals
+  - references/design-tokens.md — Design Tokens
 ## Handoff
 `design-accessibility` for a11y audit of the component library.
 `design-prototyping` for interaction specs on component states.

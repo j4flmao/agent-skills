@@ -51,7 +51,9 @@ Design motion systems for digital products: animation principles, micro-interact
 - Pause/resume/seek controls
 
 ## References
-- `references/animation-principles.md` — Easing curves, duration, stagger, orchestration, spring physics
-- `references/lotti-rive.md` — Lottie and Rive animation formats, runtime integration, performance optimization
-- `references/motion-accessibility.md` — prefers-reduced-motion, vestibular disorders, motion budget, WCAG motion guidelines
-- `references/ui-animation-patterns.md` — Micro-interactions, transitions, loading states, parallax, scroll-triggered animation
+  - references/animation-principles.md — Animation Principles Reference
+  - references/lotti-rive.md — Lottie and Rive Animation Reference
+  - references/motion-accessibility.md — Motion Accessibility Reference
+  - references/motion-design-advanced.md — Motion Design Advanced Topics
+  - references/motion-design-fundamentals.md — Motion Design Fundamentals
+  - references/ui-animation-patterns.md — UI Animation Patterns Reference

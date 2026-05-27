@@ -56,11 +56,12 @@ Design and maintain SIEM infrastructure, onboard log sources, develop correlatio
 - [ ] Tuning strategy documented for FP reduction
 
 ## References
-- `references/siem-architecture.md` — SIEM components and data flow
-- `references/correlation-rules.md` — rule patterns and examples
-- `references/log-sources-ingestion.md` — log source onboarding, syslog, WEF, and cloud ingestion
-- `references/detection-content.md` — detection content creation, correlation patterns, and rule lifecycle
-- `references/siem-tuning.md` — SIEM tuning, FP/FN optimization, and storage strategy
-
+  - references/correlation-rules.md — SIEM Correlation Rules
+  - references/detection-content.md — Detection Content Creation
+  - references/log-sources-ingestion.md — Log Source Ingestion
+  - references/siem-architecture.md — SIEM Architecture
+  - references/siem-engineering-advanced.md — Siem Engineering Advanced Topics
+  - references/siem-engineering-fundamentals.md — Siem Engineering Fundamentals
+  - references/siem-tuning.md — SIEM Tuning
 ## Handoff
 Use cases feed into soc-operations for triage workflows. Rules can be automated via soar-automation.

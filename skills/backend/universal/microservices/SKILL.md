@@ -173,18 +173,11 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 | **No Monitoring** | Cannot debug production issues | Add OpenTelemetry before going live |
 
 ## References
-
-### Reference Files
-- `references/decomposition-patterns.md` — Detailed decomposition strategies with examples
-- `references/communication-patterns.md` — Sync/async/saga/outbox patterns with code sketches
-- `references/data-patterns.md` — Database-per-service, CQRS, Event Sourcing, Saga patterns
-- `references/microservices-communication.md` — Communication patterns, gRPC, message queues, circuit breakers
-
-### Related Skills
-- `backend/universal/design-patterns/SKILL.md` — Foundational GoF patterns
-- `backend/universal/event-driven/SKILL.md` — Event-driven architecture
-- `backend/universal/clean-architecture/SKILL.md` — Monolith to microservices transition
-- `devops/containerization/SKILL.md` — Container and orchestration
-
+  - references/communication-patterns.md — Communication Patterns
+  - references/data-patterns.md — Data Patterns
+  - references/decomposition-patterns.md — Decomposition Patterns
+  - references/microservices-communication.md — Microservices Communication
+  - references/microservices-observability.md — Microservices Observability
+  - references/microservices-testing.md — Microservices Testing
 ## Handoff
 Hand off to `devops/containerization/SKILL.md` for container orchestration setup. Hand off to `backend/universal/event-driven/SKILL.md` for detailed event-driven patterns. Hand off to `backend/universal/database-patterns/SKILL.md` for data consistency strategies.

@@ -237,18 +237,14 @@ describe('Order Flow', () => {
 ```
 
 ## References
-
-### Reference Files
-- `references/architecture.md` — project structure, folder conventions
-- `references/navigation.md` — Expo Router, React Navigation, deep linking
-- `references/performance.md` — FlatList, Hermes, JS thread optimization
-- `references/testing.md` — Jest, RNTL, Detox, MSW
-
-### Related Skills
-- `mobile/android/SKILL.md` — Android-specific native modules
-- `mobile/ios/SKILL.md` — iOS-specific native modules
-- `mobile/universal/deployment/SKILL.md` — app store deployment
-
+  - references/architecture.md — React Native Architecture
+  - references/navigation-routing.md — React Native Navigation and Routing
+  - references/navigation.md — React Native Navigation
+  - references/performance-optimization.md — React Native Performance Optimization
+  - references/performance.md — React Native Performance
+  - references/react-native-advanced.md — React Native Advanced Topics
+  - references/react-native-fundamentals.md — React Native Fundamentals
+  - references/testing.md — React Native Testing
 ## Handoff
 
 Hand off to `mobile/universal/deployment/SKILL.md` for build and deployment.

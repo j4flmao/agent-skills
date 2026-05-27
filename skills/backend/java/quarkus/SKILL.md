@@ -184,16 +184,11 @@ public class OrderResourceTest {
 - @QuarkusIntegrationTest for full integration with running instances.
 
 ## References
-
-### Reference Files
-- `references/quarkus-setup.md` — Quarkus project setup, extensions, Dev UI
-- `references/quarkus-extension-guide.md` — Writing and configuring extensions
-- `references/quarkus-reactive.md` — RESTEasy Reactive, Mutiny, Hibernate Reactive, messaging
-- `references/quarkus-deployment.md` — Native image, Docker, CI/CD, platform deployment
-
-### Related Skills
-- `backend/universal/api-response/SKILL.md` — API response envelope
-- `backend/universal/oop-principles/SKILL.md` — SOLID for Java
-
+  - references/quarkus-deployment.md — Quarkus Deployment
+  - references/quarkus-extension-guide.md — Quarkus Extension Guide
+  - references/quarkus-reactive.md — Quarkus Reactive
+  - references/quarkus-security.md — Quarkus Security Reference
+  - references/quarkus-setup.md — Quarkus Setup Guide
+  - references/quarkus-testing.md — Quarkus Testing Reference
 ## Handoff
 Hand off to `backend/universal/api-response/SKILL.md` for API response formats.

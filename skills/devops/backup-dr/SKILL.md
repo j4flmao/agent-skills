@@ -142,10 +142,13 @@ Backup/DR incidents declared through incident management process (SEV classifica
 BCP defines organizational response beyond technical DR: alternate work locations, communication tree for stakeholders, customer notification templates, regulatory reporting requirements, insurance claim procedures. BCP linked to DR runbooks: when to declare business continuity event (vs technical incident), who makes the call (CEO/CISO for BCP, on-call engineer for technical incident), how long before BCP is enacted (typically 4-8 hours of downtime). BCP testing: annual tabletop exercise with business stakeholders, quarterly update of contact lists and templates.
 
 ## References
-- [Backup Strategies](./references/backup-strategies.md) — database backup, K8s Velero, file replication, retention policies
-- [Disaster Recovery](./references/disaster-recovery.md) — DR patterns, RTO/RPO, failover, testing, runbooks
-- [Backup 3-2-1](./references/backup-3-2-1.md) — 3-2-1 rule, backup types, retention policies, Velero, cross-region replication
-- [DR Recovery](./references/dr-recovery.md) — Pilot Light, Warm Standby, Active-Active, failover runbooks, DR testing
-
+  - references/backup-3-2-1.md — Backup 3-2-1 Rule
+  - references/backup-automation.md — Backup Automation
+  - references/backup-disaster-recovery.md — Backup and Disaster Recovery
+  - references/backup-dr-advanced.md — Backup Dr Advanced Topics
+  - references/backup-dr-fundamentals.md — Backup Dr Fundamentals
+  - references/backup-strategies.md — Backup Strategies
+  - references/disaster-recovery.md — Disaster Recovery
+  - references/dr-recovery.md — Disaster Recovery Patterns
 ## Handoff
 Hand off to backup-dr for backup strategy and DR planning. Hand off to cloud-specific skills (aws/azure/gcp) for cloud storage and replication. Hand off to kubernetes-patterns for Velero setup. Hand off to monitoring for backup health alerts. Hand off to incident-response when DR failover triggers incident response process. Hand off to security for ransomware protection and backup encryption key management. Hand off to finops for backup storage cost optimization and lifecycle management.

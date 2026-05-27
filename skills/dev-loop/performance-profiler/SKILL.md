@@ -146,11 +146,12 @@ Re-measure same metrics under same conditions. Record before/after. If improveme
 - Regression test every optimization — performance fixes should not break correctness.
 
 ## References
-- `references/bottleneck-analysis.md` — Bottleneck Analysis
-- `references/bottleneck-patterns.md` — Bottleneck Patterns
-- `references/profiling-tools-comparison.md` — Profiling Tools Comparison
-- `references/profiling-tools.md` — Profiling Tools
-
+  - references/bottleneck-analysis.md — Bottleneck Analysis Reference
+  - references/bottleneck-patterns.md — Bottleneck Patterns Reference
+  - references/performance-profiler-advanced.md — Performance Profiler Advanced Topics
+  - references/performance-profiler-fundamentals.md — Performance Profiler Fundamentals
+  - references/profiling-tools-comparison.md — Profiling Tools Comparison
+  - references/profiling-tools.md — Profiling Tools Reference
 ## Handoff
 Next skill: devops-observability for distributed tracing setup.
 Carry forward: profile results, bottleneck list, fix priorities.

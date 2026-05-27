@@ -167,11 +167,12 @@ For SvelteKit, use `load` function in `+page.ts` / `+page.server.ts` for SSR dat
 - Key each blocks with (item.id) for proper list transitions.
 
 ## References
-- `references/svelte-forms.md` — bind:value, form actions, validation, file uploads, progressive enhancement
-- `references/svelte-transitions.md` — transition/animate/in view directives, custom transition functions, crossfade
-- `references/svelte-routing.md` — SvelteKit routing, navigation, params, guards, custom routing
-- `references/svelte-state.md` — $state patterns, derived state, shared .svelte.js, context, class-based stores
-
+  - references/svelte-component-patterns.md — Svelte Component Patterns
+  - references/svelte-forms.md — Svelte Forms — bind:value, Form Actions, Validation, File Uploads
+  - references/svelte-routing.md — Svelte Routing Patterns
+  - references/svelte-state.md — Svelte State Management Patterns
+  - references/svelte-stores-state.md — Svelte Stores and State
+  - references/svelte-transitions.md — Svelte Transitions — Transition, Animation, InView Directives, Custom Transitions
 ## Handoff
 No artifact produced.
 Next skill: frontend-sveltekit if using SvelteKit, or frontend-universal-testing.

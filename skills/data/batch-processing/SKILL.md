@@ -259,11 +259,14 @@ spark.sql.codegen.wholeStage = true; (default)
 - Set spark.sql.files.maxPartitionBytes = 128MB for balanced parallelism
 
 ## References
-- `references/hive-spark-sql.md` — Hive metastore, Spark SQL Catalyst, Tungsten, HQL vs Spark SQL
-- `references/batch-optimization.md` — Partitioning, bucketing, file format selection, vectorized read, DPP, statistics
-- `references/batch-job-scheduling.md` — Dependency graphs, SLA-based scheduling, retry policies, alerting
-- `references/batch-vs-streaming.md` — Lambda/kappa architecture, latency vs cost decision framework
-
+  - references/batch-error-handling.md — Batch Processing Error Handling
+  - references/batch-job-scheduling.md — Batch Job Scheduling Reference
+  - references/batch-monitoring.md — Batch Pipeline Monitoring
+  - references/batch-optimization.md — Batch Optimization Reference
+  - references/batch-processing-patterns.md — Batch Processing Patterns
+  - references/batch-vs-streaming.md — Batch vs Streaming Decision Framework
+  - references/hive-spark-sql.md — Hive and Spark SQL Reference
+  - references/incremental-loading.md — Incremental Loading Strategies
 ## Handoff
 `data-distributed-compute` for Spark cluster tuning and resource management
 `data-data-lake` for lake table formats (Delta/Iceberg/Hudi) on batch data

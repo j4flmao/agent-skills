@@ -126,11 +126,12 @@ workflows:
 - Always pin Docker image versions in executors.
 
 ## References
-- `references/config-structure.md` — Jobs, workflows, executors, caching
-- `references/orb-ecosystem.md` — Pre-built orbs, custom orbs, testing
-- `references/performance-optimization.md` — Parallelism, test splitting, DLC
-- `references/kubernetes-integration.md` — Helm, kubectl, kustomize, contexts
-
+  - references/circleci-advanced.md — Circleci Advanced Topics
+  - references/circleci-fundamentals.md — Circleci Fundamentals
+  - references/config-structure.md — CircleCI Configuration Structure
+  - references/kubernetes-integration.md — CircleCI Kubernetes Integration
+  - references/orb-ecosystem.md — CircleCI Orb Ecosystem
+  - references/performance-optimization.md — CircleCI Performance Optimization
 ## Handoff
 After completing this skill:
 - Next skill: **devops-kubernetes-autoscaling** — autoscaling configurations deployed via CircleCI

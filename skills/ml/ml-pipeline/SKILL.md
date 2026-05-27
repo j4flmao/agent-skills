@@ -194,10 +194,11 @@ def training_pipeline(data_url: str):
 - Rollback restores previous model version and triggers retraining.
 
 ## References
-- `references/kubeflow-tfx.md` — Kubeflow Pipelines components, TFX pipeline, component patterns
-- `references/ml-cicd.md` — CI/CD for ML pipelines, validation gates, staging, rollback
-- `references/pipeline-monitoring.md` — Pipeline observability, drift detection, alerting, retraining triggers, data quality monitoring
-- `references/pipeline-orchestration.md` — Workflow orchestrators (Airflow, Prefect, Dagster), DAG design, scheduling, dependency management
-
+  - references/kubeflow-tfx.md — Kubeflow Pipelines & TFX
+  - references/ml-cicd.md — CI/CD for ML Pipelines
+  - references/ml-pipeline-advanced.md — Ml Pipeline Advanced Topics
+  - references/ml-pipeline-fundamentals.md — Ml Pipeline Fundamentals
+  - references/pipeline-monitoring.md — ML Pipeline Monitoring
+  - references/pipeline-orchestration.md — ML Pipeline Orchestration
 ## Handoff
 For model serving deployment, hand off to `ml-model-serving`. For feature store configuration, hand off to `ml-feature-store`. For experiment tracking setup, hand off to `ai-model-training`.

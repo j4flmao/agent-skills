@@ -125,11 +125,12 @@ Prefetch strategy is critical for instant navigation. Bundle splitting is automa
 - Form data is serialized — use routeAction$ for mutations.
 
 ## References
-- `references/qwik-resumable.md` — resumability, serialization, dollar API, fine-grained lazy loading
-- `references/qwik-city.md` — routing, loaders, actions, middleware, deployment
-- `references/qwik-resumability.md` — resumability vs hydration, serialization, optimizer, lazy flow
-- `references/qwik-optimization.md` — prefetch strategy, bundle optimization, visibleTask guidelines, code splitting
-
+  - references/qwik-city-routing.md — Qwik City Routing
+  - references/qwik-city.md — Qwik City — Routing, Loaders, Actions, Middleware, Deployment
+  - references/qwik-optimization.md — Qwik Optimization Patterns
+  - references/qwik-resumability.md — Qwik Resumability Architecture
+  - references/qwik-resumable.md — Qwik Resumability — Resumability, Serialization, Dollar API, Fine-Grained Lazy
+  - references/qwik-testing.md — Qwik Testing Reference
 ## Handoff
 No artifact produced.
 Next skill: frontend-universal-seo or frontend-universal-testing for Qwik projects.

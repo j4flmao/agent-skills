@@ -100,10 +100,11 @@ Create pricing page variants for A/B testing. Test monthly vs annual billing (an
 - Price changes must include communicated value justification.
 
 ## References
-- `references/packaging-tiers.md` — Packaging Tiers
-- `references/pricing-models.md` — Pricing Models
-- `references/willingness-to-pay.md` — Willingness To Pay
-- `references/pricing-experimentation.md` — Pricing experiments, WTP studies, price elasticity testing
-
+  - references/packaging-tiers.md — Packaging and Tiers
+  - references/pricing-experimentation.md — Pricing Experimentation
+  - references/pricing-models.md — Pricing Models
+  - references/pricing-strategy-advanced.md — Pricing Strategy Advanced Topics
+  - references/pricing-strategy-fundamentals.md — Pricing Strategy Fundamentals
+  - references/willingness-to-pay.md — Willingness to Pay (WTP)
 ## Handoff
 For growth experiments on pricing, hand off to `product-growth-engineering`. For GTM strategy for new pricing, hand off to `product-go-to-market`.

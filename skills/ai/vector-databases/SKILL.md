@@ -121,10 +121,13 @@ Determine: vector dimension, number of vectors, inserts/second, queries/second, 
 - Test ANN recall on your data distribution, not synthetic.
 
 ## References
-- `references/index-types.md` — Index Types
-- `references/indexing-strategies.md` — Indexing Strategies
-- `references/operations.md` — Operations
-- `references/vector-db-comparison.md` — Vector Db Comparison
-
+  - references/index-types.md — Vector Index Types
+  - references/indexing-strategies.md — Indexing Strategies
+  - references/operations.md — Vector Database Operations
+  - references/vector-databases-advanced.md — Vector Databases Advanced Topics
+  - references/vector-databases-fundamentals.md — Vector Databases Fundamentals
+  - references/vector-db-comparison.md — Vector Database Comparison
+  - references/vector-db-scaling.md — Vector Database Scaling
+  - references/vector-db-security.md — Vector Database Security
 ## Handoff
 For embedding model selection before index creation, hand off to `ai-rag-patterns`. For ML infrastructure around vector DB, hand off to `ai-llm-ops`.

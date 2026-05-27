@@ -98,10 +98,11 @@ Automate monthly SLA reports per customer. Track SLA attainment trend. Calculate
 - Feature freeze enforced when error budget fully consumed.
 
 ## References
-- `references/slo-definition.md` — SLO definition guide with SLI measurement
-- `references/error-budget.md` — Error budget calculation and burn rate alerting
-- `references/sla-monitoring.md` — SLA monitoring dashboards and compliance reporting
-- `references/sla-definitions.md` — SLA definition templates and multi-tier service structures
-
+  - references/error-budget.md — Error Budget Management
+  - references/sla-definitions.md — SLA Definitions
+  - references/sla-management-advanced.md — Sla Management Advanced Topics
+  - references/sla-management-fundamentals.md — Sla Management Fundamentals
+  - references/sla-monitoring.md — SLA Monitoring
+  - references/slo-definition.md — SLO Definition Guide
 ## Handoff
 For compliance-related SLA requirements, hand off to `enterprise-compliance-audit`. For cost implications of SLA tiers, hand off to `enterprise-cost-governance`.

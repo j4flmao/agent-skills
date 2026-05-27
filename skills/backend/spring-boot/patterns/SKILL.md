@@ -373,16 +373,11 @@ public class AsyncOrderHandler {
 - TestContainers for database integration tests, WireMock for HTTP stubs.
 
 ## References
-
-### Reference Files
-- `references/spring-patterns.md` — DI, AOP, transaction, event-driven patterns
-- `references/spring-testing.md` — Unit test, slice tests, TestContainers, WireMock
-- `references/spring-boot-deployment.md` — Docker, profiles, health checks, performance tuning
-- `references/spring-boot-observability.md` — Actuator, metrics, tracing, logging, health indicators
-
-### Related Skills
-- `backend/spring-boot/architecture/SKILL.md` — Spring Boot project structure
-- `backend/universal/testing/SKILL.md` — General testing patterns
-
+  - references/spring-boot-data-access.md — Spring Boot Data Access Reference
+  - references/spring-boot-deployment.md — Spring Boot Deployment
+  - references/spring-boot-observability.md — Spring Boot Observability
+  - references/spring-boot-security.md — Spring Boot Security Reference
+  - references/spring-patterns.md — Spring Patterns
+  - references/spring-testing.md — Spring Testing
 ## Handoff
 Hand off to `backend/spring-boot/architecture/SKILL.md` for project structure or `backend/universal/testing/SKILL.md` for broader testing patterns.

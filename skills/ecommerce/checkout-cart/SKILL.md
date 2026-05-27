@@ -58,7 +58,9 @@ Cart → Pending → Confirmed → Processing → Shipped → Delivered
 | Stripe Tax | Built-in | Stripe users |
 
 ## References
-- `references/cart-architecture.md` — Cart data model and state management
-- `references/discount-engine.md` — Coupon and promotion engine design
-- `references/checkout-optimization.md` — Checkout flow optimization and conversion
-- `references/checkout-ux.md` — Checkout UX patterns, cart recovery, promotion integration, conversion
+  - references/cart-architecture.md — Cart Data Model
+  - references/checkout-cart-advanced.md — Checkout Cart Advanced Topics
+  - references/checkout-cart-fundamentals.md — Checkout Cart Fundamentals
+  - references/checkout-optimization.md — Checkout Optimization
+  - references/checkout-ux.md — Checkout UX Patterns
+  - references/discount-engine.md — Discount Engine Design

@@ -260,11 +260,12 @@ NVMe-oF/TCP: 25G+ recommended, dedicated cluster network
 - Restore drill quarterly (untested snapshot = no snapshot).
 
 ## References
-- `references/ceph.md` — Cluster design, OSD layout, RBD/CephFS/RGW, ops commands
-- `references/zfs-raid.md` — ZFS pools, RAIDZ, snapshots, send/recv; RAID levels
-- `references/san-nas-iscsi.md` — SAN, NAS, iSCSI, NVMe-oF, MPIO
-- `references/snapshots.md` — Snapshot strategies, retention, replication, restore
-
+  - references/ceph.md — Ceph — Cluster Design, OSDs, RBD/CephFS/RGW
+  - references/san-nas-iscsi.md — SAN / NAS / iSCSI / NVMe-oF — Network Storage
+  - references/snapshots.md — Snapshots — Strategy, Retention, Replication, Restore
+  - references/storage-infrastructure-advanced.md — Storage Infrastructure Advanced Topics
+  - references/storage-infrastructure-fundamentals.md — Storage Infrastructure Fundamentals
+  - references/zfs-raid.md — ZFS + RAID — Single-Node Strong Storage
 ## Handoff
 - `devops-bare-metal` for OSD node hardware spec and PXE provisioning.
 - `devops-network-infrastructure` for storage VLAN, jumbo MTU, dedicated fabric.

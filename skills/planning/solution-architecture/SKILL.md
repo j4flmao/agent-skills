@@ -62,10 +62,13 @@ Guide architecture decisions using ADRs, pattern selection, trade-off analysis, 
 Unlimited — architecture requires thorough analysis.
 
 ## References
-- `references/architecture-patterns-catalog.md` — comprehensive pattern catalog
-- `references/architecture-decision-framework.md` — decision framework
-- `references/adr-template.md` — ADR template
-- `references/solution-arch-templates.md` — ADRs, solution context diagrams, template patterns
-
+  - references/adr-template.md — ADR-{number}: {title}
+  - references/architecture-decision-framework.md — Architecture Decision Framework
+  - references/architecture-patterns-catalog.md — Architecture Patterns Catalog
+  - references/architecture-review-checklist.md — Architecture Review Checklist
+  - references/domain-modeling-guide.md — Domain Modeling Guide for Solution Architects
+  - references/solution-arch-templates.md — Solution Architecture Templates
+  - references/solution-architecture-advanced.md — Solution Architecture Advanced Topics
+  - references/solution-architecture-fundamentals.md — Solution Architecture Fundamentals
 ## Handoff
 Carry forward: ADR numbers used, decisions made, key trade-offs, outstanding decisions.

@@ -106,12 +106,11 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ```
 
 ## References
-
-- `references/map-sdks.md` — Map providers, markers, clustering, styling, gesture handling
-- `references/location-services.md` — Permissions, GPS, geofencing, background location, battery optimization
-- `references/map-integration.md` — Map SDK integration, cross-platform map usage, MapKit/Google Maps setup
-- `references/geofencing-patterns.md` — Region monitoring, significant location change, visit monitoring, battery optimization, geofence transitions, background execution
-- `references/map-customization.md` — Custom markers, clustering, polylines/polygons, tile overlays, style customization, offline maps, routing/navigation
-
+  - references/geofencing-patterns.md — Geofencing Patterns for Mobile
+  - references/location-privacy.md — Location Privacy — Mobile
+  - references/location-services.md — Location Services
+  - references/map-customization.md — Map Customization — Markers, Clustering, Styling, Offline
+  - references/map-integration.md — Map Integration
+  - references/map-sdks.md — Map SDKs
 ## Handoff
 Hand off to mobile-networking when offline map tile caching is needed, or mobile-perf when map rendering performance optimization is required.

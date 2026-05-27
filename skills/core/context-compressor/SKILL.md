@@ -219,10 +219,13 @@ Before delivering a compressed summary, verify:
 - [ ] Footer is appended as the final line
 
 ## References
-- `references/compression-strategies.md` — Compression Strategies
-- `references/state-management.md` — State Management
-- `references/summary-templates.md` — Summary Templates
-- `references/token-management.md` — Token Management
-
+  - references/compression-strategies.md — Compression Strategies
+  - references/context-compressor-advanced.md — Context Compressor Advanced Topics
+  - references/context-compressor-fundamentals.md — Context Compressor Fundamentals
+  - references/context-retrieval.md — Context Retrieval System
+  - references/context-window-management.md — Context Window Management
+  - references/state-management.md — State Management
+  - references/summary-templates.md — Summary Templates
+  - references/token-management.md — Token Management
 ## Handoff
 master-orchestrator — the compressed summary is injected at the start of the next work session for the master orchestrator skill to continue the work from where it was interrupted.

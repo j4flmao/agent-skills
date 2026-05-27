@@ -269,13 +269,12 @@ Actioned feedback encourages more participation.
 - Every meeting has agenda and outcome notes
 
 ## References
-- `references/stakeholder-mapping.md`
-- `references/communication-plan.md`
-- `references/status-report-template.md`
-- `references/stakeholder-management.md`
-  Cadence design, channel selection, status reports,
-  escalation triggers, feedback loops, surveys
-
+  - references/communication-plan.md — Communication Plan
+  - references/stakeholder-advanced.md — Stakeholder Advanced Topics
+  - references/stakeholder-fundamentals.md — Stakeholder Fundamentals
+  - references/stakeholder-management.md — Stakeholder Management
+  - references/stakeholder-mapping.md — Stakeholder Mapping
+  - references/status-report-template.md — Status Report Template
 ## Handoff
 `management/risk-management` for stakeholder-related risks
 `planning/create-roadmap` for roadmap adjustments

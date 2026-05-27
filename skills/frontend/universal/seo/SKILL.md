@@ -180,12 +180,12 @@ npx lhci assert --preset=lighthouse:recommended
 - Always validate JSON-LD with Google Rich Results Test before deploying
 
 ## References
-- `references/meta-tags.md` — Title, description, OG, Twitter Cards, hreflang
-- `references/ssr-seo.md` — SSR/SSG strategies, Core Web Vitals, framework-specific meta APIs
-- `references/structured-data.md`
-- `references/sitemap.md`
-- `references/performance-seo.md`
-
+  - references/meta-tags.md — Meta Tags Reference
+  - references/performance-seo.md — Performance SEO Reference
+  - references/seo-testing.md — SEO Testing Reference
+  - references/sitemap.md — Sitemap Reference
+  - references/ssr-seo.md — SSR/SSG SEO Reference
+  - references/structured-data.md — Structured Data Reference
 ## Handoff
 No artifact produced unless requested.
 Next skill: `frontend-pwa` (if the app needs offline PWA capabilities alongside SEO)

@@ -110,10 +110,11 @@ data class SyncConfig(
 ```
 
 ## References
-- `references/local-storage.md` — Local Storage
-- `references/mobile-database.md` — Mobile Database
-- `references/offline-sync.md` — Offline Sync
-- `references/sync-strategies.md` — Sync Strategies
-
+  - references/conflict-resolution.md — Conflict Resolution — Offline-First
+  - references/local-storage.md — Local Storage
+  - references/mobile-database.md — Mobile Local Database
+  - references/offline-first-architecture.md — Offline-First Architecture
+  - references/offline-sync.md — Offline Sync
+  - references/sync-strategies.md — Sync Strategies
 ## Handoff
 Hand off to mobile-networking skill when implementing the sync transport layer, or to mobile-storage for advanced local persistence patterns.

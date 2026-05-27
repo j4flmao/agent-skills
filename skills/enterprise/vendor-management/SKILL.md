@@ -97,10 +97,11 @@ Continuously monitor vendor health. Track security advisories and incidents. Rev
 - Exit strategy must be documented before contract signature for critical vendors.
 
 ## References
-- `references/vendor-selection.md` -- Vendor selection process and evaluation methodology
-- `references/contract-negotiation.md` -- Contract negotiation guide and key terms
-- `references/vendor-risk.md` -- Vendor risk assessment and management framework
-- `references/vendor-performance.md` -- Vendor performance and relationship management
-
+  - references/contract-negotiation.md — Contract Negotiation Guide
+  - references/vendor-management-advanced.md — Vendor Management Advanced Topics
+  - references/vendor-management-fundamentals.md — Vendor Management Fundamentals
+  - references/vendor-performance.md — Vendor Performance Management
+  - references/vendor-risk.md — Vendor Risk Management
+  - references/vendor-selection.md — Vendor Selection Process
 ## Handoff
 For compliance alignment, hand off to `enterprise-compliance-audit` for vendor control mapping. For architecture impact, hand off to `enterprise-architecture-governance` for vendor technology review.

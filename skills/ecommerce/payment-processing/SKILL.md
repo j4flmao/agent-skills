@@ -58,7 +58,11 @@ Plan → Customer → Subscription → Invoice → Payment
 | 4 | < 20k/year | SAQ (self-assessment) |
 
 ## References
-- `references/gateway-patterns.md` — Payment gateway integration patterns
-- `references/subscription-billing.md` — Subscription management and dunning
-- `references/pci-dss-guide.md` — PCI DSS compliance and tokenization
-- `references/payment-security.md` — PCI DSS, tokenization, 3DS, fraud detection, gateway patterns
+  - references/checkout-optimization.md — Checkout Optimization
+  - references/gateway-patterns.md — Payment Gateway Integration Patterns
+  - references/payment-processing-advanced.md — Payment Processing Advanced Topics
+  - references/payment-processing-fundamentals.md — Payment Processing Fundamentals
+  - references/payment-security.md — Payment Security
+  - references/pci-dss-guide.md — PCI DSS Compliance Guide
+  - references/stripe-integration.md — Stripe Integration
+  - references/subscription-billing.md — Subscription Billing

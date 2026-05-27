@@ -220,16 +220,11 @@ class GraphView: NSView {
 - Auto Layout or manual frame layout — never mix both.
 
 ## References
-
-### Reference Files
-- `references/appkit-architecture.md` — NSDocument, MVC, responder chain, Auto Layout, bindings, Core Data integration, window management
-- `references/appkit-controls.md` — Controls reference, customization, data sources
-- `references/appkit-modernization.md` — SwiftUI hosting, Combine, async/await, Catalyst, dark mode, sandboxing, accessibility
-- `references/appkit-best-practices.md` — AppKit best practices, structure, lifecycle, performance
-
-### Related Skills
-- `desktop/swiftui/SKILL.md` — Modern declarative alternative to AppKit
-- `desktop/electron/SKILL.md` — Cross-platform alternative
-
+  - references/appkit-advanced.md — Appkit Advanced Topics
+  - references/appkit-architecture.md — AppKit Architecture Reference
+  - references/appkit-best-practices.md — AppKit Best Practices
+  - references/appkit-controls.md — AppKit Controls Reference
+  - references/appkit-fundamentals.md — Appkit Fundamentals
+  - references/appkit-modernization.md — AppKit Modernization Reference
 ## Handoff
 Hand off to `desktop/swiftui/SKILL.md` when building new macOS features or migrating to declarative UI. Hand off to `desktop/electron/SKILL.md` when cross-platform deployment required.

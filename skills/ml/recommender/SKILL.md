@@ -168,38 +168,12 @@ Log all recommendation requests, candidate sets, ranking scores, and final displ
 Version embeddings and ranking models independently to enable isolated rollbacks.
 
 ## References
-- references/cf-matrix-factorization.md — User-based/item-based CF, SVD, ALS for implicit, BPR, evaluation precision@k/recall@k/NDCG
-- references/neural-recommender.md — Two-tower model, embedding layers, negative sampling, cold start, candidate generation, ranking, feature store integration
-- references/cold-start-strategies.md — New user/item cold start, content-based initialization, exploration bonus, multi-armed bandit, onboarding
-- references/recommender-evaluation.md — Offline metrics (NDCG, Recall@k), temporal split, leave-one-out, A/B testing, dashboard metrics, common pitfalls
-
-### Edge Cases and Special Scenarios
-Sequential/session-based recommendation: use GRU4Rec, SR-GNN, SASRec, BERT4Rec for next-item prediction.
-News recommendation: use content embeddings (BERT for headlines), recency bias, topic diversity maximization.
-Marketplace recommendation (buyers + sellers): model both sides, balance buyer relevance with seller exposure fairness.
-Location-based recommendation: use geohash features, distance decay weighting, local popularity signals.
-Cold start with side information: use content features (text, images, categories), metadata embeddings, warm-start via feature-based initialization.
-Cross-domain recommendation: use shared user embeddings across domains, domain adaptation techniques, CDCF (cross-domain CF).
-Multimedia recommendation: combine collaborative signals with visual/audio embeddings from pretrained models.
-
-### Framework Integration
-Surprise: SVD, SVD++, NMF, KNN, CoClustering for explicit rating prediction (pip install scikit-surprise).
-Implicit: ALS, BPR, Bayesian Personalised Ranking for implicit feedback (pip install implicit).
-LightFM: hybrid recommender combining collaborative and content-based signals with metadata features.
-Microsoft Recommenders: popular algorithms (SAR, ALS, BPR, VowpalWabbit, DeepRec) with evaluation utilities.
-Spotify Annoy: approximate nearest neighbor library for efficient retrieval at scale.
-TensorFlow Recommenders: two-tower, multi-task, retrieval and ranking models in TF.
-PyTorch RecSys: deep learning recommender models (NCF, Wide&Deep, DCN) in PyTorch.
-
-### Advanced Recommender Tips
-Use HNSW index with product quantization (PQ) for memory-efficient ANN retrieval at billion-item scale.
-Implement score calibration to ensure recommendation scores match expected engagement probabilities.
-For session-based recommendation, use GRU4Rec or SR-GNN for capturing short-term user intent.
-Use contextual bandits (LinUCB, Thompson sampling) for explore-exploit in cold start scenarios.
-Implement fairness constraints in recommendation: ensure demographic parity in exposure across groups.
-Use diversity-aware ranking: MMR (Maximum Marginal Relevance) or DPP (Determinantal Point Process).
-For real-time personalization, update user embeddings incrementally without full model retraining.
-Implement two-level retrieval: coarse retrieval with smaller embeddings, fine retrieval with full embeddings.
-
+  - references/cf-matrix-factorization.md — Collaborative Filtering & Matrix Factorization
+  - references/cold-start-strategies.md — Cold Start Strategies
+  - references/neural-recommender.md — Neural Recommender Systems
+  - references/recommender-advanced.md — Recommender Advanced Topics
+  - references/recommender-architecture.md — Recommender System Architecture
+  - references/recommender-evaluation.md — Recommender System Evaluation
+  - references/recommender-fundamentals.md — Recommender Fundamentals
 ## Handoff
 Hand off to ml-experiment-tracking for training runs. For search relevance improvements, hand off to search-patterns. For feature store setup, hand off to data-feature-store.

@@ -325,11 +325,14 @@ Druid is a real-time analytical database for high-concurrency OLAP on streaming/
 - Document grain explicitly in every fact table definition
 
 ## References
-- `references/warehouse-platforms.md` — Snowflake, BigQuery, Redshift, Databricks SQL, platform-specific features, auto-scaling, sizing, slots
-- `references/modeling-optimization.md` — Star schema, snowflake, fact/dimension tables, SCD, partitioning, clustering, materialized views, query optimization, cost management
-- `references/clickhouse-analytics.md` — ClickHouse MergeTree engines, vectorized execution, materialized views, distributed queries, performance tuning
-- `references/timescaledb-druid.md` — TimescaleDB hypertables, compression, continuous aggregates; Druid segments, rollup, real-time ingestion
-
+  - references/clickhouse-analytics.md — ClickHouse for Real-Time Analytics
+  - references/modeling-optimization.md — Modeling and Optimization
+  - references/timescaledb-druid.md — TimescaleDB and Apache Druid
+  - references/warehouse-cost-optimization.md — Warehouse Cost Optimization
+  - references/warehouse-data-sharing.md — Warehouse Data Sharing
+  - references/warehouse-observability.md — Warehouse Observability
+  - references/warehouse-platforms.md — Warehouse Platforms
+  - references/warehouse-security.md — Warehouse Security
 ## Handoff
 `data-etl-pipeline` for loading data into the warehouse schema
 `data-bi-tools` for connecting dashboards to the data model

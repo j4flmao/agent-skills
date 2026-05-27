@@ -105,11 +105,14 @@ Expose metrics: `job.duration`, `job.success`, `job.failure`, `job.last-run-time
 - Jobs must be idempotent — they can be retried at any time.
 
 ## References
-- `references/scheduling-patterns.md` — Distributed scheduling patterns
-- `references/distributed-cron.md` — Distributed cron implementation guide
-- `references/scheduling-architecture.md` — Scheduling architecture, leader election, job distribution
-- `references/scheduling-monitoring.md` — Job monitoring, alerting, observability
-
+  - references/cron-expression-guide.md — Cron Expression Guide
+  - references/distributed-cron.md — Distributed Cron
+  - references/job-monitoring.md — Job Monitoring and Management
+  - references/scheduler-implementation.md — Scheduling and Cron Patterns
+  - references/scheduling-architecture.md — Scheduling Architecture
+  - references/scheduling-monitoring.md — Scheduling Monitoring
+  - references/scheduling-patterns.md — Scheduling Patterns
+  - references/scheduling-security.md — Scheduling Security
 ## Handoff
 No artifact produced unless requested.
 Next skill: multi-tenancy — segregate data for different tenants using the scheduled jobs.

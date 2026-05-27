@@ -90,10 +90,11 @@ Define adoption metrics per stakeholder group. Set targets and measurement inter
 - Sponsor must be visibly active throughout the change.
 
 ## References
-- `references/adkar-model.md` — ADKAR assessment methodology
-- `references/kotter-8step.md` — Kotter 8-Step change framework
-- `references/stakeholder-impact.md` — Stakeholder analysis and resistance management
-- `references/adoption-metrics.md` — Adoption measurement frameworks
-
+  - references/adkar-model.md — ADKAR Model
+  - references/adoption-metrics.md — Adoption Metrics
+  - references/change-management-advanced.md — Change Management Advanced Topics
+  - references/change-management-fundamentals.md — Change Management Fundamentals
+  - references/kotter-8step.md — Kotter 8-Step Change Model
+  - references/stakeholder-impact.md — Stakeholder Impact Analysis
 ## Handoff
 For stakeholder communication execution, hand off to `management-stakeholder`. For OKR alignment with change goals, hand off to `management-okr-kpi`. For team-level change impact, hand off to `management-team-topology`.

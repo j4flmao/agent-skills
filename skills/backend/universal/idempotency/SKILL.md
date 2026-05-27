@@ -98,11 +98,14 @@ Use a TTL index (Redis) or a background job (PostgreSQL) to delete keys after th
 - GET, HEAD, OPTIONS are inherently idempotent — no key needed.
 
 ## References
-- `references/idempotency-patterns.md` — Idempotency key implementation patterns
-- `references/exactly-once-strategies.md` — Exactly-once semantic strategies
-- `references/idempotency-keys.md` — Idempotency key store backends, middleware, concurrent handling
-- `references/idempotency-distributed.md` — Distributed idempotency, message dedup, saga integration
-
+  - references/exactly-once-strategies.md — Exactly-Once Execution Strategies
+  - references/idempotency-distributed.md — Distributed Idempotency
+  - references/idempotency-failure-modes.md — Idempotency Failure Modes
+  - references/idempotency-keys.md — Idempotency Keys
+  - references/idempotency-middleware.md — Idempotency Middleware Patterns
+  - references/idempotency-patterns.md — Idempotency Key Implementation Patterns
+  - references/idempotency-storage.md — Idempotency Storage Backends
+  - references/idempotency-testing.md — Idempotency Testing
 ## Handoff
 No artifact produced unless requested.
 Next skill: distributed-locking — coordinate access to shared resources across services.

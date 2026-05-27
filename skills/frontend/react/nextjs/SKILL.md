@@ -194,11 +194,12 @@ export async function createUser(formData: FormData) {
 - generateStaticParams + ISR for hybrid static/dynamic pages.
 
 ## References
-- `references/app-router.md` — App Router routes, layouts, data fetching, route handlers
-- `references/server-components.md` — Server Component default, `'use client'` rules, composition
-- `references/nextjs-data-fetching.md` — Data fetching strategies, caching, revalidation, streaming
-- `references/nextjs-deployment.md` — Deployment, Docker, CI/CD, build optimization, monitoring
-
+  - references/app-router-architecture.md — Next.js App Router Architecture
+  - references/app-router.md — Next.js App Router
+  - references/middleware-edge.md — Next.js Middleware and Edge Runtime
+  - references/nextjs-data-fetching.md — Next.js Data Fetching
+  - references/nextjs-deployment.md — Next.js Deployment
+  - references/server-components.md — Server Components
 ## Handoff
 No artifact produced.
 Next skill: frontend-testing — test Next.js components.

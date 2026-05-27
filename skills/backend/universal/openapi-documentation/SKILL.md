@@ -133,11 +133,12 @@ npx @openapitools/openapi-generator-cli generate -i openapi.yaml -g typescript-a
 - Every spec must pass spectral with the default ruleset.
 
 ## References
-- `references/openapi-setup.md` — OpenAPI project setup guide
-- `references/openapi-codegen.md` — OpenAPI code generation patterns
-- `references/openapi-tools.md` — OpenAPI tooling ecosystem, linting, mock servers, breaking change detection
-- `references/openapi-versioning-strategies.md` — API versioning strategies, migration guides, spec management
-
+  - references/openapi-codegen.md — OpenAPI Code Generation
+  - references/openapi-security.md — OpenAPI Security
+  - references/openapi-setup.md — OpenAPI Project Setup Guide
+  - references/openapi-testing.md — OpenAPI Testing
+  - references/openapi-tools.md — OpenAPI Tools
+  - references/openapi-versioning-strategies.md — OpenAPI Versioning Strategies
 ## Handoff
 No artifact produced unless requested.
 Next skill: contract-testing — verify the OpenAPI spec against provider behavior.

@@ -147,10 +147,11 @@ Detection: weekly idle resource report shows 3 unattached volumes, 2 orphaned lo
 Detection: monthly RI/SP report shows coverage dropped from 65% to 45%. Investigation: new workload deployed without RI/SP coverage, team used different instance family. Response: purchase additional RI/SP for new instance family, adjust workload to use covered instance family where possible. Automation: alert when RI/SP coverage drops below 50%, block deployment of instance families without RI/SP coverage, automate RI/SP purchase recommendation.
 
 ## References
-- [Cost Optimization](./references/cost-optimization.md) — right-sizing, reserved instances, spot, storage lifecycle, tagging
-- [FinOps Governance](./references/finops-governance.md) — budgets, anomaly detection, chargeback, reporting, practice maturity
-- [FinOps Practices](./references/finops-practices.md) — FinOps lifecycle (inform → optimize → operate), unit economics, forecasting, budget models, maturity model
-- [FinOps Automation](./references/finops-automation.md) — Automated cost remediation, scheduling, tag enforcement, budget alerts, discount automation
-
+  - references/cost-optimization.md — Cost Optimization
+  - references/finops-advanced.md — Finops Advanced Topics
+  - references/finops-automation.md — FinOps Automation
+  - references/finops-fundamentals.md — Finops Fundamentals
+  - references/finops-governance.md — FinOps Governance
+  - references/finops-practices.md — FinOps Practices
 ## Handoff
 Hand off to finops for cost visibility and optimization. Hand off to cloud-specific skills (aws/azure/gcp) for resource provisioning at optimized price. Hand off to monitoring for utilization metrics used in right-sizing.

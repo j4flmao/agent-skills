@@ -232,11 +232,12 @@ export class TruncatePipe implements PipeTransform {
 - Pipes are pure and side-effect-free. Same input always produces the same output.
 
 ## References
-- `references/di-patterns.md` — InjectionToken, multi providers, factory providers
-- `references/rxjs-patterns.md` — HttpClient, interceptors, RxJS operators by use case
-- `references/angular-testing.md` — component testing, service testing, directive testing, integration tests
-- `references/angular-performance.md` — OnPush, signals, lazy loading, bundle optimization, defer, virtual scroll
-
+  - references/angular-design-patterns.md — Angular Design Patterns
+  - references/angular-performance.md — Angular Performance Patterns
+  - references/angular-rxjs-patterns.md — Angular RxJS Patterns
+  - references/angular-testing.md — Angular Testing Patterns
+  - references/di-patterns.md — Angular DI Patterns
+  - references/rxjs-patterns.md — Angular RxJS Patterns
 ## Handoff
 No artifact produced.
 Next skill: frontend-testing — test Angular components.

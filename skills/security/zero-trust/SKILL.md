@@ -76,11 +76,14 @@ Define and implement Zero Trust Architecture principles including identity-first
 - Least privilege: grant only what's needed, just-in-time
 
 ## References
-- `references/core-principles.md` — Zero Trust pillars and NIST SP 800-207 framework
-- `references/identity-first-security.md` — BeyondCorp and Cloudflare Access model
-- `references/microsegmentation.md` — Network microsegmentation with Cilium, Calico, Illumio
-- `references/zt-access-proxy.md` — Zero Trust access proxy architecture (Pomerium, Teleport)
-- `references/continuous-verification.md` — Continuous verification, UBA, and risk scoring
-
+  - references/continuous-verification.md — Continuous Verification
+  - references/core-principles.md — Zero Trust Core Principles
+  - references/identity-first-security.md — Identity-First Security
+  - references/microsegmentation.md — Network Microsegmentation
+  - references/zero-trust-advanced.md — Zero Trust Advanced Topics
+  - references/zero-trust-data.md — Zero Trust Data
+  - references/zero-trust-fundamentals.md — Zero Trust Fundamentals
+  - references/zero-trust-networking.md — Zero Trust Networking
+  - references/zt-access-proxy.md — Zero Trust Access Proxy
 ## Handoff
 Zero Trust architecture artifacts can be handed to network-engineering for firewall configuration, platform-engineering for service mesh/mTLS, and security-engineering for SIEM integration.

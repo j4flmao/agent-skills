@@ -115,11 +115,12 @@ For >10,000 RPS: k6 operator on Kubernetes (k6-operator), Locust with master/wor
 - Document test conditions (environment, data volume, network)
 
 ## References
-- `references/execution.md` — Execution
-- `references/k6-scripts.md` — K6 Scripts
-- `references/locust-guide.md` — Locust Guide
-- `references/test-design.md` — Test Design
-
+  - references/execution.md — Execution
+  - references/k6-scripts.md — k6 Scripts
+  - references/load-testing-advanced.md — Load Testing Advanced Topics
+  - references/load-testing-fundamentals.md — Load Testing Fundamentals
+  - references/locust-guide.md — Locust Guide
+  - references/test-design.md — Test Design
 ## Handoff
 `devops-observability` for monitoring setup based on load test findings.
 `quality-e2e-testing` for functional validation of performance-critical flows.

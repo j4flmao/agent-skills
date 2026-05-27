@@ -57,7 +57,11 @@ app-backend → plugin-auth-backend → plugin-catalog-backend → plugin-scaffo
 | Platform uptime | 99.9% | Uptime of Backstage and APIs |
 
 ## References
-- `references/golden-paths.md` — Golden path design patterns and templates
-- `references/backstage-plugins.md` — Backstage plugin development guide
-- `references/adoption-strategy.md` — Platform adoption and DX measurement
-- `references/idp-adoption.md` — IDP adoption strategies, onboarding, golden paths, DX metrics
+  - references/adoption-strategy.md — Platform Adoption Strategy
+  - references/backstage-plugins.md — Backstage Plugin Development
+  - references/developer-portal-customization.md — Developer Portal Customization Guide
+  - references/golden-paths.md — Golden Path Design Patterns
+  - references/idp-adoption.md — IDP Adoption Strategies
+  - references/idp-scorecard.md — IDP Scorecard: Maturity Assessment Framework
+  - references/internal-developer-platform-advanced.md — Internal Developer Platform Advanced Topics
+  - references/internal-developer-platform-fundamentals.md — Internal Developer Platform Fundamentals

@@ -52,12 +52,13 @@ Cost-benefit analysis with TCO model, ROI calculation, break-even timeline, and 
 150 lines
 
 ## References
-- `references/tco-calculation.md` — Total Cost of Ownership modeling
-- `references/roi-framework.md` — ROI calculation, break-even, NPV, sensitivity analysis
-- `references/cba-methodology.md` — CBA methodology: NPV, IRR, payback period, sensitivity analysis, break-even analysis, cost classification
-- `references/tco-modeling.md` — TCO modeling across scenarios: on-prem vs cloud, build vs buy, labor costs, migration costs
-- `references/roi-frameworks.md` — ROI frameworks: 3-5 year projections, tangible vs intangible benefits, risk-adjusted ROI, real options
-
+  - references/cba-methodology.md — CBA Methodology
+  - references/cost-benefit-advanced.md — Cost Benefit Advanced Topics
+  - references/cost-benefit-fundamentals.md — Cost Benefit Fundamentals
+  - references/roi-framework.md — ROI Framework
+  - references/roi-frameworks.md — ROI Frameworks
+  - references/tco-calculation.md — TCO Calculation
+  - references/tco-modeling.md — TCO Modeling Across Scenarios
 ## Handoff
 `risk-management` for cost-related risk assessment.
 `stakeholder` for business case presentation.

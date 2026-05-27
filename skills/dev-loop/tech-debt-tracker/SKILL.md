@@ -92,11 +92,12 @@ Example: 5 developers × 3 encounters/week × 0.25 hours = 3.75 hours/week inter
 - **New features get a debt allowance** — Every feature story should allocate ~10% of its points for incidental cleanup discovered during implementation. This prevents debt accumulation from new work.
 
 ## References
-- `references/debt-prioritization.md` — Debt Prioritization
-- `references/debt-tracking.md` — Debt Tracking
-- `references/repayment-strategies.md` — Repayment Strategies
-- `references/tech-debt-management.md` — Tech Debt Management
-
+  - references/debt-prioritization.md — Tech Debt Prioritization
+  - references/debt-tracking.md — Debt Tracking Reference
+  - references/repayment-strategies.md — Tech Debt Repayment Strategies
+  - references/tech-debt-management.md — Technical Debt Management
+  - references/tech-debt-tracker-advanced.md — Tech Debt Tracker Advanced Topics
+  - references/tech-debt-tracker-fundamentals.md — Tech Debt Tracker Fundamentals
 ## Related Skills
 
 - **sprint-retro** — Review debt trends during sprint retro with the full team

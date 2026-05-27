@@ -232,19 +232,12 @@ labels:
 ```
 
 ## References
-
-### Reference Files
-- `references/alert-rules-catalog.md` — Complete alert rules catalog for infrastructure, application, business
-- `references/notification-routing.md` — Notification routing rules, escalation matrix, integration configs
-- `references/alert-rules-templates.md` — Reusable alert rule templates with configurable thresholds
-- `references/escalation-policies.md` — Escalation policy definitions and on-call rotation templates
-
-### Related Skills
-- `devops/monitoring/SKILL.md` — Monitoring stack configuration
-- `devops/observability/SKILL.md` — Observability fundamentals
-- `management/security/SKILL.md` — Security alerts
-- `management/team-rules/SKILL.md` — On-call rotation
-
+  - references/alert-rules-catalog.md — Alert Rules Catalog
+  - references/alert-rules-templates.md — Alert Rules Templates
+  - references/alerting-advanced.md — Alerting Advanced Topics
+  - references/alerting-fundamentals.md — Alerting Fundamentals
+  - references/escalation-policies.md — Escalation Policies
+  - references/notification-routing.md — Notification Routing Reference
 ## Handoff
 
 Hand off to `devops/monitoring/SKILL.md` for monitoring stack setup. Hand off to `management/team-rules/SKILL.md` for on-call schedule and incident response.

@@ -141,11 +141,12 @@ No preamble. No postamble. No explanations. Compress output — why use many tok
 - Keep x-data expressions simple; extract complex logic into methods.
 
 ## References
-- `references/alpine-setup.md` — CDN/npm install, globals, plugins, tooling
-- `references/alpine-patterns.md` — components, stores, modifiers, lifecycle
-- `references/alpinejs-advanced.md` — custom directives, magics, plugins, CSP, focus management
-- `references/alpinejs-deployment.md` — build options, CDN vs npm, production optimization, security
-
+  - references/alpine-patterns.md — Alpine.js Patterns & Best Practices
+  - references/alpine-setup.md — Alpine.js Setup Guide
+  - references/alpinejs-advanced.md — Alpine.js Advanced Patterns
+  - references/alpinejs-deployment.md — Alpine.js Deployment
+  - references/alpinejs-fundamentals.md — Alpinejs Fundamentals
+  - references/alpinejs-testing.md — Alpine.js Testing Reference
 ## Handoff
 No artifact produced.
 Next skill: alpine-laravel (if Laravel backend) or frontend-testing.

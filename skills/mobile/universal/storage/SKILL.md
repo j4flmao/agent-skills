@@ -157,11 +157,12 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
 ```
 
 ## References
-- `references/file-system.md` — File System
-- `references/mobile-storage-patterns.md` — Mobile Storage Patterns
-- `references/preferences.md` — Preferences
-- `references/sqlite.md` — Sqlite
-
+  - references/cloud-storage.md — Cloud Storage Integration
+  - references/file-system.md — Mobile File System
+  - references/local-storage.md — Local Data Storage
+  - references/mobile-storage-patterns.md — Mobile Storage Patterns
+  - references/preferences.md — Mobile Preferences
+  - references/sqlite.md — Mobile SQLite
 ## Handoff
 
 Hand off to stack-specific skill for implementation.

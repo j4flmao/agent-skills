@@ -120,11 +120,12 @@ VR requires dedicated headset (Meta Quest, Apple Vision Pro). Mobile VR is prima
 - Test on real devices, never rely solely on emulator/simulator AR performance
 
 ## References
-- `references/ar-platforms.md` — ARKit vs ARCore deep dive, scene setup, anchors, lighting, session management
-- `references/ar-patterns.md` — Gesture interaction, model loading and optimization, performance budgets, VR integration
-- `references/ar-core-arkit.md` — ARCore vs ARKit feature comparison, session management, anchor systems, environmental understanding, motion tracking
-- `references/vr-development.md` — Unity vs Unreal for mobile VR, 6DoF tracking, performance optimization, hand tracking, foveated rendering
-
+  - references/ar-core-arkit.md — ARCore (Android) vs ARKit (iOS) Developer Guide
+  - references/ar-patterns.md — AR/VR Interaction Patterns
+  - references/ar-platforms.md — AR Platforms: ARKit vs ARCore
+  - references/arcore-implementation.md — ARCore Implementation
+  - references/arkit-implementation.md — ARKit Implementation
+  - references/vr-development.md — Mobile VR Development
 ## Handoff
 `mobile/universal/testing` for AR testing strategy (real device, varied lighting, occlusion scenarios)
 `mobile/universal/performance` for profiling AR-specific performance metrics

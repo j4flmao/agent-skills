@@ -101,10 +101,11 @@ Create experiment pipeline to improve activation. Typical experiments: reduce si
 - Post-activation experience must be designed simultaneously.
 
 ## References
-- `references/activation-design.md` — Activation Design
-- `references/activation-funnels.md` — Activation Funnels
-- `references/onboarding-experiments.md` — Onboarding Experiments
-- `references/onboarding-patterns.md` — Onboarding Patterns
-
+  - references/activation-design.md — Activation Design
+  - references/activation-funnels.md — Activation Funnels
+  - references/onboarding-experiments.md — Onboarding Experiments
+  - references/onboarding-flow-advanced.md — Onboarding Flow Advanced Topics
+  - references/onboarding-flow-fundamentals.md — Onboarding Flow Fundamentals
+  - references/onboarding-patterns.md — Onboarding Patterns
 ## Handoff
 For analytics tracking of onboarding metrics, hand off to `product-analytics`. For A/B testing onboarding changes, hand off to `product-ab-testing`.

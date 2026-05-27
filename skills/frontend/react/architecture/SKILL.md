@@ -202,11 +202,12 @@ class ErrorBoundary extends React.Component<
 - Features import from other features only via their public API (index.ts). No deep imports.
 
 ## References
-- `references/folder-structure.md` — React feature-based folder structure
-- `references/component-patterns.md` — smart/dumb, composition, compound components
-- `references/hooks-guide.md` — custom hooks naming, rules, and patterns
-- `references/react-compiler.md` — React Compiler setup, rules, migration, ESLint integration, performance benefits
-
+  - references/component-patterns.md — React Component Patterns
+  - references/folder-structure.md — React Folder Structure
+  - references/hooks-guide.md — React Hooks Guide
+  - references/react-19-patterns.md — React 19 Patterns
+  - references/react-compiler.md — React Compiler
+  - references/rendering-patterns.md — React Rendering Patterns
 ## Handoff
 No artifact produced.
 Next skill: react-nextjs (if using Next.js) or frontend-testing.

@@ -162,11 +162,12 @@ if errors.Is(err, domain.ErrUserNotFound) {
 - Package names are part of the import path. A package named "userrepo" is imported as "project/internal/infrastructure/userrepo".
 
 ## References
-- `references/project-layout.md` — Go project structure and package organization
-- `references/interface-design.md` — interface at consumer, repository pattern
-- `references/go-concurrency.md` — Goroutines, channels, worker pools, errgroup patterns
-- `references/go-testing.md` — Table-driven tests, mocking, integration tests, HTTP tests
-
+  - references/go-concurrency.md — Go Concurrency
+  - references/go-graceful-shutdown.md — Graceful Shutdown Patterns in Go
+  - references/go-hexagonal.md — Hexagonal Architecture in Go
+  - references/go-testing.md — Go Testing
+  - references/interface-design.md — Go Interface Design
+  - references/project-layout.md — Go Project Layout
 ## Handoff
 No artifact produced.
 Next skill: golang-patterns — concurrency, HTTP servers, error handling.

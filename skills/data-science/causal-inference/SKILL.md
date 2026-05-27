@@ -304,11 +304,12 @@ def double_ml(X, y, t, model_y=None, model_t=None):
 - Multiple robustness checks with different estimators
 
 ## References
-- `references/causal-frameworks.md` — Potential outcomes, DAGs, do-calculus, counterfactual reasoning, structural causal models
-- `references/causal-inference-methods.md` — DAGs, do-calculus, propensity score matching, DiD, IV, RDD, A/B testing vs causal inference, sensitivity analysis
-- `references/causal-ml.md` — Uplift modeling, CATE, meta-learners, causal forests, double ML
-- `references/quasi-experimental.md` — DiD, RDD, IV, PSM, synthetic control
-
+  - references/causal-frameworks.md — Causal Inference Frameworks Reference
+  - references/causal-inference-advanced.md — Causal Inference Advanced Topics
+  - references/causal-inference-fundamentals.md — Causal Inference Fundamentals
+  - references/causal-inference-methods.md — Causal Inference Methods Reference
+  - references/causal-ml.md — Causal Machine Learning Reference
+  - references/quasi-experimental.md — Quasi-Experimental Methods Reference
 ## Handoff
 `data-science-statistical-analysis` for foundational statistical methods
 `data-science-experimentation` for RCT design and A/B testing

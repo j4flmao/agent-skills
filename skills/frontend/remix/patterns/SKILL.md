@@ -121,11 +121,12 @@ Place `sw.js` in `public/`. Register from root.tsx `<Scripts>` after. Manifest a
 - Service worker updates should use skip-waiting pattern.
 
 ## References
-- `references/remix-forms.md` — validation, progressive enhancement, pending states
-- `references/remix-seo.md` — meta, sitemap, JSON-LD, canonical
-- `references/remix-routing.md` — route validation, nested data access, multiple actions, progressive enhancement
-- `references/remix-validation.md` — Zod validation, useFetcher patterns, file uploads, optimistic UI
-
+  - references/remix-data-patterns.md — Remix Data Patterns
+  - references/remix-form-patterns.md — Remix Form Patterns
+  - references/remix-forms.md — Remix Forms — Validation, Progressive Enhancement, Pending States
+  - references/remix-routing.md — Remix Routing & Validation Patterns
+  - references/remix-seo.md — Remix SEO — Meta, Sitemap, JSON-LD, Canonical
+  - references/remix-validation.md — Remix Form Validation Patterns
 ## Handoff
 No artifact produced.
 Next skill: frontend-react-architecture for shared React patterns (component composition, hooks, state management).

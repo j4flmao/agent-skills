@@ -244,11 +244,12 @@ export const StyledButton = styled.button<ButtonProps>`
 12. CSS selectors never exceed 3 levels of specificity.
 
 ## References
-- `references/css-approaches.md` — Detailed comparison, trade-offs, migration paths between approaches
-- `references/css-organization.md` — File structure, naming conventions, global vs component styles, design tokens
-- `references/css-methodology.md` — BEM, CSS Layers, CSS Modules, naming conventions, critical CSS, file organization
-- `references/css-performance.md` — Critical delivery, selector performance, containment, bundle size, layout thrash prevention
-
+  - references/container-queries.md — Container Queries
+  - references/css-approaches.md — CSS Approaches
+  - references/css-custom-properties.md — CSS Custom Properties
+  - references/css-methodology.md — CSS Methodology
+  - references/css-organization.md — CSS Organization
+  - references/css-performance.md — CSS Performance
 ## Handoff
 No artifact produced unless requested.
 Next skill: `frontend-tailwind-css` — Tailwind-specific patterns, configuration, and optimization.

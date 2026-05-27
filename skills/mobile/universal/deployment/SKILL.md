@@ -266,18 +266,12 @@ appUpdateManager.startUpdateFlow(
 ```
 
 ## References
-
-### Reference Files
-- `references/fastlane-setup.md` — Fastlane lanes, plugins, environment
-- `references/code-signing.md` — iOS code signing, Android keystore, match
-- `references/app-store-connect.md` — App Store Connect submission, TestFlight, app review, marketing optimization, in-app events
-- `references/play-console.md` — Google Play Console submission, testing tracks, staged rollouts, pre-launch reports, Android App Bundle
-
-### Related Skills
-- `mobile/ios/SKILL.md` — iOS development
-- `mobile/android/SKILL.md` — Android development
-- `devops/jenkins/SKILL.md` — CI/CD pipeline
-
+  - references/app-store-connect.md — App Store Connect — Complete Guide
+  - references/app-store-optimization.md — App Store Optimization (ASO)
+  - references/ci-cd-mobile.md — Mobile CI/CD Pipeline Setup
+  - references/code-signing.md — Code Signing
+  - references/fastlane-setup.md — Fastlane Setup
+  - references/play-console.md — Google Play Console — Complete Guide
 ## Handoff
 
 No further handoff. Deployment is terminal.

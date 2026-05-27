@@ -197,16 +197,11 @@ ToastNotificationManager.CreateToastNotifier().Show(toast);
 - Store graphics required: 620x300, 1240x600, StoreLogo, Square44x44.
 
 ## References
-
-### Reference Files
-- `references/uwp-architecture.md` — MVVM, adaptive UI, layout panels, data binding, app lifecycle, background tasks, contracts
-- `references/uwp-deployment.md` — Store submission, packaging, capabilities, sideloading, enterprise deployment, versioning
-- `references/uwp-lifecycle.md` — App lifecycle, suspension, background tasks, activation
-- `references/uwp-best-practices.md` — UWP best practices, architecture, data binding, performance
-
-### Related Skills
-- `desktop/winui3/SKILL.md` — WinUI 3 for modern desktop-only Windows apps
-- `desktop/electron/SKILL.md` — Cross-platform alternative with Chromium runtime
-
+  - references/uwp-advanced.md — Uwp Advanced Topics
+  - references/uwp-architecture.md — UWP Architecture Reference
+  - references/uwp-best-practices.md — UWP Best Practices
+  - references/uwp-deployment.md — UWP Deployment Reference
+  - references/uwp-fundamentals.md — Uwp Fundamentals
+  - references/uwp-lifecycle.md — UWP App Lifecycle Reference
 ## Handoff
 Hand off to `desktop/winui3/SKILL.md` when need desktop-only app without Store restrictions. Hand off to `desktop/electron/SKILL.md` when cross-platform deployment required.

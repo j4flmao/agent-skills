@@ -284,11 +284,12 @@ predictions = loaded_pipeline.predict(new_data)
 - Test set is for final evaluation only — one inference
 
 ## References
-- `references/supervised-learning.md` — Regression/classification metrics, ensemble methods, XGBoost/LightGBM/CatBoost, hyperparameter guide, imbalanced data
-- `references/unsupervised-pipeline.md` — Clustering K-means/DBSCAN/HDBSCAN, PCA/UMAP/t-SNE, scikit-learn Pipeline, ColumnTransformer, cross-validation
-- `references/imbalanced-learn.md` — SMOTE, ADASYN, undersampling, class weighting, balanced metrics, threshold tuning for imbalanced classification
-- `references/interpretable-ml.md` — Glass-box models, permutation importance, partial dependence, SHAP for tree models, model debugging
-
+  - references/classical-ml-advanced.md — Classical Ml Advanced Topics
+  - references/classical-ml-fundamentals.md — Classical Ml Fundamentals
+  - references/imbalanced-learn.md — Handling Imbalanced Data
+  - references/interpretable-ml.md — Interpretable Classical ML
+  - references/supervised-learning.md — Supervised Learning Reference
+  - references/unsupervised-pipeline.md — Unsupervised Learning and Pipelines
 ## Handoff
 `ml-deep-learning` for deep learning/neural network methods
 `ml-feature-engineering` for feature extraction and selection

@@ -335,11 +335,12 @@ kafka.connect:type=connect-metrics,client-id=...
 - Monitor lag: alert if CDC lag > 5min for latency-critical pipelines
 
 ## References
-- `references/cdc-methods.md` — Log-based vs trigger-based vs timestamp, Debezium connectors, snapshot modes
-- `references/kafka-connect.md` — Source/sink connectors, schema management, parallel loading, error handling, monitoring
-- `references/debezium-deep.md` — MySQL/PG/Mongo connector configuration, snapshot modes, exactly-once semantics
-- `references/kafka-connect-cdc.md` — Source/sink connectors, SMT, offset management, error handling
-
+  - references/cdc-methods.md — CDC Methods Reference
+  - references/cdc-performance.md — CDC Performance Optimization
+  - references/cdc-schema-evolution.md — CDC Schema Evolution
+  - references/debezium-deep.md — Debezium Deep Dive Reference
+  - references/kafka-connect-cdc.md — Kafka Connect CDC Reference
+  - references/kafka-connect.md — Kafka Connect Reference
 ## Handoff
 `data-etl-pipeline` for downstream ETL processing of CDC events
 `data-data-lake` for CDC ingestion into Delta/Iceberg/Hudi tables

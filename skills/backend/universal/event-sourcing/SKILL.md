@@ -210,11 +210,12 @@ async function loadWithSnapshot(aggregateId: string): Promise<OrderAggregate> {
 - Aggregate boundaries are consistency boundaries. Everything within one aggregate is strongly consistent.
 
 ## References
-- `references/event-store-patterns.md` — Event store implementations, storage strategies, querying
-- `references/aggregate-design.md` — Aggregate boundaries, invariants, event sourcing aggregates
-- `references/event-versioning.md` — Event schema evolution, versioning strategies, migration
-- `references/event-sourcing-projections.md` — Projection types, rebuild management, categorized projections
-
+  - references/aggregate-design.md — Aggregate Design
+  - references/event-sourcing-projections.md — Event Sourcing Projections
+  - references/event-sourcing-snapshots.md — Event Sourcing Snapshots
+  - references/event-sourcing-testing.md — Event Sourcing Testing
+  - references/event-store-patterns.md — Event Store Patterns
+  - references/event-versioning.md — Event Versioning
 ## Handoff
 No artifact produced.
 Next skill: cqrs-patterns — to separate read/write models for event-sourced aggregates.

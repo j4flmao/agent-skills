@@ -166,11 +166,12 @@ it('should have no a11y violations', async () => {
 - Automated a11y testing (axe-core) runs in CI. Manual testing with a real screen reader (VoiceOver, NVDA) is done before release.
 
 ## References
-- `references/wcag-checklist.md` — WCAG 2.1 AA checklist with implementation examples
-- `references/a11y-testing.md` — axe-core, Cypress/Playwright a11y tests, CI integration, common violations
-- `references/a11y-aria.md` — landmark roles, widget patterns, live regions, ARIA states reference
-- `references/a11y-tools.md` — automated tools, contrast checkers, screen readers, browser extensions, CI
-
+  - references/a11y-aria.md — ARIA Patterns & Best Practices
+  - references/a11y-testing.md — Accessibility Testing Patterns
+  - references/a11y-tools.md — Accessibility Tools
+  - references/accessible-data-visualization.md — Accessible Data Visualization
+  - references/accessible-forms.md — Accessible Forms
+  - references/wcag-checklist.md — WCAG 2.1 AA Checklist
 ## Handoff
 No artifact produced.
 Next skill: frontend-testing — test accessibility assertions.

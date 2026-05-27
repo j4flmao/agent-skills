@@ -381,11 +381,12 @@ for col, rules in checks.items():
 - Feature engineering pipelines are idempotent and incremental
 
 ## References
-- `references/feast-setup-guide.md` — Feast architecture, deployment options (Docker, K8s, cloud), feature repository structure, registry management, online/offline store configuration, serving API
-- `references/feature-engineering-pipeline.md` — Batch (Spark/dbt) and streaming (Flink/Kafka) feature computation, point-in-time join mechanics, feature validation, monitoring, Tecton platform overview
-- `references/feature-registry.md` — Feature registry management, discovery, governance, versioning, feature lineage, RBAC, access control
-- `references/online-serving.md` — Feast online store (Redis/DynamoDB), feature server, low-latency retrieval
-
+  - references/feast-setup-guide.md — Feast Setup Guide
+  - references/feature-engineering-pipeline.md — Feature Engineering Pipeline Reference
+  - references/feature-registry.md — Feature Registry & Governance
+  - references/feature-validation-monitoring.md — Feature Validation and Monitoring
+  - references/offline-feature-computation.md — Offline Feature Computation
+  - references/online-serving.md — Online Feature Serving Reference
 ## Handoff
 `streaming` for real-time feature computation with Kafka and Flink
 `etl-pipeline` for batch feature engineering orchestration with Airflow

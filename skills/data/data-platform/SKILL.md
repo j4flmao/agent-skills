@@ -220,13 +220,14 @@ Layer that queries across sources without moving data. Dremio, Starburst (Trino)
 - Data virtualization is a complement to, not a replacement for, the warehouse.
 
 ## References
-- `references/cross-cloud-setup.md` — Multi-cloud data platform setup, cross-cloud replication, S3/ADLS/GCS integration, unified catalog, data residency
-- `references/data-catalog-virtualization.md` — Datahub/Amundsen/OpenMetadata, LakeFS/DVC, data mesh, Dremio/Starburst
-- `references/data-platform-architecture.md` — Lake, lakehouse, mesh, warehouse comparison, storage formats, compute engines
-- `references/k8s-for-data.md` — Kubernetes for data platforms, Spark operator, Trino on K8s, storage classes, node pools, resource management
-- `references/platform-architecture.md` — End-to-end data platform architecture, component interaction, network topology, security boundaries
-- `references/platform-decision-tree.md` — Architecture selection decision tree, workload-based recommendations, trade-off analysis
-- `references/platform-tools-comparison.md` — Comprehensive tool comparison for storage, compute, catalog, versioning, virtualization
-
+  - references/cross-cloud-setup.md — Cross-Cloud Data Platform Setup
+  - references/data-catalog-virtualization.md — Data Catalog & Virtualization
+  - references/data-platform-advanced.md — Data Platform Advanced Topics
+  - references/data-platform-architecture.md — Data Platform Architecture
+  - references/data-platform-fundamentals.md — Data Platform Fundamentals
+  - references/k8s-for-data.md — Kubernetes for Data Workloads
+  - references/platform-architecture.md — Data Platform Architecture
+  - references/platform-decision-tree.md — Platform Decision Tree
+  - references/platform-tools-comparison.md — Platform Tools Comparison
 ## Handoff
 For ETL pipeline implementation, hand off to `etl-pipeline`. For data warehouse modeling, hand off to `data-warehouse`. For streaming, hand off to `streaming`.

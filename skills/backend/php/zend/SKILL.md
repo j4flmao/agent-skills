@@ -553,11 +553,12 @@ class ListUsersHandler implements RequestHandlerInterface
 - Mezzio routing uses PSR-7/PSR-15 middleware; Laminas MVC uses MVC controllers.
 
 ## References
-- `references/laminas-mvc.md` — Module system, EventManager, plugins, console routes
-- `references/laminas-db-doctrine.md` — laminas-db TableGateway, Doctrine ORM, migrations
-- `references/mezzio-api.md` — Mezzio middleware, PSR-15 handlers, API development
-- `references/zend-migration.md` — Migration from ZF3 to Laminas, namespace changes, checklist
-
+  - references/laminas-auth.md — Laminas Authentication and Authorization
+  - references/laminas-db-doctrine.md — Laminas DB & Doctrine
+  - references/laminas-forms.md — Laminas Form and Validation Patterns
+  - references/laminas-mvc.md — Laminas MVC Reference
+  - references/mezzio-api.md — Mezzio API Development
+  - references/zend-migration.md — Zend to Laminas Migration
 ## Handoff
 Next skill: php-laravel — if user prefers Laravel's opinionated conventions.
 Carry forward: PHP version, database driver, module structure, laminas vs zend namespace.

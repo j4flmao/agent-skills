@@ -257,11 +257,12 @@ AWS Glue: serverless Spark-based ETL with schema crawler and auto-generated cata
 - Track row count trends for anomaly detection
 
 ## References
-- `references/etl-elt-patterns.md` — ETL vs ELT, Airflow DAG patterns, incremental strategies, error handling topology, data validation, lineage
-- `references/pipeline-monitoring.md` — dbt models, testing, documentation, snapshots, monitoring, alerting, SLAs, pipeline health dashboard
-- `references/nifi-mage-patterns.md` — Apache NiFi visual data routing, Mage.ai Python-native pipelines, block-based ETL
-- `references/cloud-etl-services.md` — AWS Glue serverless Spark, Azure Data Factory connectors, GCP Dataflow Beam
-
+  - references/cloud-etl-services.md — Cloud ETL Services
+  - references/data-pipeline-cicd.md — Data Pipeline CI/CD
+  - references/etl-elt-patterns.md — ETL/ELT Patterns
+  - references/etl-pipeline-design.md — ETL Pipeline Design
+  - references/nifi-mage-patterns.md — Apache NiFi and Mage.ai ETL Patterns
+  - references/pipeline-monitoring.md — Pipeline Monitoring
 ## Handoff
 `data-data-quality` for validation rules and data contract enforcement
 `data-data-warehouse` for target schema design and optimization

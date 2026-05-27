@@ -297,11 +297,12 @@ Use named slots for optional sections. Use scoped slots (`v-bind`) to expose com
 - Named slots for structural sections, default slot for primary content.
 
 ## References
-- `references/composition-patterns.md` — composables, provide/inject, renderless components, slots, directives
-- `references/state-router-patterns.md` — Pinia stores, router guards, lazy routes, navigation guards
-- `references/vue-routing.md` — router setup, guards, lazy loading, search params, route props, navigation
-- `references/vue-state.md` — Pinia setup stores, store composition, state architecture rules, persist plugin
-
+  - references/composition-patterns.md — Vue Composition Patterns
+  - references/state-router-patterns.md — Vue State & Router Patterns
+  - references/vue-animations.md — Vue Animations
+  - references/vue-form-patterns.md — Vue Form Patterns
+  - references/vue-routing.md — Vue Routing Patterns
+  - references/vue-state.md — Vue State Management Patterns
 ## Handoff
 No artifact produced.
 Next skill: vue-nuxt if using Nuxt. Or frontend-universal-testing for Vue component tests.

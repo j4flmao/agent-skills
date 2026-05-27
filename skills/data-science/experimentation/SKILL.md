@@ -243,11 +243,12 @@ experiment:
 - Document preriod: exclude first N hours for novelty/primacy effects
 
 ## References
-- `references/experiment-design.md` — Randomization, control groups, sample size, stratification, blocking, factorial, A/A tests
-- `references/statistical-methods.md` — Frequentist vs Bayesian, sequential testing, multiple testing correction, delta method
-- `references/metric-selection.md` — North star, guardrail, proxy, success vs diagnostic, sensitivity, ratio metrics
-- `references/experimentation-platform.md` — Feature flagging, traffic allocation, metric computation, statistical engine, results delivery
-
+  - references/experiment-design.md — Experiment Design Reference
+  - references/experimentation-advanced.md — Experimentation Advanced Topics
+  - references/experimentation-fundamentals.md — Experimentation Fundamentals
+  - references/experimentation-platform.md — Experimentation Platform Architecture Reference
+  - references/metric-selection.md — Metric Selection Reference
+  - references/statistical-methods.md — Statistical Methods for Experimentation Reference
 ## Handoff
 `data-science-statistical-analysis` for foundational statistical methods
 `data-science-causal-inference` for causal effect estimation in observational settings

@@ -178,11 +178,12 @@ const variantStyles: Record<ButtonVariant, string> = {
 - Prefer `satisfies` over `as` when constraining a value to a type while keeping its literal type.
 
 ## References
-- `references/ts-react-patterns.md` — generic components, hooks, prop patterns in React
-- `references/ts-type-safety.md` — type narrowing, branded types, Nominal typing patterns
-- `references/typescript-advanced.md` — Branded types, template literals, conditional types, key remapping, satisfies, typed events
-- `references/typescript-config.md` — tsconfig recommendations, strict mode, path aliases, module resolution, incremental builds, ESLint
-
+  - references/ts-generics-patterns.md — TypeScript Generics Patterns
+  - references/ts-react-patterns.md — TypeScript React Patterns
+  - references/ts-type-safety.md — TypeScript Type Safety Patterns
+  - references/ts-utility-types.md — TypeScript Utility Types
+  - references/typescript-advanced.md — Advanced TypeScript
+  - references/typescript-config.md — TypeScript Configuration
 ## Handoff
 No artifact produced.
 Next skill: `error-handling` — wrap API responses with typed error boundaries.

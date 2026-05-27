@@ -136,12 +136,12 @@ kotlin {
 ```
 
 ## References
-
-- `references/kmp-structure.md` — Module setup, expect/actual pattern, dependency injection
-- `references/platform-specific.md` — Platform-specific implementations, Compose Multiplatform integration
-- `references/kmp-compose.md` — Compose Multiplatform UI development, theming, navigation, platform interop
-- `references/kmm-networking.md` — Ktor client, SQLDelight, multiplatform serialization (kotlinx.serialization), platform HTTP implementations, testing
-- `references/kmm-concurrency.md` — Kotlin coroutines in KMM, expect/actual for platform concurrency, structured concurrency, flows, threading models
-
+  - references/kmm-concurrency.md — KMM Concurrency — Coroutines, Flows, and Threading
+  - references/kmm-networking.md — KMM Networking — Ktor, SQLDelight, Serialization
+  - references/kmp-compose.md — Compose Multiplatform
+  - references/kmp-structure.md — KMP Module Structure
+  - references/kotlin-multiplatform-advanced.md — Kotlin Multiplatform Advanced Topics
+  - references/kotlin-multiplatform-fundamentals.md — Kotlin Multiplatform Fundamentals
+  - references/platform-specific.md — Platform-Specific Implementations
 ## Handoff
 Hand off to platform-specific iOS or Android skills when expect/actual implementations need deep platform API knowledge.

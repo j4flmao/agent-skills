@@ -104,10 +104,11 @@ Create 3-5 distinct personas based on research patterns. Include: demographics, 
 - Research plan must be reviewed before recruiting begins.
 
 ## References
-- `references/interview-guide.md` — Interview Guide
-- `references/research-methods.md` — Research Methods
-- `references/synthesis-frameworks.md` — Synthesis Frameworks
-- `references/user-research-methods.md` — User Research Methods
-
+  - references/interview-guide.md — User Interview Guide
+  - references/research-methods.md — Research Methods
+  - references/synthesis-frameworks.md — Synthesis Frameworks
+  - references/user-research-advanced.md — User Research Advanced Topics
+  - references/user-research-fundamentals.md — User Research Fundamentals
+  - references/user-research-methods.md — User Research Methods
 ## Handoff
 For quantitative validation of insights, hand off to `product-analytics`. For running experiments based on findings, hand off to `product-ab-testing`.

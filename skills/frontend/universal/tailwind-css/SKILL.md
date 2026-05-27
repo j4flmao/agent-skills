@@ -160,13 +160,12 @@ npx tailwindcss -i src/input.css -o output.css --minify --verbose
 - Position `container queries` (`@sm:`, `@md:`) after viewport breakpoints in class order
 
 ## References
-- `references/configuration.md` — Config setup for v3 and v4, tailwind.config, plugins, dark mode
-- `references/component-patterns.md` — Component extraction, @apply discipline, composition patterns
-- `references/utility-first.md`
-- `references/design-tokens.md`
-- `references/responsive-patterns.md`
-- `references/performance.md`
-
+  - references/component-patterns.md — Component Patterns Reference
+  - references/configuration.md — Tailwind Configuration Reference
+  - references/design-tokens.md — Design Tokens Reference
+  - references/performance.md — Tailwind CSS Performance Reference
+  - references/responsive-patterns.md — Responsive Patterns Reference
+  - references/utility-first.md — Utility-First CSS Reference
 ## Handoff
 No artifact produced unless requested.
 Next skill: `frontend-storybook` (if component documentation is needed next)

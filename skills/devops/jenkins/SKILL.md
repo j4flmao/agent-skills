@@ -246,18 +246,11 @@ Automatic branch discovery:
 - `cleanWs()` in `post { always }` block.
 
 ## References
-
-### Reference Files
-- `references/jenkins-pipeline.md` — Advanced pipeline patterns, parallel stages, error handling
-- `references/jenkins-best-practices.md` — Jenkins security, performance, plugin management
-- `references/jenkins-shared-libraries.md` — Shared library structure, global variables, class libraries, testing, best practices
-- `references/jenkins-ops.md` — HA, backup/restore, plugin management, security, performance tuning, agent provisioning, monitoring
-
-### Related Skills
-- `devops/cicd-pipeline/SKILL.md` — CI/CD pipeline design principles
-- `devops/helm-patterns/SKILL.md` — Helm deployment in CI/CD
-- `devops/terraform/SKILL.md` — Terraform in CI/CD
-- `devops/docker-patterns/SKILL.md` — Docker build and registry
-
+  - references/jenkins-advanced.md — Jenkins Advanced Topics
+  - references/jenkins-best-practices.md — Jenkins Best Practices
+  - references/jenkins-fundamentals.md — Jenkins Fundamentals
+  - references/jenkins-ops.md — Jenkins Operations
+  - references/jenkins-pipeline.md — Jenkins Pipeline Reference
+  - references/jenkins-shared-libraries.md — Jenkins Shared Libraries
 ## Handoff
 Hand off to `devops/cicd-pipeline/SKILL.md` for CI/CD architecture. Hand off to `devops/helm-patterns/SKILL.md` for Helm deployment integration.

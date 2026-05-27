@@ -207,17 +207,11 @@ public partial class App : Application
 - INotifyPropertyChanged via source generators, never handwritten.
 
 ## References
-
-### Reference Files
-- `references/wpf-architecture.md` — MVVM pattern, XAML, data binding, dependency properties, commands, attached behaviors, routed events
-- `references/wpf-mvvm-patterns.md` — MVVM patterns, commands, validation, testing
-- `references/wpf-performance.md` — UI virtualization, rendering optimization, memory management, async patterns, profiling tools
-- `references/wpf-best-practices.md` — WPF best practices, MVVM, DI, styling, performance tips
-
-### Related Skills
-- `desktop/winui3/SKILL.md` — Modern Windows UI with WinAppSDK
-- `desktop/winforms/SKILL.md` — Classic drag-drop Windows Forms
-- `desktop/uwp/SKILL.md` — Universal Windows Platform
-
+  - references/wpf-advanced.md — Wpf Advanced Topics
+  - references/wpf-architecture.md — WPF Architecture Reference
+  - references/wpf-best-practices.md — WPF Best Practices
+  - references/wpf-fundamentals.md — Wpf Fundamentals
+  - references/wpf-mvvm-patterns.md — WPF MVVM Patterns Reference
+  - references/wpf-performance.md — WPF Performance Reference
 ## Handoff
 Hand off to `desktop/winui3/SKILL.md` when Fluent Design or modern Windows 11 UI required. Hand off to `desktop/uwp/SKILL.md` when Store distribution needed.

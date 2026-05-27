@@ -664,13 +664,14 @@ function logABACDecision(user, action, resource, env, result, matchedPolicies) {
 - Risk-based policies must have a floor: never allow if risk > 90 regardless of other attributes.
 
 ## References
-- `references/abac-policy-structure.md` — Policy anatomy, combining algorithms, condition operators, XACML reference
-- `references/opa-abac-implementation.md` — OPA/Rego for ABAC, deployment patterns, performance tuning
-- `references/hybrid-rbac-abac.md` — Hybrid RBAC-ABAC models, integration patterns, migration guide
-- `references/abac-testing.md` — ABAC policy testing, simulation, coverage analysis, regression
-- `references/abac-envoy-deployment.md` — OPA + Envoy ext_authz, K8s deployment, performance tuning, production checklist
-- `references/abac-policy-management.md` — Policy-as-code CI/CD, canary deployment, rollback, monitoring, governance
-
+  - references/abac-advanced.md — Abac Advanced Topics
+  - references/abac-envoy-deployment.md — OPA + Envoy Deployment
+  - references/abac-fundamentals.md — Abac Fundamentals
+  - references/abac-policy-management.md — ABAC Policy Lifecycle Management
+  - references/abac-policy-structure.md — ABAC Policy Structure
+  - references/abac-testing.md — ABAC Testing
+  - references/hybrid-rbac-abac.md — Hybrid RBAC-ABAC Models
+  - references/opa-abac-implementation.md — OPA/Rego ABAC Implementation
 ## Handoff
 No artifact produced unless requested.
 Next skill: authorization (backend) — integrate ABAC into the overall authorization architecture.

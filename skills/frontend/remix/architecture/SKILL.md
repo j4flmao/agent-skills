@@ -139,11 +139,12 @@ export default defineConfig({
 - Never fetch in components — fetch in loaders.
 
 ## References
-- `references/remix-routing.md` — route modules, nested routes, layouts
-- `references/remix-data.md` — loaders, actions, forms, pending UI
-- `references/remix-data-loading.md` — parallel loads, deferred data, caching, pagination, session data
-- `references/remix-deployment.md` — Fly.io, Vercel, Cloudflare, env vars, CI/CD, budgets
-
+  - references/remix-data-loading.md — Remix Data Loading Patterns
+  - references/remix-data.md — Remix Data — Loaders, Actions, Forms, and Pending UI
+  - references/remix-deployment.md — Remix Deployment
+  - references/remix-error-handling.md — Remix Error Handling
+  - references/remix-loader-patterns.md — Remix Loader Patterns
+  - references/remix-routing.md — Remix Routing — Route Modules, Nested Routes, Layouts
 ## Handoff
 No artifact produced.
 Next skill: frontend-remix-patterns for form validation, error boundaries, SEO, caching, optimistic UI.

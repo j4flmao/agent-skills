@@ -240,17 +240,12 @@ Auto-create tickets for fixable vulnerabilities.
 - CVE fix prioritized by severity and fixability
 
 ## References
-- `references/image-security.md`
-  Trivy, Grype, Clair, Snyk, Dockerfile hardening,
-  distroless, multi-stage, Cosign, SBOM
-- `references/runtime-security.md`
-  Falco, Tracee, admission control, Kyverno, OPA,
-  seccomp, AppArmor, Pod Security Standards
-- `references/admission-controller-policies.md`
-  Policy categories, Pod Security Standards, policy engine comparison
-- `references/container-vulnerability-scanning.md`
-  Scanning strategy by stage, severity thresholds, image best practices
-
+  - references/admission-controller-policies.md — Admission Controller Policies
+  - references/container-security-advanced.md — Container Security Advanced Topics
+  - references/container-security-fundamentals.md — Container Security Fundamentals
+  - references/container-vulnerability-scanning.md — Container Vulnerability Scanning
+  - references/image-security.md — Image Security
+  - references/runtime-security.md — Runtime Security
 ## Handoff
 `security-secrets-management` for credential injection
 `security-api-security` for gateway and service mesh policies

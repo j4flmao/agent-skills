@@ -149,11 +149,12 @@ Review in order: correctness → architecture → clarity → performance → se
 ```
 
 ## References
-- `references/review-checklist.md` — Review Checklist
-- `references/review-workflow.md` — Review Workflow
-- `references/security-review-checklist.md` — Security Review Checklist
-- `references/security-review-guide.md` — Security Review Guide
-
+  - references/code-review-advanced.md — Code Review Advanced Topics
+  - references/code-review-fundamentals.md — Code Review Fundamentals
+  - references/review-checklist.md — Code Review Checklist
+  - references/review-workflow.md — Code Review Workflow
+  - references/security-review-checklist.md — Security Review Checklist
+  - references/security-review-guide.md — Security Review Guide
 ## Handoff
 After completing this skill:
 - Next skill: **debugging-strategy** — if issues found need deeper investigation

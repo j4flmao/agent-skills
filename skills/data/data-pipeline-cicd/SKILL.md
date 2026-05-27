@@ -486,11 +486,14 @@ rollback:
 - Use `data-diff` in staging to detect unexpected data changes before prod promotion
 
 ## References
-- `references/dbt-ci-cd-pipeline.md` — Full dbt CI/CD pipeline setup including GitHub Actions, dbt Cloud API jobs, environment promotion, and branch strategy
-- `references/sql-linting-and-testing.md` — SQLFluff rule configuration, dbt test patterns (singular, generic, freshness), data-diff comparison, and Atlantis SQL review workflow
-- `references/data-diff-testing.md` — data-diff, row/schema/volume diff, acceptance thresholds
-- `references/data-quality-ci.md` — Great Expectations checkpoints, quality gates, data contracts, guardrails
-
+  - references/cicd-for-data-pipelines.md — CI/CD for Data Pipelines
+  - references/data-diff-testing.md — Data Diff Testing Reference
+  - references/data-quality-ci.md — Data Quality in CI/CD Reference
+  - references/dbt-ci-cd-pipeline.md — dbt CI/CD Pipeline
+  - references/pipeline-cicd-environments.md — Pipeline CI/CD Environment Management
+  - references/pipeline-cicd-secrets.md — Pipeline CI/CD Secrets Management
+  - references/pipeline-test-automation.md — Pipeline Test Automation
+  - references/sql-linting-and-testing.md — SQL Linting and Testing
 ## Handoff
 `data-data-quality` for data quality monitoring and alerting in production
 `data-etl-pipeline` for pipeline orchestration and execution

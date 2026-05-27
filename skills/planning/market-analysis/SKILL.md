@@ -106,10 +106,11 @@ Their Threat → Your Opportunity = Defend
 - **External validation beats internal estimates** — Prefer cited analyst data, public company filings, and third-party surveys over internal guesses. If external data does not exist, state that explicitly and mark confidence as low.
 
 ## References
-- `references/competitive-analysis.md` — Competitive Analysis
-- `references/market-analysis-frameworks.md` — Market Analysis Frameworks
-- `references/market-analysis-template.md` — Market Analysis Template
-- `references/market-sizing.md` — Market Sizing
-
+  - references/competitive-analysis.md — Competitive Analysis Guide
+  - references/market-analysis-advanced.md — Market Analysis Advanced Topics
+  - references/market-analysis-frameworks.md — Market Analysis Frameworks
+  - references/market-analysis-fundamentals.md — Market Analysis Fundamentals
+  - references/market-analysis-template.md — Market Analysis Template
+  - references/market-sizing.md — Market Sizing Guide
 ## Handoff
 create-roadmap (feed market analysis into roadmap priorities and feature decisions), create-pitch-deck (provide market data, competitor positioning, and TAM/SAM/SOM for investor deck).

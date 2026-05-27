@@ -188,11 +188,12 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
 - CQRS: commands for writes, queries for reads. Never mix them in the same handler.
 
 ## References
-- `references/module-structure.md` — NestJS module organization and dependency direction
-- `references/ddd-nestjs.md` — DDD patterns: entities, value objects, domain events
-- `references/nestjs-modules.md` — Module types, dynamic modules, scopes, encapsulation
-- `references/nestjs-deployment.md` — Docker, CI/CD, platforms, graceful shutdown
-
+  - references/ddd-nestjs.md — NestJS DDD Patterns
+  - references/module-structure.md — NestJS Module Structure
+  - references/nestjs-cqrs.md — NestJS CQRS Implementation
+  - references/nestjs-deployment.md — NestJS Deployment
+  - references/nestjs-modules.md — NestJS Modules
+  - references/nestjs-testing.md — NestJS Testing Strategies
 ## Handoff
 No artifact produced.
 Next skill: nestjs-patterns — guards, interceptors, pipes, microservices.

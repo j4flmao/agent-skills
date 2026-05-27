@@ -151,11 +151,14 @@ describe('PostgresUserRepository', () => {
 - Test names are sentences: "should return error when email is invalid" — not "test_email_validation".
 
 ## References
-- `references/test-pyramid.md` — test pyramid guide with ratios and examples
-- `references/mocking-strategies.md` — Mock types, what to mock vs not mock, anti-patterns
-- `references/integration-test-patterns.md` — TestContainers, WireMock, transaction rollback, factories
-- `references/testing-integration.md` — Integration testing types, Testcontainers, WireMock, database tests
-
+  - references/integration-test-patterns.md — Integration Test Patterns
+  - references/mocking-fakes.md — Mocking and Test Doubles
+  - references/mocking-strategies.md — Mocking Strategies
+  - references/test-naming-coverage.md — Test Naming and Coverage
+  - references/test-pyramid.md — Test Pyramid
+  - references/testing-contract.md — Contract Testing
+  - references/testing-integration.md — Integration Testing
+  - references/testing-property-based.md — Property-Based Testing
 ## Handoff
 No artifact produced.
 Next skill: stack-specific skill (nestjs-architecture, golang-architecture, etc.)

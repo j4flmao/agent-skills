@@ -170,38 +170,13 @@ Monitor for adversarial or out-of-distribution inputs using confidence threshold
 Log model version, preprocessing config, inference time, and detection results for every request.
 
 ## References
-- references/detection-segmentation.md — YOLOv8, DETR, Faster-RCNN, U-Net, Mask R-CNN, SAM, training config, metrics mAP/IoU
-- references/image-preprocessing.md — OpenCV operations, albumentations, normalization, data augmentation, pipeline
-- references/cv-deployment.md — Model optimization, ONNX/TensorRT export, quantization, edge deployment, Triton inference server
-- references/video-analysis.md — Object tracking, action recognition, video segmentation, Optical Flow, video preprocessing pipelines
-
-### Edge Cases and Special Domains
-Small object detection: increase input resolution, use feature pyramid networks (FPN), mosaic augmentation, copy-paste augmentation.
-Occluded objects: use partial visibility training, cutout and coarse dropout augmentation, DETR (handles occlusion well).
-Low-light images: use data augmentation (brightness, gamma), HDR preprocessing, denoising before model.
-Aerial/satellite imagery: use oriented bounding boxes (OBB), large input sizes, rotated augmentation, specialized models (YOLO-OBB).
-Medical images (X-ray, MRI, CT): use 3D CNNs or 2.5D (slice-based), transfer from medical pretrained models (RadImageNet).
-Document layout analysis: use LayoutLM, DETR for document parsing, OCR preprocessing with Tesseract or PaddleOCR.
-Edge deployment (Jetson, mobile): use model quantization (INT8), knowledge distillation, efficient architectures (MobileNet, EfficientNet-Lite).
-
-### Framework Integration
-TorchVision: models (ResNet, EfficientNet, ViT), transforms, datasets, utilities for PyTorch.
-Ultralytics: YOLOv8 training, validation, export (ONNX/TensorRT/TFLite), tracking.
-Detectron2: Faster R-CNN, Mask R-CNN, DensePose, keypoint detection (Meta AI).
-MMDetection: modular detection framework with 300+ models, config-based training pipeline.
-Segment Anything (SAM): foundation model for zero-shot segmentation with prompt engineering.
-HuggingFace Transformers: DETR, ViT, Swin, ConvNeXt, Depth Anything for vision tasks.
-Albumentations: fast image augmentation library with 70+ transforms and bbox/keypoint support.
-
-### Advanced CV Tips
-Use class-balanced sampling for imbalanced datasets: WeightedRandomSampler in PyTorch or class_weights in loss.
-Implement warmup + cosine annealing learning rate schedule for stable training with large batch sizes.
-Use Stochastic Weight Averaging (SWA) for improved generalization at no additional training cost.
-For domain adaptation, fine-tune only the last few layers first, then progressively unfreeze earlier layers.
-Implement automated hyperparameter search over augmentation parameters for optimal training pipeline.
-Use exponential moving average (EMA) of model weights during training for more robust inference.
-For video understanding, use 3D CNNs (I3D, SlowFast) or video transformers (TimeSformer, VideoMAE).
-Implement class activation maps (Grad-CAM) for visual explanation of model predictions in production.
-
+  - references/computer-vision-advanced.md — Computer Vision Advanced Topics
+  - references/computer-vision-fundamentals.md — Computer Vision Fundamentals
+  - references/cv-deployment.md — CV Model Deployment
+  - references/cv-pipeline.md — Computer Vision Pipeline
+  - references/detection-segmentation.md — Detection & Segmentation
+  - references/image-preprocessing.md — Image Preprocessing & Augmentation
+  - references/image-segmentation.md — Image Segmentation
+  - references/video-analysis.md — Video Analysis
 ## Handoff
 Hand off to ml-experiment-tracking for training runs. For model deployment on edge devices, hand off to devops-ml-serving. For video processing pipelines, use dedicated video-streaming skill.

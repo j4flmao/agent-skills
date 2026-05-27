@@ -232,18 +232,11 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 - Controllers only contain routing/HTTP concerns — all logic in handlers/services.
 
 ## References
-
-### Reference Files
-- `references/project-structure.md` — Detailed project templates with file-by-file guidance
-- `references/api-design.md` — API design patterns, versioning, OpenAPI configuration
-- `references/dotnet-clean-architecture.md` — Layer structure, dependency rule, domain purity
-- `references/dotnet-microservices.md` — Service boundaries, gRPC, messaging, resilience
-
-### Related Skills
-- `backend/dotnet/patterns/SKILL.md` — .NET-specific patterns (MediatR CQRS, Result pattern)
-- `backend/universal/clean-architecture/SKILL.md` — Clean Architecture principles
-- `backend/universal/oop-principles/SKILL.md` — SOLID and OOP foundation
-- `backend/universal/testing/SKILL.md` — Testing strategies for .NET
-
+  - references/api-design.md — .NET API Design Reference
+  - references/dotnet-clean-architecture.md — .NET Clean Architecture
+  - references/dotnet-cqrs-event-sourcing.md — .NET CQRS and Event Sourcing
+  - references/dotnet-microservices.md — .NET Microservices
+  - references/dotnet-testing-architecture.md — .NET Testing Architecture
+  - references/project-structure.md — .NET Project Structure Reference
 ## Handoff
 Hand off to `backend/dotnet/patterns/SKILL.md` for CQRS/MediatR, Result pattern, Pipeline behaviors. Hand off to `backend/universal/clean-architecture/SKILL.md` for architectural restructuring.

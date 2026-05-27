@@ -272,11 +272,12 @@ Key compatibility rules:
 - Provide framework wrappers (React, Vue, Angular) for ergonomic usage — set properties via refs.
 
 ## References
-- `references/custom-elements.md` — lifecycle, attributes, properties, ElementInternals, form participation
-- `references/shadow-dom.md` — encapsulation, slots, CSS parts, theming, cross-framework
-- `references/web-components-implementation.md` — Complete component patterns (counter, form input), shadow DOM styling, declarative shadow DOM, testing
-- `references/web-components-frameworks.md` — React/Vue/Angular/Svelte/Lit integration, event handling, cross-framework compatibility rules
-
+  - references/custom-elements.md — Custom Elements Reference
+  - references/shadow-dom.md — Shadow DOM Reference
+  - references/wc-performance.md — Web Component Performance
+  - references/wc-testing.md — Web Component Testing
+  - references/web-components-frameworks.md — Web Components in Frameworks
+  - references/web-components-implementation.md — Web Components Implementation
 ## Handoff
 No artifact produced.
 Next skill: frontend-lit for Lit-based web components. Or frontend-universal-design-system for design token integration.

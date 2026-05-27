@@ -53,11 +53,12 @@ Manage cyber threat intelligence operations including feed management, IoC/TTP h
 - [ ] Threat hunting plan with hypotheses
 
 ## References
-- `references/cti-lifecycle.md` — intelligence lifecycle and processes
-- `references/threat-hunting.md` — hunting methodology and techniques
-- `references/osint-collection.md` — OSINT collection, passive recon, and dark web monitoring
-- `references/ti-platforms.md` — threat intelligence platforms comparison and integration
-- `references/ti-sharing.md` — threat intelligence sharing, STIX/TAXII, and TLP
-
+  - references/cti-lifecycle.md — Threat Intelligence Lifecycle
+  - references/osint-collection.md — OSINT Collection
+  - references/threat-hunting.md — Threat Hunting
+  - references/threat-intelligence-advanced.md — Threat Intelligence Advanced Topics
+  - references/threat-intelligence-fundamentals.md — Threat Intelligence Fundamentals
+  - references/ti-platforms.md — Threat Intelligence Platforms
+  - references/ti-sharing.md — Threat Intelligence Sharing
 ## Handoff
 IoC feeds integrated with siem-engineering for detection rules. TTP mapping informs soc-operations for analyst workflows.

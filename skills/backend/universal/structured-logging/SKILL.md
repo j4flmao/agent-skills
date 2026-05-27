@@ -238,10 +238,13 @@ logging:
 - Follow ECS (Elastic Common Schema) for field naming
 
 ## References
-- `references/log-format.md` — JSON schema, field definitions, context propagation, ECS format
-- `references/log-shipping.md` — Stdout capture, sidecar config, aggregation pipeline, sampling
-- `references/logging-architecture.md` — Log pipeline design, structured logging per language, context propagation
-- `references/logging-aggregation.md` — Log shippers (Vector/Fluentd), storage backends, query patterns
-
+  - references/log-aggregation.md — Log Aggregation and Analysis
+  - references/log-correlation-tracing.md — Log Correlation and Tracing
+  - references/log-format.md — Log Format Schema
+  - references/log-sampling-strategies.md — Log Sampling Strategies
+  - references/log-shipping.md — Log Shipping
+  - references/logging-aggregation.md — Logging Aggregation
+  - references/logging-architecture.md — Logging Architecture
+  - references/structured-logging-implementation.md — Structured Logging Patterns
 ## Handoff
 `devops-observability` for metrics collection and distributed tracing setup

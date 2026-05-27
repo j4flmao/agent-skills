@@ -172,11 +172,14 @@ Never trust sticky sessions alone for reliability. Always pair with external pub
 - Buffer messages for offline clients only up to a configurable TTL and limit.
 
 ## References
-- `references/websocket-basics.md` — WebSocket protocol fundamentals
-- `references/socket-io-patterns.md` — Socket.IO-specific patterns
-- `references/reconnection-strategy.md` — Reconnection and resilience
-- `references/ws-vs-sse.md` — WebSocket vs SSE comparison
-
+  - references/reconnection-strategy.md — Reconnection Strategy
+  - references/socket-io-patterns.md — Socket.IO Patterns
+  - references/websocket-auth.md — WebSocket Authentication
+  - references/websocket-basics.md — WebSocket Basics
+  - references/websocket-implementation.md — WebSocket Implementation Patterns
+  - references/websocket-monitoring.md — WebSocket Monitoring
+  - references/websocket-patterns.md — WebSocket Message Protocol
+  - references/ws-vs-sse.md — WebSocket vs SSE (Server-Sent Events)
 ## Handoff
 No artifact produced unless requested.
 Next skill: backend-message-queue — if real-time events need to be persisted or fanned out to other services.

@@ -90,11 +90,14 @@ All 10 slides outlined with headlines and key messages. Key metrics are present 
 - **Every slide ends with a hook to the next** — The final sentence or visual on each slide should create curiosity and anticipation for the next slide. The deck should feel like an engaging book that is difficult to put down.
 
 ## References
-- `references/investor-questions.md` — Investor Questions
-- `references/pitch-deck-strategy.md` — Pitch Deck Strategy
-- `references/pitch-deck-template.md` — Pitch Deck Template
-- `references/pitch-deck-templates.md` — Pitch Deck Templates
-
+  - references/create-pitch-deck-advanced.md — Create Pitch Deck Advanced Topics
+  - references/create-pitch-deck-fundamentals.md — Create Pitch Deck Fundamentals
+  - references/investor-pitch-preparation.md — Investor Pitch Preparation Guide
+  - references/investor-questions.md — Investor Questions
+  - references/pitch-deck-storytelling.md — Pitch Deck Storytelling Guide
+  - references/pitch-deck-strategy.md — Pitch Deck Strategy
+  - references/pitch-deck-template.md — Pitch Deck Template
+  - references/pitch-deck-templates.md — Pitch Deck Templates
 ## Related Skills
 
 - **market-analysis** — Refine market data, TAM/SAM/SOM, and competitive positioning for slide 3

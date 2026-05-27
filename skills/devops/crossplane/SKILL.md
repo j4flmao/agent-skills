@@ -193,12 +193,13 @@ spec:
 - Package configurations for registry publishing with semantic versioning.
 
 ## References
-- `references/provider-architecture.md` — Providers, managed resources, XRs, compositions
-- `references/composition-patterns.md` — Patches, transforms, patch sets, claims
-- `references/package-management.md` — Packages, registry, configuration packages
-- `references/composition-functions.md` — Go/Python/TypeScript functions, testing
-- `references/enterprise-patterns.md` — Multi-cluster, multi-cloud, GitOps, RBAC
-
+  - references/composition-functions.md — Crossplane Composition Functions
+  - references/composition-patterns.md — Crossplane Composition Patterns
+  - references/crossplane-advanced.md — Crossplane Advanced Topics
+  - references/crossplane-fundamentals.md — Crossplane Fundamentals
+  - references/enterprise-patterns.md — Crossplane Enterprise Patterns
+  - references/package-management.md — Crossplane Package Management
+  - references/provider-architecture.md — Crossplane Provider Architecture
 ## Handoff
 After completing this skill:
 - Next skill: **devops-gitlab-ci** — CI/CD pipelines for Crossplane configuration packages

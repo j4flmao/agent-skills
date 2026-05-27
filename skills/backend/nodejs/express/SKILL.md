@@ -408,17 +408,11 @@ export function requestLogger(req: Request, res: Response, next: NextFunction) {
 - Graceful shutdown on SIGTERM/SIGINT. Close server + DB connections.
 
 ## References
-
-### Reference Files
-- `references/middleware-patterns.md` — Middleware chain, error handling, validation, rate limiting
-- `references/app-structure.md` — Folder organization, route separation, config, startup
-- `references/performance-optimization.md` — Compression, clustering, connection pooling, caching
-- `references/testing-strategies.md` — Supertest, integration tests, mock middleware, error handler tests
-
-### Related Skills
-- `backend/nodejs/architecture/SKILL.md` — General Node.js architecture
-- `backend/nodejs/patterns/SKILL.md` — Node.js design patterns
-- `backend/nodejs/prisma/SKILL.md` — Prisma ORM integration
-
+  - references/app-structure.md — App Structure
+  - references/express-error-handling.md — Express Error Handling Reference
+  - references/express-security.md — Express Security Reference
+  - references/middleware-patterns.md — Middleware Patterns
+  - references/performance-optimization.md — Express Performance Optimization
+  - references/testing-strategies.md — Express Testing Strategies
 ## Handoff
 Hand off to `backend/nodejs/prisma/SKILL.md` for database integration or `backend/nodejs/patterns/SKILL.md` for advanced Express patterns.

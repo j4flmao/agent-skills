@@ -208,17 +208,11 @@ describe('Order Routes', () => {
 - No global state — use c.env and c.set for per-request context.
 
 ## References
-
-### Reference Files
-- `references/hono-setup.md` — Hono setup, runtimes, deployment targets
-- `references/hono-middleware.md` — Middleware, validation, RPC, testing
-- `references/hono-deployment.md` — Cloudflare Workers, Deno Deploy, Bun, Node.js, Docker
-- `references/hono-custom-middleware.md` — Custom middleware patterns, composability, error handling
-
-### Related Skills
-- `backend/nodejs/architecture/SKILL.md` — Node.js architecture
-- `backend/nodejs/fastify/SKILL.md` — Fastify alternative
-- `backend/universal/api-response/SKILL.md` — API response envelope
-
+  - references/hono-custom-middleware.md — Hono Custom Middleware
+  - references/hono-deployment.md — Hono Deployment
+  - references/hono-middleware.md — Hono Middleware Guide
+  - references/hono-rpc.md — Hono RPC Reference
+  - references/hono-setup.md — Hono Setup Guide
+  - references/hono-testing.md — Hono Testing Reference
 ## Handoff
 Hand off to `backend/nodejs/architecture/SKILL.md` for full Node.js architecture.

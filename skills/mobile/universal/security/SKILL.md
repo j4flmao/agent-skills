@@ -157,11 +157,12 @@ buildTypes {
 ```
 
 ## References
-- `references/auth.md` — Auth
-- `references/data-protection.md` — Data Protection
-- `references/mobile-security-best-practices.md` — Mobile Security Best Practices
-- `references/network-security.md` — Network Security
-
+  - references/auth.md — Mobile Authentication
+  - references/data-protection.md — Mobile Data Protection
+  - references/mobile-security-best-practices.md — Mobile Security Best Practices
+  - references/mobile-security.md — Mobile Security Fundamentals
+  - references/network-security.md — Mobile Network Security
+  - references/security-hardening.md — Mobile Security Hardening
 ## Handoff
 
 Hand off to stack-specific skill for implementation.

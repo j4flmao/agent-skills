@@ -132,12 +132,13 @@ kubectl logs -l app=otel-collector
 - Configure TLS for OTLP export in production.
 
 ## References
-- `references/otel-concepts.md` — Signals, SDK, API, Collector, OTLP
-- `references/collector-pipeline.md` — Receivers, processors, exporters
-- `references/sdk-instrumentation.md` — Auto/manual instrumentation per language
-- `references/trace-sampling.md` — Head-based, tail-based, probabilistic
-- `references/multi-backend-export.md` — OTLP to multiple backends
-
+  - references/collector-pipeline.md — OpenTelemetry Collector Pipeline
+  - references/multi-backend-export.md — Multi-Backend OTLP Export
+  - references/opentelemetry-advanced.md — Opentelemetry Advanced Topics
+  - references/opentelemetry-fundamentals.md — Opentelemetry Fundamentals
+  - references/otel-concepts.md — OpenTelemetry Concepts
+  - references/sdk-instrumentation.md — OpenTelemetry SDK Instrumentation
+  - references/trace-sampling.md — OpenTelemetry Trace Sampling
 ## Handoff
 After completing this skill:
 - Next skill: **devops-apm-observability** — APM platforms receiving OTel data

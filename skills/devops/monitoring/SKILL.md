@@ -507,19 +507,12 @@ output.elasticsearch:
 - Alert delivery verified with synthetic tests — never trust alerting without validation.
 
 ## References
-
-### Reference Files
-- `references/prometheus-setup.md` — Full Prometheus configuration, exporters, service discovery
-- `references/grafana-dashboards.md` — Dashboard design patterns, JSON model, provisioning
-- `references/loki-setup.md` — Loki configuration, logQL queries, multi-tenancy
-- `references/elk-setup.md` — ELK stack setup, index templates, pipeline configurations
-
-### Related Skills
-- `devops/observability/SKILL.md` — Observability fundamentals and tracing
-- `management/alerting/SKILL.md` — Alert rules and notification routing
-- `devops/helm-patterns/SKILL.md` — Helm deploy of monitoring stack
-- `devops/terraform/SKILL.md` — Infrastructure provisioning for monitoring
-
+  - references/elk-setup.md — ELK Stack Setup Reference
+  - references/grafana-dashboards.md — Grafana Dashboard Design
+  - references/loki-setup.md — Loki Setup Reference
+  - references/monitoring-advanced.md — Monitoring Advanced Topics
+  - references/monitoring-fundamentals.md — Monitoring Fundamentals
+  - references/prometheus-setup.md — Prometheus Setup Reference
 ## Handoff
 
 Hand off to `management/alerting/SKILL.md` for alert rule configuration. Hand off to `devops/helm-patterns/SKILL.md` for deploying monitoring stack on Kubernetes. Hand off to `devops/terraform/SKILL.md` for provisioning monitoring infrastructure.

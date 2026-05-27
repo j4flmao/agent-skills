@@ -193,11 +193,14 @@ Use layers for: shared UI library across Nuxt apps, white-label apps, base confi
 - Use $fetch for client-to-server API calls. Use useFetch for SSR-compatible data loading.
 
 ## References
-- `references/nuxt-conventions.md` — Nuxt directory structure, auto-imports, useFetch, server routes
-- `references/nuxt-modules.md` — official modules, module configuration, custom modules, best practices
-- `references/nuxt-deployment.md` — build commands, deployment targets, env vars, performance budget
-- `references/nuxt-performance.md` — data fetching optimization, images, bundle optimization, lazy hydration
-
+  - references/composables-autoimport.md — Nuxt Composables and Auto-imports
+  - references/nuxt-auth.md — Nuxt Auth
+  - references/nuxt-conventions.md — Nuxt Conventions
+  - references/nuxt-deployment.md — Nuxt Deployment
+  - references/nuxt-modules.md — Nuxt Modules
+  - references/nuxt-performance.md — Nuxt Performance Patterns
+  - references/nuxt-testing.md — Nuxt Testing
+  - references/server-routes.md — Nuxt Server Routes and API Endpoints
 ## Handoff
 No artifact produced.
 Next skill: frontend-testing — test Nuxt pages.

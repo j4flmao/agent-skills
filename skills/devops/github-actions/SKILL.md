@@ -217,11 +217,14 @@ jobs:
 YAML workflow files in `.github/workflows/` and/or `action.yml` files for composite/reusable actions.
 
 ## References
-- `references/workflow-basics.md` — workflow syntax, triggers, jobs, steps
-- `references/reusable-workflows.md` — `workflow_call`, `workflow_dispatch`, sharing across repos
-- `references/composite-actions.md` — building and publishing composite actions
-- `references/best-practices.md` — caching, security, performance, monitoring
-
+  - references/best-practices.md — Best Practices
+  - references/composite-actions.md — Composite Actions
+  - references/custom-actions.md — Custom GitHub Actions Development
+  - references/github-actions-advanced.md — Github Actions Advanced Topics
+  - references/github-actions-fundamentals.md — Github Actions Fundamentals
+  - references/reusable-workflows.md — Reusable Workflows
+  - references/workflow-basics.md — Workflow Basics
+  - references/workflow-optimization.md — GitHub Actions Workflow Optimization
 ## Handoff
 After completing this skill:
 - Next skill: **gitops** — ArgoCD/Flux deployment from CI artifacts

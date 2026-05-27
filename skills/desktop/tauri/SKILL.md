@@ -159,17 +159,11 @@ async function handleGreet() {
 - Dev mode uses `tauri dev` for hot-reload.
 
 ## References
-
-### Reference Files
-- `references/tauri-architecture.md` — Rust backend, webview frontend, IPC commands, file system access, system tray, window management
-- `references/tauri-deployment.md` — Bundling, code signing, auto-updater, CI/CD for Windows/Mac/Linux, app store distribution
-- `references/tauri-setup.md` — Project setup, Rust commands, plugins, debugging
-- `references/tauri-vs-electron.md` — Comparison, migration guide, trade-offs
-
-### Related Skills
-- `desktop/electron/SKILL.md` — Heavier alternative with Chromium bundle
-- `desktop/qt/SKILL.md` — Native C++ alternative
-- `backend/rust/core/SKILL.md` — Rust language fundamentals
-
+  - references/tauri-advanced.md — Tauri Advanced Topics
+  - references/tauri-architecture.md — Tauri Architecture Reference
+  - references/tauri-deployment.md — Tauri Deployment Reference
+  - references/tauri-fundamentals.md — Tauri Fundamentals
+  - references/tauri-setup.md — Tauri Setup Reference
+  - references/tauri-vs-electron.md — Tauri vs Electron Reference
 ## Handoff
 Hand off to `desktop/electron/SKILL.md` when Chromium DevTools or extensive npm-native ecosystem required. Hand off to `backend/rust/core/SKILL.md` for complex Rust backend logic beyond Tauri commands.

@@ -142,10 +142,13 @@ Configure webhooks in Git provider (GitHub, GitLab, Bitbucket) for faster sync t
 Symptoms: Application status shows "OutOfSync" with "Error" health status, sync hangs on hook. Diagnosis: check app details in ArgoCD UI, verify Git repo access, check repo server logs, verify destination cluster connectivity. Resolution: for sync error — fix manifest issue in Git, commit fix, auto-sync retries. For hook failure — check hook Job logs, fix migration/test, commit fix, ArgoCD retries on next sync. For cluster connectivity — verify kubeconfig, check cluster API health, re-register cluster if needed. Prevention: CI validation of manifests before commit, pre-sync hook smoke tests, canary deployments with auto-rollback.
 
 ## References
-- [ArgoCD Setup](./references/argocd-setup.md) — installation, config, SSO, projects, cluster registration
-- [ArgoCD Patterns](./references/argocd-patterns.md) — ApplicationSets, sync waves, hooks, rollback, blue-green, canary
-- [ArgoCD Advanced](./references/argocd-advanced.md) — CMP, webhooks, multi-cluster DR, notifications, Argo Rollouts
-- [ArgoCD Operations](./references/argocd-operations.md) — HA, scaling, backup/restore, upgrade, troubleshooting, performance
-
+  - references/argo-cd-advanced.md — Argo Cd Advanced Topics
+  - references/argo-cd-application-sets.md — Argo CD Application Sets
+  - references/argo-cd-fundamentals.md — Argo Cd Fundamentals
+  - references/argo-cd-sync-strategies.md — Argo CD Sync Strategies
+  - references/argocd-advanced.md — ArgoCD Advanced
+  - references/argocd-operations.md — ArgoCD Operations
+  - references/argocd-patterns.md — ArgoCD Patterns
+  - references/argocd-setup.md — ArgoCD Setup
 ## Handoff
 Hand off to ArgoCD when Application manifests or sync policies are needed. Hand off to kubernetes-patterns for general workload manifests. Hand off to helm-patterns for Helm chart-specific concerns. Hand off to observability for monitoring ArgoCD itself. Hand off to cicd-pipeline for ArgoCD integration with CI systems. Hand off to security for SSO configuration and RBAC policy design. Hand off to service-mesh for progressive delivery patterns with Argo Rollouts and Istio integration.

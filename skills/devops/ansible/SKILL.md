@@ -264,17 +264,13 @@ jobs:
 - Use `tags:` on all tasks for selective execution.
 
 ## References
-
-### Reference Files
-- `references/ansible-roles.md` — Role design patterns, dependencies, composition
-- `references/ansible-best-practices.md` — Ansible optimization, security, inventory management
-- `references/ansible-tower.md` — AWX/Tower, job templates, RBAC, workflow, inventory
-- `references/ansible-security.md` — Vault, SSH hardening, secrets management, compliance automation
-
-### Related Skills
-- `devops/terraform/SKILL.md` — Infrastructure provisioning
-- `devops/helm-patterns/SKILL.md` — K8s configuration
-- `devops/monitoring/SKILL.md` — Monitoring agent deployment
-
+  - references/ansible-advanced.md — Ansible Advanced Topics
+  - references/ansible-best-practices.md — Ansible Best Practices
+  - references/ansible-fundamentals.md — Ansible Fundamentals
+  - references/ansible-roles.md — Ansible Role Design
+  - references/ansible-security.md — Ansible Security
+  - references/ansible-tower.md — Ansible AWX/Tower
+  - references/automation-playbooks.md — Ansible Automation Playbooks
+  - references/inventory-config.md — Ansible Inventory and Configuration
 ## Handoff
 Hand off to `devops/terraform/SKILL.md` for infrastructure provisioning. Hand off to `devops/monitoring/SKILL.md` for monitoring agent configuration.

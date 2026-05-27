@@ -125,10 +125,15 @@ Map task to eval categories: generation (quality, coherence), RAG (faithfulness,
 - Automate eval runs but require human review for regression in critical metrics.
 
 ## References
-- `references/eval-datasets.md` — Eval Datasets
-- `references/eval-metrics.md` — Eval Metrics
-- `references/eval-pipeline.md` — Eval Pipeline
-- `references/metrics-reference.md` — Metrics Reference
-
+  - references/ai-evals-advanced.md — Ai Evals Advanced Topics
+  - references/ai-evals-fundamentals.md — Ai Evals Fundamentals
+  - references/eval-datasets.md — Evaluation Datasets
+  - references/eval-frameworks.md — Evaluation Frameworks
+  - references/eval-metrics.md — Evaluation Metrics
+  - references/eval-pipeline.md — Evaluation Pipeline
+  - references/eval-quality-assurance.md — Evaluation Quality Assurance
+  - references/eval-workflow-automation.md — Evaluation Workflow Automation
+  - references/llm-judge-patterns.md — LLM-as-Judge Patterns
+  - references/metrics-reference.md — Metrics Quick Reference
 ## Handoff
 For prompt optimization to improve eval scores, hand off to `ai-prompt-engineering`. For RAG pipeline changes evaluated by this skill, hand off to `ai-rag-patterns`.

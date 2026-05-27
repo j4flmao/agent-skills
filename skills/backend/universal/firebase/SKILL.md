@@ -206,18 +206,11 @@ if (decoded.role === 'admin') { /* allow */ }
 - Store service account JSON outside the repo — use secret manager.
 
 ## References
-
-### Reference Files
-- `references/firestore-database.md` — Firestore data modeling, queries, indexes, real-time, offline, security rules
-- `references/firebase-auth.md` — Auth providers, custom claims, admin SDK, multi-tenancy, security
-- `references/firebase-storage-hosting.md` — Cloud Storage, Hosting, CDN, security rules, rewrite config
-- `references/cloud-functions.md` — Cloud Functions triggers, deployment, cold starts, memory config, monitoring
-
-### Related Skills
-- `mobile/universal/crash-reporting/SKILL.md` — Firebase Crashlytics integration
-- `mobile/universal/analytics/SKILL.md` — Firebase Analytics
-- `frontend/universal/authentication/SKILL.md` — Client-side auth patterns
-- `backend/universal/supabase/SKILL.md` — Supabase (alternative)
-
+  - references/cloud-functions.md — Cloud Functions
+  - references/firebase-auth.md — Firebase Auth
+  - references/firebase-cost-optimization.md — Firebase Cost Optimization
+  - references/firebase-emulator-testing.md — Firebase Emulator Testing
+  - references/firebase-storage-hosting.md — Firebase Storage & Hosting
+  - references/firestore-database.md — Firestore Database
 ## Handoff
 Hand off to `mobile/*/SKILL.md` for client-side SDK integration or `devops/monitoring/SKILL.md` for Firebase monitoring setup.

@@ -91,11 +91,12 @@ Problem → Select Heuristic → Apply & Observe → Record Finding → (Optiona
 7. One charter per session — context switching reduces exploration depth
 
 ## References
-- `references/session-based.md` — Session-Based Test Management (SBTM)
-- `references/test-heuristics.md` — Test heuristics and mnemonic guides
-- `references/charter-design.md` — Charter design and types
-- `references/exploratory-session.md` — Session-based testing, charter templates, debriefing, notes
-
+  - references/charter-design.md — Charter Design
+  - references/exploratory-session.md — Session-Based Testing
+  - references/exploratory-testing-advanced.md — Exploratory Testing Advanced Topics
+  - references/exploratory-testing-fundamentals.md — Exploratory Testing Fundamentals
+  - references/session-based.md — Session-Based Test Management (SBTM)
+  - references/test-heuristics.md — Test Heuristics
 ## Handoff
 After session completion, hand off to:
 - `quality-regression-testing` — if new bugs need regression coverage

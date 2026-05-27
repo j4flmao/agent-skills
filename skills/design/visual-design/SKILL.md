@@ -62,8 +62,10 @@ Apply visual design principles: color theory, typography, layout grids, spacing 
 - **Consistency**: Repeating patterns create familiarity
 
 ## References
-- `references/color-theory.md` — Color theory, wheel, harmony, contrast, WCAG, dark mode
-- `references/layout-principles.md` — Grid systems, spacing, and composition
-- `references/spacing-grid.md` — 8px grid, baseline grid, spacing scale, container queries, responsive breakpoints
-- `references/typography.md` — Typeface selection, font pairing, hierarchy, responsive type scales, variable fonts
-- `references/visual-hierarchy.md` — F-pattern, Z-pattern, focal points, proximity, Gestalt principles
+  - references/color-theory.md — Color Theory Reference
+  - references/layout-principles.md — Color Theory Guide
+  - references/spacing-grid.md — Spacing and Grid Systems Reference
+  - references/typography.md — Typography Reference
+  - references/visual-design-advanced.md — Visual Design Advanced Topics
+  - references/visual-design-fundamentals.md — Visual Design Fundamentals
+  - references/visual-hierarchy.md — Visual Hierarchy Reference

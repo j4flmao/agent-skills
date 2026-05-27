@@ -134,10 +134,11 @@ channels.forEach { manager.createNotificationChannel(it) }
 - Never log push tokens in production.
 
 ## References
-- `references/apns-guide.md` — APNs endpoints, tokens, certificate vs key auth, payload limits
-- `references/fcm-guide.md` — FCM HTTP v1 API, topic messaging, device groups, delivery extensions
-- `references/payload-design.md` — Alert, data, and silent payload structures, localized strings, media attachments
-- `references/permission-flow.md` — Provisional authorization, critical alerts, provisional push, pre-permission dialog design
-
+  - references/apns-guide.md — APNs Guide
+  - references/fcm-guide.md — FCM Guide
+  - references/local-notifications.md — Local Notifications
+  - references/payload-design.md — Payload Design
+  - references/permission-flow.md — Permission Flow
+  - references/push-notifications.md — Push Notifications Setup
 ## Handoff
 No further handoff. Push notification integration is self-contained.

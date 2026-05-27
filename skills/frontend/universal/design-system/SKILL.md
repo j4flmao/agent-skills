@@ -177,11 +177,12 @@ const buttonVariants = cva(
 - Prefer composition (children, slots) over configuration (boolean props for every option).
 
 ## References
-- `references/design-tokens.md` — token hierarchy (primitive / semantic / component)
-- `references/component-api.md` — CVA pattern, slot pattern, component API rules
-- `references/design-system-implementation.md` — Project structure, component API design, CVA patterns, slot pattern, distribution
-- `references/design-system-testing.md` — Unit tests, a11y tests, visual regression, interaction tests, snapshot strategy
-
+  - references/component-api.md — Component API Design
+  - references/component-architecture.md — Component Architecture
+  - references/design-system-implementation.md — Design System Implementation
+  - references/design-system-testing.md — Design System Testing
+  - references/design-tokens.md — Design Tokens
+  - references/theme-implementation.md — Theme Implementation
 ## Handoff
 No artifact produced.
 Next skill: frontend-state-management — state architecture for the design system.

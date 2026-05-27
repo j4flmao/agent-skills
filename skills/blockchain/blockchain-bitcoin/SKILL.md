@@ -35,13 +35,14 @@ tags: [blockchain, bitcoin, pow, mining, phase-blockchain]
 5. **Layer 2**: Lightning Network architecture, channel lifecycle
 
 ## References
-- references/bip-standards.md — BIP-32/39/44/84/86/174/340/341/342 standards
-- references/bitcoin-core-deep.md — Bitcoin Core C++ architecture and internals
-- references/bitcoin-l2s.md — Stacks, RSK, Babylon, and Bitcoin L2 solutions
-- references/bitcoin-script-and-taproot.md — Script opcodes, Taproot, and MAST
-- references/lightning-network.md — Lightning Network channels, HTLCs, routing
-- references/mining-pow.md — SHA-256d mining, difficulty adjustment, ASICs
-- references/ordinals-runes.md — Ordinals inscriptions, BRC-20, and Runes tokens
-
+  - references/bip-standards.md — BIP Standards Reference
+  - references/bitcoin-core-deep.md — Bitcoin Core Architecture
+  - references/bitcoin-l2s.md — Bitcoin Layer 2s
+  - references/bitcoin-script-and-taproot.md — Bitcoin Script & Taproot
+  - references/blockchain-bitcoin-advanced.md — Blockchain Bitcoin Advanced Topics
+  - references/blockchain-bitcoin-fundamentals.md — Blockchain Bitcoin Fundamentals
+  - references/lightning-network.md — Lightning Network
+  - references/mining-pow.md — Mining & Proof of Work
+  - references/ordinals-runes.md — Ordinals, BRC-20 & Runes
 ## Phase
 blockchain → blockchain-bitcoin

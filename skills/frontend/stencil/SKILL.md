@@ -176,11 +176,12 @@ npm run build
 - Mark props as `mutable: true` only when the component itself mutates them.
 
 ## References
-- `references/stencil-setup.md` — CLI, config, build output, testing, framework bindings
-- `references/stencil-components.md` — decorators, lifecycle, slots, styling, patterns
-- `references/stencil-architecture.md` — component composition, state management, slots, forms, lifecycle
-- `references/stencil-deployment.md` — output targets, framework bindings, NPM publishing, SSR
-
+  - references/stencil-advanced.md — Stencil Advanced Topics
+  - references/stencil-architecture.md — Stencil Architecture Patterns
+  - references/stencil-components.md — Stencil Components & Patterns
+  - references/stencil-deployment.md — Stencil Deployment
+  - references/stencil-fundamentals.md — Stencil Fundamentals
+  - references/stencil-setup.md — Stencil Setup Guide
 ## Handoff
 No artifact produced.
 Next skill: stencil-design-system (if building a design system) or frontend-testing.

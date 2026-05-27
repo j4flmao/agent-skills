@@ -176,11 +176,12 @@ export default class AuthService extends Service {
 - Follow the `app/` folder convention: routes/, components/, services/, models/, modifiers/.
 
 ## References
-- `references/ember-setup.md` — CLI, project structure, config, addons
-- `references/ember-patterns.md` — components, routes, data, services, testing
-- `references/ember-architecture.md` — route architecture, module structure, component patterns, services
-- `references/ember-deployment.md` — build pipeline, deployment targets, CI/CD, performance budget
-
+  - references/ember-advanced.md — Ember Advanced Topics
+  - references/ember-architecture.md — Ember.js Architecture Patterns
+  - references/ember-deployment.md — Ember.js Deployment
+  - references/ember-fundamentals.md — Ember Fundamentals
+  - references/ember-patterns.md — Ember.js Patterns & Best Practices
+  - references/ember-setup.md — Ember.js Setup Guide
 ## Handoff
 No artifact produced.
 Next skill: ember-data (if complex data layer) or frontend-testing.

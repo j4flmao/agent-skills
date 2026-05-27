@@ -255,16 +255,14 @@ top abused endpoints, WAF trigger trends.
 - OWASP API Top 10 review on every new endpoint
 
 ## References
-- `references/api-threats.md`
-  OWASP API Top 10, common vulnerabilities, threat modeling
-- `references/api-protection.md`
-  Auth patterns, rate limiting, WAF, input validation,
-  request signing, audit
-- `references/api-security-testing.md`
-  API security testing categories, tools, and checklist
-- `references/api-auth-patterns.md`
-  Auth flow comparison, JWT best practices, OAuth2 flows
-
+  - references/api-auth-patterns.md — API Authentication Patterns
+  - references/api-protection.md — API Protection
+  - references/api-security-advanced.md — Api Security Advanced Topics
+  - references/api-security-fundamentals.md — Api Security Fundamentals
+  - references/api-security-testing.md — API Security Testing Patterns
+  - references/api-threats.md — API Threats
+  - references/graphql-security.md — GraphQL Security
+  - references/oauth2-deep-dive.md — OAuth2 Deep Dive
 ## Handoff
 `security-sast-dast` for API-specific DAST scanning
 `backend-api-design` for endpoint design and versioning

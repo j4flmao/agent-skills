@@ -183,12 +183,12 @@ Use Chrome DevTools > Network > Offline. Verify: page loads from cache, API show
 - Always check `navigator.serviceWorker` availability before registering
 
 ## References
-- `references/service-worker.md` — Lifecycle events, registration, Workbox, build tool plugins
-- `references/caching-strategies.md` — CacheFirst, NetworkFirst, StaleWhileRevalidate, app shell, strategy decision tree
-- `references/offline-strategies.md`
-- `references/manifest-config.md`
-- `references/pwa-audit.md`
-
+  - references/caching-strategies.md — Caching Strategies Reference
+  - references/manifest-config.md — Manifest Configuration Reference
+  - references/offline-strategies.md — Offline Strategies Reference
+  - references/pwa-audit.md — PWA Audit Reference
+  - references/pwa-testing.md — PWA Testing Reference
+  - references/service-worker.md — Service Worker Reference
 ## Handoff
 No artifact produced unless requested.
 Next skill: `frontend-seo` (if the PWA needs search engine discoverability)

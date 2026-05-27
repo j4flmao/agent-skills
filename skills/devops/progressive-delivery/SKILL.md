@@ -58,11 +58,12 @@ Primary (100% traffic) → Canary (0% → 100% gradually)
 | Permission toggle | Permanent | User segmentation |
 
 ## References
-- `references/deployment-strategies.md` — Detailed deployment strategy comparison: recreate, rolling, blue-green, canary, A/B, shadow — with YAML configs for each
-- `references/argo-rollouts.md` — Argo Rollouts: Rollout CRD, template spec, strategy definition, traffic routing with Istio/NGINX/ALB, analysis templates
-- `references/flagger-config.md` — Flagger: canary CRD, service mesh integration (Istio, Linkerd, App Mesh), metric analysis, alerting, webhooks
-- `references/canary-analysis.md` — Canary analysis: metrics (success rate, latency, error rate), analysis templates, threshold config, manual judgment, rollback
-- `references/traffic-mirroring.md` — Traffic mirroring/shadowing: Istio mirror, Envoy shadow, service mesh traffic split, dark launches, request duplication
-
+  - references/argo-rollouts.md — Argo Rollouts
+  - references/canary-analysis.md — Canary Analysis
+  - references/deployment-strategies.md — Deployment Strategy Comparison
+  - references/flagger-config.md — Flagger Configuration
+  - references/progressive-delivery-advanced.md — Progressive Delivery Advanced Topics
+  - references/progressive-delivery-fundamentals.md — Progressive Delivery Fundamentals
+  - references/traffic-mirroring.md — Traffic Mirroring / Shadowing
 ## Handoff
 Related skills: devops-gitops-advanced, devops-argo-cd, backend-feature-flags, devops-sre-practices.

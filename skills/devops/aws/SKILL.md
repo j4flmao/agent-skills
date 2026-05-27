@@ -242,11 +242,14 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu" {
 Terraform HCL, CloudFormation YAML, AWS CLI commands, or IAM policy JSON.
 
 ## References
-- `references/core-services.md` — EC2, S3, RDS, Lambda, ECS, EKS
-- `references/iam-policies.md` — policy syntax, roles, trust policies, conditions
-- `references/networking.md` — VPC, subnets, security groups, NACLs, endpoints
-- `references/well-architected.md` — six pillars, cost optimization, best practices
-
+  - references/aws-advanced.md — Aws Advanced Topics
+  - references/aws-fundamentals.md — Aws Fundamentals
+  - references/core-services.md — Core Services
+  - references/ecs-architecture.md — ECS Architecture and Patterns
+  - references/iam-policies.md — IAM Policies
+  - references/lambda-triggers.md — Lambda Triggers and Event Sources
+  - references/networking.md — Networking
+  - references/well-architected.md — Well-Architected Framework
 ## Handoff
 After completing this skill:
 - Next skill: **serverless** — Lambda functions, API Gateway, event sources

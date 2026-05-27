@@ -217,10 +217,11 @@ monitoring:
 - Job dashboard accessible to on-call engineers
 
 ## References
-- `references/job-types.md` — Job classification, retry strategies, DLQ, concurrency patterns
-- `references/queue-setup.md` — Queue infrastructure, cron expressions, worker configuration
-- `references/job-monitoring.md` — Dashboard metrics, Prometheus alerts, DLQ management, debugging stuck jobs
-- `references/job-patterns.md` — Chained workflows, saga pattern with compensations, batch processing, rate-limited jobs, exactly-once
-
+  - references/job-monitoring.md — Background Job Monitoring
+  - references/job-patterns.md — Background Job Patterns
+  - references/job-scheduling.md — Background Job Scheduling
+  - references/job-testing.md — Background Job Testing
+  - references/job-types.md — Job Types and Queue Patterns
+  - references/queue-setup.md — Queue Setup and Scheduled Tasks
 ## Handoff
 `backend-event-driven` for job completion events and chained workflows

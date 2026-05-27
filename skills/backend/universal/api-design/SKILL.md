@@ -162,11 +162,12 @@ Every list endpoint uses cursor or offset pagination:
 - If the API grows beyond 20 endpoints, consider splitting into separate services.
 
 ## References
-- `references/rest-conventions.md` — REST API design conventions
-- `references/graphql-conventions.md` — GraphQL conventions
-- `references/api-pagination-filtering.md` — Cursor vs offset pagination, filtering, sorting, field selection
-- `references/api-error-handling.md` — Error codes catalog, response envelope, debugging headers, deprecation strategy
-
+  - references/api-design-documentation.md — API Design Documentation
+  - references/api-design-security.md — API Design Security
+  - references/api-error-handling.md — API Error Handling
+  - references/api-pagination-filtering.md — API Pagination and Filtering
+  - references/graphql-conventions.md — GraphQL Conventions
+  - references/rest-conventions.md — REST API Conventions
 ## Handoff
 No artifact produced unless requested.
 Next skill: backend-database-patterns — design the data layer for these APIs.

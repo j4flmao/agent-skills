@@ -101,10 +101,11 @@ Integrate feature files into CI pipeline. Generate HTML reports from test execut
 - Three amigos must include all three roles — skipping one party produces blind spots
 
 ## References
-- `references/gherkin-deep-dive.md` — Gherkin syntax: Feature, Scenario, Given/When/Then, Scenario Outline, Examples, Data Tables, Doc Strings
-- `references/spec-example.md` — Specification by Example: key examples, refine, automate, validate, living documentation
-- `references/bdd-tools.md` — BDD tools: Cucumber, SpecFlow, Behave, JBehave; step definitions, hooks, tags
-- `references/atdd-workflow.md` — ATDD workflow: three amigos, example mapping, acceptance criteria, test-first
-
+  - references/atdd-workflow.md — ATDD Workflow
+  - references/bdd-atdd-advanced.md — Bdd Atdd Advanced Topics
+  - references/bdd-atdd-fundamentals.md — Bdd Atdd Fundamentals
+  - references/bdd-tools.md — BDD Tools
+  - references/gherkin-deep-dive.md — Gherkin Deep Dive
+  - references/spec-example.md — Specification by Example
 ## Handoff
 `create-story` for converting discovered stories into backlog items. `create-tech-spec` for implementation details from step definitions. `create-prd` for aligning feature files with product requirements.

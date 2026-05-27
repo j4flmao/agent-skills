@@ -206,16 +206,11 @@ func registerRoutes(_ app: Application) throws {
 - DTOs separate from Models — use toResponse() mapping.
 
 ## References
-
-### Reference Files
-- `references/vapor-setup.md` — Vapor project setup, configuration, deployment
-- `references/vapor-fluent-guide.md` — Fluent ORM models, migrations, queries
-- `references/vapor-deployment.md` — Docker, systemd, Nginx, CI/CD, Vapor Cloud
-- `references/vapor-testing.md` — XCTVapor, HTTP tests, in-memory DB, WebSocket tests
-
-### Related Skills
-- `backend/universal/api-response/SKILL.md` — API response envelope
-- `backend/universal/oop-principles/SKILL.md` — SOLID for Swift
-
+  - references/vapor-deployment.md — Vapor Deployment
+  - references/vapor-fluent-guide.md — Vapor Fluent ORM Guide
+  - references/vapor-middleware.md — Vapor Middleware Reference
+  - references/vapor-security.md — Vapor Security Reference
+  - references/vapor-setup.md — Vapor Setup Guide
+  - references/vapor-testing.md — Vapor Testing
 ## Handoff
 Hand off to `backend/universal/api-response/SKILL.md` for API response standards.

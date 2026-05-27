@@ -260,12 +260,13 @@ resource "oci_apigateway_deployment" "api" {
 - Apply service limits and quotas governance with compartments
 
 ## References
-- `references/core-services.md` — VCN, compute, block/object storage, LB, Vault
-- `references/oke-kubernetes.md` — OKE cluster creation, node pools, VCN-native
-- `references/database-services.md` — Autonomous DB, MySQL HeatWave, Exadata
-- `references/security-iam.md` — IAM, Vault, Cloud Guard, WAF, Security Zone
-- `references/serverless-integration.md` — Functions, API Gateway, Streaming, SCH
-
+  - references/core-services.md — Core Services
+  - references/database-services.md — Database Services
+  - references/oke-kubernetes.md — OKE (Oracle Kubernetes Engine)
+  - references/oracle-cloud-advanced.md — Oracle Cloud Advanced Topics
+  - references/oracle-cloud-fundamentals.md — Oracle Cloud Fundamentals
+  - references/security-iam.md — Security and IAM
+  - references/serverless-integration.md — Serverless and Integration
 ## Handoff
 After completing this skill:
 - Next skill: **database-migration** — migrate on-prem to OCI databases

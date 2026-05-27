@@ -147,11 +147,14 @@ src/app/features/ src/app/shared/ src/app/core/ src/assets/
 - If the project already exists, ask: "The directory {name} already exists. Overwrite specific files? (yes/no/list)"
 
 ## References
-- `references/config-reference.md` — Project configuration files reference
-- `references/config-templates.md` — Configuration templates for common stacks
-- `references/project-scaffold.md` — Project scaffolding patterns and directory structures
-- `references/stack-templates.md` — Stack-specific project templates and conventions
-
+  - references/boilerplate-generation.md — Boilerplate Generation
+  - references/config-reference.md — Config File Reference
+  - references/config-templates.md — Config Templates Reference
+  - references/project-init-advanced.md — Project Init Advanced Topics
+  - references/project-init-checklist.md — Project Init Checklist
+  - references/project-init-fundamentals.md — Project Init Fundamentals
+  - references/project-scaffold.md — Project Scaffolding Reference
+  - references/stack-templates.md — Stack Templates
 ## Handoff
 Output: Scaffolded project at {path}
 Next skill: create-brief — to define what gets built.

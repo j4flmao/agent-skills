@@ -301,12 +301,13 @@ static_sites:
 - Tag all resources with environment, project, and team metadata
 
 ## References
-- `references/droplets-networking.md` — Droplets, VPC, Firewall, LB, DNS
-- `references/kubernetes-doks.md` — DOKS, node pools, autoscaling, App Platform
-- `references/managed-databases.md` — PostgreSQL, MySQL, Redis, Kafka, HA
-- `references/app-platform.md` — App Platform, serverless, auto-deploy, functions
-- `references/infrastructure-tools.md` — Terraform, Pulumi, doctl, Spaces
-
+  - references/app-platform.md — App Platform
+  - references/digitalocean-advanced.md — Digitalocean Advanced Topics
+  - references/digitalocean-fundamentals.md — Digitalocean Fundamentals
+  - references/droplets-networking.md — Droplets and Networking
+  - references/infrastructure-tools.md — Infrastructure Tooling
+  - references/kubernetes-doks.md — DOKS (DigitalOcean Kubernetes)
+  - references/managed-databases.md — Managed Databases
 ## Handoff
 After completing this skill:
 - Next skill: **app-platform** — expand App Platform with functions and static sites

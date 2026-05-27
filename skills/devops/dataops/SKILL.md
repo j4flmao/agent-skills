@@ -110,10 +110,11 @@ Use dbt docs for column-level lineage. Store lineage artifacts per environment. 
 - Rollback must be tested in staging before production use.
 
 ## References
-- `references/data-cicd.md` — dbt CI/CD (slim CI, state comparison), SQLFluff, data diff, schema management, environment promotion
-- `references/data-testing.md` — Great Expectations in CI, dbt tests, data contract validation, pipeline rollback, monitoring
-- `references/data-observability.md` — Data freshness, volume monitoring, schema drift detection, lineage, anomaly detection
-- `references/data-contracts-ops.md` — Data contract lifecycle, schema enforcement, registry operations, compliance monitoring, alerting
-
+  - references/data-cicd.md — Data CI/CD
+  - references/data-contracts-ops.md — Data Contracts Operations
+  - references/data-observability.md — DataOps Observability
+  - references/data-testing.md — Data Testing
+  - references/dataops-advanced.md — Dataops Advanced Topics
+  - references/dataops-fundamentals.md — Dataops Fundamentals
 ## Handoff
 For data warehouse schema design, hand off to `data-warehouse`. For data pipeline ETL, hand off to `etl-pipeline`. For quality monitoring, hand off to `data-quality`.

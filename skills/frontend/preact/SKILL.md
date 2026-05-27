@@ -141,11 +141,12 @@ const html = render(<App />)
 - Bundle target: keep preact-specific code under 3kB total.
 
 ## References
-- `references/preact-setup.md` — Vite/WMR setup, compat config, CLI
-- `references/preact-vs-react.md` — API differences, bundle size, migration guide
-- `references/preact-architecture.md` — component patterns, signal stores, routing, data fetching, testing
-- `references/preact-deployment.md` — Vite config, bundle comparison, SSR, code splitting, CI/CD
-
+  - references/preact-advanced.md — Preact Advanced Topics
+  - references/preact-architecture.md — Preact Architecture Patterns
+  - references/preact-deployment.md — Preact Deployment
+  - references/preact-fundamentals.md — Preact Fundamentals
+  - references/preact-setup.md — Preact Setup Guide
+  - references/preact-vs-react.md — Preact vs React: Differences & Migration
 ## Handoff
 No artifact produced.
 Next skill: preact-ssr (if SSR needed) or frontend-testing.

@@ -182,11 +182,14 @@ class OrderProjection {
 - Eventual consistency delay must be documented and acceptable to product stakeholders.
 
 ## References
-- `references/cqrs-fundamentals.md` — CQRS core concepts, when to apply, common pitfalls
-- `references/read-model-strategies.md` — Read model projections, materialized views, caching
-- `references/command-validation.md` — Command validation patterns, preconditions, invariants
-- `references/cqrs-testing.md` — CQRS testing pyramid, command/query handler tests, projection tests
-
+  - references/command-query-separation.md — Command-Query Separation
+  - references/command-validation.md — Command Validation
+  - references/cqrs-fundamentals.md — CQRS Fundamentals
+  - references/cqrs-monitoring.md — CQRS Monitoring
+  - references/cqrs-sync-strategies.md — CQRS Synchronization Strategies
+  - references/cqrs-testing.md — CQRS Testing
+  - references/event-sourcing.md — Event Sourcing
+  - references/read-model-strategies.md — Read Model Strategies
 ## Handoff
 No artifact produced.
 Next skill: event-sourcing — if events are the source of truth for the write model.

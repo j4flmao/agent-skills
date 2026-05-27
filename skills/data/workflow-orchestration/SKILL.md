@@ -324,11 +324,12 @@ Kestra combines YAML declarative flows with event-driven triggers. Flows define 
 - Monitor queue depth, scheduler heartbeat, and missed SLAs
 
 ## References
-- `references/airflow-architecture.md` — Scheduler, executor types, DAG design, operators, sensors, pools, SLA
-- `references/dagster-prefect.md` — Dagster assets, software-defined assets, sensors; Prefect flows/tasks, deployments; CI/CD, testing, alerting
-- `references/dagster-deep-guide.md` — Dagster SDAs, auto-materialize, dbt integration, asset checks, code locations
-- `references/temporal-workflows.md` — Temporal workflow-as-code, activities, signals, queries, retry policies, data pipeline patterns
-
+  - references/airflow-architecture.md — Airflow Architecture Reference
+  - references/airflow-best-practices.md — Airflow Best Practices
+  - references/dagster-deep-guide.md — Dagster Deep Guide
+  - references/dagster-prefect.md — Dagster and Prefect Reference
+  - references/data-pipeline-monitoring.md — Data Pipeline Monitoring
+  - references/temporal-workflows.md — Temporal Workflows
 ## Handoff
 `data-etl-pipeline` for pipeline design patterns and incremental loading
 `data-batch-processing` for batch query optimization in orchestrated pipelines

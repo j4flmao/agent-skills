@@ -99,10 +99,11 @@ Sort features by score within chosen framework. Assign priority buckets: P0 = sh
 - Re-prioritization must happen quarterly or when strategy changes.
 
 ## References
-- `references/prioritization-frameworks.md` — Prioritization Frameworks
-- `references/prioritization-matrix.md` — Prioritization Matrix
-- `references/roadmap-planning.md` — Roadmap Planning
-- `references/scoring-models.md` — Scoring Models
-
+  - references/feature-prioritization-advanced.md — Feature Prioritization Advanced Topics
+  - references/feature-prioritization-fundamentals.md — Feature Prioritization Fundamentals
+  - references/prioritization-frameworks.md — Prioritization Frameworks
+  - references/prioritization-matrix.md — Prioritization Matrix
+  - references/roadmap-planning.md — Roadmap Planning
+  - references/scoring-models.md — Scoring Models
 ## Handoff
 For analytics data to inform prioritization, hand off to `product-analytics`. For user research to validate priorities, hand off to `product-user-research`.

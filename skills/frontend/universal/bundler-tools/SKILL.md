@@ -133,14 +133,12 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ---
 
 ## References
-
-- `references/vite-config.md` — Vite config, plugins, SSR, build optimization, migration from Webpack
-- `references/bundle-optimization.md` — Code splitting, tree shaking, asset pipeline, caching, performance budgets
-- `references/bundler-comparison.md` — Vite vs Webpack vs Turbopack vs Parcel vs Rspack, migration paths, plugin equivalents
-- `references/bundler-optimization.md` — Bundle budgets, vendor splitting, tree shaking, asset pipeline, compression, analysis
-
----
-
+  - references/bundle-optimization.md — Bundle Optimization
+  - references/bundler-comparison.md — Bundler Comparison
+  - references/bundler-configuration.md — Bundler Configuration
+  - references/bundler-optimization.md — Bundler Optimization
+  - references/module-federation.md — Module Federation
+  - references/vite-config.md — Vite Configuration
 ## Handoff
 
 If project requires custom Webpack plugin development, complex Module Federation setup, or migration from a legacy bundler (Grunt/Gulp/Browserify), flag for build engineer review. Otherwise implement complete bundler config.

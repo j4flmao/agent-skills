@@ -251,11 +251,12 @@ turbo run lint --filter=...[main]
 `nx.json`, `turbo.json`, `project.json` files, ESLint module boundary config, and CI workflow.
 
 ## References
-- `references/monorepo-tools.md` — workspace managers, tool comparison, best practices
-- `references/nx-guide.md` — Nx workspace setup, generators, executors, plugins
-- `references/turborepo-guide.md` — Turborepo pipeline, filtering, remote caching
-- `references/dependency-management.md` — workspace dependencies, versioning, publishing
-
+  - references/dependency-management.md — Dependency Management
+  - references/monorepo-advanced.md — Monorepo Advanced Topics
+  - references/monorepo-fundamentals.md — Monorepo Fundamentals
+  - references/monorepo-tools.md — Monorepo Tools
+  - references/nx-guide.md — Nx Guide
+  - references/turborepo-guide.md — Turborepo Guide
 ## Handoff
 After completing this skill:
 - Next skill: **dependency-management** — Dependabot, Renovate for mono-repo deps

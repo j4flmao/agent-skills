@@ -155,17 +155,11 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 - DRY within a bounded context; OK to duplicate across contexts.
 
 ## References
-
-### Reference Files
-- `references/principles-reference.md` — Full reference for all principles with code examples
-- `references/solid-deep-dive.md` — SOLID principles deep dive with detection heuristics
-- `references/composition-vs-inheritance.md` — When to compose vs inherit, patterns and trade-offs
-- `references/oop-solid.md` — SOLID principles with code examples, violation heuristics, detection
-
-### Related Skills
-- `backend/universal/design-patterns/SKILL.md` — Concrete pattern implementations
-- `backend/universal/clean-architecture/SKILL.md` — Architectural application of SOLID
-- `backend/universal/testing/SKILL.md` — Testability principles
-
+  - references/composition-vs-inheritance.md — Composition over Inheritance
+  - references/grasp-patterns.md — GRASP Patterns
+  - references/oop-solid.md — OOP SOLID Principles
+  - references/principles-reference.md — Principles Reference
+  - references/solid-deep-dive.md — SOLID Deep Dive
+  - references/solid-examples.md — SOLID Code Examples
 ## Handoff
 Hand off to `backend/universal/design-patterns/SKILL.md` if concrete pattern selection is required. Hand off to `backend/universal/clean-architecture/SKILL.md` if system architecture restructuring is needed.

@@ -123,11 +123,14 @@ Include `X-Webhook-ID` header. Consumers deduplicate by this ID.
 - Allow consumers to unsubscribe — respect opt-out.
 
 ## References
-- `references/webhook-setup.md` — Webhook setup and delivery infrastructure
-- `references/webhook-security.md` — Webhook security best practices
-- `references/webhooks-architecture.md` — Webhook service design, routing, delivery, subscription management
-- `references/webhooks-delivery.md` — Webhook signing, verification, secret rotation, security
-
+  - references/webhook-delivery.md — Webhook Delivery System
+  - references/webhook-monitoring.md — Webhook Monitoring and Reliability
+  - references/webhook-rate-limiting.md — Webhook Rate Limiting
+  - references/webhook-scaling.md — Webhook Scaling
+  - references/webhook-security.md — Webhook Security
+  - references/webhook-setup.md — Webhook Setup
+  - references/webhooks-architecture.md — Webhooks Architecture
+  - references/webhooks-delivery.md — Webhook Security
 ## Handoff
 No artifact produced unless requested.
 Next skill: api-versioning — manage version transitions for the webhook API.

@@ -105,10 +105,11 @@ Use `@elysiajs/opentelemetry` for distributed tracing across plugins. Attach cor
 Track these metrics per plugin: request count, p50/p95/p99 latency, error rate by status code, active WebSocket connections, auth failure rate. Export via OpenTelemetry to your observability backend. Alert on p99 latency > 500ms, error rate > 1%, WebSocket connection leak > 10% above baseline. Set up `onResponse` hook to record duration and status code for every request.
 
 ## References
-- `references/eden-treaty.md` — Eden Treaty client setup and patterns
-- `references/elysia-performance.md` — Elysia performance optimization
-- `references/elysia-auth.md` — JWT, RBAC, API keys, OAuth2, session auth
-- `references/elysia-validation.md` — Elysia t types, custom validation, type inference
-
+  - references/eden-treaty.md — Eden Treaty Client
+  - references/elysia-auth.md — Elysia Auth Patterns
+  - references/elysia-performance.md — Elysia Performance Optimization
+  - references/elysia-plugins.md — Elysia Plugin Development
+  - references/elysia-validation.md — Elysia Validation
+  - references/elysia-websocket.md — WebSocket Patterns with Elysia
 ## Handoff
 Hand off to `backend/universal/api-design/SKILL.md` for REST API design patterns. Carry forward: plugin hierarchy, guard scopes, Eden Treaty type definitions.

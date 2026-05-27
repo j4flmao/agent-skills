@@ -142,11 +142,12 @@ Bugs that disappear when you try to observe them. Common causes: timing changes 
 Common patterns: static/global collections growing unbounded, event listeners never deregistered, closure references capturing large object graphs, caches without eviction policies, thread-local storage accumulating per-request data, string interning tables in long-running processes. Detection protocol: take heap snapshot A, perform operation N times, take heap snapshot B, diff snapshots to find growing object types, trace retention path from each growing object to its GC root. For managed languages, force full GC before each snapshot for clean diffs. For native code, use Valgrind Memcheck, LeakSanitizer, or AddressSanitizer with leak detection enabled.
 
 ## References
-- `references/debugging-workflow.md` — Debugging Workflow
-- `references/production-debugging.md` — Production Debugging
-- `references/remote-debugging.md` — Remote Debugging
-- `references/toolchain.md` — Toolchain
-
+  - references/debugging-strategy-advanced.md — Debugging Strategy Advanced Topics
+  - references/debugging-strategy-fundamentals.md — Debugging Strategy Fundamentals
+  - references/debugging-workflow.md — Debugging Workflow Reference
+  - references/production-debugging.md — Production Debugging
+  - references/remote-debugging.md — Remote Debugging Guide
+  - references/toolchain.md — Debug Toolchain Reference
 ## Handoff
 After completing this skill:
 - Next skill: **refactor-guide** — if the fix requires structural cleanup

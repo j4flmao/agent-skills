@@ -142,11 +142,14 @@ Runbook structure per service: symptoms (what alerts fire, what users experience
 - Postmortem action items have single owners and due dates
 
 ## References
-- `references/incident-lifecycle.md` — Severity matrix detailed definitions, detection methods, response procedures, mitigation strategies, resolution criteria, incident command system
-- `references/postmortem.md` — Blameless culture principles, timeline construction, root cause analysis (5 Whys, fishbone), action item tracking, postmortem review meeting
-- `references/incident-runbooks.md` — Runbook template, diagnostic flowcharts, communication templates
-- `references/incident-metrics.md` — MTTD/MTTR tracking, dashboards, improvement targets, action item tracking
-
+  - references/incident-lifecycle.md — Incident Lifecycle
+  - references/incident-metrics.md — Incident Metrics
+  - references/incident-response-advanced.md — Incident Response Advanced Topics
+  - references/incident-response-fundamentals.md — Incident Response Fundamentals
+  - references/incident-runbooks.md — Incident Runbooks
+  - references/postmortem.md — Postmortem Process
+  - references/severity-classification.md — Severity Classification
+  - references/war-room-protocol.md — War Room Protocol
 ## Handoff
 `dev-loop/tech-debt-tracker` for action items from postmortem
 `planning/create-roadmap` for incident-driven roadmap changes

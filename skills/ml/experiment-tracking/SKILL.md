@@ -248,11 +248,12 @@ random_seeds:
 - Never delete runs — archive them instead
 
 ## References
-- `references/mlflow-setup.md` — MLflow tracking server, experiment/run, artifact store, model registry, stage promotion, projects
-- `references/experiment-platforms.md` — W&B, Neptune comparison, metric logging, artifact tracking, collaboration, reporting
-- `references/data-versioning.md` — DVC, data/feature pipeline versioning, dataset registry, pipeline caching, reproducibility
-- `references/experiment-collaboration.md` — Team workflows, sharing, dashboards, reporting, CI/CD integration for collaborative experiment tracking
-
+  - references/data-versioning.md — Data Versioning
+  - references/experiment-collaboration.md — Experiment Collaboration
+  - references/experiment-platforms.md — Experiment Tracking Platforms
+  - references/experiment-tracking-advanced.md — Experiment Tracking Advanced Topics
+  - references/experiment-tracking-fundamentals.md — Experiment Tracking Fundamentals
+  - references/mlflow-setup.md — MLflow Setup and Configuration
 ## Handoff
 `ml-classical-ml` for model training workflows
 `ml-deep-learning` for deep learning experiment tracking

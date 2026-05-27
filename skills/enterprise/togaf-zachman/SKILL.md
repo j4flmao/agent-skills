@@ -96,10 +96,11 @@ Capture, track, and prioritize requirements throughout ADM. Assess requirements 
 - Architecture change requests follow the governed exception process.
 
 ## References
-- `references/togaf-framework.md` — TOGAF ADM phases, deliverables, governance
-- `references/zachman-framework.md` — Zachman Framework rows, columns, matrix usage
-- `references/architecture-content.md` — Architecture content, views, viewpoints, repository
-- `references/ea-governance.md` — EA governance, board, principles, maturity models
-
+  - references/architecture-content.md — Architecture Content Framework
+  - references/ea-governance.md — Enterprise Architecture Governance
+  - references/togaf-framework.md — TOGAF Architecture Development Method (ADM)
+  - references/togaf-zachman-advanced.md — Togaf Zachman Advanced Topics
+  - references/togaf-zachman-fundamentals.md — Togaf Zachman Fundamentals
+  - references/zachman-framework.md — Zachman Framework for Enterprise Architecture
 ## Handoff
 For implementation projects, hand off to `enterprise-architecture-governance` for review board decisions, or `enterprise-vendor-management` for technology procurement alignment.

@@ -112,10 +112,11 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ```
 
 ## References
-- `references/deep-link-routing.md` — Deep Link Routing
-- `references/deep-link-setup.md` — Deep Link Setup
-- `references/platform-differences.md` — Platform Differences
-- `references/universal-links.md` — Universal Links
-
+  - references/deep-link-analytics.md — Deep Link Analytics & Attribution
+  - references/deep-link-implementation.md — Deep Linking Setup
+  - references/deep-link-routing.md — Deep Link Routing
+  - references/deep-link-setup.md — Deep Link Setup
+  - references/platform-differences.md — Platform Differences — Deep Linking
+  - references/universal-links.md — Universal Links Setup
 ## Handoff
 Hand off to mobile-analytics skill when deep link attribution and conversion tracking is needed.

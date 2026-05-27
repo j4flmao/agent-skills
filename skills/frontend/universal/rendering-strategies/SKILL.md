@@ -187,11 +187,12 @@ async function ProductPage({ params }: { params: { id: string } }) {
 8. Authentication-driven personalization requires SSR or CSR — never SSG.
 
 ## References
-- `references/rendering-comparison.md` — CSR vs SSR vs SSG vs ISR vs RSC detailed comparison, decision trees, metrics
-- `references/hydration-strategies.md` — Full, progressive, partial, selective hydration, islands, hydration pitfalls
-- `references/ssr-csr.md` — CSR vs SSR vs SSG vs ISR deep dive, rendering timeline, streaming, hydration comparison, performance budgets
-- `references/isomorphic-rendering.md` — Universal code, server/client boundaries, data hydration, hydration mismatch, cache sync, environment detection
-
+  - references/edge-rendering.md — Edge Rendering
+  - references/hydration-strategies.md — Hydration Strategies
+  - references/isomorphic-rendering.md — Isomorphic Rendering
+  - references/rendering-comparison.md — Rendering Strategy Comparison
+  - references/ssr-csr.md — SSR vs CSR
+  - references/streaming-ssr.md — Streaming SSR
 ## Handoff
 No artifact produced unless requested.
 Next skill: `frontend-performance` — measure rendering strategy impact via Core Web Vitals.

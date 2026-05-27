@@ -162,16 +162,11 @@ class OrderController @Inject()(
 - Twirl templates minimal — HTML logic in view models.
 
 ## References
-
-### Reference Files
-- `references/play-setup.md` — Play Framework setup, SBT config, routes
-- `references/play-architecture.md` — Architecture, action composition, error handling
-- `references/play-testing.md` — Play testing with ScalaTest, Mockito, integration specs
-- `references/play-performance.md` — Thread pools, caching, HTTP/2, connection pooling
-
-### Related Skills
-- `backend/universal/api-response/SKILL.md` — API response envelope
-- `backend/universal/oop-principles/SKILL.md` — SOLID for Scala
-
+  - references/play-architecture.md — Play Architecture Guide
+  - references/play-performance.md — Play Framework Performance
+  - references/play-rest-api.md — Play Framework REST API Reference
+  - references/play-security.md — Play Framework Security Reference
+  - references/play-setup.md — Play Framework Setup Guide
+  - references/play-testing.md — Play Framework Testing
 ## Handoff
 Hand off to `backend/universal/api-response/SKILL.md` for API response standards.

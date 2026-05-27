@@ -238,10 +238,13 @@ Track: `dataset_queries`, `column_access_frequency`, `top_users`, `search_querie
 - No undocumented dataset promoted to production
 
 ## References
-- `references/catalog-api-examples.md` — API examples for DataHub GraphQL, Amundsen REST, OpenMetadata API, programmatic metadata management, automation, bulk operations
-- `references/catalog-platforms.md` — DataHub vs Amundsen vs OpenMetadata vs Atlas, ingestion, lineage, search
-- `references/metadata-ingestion-patterns.md` — Ingestion patterns for Snowflake, BigQuery, dbt, Spark, Airflow, Kafka — crawler, push, event-based, incremental
-- `references/metadata-management.md` — Business glossary, ownership, stewardship, usage analytics, certification
-
+  - references/catalog-api-examples.md — Catalog API Examples
+  - references/catalog-data-discovery.md — Catalog Data Discovery
+  - references/catalog-governance.md — Catalog Governance
+  - references/catalog-metadata-automation.md — Catalog Metadata Automation
+  - references/catalog-platforms.md — Catalog Platforms Comparison
+  - references/catalog-search-discovery.md — Catalog Search and Discovery
+  - references/metadata-ingestion-patterns.md — Metadata Ingestion Patterns
+  - references/metadata-management.md — Metadata Management
 ## Handoff
 `data-data-platform` for platform infrastructure. `data-data-quality` for linking quality metadata to catalog. `data-data-observability` for freshness monitoring. `data-data-contracts` for contract metadata in catalog.

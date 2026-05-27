@@ -263,19 +263,12 @@ orders-app/
 | **Wrong version of React** | Hooks broken, context lost | Force singleton via Module Federation config |
 
 ## References
-
-### Reference Files
-- `references/module-federation.md` — Detailed Module Federation configuration with examples
-- `references/communication-strategies.md` — Inter-MFE communication protocols
-- `references/microfrontend-architecture.md` — Architecture patterns, shell responsibilities, shared dependencies, monorepo structure, migration strategy
-- `references/microfrontend-integration.md` — Module Federation config (Webpack 5, Vite, Rspack), dynamic loading, communication, CSS isolation, error handling
-
-### Related Skills
-- `frontend/universal/patterns/SKILL.md` — Frontend component and hooks patterns
-- `frontend/universal/design-system/SKILL.md` — Shared component library
-- `frontend/universal/state-management/SKILL.md` — State management across MFEs
-- `devops/containerization/SKILL.md` — Deployment and orchestration
-
+  - references/communication-strategies.md — Inter-MFE Communication Strategies
+  - references/microfrontend-architecture.md — Microfrontend Architecture
+  - references/microfrontend-deployment.md — Microfrontend Deployment Reference
+  - references/microfrontend-integration.md — Microfrontend Integration
+  - references/microfrontend-testing.md — Microfrontend Testing Reference
+  - references/module-federation.md — Module Federation Reference
 ## Handoff
 
 Hand off to `frontend/universal/patterns/SKILL.md` for component patterns used within each microfrontend. Hand off to `frontend/universal/design-system/SKILL.md` for shared design system.

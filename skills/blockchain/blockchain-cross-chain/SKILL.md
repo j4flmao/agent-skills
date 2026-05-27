@@ -59,13 +59,14 @@ tags: [blockchain, cross-chain, bridge, interoperability, phase-blockchain]
 ```
 
 ## References
-- references/atomic-composability.md — Cross-chain atomic execution and composability
-- references/bridge-security.md — Bridge attack taxonomy and security analysis
-- references/ccip-chainlink.md — Chainlink CCIP cross-chain messaging protocol
-- references/ibc-deep.md — IBC protocol, light clients, and relayer model
-- references/layerzero-wormhole.md — LayerZero, Wormhole, and Axelar protocols
-- references/shared-sequencer.md — Shared sequencer design for rollups
-
+  - references/atomic-composability.md — Atomic Composability Across Chains
+  - references/blockchain-cross-chain-advanced.md — Blockchain Cross Chain Advanced Topics
+  - references/blockchain-cross-chain-fundamentals.md — Blockchain Cross Chain Fundamentals
+  - references/bridge-security.md — Bridge Security
+  - references/ccip-chainlink.md — Chainlink CCIP (Cross-Chain Interoperability Protocol)
+  - references/ibc-deep.md — IBC (Inter-Blockchain Communication) Deep Dive
+  - references/layerzero-wormhole.md — LayerZero, Wormhole, Axelar
+  - references/shared-sequencer.md — Shared Sequencing
 ## Phase: blockchain → blockchain-cross-chain
 
 This skill is a sub-skill of the `blockchain` phase. Activate when the user mentions cross-chain, bridge, IBC, LayerZero, Wormhole, Axelar, CCIP, interop, atomic swaps, or shared sequencers.

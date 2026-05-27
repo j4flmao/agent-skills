@@ -94,10 +94,11 @@ Map user stories by persona on a story map. Arrange by persona journey order. Id
 - Every design decision should reference which persona it serves.
 
 ## References
-- `references/empathy-mapping.md` — Empathy Mapping
-- `references/persona-creation-guide.md` — Persona Creation Guide
-- `references/persona-creation.md` — Persona Creation
-- `references/persona-to-feature.md` — Persona To Feature
-
+  - references/empathy-mapping.md — Empathy Mapping
+  - references/persona-creation-guide.md — Persona Creation Guide
+  - references/persona-creation.md — Persona Creation
+  - references/persona-development-advanced.md — Persona Development Advanced Topics
+  - references/persona-development-fundamentals.md — Persona Development Fundamentals
+  - references/persona-to-feature.md — Persona-Driven Design
 ## Handoff
 For journey mapping with persona context, hand off to `product-customer-journey`. For user research to validate personas, hand off to `product-user-research`. For feature prioritization using persona scores, hand off to `product-feature-prioritization`.

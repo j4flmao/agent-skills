@@ -273,14 +273,12 @@ describe('RegistrationForm', () => {
 ---
 
 ## References
-
-- `references/form-libraries.md` — React Hook Form, Formik, Angular Reactive Forms, TanStack Form, library selection, setup patterns
-- `references/validation-patterns.md` — Zod schemas, field-level, form-level, async validation, error display, accessibility, file upload
-- `references/form-validation.md` — Zod schema patterns, async validation, RHF integration, validation timing, cross-field validation, error display
-- `references/form-state.md` — State machine, dirty tracking, field arrays, draft persistence, submit state, reset patterns
-
----
-
+  - references/form-accessibility.md — Form Accessibility
+  - references/form-libraries.md — Form Libraries
+  - references/form-security-patterns.md — Form Security Patterns
+  - references/form-state.md — Form State
+  - references/form-validation.md — Form Validation
+  - references/validation-patterns.md — Validation Patterns
 ## Handoff
 
 If form requires multi-step wizard with persisted draft state or server-side draft saving, flag for backend handoff. Otherwise deliver complete form implementation with schema, fields, validation, and submission handler.

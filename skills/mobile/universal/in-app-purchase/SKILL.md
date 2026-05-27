@@ -191,10 +191,11 @@ billingClient.queryPurchasesAsync(BillingClient.ProductType.SUBS) { _, purchases
 - StoreKit 2 is preferred over StoreKit 1 for new iOS implementations.
 
 ## References
-- `references/subscription-models.md` — Pricing tiers, introductory offers, promo codes, grace periods
-- `references/receipt-validation.md` — Local vs server validation, shared secret, edge cases
-- `references/storekit-guide.md` — StoreKit 1 vs 2 migration, Transaction.updates, AppTransaction
-- `references/play-billing-guide.md` — Acknowledge requirements, pending transactions, test cards
-
+  - references/in-app-purchase.md — In-App Purchase Integration
+  - references/play-billing-guide.md — Play Billing Guide
+  - references/receipt-validation.md — Receipt Validation
+  - references/storekit-guide.md — StoreKit Guide
+  - references/subscription-management.md — Subscription Management
+  - references/subscription-models.md — Subscription Models
 ## Handoff
 No further handoff. IAP integration is self-contained with server-side receipt validation as the only external dependency.

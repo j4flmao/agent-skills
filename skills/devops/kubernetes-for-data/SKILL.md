@@ -126,10 +126,11 @@ Set resource quotas per namespace. Use priority classes for critical vs. best-ef
 - Prefer Karpenter over cluster-autoscaler for data workloads.
 
 ## References
-- `references/data-workloads-k8s.md` — Spark Operator, Airflow K8sExecutor/KubernetesPodOperator, Kafka Strimzi, resource sizing
-- `references/gpu-storage-k8s.md` — NVIDIA GPU Operator, Volcano batch scheduling, Karpenter, CSI storage, local SSDs, PVC patterns
-- `references/data-processing-k8s.md` — Spark, Flink, Airflow, Ray on K8s — deployment patterns, resource sizing guide
-- `references/data-infrastructure-k8s.md` — Kafka (Strimzi), databases (CloudNativePG), object store, Alluxio caching, node pool strategy
-
+  - references/data-infrastructure-k8s.md — Data Infrastructure on Kubernetes
+  - references/data-processing-k8s.md — Data Processing on Kubernetes
+  - references/data-workloads-k8s.md — Data Workloads on Kubernetes
+  - references/gpu-storage-k8s.md — GPU & Storage for Kubernetes Data Workloads
+  - references/kubernetes-for-data-advanced.md — Kubernetes For Data Advanced Topics
+  - references/kubernetes-for-data-fundamentals.md — Kubernetes For Data Fundamentals
 ## Handoff
 For data pipeline orchestration, hand off to `etl-pipeline`. For streaming infrastructure, hand off to `streaming`.

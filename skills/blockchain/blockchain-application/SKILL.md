@@ -35,14 +35,15 @@ tags: [blockchain, smart-contracts, solidity, vyper, rust, haskell, cairo, move,
 5. **Deployment**: constructor args, verification, proxy setup, multi-sig ownership
 
 ## References
-- references/cairo-language.md — Cairo language for StarkNet smart contracts
-- references/contract-security.md — Smart contract security best practices overview
-- references/haskell-plutus.md — Haskell and Plutus for Cardano eUTxO
-- references/move-language.md — Move language for Sui and Aptos development
-- references/rust-smart-contracts.md — Rust-based contracts on Solana, NEAR, Polkadot
-- references/smart-contract-patterns.md — Common contract design patterns and practices
-- references/solidity-evm.md — Solidity language and EVM architecture deep dive
-- references/vyper-language.md — Vyper language for secure EVM contracts
-
+  - references/blockchain-application-advanced.md — Blockchain Application Advanced Topics
+  - references/blockchain-application-fundamentals.md — Blockchain Application Fundamentals
+  - references/cairo-language.md — Cairo Language (StarkNet)
+  - references/contract-security.md — Smart Contract Security
+  - references/haskell-plutus.md — Haskell & Plutus (Cardano)
+  - references/move-language.md — Move Language (Sui & Aptos)
+  - references/rust-smart-contracts.md — Rust Smart Contracts
+  - references/smart-contract-patterns.md — Smart Contract Design Patterns
+  - references/solidity-evm.md — Solidity & EVM Deep Dive
+  - references/vyper-language.md — Vyper Language
 ## Phase
 blockchain → blockchain-application

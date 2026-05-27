@@ -166,38 +166,13 @@ Pin random seed for reproducibility of forecasting runs.
 Version the training data by date range to enable exact reproduction.
 
 ## References
-- references/classical-forecasting.md — Decomposition, stationarity, ARIMA/SARIMA, auto-ARIMA, Prophet, Fourier terms, holidays, changepoints
-- references/deep-learning-ts.md — LSTM, TFT, attention, feature engineering, temporal CV, backtesting, metrics
-- references/forecast-deep-learning.md — TFT, N-BEATS, DeepAR, Informer, data preparation, multi-horizon forecasting, backtesting for DL models
-- references/time-series-feature-store.md — tsfresh extraction, Feast integration, point-in-time correctness, online serving, feature freshness monitoring
-
-### Edge Cases and Special Patterns
-Intermittent demand (sporadic sales): use Croston's method, TSB (Teunter-Syntetos-Babai), or ADIDA.
-Count data (integer values): use Poisson or negative binomial models, or round forecasts after prediction.
-Multiple seasonalities (hourly + daily + weekly): use Prophet, Fourier features at each period, or TFT.
-Hierarchical forecasts (geo, product hierarchy): use reconciliation (bottom-up, top-down, optimal combination).
-Long-range dependence: use ARFIMA or fractional differencing for slowly decaying autocorrelation.
-Regime changes (sudden shifts): use regime-switching models, Prophet with changepoint detection, or sliding window.
-Zero-inflated series (many periods with zero demand): use two-stage model (occurrence + magnitude) or hurdle models.
-
-### Framework Integration
-Statsmodels: ARIMA, SARIMA, VAR, ExponentialSmoothing, STL decomposition, ACF/PACF plotting.
-Prophet: additive model with changepoints, holidays, seasonality; handles missing data natively.
-sktime: unified API for forecasting, time series classification, regression, and decomposition.
-PyTorch Forecasting: TemporalFusionTransformer, NBeats, DeepAR with PyTorch Lightning integration.
-Darts: simple API for ARIMA, Prophet, N-Beats, TFT, BlockRNN with backtesting and gridsearch.
-NeuralProphet: hybrid of Prophet and PyTorch for deep learning forecasting with changepoints.
-GluonTS: deep learning toolkit for time series with multiple probabilistic models.
-
-### Advanced Forecasting Tips
-For hierarchical time series (product categories -> products -> SKUs), use reconciliation methods to ensure forecast consistency.
-Use ensemble stacking: train meta-model on predictions from ARIMA + Prophet + LSTM for improved accuracy.
-Implement direct multi-step forecasting (separate model per horizon) instead of recursive for long horizons.
-For intermittent demand (sporadic sales), use Croston's method or TSB (Teunter-Syntetos-Babai) method.
-Use Fourier features to encode multiple seasonalities for any model (linear regression, gradient boosting).
-For very long time series, use random sampling of time windows for training instead of full sequence.
-Implement prediction interval evaluation using pinball loss at multiple quantiles.
-For causal forecasting (what-if scenarios), use structural time series models or difference-in-differences.
-
+  - references/classical-forecasting.md — Classical Forecasting
+  - references/deep-learning-ts.md — Deep Learning for Time Series
+  - references/feature-engineering.md — Time Series Feature Engineering
+  - references/forecast-deep-learning.md — Deep Learning for Time Series Forecasting
+  - references/forecasting-methods.md — Time Series Forecasting
+  - references/time-series-advanced.md — Time Series Advanced Topics
+  - references/time-series-feature-store.md — Time Series Feature Store
+  - references/time-series-fundamentals.md — Time Series Fundamentals
 ## Handoff
 Hand off to ml-feature-engineering for advanced feature creation. For anomaly detection on residuals, hand off to ml-anomaly-detection.

@@ -148,17 +148,11 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
 - TypeScript strict mode for all new projects.
 
 ## References
-
-### Reference Files
-- `references/express-setup.md` — Express configuration, middleware patterns, security
-- `references/fastify-setup.md` — Fastify configuration, plugins, hooks
-- `references/nodejs-event-loop.md` — Event loop phases, microtasks, blocking, worker threads
-- `references/nodejs-clustering.md` — Cluster module, PM2, IPC, zero-downtime restart
-
-### Related Skills
-- `backend/nodejs/patterns/SKILL.md` — Node.js-specific patterns
-- `backend/universal/api-response/SKILL.md` — API response envelope
-- `backend/universal/oop-principles/SKILL.md` — SOLID for Node.js
-
+  - references/express-setup.md — Express Setup Reference
+  - references/fastify-setup.md — Fastify Setup
+  - references/nodejs-clustering.md — Node.js Clustering
+  - references/nodejs-event-loop.md — Node.js Event Loop
+  - references/nodejs-middleware.md — Node.js Middleware Architecture Reference
+  - references/nodejs-security.md — Node.js Security Reference
 ## Handoff
 Hand off to `backend/nodejs/patterns/SKILL.md` for Node.js-specific patterns.

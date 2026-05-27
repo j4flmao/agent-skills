@@ -38,12 +38,13 @@ tags: [blockchain, testing, security, audit, phase-blockchain]
 7. **Security audit**: tooling (Slither, Mythril, Halmos), manual review checklist
 
 ## References
-- references/chaos-testing.md — Blockchain-specific chaos testing scenarios
-- references/formal-verification.md — Formal verification overview (see security)
-- references/foundry-testing.md — Foundry/Forge testing setup and cheatcodes
-- references/fuzz-property-testing.md — Fuzz, invariant, property-based testing
-- references/hardhat-testing.md — Hardhat testing framework and configuration
-- references/integration-e2e.md — Mainnet fork and E2E integration testing
-
+  - references/blockchain-testing-advanced.md — Blockchain Testing Advanced Topics
+  - references/blockchain-testing-fundamentals.md — Blockchain Testing Fundamentals
+  - references/chaos-testing.md — Chaos Testing Reference
+  - references/formal-verification.md — Formal Verification Reference
+  - references/foundry-testing.md — Foundry Testing Reference
+  - references/fuzz-property-testing.md — Fuzz, Property & Invariant Testing Reference
+  - references/hardhat-testing.md — Hardhat Testing Reference
+  - references/integration-e2e.md — Integration & E2E Testing Reference
 ## Phase
 blockchain → blockchain-testing

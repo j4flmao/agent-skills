@@ -197,11 +197,12 @@ feature:
 - @Valid on controller request bodies for input validation. Domain entities are validated in domain constructors/factory methods.
 
 ## References
-- `references/layered-architecture.md` — hexagonal architecture, constructor injection, dependency rule
-- `references/reactive-webflux.md` — WebFlux controllers, R2DBC, reactive error handling
-- `references/spring-boot-data-access.md` — JPA, R2DBC, transactions, locking, batch operations
-- `references/spring-boot-security.md` — security chain, JWT, CORS, method security, testing
-
+  - references/layered-architecture.md — Spring Boot Layered Architecture
+  - references/reactive-webflux.md — Spring WebFlux Patterns
+  - references/spring-boot-data-access.md — Spring Boot Data Access
+  - references/spring-boot-observability.md — Spring Boot Observability
+  - references/spring-boot-security.md — Spring Boot Security
+  - references/spring-boot-testing.md — Spring Boot Testing
 ## Handoff
 No artifact produced.
 Next skill: backend-testing — test Spring Boot.
