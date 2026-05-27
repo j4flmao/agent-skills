@@ -70,5 +70,19 @@ Unlimited — architecture requires thorough analysis.
   - references/solution-arch-templates.md — Solution Architecture Templates
   - references/solution-architecture-advanced.md — Solution Architecture Advanced Topics
   - references/solution-architecture-fundamentals.md — Solution Architecture Fundamentals
+  - references/system-design-methodology.md — System Design Methodology for Solution Architects
+  - references/c4-model-visualization.md — C4 Model for Architecture Visualization
+  - references/architecture-evaluation-methods.md — Architecture Evaluation Methods
+  - references/architecture-fitness-functions.md — Architecture Fitness Functions
+  - references/reference-architectures.md — Reference Architectures for Solution Architects
+  - references/architecture-modernization.md — Architecture Modernization
+  - references/technology-radar.md — Technology Radar for Solution Architects
+  - references/architecture-debt-management.md — Architecture Debt Management
+  - references/architecture-leadership.md — Architecture Leadership
+  - references/architecture-metrics.md — Architecture Metrics
+  - references/architecture-risk-quantification.md — Architecture Risk Quantification
+  - references/api-architecture-strategy.md — API Architecture Strategy
+  - references/security-architecture-guide.md — Security Architecture Guide
+  - references/startup-vs-enterprise-architecture.md — Startup vs Enterprise Architecture
 ## Handoff
 Carry forward: ADR numbers used, decisions made, key trade-offs, outstanding decisions.

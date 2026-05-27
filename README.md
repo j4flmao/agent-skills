@@ -257,7 +257,7 @@ Agent config files contain the compression rules:
     └── bundle-definitions.json
 ```
 
-Total: **437 SKILL.md** + **3027+ reference .md files** + **18 docs/ guides** + **agent configs** = **3500+ files**. Avg **6.81 refs/skill** — all skills 6+ refs.
+Total: **437 SKILL.md** + **3049+ reference .md files** + **18 docs/ guides** + **agent configs** = **3522+ files**. Avg **6.98 refs/skill** — all skills 6+ refs. **solution-architecture** deepened to **22 refs** covering system design methodology, C4 model, evaluation methods (ATAM/CBAM), fitness functions, reference architectures, modernization, technology radar, architecture debt, leadership, metrics, risk quantification, API strategy, security architecture, and startup-vs-enterprise patterns.
 
 ## License
 
