@@ -152,6 +152,102 @@ Every list endpoint uses cursor or offset pagination:
 | 429 | RATE_LIMITED | Too many requests |
 | 500 | INTERNAL_ERROR | Unexpected server error |
 
+## API Governance Framework
+
+### Governance Levels
+
+```yaml
+governance_levels:
+  level_0_no_governance:
+    description: "Each team designs APIs independently"
+    characteristics: ["Inconsistent conventions across teams", "No API review process"]
+    when_appropriate: "Single team, early stage startup, internal-only APIs"
+    
+  level_1_conventions:
+    description: "Shared conventions documented but not enforced"
+    characteristics: ["API style guide exists", "Naming conventions documented", "Error format agreed"]
+    enforcement: "Manual review in PR — architect reviews API changes"
+    when_appropriate: "2-3 teams, moderate API surface"
+    
+  level_2_spec_governance:
+    description: "API specs validated automatically in CI"
+    characteristics: ["OpenAPI/GraphQL spec mandatory", "Automated linting on spec", "Breaking change detection"]
+    enforcement: "CI pipeline rejects PRs that violate conventions or break compatibility"
+    tools: ["spectral (OpenAPI linting)", "openapi-diff (breaking change detection)", "graphql-inspector"]
+    when_appropriate: "3-8 teams, growing API surface, external consumers"
+    
+  level_3_api_platform:
+    description: "Centralized API management with developer portal"
+    characteristics: ["API gateway with unified auth, rate limiting, analytics", "Developer portal for discovery", "API version lifecycle management"]
+    enforcement: "Automated + manual — ARB reviews cross-cutting API changes"
+    when_appropriate: "8+ teams, public APIs, B2B integrations"
+```
+
+### API Review Checklist
+
+```yaml
+api_review_checklist:
+  naming_and_structure:
+    - "Resource names are plural nouns, lowercase, kebab-case"
+    - "No verbs in CRUD paths (use /orders not /getOrders)"
+    - "Nested resources follow /parents/:parentId/children"
+    - "Query parameters for filtering, sorting, pagination"
+    - "Consistent date format (ISO 8601 — RFC 3339)"
+    
+  request_contract:
+    - "Request body schema validated (JSON Schema / OpenAPI)"
+    - "Required vs optional fields explicitly marked"
+    - "Idempotency key accepted for mutation endpoints"
+    - "Content-Type and Accept headers validated"
+    - "Rate limit headers documented and enforced"
+    
+  response_contract:
+    - "Consistent envelope — data, error, meta structure"
+    - "Error codes are UPPER_SNAKE_CASE strings"
+    - "Pagination meta included on all list endpoints"
+    - "Response includes requestId for tracing"
+    - "No internal implementation details exposed"
+    
+  backwards_compatibility:
+    - "No removal or rename of existing fields"
+    - "No change to existing field types"
+    - "No narrowing of existing field constraints"
+    - "Adding new fields is safe (clients should ignore unknown fields)"
+    - "Adding new optional request fields is safe"
+    - "Making required fields optional is safe"
+    - "Making optional fields required is BREAKING"
+    
+  security:
+    - "Authentication method defined (API key, JWT, OAuth2, mTLS)"
+    - "Authorization model (RBAC, ABAC, scope-based)"
+    - "Sensitive data not exposed in URLs or responses"
+    - "Rate limiting configured with graduated tiers"
+    - "HTTPS enforced — no cleartext endpoints"
+```
+
+## API Versioning Decision Tree
+
+```yaml
+versioning_decision_tree:
+  "Are consumers external (third-party developers, partners)?":
+    yes: "URI path versioning (v1, v2) — clear, obvious, easy to communicate"
+    no_internal:
+      "Can you coordinate deployments with all consumers?":
+        yes: "No versioning — evolve API with backwards compatibility, coordinate changes"
+        no: "Header versioning — consumers opt-in to new version without path changes"
+        
+  "Do mobile clients consume this API?":
+    yes:
+      "URI path versioning — app store versions can't change API paths dynamically"
+      "Support last 2 major versions — force upgrade when dropping v1"
+    no:
+      "Header versioning or no versioning (backwards compatible evolution)"
+      
+  "Is the API in rapid iteration mode (<1 year old, <10 consumers)?":
+    yes: "No versioning — additive changes only, feature flags for experiments"
+    no: "Formal versioning strategy with deprecation policy (18-month minimum)"
+```
+
 ## Rules
 - Always paginate list endpoints. Never return unbounded arrays.
 - Error codes are UPPER_SNAKE_CASE strings, not HTTP status descriptions.
@@ -160,6 +256,8 @@ Every list endpoint uses cursor or offset pagination:
 - Response envelope is consistent in ALL cases — success and error. data is null when error is present.
 - Every response includes requestId for tracing.
 - If the API grows beyond 20 endpoints, consider splitting into separate services.
+- API design decisions must be documented as ADRs — especially versioning, auth, and conventions.
+- Governance level should match API maturity — don't over-govern early-stage APIs.
 
 ## References
   - references/api-design-documentation.md — API Design Documentation

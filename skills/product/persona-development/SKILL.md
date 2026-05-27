@@ -83,6 +83,100 @@ Score each feature by persona fit: how well does it serve each persona's goals a
 ### Step 5: User Story Mapping with Personas
 Map user stories by persona on a story map. Arrange by persona journey order. Identify gaps where persona needs have no stories. Flag over-investment in low-priority persona features. Ensure each sprint has stories serving the primary persona.
 
+## Research Methods for Persona Development
+
+### Qualitative Research Methods
+
+```yaml
+qualitative_methods:
+  user_interviews:
+    format: "Semi-structured 1:1 interviews, 45-60 minutes each"
+    sample_size: "8-12 participants per persona segment for saturation"
+    recruitment: "Screen for target behavior, not demographics — find users who actually do the thing"
+    questions:
+      - "Walk me through the last time you [key activity]"
+      - "What's the hardest part about [activity]?"
+      - "How do you currently solve [problem]?"
+      - "What would your ideal solution look like?"
+    outputs: ["Interview transcripts", "Key quotes", "Behavior patterns", "Pain point themes"]
+    
+  contextual_inquiry:
+    format: "Observe users in their natural environment while they work"
+    duration: "1-2 hours per session"
+    technique: "Master-apprentice model — user does the task, researcher observes and asks questions"
+    best_for: "Complex workflows where users can't articulate what they do"
+    outputs: ["Task flow diagrams", "Environment photos", "Workflow artifacts"]
+    
+  diary_study:
+    format: "Users log activities, thoughts, and frustrations over 5-14 days"
+    sample_size: "10-20 participants"
+    prompts:
+      - "What did you do today related to [activity]?"
+      - "What frustrated you?"
+      - "What workaround did you use?"
+      - "How did you feel when [event] happened?"
+    outputs: ["Longitudinal behavior data", "Emotion patterns over time", "Frequency data"]
+```
+
+### Quantitative Research Methods
+
+```yaml
+quantitative_methods:
+  surveys:
+    format: "Structured questionnaire, Likert scales, multiple choice"
+    sample_size: "100+ responses minimum, 400+ for statistical significance"
+    question_types:
+      - "Behavioral: How often do you [activity]?"
+      - "Attitudinal: How satisfied are you with [feature]?"
+      - "Segmentation: Which best describes your role?"
+    outputs: ["Statistical segments", "Correlation analysis", "Feature preference rankings"]
+    
+  analytics_analysis:
+    sources: ["Product analytics (Mixpanel, Amplitude)", "Web analytics (Google Analytics)", "CRM data"]
+    patterns_to_look_for:
+      - "User behavior clusters — groups that navigate similarly"
+      - "Feature adoption rates — power users vs casual users"
+      - "Drop-off points — where do users struggle or abandon"
+      - "Session frequency and duration — engagement segments"
+    outputs: ["Behavioral segments", "Feature usage patterns", "User journey hotspots"]
+    
+  behavioral_segmentation:
+    technique: "RFM analysis (Recency, Frequency, Monetary) or k-means clustering"
+    input: "Usage data, transaction history, support ticket volume"
+    outputs: ["Segments: power users, casual, at-risk, dormant", "Segment profiles with key metrics"]
+```
+
+### Synthesis and Validation
+
+```yaml
+persona_synthesis:
+  pattern_recognition:
+    technique: "Affinity mapping — group research findings into themes"
+    process:
+      - "Write each finding on separate sticky note"
+      - "Group related findings without predefined categories"
+      - "Label clusters with descriptive themes"
+      - "Identify behavioral patterns across participants"
+      
+  persona_drafting:
+    structure:
+      - "Name and tagline — memorable and descriptive"
+      - "Demographics — age, role, industry, tech comfort"
+      - "Goals — what they want to achieve (not what features they want)"
+      - "Behaviors — how they currently work"
+      - "Pain points — what frustrates them"
+      - "Workarounds — how they compensate for current limitations"
+      - "Quote — real quote from research that captures their essence"
+      
+  validation:
+    methods:
+      - "Stakeholder review — present to product team, collect feedback"
+      - "Survey validation — test persona descriptions against larger sample"
+      - "Analytics triangulation — verify persona behaviors match analytics data"
+      - "A/B test — design different experiences for different personas, measure engagement"
+    iteration: "Personas are living artifacts — update as product and market evolve"
+```
+
 ## Rules
 - Personas must be based on research data, not stereotypes or assumptions.
 - Each persona must be grounded in data from at least 3 research participants.
@@ -92,6 +186,8 @@ Map user stories by persona on a story map. Arrange by persona journey order. Id
 - Persona count should be 3-5 — more than 5 dilutes focus.
 - Personas must be validated with stakeholders and updated as product evolves.
 - Every design decision should reference which persona it serves.
+- Use at least 2 research methods (1 qualitative + 1 quantitative) for persona development.
+- Validate personas against quantitative data — don't rely solely on interview insights.
 
 ## References
   - references/empathy-mapping.md — Empathy Mapping

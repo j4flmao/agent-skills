@@ -76,6 +76,122 @@ Map security controls to applicable compliance frameworks (SOC2, HIPAA, PCI-DSS,
 ### Step 6: Establish Security Champions Program
 Designate security champions in each dev team for embedded security practices.
 
+## Security Governance Framework
+
+### Security Program Maturity Levels
+
+```yaml
+security_maturity:
+  level_1_ad_hoc:
+    description: "Security is reactive — only addressed when incident occurs"
+    characteristics:
+      - "No dedicated security team"
+      - "No security review process"
+      - "Vulnerabilities found by accident or after breach"
+    target_org: "Startup pre-product-market fit, <10 engineers"
+    
+  level_2_baseline:
+    description: "Basic security practices established"
+    characteristics:
+      - "Security champion(s) embedded in dev teams"
+      - "SAST scanning in CI (Semgrep, SonarQube)"
+      - "Dependency scanning enabled"
+      - "Incident response plan documented"
+      - "Basic security training for developers"
+    target_org: "Growing startup, <50 engineers, SOC2 readiness"
+    
+  level_3_embedded:
+    description: "Security integrated into SDLC"
+    characteristics:
+      - "Security review gates at every SDLC phase"
+      - "Threat modeling for all architecture changes"
+      - "DAST scanning in staging environments"
+      - "Vulnerability management program with SLAs"
+      - "Security champions program with rotating members"
+      - "Regular penetration testing (annual minimum)"
+    target_org: "Mid-market, 50-200 engineers, SOC2/HIPAA compliance"
+    
+  level_4_proactive:
+    description: "Security anticipates and prevents threats"
+    characteristics:
+      - "Threat intelligence integration"
+      - "Bug bounty program"
+      - "Automated security testing in CI/CD pipeline"
+      - "Continuous compliance monitoring"
+      - "Security architecture review for all significant changes"
+      - "Incident response drills and tabletop exercises"
+      - "Supply chain security program (SBOM, attestation)"
+    target_org: "Enterprise, 200+ engineers, multi-compliance framework"
+```
+
+### Security Tool Selection Framework
+
+```yaml
+tool_selection:
+  saST:
+    when_to_adopt: "Level 2+ — as soon as you have CI pipeline"
+    selection_criteria: ["Language coverage", "False positive rate", "Custom rule support", "CI integration"]
+    options:
+      starter: "Semgrep — free, multi-language, custom rules, low false positives"
+      enterprise: "CodeQL — deep analysis, GitHub integration, wider coverage"
+      
+  daST:
+    when_to_adopt: "Level 3 — once you have staging environment with realistic data"
+    selection_criteria: ["Authentication support", "API scanning capability", "Scalability"]
+    options:
+      free: "OWASP ZAP — automated scanning, API support"
+      commercial: "Burp Suite Enterprise — deeper analysis, CI integration"
+      
+  sca:
+    when_to_adopt: "Level 2 — immediately, no infrastructure needed"
+    selection_criteria: ["Dependency graph coverage", "CVE database freshness", "Fix recommendations"]
+    options:
+      starter: "Dependabot (GitHub native) + Trivy (container scanning)"
+      enterprise: "Snyk — broader coverage, prioritization, fix PRs"
+      
+  secret_detection:
+    when_to_adopt: "Level 2 — before first git commit in shared repo"
+    selection_criteria: ["Pre-commit hooks", "Historical scan", "False positive rate"]
+    options:
+      free: "Gitleaks — fast, effective, pre-commit + CI scanning"
+      enterprise: "TruffleHog — deep scanning, entropy detection, integration"
+      
+  iaC_scanning:
+    when_to_adopt: "Level 2+ — when using Terraform, CloudFormation, Helm"
+    options: ["Checkov — broad cloud coverage, Kubernetes support", "tfsec — Terraform-specific, fast"]
+```
+
+### Vendor Security Assessment
+
+```yaml
+vendor_assessment:
+  tiers:
+    tier_1_low_risk:
+      description: "No access to customer data, internal tooling only"
+      assessment: "Self-attestation questionnaire (SOC2, ISO 27001 status)"
+      examples: ["Internal communication tool", "Project management software"]
+      
+    tier_2_medium_risk:
+      description: "Access to non-sensitive business data"
+      assessment: "Security questionnaire + SOC2 report review"
+      examples: ["CRM", "Marketing automation", "HR system"]
+      
+    tier_3_high_risk:
+      description: "Access to PII, payment data, or customer infrastructure"
+      assessment: "Full security review: questionnaire + SOC2 review + penetration test + architecture review"
+      examples: ["Cloud infrastructure provider", "Payment processor", "Data warehouse"]
+      
+  assessment_items:
+    - "Data encryption at rest and in transit"
+    - "Access control and identity management"
+    - "Incident response process and SLA"
+    - "Subprocessor list and their assessments"
+    - "Data retention and deletion policies"
+    - "Compliance certifications (SOC2, ISO 27001, PCI DSS)"
+    - "Business continuity and disaster recovery"
+    - "Penetration testing frequency and findings"
+```
+
 ## Rules
 
 - Security review is required at every SDLC phase — no phase can be skipped
@@ -85,6 +201,8 @@ Designate security champions in each dev team for embedded security practices.
 - Secrets detected in git must be rotated immediately, not just removed
 - Third-party dependencies must be scanned for CVEs on every build
 - Access to production secrets requires approval and is logged
+- Security maturity should match organizational size and compliance requirements
+- Vendor security assessments should be tiered by risk — don't apply same rigor to all vendors
 
 ## Security Review Gates
 

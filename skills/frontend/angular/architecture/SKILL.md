@@ -238,6 +238,124 @@ export class UserService {
 }
 ```
 
+## State Management: NgRx Signals vs Signal Store
+
+```yaml
+state_management_comparison:
+  signal_store:
+    description: "Lightweight state management using Signals — part of Angular core (since v16+)"
+    setup: "Injectable service with public signals and private state"
+    best_for: "Feature-level state, component communication within a feature"
+    complexity: "Low — no actions, reducers, effects to learn"
+    boilerplate: "Minimal — signals are built into Angular"
+    example:
+      code: |
+        @Injectable({ providedIn: 'root' })
+        export class UserStore {
+          private readonly userService = inject(UserService)
+          readonly users = signal<User[]>([])
+          readonly selectedUser = signal<User | null>(null)
+          readonly isLoading = signal(false)
+          
+          async loadUsers() {
+            this.isLoading.set(true)
+            try {
+              const users = await this.userService.getAll()
+              this.users.set(users)
+            } finally {
+              this.isLoading.set(false)
+            }
+          }
+        }
+    
+  ngrx_signals:
+    description: "NgRx's signal-based state management (@ngrx/signals) — opinionated store pattern"
+    setup: "signalStore with withState, withMethods, withComputed, withHooks"
+    best_for: "Shared state across multiple features, complex state with computed derivations"
+    complexity: "Medium — store definition is structured but straightforward"
+    boilerplate: "Moderate — structured but less than classic NgRx"
+    example:
+      code: |
+        export const UserStore = signalStore(
+          { providedIn: 'root' },
+          withState({ users: [] as User[], isLoading: false }),
+          withComputed((store) => ({
+            userCount: computed(() => store.users().length)
+          })),
+          withMethods((store, userService = inject(UserService)) => ({
+            async loadUsers() {
+              store.isLoading.set(true)
+              try {
+                const users = await userService.getAll()
+                store.users.set(users)
+              } finally {
+                store.isLoading.set(false)
+              }
+            }
+          }))
+        )
+    
+  classic_ngrx:
+    description: "Traditional NgRx (actions, reducers, effects, selectors)"
+    setup: "Multiple files per feature — actions.ts, reducer.ts, effects.ts, selectors.ts"
+    best_for: "Complex state with undo/redo, extensive side effect orchestration, large teams"
+    complexity: "High — many concepts, boilerplate, ceremony"
+    boilerplate: "High — 10+ files per feature is common"
+    recommendation: "Prefer @ngrx/signals or signal stores for new Angular 17+ projects"
+```
+
+## Micro-Frontend Patterns with Angular
+
+```yaml
+angular_micro_frontends:
+  module_federation:
+    tool: "@angular-architects/module-federation — Webpack Module Federation wrapper"
+    approach: "Each micro-frontend is a standalone Angular app, composed at runtime"
+    sharing:
+      - "Shared Angular runtime (singleton — prevent duplicate instances)"
+      - "Shared libraries (component library, auth library, utility library)"
+      - "Route-based loading — each MF loads on-demand"
+    communication:
+      - "Custom events (window.dispatchEvent) for simple cross-MF messaging"
+      - "Shared service (injected from shell) for complex state sharing"
+      - "URL/route params for navigation between MFs"
+    
+  composition_patterns:
+    shell_host:
+      responsibility: "Auth shell, top-level navigation, MF loading, shared DI setup"
+      implementation: "LoadRemoteComponent from @angular-architects/module-federation"
+      
+    micro_frontend:
+      responsibility: "Self-contained feature — pages, routing, state, API calls"
+      independence: "Can be developed, tested, and deployed independently"
+      integration: "Exposes routes and components via Module Federation exposes"
+```
+
+## Performance Optimization
+
+```yaml
+angular_performance:
+  change_detection:
+    default: "OnPush — standalone components use OnPush by default"
+    signals: "Signals trigger change detection only on their reactive consumers"
+    zone_less: "Angular 18+ experimental zoneless change detection — signals-only change detection"
+    
+  lazy_loading:
+    - "Every feature route must be lazy-loaded"
+    - "Defer loadable views (@defer block) for below-the-fold content"
+    - "Preload strategy: PreloadAllModules for small apps, custom for large"
+    
+  bundle_optimization:
+    - "Standalone components reduce bundle size (no NgModule overhead)"
+    - "Defer heavy third-party components with @defer placeholder"
+    - "Image optimization — ngSrc with automatic srcset and lazy loading"
+    
+  runtime:
+    - "trackBy / track function for @for — prevents unnecessary DOM recreation"
+    - "Virtual scrolling (cdk-virtual-scroll-viewport) for large lists"
+    - "Unsubscribe from observables — takeUntilDestroyed() (Angular 16+)"
+```
+
 ## Rules
 - Standalone components by default. NgModules only for NgRx feature states or backward compatibility.
 - Signals for component and local state. RxJS only for complex async streams (HTTP, WebSocket, debounced inputs).
@@ -245,6 +363,9 @@ export class UserService {
 - New control flow syntax (@if, @for, @switch) in all new code. No *ngIf, *ngFor, *ngSwitch.
 - Every feature route is lazy-loaded. No eager-loaded features in production bundles.
 - OnPush change detection is default for standalone components.
+- Prefer signalStore or service-based signal stores over classic NgRx for new Angular 17+ projects.
+- Use takeUntilDestroyed() for automatic RxJS cleanup — not manual unsubscribe.
+- Defer non-critical content with @defer blocks for initial bundle reduction.
 
 ## References
   - references/angular-module-architecture.md — Angular Module Architecture

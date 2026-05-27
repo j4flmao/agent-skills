@@ -124,6 +124,74 @@ val channels = listOf(
 channels.forEach { manager.createNotificationChannel(it) }
 ```
 
+## Delivery Optimization
+
+### Deliverability Patterns
+```yaml
+deliverability:
+  token_management:
+    registration: "Register token on every app launch — tokens can change without notice"
+    refresh: "Monitor token refresh callbacks (APNs, FCM) — update server immediately"
+    expiry: "APNs tokens expire after connecting to new environment (dev → prod)"
+    stale_tokens: "Monitor delivery failures — remove stale tokens from active push lists"
+    
+  throttling:
+    per_device: "Max 1 push per 30 seconds per device — OS may drop otherwise"
+    per_user: "Max 5 pushes per hour per user in peak, 1-2 per hour in quiet periods"
+    burst: "For time-sensitive batches, spread pushes over 5-10min window, not all at once"
+    
+  priority_management:
+    critical_alerts: "Use critical alert entitlement (iOS) — bypasses mute/ringer"
+    time_sensitive: "Use time-sensitive interruption level — delivered immediately"
+    normal: "Standard priority — may be grouped or delayed by OS"
+    background: "Content-available only (silent) — no user-facing payload"
+    
+  payload_size:
+    apns_limit: "4KB max payload (including headers)"
+    fcm_limit: "4KB max payload (Android), 2KB for notification-only (iOS via FCM)"
+    optimization: "Use data-only (FCM) + local notification (app) pattern for rich content"
+```
+
+### Rich Notification Patterns
+```yaml
+rich_notifications:
+  ios:
+    media_attachments: "Image, audio, video up to 50MB via service extension"
+    interactive: "Custom action buttons (reply, confirm, dismiss) via UNNotificationCategory"
+    live_activities: "Dynamic Island / Lock Screen live updates for ongoing events"
+    
+  android:
+    notification_templates: "Expandable notifications with inbox, big picture, big text, media styles"
+    action_buttons: "Up to 3 action buttons per notification"
+    direct_reply: "Inline reply via RemoteInput — no app launch required"
+    
+  cross_platform:
+    image_loading: "Provide image URL in payload — app caches and displays on notification tap"
+    deep_linking: "Include deeplink path in payload — navigate directly to relevant screen"
+    grouping: "Use thread-id (iOS) and group-key (Android) for logical grouping"
+```
+
+### Analytics and Monitoring
+
+```yaml
+notification_analytics:
+  metrics:
+    delivery_rate: "Notifications delivered by provider vs dropped"
+    tap_rate: "Percentage of delivered notifications that are tapped"
+    conversion: "Users who complete target action after tapping notification"
+    opt_out_rate: "Users who disable notifications after receiving them"
+    
+  tracking:
+    impression: "Track when notification is displayed to user"
+    tap: "Track when notification is tapped (with deep-link path)"
+    conversion: "Track subsequent user action (order, message, signup)"
+    
+  a_b_testing:
+    variables: ["Title", "Body text", "Image presence", "Action button text", "Delivery time"]
+    metric: "Tap rate and conversion within 24 hours of delivery"
+    minimum_sample: "1000 users per variant for statistical significance"
+```
+
 ## Rules
 - Always handle both foreground and background notification states.
 - Never hardcode notification channel IDs - define them as constants.
@@ -132,6 +200,9 @@ channels.forEach { manager.createNotificationChannel(it) }
 - Android requires notification channels for all notification types.
 - Always test with real device - simulator push has limitations.
 - Never log push tokens in production.
+- Monitor delivery rates and tap rates — notifications not delivering are worse than not sending.
+- Implement token refresh callback, not just registration — tokens change without notice.
+- Throttle pushes per device — OS may silently drop notifications from aggressive senders.
 
 ## References
   - references/apns-guide.md — APNs Guide

@@ -60,6 +60,83 @@ Set up DAOs/repositories with insert, read, update, delete operations and query 
 ### Step 4: Plan Migrations
 Version the schema from day one, write migration scripts for each version change, and test rollback paths.
 
+## Storage Decision Tree
+
+```yaml
+storage_decision_tree:
+  question_1_data_type:
+    "Simple key-value pairs (settings, preferences, feature flags)":
+      "Secure (tokens, auth data)?":
+        yes: "Platform secure storage — Keychain, EncryptedSharedPrefs, flutter_secure_storage"
+        no: "Platform preferences — UserDefaults, SharedPreferences, AsyncStorage"
+      
+    "Complex queryable data (user records, product catalog, orders)":
+      "Relational with complex queries (JOINs, aggregations)?":
+        yes: "SQLite via Room (Android), Core Data (iOS), sqflite/drift (Flutter), WatermelonDB (RN)"
+        no: "Document/NoSQL — Realm, Isar, Hive (simple queries, nested data)"
+      
+    "Large files (images, documents, video)":
+      "Cache or permanent?":
+        cache: "Temporary directory with LRU eviction"
+        permanent: "Application documents directory, platform file storage"
+        large_media: "Consider cloud storage with local cache"
+      
+  question_2_sync_requirement:
+    "Does the data need to sync across devices?":
+      yes: "Cloud-first with local cache — CloudKit, Firebase, custom API + local DB"
+      no: "Local-first — storage is authoritative, cloud is optional backup"
+      
+  question_3_offline_support:
+    "Does the app need full offline capability?":
+      yes: "Local DB as source of truth, background sync engine, conflict resolution"
+      no: "Cache API responses, show cached data when offline, stale-while-revalidate"
+```
+
+## Synchronization Strategies
+
+```yaml
+sync_strategies:
+  online_first:
+    description: "Network is source of truth, local is cache"
+    flow: "Read from cache → display immediately → fetch from API → update UI"
+    conflict: "Server wins (cache is always overwritten)"
+    best_for: "Social feeds, content browsing, reference data"
+    
+  offline_first:
+    description: "Local DB is source of truth, background sync"
+    flow: "Write to local DB → queue for sync → sync when online → resolve conflicts"
+    conflict: "Last-write-wins or custom merge logic"
+    best_for: "Note-taking, task management, field data collection"
+    
+  crdt_based:
+    description: "Conflict-free Replicated Data Types — automatic merge"
+    flow: "Local writes applied immediately → sync via CRDT merge → no manual conflict resolution"
+    trade_off: "Higher complexity, limited query capabilities"
+    best_for: "Collaborative editing, real-time multiplayer, distributed counters"
+```
+
+## Storage Performance Patterns
+
+```yaml
+storage_performance:
+  indexing:
+    - "Index all columns in WHERE, JOIN, ORDER BY, and GROUP BY clauses"
+    - "Composite indexes for multi-column queries — column order matters (most selective first)"
+    - "Avoid over-indexing — each index slows writes by 5-15%"
+    
+  query_optimization:
+    - "Use LIMIT + OFFSET for pagination — never SELECT * without bounds"
+    - "Project only needed columns — never SELECT *"
+    - "Batch inserts with transactions — 100 writes in 1 transaction vs 100 individual"
+    - "Use prepared statements — reuse query plan, prevent SQL injection"
+    
+  cache_strategy:
+    - "In-memory cache (LRU) for frequently read, rarely changed data"
+    - "Cache TTL: 5min for user data, 1h for reference data, never for critical state"
+    - "Cache invalidation: write-through (update cache on write) for consistency"
+    - "L2 cache: serialize to disk for app restart recovery"
+```
+
 ## Rules
 
 - Version the database schema from the first release — migration from v1 is mandatory
@@ -69,6 +146,8 @@ Version the schema from day one, write migration scripts for each version change
 - File storage for large blobs (images, documents) — not in the database
 - Migration tests must verify data integrity before and after migration
 - AsyncStorage (RN) and SharedPreferences (Flutter) are synchronous — avoid for large datasets
+- Choose storage layer based on data query patterns, not platform familiarity
+- Define sync strategy before implementing offline support — different patterns have different guarantees
 
 ## Storage Selection
 

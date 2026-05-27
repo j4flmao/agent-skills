@@ -158,6 +158,89 @@ RSpec.describe Api::V1::OrdersController, type: :request do
 end
 ```
 
+## Rails 8 Patterns
+
+### Current Best Practices (Rails 7.1+ / 8.0)
+```yaml
+rails_8_patterns:
+  authentication:
+    default: "has_secure_password (Rails 7.1+) for API tokens"
+    alternatives: ["Devise for full auth UI", "JWT for stateless API auth"]
+    recommendation: "Use has_secure_token for API key generation, has_secure_password for password hashing"
+    
+  background_jobs:
+    production_default: "Solid Queue (Rails 8 default) — SQLite/PostgreSQL-backed, no Redis dependency"
+    alternative: "Sidekiq for high-throughput (>10k jobs/min) with Redis"
+    comparison:
+      solid_queue: "Lower ops overhead, no Redis, good for 90% of apps"
+      sidekiq: "Higher throughput, mature ecosystem, Redis dependency"
+    
+  caching:
+    strategies:
+      - "Russian doll caching for view fragments"
+      - "Low-level caching for expensive queries (Rails.cache)"
+      - "HTTP caching (ETags, Last-Modified) for API responses"
+      - "Solid Cache (Rails 8) — database-backed cache store"
+    
+  database:
+    default: "PostgreSQL — UUID primary keys, pgvector, JSONB"
+    alternatives: "SQLite for single-server apps with Solid Stack (Rails 8)"
+    migration_gems: ["strong_migrations for safe production migrations", "lhm for zero-downtime DDL"]
+    
+  api_mode:
+    defaults:
+      - "API-only mode (rails new app --api)"
+      - "JSON:API specification with serializers (blueprinter, jsonapi-serializer)"
+      - "Request validation (dry-validation, JSON Schema)"
+      - "Rate limiting (rack-attack)"
+      - "CORS configuration (rack-cors)"
+```
+
+### Service Object Patterns
+```yaml
+service_object_patterns:
+  basic_service:
+    pattern: "Callable object with single responsibility"
+    convention: "Returns Result object (success? with value or failure? with errors)"
+    example:
+      class: "Orders::CreateOrder < ApplicationService"
+      call_method: "Receives params, creates order, returns Result"
+      
+  orchestrator:
+    pattern: "Coordinates multiple services for complex workflows"
+    example: "CheckoutService calls → CartService.lock, PaymentService.charge, OrderService.create, NotificationService.send"
+    
+  policy_object:
+    pattern: "Authorization rules extracted from controllers"
+    convention: "Pundit policies — one policy class per model"
+    
+  query_object:
+    pattern: "Complex database queries extracted from models"
+    convention: "Class method returns ActiveRecord::Relation for composability"
+```
+
+## Rails Performance Patterns
+
+```yaml
+rails_performance:
+  database:
+    n_plus_1: "Use includes, eager_load, or preload for associations"
+    pagination: "Cursor-based pagination (pagy) over offset-based for large datasets"
+    query_tuning: "Bullet gem detects N+1 in dev/test, pghero for query analysis"
+    connection_pool: "Size = thread_count + background_job_concurrency + 2"
+    
+  caching:
+    fragment: "Russian doll caching for complex views"
+    low_level: "Rails.cache.fetch for expensive computations"
+    http: "Etag + Last-Modified for API responses — return 304 Not Modified"
+    query: "Cache result counts and aggregation queries"
+    
+  background_jobs:
+    async: "Move email, notification, report generation to background jobs"
+    batching: "Batch large operations (import, export, cleanup) with find_each"
+    queues: "Separate queues by priority — critical, default, low"
+```
+
 ## Rules
 - API-only mode for new backends unless views explicitly needed.
 - Service objects encapsulate business logic — keep controllers thin.
@@ -167,6 +250,9 @@ end
 - Sidekiq or GoodJob for background jobs.
 - RSpec + FactoryBot for testing.
 - API versioning via namespace (Api::V1).
+- Use strong_migrations for production database migrations — detect dangerous operations.
+- Every migration must be reversible (up/down or change with reversible limitations).
+- Solid Queue (Rails 8) for new apps unless specific need for Sidekiq.
 
 ## References
   - references/rails-active-record.md — Rails ActiveRecord Patterns

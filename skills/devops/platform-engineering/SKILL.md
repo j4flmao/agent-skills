@@ -96,12 +96,123 @@ Orchestrator (Terraform/Pulumi/Crossplane)
 - Phase 4: Policy enforcement + cost/showback
 - Phase 5: Inner source and platform contributions
 
+## Platform Maturity Model
+
+```yaml
+platform_maturity:
+  level_0_no_platform:
+    description: "Every team manages their own infrastructure manually"
+    characteristics:
+      - "Ticket-based infrastructure requests"
+      - "No standardized tooling"
+      - "Each team reinvents CI/CD, monitoring, deployment"
+      - "No service catalog or discovery"
+    dev_experience: "Slow — days to provision resources, weeks to add new service"
+    
+  level_1_automated_infrastructure:
+    description: "Infrastructure automation exists but is team-specific"
+    characteristics:
+      - "IaC adopted but per-team implementations"
+      - "CI/CD pipelines per project"
+      - "Basic monitoring and alerting"
+      - "Shared credentials management"
+    dev_experience: "Better — hours to provision, but inconsistent across teams"
+    
+  level_2_platform_emerges:
+    description: "Dedicated platform team forms, shared tooling emerges"
+    characteristics:
+      - "Platform team owns CI/CD, monitoring, shared IaC modules"
+      - "Golden paths for 2-3 common service types"
+      - "Service catalog with basic metadata"
+      - "Standardized container images and base configurations"
+    dev_experience: "Good — minutes to provision, consistent tooling across teams"
+    
+  level_3_internal_developer_platform:
+    description: "Self-service IDP with developer portal"
+    characteristics:
+      - "Developer portal (Backstage/Port) with service catalog"
+      - "Software templates for all common service types"
+      - "Self-service infrastructure actions (databases, queues, caches)"
+      - "Automated cost tagging and showback"
+      - "Policy as code with automated guardrails"
+    dev_experience: "Excellent — minutes to scaffold service, click to provision infra"
+    
+  level_4_platform_ecosystem:
+    description: "Platform is a product with inner source contributions"
+    characteristics:
+      - "Platform as a product — roadmap, feedback loops, SLAs"
+      - "Inner source — teams contribute to platform components"
+      - "Dynamic golden paths updated based on usage patterns"
+      - "Cross-platform orchestration (multi-cloud, hybrid)"
+      - "Automated compliance and security posturing"
+    dev_experience: "Exceptional — platform anticipates needs, teams focus on business logic"
+```
+
+## Golden Path Design Patterns
+
+```yaml
+golden_path_patterns:
+  path_structure:
+    what_it_produces:
+      - "Source repository with starter code template"
+      - "CI/CD pipeline configuration"
+      - "Containerization (Dockerfile, Helm chart, or serverless config)"
+      - "Monitoring dashboard and alert rules"
+      - "Documentation template (README, API docs, runbook)"
+      - "Security scanning configuration"
+      - "Environment configurations (dev, staging, prod)"
+      
+    scaffolding_approach:
+      template_based: "Cookiecutter / yeoman / plop — generate repo from template"
+      pipeline_integrated: "Backstage software templates — scaffold from developer portal"
+      composition: "Assemble from modular building blocks — terraform modules, pipeline templates"
+      
+  exit_strategy:
+    when_to_exit: "Team outgrows golden path defaults (custom framework, unusual architecture)"
+    how_to_exit: "Fork the template, document deviations, register custom service in catalog"
+    platform_role: "Accept deviations, review for platform improvement opportunities, maintain compatibility"
+    
+  measurement:
+    adoption: "% of new services created via golden path"
+    satisfaction: "Developer NPS on golden path experience"
+    productivity: "Time from idea to production for golden path services"
+    maintenance: "Cost to update golden path when platform changes"
+```
+
+## Platform Adoption Anti-Patterns
+
+```yaml
+adoption_anti_patterns:
+  build_it_and_they_will_come:
+    problem: "Platform team builds features without developer input"
+    sign: "Low adoption rates, teams building parallel solutions"
+    solution: "Treat platform as product — developer research, feedback loops, beta programs"
+    
+  forced_adoption:
+    problem: "Mandating platform usage without flexibility"
+    sign: "Shadow platforms emerge, teams find workarounds"
+    solution: "Golden paths with escape hatches, demonstrate value before mandating"
+    
+  platform_team_as_ops:
+    problem: "Platform team becomes bottleneck — every request goes through them"
+    sign: "Platform team doing manual work, no self-service"
+    solution: "Prioritize self-service capabilities, automate common requests"
+    
+  over_abstraction:
+    problem: "Platform hides too much — developers can't debug or customize"
+    sign: "Teams can't diagnose production issues, frustrated by magic"
+    solution: "Expose appropriate details, provide debugging tools, document internals"
+```
+
 ## Rules
 - Platform must reduce, not increase, cognitive load for developers
 - Every golden path must have a clear "exit" for when developers outgrow it
 - Platform team is a product team: treat developers as customers
 - Measure success by developer velocity, not platform features shipped
 - All platform components must have documented SLAs for the platform team
+- Adopt incrementally — level 1 before level 2, never skip maturity levels
+- Platform features should be optional first, compelling second, default third
+- Every golden path must include observability, security, and cost tracking
 
 ## References
   - references/backstage-config.md — Backstage Configuration Guide

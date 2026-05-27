@@ -108,6 +108,143 @@ PostgreSQL: Row-Level Security (RLS) policies per table. BigQuery: column ACL on
 ### Step 7: Compliance
 GDPR: right to access (data portability), right to deletion (erase records), right to rectification. CCPA: right to know, right to delete, right to opt-out. Document data processing activities. Maintain data flow maps.
 
+## Data Classification Automation
+
+### Classification Levels and Criteria
+
+```yaml
+classification_levels:
+  public:
+    description: "Data that can be freely shared with anyone"
+    examples: ["Marketing content", "Published research", "Product documentation"]
+    controls: ["No special controls beyond integrity"]
+    access: "Unrestricted"
+    
+  internal:
+    description: "Data that should not be publicly exposed but has limited impact if leaked"
+    examples: ["Organizational charts", "Internal wikis", "Non-sensitive logs"]
+    controls: ["Access control", "Basic encryption at rest"]
+    access: "All employees by default"
+    
+  confidential:
+    description: "Data that would cause moderate harm if exposed"
+    examples: ["Customer PII", "Financial records", "Source code", "Business plans"]
+    controls: ["Encryption at rest and transit", "Access logging", "Least privilege access", "Data masking in non-prod"]
+    access: "Role-based, need-to-know basis"
+    
+  restricted:
+    description: "Data that would cause severe harm if exposed"
+    examples: ["Passwords", "Payment card numbers", "Health records", "Trade secrets"]
+    controls: ["All confidential controls plus:", "Field-level encryption", "Strict access logging with alerting", "Quarterly access review", "HSM key management"]
+    access: "Explicitly approved individuals, JIT access"
+```
+
+### Automated Classification Pipeline
+
+```yaml
+automated_classification:
+  discovery:
+    tools: ["Apache Atlas", "AWS Macie", "Microsoft Purview", "BigQuery Data Catalog"]
+    scanning:
+      - "Scan all data stores for sensitive data patterns (regex, ML classifiers)"
+      - "Credit card numbers, SSN, email, phone, addresses, passport numbers"
+      - "Custom patterns for business-specific sensitive data"
+    output: "Data inventory with detected sensitivity labels"
+    
+  tagging:
+    automated:
+      - "Auto-tag databases, tables, columns based on scan results"
+      - "Tag files and objects in object storage based on content scan"
+      - "Tag streaming data at ingestion point based on schema analysis"
+    manual:
+      - "Data owners can override or refine automated classifications"
+      - "Tagged data requires re-certification every 90 days"
+      
+  enforcement:
+    preventive:
+      - "Block writes of classified data to unapproved locations"
+      - "Prevent export of confidential data to personal devices"
+      - "Require approval for bulk access to restricted data"
+    detective:
+      - "Alert on unauthorized access attempts to classified data"
+      - "Monitor data egress patterns for anomaly detection"
+      - "Audit all access to restricted data with immutable logs"
+```
+
+### Privacy-by-Design Engineering Checklist
+
+```yaml
+privacy_by_design:
+  system_design:
+    - "Data minimization: only collect data needed for stated purpose"
+    - "Purpose limitation: data collected for one purpose not reused without consent"
+    - "Storage limitation: automated data deletion after retention period"
+    - "Privacy impact assessment completed before implementation"
+    
+  user_rights:
+    - "Right to access: API to retrieve all user data in portable format"
+    - "Right to deletion: cascading delete across all systems and backups"
+    - "Right to rectification: update user data across all stores"
+    - "Right to portability: export data in machine-readable format"
+    - "Right to object: opt-out mechanism for non-essential processing"
+    
+  consent_management:
+    - "Consent captured at time of data collection — not blanket consent"
+    - "Granular consent per purpose — separate toggles for different uses"
+    - "Consent records stored with timestamp and version"
+    - "Withdrawal mechanism equally accessible as giving consent"
+    - "Consent refresh required if purpose changes"
+    
+  data_protection_impact_assessment_dpia:
+    triggers: ["Processing sensitive data", "Large-scale monitoring", "Systematic profiling", "New technology deployment"]
+    sections:
+      - "System description and purpose"
+      - "Data flow mapping"
+      - "Privacy risk assessment"
+      - "Mitigation measures"
+      - "Compliance review sign-off"
+```
+
+### De-Identification Techniques Comparison
+
+```yaml
+de_identification:
+  anonymization:
+    k_anonymity:
+      description: "Each record indistinguishable from k-1 others"
+      example: "Generalize age to ranges (30-40) instead of exact age"
+      strength: "Moderate — vulnerable to homogeneity attack"
+      use_case: "Published datasets, analytics exports"
+    l_diversity:
+      description: "Each equivalence class has at least l distinct values for sensitive attribute"
+      example: "Blood type distribution within each age-range group has at least 3 distinct values"
+      strength: "Strong — prevents attribute disclosure"
+      use_case: "Medical research data"
+    differential_privacy:
+      description: "Add calibrated noise to query results"
+      example: "Add Laplace noise to query result: 'count of users > 30 = 1450 + noise'"
+      strength: "Very strong — mathematical privacy guarantee"
+      epsilon: "Lower ε = more privacy, less accuracy. ε=1: strong privacy, ε=10: weak privacy"
+      use_case: "Statistical queries, aggregate analytics"
+      
+  pseudonymization:
+    tokenization:
+      description: "Replace identifier with token, mapping stored in secure vault"
+      reversibility: "Reversible with vault access"
+      format_preserving: "Token looks like original (same format, check digit)"
+      use_case: "PCI data, test data generation"
+    hashing:
+      description: "One-way hash of identifier"
+      reversibility: "Irreversible (assuming no rainbow table)"
+      salting: "Add unique salt per column to prevent rainbow table attacks"
+      use_case: "Event tracking, analytics without PII"
+    encryption:
+      description: "Encrypt identifier, decrypt only when needed"
+      reversibility: "Reversible with key access"
+      key_management: "Separate encryption key per data classification level"
+      use_case: "Data that needs to be re-identified for legitimate business purpose"
+```
+
 ## Rules
 - Encryption at rest is mandatory for all data containing PII.
 - TLS 1.0 and 1.1 are prohibited — enforce TLS 1.2 minimum.
@@ -116,6 +253,8 @@ GDPR: right to access (data portability), right to deletion (erase records), rig
 - Column-level access must be enforced at database level — not just application.
 - Data classification must be applied before any security control.
 - Anonymization must be validated against re-identification risk.
+- Automate data classification discovery — manual classification doesn't scale.
+- Privacy-by-design must be integrated from system design phase, not retrofitted.
 
 ## References
   - references/data-loss-prevention.md — Data Loss Prevention (DLP)

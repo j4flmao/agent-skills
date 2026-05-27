@@ -80,6 +80,99 @@ Define interaction modes between teams: collaboration (joint work on shared prob
 ### Step 5: Org Transition Plan
 Identify what changes incrementally. Use reverse Conway maneuver: change org structure first, then design the system to match. Plan transitions in phases (not big bang). Start with team type reassignment and cognitive load reduction. Add enabling teams before platform teams (build capability first). Measure squad health at each phase.
 
+## Interaction Mode Patterns
+
+### Mode Selection Decision Tree
+```yaml
+interaction_mode_selection:
+  question_1_work_nature:
+    "Is this a one-time or ongoing need?":
+      one_time: "Facilitating — help team build capability, then leave"
+      ongoing:
+        "Is the interface stable and well-defined?":
+          yes: "X-as-a-Service — clear contract, minimal coordination"
+          no: "Collaboration — work together on evolving shared boundary"
+          
+  question_2_team_maturity:
+    "Does the consuming team have the skills to work independently?":
+      yes: "X-as-a-Service — provide self-service APIs, documentation, SLAs"
+      no: "Facilitating — pair, coach, document, gradually withdraw"
+      
+  question_3_boundary_volatility:
+    "How frequently does the interface change?":
+      stable: "X-as-a-Service — versioned API, semver, deprecation policy"
+      changing_weekly: "Collaboration — shared ownership, joint design sessions"
+      changing_daily: "Consider merging teams — boundary is too unstable for separate teams"
+```
+
+### Conway's Law in Practice
+
+```yaml
+conways_law_applications:
+  diagnosis:
+    signs_of_misalignment:
+      - "Integration between two services requires 3+ teams to coordinate"
+      - "Single team owns service but deployment requires changes in 5 other services"
+      - "Frequent defects at service boundaries between specific teams"
+      - "Key architectural changes blocked by organizational dependencies"
+    diagnostic_technique:
+      - "Map current team structure and communication paths"
+      - "Map desired system architecture"
+      - "Compare communication paths to architectural interfaces"
+      - "Identify mismatches — where org structure works against architecture"
+      
+  reverse_conway_maneuver:
+    description: "Restructure teams to produce the desired architecture"
+    steps:
+      - "Define target system architecture (bounded contexts, services, layers)"
+      - "Define team boundaries that would naturally produce that architecture"
+      - "Incrementally reorganize teams to match target"
+      - "Verify: new communication paths align with architectural interfaces"
+    timing: "Best done during major reorganization or new product development — harder in stable orgs"
+    
+  common_patterns:
+    monolith_org_to_monolith_system:
+      pattern: "Single team → single service/monolith"
+      good_for: "Startups, small products, simple domains"
+    distributed_org_to_distributed_system:
+      pattern: "N stream-aligned teams → N microservices"
+      good_for: "Large products with clear domain boundaries"
+    platform_org_to_platform_architecture:
+      pattern: "Platform team + stream-aligned teams → platform + services"
+      good_for: "Organizations with shared infrastructure needs"
+```
+
+### Team Cognitive Load Assessment
+
+```yaml
+cognitive_load_assessment:
+  intrinsic:
+    definition: "Complexity inherent to the domain and technology"
+    factors: ["Domain complexity (finance, healthcare, real-time systems)", "Technical complexity (distributed systems, ML, embedded)"]
+    target: "Match team expertise — don't assign complex domain to junior team"
+    
+  extraneous:
+    definition: "Process overhead, coordination cost, context switching"
+    factors: ["Number of external dependencies", "Meeting overhead", "Deployment complexity"]
+    target: "Reduce to <30% of team capacity — automate, standardize, simplify"
+    
+  germane:
+    definition: "Capacity for learning and improvement"
+    factors: ["Time for experimentation", "Spikes and proof-of-concepts", "Skill building"]
+    target: "Minimum 20% of team capacity — protect this time explicitly"
+    
+  assessment_scale:
+    manageable: "1-2 domains, few dependencies, clear interfaces"
+    warning: "Multiple domains, 3+ coordination points, unclear interfaces"
+    critical: "New domain, 5+ dependencies, high process overhead"
+    
+  reduction_strategies:
+    split_stream: "Split value stream across two stream-aligned teams"
+    add_enabling: "Add enabling team to build capability and tools"
+    create_platform: "Standardize common concerns into platform"
+    simplify_interface: "Invest in API design and documentation to reduce coordination"
+```
+
 ## Rules
 - Each team must own a complete value stream or meaningful subsystem.
 - Cognitive load must be assessed before team type assignment.
@@ -89,6 +182,8 @@ Identify what changes incrementally. Use reverse Conway maneuver: change org str
 - Reverse Conway: design org structure to produce desired system architecture.
 - Transition must be incremental, not big bang.
 - Every team has a clear purpose statement and internal API.
+- Use interaction mode decision tree to choose between collaboration, X-as-a-Service, and facilitating.
+- Monitor team cognitive load — extraneous load should never exceed team capacity.
 
 ## References
   - references/org-design.md — Organizational Design

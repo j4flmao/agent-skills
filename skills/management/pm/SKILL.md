@@ -157,6 +157,107 @@ Velocity: {n} / {n} points (on track / at risk / behind)
 - [ ] Configure board with QA review column (PM, by Fri)
 ```
 
+## Agile at Scale Frameworks
+
+### Framework Selection
+
+```yaml
+agile_at_scale:
+  team_of_teams:
+    description: "Multiple Scrum teams working independently with coordination"
+    structure: "2-5 teams, each with own Scrum process, weekly sync between leads"
+    coordination:
+      - "Weekly Scrum of Scrums — team leads sync on dependencies"
+      - "Cross-team backlog refinement for shared work items"
+      - "Joint sprint review for stakeholder demo"
+    best_for: "15-50 engineers, single product, moderate cross-team dependencies"
+    
+  scaled_agile_framework:
+    description: "SAFe — structured framework with program increment (PI) planning"
+    structure: "Agile Release Train (ART) — 5-12 teams, 8-12 week PI cadence"
+    ceremonies:
+      - "PI Planning every 8-12 weeks — 2-day event with all teams"
+      - "System demo at end of each iteration"
+      - "Inspect and Adapt workshop at end of PI"
+    artifacts: ["Program backlog", "PI objectives", "ART board", "WSJF prioritization"]
+    best_for: "50-200 engineers, multiple products, enterprise compliance requirements"
+    trade_offs: "Heavy process overhead, less autonomy, requires dedicated RTE"
+    
+  lean_agile:
+    description: "Lean principles applied to agile — Kanban at scale"
+    structure: "Value stream teams with end-to-end ownership"
+    practices: ["Kanban with work-in-progress limits", "Service level agreements (SLAs)", "Flow metrics (cycle time, throughput)"]
+    best_for: "Maintenance-heavy work, operations teams, continuous delivery"
+    
+  shape_up:
+    description: "Basecamp's 6-week cycle / 2-week cooldown approach"
+    structure: "Shaped pitches → 6-week building cycles → 2-week cooldown"
+    practices: ["Pitch document (problem, solution, appetite, rabbit holes)", "No daily standups, no sprint backlogs", "Vertical slicing — build thin, then iterate"]
+    best_for: "Small teams (3-8), product-focused, high autonomy"
+```
+
+### Estimation Framework Decision Tree
+
+```yaml
+estimation_framework:
+  question_1_precision_needed:
+    "Do you need high precision (budgeting, contractual)?":
+      yes: "Three-point estimation (PERT) — optimistic + most likely + pessimistic"
+      no:
+        question_2_artifact_level:
+          "What level are you estimating?":
+            epic: "T-shirt sizing (XS-XXL) or story points with affinity mapping"
+            story: "Planning Poker with Fibonacci sequence"
+            task: "Hours or half-days — engineering judgment"
+            
+  question_3_team_familiarity:
+    "Is the team familiar with the work domain?":
+      yes: "Relative estimation (story points) — compare to known baseline stories"
+      no: "T-shirt sizing with wide ranges — accept uncertainty, re-estimate after first iteration"
+      
+  question_4_audience:
+    "Who needs the estimate?":
+      leadership: "T-shirt sizing + quarter-level ranges — don't give false precision"
+      product: "Story points — relative sizing for prioritization"
+      engineering: "Hours — task-level breakdown for sprint capacity"
+```
+
+### Delivery Risk Management
+
+```yaml
+delivery_risk:
+  risk_categories:
+    technical:
+      - "Integration complexity with existing systems"
+      - "Performance/scaling unknowns"
+      - "Data migration complexity"
+      - "Third-party API limitations"
+    process:
+      - "Unclear requirements or acceptance criteria"
+      - "Dependency on external teams"
+      - "Stakeholder availability for feedback"
+      - "Approval gate timing"
+    resource:
+      - "Team member availability (PTO, turnover, sickness)"
+      - "Skill gaps in critical areas"
+      - "Tooling or environment availability"
+    external:
+      - "Regulatory changes mid-project"
+      - "Vendor or partner delays"
+      - "Market timing pressure"
+      
+  risk_response_strategies:
+    mitigate: "Reduce likelihood or impact — spike to validate architecture, add buffer"
+    avoid: "Change approach to eliminate risk — use proven technology instead of bleeding edge"
+    transfer: "Shift risk to third party — fixed-price contract, insurance, SaaS over custom build"
+    accept: "Acknowledge and monitor — low impact risks with contingency plan if triggered"
+    
+  tracking:
+    format: "Risk register — one row per risk with likelihood, impact, response, owner"
+    review: "Reassess at each sprint planning — likelihood and impact may change"
+    escalation: "Critical risks (high likelihood + high impact) escalate to project sponsor"
+```
+
 ## Rules
 - Estimates are ranges, not promises — never treat estimates as deadlines
 - Velocity is a planning tool, not a performance metric
@@ -164,6 +265,9 @@ Velocity: {n} / {n} points (on track / at risk / behind)
 - Status reports must include blockers with unblock plans
 - Retrospectives produce action items with owners — no complaints without solutions
 - Sprint goal must be achievable within the sprint — not aspirational
+- Choose agile-at-scale framework based on team count and dependency complexity, not popularity
+- Estimation precision should match the audience — don't give hour-level estimates to leadership
+- Risk register must be reviewed at least every sprint planning — risks change over time
 
 ## References
   - references/ceremony-guide.md — Agile Ceremony Guide

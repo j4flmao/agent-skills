@@ -153,6 +153,78 @@ class OrderController @Inject()(
 }
 ```
 
+## Play 3.x Patterns
+
+### Play 3 Migration from Play 2
+```yaml
+play_3_changes:
+  akka_to_pekkko:
+    impact: "Akka dependency replaced by Apache Pekko due to licensing changes"
+    migration: "Replace akka-* imports with org.apache.pekko.* — API-compatible"
+    
+  scala_3_support:
+    status: "Play 3.0+ supports Scala 3"
+    considerations:
+      - "Routes file still uses Play-specific DSL — not affected by Scala version"
+      - "Twirl templates work with Scala 3"
+      - "Action composition syntax same as Scala 2"
+      
+  sbt_version:
+    minimum: "SBT 1.9+"
+    recommendation: "SBT 1.10+ for Scala 3 support and faster compilation"
+```
+
+### REST API with Play
+
+```yaml
+play_rest_api:
+  project_structure:
+    api_versioning: "routes file namespaced by version — /v1/orders, /v2/orders"
+    controller_organization: "One controller per resource — OrderController, UserController"
+    serialization: "Play JSON (Writes/Reads) or Circe — automatic codec derivation"
+    
+  error_handling:
+    pattern: "Custom ErrorHandler trait extending HttpErrorHandler"
+    implementation:
+      client_errors: "Return RFC 7807 Problem JSON — {type, title, status, detail, instance}"
+      server_errors: "Log stack trace, return generic 500 with request ID"
+      validation_errors: "Return field-level errors with constraint violations"
+      
+  async_patterns:
+    database: "Slick (reactive) or doobie (cats-effect, ZIO) — non-blocking DB access"
+    http_client: "Play WS client or Pekko HTTP — non-blocking external API calls"
+    streaming: "Response as Source[T, _] — streaming JSON, CSV, or Server-Sent Events"
+    websocket: "Play WebSocket support with Pekko streams — bidirectional communication"
+```
+
+### Scala Concurrency Patterns
+
+```yaml
+scala_concurrency:
+  futures:
+    use_case: "Standard async operations — DB queries, external API calls"
+    pitfalls:
+      - "Blocking inside Future.map blocks the thread pool"
+      - "Recovery chain: recover, recoverWith, fallbackTo"
+      - "Sequential composition: flatMap/for-comprehension"
+    thread_pool: "Custom ExecutionContext for blocking IO (separate from CPU pool)"
+    
+  streams:
+    use_case: "Large data processing, real-time data flows, backpressure"
+    implementation: "Akka Streams / Pekko Streams — Source, Flow, Sink"
+    patterns:
+      - "Source.queue for integrating with async callbacks"
+      - "Flow.batch for grouping elements"
+      - "RestartSource for auto-reconnection"
+      
+  actors_pekkko:
+    use_case: "Stateful concurrent operations, event sourcing, distributed systems"
+    when_not: "Simple request-response — use Future, not actors"
+    patterns:
+      - "ask pattern for request-response between actors"
+      - "Actor supervision strategy for failure handling"
+```
+
 ## Rules
 - Routes file is the single source of truth for URL mapping.
 - Action composition for auth, logging, metrics — not inline in controllers.
@@ -160,6 +232,9 @@ class OrderController @Inject()(
 - All async actions return Future — never block.
 - Global ErrorHandler trait for unhandled exceptions.
 - Twirl templates minimal — HTML logic in view models.
+- Use Pekko instead of Akka for Play 3.x (licensing change).
+- Separate thread pools for CPU-bound vs blocking IO operations.
+- Prefer Future for simple async, Streams for streaming, Actors for stateful concurrent.
 
 ## References
   - references/play-architecture.md — Play Architecture Guide

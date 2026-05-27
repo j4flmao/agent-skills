@@ -62,6 +62,67 @@ Implement Baseline Profiles (Android), reduce dynamic framework loading (iOS), a
 ### Step 5: Reduce Bundle Size
 Enable code splitting, remove unused dependencies, use --split-debug-info, and analyze bundle composition.
 
+## Performance Budget Methodology
+
+### Defining Performance Budgets
+```yaml
+performance_budgets:
+  startup:
+    cold_start:
+      target: "<2s to interactive on mid-range device"
+      metrics: ["Time to first frame", "Time to interactive", "Fully loaded time"]
+      tools: ["Firebase Performance", "Macrobenchmark (Android)", "MetricKit (iOS)"]
+    warm_start:
+      target: "<800ms to interactive"
+      optimization: "Avoid heavy de-serialization on resume, cache last state"
+      
+  runtime:
+    frame_rate:
+      target: "60fps consistent (120fps for ProMotion devices)"
+      measurement: "Frame timing instrumentation — not just perceived smoothness"
+    memory:
+      target: "<200MB peak heap on mid-range"
+      measurement: "Heap snapshots at key user flows — leak detection per screen"
+      
+  bundle:
+    app_size_android:
+      target: "<30MB APK (or AAB equivalent)"
+      reduction: "R8 optimization, --split-debug-info, remove unused resources"
+    app_size_ios:
+      target: "<80MB IPA"
+      reduction: "Asset catalog optimization, remove unused architectures, Bitcode"
+    download:
+      target: "<100MB initial download from store (to avoid cellular warning)"
+```
+
+### Profiling Workflow
+```yaml
+profiling_workflow:
+  step_1_establish_baseline:
+    activity: "Run performance tests on reference device (mid-range, not flagship)"
+    tools: ["Xcode Instruments", "Android Profiler", "Flutter DevTools", "Flipper"]
+    metrics: ["Startup time", "Frame rate", "Peak memory", "Bundle size"]
+    
+  step_2_identify_bottlenecks:
+    activity: "Profile each key user flow — launch, list scroll, image load, navigation"
+    signs_of_trouble: ["Frame drops >3%", "Heap growing without GC", "Startup >3s"]
+    
+  step_3_hypothesize_and_fix:
+    activity: "Form hypothesis about root cause, implement fix, re-profile"
+    common_fixes:
+      startup: "Defer SDK init, lazy-load modules, Baseline Profiles (Android)"
+      jank: "Virtualized lists, const widgets, efficient re-render triggers"
+      memory: "Weak refs, dispose subscriptions, image cache limits"
+      
+  step_4_verify:
+    activity: "Profile again with same conditions — confirm fix without regression"
+    threshold: "Improvement >10% in target metric"
+    
+  step_5_monitor:
+    activity: "Add performance monitoring to production release"
+    tools: ["Firebase Performance", "Datadog RUM", "New Relic Mobile", "Sentry Performance"]
+```
+
 ## Rules
 
 - Profile before optimizing — never guess at performance bottlenecks
@@ -71,6 +132,8 @@ Enable code splitting, remove unused dependencies, use --split-debug-info, and a
 - Startup: defer non-critical SDK initialization to after first frame
 - Bundle: remove unused packages before adding new ones
 - Baseline Profiles for Android — can improve startup by 30%+
+- Set explicit performance budgets before optimization begins
+- Profile on mid-range devices — flagships hide performance problems
 
 ## Rendering Performance
 
