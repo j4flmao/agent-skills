@@ -313,8 +313,84 @@ GET /collections/products/documents/search
 &sort_by=price:asc
 ```
 
+## Common Pitfalls
+
+### Pitfall 1: Dynamic Mapping in Production
+Dynamic mapping creates thousands of unused fields, bloats the mapping, and causes mapping explosions. Always use explicit mapping with `dynamic: "strict"` for production indices.
+
+### Pitfall 2: Oversharding
+Too many shards wastes resources and degrades cluster performance. Maximum 20 shards per GB of heap. A 30GB heap cluster should have max 600 shards total. Delete unused indices.
+
+### Pitfall 3: Undersharding
+Too few shards limits indexing parallelism and prevents effective scaling. Target 10-50GB per shard. A 500GB index needs 10-50 shards.
+
+### Pitfall 4: No Index Lifecycle Management
+Without ILM, time-series indices grow unbounded, consume all disk space, and degrade performance. Always define hot/warm/cold/delete phases.
+
+### Pitfall 5: Using `text` for Aggregations
+Text fields are analyzed and cannot be used for terms aggregations, sorting, or scripting. Always use `.keyword` multifield or explicit `keyword` type for aggregatable fields.
+
+### Pitfall 6: Deep Pagination
+Using `from` + `size` beyond page 100 causes massive heap pressure. Use `search_after` for deep pagination or `scroll` for batch processing.
+
+### Pitfall 7: No Query Timeout
+Without timeouts, slow queries block thread pool threads and degrade cluster responsiveness. Set `timeout` on all search requests.
+
+### Pitfall 8: Nested Query Without Nested Type
+Querying array objects as if they were independent leads to incorrect results. Use `nested` type and `nested` query when array element independence matters.
+
+### Pitfall 9: Too Many Replicas
+Each replica doubles storage and indexing load. One replica is sufficient for high availability. Two for read-heavy. More than two rarely needed.
+
+### Pitfall 10: Ignoring Cluster Health
+Yellow cluster status (unassigned shards) degrades read capacity. Red cluster status means missing data. Monitor and alert on cluster health.
+
+## Best Practices
+
+- Use explicit mapping with `dynamic: "strict"` for all production indices.
+- Multifields: `text` for search + `keyword` for sorting/aggregations.
+- Use filter context (bool/filter) for structured conditions — cached, no scoring overhead.
+- Keep shard size 10-50GB. Max 20 shards per GB of heap.
+- Use ILM for all time-series indices. Define hot/warm/cold/delete phases.
+- Set `refresh_interval: 30s` (or `-1` during bulk indexing) for write-heavy workloads.
+- Use `search_after` for deep pagination. Never use `from`/`size` beyond page 100.
+- Set `timeout` on all search requests to prevent thread pool exhaustion.
+- Use `nested` type only when array element independence is required.
+- Enable slow logs: `index.search.slowlog.threshold.query.warn: 10s`.
+- Prefer `terms` over `wildcard`/`regexp` queries. They are much faster.
+- Use `forcemerge` to 1 segment in warm phase for faster reads.
+- Monitor: cluster health, node CPU/memory, search latency, indexing rate.
+
+## Compared With
+
+### Elasticsearch vs OpenSearch
+OpenSearch is a fork of Elasticsearch 7.10 with built-in security, k-NN vector search, PPL, and alerting. Elasticsearch 8.x has more advanced features (ELSER, vector search with HNSW, better performance). Choose OpenSearch for open-source commitment and built-in security. Choose Elasticsearch for the latest search and AI features.
+
+### Elasticsearch vs Meilisearch
+Elasticsearch is a full-featured search and analytics engine for datasets from GB to PB. Meilisearch is lightweight (Rust, single-node, sub-50ms) for datasets up to 10M docs. Choose Elasticsearch for complex querying, aggregations, and large-scale analytics. Choose Meilisearch for simple, fast site search.
+
+### Elasticsearch vs Typesense
+Typesense is C++, typo-tolerant, sub-50ms, with built-in vector search and curations. Elasticsearch is more feature-rich but operationally heavier. Choose Typesense for simpler ops and higher per-node performance. Choose Elasticsearch for complex analytics and cluster-scale deployments.
+
+### Elasticsearch vs Solr
+Solr is older but excels at faceted search and has a mature ecosystem. Elasticsearch has better ecosystem (Kibana, Beats, Logstash), easier scaling, and more active development. Choose Elasticsearch for new projects. Choose Solr for legacy systems with specific faceted search requirements.
+
+## Performance Considerations
+
+- Indexing: target refresh_interval 30s+ for bulk writes. Use `-1` during initial loads.
+- Merge: `max_merged_segment: 5GB` default. Larger for read-heavy indices.
+- Store: use SSD for hot tier. HDD for warm/cold. RAID 0 for hot nodes.
+- Heap: 50% of RAM, max 31GB (Java compressed oops limit). Rest to OS for file cache.
+- Thread pools: search queue size default 1000. Increase for high concurrency.
+- Circuit breakers: `indices.breaker.total.limit: 70%` of heap for field data/requests.
+- Bulk indexing: 5-15MB per batch, 1000-5000 docs per batch.
+- Shard recovery: throttle at 40MB/sec to avoid cluster overload.
+- Slow logs: enable query slow log at 500ms WARN, 5s INFO.
+- Field data: use `eager` loading for aggregations on high-cardinality fields.
+- Doc values: enabled by default for keyword, numeric, date. Supports efficient sorting/aggregation without field data cache.
+- Search load: use replicas for read scaling. Each replica can serve search traffic.
+
 ## Rules
-- Explicit mapping always, dynamic mapping never in production
 - Multi-fields (`text` + `keyword`) for full-text + sorting/aggregation
 - Limit shard size to 10-50 GB per shard
 - Use filter context for structured conditions (cached, no scoring)
@@ -332,6 +408,8 @@ GET /collections/products/documents/search
   - references/search-engine-optimization.md — Search Engine Optimization Reference
   - references/search-operations.md — Search Operations
   - references/search-relevance-tuning.md — Search Relevance Tuning
+  - references/search-engine-ranking-relevance.md — Ranking, relevance tuning, and scoring strategies
+  - references/search-engine-distributed-architecture.md — Distributed architecture for search clusters
 ## Handoff
 `data-relational-database` for source data
 `ml-feature-engineering` for text feature extraction from search data

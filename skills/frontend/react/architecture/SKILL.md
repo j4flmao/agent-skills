@@ -57,6 +57,191 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ### Max Response Length
 Folder structure: unlimited. Code: 15 lines per example.
 
+## Component Architecture / Decision Trees
+
+### Architecture Options
+
+| Approach | Trade-off | When to Use |
+|----------|-----------|-------------|
+| Feature-based folders | Cohesion, scalability | All projects with multiple features |
+| Type-based folders (components/, hooks/) | Simple for small apps | Small projects, prototypes |
+| Smart/Dumb separation | Testable, reusable UI | Components with data dependencies |
+| Compound components | Flexible, composable | Complex UI (Dropdown, Tabs, Select) |
+| Render props | Max flexibility | Cross-cutting behavior (Mouse position, Scroll) |
+| Custom hooks | Reusable stateful logic | Data fetching, form logic, subscriptions |
+
+### Decision Tree: Component Type
+
+```
+Does the component fetch data or manage state?
+  ├── Yes -> Smart component
+  │    ├── Uses custom hooks for logic
+  │    ├── Renders dumb components
+  │    └── Exports from feature barrel
+  └── No -> Dumb (presentational) component
+       ├── Receives everything via props
+       ├── No data fetching, no stores
+       └── Resides in features/{feature}/components/
+```
+
+### Decision Tree: State Management
+
+```
+How complex is the state?
+  ├── Local (component only) -> useState, useReducer
+  ├── Shared across few components -> Props lifting, Context
+  └── Shared across many components ->
+       ├── Server state -> TanStack Query
+       ├── Client state -> Zustand, Jotai, Context
+       └── URL state -> useSearchParams, react-router
+```
+
+### Decision Tree: Custom Hook vs Component
+
+```
+Does the logic produce UI?
+  ├── Yes -> Component (possibly compound)
+  └── No -> Custom hook
+       ├── Data fetching -> Query hook
+       ├── Form logic -> Form hook
+       ├── Browser API -> useMediaQuery, useOnlineStatus
+       └── Animation -> Animation hook
+```
+
+## Common Pitfalls
+
+### Pitfall 1: Deep Imports Across Features
+```tsx
+// Wrong — importing directly from another feature's internals
+import { UserCard } from '../users/components/UserCard'
+
+// Correct — import from feature barrel
+import { UserCard } from '../users'
+```
+Features should only expose their public API through the barrel (index.ts). Deep imports create tight coupling.
+
+### Pitfall 2: Barrel Files in Every Folder
+```tsx
+// Wrong — barrel in api/, components/, hooks/, stores/, types/
+// Correct — ONE barrel at feature level (features/users/index.ts)
+```
+Barrel files at every subfolder level create circular import risks and slower builds. Only barrel at the feature boundary.
+
+### Pitfall 3: Smart Components Over 150 Lines
+Components over 150 lines are doing too much. Extract:
+- Data fetching -> custom hook
+- Business logic -> custom hook or utility
+- JSX subsections -> dumb child components
+
+### Pitfall 4: Data Fetching in Dumb Components
+Dumb components receive props only. If a component calls `useQuery` or accesses a store, it is a smart component and should be in the feature's component folder.
+
+### Pitfall 5: Prop Drilling Beyond 3 Levels
+```tsx
+// Wrong — prop drilling through 4 components
+<Page user={user} />
+  <Sidebar user={user} />
+    <Nav user={user} />
+      <Avatar user={user} />
+
+// Correct — Context or composition
+<Page>
+  <Sidebar>
+    <Nav user={user} /> {/* Only drill where needed */}
+```
+At 3+ levels of prop drilling, consider Context, composition, or state management.
+
+## Compared With
+
+### Feature-Based vs Type-Based Structure
+| Aspect | Feature-Based | Type-Based |
+|--------|---------------|------------|
+| Cohesion | High (feature files colocated) | Low (feature files spread) |
+| Scaling | Excellent | Poor after 20+ files |
+| Navigation | By feature in IDE | By type in IDE |
+| Refactoring | Isolated to feature | Cross-cutting changes |
+| Reusability | Shared via shared/ folder | Natural cross-feature sharing |
+
+### React Hooks vs Vue Composables
+Both encapsulate reactive state. React hooks run on every render and depend on call order; Vue composables run once and use proxy-based reactivity. React hooks are more flexible but have stricter rules.
+
+### React Compound Components vs Slots
+Compound components (`<Select><Select.Trigger/><Select.Options/></Select>`) give explicit control over rendered structure. Slots (Svelte, Vue) are simpler but less flexible for advanced composition.
+
+## Performance Considerations
+
+### Re-render Optimization
+React re-renders components when state changes. Strategies to minimize:
+- `React.memo` for pure components receiving the same props
+- `useMemo` for expensive computations
+- `useCallback` for stable function references
+- `React Compiler` (automated memoization in React 19+)
+
+### Bundle Size
+- React + react-dom: ~45KB gzipped
+- Feature-based structure aids tree-shaking
+- Code-split at route level with `React.lazy` + `Suspense`
+- Lazy load heavy libraries (chart, markdown, date picker)
+
+### Virtual DOM Cost
+Large lists (1000+ items) benefit from:
+- Windowed rendering (react-window, react-virtuoso)
+- Stable keys (`item.id`, never index)
+- Avoiding inline functions in list item renders
+
+### State Management Size
+| Library | Size (gzipped) |
+|---------|----------------|
+| useState/useReducer | 0KB (built-in) |
+| Context | 0KB (built-in) |
+| Zustand | ~1KB |
+| Jotai | ~3KB |
+| TanStack Query | ~13KB |
+| Redux Toolkit | ~12KB |
+
+## Ecosystem & Tooling
+
+### State Management
+| Library | Best For |
+|---------|----------|
+| TanStack Query | Server state (API data) |
+| Zustand | Simple global client state |
+| Jotai | Atomic state with React-like API |
+| Redux Toolkit | Large apps with complex state logic |
+| Context | Low-frequency global state (theme, auth) |
+| useReducer | Local complex state (forms, wizards) |
+
+### UI Libraries
+| Library | Style |
+|---------|-------|
+| Radix UI | Headless primitives |
+| shadcn/ui | Copy-paste components |
+| MUI | Full Material Design |
+| Chakra UI | Accessible by default |
+| Tailwind CSS | Utility-first CSS |
+
+### Testing Tools
+| Tool | Purpose |
+|------|---------|
+| Vitest | Unit and integration tests |
+| React Testing Library | Component testing |
+| Playwright | E2E testing |
+| Storybook | Visual component development |
+
+### Build Tools
+| Tool | Purpose |
+|------|---------|
+| Vite | Fast dev server and build |
+| Next.js | Full-stack React framework |
+| Remix | SSR-focused framework |
+| React Router | Client-side routing |
+
+### Community
+- Docs: react.dev
+- GitHub: github.com/facebook/react
+- Discord: reactiflux.com
+- Trends: reacttrends.io
+
 ## Workflow
 
 ### Step 1: Feature-Based Structure
@@ -141,7 +326,6 @@ function UserListFeature() {
 
 ### Step 3: Custom Hook Patterns
 ```typescript
-// Single responsibility hook
 function useUserFilter(users: User[], search: string) {
   return useMemo(() => {
     if (!search) return users
@@ -151,7 +335,6 @@ function useUserFilter(users: User[], search: string) {
   }, [users, search])
 }
 
-// Data fetching hook (thin wrapper around query library)
 function useUsersQuery() {
   return useQuery({
     queryKey: ['users'],
@@ -168,8 +351,7 @@ export { UserListFeature } from './components/UserListFeature'
 export { useUsersQuery } from './api/useUsersQuery'
 export type { User, CreateUserDTO } from './types'
 ```
-
-Features import from other features ONLY through their public API (index.ts). Never import from features/users/components/ directly.
+Features import from other features ONLY through their public API (index.ts).
 
 ### Step 5: Error Boundaries
 ```typescript
@@ -182,7 +364,6 @@ class ErrorBoundary extends React.Component<
   static getDerivedStateFromError() { return { hasError: true } }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    // Log to error reporting service
     console.error('Error caught:', error, info)
   }
 
@@ -193,6 +374,37 @@ class ErrorBoundary extends React.Component<
 }
 ```
 
+### Step 6: Code Splitting
+```typescript
+const UsersPage = lazy(() => import('./features/users/pages/UsersPage'))
+const OrdersPage = lazy(() => import('./features/orders/pages/OrdersPage'))
+
+function App() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <Routes>
+        <Route path="/users" element={<UsersPage />} />
+        <Route path="/orders" element={<OrdersPage />} />
+      </Routes>
+    </Suspense>
+  )
+}
+```
+
+### Step 7: React Compiler (React 19+)
+```typescript
+// Install: npm install -D vite-plugin-react-compiler
+import reactCompiler from 'vite-plugin-react-compiler'
+
+export default defineConfig({
+  plugins: [
+    reactCompiler({ target: '19' }),
+    react(),
+  ],
+})
+```
+The React Compiler automatically memoizes components and hooks, eliminating manual useMemo, useCallback, and React.memo.
+
 ## Rules
 - Smart components connect to data/stores. Dumb components receive everything via props.
 - Custom hooks start with use and return objects (not arrays) when returning more than 2 values.
@@ -200,14 +412,21 @@ class ErrorBoundary extends React.Component<
 - Components stay under 150 lines. Split them.
 - Dumb components never fetch data, never access stores, never call mutations.
 - Features import from other features only via their public API (index.ts). No deep imports.
+- Use TanStack Query for server state; Zustand or Context for client state.
+- Code-split at route level with React.lazy + Suspense.
+- Use React Compiler in React 19 projects to automate memoization.
+- Test smart components via hooks; test dumb components via props.
 
 ## References
-  - references/component-patterns.md — React Component Patterns
-  - references/folder-structure.md — React Folder Structure
-  - references/hooks-guide.md — React Hooks Guide
-  - references/react-19-patterns.md — React 19 Patterns
-  - references/react-compiler.md — React Compiler
-  - references/rendering-patterns.md — React Rendering Patterns
+- references/component-patterns.md — React Component Patterns
+- references/folder-structure.md — React Folder Structure
+- references/hooks-guide.md — React Hooks Guide
+- references/react-19-patterns.md — React 19 Patterns
+- references/react-compiler.md — React Compiler
+- references/rendering-patterns.md — React Rendering Patterns
+- references/react-server-components.md — React Server Components
+- references/react-compiler-optimizations.md — React Compiler Optimizations
+
 ## Handoff
 No artifact produced.
 Next skill: react-nextjs (if using Next.js) or frontend-testing.

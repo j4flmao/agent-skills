@@ -43,7 +43,7 @@ Rendering: {static/server/hybrid} — {per-route rationale}
 No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
 
 ### Completion Criteria
-- [ ] Island hydration chosen from most to least aggressive: load → idle → visible → media → only.
+- [ ] Island hydration chosen from most to least aggressive: load -> idle -> visible -> media -> only.
 - [ ] Content collections have Zod schemas with validation.
 - [ ] View transitions use <ViewTransition /> and transition:name directives.
 - [ ] Hybrid rendering: static for content, server for dynamic routes.
@@ -52,6 +52,141 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 2560 tokens.
+
+## Component Architecture / Decision Trees
+
+### Architecture Options
+
+| Approach | Trade-off | When to Use |
+|----------|-----------|-------------|
+| Pure .astro components | Zero JS output, fully static | Content display, headers, footers |
+| Framework islands (React, Vue, Svelte) | JS bundle per island type | Interactive widgets, forms |
+| client:load | Immediate hydration, eager | Hero search, auth buttons |
+| client:visible | Delayed until viewport | Analytics widgets, below-fold chat |
+| client:media | Responsive hydration | Desktop-only sidebars, mobile nav |
+| client:only | No SSR, client-render only | Browser-API-dependent charts |
+
+### Decision Tree: Hydration Strategy
+
+```
+Is the component visible on load?
+  ├── Yes and critical interactive (search, auth) -> client:load
+  ├── Yes but not urgent -> client:idle
+  └── No (below fold) -> client:visible
+```
+
+```
+Is interactivity needed only on certain screen sizes?
+  ├── Yes -> client:media with appropriate media query
+  └── No -> use the least aggressive directive from above
+```
+
+### Decision Tree: Multi-Framework Selection
+
+```
+Do you already have a framework in the project?
+  ├── Yes -> use that framework for all islands
+  └── No -> Choose:
+       ├── SSR performance critical -> SolidJS or Preact (smaller runtime)
+       ├── Team familiarity -> React (larger ecosystem)
+       └── Design-heavy -> Vue or Svelte (template-based)
+```
+
+## Common Pitfalls
+
+### Pitfall 1: Over-hydrating with client:load
+Using `client:load` for every island defeats Astro's purpose. Each `client:load` island eagerly downloads its framework runtime and component code. Prefer `client:visible` or `client:idle` for non-critical elements.
+
+### Pitfall 2: Shared State Across Islands
+Astro islands are independent React/Vue/Svelte roots. They cannot share reactive state directly. Pass initial data as props; for cross-island communication, use DOM events or a shared data attribute.
+
+### Pitfall 3: Missing Layout Shift Prevention
+Hydrating an island after paint can cause layout shift. Always set explicit width/height on island containers:
+```astro
+<Chart client:visible style="width: 100%; height: 400px;" />
+```
+
+### Pitfall 4: Mixing Framework Runtimes
+Each framework island (React, Vue, Svelte) ships its own runtime. Using three frameworks on one page triples the JS overhead. Stick to one framework for all islands when possible.
+
+### Pitfall 5: Forgetting to Set output in config
+Using `client:only` or SSR features without setting `output: 'hybrid'` or `output: 'server'` in `astro.config.mjs` causes build errors. SSG mode does not support server-only routes.
+
+## Compared With
+
+### Astro Islands vs Qwik
+| Aspect | Astro | Qwik |
+|--------|-------|------|
+| JS model | Zero JS, opt-in islands | Zero JS, lazy per event |
+| Hydration | Per component (framework level) | Per event handler (fine-grained) |
+| Multi-framework | Yes (React, Vue, Svelte, etc.) | Single framework |
+| Content focus | Excellent (MDX, collections) | Good (SSR-focused) |
+| Bundle size | Proportional to islands | Proportional to interactions |
+
+### Astro vs Next.js
+Astro excels at content sites with minimal JS. Next.js excels at highly interactive apps with server components. Astro's islands give finer control over hydration than Next.js's all-or-nothing client components, but Next.js has a richer ecosystem for data mutations.
+
+### Astro vs Eleventy (11ty)
+Both are content-focused static site generators. Astro adds island architecture and multi-framework support; 11ty is simpler with Nunjucks/Liquid templates. Astro suits projects needing occasional interactivity; 11ty suits purely static sites.
+
+## Performance Considerations
+
+### Island Cost
+Each framework island carries a base runtime cost:
+| Framework | Runtime (gzipped) |
+|-----------|-------------------|
+| Preact | ~4KB |
+| SolidJS | ~8KB |
+| Svelte | ~2KB |
+| Vue | ~16KB |
+| React | ~45KB |
+
+For React-heavy pages, consider using Preact via `@astrojs/preact` to reduce overhead.
+
+### Zero-JS Pages
+Content-only pages that use no framework islands ship zero JavaScript. This makes Astro ideal for blogs, documentation, marketing sites, and e-commerce product pages.
+
+### Bundle Splitting
+Each island's framework runtime is loaded lazily on first island hydration. If the page has 5 React islands, React runtime loads once and is shared. Different frameworks (React + Vue) each load their own runtime.
+
+### Image Optimization
+`astro:assets` provides automatic WebP/AVIF conversion, responsive srcset, and lazy loading. Using `<Image />` instead of bare `<img>` reduces image payload by 40-60%.
+
+## Ecosystem & Tooling
+
+### Core Packages
+| Package | Purpose |
+|---------|---------|
+| astro | Core framework |
+| @astrojs/react | React integration |
+| @astrojs/vue | Vue integration |
+| @astrojs/svelte | Svelte integration |
+| @astrojs/solid-js | SolidJS integration |
+| @astrojs/mdx | MDX support |
+| @astrojs/tailwind | Tailwind CSS integration |
+| @astrojs/sitemap | Sitemap generation |
+| @astrojs/node | Node.js adapter |
+
+### Tools
+- **Astro VS Code Extension** — Syntax highlighting, IntelliSense for `.astro` files, content collection autocomplete.
+- **astro check** — Type checking for `.astro` files.
+- **astro add** — CLI for adding integrations (`npx astro add react`).
+- **Astro Studio** — Managed content platform with Astro DB.
+
+### Deployment Adapters
+| Adapter | Platform |
+|---------|----------|
+| @astrojs/vercel | Vercel (SSR, Edge, ISR) |
+| @astrojs/netlify | Netlify (SSR, Edge, On-demand builders) |
+| @astrojs/cloudflare | Cloudflare Pages/Workers |
+| @astrojs/deno | Deno Deploy |
+| @astrojs/node | Self-hosted Node.js |
+
+### Community
+- Docs: docs.astro.build
+- GitHub: github.com/withastro/astro
+- Discord: astro.build/chat
+- Themes: astro.build/themes
 
 ## Workflow
 
@@ -66,11 +201,6 @@ Choose the least aggressive directive that meets the need:
 | `client:only` | Client-only (no SSR render) | Browser-API-dependent charts |
 
 ```astro
----
-import HeavyChart from '../components/HeavyChart.tsx'
-import ShareButton from '../components/ShareButton.tsx'
----
-<!-- Passive hydration first -->
 <ShareButton client:visible />
 <HeavyChart client:media="(min-width: 1024px)" />
 ```
@@ -82,7 +212,6 @@ Islands are isolated — no shared JS state across islands. Pass data as props:
 import Counter from '../components/Counter.tsx'
 const { count } = Astro.props
 ---
-<!-- Props serialized to HTML, island picks them up -->
 <Counter client:idle initialCount={count} />
 ```
 For cross-island communication, use events or a shared data attribute on the parent.
@@ -113,18 +242,9 @@ const blog = defineCollection({
 export const collections = { blog, authors }
 ```
 
-```astro
----
-const posts = await getCollection('blog', ({ data }) => !data.draft)
-const sorted = posts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
----
-{posts.map(post => <ArticleCard post={post} />)}
-```
-
 ### Step 4: View Transitions
 ```astro
 ---
-// src/layouts/BaseLayout.astro
 import { ViewTransitions } from 'astro:transitions'
 ---
 <!doctype html>
@@ -173,12 +293,20 @@ import { Image } from 'astro:assets'
 import myImage from '../assets/hero.png'
 import ReactWidget from '../components/ReactWidget.tsx'
 ---
-<!-- Astro-native image optimization -->
 <Image src={myImage} alt="Hero" width={1200} height={600} format="webp" />
-
-<!-- Framework island with passive hydration -->
 <ReactWidget client:idle widgetId="123" />
 ```
+
+### Step 7: Middleware and Endpoints
+```ts
+// src/middleware.ts
+import { defineMiddleware } from 'astro/middleware'
+export const onRequest = defineMiddleware(async (context, next) => {
+  context.locals.user = await getUser(context.cookies)
+  return next()
+})
+```
+Use endpoints (`src/pages/api/*.ts`) for JSON APIs without HTML rendering.
 
 ## Rules
 - Prefer the least aggressive hydration directive that satisfies the interaction requirement.
@@ -188,14 +316,20 @@ import ReactWidget from '../components/ReactWidget.tsx'
 - Hybrid rendering: static for content-heavy routes, server for authenticated/dynamic routes.
 - Use Image/Picture from astro:assets for optimized images — never bare <img> tags.
 - Framework islands are scoped — no global store shared across different framework islands.
+- One framework per project when possible to minimize runtime overhead.
+- Set explicit dimensions on island containers to prevent layout shift on hydration.
+- Use output: 'hybrid' for mixed static + dynamic pages.
 
 ## References
-  - references/astro-component-strategies.md — Astro Component Strategies
-  - references/astro-performance.md — Astro Performance Reference
-  - references/astro-routing.md — Astro Routing Patterns
-  - references/astro-ssg.md — Astro SSG Patterns
-  - references/content-patterns.md — Astro Content Patterns
-  - references/island-patterns.md — Astro Island Patterns
+- references/astro-component-strategies.md — Astro Component Strategies
+- references/astro-performance.md — Astro Performance Reference
+- references/astro-routing.md — Astro Routing Patterns
+- references/astro-ssg.md — Astro SSG Patterns
+- references/content-patterns.md — Astro Content Patterns
+- references/island-patterns.md — Astro Island Patterns
+- references/astro-content-collections.md — Astro Content Collections Deep Dive
+- references/astro-integration-patterns.md — Astro Integration Patterns
+
 ## Handoff
 No artifact produced.
 Next skill: frontend-universal-seo for meta, sitemap, structured data. Or frontend-universal-performance for Core Web Vitals.

@@ -44,7 +44,7 @@ Anchor Strategy: {type + lifecycle}
 Interaction Model: {gesture set + feedback}
 Performance Budget: {FPS target, memory cap}
 ```
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output.
 
 ### Completion Criteria
 - [ ] Platform selected with fallback strategy for unsupported devices
@@ -57,10 +57,57 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ### Max Response Length
 300 lines
 
+## Architecture / Decision Trees
+
+### AR Framework Decision Tree
+
+```
+Is the app cross-platform (iOS + Android)?
+├── Yes → Use ARFoundation (Unity) or SceneView (React Native / Flutter)
+│   ├── Unity project? → ARFoundation with ARCore/ARKit XR Plugins
+│   └── React Native / Flutter? → SceneView / ar_flutter_plugin
+├── iOS only → ARKit (native Swift) — best iOS experience
+└── Android only → ARCore (native Kotlin/Java)
+
+Does the app need LiDAR features?
+├── Yes → ARKit (LiDAR on iOS), ARCore Depth API (limited Android)
+└── No → Any framework works
+```
+
+### Tracking Configuration Decision
+
+```
+What type of AR tracking is needed?
+├── World tracking (object placement on surfaces)
+│   ├── Indoor → ARWorldTrackingConfiguration + plane detection
+│   └── Outdoor → GPS + ARKit GeoTracking / ARCore + VPS
+├── Image tracking (detect 2D images)
+│   └── ARImageTrackingConfiguration / Augmented Images
+├── Face tracking (AR filters, masks)
+│   └── ARFaceTrackingConfiguration (iOS TrueDepth) / ARCore Augmented Faces
+├── Body tracking (motion capture)
+│   └── ARBodyTrackingConfiguration (iOS A12+) / ARCore 3D Body
+└── Object scanning (3D object recognition)
+    └── ARObjectScanningConfiguration / ARCore Cloud Anchors
+```
+
+### 3D Model Format Decision
+
+```
+Need animation support?
+├── Yes → glTF 2.0 (cross-platform best choice)
+│   └── Also supports: USDZ (iOS native with animation)
+├── Need Draco compression?
+│   ├── Yes → glTF with Draco (smallest file size)
+│   └── No → glTF (universal) or USDZ (iOS only)
+└── Static models only
+    └── glTF or OBJ (simple, large files)
+```
+
 ## Workflow
 
 ### Step 1: Platform Selection
-ARKit (iOS 11+): A12 Bionic or later for LiDAR, ARWorldTrackingConfiguration for 6DOF, ARImageTrackingConfiguration for image targets, ARFaceTrackingConfiguration for face AR. ARCore (Android 7+): Google Play Services for AR, supported devices list at developers.google.com/ar/devices, Depth API for occlusion, Augmented Images for image tracking. Cross-platform: use ARFoundation (Unity) or SceneView (React Native / Flutter) — abstract platform differences behind a unified API but expose platform-specific capabilities.
+ARKit (iOS 11+): A12 Bionic or later for LiDAR, ARWorldTrackingConfiguration for 6DOF, ARImageTrackingConfiguration for image targets, ARFaceTrackingConfiguration for face AR. ARCore (Android 7+): Google Play Services for AR, supported devices list at developers.google.com/ar/devices, Depth API for occlusion, Augmented Images for image tracking. Cross-platform: use ARFoundation (Unity) or SceneView (React Native / Flutter).
 
 | Capability | ARKit | ARCore |
 |---|---|---|
@@ -71,7 +118,7 @@ ARKit (iOS 11+): A12 Bionic or later for LiDAR, ARWorldTrackingConfiguration for
 | LiDAR support | iPad Pro 2020+, iPhone 12 Pro+ | Select Android devices |
 
 ### Step 2: Scene Setup
-Configure ARSession with appropriate tracking configuration. For world tracking: set `ARWorldTrackingConfiguration` (iOS) or `Config` with `PlaneFindingMode` (Android). Enable auto-focus, ambient light estimation, and environment texturing. Handle session interruptions (camera access denied, motion tracking lost) with state management and user recovery prompts.
+Configure ARSession. For world tracking: set `ARWorldTrackingConfiguration` (iOS) or `Config` with `PlaneFindingMode` (Android). Enable auto-focus, ambient light estimation, and environment texturing. Handle session interruptions.
 
 ```
 ARSession
@@ -91,41 +138,104 @@ ARSession
 ```
 
 ### Step 3: 3D Model Handling
-Preferred formats: USDZ (iOS native, supports animation + materials), glTF 2.0 (cross-platform, Draco compression). Model pipeline: source → optimize (decimate to target poly count) → compress (Draco for glTF, built-in for USDZ) → LOD generation (3 levels at 100%, 60%, 30% detail) → bundle. Texture atlas: combine textures, max 1024x1024 for mobile, ASTC compression (iOS) or ETC2 (Android). Memory budget: <200MB total for all loaded models at peak.
-
-| Metric | Target | Critical |
-|---|---|---|
-| FPS | 60 | <30 triggers warning |
-| Model memory | <200MB combined | <350MB hard cap |
-| Draw calls | <100 per frame | <200 per frame |
-| Poly count | <100k per model | <300k per model |
-| Load time | <2s per model | <5s timeout |
+Preferred formats: USDZ (iOS native, animation + materials), glTF 2.0 (cross-platform, Draco compression). Model pipeline: source → optimize (decimate to target poly count) → compress (Draco for glTF) → LOD generation (3 levels at 100%, 60%, 30% detail) → bundle. Texture atlas: combine textures, max 1024x1024 for mobile, ASTC (iOS) or ETC2 (Android).
 
 ### Step 4: Interaction Patterns
-Placement: hit-test against detected planes (raycast), show ghost preview for validation, confirm placement with haptic feedback and animation. Manipulation: one-finger rotate, two-finger scale, long-press drag for reposition. Selection: tap to select (visual highlight + bounding box), double-tap for context menu. Feedback: haptic (light impact for selection, medium for placement), visual (ripple animation, glow effect), audio (subtle confirm sound).
+Placement: hit-test against detected planes (raycast), show ghost preview, confirm placement with haptic + animation. Manipulation: one-finger rotate, two-finger scale, long-press drag. Selection: tap to select (visual highlight + bounding box), double-tap for context menu. Feedback: light impact for selection, medium for placement, ripple animation, glow effect.
 
 ### Step 5: Performance Optimization
-Use GPU instancing for repeated objects. Implement occlusion culling (LiDAR depth on iOS, Depth API on Android). Limit simultaneous tracked images to 10 max. Batch ARAnchor operations — avoid per-frame anchor creation. Use level-of-detail switching based on camera distance. Profile with Xcode SceneKit debugger (iOS) or Android GPU Inspector. Common mistakes: creating anchors every frame, loading uncompressed models, no LOD strategy, excessive draw calls from unbatched rendering.
+GPU instancing for repeated objects. Occlusion culling (LiDAR depth on iOS, Depth API on Android). Limit tracked images to 10 max. Batch ARAnchor operations. LOD switching based on camera distance. Profile with Xcode SceneKit debugger or Android GPU Inspector.
 
-### Step 6: VR Integration (if applicable)
-VR requires dedicated headset (Meta Quest, Apple Vision Pro). Mobile VR is primarily ARKit + ARKit's VR mode or Unity VR build. For spatial computing (Vision Pro): use Reality Kit, SwiftUI with volumetric windows, immersive spaces. Performance targets differ: AR typically 60fps, VR requires 72fps minimum (90fps preferred) to prevent motion sickness.
+### Step 6: VR Integration
+VR requires dedicated headset (Meta Quest, Apple Vision Pro). Mobile VR is primarily ARKit or Unity VR build. For Vision Pro: RealityKit, SwiftUI with volumetric windows, immersive spaces. AR: 60fps. VR: 72fps minimum (90fps preferred) to prevent motion sickness.
+
+## Common Pitfalls
+
+### Pitfall 1: Not Checking Device Capability
+Running AR features on unsupported devices crashes the app. Always check `ARConfiguration.isSupported` (iOS) or `ArCoreApk.checkAvailability` (Android) before activating AR.
+
+### Pitfall 2: Hardcoding Tracking Configurations
+Setting a fixed tracking configuration without handling runtime failures. Always monitor session state changes and provide user recovery prompts for limited tracking.
+
+### Pitfall 3: Loading Uncompressed 3D Models
+Shipping raw OBJ or FBX files in production bundles. These are 5-10x larger than compressed glTF or USDZ, causing long load times and memory pressure.
+
+### Pitfall 4: Creating Anchors Every Frame
+Adding ARAnchors in the update loop creates anchor overload, degrading tracking quality. Batch anchor operations and reuse existing anchors when possible.
+
+### Pitfall 5: No LOD Strategy
+Rendering full-detail models at every distance wastes GPU resources. Three LOD levels reduce draw calls by up to 60%.
+
+### Pitfall 6: Ignoring Battery Impact
+AR sessions consume significant battery power (camera + sensors + rendering). Monitor battery level and reduce rendering quality when battery is low.
+
+### Pitfall 7: Testing Only on Simulator
+AR performance on simulators/emulators bears no relation to real-device performance. Test on real devices with varied lighting, surfaces, and motion conditions.
+
+## Best Practices
+
+- Check AR capability at app launch, provide graceful fallback (2D mode, web-based AR).
+- Use ARWorldTrackingConfiguration for 6DOF tracking, with plane detection enabled.
+- Set environment texturing to automatic for realistic lighting.
+- Implement session interruption handlers with state recovery.
+- Compress all 3D models — target <50MB total for all models in a scene.
+- Generate 3 LOD levels per model at 100%, 50%, 25% detail.
+- Use texture atlases to reduce draw calls — combine multiple textures into one.
+- Implement hit-testing with raycast for accurate placement.
+- Provide visual + haptic feedback for every user action.
+- Test on real devices with varied conditions: bright sunlight, dim interiors, textured surfaces.
+- Remove unused anchors — limit active anchors to 50 maximum.
+- Use GPU instancing for repeated objects (e.g., furniture in a room).
+
+## Compared With
+
+### ARKit vs ARCore
+ARKit offers better tracking quality and more features (LiDAR, face tracking, world maps). ARCore has broader device support but fewer advanced features. Choose ARKit for iOS-only, ARFoundation for cross-platform.
+
+### ARKit vs ARFoundation
+ARFoundation wraps both ARKit and ARCore in Unity's API. Native ARKit provides more control and better performance. Use ARFoundation for cross-platform Unity projects. Use native ARKit for iOS-only apps needing maximum performance.
+
+### SceneView (React Native) vs ARFoundation (Unity)
+SceneView is lighter weight for React Native apps but has fewer features. ARFoundation provides full AR capabilities but requires Unity. Choose based on existing tech stack.
+
+### Mobile AR vs VR
+Mobile AR leverages the device camera for real-world overlay. VR creates fully immersive environments. AR is accessible (no headset required) but limited by field of view. VR provides full immersion but requires dedicated hardware.
+
+## Performance Considerations
+
+- Target 60fps for all AR experiences. Dropping below 30fps causes user discomfort.
+- Model memory budget: <200MB total at peak for all loaded models.
+- Draw calls: <100 per frame. Use instancing and texture atlases.
+- Poly count: <100k per model, <300k total per scene.
+- Load time: <2s per model. Show loading indicator if longer.
+- Texture resolution: max 1024x1024 for mobile. Use compressed formats (ASTC, ETC2).
+- Battery: AR session consumes 300-500mW. Optimize render frequency when battery <20%.
+- Memory: ARKit uses ~200MB baseline. Total app memory should stay under 500MB.
+- Thermal: Sustained AR usage can trigger thermal throttling. Reduce quality after 10 minutes.
 
 ## Rules
-- Always detect device AR capability before activating AR features — provide graceful fallback
-- Never hardcode tracking configurations — handle session state changes
-- All 3D models must use compressed formats — never raw OBJ or FBX in production
-- Performance budget is mandatory — document FPS, memory, and poly count targets
-- Anchor management: remove unused anchors, limit active anchors to <50
-- Interaction feedback every action — visual + haptic for every user gesture
-- Test on real devices, never rely solely on emulator/simulator AR performance
+- Always detect device AR capability before activating AR features. Provide graceful fallback.
+- Never hardcode tracking configurations. Handle session state changes.
+- All 3D models must use compressed formats. No raw OBJ or FBX in production.
+- Performance budget is mandatory. Document FPS, memory, and poly count targets.
+- Anchor management: remove unused anchors, limit active anchors to 50.
+- Interaction feedback every action: visual + haptic for every user gesture.
+- Test on real devices. Never rely solely on emulator/simulator AR performance.
+- Generate LODs for all models. Minimum 3 levels.
+- Use GPU instancing for repeated objects.
+- Handle camera authorization denial with clear user messaging.
+- Implement battery-aware rendering quality adjustment.
 
 ## References
-  - references/ar-core-arkit.md — ARCore (Android) vs ARKit (iOS) Developer Guide
-  - references/ar-patterns.md — AR/VR Interaction Patterns
-  - references/ar-platforms.md — AR Platforms: ARKit vs ARCore
-  - references/arcore-implementation.md — ARCore Implementation
-  - references/arkit-implementation.md — ARKit Implementation
-  - references/vr-development.md — Mobile VR Development
+- `references/ar-core-arkit.md` — ARCore vs ARKit Developer Guide
+- `references/ar-patterns.md` — AR/VR Interaction Patterns
+- `references/ar-platforms.md` — AR Platforms: ARKit vs ARCore
+- `references/arcore-implementation.md` — ARCore Implementation
+- `references/arkit-implementation.md` — ARKit Implementation
+- `references/vr-development.md` — Mobile VR Development
+- `references/ar-vr-rendering-performance.md` — Rendering optimization for AR/VR on mobile
+- `references/ar-vr-interaction-design.md` — Interaction design patterns for AR/VR experiences
+
 ## Handoff
 `mobile/universal/testing` for AR testing strategy (real device, varied lighting, occlusion scenarios)
 `mobile/universal/performance` for profiling AR-specific performance metrics

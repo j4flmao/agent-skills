@@ -52,6 +52,166 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ### Max Response Length
 Per pattern: 20 lines.
 
+## Component Architecture / Decision Trees
+
+### Architecture Options
+
+| Approach | Trade-off | When to Use |
+|----------|-----------|-------------|
+| Standalone components (default since v17) | No NgModules, simpler | New projects, new features |
+| NgModules-based | Legacy, shared declarations | Existing Angular <17 projects |
+| Signal Store (manual or @ngrx/signals) | Lighter than NgRx | Small-medium apps, CRUD |
+| NgRx (Store + Effects + Entity) | Full Redux pattern | Large apps, complex side effects |
+| Component Store (@ngrx/component-store) | Local state management | Feature-scoped state |
+| Presentational + Container Components | Separates logic from UI | Complex feature components |
+
+### Decision Tree: State Management
+
+```
+How complex is the state?
+  ├── Simple (component-local) -> signal() or BehaviorSubject
+  ├── Medium (feature-scoped) -> Signal Store or Component Store
+  └── Complex (cross-feature, many side effects) -> NgRx
+```
+
+```
+Does async data control the flow?
+  ├── Yes (HTTP, WebSocket, events) -> RxJS Observables
+  ├── No (UI state, toggles, selections) -> Signals
+  └── Both -> RxJS for streams, Signals for sync state
+```
+
+### Decision Tree: Dependency Injection
+
+```
+Is this a reusable service with multiple implementations?
+  ├── Yes -> Provide with useClass, useExisting, or useFactory
+  ├── Yes -> Inject with InjectionToken and @Optional()
+  └── No -> providedIn: 'root' singleton
+```
+
+## Common Pitfalls
+
+### Pitfall 1: Manual Subscription Management
+```typescript
+// Wrong — manual subscribe, easy to forget unsubscribe
+this.route.params.subscribe(params => this.id = params['id'])
+
+// Correct — automatic cleanup
+this.route.params.pipe(takeUntilDestroyed()).subscribe(params => this.id = params['id'])
+```
+Always use `takeUntilDestroyed()` (Angular 16+) or the async pipe. Never manually manage subscriptions in components.
+
+### Pitfall 2: Business Logic in Interceptors
+Interceptors should handle cross-cutting concerns only:
+- Adding auth headers
+- Logging errors
+- Timing requests
+Do NOT put business logic (redirect logic based on response data, data transformation) in interceptors.
+
+### Pitfall 3: Side Effects in Guards
+Guards should only decide navigation access. They should not dispatch analytics events, modify state, or call mutation endpoints.
+
+### Pitfall 4: Using NgRx for Everything
+NgRx adds significant boilerplate. For most CRUD apps, a Signal Store or Component Store is sufficient. Reserve NgRx for complex state interactions, multi-source event merging, or when Redux DevTools time-travel debugging is needed.
+
+### Pitfall 5: Mixing Signals and RxJS Incorrectly
+```typescript
+// Wrong — converting signal to observable unnecessarily
+const count$ = toObservable(this.count)
+
+// Correct — use signal directly in template
+// {{ count() }}
+```
+Use Signals in templates and `computed()` for sync derivations. Only use `toObservable()` when integrating with RxJS operators or libraries that expect observables.
+
+## Compared With
+
+### Angular vs React
+| Aspect | Angular | React |
+|--------|---------|-------|
+| Architecture | Full framework (DI, router, HTTP, forms) | Library (ecosystem via external packages) |
+| Reactivity | Signals + RxJS | Hooks + state management |
+| DI | Built-in, hierarchical | Manual via context or props |
+| TypeScript | First-class, required | Optional via types |
+| Bundle size | Larger (~65KB base) | Smaller (~45KB with react-dom) |
+| Learning curve | Steeper (many concepts) | Moderate (few concepts, many choices) |
+| Performance | Default OnPush + signals | Manual memoization |
+
+### Angular vs Vue
+Both are full frameworks, but Angular uses TypeScript natively and RxJS for async, while Vue uses a simpler reactivity model with ref() and reactive(). Vue is easier to learn but Angular scales better for enterprise teams.
+
+### Angular vs Svelte
+Svelte compiles away the framework, producing tiny bundles. Angular has a larger runtime but offers more built-in features (DI, routing, forms, HTTP client). Svelte suits smaller teams; Angular suits large enterprise applications.
+
+## Performance Considerations
+
+### Change Detection Strategy
+```typescript
+@Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+```
+OnPush + Signals is the most performant combination. `OnPush` skips change detection unless inputs change, events fire, or signals/observables notify. Combined with `signal()` for local state, this minimizes change detection cycles.
+
+### Lazy Loading
+```typescript
+const routes: Routes = [
+  {
+    path: 'admin',
+    loadChildren: () => import('./admin/admin.routes'),
+  },
+]
+```
+Lazy loading at feature level keeps initial bundle small. Each lazy-loaded feature is a separate chunk loaded on navigation.
+
+### RxJS Subscription Management
+Unnecessary subscriptions waste memory. Use `takeUntilDestroyed()` (Angular 16+), `async` pipe, or `first()` for one-shot operations.
+
+### Signal Performance
+Signals are lightweight compared to RxJS Subjects:
+- `signal()` and `computed()` have near-zero overhead
+- No Subscription objects, no operators, no schedulers
+- Direct integration with Angular's change detection (no zone.js needed with zoneless)
+
+## Ecosystem & Tooling
+
+### Core Packages
+| Package | Purpose |
+|---------|---------|
+| @angular/core | Framework core (components, DI, signals) |
+| @angular/router | Routing and navigation |
+| @angular/forms | Template-driven and reactive forms |
+| @angular/common/http | HTTP client with interceptors |
+| @angular/ssr | Server-side rendering |
+
+### State Management Libraries
+| Package | Purpose |
+|---------|---------|
+| @ngrx/store | Redux-style state management |
+| @ngrx/effects | Side effect management |
+| @ngrx/component-store | Local/feature state management |
+| @ngrx/signals | Signal-based state management |
+| ngxtension | Utilities for Signals and RxJS interop |
+
+### Tools
+- **Angular CLI** — Project scaffolding, code generation (`ng generate`), builds.
+- **Angular DevTools** — Browser extension for component tree, profiler, state inspection.
+- **ESLint + @angular-eslint** — Linting with Angular-specific rules.
+- **Jest + Angular Testing Library** — Modern testing setup.
+
+### UI Libraries
+- **Angular Material** — Official component library (Material Design).
+- **PrimeNG** — Extensive component set.
+- **Taiga UI** — Enterprise UI kit.
+- **ng-zorro-antd** — Ant Design for Angular.
+
+### Community
+- Docs: angular.dev
+- GitHub: github.com/angular/angular
+- Discord: discord.gg/angular
+- Newsletter: angular.dev/newsletter
+
 ## Workflow
 
 ### Step 1: HTTP Interceptor
@@ -63,23 +223,9 @@ export class AuthInterceptor implements HttpInterceptor {
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     const token = this.auth.token()
     if (token) {
-      req = req.clone({
-        setHeaders: { Authorization: `Bearer ${token}` },
-      })
+      req = req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
     }
     return next.handle(req)
-  }
-}
-
-@Injectable()
-export class ErrorInterceptor implements HttpInterceptor {
-  intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    return next.handle(req).pipe(
-      catchError((error: HttpErrorResponse) => {
-        console.error(`HTTP error ${error.status}: ${error.message}`)
-        return throwError(() => error)
-      })
-    )
   }
 }
 
@@ -88,7 +234,6 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideHttpClient(withInterceptorsFromDi()),
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
-    { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
   ],
 }
 ```
@@ -98,9 +243,7 @@ export const appConfig: ApplicationConfig = {
 export const authGuard: CanActivateFn = (route, state) => {
   const auth = inject(AuthService)
   const router = inject(Router)
-
   if (auth.isAuthenticated()) return true
-
   return router.parseUrl('/login')
 }
 
@@ -110,33 +253,14 @@ export const roleGuard = (requiredRole: string): CanMatchFn => {
     return auth.hasRole(requiredRole)
   }
 }
-
-// Route config
-export const routes: Routes = [
-  {
-    path: 'admin',
-    canActivate: [authGuard],
-    canMatch: [roleGuard('admin')],
-    loadChildren: () => import('./features/admin/admin.routes'),
-  },
-]
 ```
 
 ### Step 3: Signals vs RxJS Decision
-| Use Signals When | Use RxJS When |
-|-----------------|---------------|
-| Component-local state | HTTP requests |
-| UI state (loading, error, selected) | WebSocket streams |
-| Derived values (computed) | Debounced input |
-| Simple state that one component owns | Complex async compositions |
-| Counter, toggle, form field value | Multi-source event merging |
-
 ```typescript
 @Component({...})
 export class UserSearchComponent {
   readonly searchControl = new FormControl('')
 
-  // RxJS for async streams (debounced HTTP search)
   readonly searchResults$ = this.searchControl.valueChanges.pipe(
     debounceTime(300),
     distinctUntilChanged(),
@@ -146,7 +270,6 @@ export class UserSearchComponent {
     takeUntilDestroyed(),
   )
 
-  // Signals for sync state
   readonly selectedUser = signal<User | null>(null)
 
   selectUser(user: User) {
@@ -156,13 +279,6 @@ export class UserSearchComponent {
 ```
 
 ### Step 4: NgRx vs Signal Store Decision
-| NgRx When | Signal Store When |
-|-----------|-------------------|
-| Large application, many state interactions | Small to medium app |
-| Complex side effect orchestration | Simple async operations |
-| Team knows NgRx | Team is new to the project |
-| Need Redux DevTools and time-travel debugging | State is straightforward |
-
 ```typescript
 // Signal Store (preferred for most cases)
 @Injectable({ providedIn: 'root' })
@@ -223,6 +339,22 @@ export class TruncatePipe implements PipeTransform {
 }
 ```
 
+### Step 7: Advanced DI Patterns
+```typescript
+// InjectionToken for configuration
+export const API_CONFIG = new InjectionToken<ApiConfig>('API_CONFIG')
+
+// useFactory for conditional providers
+providers: [
+  {
+    provide: LoggerService,
+    useFactory: () => environment.production
+      ? new ProductionLoggerService()
+      : new DebugLoggerService(),
+  },
+]
+```
+
 ## Rules
 - Signals for synchronous state. RxJS for asynchronous streams (HTTP, events, WebSocket).
 - Interceptors handle cross-cutting concerns only. No business logic in interceptors.
@@ -230,14 +362,21 @@ export class TruncatePipe implements PipeTransform {
 - Signal Store over NgRx for most applications. NgRx is overkill for common CRUD apps.
 - Custom directives encapsulate reusable DOM behavior that repeats across components.
 - Pipes are pure and side-effect-free. Same input always produces the same output.
+- inject() over constructor DI for better readability and testability.
+- OnPush change detection with signals for optimal performance.
+- Lazy load feature routes for smaller initial bundles.
+- Use Angular 17+ standalone components for all new code.
 
 ## References
-  - references/angular-design-patterns.md — Angular Design Patterns
-  - references/angular-performance.md — Angular Performance Patterns
-  - references/angular-rxjs-patterns.md — Angular RxJS Patterns
-  - references/angular-testing.md — Angular Testing Patterns
-  - references/di-patterns.md — Angular DI Patterns
-  - references/rxjs-patterns.md — Angular RxJS Patterns
+- references/angular-design-patterns.md — Angular Design Patterns
+- references/angular-performance.md — Angular Performance Patterns
+- references/angular-rxjs-patterns.md — Angular RxJS Patterns
+- references/angular-testing.md — Angular Testing Patterns
+- references/di-patterns.md — Angular DI Patterns
+- references/rxjs-patterns.md — Angular RxJS Patterns
+- references/angular-signals-migration.md — Angular Signals Migration Guide
+- references/angular-advanced-di.md — Angular Advanced Dependency Injection
+
 ## Handoff
 No artifact produced.
 Next skill: frontend-testing — test Angular components.

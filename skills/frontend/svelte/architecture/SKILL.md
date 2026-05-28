@@ -48,22 +48,162 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ### Max Response Length
 Code: 15 lines per example.
 
+## Component Architecture / Decision Trees
+
+### Architecture Options
+
+| Approach | Trade-off | When to Use |
+|----------|-----------|-------------|
+| Single-file .svelte with all logic | Simple, colocated | Small components under 100 lines |
+| .svelte.js module for shared state | Separates state from UI | Multiple components share state |
+| SvelteKit + load functions | SSR data fetching built-in | Full-stack SvelteKit apps |
+| Svelte standalone + adapter | Minimal, SPA-like | Existing non-SvelteKit projects |
+| Snippets + render functions | Reusable template fragments | Complex list rendering patterns |
+
+### Decision Tree: State Sharing
+
+```
+Does state need to be shared across components?
+  ├── No → $state() locally inside component
+  └── Yes → Is it component-tree scoped?
+       ├── Yes → setContext() / getContext()
+       └── No → .svelte.js module with $state class
+```
+
+### Decision Tree: Reactivity
+
+```
+Is the value derived from existing state?
+  ├── No → $state()
+  └── Yes → $derived() or $derived.by()
+```
+
+```
+Is there a side effect (localStorage, analytics)?
+  ├── No → Use $derived
+  └── Yes → Use $effect with cleanup
+```
+
+## Common Pitfalls
+
+### Pitfall 1: Using $effect for Derived State
+```svelte
+<script>
+  let count = $state(0)
+  // Wrong — side effect for computation
+  $effect(() => { doubled = count * 2 })
+  // Correct — $derived for computed values
+  let doubled = $derived(count * 2)
+</script>
+```
+
+### Pitfall 2: Missing $effect Cleanup
+Always return cleanup from $effect for subscriptions, intervals, or abort controllers. Missing cleanup causes memory leaks and duplicate handlers on re-render.
+
+### Pitfall 3: Mutating Props
+Props passed via $props() are read-only. Mutating them silently fails. Copy to local $state if mutation is needed.
+
+### Pitfall 4: Forgetting $state Makes Objects Deeply Reactive
+```svelte
+<script>
+  let data = $state({ count: 0 })
+  // This works — $state is deeply reactive
+  data.count++
+  // But direct mutation of nested state without $state may not trigger updates
+  // Solution: always initialize with $state()
+</script>
+```
+
+### Pitfall 5: Legacy $: Syntax in Svelte 5
+Svelte 5 still supports `$:` for backward compatibility but it is deprecated. All new code must use runes. Run `svelte-migrate` to convert existing code.
+
+## Compared With
+
+### Svelte 5 vs React
+| Aspect | Svelte 5 | React |
+|--------|----------|-------|
+| Reactivity | Compile-time, fine-grained | Runtime, VDOM diffing |
+| Bundle size | Very small (no runtime) | Larger (react-dom + scheduler) |
+| Learning curve | Lower (natural JS syntax) | Higher (hooks rules, deps arrays) |
+| Component syntax | Single file (html+js+css) | JSX/TSX only |
+| State management | Built-in runes | External libs (Zustand, Jotai) |
+| SSR | SvelteKit | Next.js, Remix |
+
+### Svelte 5 vs Vue
+Both have single-file components, but Svelte 5 uses compile-time reactivity (no proxy system, no ref() wrapper). Vue's Composition API is closer to React hooks; Svelte runes feel more like plain JS.
+
+### Svelte 5 vs SolidJS
+Both compile to fine-grained reactive DOM updates. SolidJS uses JSX-only with signals as functions; Svelte uses template syntax with runes as variables. Svelte is more approachable for designers; SolidJS is closer to React developers.
+
+## Performance Considerations
+
+### Compile-Time Optimization
+Svelte 5's compiler analyzes variable dependencies at build time. The generated code updates only the specific DOM nodes that depend on changed values — no VDOM diffing.
+
+### Bundle Size
+- Svelte runtime: ~2KB gzipped (vs React ~45KB, Vue ~30KB).
+- Components compile to vanilla JS with no runtime overhead.
+- Runes add zero overhead — they compile to direct variable assignments.
+
+### Avoiding Wasted Reactivity
+```svelte
+<script>
+  let count = $state(0)
+  // This creates a new subscription each render. Use $derived instead.
+  $effect(() => {
+    // Don't use $effect for DOM that can use {count * 2}
+  })
+</script>
+<p>{count * 2}</p> <!-- Direct expression — no extra memory, no effect -->
+```
+Expressions in the template are compiled to direct DOM updates, not diffed through VDOM.
+
+### $state Proxy Overhead
+Deeply nested objects in $state are wrapped in proxies. For very large arrays (10K+ entries), consider using an immutable update pattern or virtual scrolled lists.
+
+## Ecosystem & Tooling
+
+### Core Packages
+| Package | Purpose |
+|---------|---------|
+| svelte | Core compiler and runtime with runes |
+| @sveltejs/kit | Full-stack framework (routing, SSR, adapters) |
+| @sveltejs/adapter-* | Deploy targets (node, vercel, netlify, cloudflare) |
+
+### Tools
+- **Svelte VS Code Extension** — Syntax highlighting, TypeScript support, auto-complete for runes.
+- **svelte-check** — CLI type checking and validation (`npx svelte-check`).
+- **svelte-migrate** — Automatically migrate Svelte 4 to Svelte 5 runes.
+- **Vite** — Official build tool with HMR for instant updates.
+
+### UI Libraries
+- **Skeleton** — UI toolkit for Svelte + Tailwind.
+- **Shadcn-svelte** — Port of shadcn/ui for Svelte.
+- **Melt UI** — Headless UI primitives for Svelte.
+- **Threlte** — Three.js integration for Svelte.
+
+### Community
+- Official docs: svelte.dev
+- SvelteKit docs: kit.svelte.dev
+- GitHub: github.com/sveltejs/svelte
+- Discord: discord.gg/svelte
+
 ## Workflow
 
 ### Step 1: Svelte 5 Runes
 ```svelte
 <script>
-  let count = $state(0)                        // Reactive state
-  let user = $state({ name: 'Alice' })         // Deeply reactive
-  let doubled = $derived(count * 2)             // Computed value
-  let label = $derived.by(() => count > 10 ? 'High' : 'Low')  // Block computed
+  let count = $state(0)
+  let user = $state({ name: 'Alice' })
+  let doubled = $derived(count * 2)
+  let label = $derived.by(() => count > 10 ? 'High' : 'Low')
 
-  $effect(() => {                               // Side effect
+  $effect(() => {
     console.log(`Count: ${count}`)
-    return () => console.log('cleanup')          // Cleanup
+    return () => console.log('cleanup')
   })
 
-  let { name = 'world', children } = $props()   // Component inputs
+  let { name = 'world', children } = $props()
 </script>
 
 <h1>Hello {name}! Count: {count}</h1>
@@ -93,11 +233,11 @@ Code: 15 lines per example.
   let items = $state([{ id: 1, text: 'Learn Svelte' }])
 
   function addItem(text: string) {
-    items = [...items, { id: Date.now(), text }]   // Triggers update
+    items = [...items, { id: Date.now(), text }]
   }
 
   function updateItem(id: number, text: string) {
-    items = items.map(i => i.id === id ? { ...i, text } : i)  // Deep update
+    items = items.map(i => i.id === id ? { ...i, text } : i)
   }
 
   let sorted = $derived([...items].sort((a, b) => a.text.localeCompare(b.text)))
@@ -107,22 +247,30 @@ Code: 15 lines per example.
 ### Step 4: State Management
 ```svelte
 <script>
-  // Context for scoped state
   import { setContext, getContext } from 'svelte'
-
   const KEY = Symbol('theme')
   let theme = $state('light')
 
-  // Provider
   setContext(KEY, { theme, toggle: () => theme = theme === 'light' ? 'dark' : 'light' })
 
-  // Consumer (in child component)
   let ctx = getContext<{ theme: string; toggle: () => void }>(KEY)
 </script>
 ```
-For global state, use $state class instances in a module `.svelte.js` file: `export const store = new Store()`.
+For global state, use $state class instances in a module `.svelte.js` file: `export const store = new Store()`. The class pattern allows methods, computed getters, and encapsulation.
 
-### Step 5: Lifecycle
+### Step 5: Snippets and Render Functions
+```svelte
+{#snippet tableRow(item: { id: string; name: string })}
+  <tr><td>{item.name}</td></tr>
+{/snippet}
+
+{#each data as item}
+  {@render tableRow(item)}
+{/each}
+```
+Snippets replace slot patterns. They are typed, reusable, and composable.
+
+### Step 6: Lifecycle
 ```svelte
 <script>
   import { onMount, onDestroy, tick } from 'svelte'
@@ -136,7 +284,7 @@ For global state, use $state class instances in a module `.svelte.js` file: `exp
   onDestroy(() => console.log('destroyed'))
 
   async function handleClick() {
-    await tick()  // Wait for DOM update
+    await tick()
     console.log('DOM synced')
   }
 </script>
@@ -152,14 +300,21 @@ For global state, use $state class instances in a module `.svelte.js` file: `exp
 - Avoid $effect for derived state — use $derived.
 - $effect cleanup returned as function runs on re-run or destroy.
 - Svelte 5 retains backward compatibility with legacy syntax.
+- Always return cleanup from $effect for subscriptions, intervals, listeners.
+- Use $state class instances in .svelte.js for global state.
+- Snippets ({#snippet}) over slots for typed, reusable template fragments.
+- Add compilerOptions: { runes: true } explicitly to svelte.config.js.
 
 ## References
-  - references/svelte-5-runes.md — Svelte 5 Runes
-  - references/svelte-components.md — Svelte Components — Slots, Context, Lifecycle, Events, Actions, Transitions
-  - references/svelte-optimization.md — Svelte Optimization Patterns
-  - references/svelte-reactivity.md — Svelte Reactivity Patterns
-  - references/svelte-runes.md — Svelte 5 Runes — $state, $derived, $effect, $props, $bindable
-  - references/svelte-testing.md — Svelte Testing Reference
+- references/svelte-5-runes.md — Svelte 5 Runes
+- references/svelte-components.md — Svelte Components — Slots, Context, Lifecycle, Events, Actions, Transitions
+- references/svelte-optimization.md — Svelte Optimization Patterns
+- references/svelte-reactivity.md — Svelte Reactivity Patterns
+- references/svelte-runes.md — Svelte 5 Runes — $state, $derived, $effect, $props, $bindable
+- references/svelte-testing.md — Svelte Testing Reference
+- references/svelte-5-runes-deep-dive.md — Svelte 5 Runes Deep Dive
+- references/svelte-performance-optimization.md — Svelte Performance Optimization
+
 ## Handoff
 No artifact produced.
 Next skill: frontend-svelte-patterns for forms, animations, actions, and data fetching.

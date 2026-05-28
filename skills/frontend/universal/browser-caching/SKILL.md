@@ -2,7 +2,7 @@
 name: frontend-browser-caching
 description: >
   Use this skill when the user says 'browser caching', 'cache headers', 'service worker', 'SW', 'stale-while-revalidate', 'SWR', 'cache strategy', 'Cache-Control', 'ETag', 'cache busting', 'offline caching', or when optimizing frontend load performance. This skill enforces: Cache-Control headers with appropriate max-age, service worker caching with stale-while-revalidate pattern, cache-busted asset URLs, and offline fallback. Works with any frontend framework. Do NOT use for: backend response caching, CDN configuration, database query caching.
-version: "1.0.0"
+version: "1.2.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -16,7 +16,7 @@ tags: [frontend, caching, performance, universal]
 # Browser Caching
 
 ## Purpose
-Optimize load performance via HTTP cache headers, service worker caching, and stale-while-revalidate. Minimize network round-trips while serving fresh content.
+Optimize load performance via HTTP cache headers, service worker caching, and stale-while-revalidate. Minimize network round-trips while serving fresh content. First load under 2s, repeat loads under 500ms. Full offline support for static assets.
 
 ## Agent Protocol
 
@@ -38,7 +38,7 @@ Strategy: {cache strategy}
 Config: {code block}
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output.
 
 ### Completion Criteria
 - [ ] Static assets use `Cache-Control: public, max-age=31536000, immutable`.
@@ -50,6 +50,54 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 4096 tokens.
+
+## Component Architecture / Decision Trees
+
+### Cache Strategy Decision Tree
+
+```
+Resource type?
+  |-- Static asset (JS, CSS, image, font) -->
+  |     |-- Content-hashed filename?
+  |     |     |-- YES --> Cache-Control: public, max-age=31536000, immutable
+  |     |     |-- NO  --> Add content hashing to build tool
+  |-- HTML page -->
+  |     |-- Static / pre-rendered? --> Cache-Control: public, max-age=300 (5 min), ETag
+  |     |-- Dynamic / user-specific? --> Cache-Control: no-cache, private
+  |-- API response -->
+  |     |-- Public / shareable? --> Cache-Control: public, max-age=60, stale-while-revalidate=600
+  |     |-- User-specific? --> Cache-Control: private, no-cache
+  |-- Third-party resource -->
+        |-- CDN-hosted? --> Use the CDN's cache headers, add integrity hash
+```
+
+### Service Worker Architecture Options
+
+**Option A: Cache-first for static assets, network-first for HTML**
+Best for: Content-heavy sites where assets change rarely. Provides offline capability.
+```
+Install: precache all static assets
+Fetch: serve from cache, update in background (stale-while-revalidate)
+HTML: network first, fallback to cache
+API: stale-while-revalidate
+```
+
+**Option B: Network-first with cache fallback**
+Best for: Dynamic apps where freshness is critical (dashboards, admin panels).
+```
+Install: precache shell (minimal HTML, CSS, JS)
+Fetch: HTML and API always from network
+Static assets: cache-first
+Fallback: cached offline page
+```
+
+**Option C: Offline-first (fully cached)**
+Best for: Progressive Web Apps that must work entirely offline.
+```
+Install: precache everything needed for full functionality
+Fetch: cache-first for all resources, periodic background sync
+API: IndexedDB local cache with background sync when online
+```
 
 ## Workflow
 
@@ -110,7 +158,6 @@ self.addEventListener('fetch', (event) => {
         }
         return response
       })
-      // Return cached immediately, update in background
       return cached ?? fetchPromise
     })
   )
@@ -119,7 +166,7 @@ self.addEventListener('fetch', (event) => {
 
 ### Step 4: Cache Busting with Content Hash
 ```typescript
-// Vite — automatic content hashing
+// Vite -- automatic content hashing
 // build.rollupOptions.output.entryFileNames: '[name]-[hash].js'
 
 // Webpack
@@ -141,22 +188,168 @@ import('/assets/app-abc123def.js')
 | API data | SWR | `max-age=60, stale-while-revalidate=600` | Stale-while-revalidate |
 | User data | Network-only | `private, no-cache` | Bypass cache |
 
+### Step 6: Offline Fallback Page
+```html
+<!-- offline.html -->
+<!DOCTYPE html>
+<html>
+<head><title>Offline</title></head>
+<body>
+  <h1>You are offline</h1>
+  <p>Please check your connection and try again.</p>
+  <button onclick="location.reload()">Try again</button>
+</body>
+</html>
+```
+
+```typescript
+// In service worker fetch handler
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    fetch(event.request)
+      .catch(() => caches.match(event.request))
+      .catch(() => caches.match('/offline.html'))
+  )
+})
+```
+
+## Common Pitfalls
+
+### 1. Missing immutable Directive
+`Cache-Control: public, max-age=31536000` without `immutable` causes browsers to revalidate on every page reload (Cmd+R) even though the asset has a content hash. Always add `immutable` for content-hashed assets.
+
+### 2. Caching HTML Without Revalidation
+Setting `max-age` on HTML without `ETag` means users see stale content until the cache expires. Use `no-cache` with `ETag` for HTML to ensure freshness while still allowing conditional requests.
+
+### 3. Over-caching User-Specific Content
+Setting `Cache-Control: public` on authenticated API responses means a shared cache (CDN, proxy) serves the same response to all users. Always use `private` for user-specific data.
+
+### 4. Service Worker Update Without Version Bump
+If you update the service worker's cached assets but don't change the cache name (`CACHE_NAME`), the old cache is not cleaned up and new assets are never cached. Always bump the version in the cache name on each deploy.
+
+```typescript
+// BAD -- same cache name, updates never applied
+const CACHE_NAME = 'static-v1';
+
+// GOOD -- versioned cache name
+const CACHE_NAME = `static-v${new Date().getTime()}`;
+// Or use a build-time constant
+// const CACHE_NAME = `static-v${__CACHE_VERSION__}`;
+```
+
+### 5. Service Worker Blocking Updates
+Without `skipWaiting()` in the install event, the new service worker waits for all tabs of the old service worker to close before activating. This delays updates indefinitely.
+
+### 6. Cache Poisoning from Invalid Responses
+The fetch handler caches ALL responses, including 404 and 500 errors. Only cache `response.ok` responses:
+
+```typescript
+const fetchPromise = fetch(event.request).then((response) => {
+  if (response.ok) {
+    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()))
+  }
+  return response
+})
+```
+
+## Compared With
+
+| Strategy | Freshness | Speed | Offline | Complexity |
+|----------|-----------|-------|---------|------------|
+| Cache-first (immutable) | Stale until expiry | Fastest | Yes | Low |
+| Network-first | Always fresh | Slow (network dependent) | Yes | Medium |
+| Stale-while-revalidate | Stale served, fresh in background | Very fast (instant) | Yes | Medium |
+| Network-only | Always fresh | Slowest | No | Low |
+| Cache-only | Stale until expiry | Fastest | Yes | Low |
+| Service worker + IndexedDB | Background sync | Fast (local) | Full | High |
+
+## Performance Considerations
+
+### Cache Hit Ratio Targets
+- Static assets: 99%+ cache hit ratio (content hashing ensures cacheable URLs)
+- HTML pages: 80%+ (ETag enables conditional revalidation)
+- API responses: 60-90% depending on data freshness requirements
+
+### Cache Size Management
+Service worker caches can grow unbounded. Set a maximum cache size:
+
+```typescript
+async function trimCache(cacheName, maxItems) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  if (keys.length > maxItems) {
+    // Delete oldest entries
+    const toDelete = keys.slice(0, keys.length - maxItems);
+    await Promise.all(toDelete.map((key) => cache.delete(key)));
+  }
+}
+
+// Call after adding to cache
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    fetch(event.request).then((response) => {
+      if (response.ok) {
+        const cloned = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, cloned);
+          trimCache(CACHE_NAME, 50); // Keep max 50 cached entries
+        });
+      }
+      return response;
+    })
+  );
+});
+```
+
+### Storage Quota Limits
+Browsers limit storage per origin:
+- Chrome: ~60% of available disk space
+- Firefox: ~50% of available disk space
+- Safari: ~1GB (on iOS), ~500MB (on macOS)
+- Edge: same as Chrome
+
+Use `navigator.storage.estimate()` to check available and used storage.
+
+## Ecosystem & Tooling
+
+### Service Worker Libraries
+- **Workbox** -- Google's service worker library. High-level caching strategies, precaching, background sync, routing. Recommended for most projects.
+- **Workbox Webpack Plugin** -- Generates service worker config from Webpack build.
+- **vite-plugin-pwa** -- Vite plugin based on Workbox. Zero-config PWA setup.
+- **next-pwa** -- Next.js plugin for service worker generation.
+- **sw-precache / sw-toolbox** -- Legacy Workbox predecessors. Avoid in new projects.
+
+### CDN and Reverse Proxy
+- **Cloudflare** -- Cache rules, Argo Smart Routing, automatic static asset optimization.
+- **Fastly** -- Instant purge, VCL-based cache control.
+- **Vercel Edge Network** -- Automatic cache optimization for Next.js.
+- **AWS CloudFront** -- Lambda@Edge for custom caching logic.
+- **Nginx** -- `expires` and `add_header Cache-Control` directives.
+
 ## Rules
 - Static assets: `immutable` + `max-age=1 year` + content hash in filename.
-- HTML: `no-cache` with `ETag` — never cache HTML without revalidation.
+- HTML: `no-cache` with `ETag` -- never cache HTML without revalidation.
 - Service worker: update version (cache name) on every deploy.
 - SWR: serve cached instantly, fetch fresh in background, update cache.
 - Never cache user-specific or sensitive data in shared caches.
 - Use `Cache-Control: private` for authenticated responses.
+- Always validate cache responses for status 200 before caching.
+- Cap cache size to prevent quota exceeded errors.
+- Use Workbox for production service workers (avoid raw SW code).
+- Register SW with `updateViaCache: 'none'` to prevent SW script caching.
 
 ## References
-  - references/cache-strategies.md — Cache Strategies
-  - references/caching-headers.md — Caching Headers
-  - references/caching-strategies.md — Caching Strategies
-  - references/local-storage-strategies.md — Local Storage and Cache Strategies
-  - references/service-worker-caching.md — Service Worker Caching
-  - references/sw-caching.md — Service Worker Caching
+
+- `references/cache-strategies.md` -- Cache Strategies
+- `references/caching-headers.md` -- Caching Headers
+- `references/caching-strategies.md` -- Caching Strategies
+- `references/local-storage-strategies.md` -- Local Storage and Cache Strategies
+- `references/service-worker-caching.md` -- Service Worker Caching
+- `references/sw-caching.md` -- Service Worker Caching
+- `references/service-worker-caching.md` -- Service Worker Caching Patterns
+- `references/cache-invalidation-strategies.md` -- Cache Invalidation Strategies
+
 ## Handoff
 No artifact produced.
-Next skill: `performance` — combine caching with other perf optimization.
+Next skill: `performance` -- combine caching with other perf optimization.
 Carry forward: cache strategy per resource type, SW cache name version, hash config.

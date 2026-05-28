@@ -2,7 +2,7 @@
 name: frontend-tailwind-css
 description: >
   Use this skill when the user says 'tailwind', 'utility css', 'design tokens', 'responsive tailwind', 'tailwind config', 'custom theme'. This skill enforces utility-first CSS principles, design token extraction, responsive breakpoint patterns, and Tailwind config best practices. Applies to any frontend stack.
-version: "1.0.0"
+version: "1.2.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -16,7 +16,7 @@ tags: [frontend, tailwind-css, phase-3, universal]
 # Frontend Tailwind CSS
 
 ## Purpose
-Generate production-ready Tailwind CSS code following utility-first principles with consistent design tokens and responsive patterns. Covers v3 (config-based) and v4 (`@theme`-based) workflows, plugin integration, JIT optimization, and component extraction patterns.
+Generate production-ready Tailwind CSS code following utility-first principles with consistent design tokens and responsive patterns. Covers v3 (config-based) and v4 (`@theme`-based) workflows, plugin integration, JIT optimization, and component extraction patterns. Output is deterministic, tree-shakeable, and under 15KB gzipped for typical apps.
 
 ## Agent Protocol
 
@@ -36,17 +36,17 @@ No file output unless requested.
 
 ### Response Format
 1. Respond with raw Tailwind classes or config snippets first, explain only if asked
-2. Use arbitrary values (`[#123]`, `[10px]`) sparingly — prefer design tokens
+2. Use arbitrary values (`[#123]`, `[10px]`) sparingly -- prefer design tokens
 3. When generating config, output the complete relevant section, not ellipses
-4. For responsive design, always list breakpoints in order: `sm` → `md` → `lg` → `xl` → `2xl`
+4. For responsive design, always list breakpoints in order: `sm` to `md` to `lg` to `xl` to `2xl`
 5. Prefix v4 tokens with `--color-`, `--font-`, `--spacing-` namespacing
-6. No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+6. No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output.
 
 ### Completion Criteria
 - [ ] Tailwind classes follow utility-first (one class = one CSS property) where practical
 - [ ] Design tokens extracted into `tailwind.config.*` or CSS `@theme` directive
 - [ ] Responsive variants applied mobile-first (base = mobile, `md:` = tablet, `lg:` = desktop)
-- [ ] No unused custom CSS — Tailwind utility covers the use case
+- [ ] No unused custom CSS -- Tailwind utility covers the use case
 - [ ] Dark mode uses `dark:` variant unless config says otherwise
 - [ ] Output has been verified against an existing Tailwind project to confirm no breaking config changes
 - [ ] JIT mode properly detects all class sources in `content` paths
@@ -54,6 +54,90 @@ No file output unless requested.
 
 ### Max Response Length
 100 lines unless generating a full config.
+
+## Component Architecture / Decision Trees
+
+### Build Tool Integration Decision Tree
+
+```
+Which framework?
+  |-- Vite -->
+  |     |-- v4: @tailwindcss/vite plugin
+  |     |-- v3: postcss.config.js + tailwindcss + autoprefixer
+  |-- Next.js -->
+  |     |-- v4: @tailwindcss/postcss
+  |     |-- v3: postcss.config.js with tailwindcss
+  |-- Angular -->
+  |     |-- v4: @tailwindcss/vite (if using Vite) or postcss.config.js
+  |     |-- v3: postcss.config.json + angular.json styles
+  |-- Remix / Astro / others -->
+        |-- postcss.config.js in both v3 and v4
+```
+
+### Design Token Architecture Options
+
+**Option A: Tailwind Config Extend (v3)**
+Best for: Existing v3 projects, projects with static theme values.
+```
+theme.extend.colors.brand.500 = #3b82f6
+theme.extend.fontFamily.body = ['Inter', 'sans-serif']
+```
+Pros: Familiar, well-documented, works with IntelliSense. Cons: JS config can become large, no dynamic theming at runtime.
+
+**Option B: CSS @theme Directive (v4)**
+Best for: New projects, projects needing runtime CSS custom properties.
+```
+@theme { --color-brand-500: #3b82f6; --font-body: 'Inter', sans-serif; }
+```
+Pros: CSS-native, generates `--color-brand-500` as CSS custom property automatically, works with any build tool. Cons: v4 only, less tooling support.
+
+**Option C: Hybrid CSS Custom Properties + Tailwind Config**
+Best for: Design systems with runtime theming (light/dark mode).
+Define primitives as CSS custom properties, reference them in Tailwind config:
+```css
+:root { --color-brand: #3b82f6; }
+```
+```js
+theme.extend.colors.brand: 'var(--color-brand)'
+```
+Pros: Runtime theme switching without rebuild. Cons: Harder to debug, potential for missing fallback values.
+
+### Component Abstraction Patterns
+
+**Pattern 1: @apply + @layer components (v3)**
+```css
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  }
+}
+```
+
+**Pattern 2: Component Function (React)**
+```tsx
+function Button({ variant = 'primary', size = 'md', children }) {
+  const classes = cn(
+    'inline-flex items-center justify-center rounded-md font-medium transition-colors',
+    variant === 'primary' && 'bg-blue-600 text-white hover:bg-blue-700',
+    variant === 'secondary' && 'bg-gray-100 text-gray-900 hover:bg-gray-200',
+    size === 'sm' && 'h-8 px-3 text-sm',
+    size === 'md' && 'h-10 px-4 text-base',
+    size === 'lg' && 'h-12 px-6 text-lg',
+  );
+  return <button className={classes}>{children}</button>;
+}
+```
+
+**Pattern 3: CVA (Class Variance Authority)**
+```tsx
+import { cva } from 'class-variance-authority';
+const button = cva('inline-flex items-center justify-center rounded-md font-medium', {
+  variants: {
+    variant: { primary: 'bg-blue-600 text-white', secondary: 'bg-gray-100 text-gray-900' },
+    size: { sm: 'h-8 px-3 text-sm', md: 'h-10 px-4 text-base' },
+  },
+});
+```
 
 ## Workflow
 
@@ -67,7 +151,7 @@ Check `tailwind.config.js` / `tailwind.config.ts` / `postcss.config.js`. If v4, 
 
 ### Step 2: Configure Content Paths
 ```js
-// tailwind.config.js — v3
+// tailwind.config.js -- v3
 export default {
   content: ['./src/**/*.{js,jsx,ts,tsx,vue,astro,html}', './public/**/*.html'],
   theme: { extend: {} },
@@ -126,6 +210,35 @@ npx tailwindcss -i src/input.css -o output.css --minify --verbose
 # Verify no missing classes by spot-checking known-used utilities
 ```
 
+### Step 9: Handle Dark Mode
+```js
+// tailwind.config.js
+export default {
+  darkMode: 'class', // or 'media'
+}
+```
+Use `dark:` variants for elements that change in dark mode. With `class` strategy, toggle dark mode by adding `dark` class to `<html>` element.
+
+### Step 10: Manage Custom Plugins
+```js
+const plugin = require('tailwindcss/plugin');
+module.exports = {
+  plugins: [
+    plugin(function({ addUtilities, addComponents, addBase, matchUtilities, theme }) {
+      addUtilities({
+        '.scrollbar-thin': { scrollbarWidth: 'thin' },
+      });
+      matchUtilities({
+        'scrollbar': (value) => ({ 'scrollbar-width': value }),
+      }, { values: { thin: 'thin', none: 'none' } });
+    }),
+  ],
+};
+```
+
+### Step 11: Purge Unused Animations and Keyframes
+If using Tailwind's `animate-*` utilities, only the classes you use are generated. For custom keyframes, wrap in `@theme` (v4) or `theme.extend.animation` + `theme.extend.keyframes` (v3).
+
 ## Best Practices
 
 | Practice | Why | Example |
@@ -137,38 +250,145 @@ npx tailwindcss -i src/input.css -o output.css --minify --verbose
 | Plugin over custom CSS | Tree-shakeable, maintained | `@tailwindcss/forms` vs custom input styles |
 | `size-*` for equal dimensions | Shorthand for w+h | `size-10` = `w-10 h-10` |
 | `content` path coverage | No missing classes in prod | Glob all template extensions |
+| `cn()` helper for conditional classes | Cleaner JSX | `cn('base', condition && 'extra')` |
+| `@layer` for custom utilities | Proper cascade ordering | `@layer utilities { ... }` |
 
-## Pitfalls to Avoid
+## Common Pitfalls
 
-- **Class concatenation**: `bg-${color}-500` — JIT can't detect dynamic parts. Use full class names in arrays + `map()`.
-- **Inline styles overriding utilities**: `style={{ color: '#333' }}` defeats Tailwind's design system. Use token classes.
-- **Custom CSS for layouts**: `display: grid` → `grid`, `display: flex` → `flex`. Tailwind covers 99% of layout needs.
-- **Over-nesting in `@apply`**: Don't `@apply` complex responsive/dark variants in one go. Keep each variant as its own class.
-- **Ignoring `content` paths**: Missing glob patterns = purged classes in production. Always verify with `--dry-run`.
-- **Linear animations**: Use `ease-*` utilities. Never `transition: all` — be specific with `transition-colors`, `transition-transform`.
-- **Forgetting `darkMode: 'class'`**: If using class-based dark mode, `dark:` variants won't work without it.
+### 1. String Concatenation in Class Names
+```jsx
+// BAD -- JIT cannot detect dynamic parts
+<div className={`bg-${color}-500`}>
+
+// GOOD -- full class names in mapping
+const colorMap = { red: 'bg-red-500', green: 'bg-green-500' };
+<div className={colorMap[color]}>
+```
+
+### 2. Missing Content Paths for Third-Party Packages
+If you use a component library that uses Tailwind classes, its classes will be purged unless you add its source to `content`:
+```js
+content: ['./node_modules/@my-lib/**/*.js']
+```
+
+### 3. Overusing @apply Instead of Component Abstraction
+`@apply` generates duplicate CSS if used in multiple places. For reusable patterns, use framework components instead. Reserve `@apply` for cases where you cannot use a component (CMS templates, legacy code).
+
+### 4. Using dark: Variants Without darkMode Config
+```js
+// This will NOT work:
+// tailwind.config.js without darkMode: 'class'
+// <div className="dark:bg-gray-800">
+
+// Fix:
+export default { darkMode: 'class' };
+```
+
+### 5. Forgetting to Restore Default Scale
+When you add a custom spacing value, Tailwind's default spacing scale is still available unless you override the entire `spacing` key.
+```js
+// This REPLACES the default scale -- bad
+theme: { spacing: { 4: '1rem', 8: '2rem' } }
+// This ADDS to the default scale -- good
+theme: { extend: { spacing: { 18: '4.5rem' } } }
+```
+
+### 6. Arbitrary Value Overuse
+```html
+<!-- BAD -- creates inconsistency -->
+<div class="text-[#333] p-[13px] gap-[7px]">
+
+<!-- GOOD -- uses design tokens -->
+<div class="text-gray-800 p-3 gap-2">
+```
+
+Arbitrary values should be reserved for truly one-off cases (e.g., a specific measurement from a design comp that does not match the spacing scale).
+
+### 7. Nested @apply with Responsive Variants
+```css
+/* BAD -- responsive variants inside @apply */
+.btn { @apply text-sm lg:text-base; }
+/* The lg: variant won't work inside @apply */
+```
+
+## Compared With
+
+| Approach | Bundle Size | Developer Experience | Customization | Runtime Theming |
+|----------|-------------|---------------------|---------------|-----------------|
+| Tailwind CSS | < 15KB after purge | Excellent with IntelliSense | Config-driven | Possible via CSS vars |
+| CSS Modules | Zero runtime | Good with co-located styles | Per-component | Yes |
+| Styled Components | ~15KB runtime | Good, JS-based | Runtime dynamic | Native |
+| Vanilla CSS | Zero | Manual | Unlimited | Yes |
+| Bootstrap | ~30KB (utilities only) | Good, predates Tailwind | Sass variable overrides | Via CSS variables |
+| Open Props | ~20KB | Good, design tokens | CSS variable overrides | Yes, via CSS vars |
+
+## Performance Considerations
+
+### Build Time Optimization
+- v4 is 2-5x faster than v3 due to Lightning CSS integration
+- Use `@tailwindcss/vite` for Vite projects -- it uses esbuild for pre-processing
+- Keep `content` paths narrow: `./src/**/*.{jsx,tsx}` instead of `./src/**/*`
+- Avoid regex in `safelist` patterns -- they are evaluated per class
+
+### CSS Output Size
+- A typical app with 500 unique utility classes: 8-15KB uncompressed, 3-5KB gzipped
+- Large apps with 2000+ unique classes: 30-50KB uncompressed, 8-15KB gzipped
+- Monitor with `npx tailwindcss -i src/input.css -o /dev/null --dry-run -v`
+
+### Runtime Performance
+- Tailwind classes translate to static CSS -- zero runtime performance cost
+- Dynamic class computation (clsx, cn) is negligible (< 0.1ms per render)
+- CSS custom properties used by Tailwind themes have minimal performance impact
+
+## Ecosystem & Tooling
+
+### IntelliSense
+- VS Code: Tailwind CSS IntelliSense extension (autocomplete, hover preview, linting)
+- WebStorm: Built-in Tailwind support since 2021.3
+
+### Formatting
+- prettier-plugin-tailwindcss -- automatically sorts classes in the recommended order
+- Install: `npm i -D prettier prettier-plugin-tailwindcss`
+- Add to `prettier.config.js`: `{ plugins: ['prettier-plugin-tailwindcss'] }`
+
+### Build Plugins
+- `@tailwindcss/vite` -- Vite plugin for v4 (handles `@import "tailwindcss"`)
+- `@tailwindcss/postcss` -- PostCSS plugin for v4
+- `@tailwindcss/forms` -- Form reset and style normalization
+- `@tailwindcss/typography` -- Prose styling for rich text
+- `@tailwindcss/container-queries` -- Container query support (`@sm:`, `@md:`, etc.)
+
+### Design Tool Integration
+- Figma to Tailwind: Anima, Tailwind CSS Builder, Figma Tokens
+- Storybook: Storybook-addon-tailwind-dark-mode for theme switching
 
 ## Rules
-- Never use `!important` in CSS — use Tailwind's `!` prefix instead
-- Never write raw CSS when a Tailwind utility exists — that includes `display: flex` → `flex`
+- Never use `!important` in CSS -- use Tailwind's `!` prefix instead
+- Never write raw CSS when a Tailwind utility exists -- that includes `display: flex` to `flex`
 - Always configure `content` paths explicitly; wildcard patterns like `./src/**/*.{js,jsx,ts,tsx}` are preferred
 - Prefer v4 `@import "tailwindcss"` syntax for new projects; fall back to `@tailwind` directives only for v3 compatibility
 - Never remove or override Tailwind's default spacing/fontSize scales unless the design system explicitly requires it. Use `extend` or `@theme` instead
-- Keep `tailwind.config.*` flat — avoid deeply nested plugin abstractions unless there are 5+ sites sharing the config
+- Keep `tailwind.config.*` flat -- avoid deeply nested plugin abstractions unless there are 5+ sites sharing the config
 - Always output `@theme` tokens with the `--` prefix in v4: `--color-brand-500: #3b82f6`
-- Never use `@apply` inside `@media` queries — use responsive variants instead
-- Position `container queries` (`@sm:`, `@md:`) after viewport breakpoints in class order
+- Never use `@apply` inside `@media` queries -- use responsive variants instead
+- Position container queries (`@sm:`, `@md:`) after viewport breakpoints in class order
+- Avoid `@apply` for responsive or dark variants -- use the utility directly on the element
+- Never use `@layer` in component library source -- it changes the cascade order
 
 ## References
-  - references/component-patterns.md — Component Patterns Reference
-  - references/configuration.md — Tailwind Configuration Reference
-  - references/design-tokens.md — Design Tokens Reference
-  - references/performance.md — Tailwind CSS Performance Reference
-  - references/responsive-patterns.md — Responsive Patterns Reference
-  - references/utility-first.md — Utility-First CSS Reference
+
+- `references/component-patterns.md` -- Component Patterns Reference
+- `references/configuration.md` -- Tailwind Configuration Reference
+- `references/design-tokens.md` -- Design Tokens Reference
+- `references/performance.md` -- Tailwind CSS Performance Reference
+- `references/responsive-patterns.md` -- Responsive Patterns Reference
+- `references/utility-first.md` -- Utility-First CSS Reference
+- `references/tailwind-design-system.md` -- Tailwind Design System Integration
+- `references/tailwind-performance-optimization.md` -- Tailwind Performance & Build Optimization
+
 ## Handoff
 No artifact produced unless requested.
 Next skill: `frontend-storybook` (if component documentation is needed next)
 Carry forward: Tailwind theme config tokens (colors, spacing, fonts, breakpoints)
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output.

@@ -58,6 +58,89 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ### Max Response Length
 300 lines of configuration and rules.
 
+## Architecture / Decision Trees
+
+### SAST Tool Selection Decision Tree
+
+```
+What is the primary goal?
+├── Custom rule writing per project patterns → Semgrep
+├── Deep interprocedural / variant analysis → CodeQL
+├── Quality gates and tech debt tracking → SonarQube
+├── Unified platform (code + deps + containers) → Snyk Code
+└── Enterprise compliance reporting → Checkmarx / Fortify
+
+Is the repo public or private?
+├── Public → Semgrep (free) + CodeQL (free for public repos)
+├── Private with GitHub Advanced Security → CodeQL included
+└── Private without GHAS → Semgrep (free) + SonarQube Community (free)
+
+What languages are in the codebase?
+├── Python, JavaScript/TypeScript, Java, Go → Any tool works
+├── C/C++, C#, Kotlin, Swift → CodeQL or Semgrep
+├── Ruby, PHP, Rust → Semgrep (best coverage)
+├── Scala, Kotlin → CodeQL or Semgrep
+└── 10+ languages → SonarQube (broadest support)
+
+What is the team size?
+├── <10 developers → Semgrep + ZAP (free, effective)
+├── 10-50 developers → Semgrep + SonarQube + ZAP
+├── 50-200 developers → Semgrep + SonarQube + Burp Pro + ZAP
+└── >200 developers → Enterprise suite (Checkmarx/Fortify + Acunetix)
+```
+
+### DAST Tool Selection Decision Tree
+
+```
+What is the budget?
+├── $0 → OWASP ZAP (full-featured, free)
+├── $500-1000/year → ZAP + Burp Suite Community
+├── $5000+/year → Burp Suite Professional
+└── Enterprise budget → Acunetix or Burp Enterprise
+
+What type of application?
+├── Standard web app (HTML forms, links) → Any DAST tool
+├── SPA (React, Angular, Vue) → ZAP (SPA-friendly crawler) or Burp
+├── API-only (REST, GraphQL) → ZAP API scan (best for OpenAPI/GraphQL)
+├── Mobile app backend → Burp (mobile proxy setup)
+└── Internal enterprise app → Acunetix (macro auth)
+
+What is the scan target?
+├── CI/CD (automated, pipeline) → ZAP Docker (best CI integration)
+├── Manual penetration testing → Burp Suite (best manual workflow)
+├── Compliance scanning → Acunetix (comprehensive reporting)
+└── Production passive scanning → ZAP baseline (safe, read-only)
+```
+
+### SAST + DAST Correlation Strategy
+
+```
+Findings correlation matrix:
+
+Vulnerability Class          │ SAST Covers        │ DAST Covers
+───────────────────────────────────────────────────────────────
+SQL Injection                │ Source + sink      │ Confirms exploitability
+XSS                          │ Sink only          │ Confirms with payload
+Command Injection            │ Source + sink      │ Confirms exploitability
+Path Traversal               │ Source + sink      │ Confirms exploitability
+SSRF                         │ Source (limited)   │ Confirms endpoint
+Authentication Bypass        │ Logic patterns     │ Confirms via session
+Authorization Issues         │ Missing checks     │ Confirms via access
+CSRF                         │ Missing tokens     │ Confirms via request
+Insecure Deserialization     │ Dangerous calls    │ Confirms via payload
+Sensitive Data Exposure      │ Hardcoded secrets  │ Confirms in response
+Security Misconfiguration    │ Config analysis    │ Confirms headers/CSP
+XXE                          │ Parser config      │ Confirms with payload
+
+Workflow:
+├── SAST finds potential vulnerability with file/line reference
+├── Map to DAST-affected endpoint (if applicable)
+├── DAST confirms exploitability with live payload
+├── If SAST flags but DAST cannot confirm → manual review
+├── If DAST finds but SAST didn't flag → improve SAST rules
+└── Both-positive findings: highest priority for remediation
+```
+
 ## SAST Tool Details
 
 ### Semgrep
@@ -174,8 +257,86 @@ New Finding → Automated Dedup → Categorize Severity
 | MEDIUM | 2 sprints | 1 sprint | Monthly report |
 | LOW | Indefinite | Per fix | Quarterly report |
 
+## Common Pitfalls
+
+### Pitfall 1: Running Full SAST on Every PR
+Full codebase scans take 30-60 minutes, blocking CI pipelines. Use diff-aware scanning for PRs (Semgrep `--baseline-commit`, SonarQube new code analysis). Save full scans for nightly builds.
+
+### Pitfall 2: DAST on Production Without Care
+Active DAST scanning sends malicious payloads that can corrupt data, trigger alerts, or crash services. Always target staging or a dedicated test environment. Production scans must be passive-only (ZAP baseline, read-only checks).
+
+### Pitfall 3: No False Positive Triage Backlog
+Without a documented FP process, teams ignore scan results entirely. Create a `.sast-fps.yml` file per project, tag findings with rationale, and review quarterly.
+
+### Pitfall 4: Ignoring SAST-DAST Correlation
+SAST finds code-level issues. DAST finds runtime issues. They complement each other but are often run in isolation. Correlate findings: SAST flags the source, DAST confirms exploitability. Prioritize correlated findings.
+
+### Pitfall 5: Overly Permissive Scan Scope
+DAST scanning third-party endpoints, analytics services, or auth providers causes false positives and may violate terms of service. Define scope precisely with URL regex patterns.
+
+### Pitfall 6: No Authenticated DAST Scanning
+Scanning only unauthenticated pages misses 80% of application logic. Always configure authenticated sessions. Test authentication injection before full scan execution.
+
+### Pitfall 7: Using Default Rules Only
+Default rule packs are generic and miss project-specific patterns. Write custom rules for your framework, authentication model, and business logic.
+
+### Pitfall 8: No Severity-Based SLA
+Without severity-defined SLAs, critical findings sit alongside low-priority ones. Set SLAs: CRITICAL 24h, HIGH 72h, MEDIUM 2 sprints, LOW per backlog.
+
+### Pitfall 9: Blocking CI on Everything
+Blocking on WARN or INFO findings creates friction and leads to rule bypass. Block only on ERROR/CRITICAL. Use WARN to trend, not to block.
+
+### Pitfall 10: No Historical Trend Tracking
+Without trend data, you cannot tell if security posture is improving or degrading. SonarQube tracks metrics over time. Generate weekly trend reports by severity.
+
+## Best Practices
+
+- Run SAST on every PR diff (Semgrep `--baseline-commit`). Full scan nightly.
+- Use multiple SAST tools in combination: Semgrep (custom rules, speed) + SonarQube (quality gates, trends).
+- Run DAST on staging every full scan; quick baseline per deployment.
+- Correlate SAST and DAST findings. Prioritize issues confirmed by both.
+- Define severity-based SLAs with automated ticket creation.
+- Store false positive decisions in version-controlled files with expiry dates.
+- Write custom Semgrep rules for your framework and patterns. Test with `semgrep --test`.
+- Write custom CodeQL queries for complex data-flow vulnerabilities.
+- Test authentication injection before running full DAST scans.
+- Exclude destructive and high-volume endpoints from DAST active scanning.
+- Track finding age: 0-7d active, 7-30d aging, 30d+ overdue.
+- Review false positive decisions quarterly. Remove stale entries.
+- Generate weekly trend reports shared with the engineering team.
+- Include SAST findings in code review PR template.
+
+## Compared With
+
+### Semgrep vs CodeQL
+Semgrep is faster and easier for custom rule writing (YAML patterns, simple syntax). CodeQL provides deeper interprocedural analysis but requires a compiled database and QL query language. Choose Semgrep for quick custom rules, CodeQL for variant analysis and complex data-flow tracing.
+
+### Semgrep vs SonarQube
+Semgrep focuses on finding vulnerabilities with custom patterns. SonarQube tracks overall code health: coverage, duplication, code smells, technical debt. They are complementary. Use Semgrep for SAST detection. Use SonarQube for quality gates and trends.
+
+### ZAP vs Burp Suite
+ZAP is free, open-source, and CI-friendly (Docker, CLI). Burp Suite Pro offers better manual testing workflows and a rich extension ecosystem. Use ZAP for CI/CD automation. Use Burp for professional manual pentesting.
+
+### ZAP vs Acunetix
+ZAP is free with community support. Acunetix is commercial with deeper scanning, macro auth recording, and enterprise compliance reporting. Use ZAP for regular CI scanning. Use Acunetix for quarterly compliance scans.
+
+### SAST vs DAST
+SAST finds issues early in development (shift-left) with file/line precision. DAST finds runtime issues with exploitability confirmation. SAST has higher false positive rate. DAST has higher true positive rate but finds issues later. Use both for defense in depth.
+
+## Performance Considerations
+
+- Semgrep diff scan: <5s for typical PR diff (100-500 lines). Full scan: 1-5min per 100K lines.
+- CodeQL database build: 5-30min depending on language and codebase size. Query execution: 1-10min.
+- SonarQube scan: 15-60min for full codebase. New code analysis: <5min for PR.
+- ZAP baseline scan: 15-30min for typical app. ZAP active scan: 2-4h for medium app.
+- Burp Suite scan: 4-8h for full audit of medium application.
+- Acunetix scan: 2-6h for full deep scan.
+- CI pipeline time budget: SAST <5min, DAST baseline <30min, DAST active (nightly).
+- Resource usage: SAST tools need 1-4GB RAM per concurrent scan. DAST tools need 2-8GB.
+- Parallel scans: run SAST + DAST in parallel in CI. SAST gates before merge, DAST reports after.
+- Scan frequency: PR-level SAST, daily full SAST, per-deployment DAST baseline, weekly DAST active.
+
 ## Rules
-- SAST runs on every PR diff, not full codebase
 - DAST targets staging only — never production
 - Custom Semgrep rules stored in `.semgrep/rules/` with tests
 - False positives documented with rationale, not silently suppressed
@@ -191,6 +352,8 @@ New Finding → Automated Dedup → Categorize Severity
   - references/sast-dast-fundamentals.md — Sast Dast Fundamentals
   - references/sast-rules-customization.md — SAST Rule Customization
   - references/sast-tools.md — SAST Tools
+  - references/sast-tool-selection-integration.md — SAST tool selection and CI integration guide
+  - references/dast-scoping-execution.md — DAST scoping, execution, and reporting patterns
 ## Handoff
 `security-api-security` for API-specific scanning and protection rules
 `devops-ci-cd` for pipeline integration and deployment gates

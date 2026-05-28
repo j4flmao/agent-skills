@@ -18,6 +18,62 @@ tags: [data, database, nosql, phase-11]
 ## Purpose
 Select and design NoSQL databases by access patterns, data shape, consistency requirements, and scale. Use document stores for flexible schemas, wide-column for high-scale writes, key-value for caching, and single-table designs for DynamoDB.
 
+## Architecture / Decision Trees
+
+### NoSQL Type Selection Decision Tree
+
+```
+What is the primary access pattern?
+├── Complex queries with flexible filters, aggregations
+│   └── Document store (MongoDB, Couchbase)
+├── Simple lookups by primary key, high throughput
+│   ├── Key-value reads < 1KB → Redis (in-memory)
+│   └── Larger payloads, durable → DynamoDB
+├── High-volume writes, time-series data
+│   └── Wide-column (Cassandra, Scylla, Bigtable)
+├── Relationship-heavy traversals
+│   └── Graph (Neo4j, Amazon Neptune)
+
+What consistency model is required?
+├── Strong consistency required → MongoDB (primary reads, majority write)
+├── Tunable consistency → Cassandra (ONE/QUORUM/ALL per query)
+├── Eventually consistent acceptable → DynamoDB (default eventual reads)
+└── Strict serializable → Spanner, CosmosDB (Bounded Staleness)
+
+What is the write volume?
+├── < 10K writes/sec → MongoDB, DynamoDB, any
+├── 10K-100K writes/sec → Cassandra, Scylla, DynamoDB (on-demand)
+├── 100K-1M writes/sec → Scylla, Cassandra (tuned), Bigtable
+└── > 1M writes/sec → Scylla, Bigtable, custom partitioning
+
+What is the data size per entity?
+├── Small documents (< 16MB) → MongoDB (16MB doc limit)
+├── Large blobs → Store in S3/GCS, reference in NoSQL
+└── Variable size → DynamoDB (400KB item limit)
+```
+
+### Partition Key Design Decision Tree
+
+```
+What is the query pattern?
+├── Always query by user/tenant ID
+│   └── User/tenant ID as partition key
+├── Query by time range within a partition
+│   └── Partition: user/region, Sort/cluster: timestamp
+├── Global queries across all partitions
+│   └── GSI (DynamoDB), secondary index (MongoDB)
+├── Need time-series + evenly distributed writes
+│   └── Compound partition key with time bucket + hashed shard key
+└── Need geographic data locality
+    └── Ranged shard key by region
+
+Avoid:
+├── Monotonically increasing keys (all writes to last shard)
+├── Low-cardinality keys (jumbo partitions, hot spots)
+├── Single-attribute keys for multi-tenant (all writes to one shard)
+└── Frequently updated keys (cross-shard transactions)
+```
+
 ## Agent Protocol
 
 ### Trigger
@@ -235,8 +291,87 @@ CREATE TABLE sensor_readings (
   };
 ```
 
-## Rules
-- Query-first design: model around known access patterns, never data shape
+## Common Pitfalls
+
+### Pitfall 1: Relational Thinking in NoSQL
+Designing normalized schemas with foreign keys and expecting joins. NoSQL requires denormalization and embedding. MongoDB supports $lookup but it's slow. DynamoDB has no joins. Cassandra has no joins.
+
+### Pitfall 2: Poor Shard Key Selection
+Using monotonically increasing keys (timestamps, auto-increment IDs) as shard keys. All writes go to the last shard, creating a hot spot. Use hashed shard keys for time-series data.
+
+### Pitfall 3: Overusing Secondary Indexes
+Secondary indexes in wide-column stores (Cassandra SASI, MongoDB slow queries) are often slower than full scans. Prefer query-by-design (one table per access pattern in Cassandra, GSIs in DynamoDB).
+
+### Pitfall 4: Ignoring Item Size Limits
+MongoDB has a 16MB document limit. DynamoDB has a 400KB item limit. Exceeding these causes write failures. Plan for large items (gridFS for MongoDB, S3 references for DynamoDB).
+
+### Pitfall 5: Cross-Partition Queries in Cassandra
+Cassandra WHERE clauses can only filter on partition key + clustering columns. Any non-key filter requires ALLOW FILTERING (full scan). Design tables per query pattern.
+
+### Pitfall 6: No Capacity Planning for DynamoDB
+Using on-demand capacity for predictable workloads costs significantly more. Provisioned capacity with auto-scaling reduces costs 50-70%.
+
+### Pitfall 7: MongoDB Without Indexes
+Queries without indexes cause collection scans, blocking reads on large collections. Always index query fields. Use explain() to verify index usage.
+
+### Pitfall 8: Over-normalization in DynamoDB
+Creating separate tables per entity type loses the single-table design benefits. Use composite keys (PK/SK) with entity_type attribute for multi-entity access.
+
+### Pitfall 9: Ignoring Compaction in Cassandra
+Default compaction (SizeTieredCompactionStrategy) causes write amplification and disk space bloat. Use TimeWindowCompactionStrategy for time-series, LeveledCompactionStrategy for read-heavy.
+
+### Pitfall 10: Inconsistent Consistency Configuration
+Using different consistency levels for read and write without understanding the implications. Write concern w:majority with read concern local can read uncommitted data.
+
+## Best Practices
+
+- Design data model around access patterns, not data shape. Query-first design.
+- Use single-table design in DynamoDB. Entity type attribute, composite PK/SK.
+- One table per query pattern in Cassandra. Each table optimized for one access path.
+- Embed related data in MongoDB when accessed together. Reference when shared.
+- Choose shard key with high cardinality and even distribution. Hash time-series keys.
+- Prefer Global Secondary Indexes over Local Secondary Indexes in DynamoDB.
+- Use compound partition keys in Cassandra for even distribution.
+- Set write concern to majority for durability in MongoDB.
+- Use TimeWindowCompactionStrategy for time-series data in Cassandra.
+- Enable auto-scaling for DynamoDB provisioned capacity. Monitor consumption.
+- Create indexes for all query patterns in MongoDB. Use explain() to verify.
+- Use bulk writes for high-volume inserts. ordered:false for best-effort.
+- Test with production-scale data volumes, not synthetic small datasets.
+- Monitor hot partitions with CloudWatch / MongoDB Atlas metrics.
+- Enable point-in-time recovery for DynamoDB (last 35 days).
+- Use on-demand backup for schema changes, PITR for operational recovery.
+
+## Compared With
+
+### MongoDB vs DynamoDB
+MongoDB offers richer queries (aggregation pipeline, text search, geospatial) with flexible schema. DynamoDB offers single-digit-millisecond latency at any scale with auto-scaling. Choose MongoDB for complex querying. Choose DynamoDB for predictable key-value access with auto-scaling.
+
+### Cassandra vs MongoDB
+Cassandra writes are faster and scale linearly with nodes. MongoDB reads are more flexible (any field, any filter). Cassandra has no joins, no aggregations, no secondary indexes (in practice). MongoDB has full query support. Choose Cassandra for write-heavy, no-compromise scalability. Choose MongoDB for developer productivity.
+
+### DynamoDB vs Cassandra
+DynamoDB is fully managed with auto-scaling, no ops overhead. Cassandra requires operational expertise (compaction, repairs, gossip management). DynamoDB has 400KB item limit, 1MB query limit, and no joins. Cassandra has 2GB cell limit but no practical query size limit. Choose DynamoDB for managed simplicity. Choose Cassandra for multi-region, multi-datacenter control.
+
+### Document vs Wide-Column vs Key-Value
+Document stores: flexible schema, rich queries, medium scale. Wide-column: rigid schema by partition key, massive scale, time-series. Key-value: simplest model, fastest lookups, caching. Choose document for general purpose. Choose wide-column for write-heavy time-series. Choose key-value for caching and session management.
+
+## Performance Considerations
+
+- MongoDB: WiredTiger cache 50% of RAM minus 1GB. Indexes fit in RAM for best performance.
+- MongoDB: Aggregation pipeline $match and $sort use indexes. $lookup requires index on foreign field.
+- MongoDB: Batch inserts: 10K-100K documents per batch. ordered:false for best throughput.
+- DynamoDB: One strongly consistent read consumes 1 RCU (4KB). One eventually consistent read consumes 0.5 RCU.
+- DynamoDB: One write consumes 1 WCU (1KB). Items > 1KB cost proportionally more.
+- DynamoDB: Query returns max 1MB. Pagination required for larger results. Use LastEvaluatedKey.
+- DynamoDB: GSI writes are eventually consistent. Writes to main table propagate asynchronously.
+- Cassandra: Write throughput scales linearly with node count. 10K writes/sec per node typical.
+- Cassandra: Read repair chance: default 10%. Increase for read-heavy, decrease for write-heavy.
+- Cassandra: Hinted handoff stores writes for downed nodes up to 3 hours by default.
+- Latency targets: DynamoDB single-digit ms, Cassandra 1-5ms per node, MongoDB 1-10ms indexed.
+- Throughput: DynamoDB on-demand 4K write/sec/partition, read 8K/sec/partition. Cassandra 10K/sec/node.
+
+## Rules: model around known access patterns, never data shape
 - Single-table design in DynamoDB for all related entities
 - One table per query pattern in Cassandra
 - Embed in MongoDB when sub-documents are accessed together
@@ -254,6 +389,8 @@ CREATE TABLE sensor_readings (
   - references/nosql-cap-theorem.md — NoSQL CAP Theorem
   - references/nosql-performance-tuning.md — NoSQL Performance Tuning
   - references/wide-column.md — Wide-Column Database Reference
+  - references/nosql-data-modeling.md — Data modeling patterns for NoSQL databases
+  - references/nosql-query-optimization.md — Query optimization and indexing strategies
 ## Handoff
 `data-graph-database` for relationship-heavy queries
 `data-search-engine` for full-text search over NoSQL data
