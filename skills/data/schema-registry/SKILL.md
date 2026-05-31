@@ -2,7 +2,7 @@
 name: data-schema-registry
 description: >
   Use this skill when asked about Schema Registry, Avro, Protobuf, schema evolution, compatibility, Confluent Schema Registry, Apicurio, serialization, deserialization, or schema validation. This skill enforces: Schema Registry architecture and deployment, Avro/Protobuf/JSON Schema definition, compatibility modes (BACKWARD, FORWARD, FULL, NONE), schema evolution best practices, SerDe (serialization/deserialization) patterns, and CI/CD integration for schema governance. Do NOT use for: data contract enforcement, data catalog management, or database schema design.
-version: "1.0.0"
+version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -73,14 +73,12 @@ Default: Avro for Kafka/Confluent stacks. Protobuf for gRPC + streaming. JSON Sc
 
 ```avro
 {
-  "type": "record",
-  "name": "Order",
-  "namespace": "com.org.data.orders",
+  "type": "record", "name": "Order", "namespace": "com.org.data.orders",
   "doc": "Order event schema",
   "fields": [
     {"name": "order_id", "type": "string", "doc": "Unique order identifier"},
-    {"name": "customer_id", "type": "string", "doc": "Customer identifier"},
-    {"name": "total_amount", "type": "double", "doc": "Order total in USD"},
+    {"name": "customer_id", "type": "string"},
+    {"name": "total_amount", "type": "double"},
     {"name": "currency", "type": "string", "default": "USD"},
     {"name": "status", "type": {"type": "enum", "name": "OrderStatus",
       "symbols": ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"]}},
@@ -106,98 +104,53 @@ Default: Avro for Kafka/Confluent stacks. Protobuf for gRPC + streaming. JSON Sc
 | **FULL** | Add optional fields only | Both directions compatible | Strict governance |
 | **NONE** | Any change allowed | Consumers must sync | Dev/test only |
 
-```yaml
-subjects:
-  orders-value:
-    compatibility: BACKWARD
-    owner: orders-team
-    description: "Order event value schema"
-  orders-key:
-    compatibility: FULL
-    owner: orders-team
-    description: "Order key (order_id string)"
-  customer-value:
-    compatibility: FORWARD
-    owner: customer-team
-    description: "Customer event value schema"
-```
-
-Default rule: production topics = BACKWARD. Key subjects = FULL (keys are critical). Dev topics = NONE.
-
 ### Step 4: Deploy Schema Registry
 
 ```yaml
-# docker-compose.schema-registry.yaml
 services:
   schema-registry:
     image: confluentinc/cp-schema-registry:7.6.0
-    ports:
-      - "8081:8081"
+    ports: ["8081:8081"]
     environment:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_TOPIC: _schemas
       SCHEMA_REGISTRY_COMPATIBILITY_LEVEL: BACKWARD
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-      SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_METHODS: GET,POST,PUT,DELETE
-      SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: SASL_SSL
-      SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM: SCRAM-SHA-512
-    depends_on:
-      - kafka
+      SCHEMA_REGISTRY_KAFKASTORE_TOPIC: _schemas
 ```
 
 ### Step 5: Configure SerDe
 
 ```java
-// Kafka Producer (Java) — Avro Serde with Schema Registry
-Properties props = new Properties();
-props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
+// Kafka Producer — Avro Serde with Schema Registry
 props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class.getName());
 props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class.getName());
 props.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://schema-registry:8081");
 props.put(KafkaAvroSerializerConfig.AUTO_REGISTER_SCHEMAS, "false");
 props.put(KafkaAvroSerializerConfig.USE_LATEST_VERSION, "true");
-
-// Kafka Consumer — Avro Deserializer with Schema Registry
-props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class.getName());
-props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class.getName());
-props.put(KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://schema-registry:8081");
-props.put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, "true");
 ```
 
 ### Step 6: CI/CD Schema Validation
 
 ```yaml
-# .github/workflows/schema-check.yml
 jobs:
   schema-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Avro Schema
+      - name: Validate and Check Compatibility
         run: |
           for schema in schemas/**/*.avsc; do
-            python scripts/validate_avro.py "$schema"
-          done
-      - name: Check Compatibility
-        run: |
-          for schema in schemas/**/*.avsc; do
-            subject=$(basename "$schema" .avsc)-value
-            python scripts/check_compatibility.py \
-              --subject "$subject" \
-              --schema "$schema" \
-              --mode BACKWARD \
-              --registry http://schema-registry:8081
+            python scripts/validate_and_register.py \
+              --subject "$(basename $schema .avsc)-value" \
+              --schema "$schema" --mode BACKWARD
           done
       - name: Register Schema
         if: success() && github.ref == 'refs/heads/main'
         run: |
           for schema in schemas/**/*.avsc; do
             subject=$(basename "$schema" .avsc)-value
-            python scripts/register_schema.py \
-              --subject "$subject" \
-              --schema "$schema" \
-              --registry http://schema-registry:8081
+            python scripts/register_schema.py --subject "$subject" --schema "$schema"
           done
 ```
 
@@ -207,48 +160,133 @@ jobs:
 |---|---|
 | Always provide `default` for new fields | Ensures backward compatibility |
 | Never remove a field without deprecation period | Avoids breaking consumers |
-| Use enum types with care — adding symbols is backward-safe, removing is not | Enum evolution is restrictive |
+| Use enum types with care | Adding symbols is backward-safe, removing is not |
 | Key subjects use FULL compatibility | Keys are referenced across topics |
-| Production schemas require `auto.register.schemas = false` | Prevents accidental schema registration |
-| Schema changes reviewed by schema governance | Catches breaking changes before deploy |
+| Auto-register schemas disabled in production | Prevents accidental schema registration |
 
 ### Step 8: AsyncAPI and JSON Schema
-AsyncAPI is the specification for event-driven API documentation (analogous to OpenAPI for REST). Describes channels (Kafka topics, Pulsar topics, MQTT), messages with payloads (Avro/Protobuf/JSON Schema), and protocol bindings. AsyncAPI pairs with Schema Registry by documenting message flow: topic names, publish/subscribe patterns, payload schemas, correlation IDs. Generates client code, mock servers, and validation tools. Use AsyncAPI as the contract layer above Schema Registry for event-driven architecture governance.
-
-JSON Schema provides conditional validation for JSON payloads. Deep usage: `$defs` for reusable components, `if/then/else` for conditional validation, `oneOf/anyOf/allOf` for composition, `format` (email, date-time, uri) for semantic validation. Use JSON Schema with Schema Registry via Confluent's JsonSchemaSerde or Apicurio. JSON Schema payloads are larger than Avro/Protobuf but offer easier debugging and broader tooling support.
-
-```json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "object",
-  "properties": {
-    "order_id": {"type": "string"},
-    "customer": {"$ref": "#/$defs/customer"},
-    "items": {"type": "array", "items": {"$ref": "#/$defs/line_item"}},
-    "status": {"type": "string", "enum": ["pending", "confirmed", "shipped"]}
-  },
-  "required": ["order_id", "items"],
-  "if": {"properties": {"status": {"const": "shipped"}}},
-  "then": {"required": ["tracking_number"]}
-}
-```
+AsyncAPI pairs with Schema Registry by documenting event-driven API message flow with topic names, publish/subscribe patterns, and payload schemas.
 
 ### Step 9: Buf for Schema Management
-Buf is a schema management tool for Protobuf enforcing lint rules (naming, field ordering, package structure) and breaking change detection (wire vs source compatibility) in CI/CD. Buf Schema Registry (BSR) manages Protobuf schemas across teams as a hosted registry for gRPC/Protobuf. Generates client/server code for multiple languages from a single schema source. Key commands: `buf breaking --against .git` checks breaking changes against previous commit; `buf lint` enforces 100+ rules. Use Buf for gRPC microservices needing rigorous Protobuf governance and breaking change detection in CI.
+Buf enforces Protobuf lint rules and breaking change detection in CI/CD. `buf breaking --against .git` checks breaking changes against previous commit. Use for gRPC microservices requiring rigorous Protobuf governance.
 
-```yaml
-# buf.yaml
-version: v2
-lint:
-  use:
-    - STANDARD
-    - COMMENTS
-breaking:
-  use:
-    - FILE
-deps:
-  - buf.build/googleapis/googleapis
+### Step 10: Schema Registry as Source of Truth
+The schema registry is the authoritative source for all streaming schemas. Producers must register schemas before writing data. Consumers fetch schemas from registry to deserialize. No schema should be hardcoded in application code — always reference the registry.
+
+### Step 11: Multi-Tenant Schema Registry
+For organizations with multiple business units, use subject prefix isolation (`commerce.orders-value`, `finance.invoices-value`). Each tenant manages its own schemas within its prefix. The platform team manages registry infrastructure. Use Confluent Schema Registry's authorization mechanism with RBAC to isolate tenant access.
+
+### Step 12: Schema Migration Strategies
+For breaking schema changes that cannot be avoided, follow a multi-step migration:
+1. Add new fields with defaults (compatible change) — deploy
+2. Allow old and new schemas to coexist (dual-schema period) — 30 days
+3. Deprecate old fields (mark as deprecated in schema doc) — notify consumers
+4. Remove old fields (breaking change, MAJOR version) — deploy
+5. Clean up old schema versions that are no longer referenced
+
+## Architecture / Decision Trees
+
+### Format Selection
+
 ```
+New schema needed
+  ├── Kafka/Confluent ecosystem? → Avro
+  ├── gRPC services / multi-language? → Protobuf
+  ├── REST APIs / web frontends? → JSON Schema
+  └── Need both streaming + REST? → Avro for streaming, JSON Schema for REST
+```
+
+### Compatibility Mode Selection
+
+```
+Subject type:
+  ├── Key → FULL (keys are critical, must never break)
+  ├── Value, production → BACKWARD (safe default)
+  ├── Value, strict governance → FULL
+  ├── Value, CDC/stream consumers → FORWARD
+  └── Dev/test → NONE
+```
+
+### Registry Deployment Topology
+
+```
+Deployment scale:
+  ├── Single team, < 100 subjects → Single instance
+  ├── Multi-team, < 1000 subjects → HA cluster (3 nodes)
+  ├── Multi-region, < 10000 subjects → Per-registry + replication
+  └── Enterprise, global → Multi-registry federation
+```
+
+## Common Pitfalls
+
+1. **Auto-register schemas in production**: a single misconfigured producer can register an incorrect schema. Always set `auto.register.schemas = false`.
+2. **Enum removal**: removing symbols from an enum is a breaking change. Once data exists with a symbol, it cannot be removed.
+3. **No default on new fields**: adding a required field (no default) breaks backward compatibility. Always provide a default.
+4. **Schema registry single point of failure**: without HA, schema registry downtime blocks producers and consumers. Deploy with replication.
+5. **Subject naming inconsistency**: different teams use different naming conventions. Enforce a standard: `<topic_name>-key` and `<topic_name>-value`.
+6. **Ignoring deleted schema versions**: schemas can be deleted but referenced data persists. Use soft-delete or version archiving.
+7. **Protobuf field number reuse**: reusing field numbers breaks wire compatibility. Never reuse old field numbers.
+8. **No validation before registration**: registering invalid schemas pollutes the registry. Validate locally before submitting.
+9. **Key schema treated same as value**: key schemas need stricter compatibility (FULL) because keys are referenced across topics.
+10. **Not using transitive compatibility**: non-transitive only checks against latest version. Transitive checks against all versions.
+11. **Missing schema evolution documentation**: consumers don't know what changed. Maintain a schema changelog with migration notes.
+
+## Best Practices
+
+- Enforce schema compatibility checks in CI/CD before merging to main.
+- Every schema change requires a review by the schema governance team.
+- Schema registry is the source of truth for all streaming schemas.
+- Monitor compatibility check failures and broken producers/consumers.
+- Use subject prefixes for multi-tenant registries (e.g., `commerce.orders-value`).
+- Archive schemas older than 2 years to reduce registry size.
+- Automate schema evolution: add-only for minor versions, deprecation for major.
+- Test schema changes with shadow consumers before deploying.
+- Maintain a schema changelog for consumer awareness.
+- Use transitive compatibility enforcement for critical subjects.
+- Pin producer/consumer schema versions for canary deployments.
+- Document field semantics with `doc` attribute in schema definition.
+- Use schema references ($ref) for shared types across schemas.
+- Set up monitoring for schema registration failures and compatibility check latency.
+
+## Compared With
+
+| Feature | Confluent SR | Apicurio | Buf Schema Registry |
+|---|---|---|---|
+| Formats | Avro, Protobuf, JSON | Avro, Protobuf, JSON, GraphQL, OpenAPI | Protobuf only |
+| Compatibility | BACKWARD, FORWARD, FULL, NONE, TRANSITIVE | Same + CUSTOM | Wire + Source compatibility |
+| Deployment | Standalone, Confluent Cloud | Standalone, Red Hat | SaaS, self-hosted |
+| Integrations | Kafka, KSQL, Connect | Kafka, Quarkus, Camel | gRPC, Connect |
+| Governance | Client-side enforcement | Server-side rules | Lint + breaking change rules |
+| Ecosystem | Largest Kafka ecosystem | Cloud-native Java | Protobuf-centric |
+
+Schema registry vs data catalog: schema registry focuses on schema storage, compatibility checking, and providing schemas at serialization/deserialization time. Data catalog focuses on metadata management, discovery, and lineage. They are complementary: the schema registry feeds schemas to the catalog, and the catalog provides business context around schemas.
+
+## Performance
+
+- Schema registry adds ~5-15ms latency per serialization/deserialization call (cached on client after first fetch).
+- Avro binary serialization: 50-200MB/s throughput per core, payload 60-80% smaller than JSON.
+- Protobuf serialization: 100-400MB/s throughput per core, payload 70-85% smaller than JSON.
+- JSON Schema: 20-50MB/s throughput, payload same size as JSON (or larger with $ref expansion).
+- Schema fetch: first request fetches schema from registry (~10ms), subsequent requests use local cache.
+- Avro schema resolution: compatible reader/writer schema resolution happens on deserialization, adding ~1-5us per record.
+- Registry caching: client-side schema cache with LRU eviction. Configure cache size based on number of subjects.
+- Registry throughput: Confluent SR handles 1000+ schema registrations/second on modest hardware.
+- Network overhead: schema registry communication adds ~1-2ms per request in the same region, 10-50ms cross-region.
+- Global cache invalidation: when schema changes, existing cached schemas remain valid. Only new versions trigger fresh fetch.
+
+## Tooling
+
+| Tool | Purpose |
+|---|---|
+| Confluent Schema Registry | Primary schema registry for Kafka |
+| Apicurio | Alternative registry, multi-format support |
+| Buf | Protobuf linting, breaking change detection, BSR |
+| Avro Tools CLI | Schema validation, code generation |
+| protoc | Protobuf compilation, code generation |
+| AsyncAPI | Event-driven API documentation |
+| Karapace | Open-source schema registry (Kafka-compatible API) |
+| kcat | Kafka command-line tool with schema support |
+| SchemaCrawler | Schema visualization and documentation |
 
 ## Rules
 - Every Kafka topic has a registered schema (key + value)
@@ -259,6 +297,13 @@ deps:
 - Enum symbols never removed once data exists in topics
 - Schema registry replicated across regions for HA
 - No schema change without compatibility check in CI/CD
+- Subject naming follows `<domain>.<topic-name>-<key/value>` convention
+- Key subjects use FULL compatibility mode
+- Use transitive compatibility for critical subjects
+- Archive unused schema versions after 2 years
+- Document field semantics in schema `doc` attribute
+- Test schema changes with shadow consumers before production rollout
+- Maintain a schema changelog visible to all consumers
 
 ## References
   - references/registry-setup.md — Schema Registry Setup
@@ -267,5 +312,7 @@ deps:
   - references/schema-migration-strategies.md — Schema Migration Strategies
   - references/schema-registry-operations.md — Schema Registry Operations Reference
   - references/schema-registry-tools.md — Schema Registry Ecosystem Tools
+  - references/schema-registry-evolution.md — Schema Registry Evolution Deep Dive
+  - references/schema-registry-integration-patterns.md — Integration Patterns Reference
 ## Handoff
 `data-data-platform` for registry deployment. `data-data-catalog` for schema metadata. `data-data-contracts` for data contract schema integration. `data-data-observability` for schema drift monitoring.

@@ -15,37 +15,79 @@ compatibility:
   claude-code: true
   cursor: true
   codex: true
-  windsurf: true
+  windsuf: true
 tags: [devops, gitops, argocd, flux, phase-5]
 ---
 
 # GitOps
 
 ## Purpose
-Manage Kubernetes deployments using Git as the single source of truth with ArgoCD or Flux.
+Manage Kubernetes deployments using Git as the single source of truth
+with ArgoCD or Flux. Covers repository structure, application definitions,
+sync policies, environment promotion, drift detection, and secret management.
+
+## Framework and Methodology
+
+### GitOps Principles
+The GitOps operating model is built on four principles:
+
+```
+1. Declarative Description: The entire system is described declaratively.
+2. Version Controlled and Immutable: The desired state is stored in Git.
+3. Automatically Applied: Software agents pull changes from Git.
+4. Continuously Reconciled: Agents correct drift between desired and actual state.
+```
+
+### Reconciliation Loop
+```
+Git (desired state) 
+  -> GitOps Controller watches repo
+  -> Compares with cluster state
+  -> Detects drift (manual change or config divergence)
+  -> Applies desired state to cluster
+  -> Reports sync status
+  -> Loops continuously (default every 3-5 minutes)
+```
+
+### Pull vs Push Model
+
+```
+Pull-based (GitOps native):
+  - Agent in cluster pulls from Git.
+  - Cluster initiates all changes.
+  - No external access to cluster API needed.
+  - More secure (cluster reads, never write external).
+
+Push-based (CI/CD traditional):
+  - CI system pushes to cluster.
+  - Cluster API exposed to CI system.
+  - More complex security (credential management).
+  - Higher blast radius (CI compromise = cluster compromise).
+
+Recommendation: Always use pull-based for production.
+```
 
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "GitOps", "ArgoCD", "Flux", "Git as source of truth", "sync policy", "drift detection", "Application CRD", "sync waves".
+Exact user phrases: "GitOps", "ArgoCD", "Flux", "Git as source of truth",
+"sync policy", "drift detection", "Application CRD", "sync waves".
 
 ### Input Context
-Before activating, verify:
-- The GitOps tool is chosen (ArgoCD vs Flux).
-- The cluster access method is known (kubeconfig, OIDC, AWS EKS).
-- The deployment structure (monorepo vs multi-repo, Kustomize vs Helm).
-- The environment promotion model (staging → prod).
+- GitOps tool is chosen (ArgoCD vs Flux).
+- Cluster access method is known (kubeconfig, OIDC, AWS EKS).
+- Deployment structure (monorepo vs multi-repo, Kustomize vs Helm).
+- Environment promotion model (staging to prod).
 
 ### Output Artifact
-Writes to Application CRDs, Flux Kustomization/HelmRelease YAMLs, sync policies, and directory structure.
+Writes to Application CRDs, Flux Kustomization/HelmRelease YAMLs,
+sync policies, and directory structure.
 
 ### Response Format
 YAML manifests with no extraneous explanation.
-
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble. No postamble. No explanations.
 
 ### Completion Criteria
-This skill is complete when:
 - [ ] GitOps tool is configured (ArgoCD Application or Flux Kustomization).
 - [ ] Sync policy is defined (auto-sync with prune, self-heal).
 - [ ] Source repository and path are configured.
@@ -55,40 +97,89 @@ This skill is complete when:
 ### Max Response Length
 Direct file write. No response text.
 
-## Quick Start
-ArgoCD Application CRD pointing to a Git repo + path + cluster + namespace. Auto-sync with prune. Kustomize overlay per environment. Flux equivalent via Kustomization and GitRepository CRDs.
+## Workflow
 
-## When to Use This Skill
-- Setting up GitOps for a new cluster
-- Migrating from imperative kubectl to declarative GitOps
-- Adding multi-environment promotion (dev → staging → prod)
-- Implementing disaster recovery with Git-based state
+### Step 1: Choose GitOps Tool
+ArgoCD: richer UI, sync waves, ApplicationSets, SSO integration.
+Flux: lighter, tighter K8s-native CRDs, SOPS/SealedSecrets integration, depends-on ordering.
 
-## Core Workflow
+### Step 2: Design Repository Structure
+Monorepo (single repo for all environments) is recommended for most teams.
+Separate base (common config) from overlays (environment-specific).
 
-### Step 1: Repository Structure
-```
-infra/
-├── base/
-│   ├── kustomization.yaml
-│   ├── deployment.yaml
-│   └── service.yaml
-├── overlays/
-│   ├── dev/
-│   │   ├── kustomization.yaml
-│   │   ├── patch-replicas.yaml
-│   │   └── configmap.yaml
-│   ├── staging/
-│   │   └── kustomization.yaml
-│   └── prod/
-│       └── kustomization.yaml
-└── clusters/
-    └── apps.yaml
-```
+### Step 3: Configure Application Definition
+ArgoCD Application CRD or Flux Kustomization/HelmRelease.
+Point to source repo + path + target cluster + namespace.
 
-### Step 2: ArgoCD Application
+### Step 4: Define Sync Policy
+Auto-sync with prune and self-heal.
+Sync options: CreateNamespace, PruneLast, ApplyOutOfSyncOnly.
+
+### Step 5: Implement Environment Promotion
+Branch per environment, path per environment, or tag-based promotion.
+
+### Step 6: Handle Secrets
+Never store raw secrets in Git.
+Use SealedSecrets, External Secrets Operator, or SOPS.
+
+### Step 7: Set Up Drift Detection
+Enable self-heal in sync policy.
+Monitor alert for sync failures and drift events.
+
+### Step 8: Implement Sync Waves
+Order resource creation: CRDs first, then namespaces, then apps.
+Use sync-wave annotations (ArgoCD) or depends-on (Flux).
+
+## Common Pitfalls
+
+1. **Direct cluster changes**: Someone runs kubectl edit and changes drift. Self-heal reverts it.
+   Fix: Always change in Git. Educate team that Git is source of truth.
+2. **Plain-text secrets in Git**: Anyone with repo access sees production secrets.
+   Fix: Use SealedSecrets, External Secrets, or SOPS. Never raw secrets.
+3. **Missing prune:true**: Resources removed from Git stay in cluster.
+   Fix: Enable prune on all sync policies.
+4. **Self-heal without understanding**: Unexpected reverts confuse teams.
+   Fix: Communicate self-heal behavior. Check Git for latest change if drift detected.
+5. **Overly complex directory structure**: Too many layers make changes error-prone.
+   Fix: Keep base simple. Use Kustomize overlays per environment.
+6. **No sync wave ordering**: Deployments start before ConfigMaps exist.
+   Fix: Add annotations or depends-on for resource ordering.
+7. **No drift monitoring**: Self-heal silently reverts changes without notification.
+   Fix: Monitor sync status and alert on OutOfSync state.
+8. **Using latest as tag**: No traceability of what version is deployed.
+   Fix: Pin to specific branch, tag, or commit hash.
+
+## Best Practices
+
+- Enable auto-sync with prune and self-heal in all environments.
+- Use Kustomize or Helm to manage environment-specific overrides.
+- Store cluster bootstrap config in same repo as application config.
+- Review GitOps diff before merging PRs (ArgoCD PR previews).
+- Monitor sync status and alert on errors and drift.
+- Use branch protection on Git repo (require PRs for main branch).
+- Keep application config repo separate from application source code.
+- Document rollback procedure in runbook.
+- Test GitOps changes in staging before promoting to production.
+- Use ArgoCD ApplicationSets or Flux Kustomization for multi-cluster.
+
+## Compared With
+
+| Feature | ArgoCD | Flux | Helm-only | kubectl apply |
+|---|---|---|---|---|
+| Reconciliation | Yes | Yes | No | No |
+| Drift detection | Yes (self-heal) | Yes (self-heal) | No | No |
+| Sync waves | Yes (annotations) | Yes (depends-on) | -- | -- |
+| Rollback UI | Yes | CLI only | No | No |
+| SSO integration | Built-in | Dex/External | -- | -- |
+| Multi-cluster | ApplicationSet | Kustomization | Manual | Manual |
+| Secret encryption | SOPS plugin | SOPS native | Helm secrets | -- |
+| Blue/green | AnalysisTemplate | None | Manual | Manual |
+| Weight | Medium | Light | Light | None |
+
+## Templates and Tools
+
+### ArgoCD Application Template
 ```yaml
-# apps/dev-app.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -112,32 +203,10 @@ spec:
       - CreateNamespace=true
       - PruneLast=true
       - ApplyOutOfSyncOnly=true
-    retry:
-      limit: 5
-      backoff:
-        duration: 5s
-        factor: 2
-        maxDuration: 3m
 ```
 
-### Step 3: Flux Setup
+### Flux Kustomization Template
 ```yaml
-# clusters/my-cluster/flux-system/gotk-components.yaml
-# (install via `flux install`)
-
-# clusters/my-cluster/source.yaml
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
-metadata:
-  name: my-app
-  namespace: flux-system
-spec:
-  interval: 1m
-  url: https://github.com/org/infra.git
-  ref:
-    branch: main
-
-# clusters/my-cluster/kustomization.yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -145,93 +214,46 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
+  path: ./overlays/dev
+  prune: true
   sourceRef:
     kind: GitRepository
     name: my-app
-  path: ./overlays/dev
-  prune: true
   wait: true
   timeout: 5m
   postBuild:
     substitute:
       env: dev
-      version: latest
 ```
 
-### Step 4: Sync Strategies
-```yaml
-# Manual sync with phases (ArgoCD sync waves)
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"  # CRDs first
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  annotations:
-    argocd.argoproj.io/sync-wave: "1"  # Namespaces second
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  annotations:
-    argocd.argoproj.io/sync-wave: "2"  # Apps third
----
-# Flux depends-on for ordering
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: apps
-spec:
-  dependsOn:
-    - name: crds
-    - name: namespaces
-```
-
-### Step 5: Multi-Environment Promotion
-```yaml
-# Promote by updating the targetRevision or path
-# Strategy 1: Branch per environment
-spec:
-  source:
-    targetRevision: release/1.2.3  # staging branch
-    path: overlays/staging
-
-# Strategy 2: Path per environment (same branch)
-spec:
-  source:
-    targetRevision: main
-    path: overlays/production
-
-# Strategy 3: Tag-based
-spec:
-  source:
-    targetRevision: v1.2.3
-    path: overlays/production
-```
-
-## Rules & Constraints
-- Never apply changes directly to the cluster — always push to Git first
-- Always enable `prune: true` in automated sync policies
-- Use `selfHeal: true` to remediate drift automatically
-- Pin `targetRevision` to a branch, tag, or commit — never omit it
-- Every environment gets its own overlay or directory
-- Use sync waves / depends-on to order resource creation
-- Store secrets in SealedSecrets, External Secrets, or SOPS — never plain text in Git
-
-## Output Format
-ArgoCD Application YAML, Flux GitRepository + Kustomization YAML, and directory structure.
+## Rules
+- Never apply changes directly to the cluster -- always push to Git first.
+- Always enable prune:true in automated sync policies.
+- Use selfHeal:true to remediate drift automatically.
+- Pin targetRevision to a branch, tag, or commit -- never omit it.
+- Every environment gets its own overlay or directory.
+- Use sync waves / depends-on to order resource creation.
+- Store secrets in SealedSecrets, External Secrets, or SOPS -- never plain text in Git.
+- Monitor sync status and alert on OutOfSync or SyncFailed.
+- Use branch protection on GitOps repo (require PRs to main).
+- Apply GitOps config to staging before production for validation.
+- Document rollback procedure (revert Git commit).
+- Use ApplicationSet (ArgoCD) or Kustomization (Flux) for multi-cluster.
+- Never use latest as image tag -- pin to specific version.
+- Enable automated prune for all namespaces.
+- Validate Kustomize/Helm output in CI before merging.
 
 ## References
-  - references/argocd-setup.md — ArgoCD Setup
-  - references/flux-setup.md — Flux Setup
-  - references/gitops-advanced.md — Gitops Advanced Topics
-  - references/gitops-fundamentals.md — Gitops Fundamentals
-  - references/gitops-principles.md — GitOps Principles
-  - references/sync-strategies.md — Sync Strategies
+  - references/argocd-setup.md -- ArgoCD Setup
+  - references/flux-setup.md -- Flux Setup
+  - references/gitops-advanced.md -- Gitops Advanced Topics
+  - references/gitops-fundamentals.md -- Gitops Fundamentals
+  - references/gitops-principles.md -- GitOps Principles
+  - references/sync-strategies.md -- Sync Strategies
+  - references/gitops-workflow-environments.md -- GitOps Workflow Environments
+  - references/gitops-security-compliance.md -- GitOps Security and Compliance
+
 ## Handoff
 After completing this skill:
-- Next skill: **kubernetes-patterns** — pod specs, services, ingress
+- Next skill: **kubernetes-patterns** -- pod specs, services, ingress
 - Pass context: Git repo URL, overlay paths, environment structure

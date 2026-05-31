@@ -2,7 +2,7 @@
 name: create-prd
 description: >
   Use this skill when the user says 'create PRD', 'product requirements', 'write requirements', 'epics and stories', 'acceptance criteria', or when docs/brief.md exists and needs expansion into a full Product Requirements Document. This skill reads the brief, generates 5-8 epics, and for each epic creates 3-5 user stories with Gherkin acceptance criteria. It also produces non-functional requirements and a Definition of Done. Do NOT use for: recording architecture decisions or writing technical specifications.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -16,7 +16,24 @@ tags: [planning, phase-1, documentation]
 # Create PRD
 
 ## Purpose
-Expand a Product Brief into a comprehensive Product Requirements Document with epics, user stories (Gherkin), non-functional requirements, and Definition of Done.
+Expand a Product Brief into a comprehensive Product Requirements Document with epics, user stories (Gherkin), non-functional requirements, and Definition of Done. The PRD bridges product strategy and engineering execution by translating business goals into structured, verifiable requirements that the entire team can align on.
+
+## Architecture/Decision Trees
+
+### PRD Depth Decision Tree
+```
+Is the product category well-understood by the team?
+  |-- YES --> Do you have detailed user research?
+  |     |-- YES --> Full PRD with 6-8 epics, 4-5 stories per epic
+  |     |-- NO  --> Lean PRD with 5-6 epics, 2-3 stories per epic
+  |-- NO --> Do you have competitive analysis?
+        |-- YES --> Standard PRD with 6-8 epics
+        |-- NO  --> Start with create-brief first, then PRD after research
+
+Is the timeline aggressive (< 3 months to MVP)?
+  |-- YES --> Focus on 3-4 core epics, defer non-critical to V2
+  |-- NO --> Full scope with all identified epics
+```
 
 ## Agent Protocol
 
@@ -41,7 +58,7 @@ Non-functional requirements: {n}
 Next skill: create-adr
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick. No explanations of what a PRD is.
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output. No explanations of what a PRD is.
 
 ### Completion Criteria
 - [ ] Brief read and understood.
@@ -74,6 +91,8 @@ Create 5-8 epics. Each epic covers a logical feature area:
 Each epic must have:
 - Name
 - Description (2-3 sentences)
+- Priority (P0-P3)
+- Dependencies on other epics
 
 ### Step 3: Generate User Stories per Epic
 For each epic, create 3-5 user stories.
@@ -131,6 +150,49 @@ Write to `docs/prd-{YYYY-MM-DD}.md`.
 - Do NOT include technical implementation details in the PRD.
 - If the brief is very specific (e.g., "build a REST API for orders"), adjust epics accordingly instead of using the template.
 - If the brief lacks detail for a section, write "TBD — to be decided during implementation" rather than inventing requirements.
+- Each story must trace to a specific goal in the brief — no orphan stories.
+- Keep epics at feature level, not system level. "Payment processing" is an epic, "Database optimization" is not.
+- Avoid solution-oriented language in requirements. "User can export reports" is a requirement. "User can click button to export CSV" is a design detail.
+
+## Best Practices
+- Involve stakeholders in epic prioritization before writing detailed stories.
+- Write stories collaboratively with engineers to ensure feasibility.
+- Use consistent role names across stories (e.g., "Registered User" not "Customer" in one place and "End User" in another).
+- Link stories to measurable outcomes (OKRs or KPIs) when possible.
+- Review the PRD with at least one representative from engineering, design, and product before finalizing.
+- Version the PRD — use `docs/prd-{YYYY-MM-DD}-v2.md` for updates.
+- Keep a changelog section at the bottom of the PRD to track changes.
+
+## Common Pitfalls
+- **Writing implementation details as requirements**: "System uses Redis cache" is implementation, not a requirement. The requirement is "pages load in under 2 seconds".
+- **Vague acceptance criteria**: "Users can search" is not testable. "Given the user types 'blue shoes' When they press Enter Then results containing 'blue' or 'shoes' are displayed within 2 seconds" is testable.
+- **Scope creep in stories**: Stories that take more than 3 days should be split. If a story says "and" it probably should be two stories.
+- **Missing negative test cases**: Acceptance criteria should include what happens when things go wrong, not just happy path.
+- **Inconsistent user roles**: Using "Admin" in one story and "Super Admin" in another without defining the difference.
+- **No Definition of Done**: The team needs explicit quality gates to know when a story is truly done.
+
+## Compared With
+| Artifact | Purpose | Audience | Detail Level |
+|----------|---------|----------|-------------|
+| Product Brief | Define vision and scope | Stakeholders | High |
+| PRD | Requirements specification | Product, Design, Engineering | Medium |
+| Technical Spec | Implementation details | Engineering | High |
+| User Stories | Individual features | Dev + QA | Low-Medium |
+| Acceptance Tests | Verification criteria | QA, Automation | Precise |
+
+## Performance
+- PRDs should be 10-20 pages for most projects. Longer PRDs are rarely read.
+- Each epic should be completable within 1-2 sprints (2-4 weeks).
+- Keep stories small enough to be completed in 1-3 days by a single developer.
+- The time to write a PRD should not exceed 20% of the estimated build time.
+- Review cycles: 2-3 rounds of feedback before finalization.
+
+## Tooling/Methodology
+- **PRD collaboration**: Google Docs, Notion, Confluence, Coda.
+- **Story tracking**: Jira, Linear, Asana, Trello, GitHub Issues.
+- **Gherkin**: Cucumber, SpecFlow, Behat for executable specifications.
+- **Version control**: Git-based PRD in `docs/` directory for change tracking.
+- **Review process**: PR (pull request) on the PRD document for asynchronous feedback.
 
 ## References
   - references/create-prd-advanced.md — Create Prd Advanced Topics
@@ -139,6 +201,8 @@ Write to `docs/prd-{YYYY-MM-DD}.md`.
   - references/prd-examples.md — PRD Examples
   - references/prd-review-checklist.md — PRD Review Checklist
   - references/prd-template.md — Product Requirements Document: {Project Name}
+  - references/prd-template-structure.md — PRD Template Structure
+  - references/prd-stakeholder-review.md — PRD Stakeholder Review
 ## Handoff
 Output: `docs/prd-{YYYY-MM-DD}.md`
 Next skill: create-adr

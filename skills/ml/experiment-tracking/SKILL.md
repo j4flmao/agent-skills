@@ -2,7 +2,7 @@
 name: ml-experiment-tracking
 description: >
   Use this skill when asked about MLflow, W&B, Neptune, DVC, experiment tracking, run logging, metric logging, artifact store, model registry, hyperparameter logging, or experiment comparison. This skill enforces: experiment tracking platform setup (MLflow, W&B, Neptune), run logging conventions (params, metrics, artifacts), model registry versioning with stage promotion, experiment comparison using parallel coordinates, and full reproducibility through code + data + environment tracking. Do NOT use for: model training itself, feature engineering pipelines, or production deployment.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -16,7 +16,30 @@ tags: [ml, experiment, tracking, phase-11]
 # ML Experiment Tracking
 
 ## Purpose
-Track machine learning experiments with full reproducibility: log parameters, metrics, artifacts, and environment. Use the model registry to version, compare, and promote models through staging.
+Track machine learning experiments with full reproducibility: log parameters, metrics, artifacts, and environment. Use the model registry to version, compare, and promote models through staging. Experiment tracking is the foundation of disciplined ML development — it transforms ad-hoc model building into a systematic, comparable, and repeatable process.
+
+## Architecture/Decision Trees
+
+### Platform Selection Decision Tree
+```
+Is your team size 1-3 data scientists working locally?
+  |-- YES --> MLflow (local mode, simple setup)
+  |-- NO --> Do you need rich collaboration features with non-ML stakeholders?
+        |-- YES --> W&B (rich UI, reports, dashboards)
+        |-- NO --> Do you have strict data sovereignty requirements?
+              |-- YES --> MLflow (self-hosted, full control)
+              |-- NO --> Do you need structured metadata with nested runs?
+                    |-- YES --> Neptune (structured logging, comparison)
+                    |-- NO --> MLflow (open standard, broad ecosystem)
+
+Do you need experiment tracking for deep learning specifically?
+  |-- YES --> W&B (tight PyTorch/HuggingFace integration) or Neptune
+  |-- NO --> MLflow (sufficient for sklearn, XGBoost, lightGBM)
+
+Do you need model registry with CI/CD integration?
+  |-- YES --> MLflow Model Registry (stages, API, deployment)
+  |-- NO --> Platform-specific registry is sufficient
+```
 
 ## Agent Protocol
 
@@ -27,13 +50,13 @@ Exact user phrases: "experiment tracking", "MLflow", "WandB", "Weights and Biase
 Before activating, verify:
 - Experiment tracking platform (MLflow, W&B, Neptune) or greenfield
 - ML framework (PyTorch, TensorFlow, scikit-learn, XGBoost)
-- Team size and collaboration model (single data scientist, team, org)
+- Team size and collaboration model
 - Infrastructure (local, on-premise server, cloud-managed)
 - Artifact storage requirements (model files, datasets, plots)
 - Model registry needs (manual vs automated promotion)
 
 ### Output Artifact
-Experiment tracking configuration with logging setup, artifact structure, and model registry workflow as YAML and Python.
+Experiment tracking configuration with logging setup, artifact structure, and model registry workflow.
 
 ### Response Format
 ```python
@@ -47,7 +70,7 @@ Experiment tracking configuration with logging setup, artifact structure, and mo
 # Model registry stage rules
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble. No postamble. No explanations. No filler. Compress output.
 
 ### Completion Criteria
 - [ ] Experiment tracking platform selected and configured
@@ -64,10 +87,9 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ## Workflow
 
 ### Step 1: Platform Selection
-MLflow: open-source, self-hosted, language-agnostic (Python, R, Java, REST), tracking server + registry + projects + models. W&B: cloud-hosted (or self-hosted), rich UI, collaboration features, tight PyTorch/HuggingFace integration, reporting and dashboards. Neptune: cloud-hosted, structured logging, metadata organization, rich comparison views. Local development: MLflow for simplicity. Team collaboration: W&B or Neptune for UI. Enterprise compliance: MLflow self-hosted on Kubernetes.
+MLflow: open-source, self-hosted, language-agnostic, tracking + registry + projects + models. W&B: cloud-hosted, rich UI, collaboration, tight PyTorch/HuggingFace integration. Neptune: cloud-hosted, structured logging, rich comparison views. Local development: MLflow. Team collaboration: W&B or Neptune. Enterprise compliance: MLflow self-hosted on Kubernetes.
 
 ```yaml
-# MLflow tracking server configuration
 tracking_uri: http://mlflow-server:5000
 default_artifact_root: s3://mlflow-artifacts/
 experiment_defaults:
@@ -78,174 +100,70 @@ experiment_defaults:
 ```
 
 ### Step 2: Run Logging Conventions
-Structured parameter names: `model.learning_rate`, `model.architecture.n_layers`, `data.train_size`. Metric logging: log after every epoch (step-based) and at the end (final). Use dictionary logging for grouped metrics. Tags for searchability: `status`, `dataset`, `model_type`, `git_branch`, `gpu_id`. Automated logging: MLflow autolog for scikit-learn/XGBoost/PyTorch.
-
-```python
-import mlflow
-from mlflow.models import infer_signature
-
-mlflow.set_tracking_uri("http://mlflow-server:5000")
-mlflow.set_experiment("recommendation-engine")
-
-with mlflow.start_run(run_name="xgboost-v2") as run:
-    # Parameters
-    mlflow.log_params({
-        "model.type": "XGBoost",
-        "model.max_depth": 6,
-        "model.learning_rate": 0.01,
-        "model.n_estimators": 500,
-        "model.subsample": 0.8,
-        "data.train_size": 100000,
-        "data.features": ["user_emb", "item_emb", "context_features"],
-        "data.validation_split": 0.2,
-        "training.random_seed": 42,
-    })
-
-    # Metrics (per epoch)
-    for epoch in range(10):
-        train_loss, val_loss = train_one_epoch()
-        mlflow.log_metrics({
-            "train.loss": train_loss,
-            "val.loss": val_loss,
-            "val.auc": compute_auc(val_loss),
-        }, step=epoch)
-
-    # Final metrics
-    mlflow.log_metrics({
-        "test.auc": 0.892,
-        "test.precision@10": 0.45,
-        "test.recall@10": 0.38,
-        "test.accuracy": 0.85,
-    })
-
-    # Tags
-    mlflow.set_tags({
-        "git_branch": "feature/experiment-v2",
-        "git_commit": "a1b2c3d",
-        "dataset_hash": "sha256:abc123",
-        "gpu_type": "A100-80GB",
-        "status": "completed",
-    })
-```
+Structured parameter names: `model.learning_rate`, `model.architecture.n_layers`, `data.train_size`. Metric logging: log after every epoch and at the end. Use dictionary logging for grouped metrics. Tags for searchability: `status`, `dataset`, `model_type`, `git_branch`, `gpu_id`.
 
 ### Step 3: Artifact Storage
-Log model files with signature (input/output schema) and conda/pip environment. Log plots and visualizations as PNG/HTML artifacts. Log dataset samples and preprocessing config. Log source code snapshot for reproducibility. Structure: `models/`, `plots/`, `data/`, `configs/`, `code/`.
-
-```python
-# Log model with signature and environment
-signature = infer_signature(X_test, y_pred)
-mlflow.xgboost.log_model(
-    xgb_model,
-    artifact_path="models/xgboost",
-    signature=signature,
-    registered_model_name="recommendation-xgb",
-    pip_requirements=["xgboost==2.0.0", "pandas==2.1.0"],
-)
-
-# Log plots
-plt.figure()
-plot_confusion_matrix(y_test, y_pred)
-mlflow.log_figure(plt.gcf(), "plots/confusion_matrix.png")
-
-# Log arbitrary files
-mlflow.log_artifact("configs/hyperparameters.yaml", artifact_path="configs")
-mlflow.log_artifact("data/validation_samples.csv", artifact_path="data")
-```
+Log model files with signature and conda/pip environment. Log plots as PNG/HTML. Log dataset samples and preprocessing config. Structure: `models/`, `plots/`, `data/`, `configs/`, `code/`.
 
 ### Step 4: Model Registry
-Model versioning: each logged model creates a new version. Stage promotion: None -> Staging -> Production -> Archived. Transition rules: automated via metric thresholds, manual approval for production. Model lineage: link to source run, dataset version, training code. Deployment: fetch model by stage, not by version.
-
-```python
-from mlflow.tracking import MlflowClient
-
-client = MlflowClient()
-
-# Register model version
-client.create_registered_model("recommendation-xgb")
-client.create_model_version(
-    name="recommendation-xgb",
-    source=f"runs:/{run_id}/models/xgboost",
-    run_id=run_id,
-    description="XGBoost v2 with feature engineering v3"
-)
-
-# Promote to staging
-client.transition_model_version_stage(
-    name="recommendation-xgb",
-    version=5,
-    stage="Staging",
-    archive_existing_versions=True
-)
-
-# Promote to production (requires metrics check)
-latest_staging = client.get_latest_versions("recommendation-xgb", stages=["Staging"])
-if latest_staging[0].metrics["test.auc"] > 0.88:
-    client.transition_model_version_stage(
-        name="recommendation-xgb",
-        version=latest_staging[0].version,
-        stage="Production"
-    )
-
-# Production deployment fetches by stage
-model = mlflow.xgboost.load_model("models:/recommendation-xgb/Production")
-```
+Model versioning: each logged model creates a new version. Stage promotion: None -> Staging -> Production -> Archived. Transition rules: automated via metric thresholds, manual approval for production.
 
 ### Step 5: Experiment Comparison
-Parallel coordinates: compare hyperparameters across runs to find correlations. Scatter plots: metric vs metric (e.g., latency vs accuracy). Table view: sortable columns for all params and metrics. Regression detection: compare new run metrics against baseline, alert on degradation. Custom dashboards: pin important runs and visualizations.
-
-```python
-# Programmatic comparison of experiments
-from mlflow.tracking import MlflowClient
-
-client = MlflowClient()
-runs = client.search_runs(
-    experiment_ids=["1"],
-    filter_string="metrics.test.auc > 0.85",
-    order_by=["metrics.test.auc DESC"],
-    max_results=10
-)
-
-for run in runs:
-    print(f"Run {run.info.run_name}: AUC={run.data.metrics['test.auc']:.4f}, "
-          f"depth={run.data.params['model.max_depth']}, "
-          f"lr={run.data.params['model.learning_rate']}")
-```
+Parallel coordinates: compare hyperparameters across runs. Scatter plots: metric vs metric. Table view: sortable columns for params and metrics. Regression detection: compare against baseline, alert on degradation.
 
 ### Step 6: Reproducibility
-Code: log git commit hash. Data: log dataset hash or DVC version. Environment: log conda/pip environment files. Random seeds: log and control all seeds (Python, NumPy, PyTorch, Python hash). Source code: log snapshot of training script. Deterministic algorithms: enable deterministic flags for GPU training.
-
-```yaml
-# reproducibility checklist
-git_commit: a1b2c3d4e5f6  # logged as tag
-dataset:
-  source: s3://datasets/users-v3.parquet
-  hash: sha256:abc123def456
-  row_count: 2500000
-features:
-  config_hash: sha256:789abc
-  engineered_count: 45
-environment:
-  python: "3.10.12"
-  cuda: "12.1"
-  mlflow: "2.8.0"
-  xgboost: "2.0.0"
-random_seeds:
-  python: 42
-  numpy: 42
-  pytorch: 42
-```
+Code: log git commit hash. Data: log dataset hash or DVC version. Environment: log conda/pip environment files. Random seeds: log and control all seeds. Source code: log snapshot of training script.
 
 ## Rules
-- Every run logs params, metrics, tags, and artifacts
-- Parameter names use dot notation for grouping (`model.lr`, `data.size`)
-- Metrics logged per-epoch (step) and final
-- Model signature logged with every model artifact
-- Git commit hash always logged as a tag
-- Dataset hash or version always logged as a tag
-- Environment pinned at the package level (not just Python version)
-- Model registry stages: None -> Staging -> Production -> Archived
-- Automated promotion only to Staging, manual approval for Production
-- Never delete runs — archive them instead
+- Every run logs params, metrics, tags, and artifacts.
+- Parameter names use dot notation for grouping (`model.lr`, `data.size`).
+- Metrics logged per-epoch (step) and final.
+- Model signature logged with every model artifact.
+- Git commit hash always logged as a tag.
+- Dataset hash or version always logged as a tag.
+- Environment pinned at the package level.
+- Model registry stages: None -> Staging -> Production -> Archived.
+- Automated promotion only to Staging, manual approval for Production.
+- Never delete runs — archive them instead.
+
+## Best Practices
+- Use consistent naming conventions for experiments and runs across the team.
+- Log intermediate metrics during training, not just final values.
+- Tag runs with meaningful attributes (dataset version, branch name, model architecture).
+- Create dashboards for frequently compared experiments.
+- Set up alerts for metric regression after each new run.
+
+## Common Pitfalls
+- **Missing data version**: A model without a data version reference cannot be reproduced.
+- **Environment drift**: Pinning Python version but not package versions leads to unreproducible runs.
+- **Inconsistent metric names**: Different team members use different names for the same metric (e.g., "val_accuracy" vs "validation_accuracy").
+- **Forgetting to log test metrics**: Logging only training metrics makes it impossible to detect overfitting in the registry.
+- **Not setting random seeds**: Without fixed seeds, the exact same parameters produce different results across runs.
+- **Overwriting model registry versions**: Registry versions must be immutable; always create a new version.
+
+## Compared With
+| Feature | MLflow | W&B | Neptune | DVC |
+|---------|--------|-----|---------|-----|
+| Self-hosted | Yes | Optional | No | Yes |
+| Model Registry | Yes | Yes | Yes | Limited |
+| Experiment Comparison | Basic | Rich | Rich | None |
+| Nested Runs | No | Yes | Yes | No |
+| Reports/Dashboards | Limited | Yes | Yes | No |
+| Pipeline versioning | Projects | Limited | Limited | Full |
+| Cost | Free | Freemium | Freemium | Free |
+
+## Performance
+- MLflow tracking server overhead: < 1ms per log call (local), 5-20ms (remote).
+- Artifact storage: depends on network speed to artifact store.
+- Parallel coordinates rendering: 500+ runs may cause lag in UI.
+- Registry lookup: sub-second for stage-based queries, seconds for full history.
+
+## Tooling/Methodology
+- **MLflow**: Tracking Server, Model Registry, Projects, Models (serving).
+- **W&B**: Experiments, Artifacts, Sweeps, Reports, Tables.
+- **Neptune**: Runs, Metadata, Artifacts, Monitoring, Model Registry.
+- **DVC**: Data versioning, pipeline versioning, experiment tracking (git-based).
+- **Integration libraries**: PyTorch Lightning, HuggingFace Transformers, Keras, XGBoost.
 
 ## References
   - references/data-versioning.md — Data Versioning
@@ -254,6 +172,7 @@ random_seeds:
   - references/experiment-tracking-advanced.md — Experiment Tracking Advanced Topics
   - references/experiment-tracking-fundamentals.md — Experiment Tracking Fundamentals
   - references/mlflow-setup.md — MLflow Setup and Configuration
+  - references/experiment-tracking-tools.md — Experiment Tracking Tools
+  - references/experiment-reproducibility.md — Experiment Reproducibility
 ## Handoff
-`ml-classical-ml` for model training workflows
-`ml-deep-learning` for deep learning experiment tracking
+`ml-classical-ml` for model training workflows. `ml-deep-learning` for deep learning experiment tracking.

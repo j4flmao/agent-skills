@@ -95,7 +95,7 @@ class ImageClassifier(nn.Module):
 ```
 
 ### Step 2: Data Loading
-PyTorch: Dataset class + DataLoader with num_workers, prefetch_factor, pin_memory. Augmentation: torchvision.transforms for images, custom transforms for audio/text. Multi-processing: num_workers = 4-8 per GPU, prefetch_factor=2. TensorFlow: tf.data.Dataset with interleave, map (with num_parallel_calls), cache, prefetch. Data pipeline must never be the bottleneck.
+PyTorch: Dataset class + DataLoader with num_workers, prefetch_factor, pin_memory. Augmentation: torchvision.transforms for images, custom transforms for audio/text. Multiprocessing: num_workers = 4-8 per GPU, prefetch_factor=2. TensorFlow: tf.data.Dataset with interleave, map (with num_parallel_calls), cache, prefetch. Data pipeline must never be the bottleneck.
 
 ```python
 from torch.utils.data import Dataset, DataLoader
@@ -106,7 +106,9 @@ class ImageDataset(Dataset):
         self.file_paths = file_paths
         self.labels = labels
         self.transform = transform or transforms.Compose([
-            transforms.Resize((224, 224)),
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ColorJitter(0.2, 0.2, 0.2, 0.1),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
@@ -138,7 +140,7 @@ def train_epoch(model, loader, optimizer, criterion, device, scaler=None):
 
         optimizer.zero_grad()
 
-        if scaler:  # Mixed precision
+        if scaler:
             with torch.amp.autocast(device_type="cuda"):
                 outputs = model(inputs)
                 loss = criterion(outputs, targets)
@@ -180,14 +182,12 @@ def validate(model, loader, criterion, device):
 ResNet: residual connections for deep networks (18, 34, 50, 101, 152). ResNet50 is the best accuracy/compute trade-off. EfficientNet: compound scaling (depth, width, resolution). EfficientNet-B0 to B7. MobileNet: depthwise separable convolutions for mobile/edge. ConvNeXt: modernized ResNet with Swish, LayerNorm. Transfer learning: freeze pretrained backbone, train new classifier head. Fine-tune whole network at low learning rate (1e-5 to 1e-4).
 
 ```python
-# Transfer learning with ResNet50
 import torchvision.models as models
 
 model = models.resnet50(weights="DEFAULT")
 for param in model.parameters():
     param.requires_grad = False
 
-# Replace classifier
 num_features = model.fc.in_features
 model.fc = nn.Sequential(
     nn.Dropout(0.2),
@@ -196,9 +196,8 @@ model.fc = nn.Sequential(
     nn.Linear(256, num_classes),
 )
 
-# Fine-tune: phase 1 train new head, phase 2 unfreeze all
 optimizer = optim.Adam(model.fc.parameters(), lr=1e-3)
-# Phase 2: unfreeze backbone, lower learning rate
+
 for param in model.parameters():
     param.requires_grad = True
 optimizer = optim.Adam(model.parameters(), lr=1e-5)
@@ -208,7 +207,6 @@ optimizer = optim.Adam(model.parameters(), lr=1e-5)
 LSTM: for sequence modeling (time-series, text). Bidirectional LSTM: context from both directions. GRU: lighter than LSTM, similar performance. Transformer: self-attention for parallel processing, positional encoding for sequence order. Multi-head attention: multiple attention heads capture different relationships.
 
 ```python
-# Transformer encoder for sequence classification
 class TransformerClassifier(nn.Module):
     def __init__(self, vocab_size, d_model=256, nhead=8, num_layers=4, num_classes=2):
         super().__init__()
@@ -222,7 +220,7 @@ class TransformerClassifier(nn.Module):
         x = self.embedding(x) * math.sqrt(x.size(-1))
         x = self.pos_encoder(x)
         x = self.transformer(x)
-        x = x.mean(dim=0)  # Pool over sequence
+        x = x.mean(dim=0)
         return self.classifier(x)
 
 
@@ -247,7 +245,6 @@ class PositionalEncoding(nn.Module):
 DDP (DistributedDataParallel): each GPU has model copy, gradient sync at each step. Best for models fitting in single GPU memory. FSDP (Fully Sharded Data Parallel): shard model parameters, gradients, optimizer states across GPUs. Best for large models (1B+ params). Launch: torchrun for DDP/FSDP. Gradient checkpointing: trade compute for memory (train larger models on fewer GPUs).
 
 ```python
-# DDP training launcher: torchrun --nproc_per_node=4 train_ddp.py
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data.distributed import DistributedSampler
@@ -277,6 +274,168 @@ if __name__ == "__main__":
     torch.multiprocessing.spawn(train_ddp, args=(world_size,), nprocs=world_size)
 ```
 
+### Step 7: Training Visualization and Logging
+Use TensorBoard, WandB, or MLflow for tracking. Log loss, learning rate, gradients, and activations histograms. Monitor GPU utilization with nvidia-smi. Detect vanishing/exploding gradients by tracking gradient norms.
+
+```python
+from torch.utils.tensorboard import SummaryWriter
+
+writer = SummaryWriter("runs/experiment_001")
+
+for epoch in range(num_epochs):
+    train_loss = train_epoch(...)
+    val_loss, val_acc = validate(...)
+
+    writer.add_scalar("Loss/train", train_loss, epoch)
+    writer.add_scalar("Loss/val", val_loss, epoch)
+    writer.add_scalar("Acc/val", val_acc, epoch)
+    writer.add_scalar("LR", optimizer.param_groups[0]["lr"], epoch)
+
+    for name, param in model.named_parameters():
+        if param.grad is not None:
+            writer.add_histogram(f"grad/{name}", param.grad, epoch)
+
+    scheduler.step()
+```
+
+### Step 8: Hyperparameter Optimization
+Use Optuna for Bayesian optimization of hyperparameters. Define search space for learning rate, batch size, optimizer, architecture parameters. Use pruning (MedianPruner, HyperbandPruner) to terminate unpromising trials early.
+
+```python
+import optuna
+
+def objective(trial):
+    lr = trial.suggest_float("lr", 1e-5, 1e-2, log=True)
+    batch_size = trial.suggest_categorical("batch_size", [32, 64, 128, 256])
+    dropout = trial.suggest_float("dropout", 0.1, 0.5)
+    optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "AdamW", "SGD"])
+
+    model = ModifiedResNet(dropout=dropout)
+    optimizer = getattr(optim, optimizer_name)(model.parameters(), lr=lr)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
+
+    for epoch in range(50):
+        train_loss = train_epoch(model, train_loader, optimizer, criterion, device)
+        val_loss, val_acc = validate(model, val_loader, criterion, device)
+        scheduler.step()
+        trial.report(val_acc, epoch)
+        if trial.should_prune():
+            raise optuna.TrialPruned()
+
+    return val_acc
+
+study = optuna.create_study(direction="maximize", pruner=optuna.pruners.MedianPruner())
+study.optimize(objective, n_trials=50)
+```
+
+## Architecture / Decision Trees
+
+### Architecture Selection
+
+```
+Input type
+  ├── Images
+  │   ├── Classification → ResNet, EfficientNet, ViT
+  │   ├── Detection → YOLO, DETR, Faster R-CNN
+  │   └── Segmentation → U-Net, DeepLab, Mask R-CNN
+  ├── Text / Sequences
+  │   ├── Short sequences (< 512 tokens) → BERT, RoBERTa
+  │   ├── Long sequences (> 512 tokens) → Longformer, BigBird
+  │   ├── Generation → GPT, LLaMA, Mistral
+  │   └── Time series → LSTM, GRU, TCN, PatchTST
+  ├── Audio / Speech
+  │   ├── Classification → Wav2Vec2, HuBERT
+  │   └── Generation → WaveNet, MusicGen
+  └── Multi-modal
+      ├── Image + Text → CLIP, BLIP, LLaVA
+      └── Any modality → Perceiver IO
+```
+
+## Common Pitfalls
+
+1. **Data pipeline bottleneck**: GPU idle while CPU loads data. Fix: num_workers=4-8, prefetch, pin_memory.
+2. **Learning rate too high/low**: divergence or slow convergence. Fix: learning rate range test, cosine annealing.
+3. **Overfitting on small datasets**: insufficient regularization. Fix: dropout, weight decay, data augmentation.
+4. **Gradient vanishing/exploding**: common in deep networks and RNNs. Fix: residual connections, gradient clipping, proper initialization.
+5. **Batch size too large for GPU memory**: CUDA OOM. Fix: gradient accumulation, gradient checkpointing, mixed precision.
+6. **No validation during training**: no signal for early stopping or overfitting detection.
+7. **Not shuffling training data**: batches have same distribution bias.
+8. **Saving model without optimizer state**: can't resume training after interruption.
+9. **Mixed precision without loss scaling**: underflow for small gradients. AMP handles this automatically in PyTorch 1.6+.
+10. **DDP without DistributedSampler**: each GPU sees full dataset. Fix: use DistributedSampler with set_epoch.
+11. **Not setting dropout to eval mode**: dropout active during validation causes inconsistent metrics.
+12. **Forgetting model.to(device)**: tensors on CPU causing device mismatch errors.
+
+## Best Practices
+
+- Use PyTorch for research and custom architectures, TF for production pipelines.
+- DataLoader with num_workers=4-8 and pin_memory=True always.
+- Mixed precision (AMP) for 1.5-3x throughput on Volta+ GPUs.
+- Gradient clipping (max_norm=1.0) for RNNs and transformers.
+- Learning rate scheduling always (cosine annealing or ReduceLROnPlateau).
+- Checkpoint every N epochs, keep best 3 checkpoints.
+- DDP for model fitting in single GPU, FSDP for larger models.
+- Gradient checkpointing when memory constrained.
+- Validate on GPU, no .cpu() in validation loop.
+- Set deterministic flags for reproducibility (at cost of speed).
+- Use tensor shape comments for readability: `# (B, C, H, W)`.
+- Log hyperparameters, metrics, and model graph to experiment tracker.
+- Profile with PyTorch Profiler to identify bottlenecks.
+- Test with a single batch before full training to catch shape errors.
+- Freeze batch norm during fine-tuning with small batches.
+- Use label smoothing for classification (helps calibration).
+- Warm up learning rate for first 5-10% of training steps.
+
+## Compared With
+
+| Feature | PyTorch | TensorFlow | JAX |
+|---|---|---|---|
+| Graph type | Dynamic (Eager) | Static (Graph) + Eager | JIT (XLA) |
+| Debugging | Python-native | tfdbg | print inside jit |
+| Distributed | DDP, FSDP, DeepSpeed | MirroredStrategy, TPUStrategy | pmap, shmap |
+| Production | TorchServe, ONNX | TF Serving, TF Lite, TF.js | Limited |
+| Community | Research dominant | Industry dominant | Growing research |
+| HuggingFace | Primary | Supported | Supported |
+| Deployment | ONNX, mobile | TF Lite, TF.js, mobile | XLA devices |
+| Ecosystem | torchvision, torchaudio | TFX, KerasCV, KerasNLP | Flax, Haiku, Equinox |
+
+Deep learning vs classical ML: deep learning requires more data (typically > 100K samples), more compute (GPU), and more hyperparameter tuning. It excels with unstructured data (images, audio, text, video) and learns hierarchical representations automatically. Classical ML (gradient boosting) often beats deep learning on structured/tabular data with < 100K rows.
+
+## Performance
+
+- AMP throughput gain: 1.5-3x on Volta+ (V100, A100, H100), minimal on older GPUs.
+- DDP scaling: near-linear up to 8 GPUs, 80-90% efficiency at 64 GPUs with proper batch size scaling.
+- FSDP memory reduction: 2-8x for large models (1B+ params) compared to DDP.
+- Gradient checkpointing: 1.5-2x memory reduction, 15-25% compute overhead.
+- DataLoader: 8 workers with prefetch = 2 saturates most NVMe/SSD read speeds.
+- Profile with: `torch.cuda.profiler.profile()`, `torch.autograd.profiler.profile()`.
+- Memory optimization: use inplace ops, share buffers, avoid unnecessary tensor creation.
+- Inference optimization: torch.compile (2-5x speedup), ONNX (2-3x), TensorRT (3-8x).
+- Batch size: larger batches give better GPU utilization but may hurt generalization (use learning rate warmup).
+- Memory-efficient attention: FlashAttention (2-4x faster attention, 5-10x memory reduction) for transformers.
+
+Scalability: single GPU for models up to 7B params (quantized). 4-8 GPUs for 7B-70B. FSDP + CPU offloading for 70B+. TPU pods for 100B+ models.
+
+## Tooling
+
+| Tool | Purpose |
+|---|---|
+| PyTorch | Primary deep learning framework |
+| TensorFlow / Keras | Production deep learning framework |
+| JAX + Flax | High-performance research framework |
+| HuggingFace Transformers | Pre-trained models, tokenizers, trainers |
+| DeepSpeed | Large model training, ZeRO optimization |
+| FSDP | Fully sharded data parallel (PyTorch native) |
+| Lightning | Training loop abstraction, multi-GPU/TPU |
+| Optuna | Hyperparameter optimization with pruning |
+| Weights & Biases | Experiment tracking and visualization |
+| TensorBoard | Training metrics visualization |
+| ONNX | Cross-platform model export |
+| TorchServe / TF Serving | Model serving |
+| NVIDIA DALI | GPU-accelerated data loading |
+| FlashAttention | Memory-efficient attention implementation |
+| bitsandbytes | 4-bit/8-bit quantization for large models |
+
 ## Rules
 - Use PyTorch for research/custom models, TensorFlow for TFX production
 - DataLoader with num_workers=4-8 and pin_memory=True always
@@ -288,6 +447,13 @@ if __name__ == "__main__":
 - Gradient checkpointing when memory constrained
 - Validate on GPU, no .cpu() in validation loop
 - Set deterministic flags for reproducibility (at the cost of speed)
+- Profile data pipeline: GPU should never wait for data
+- Use gradient accumulation for effective large batch size when GPU memory limited
+- Freeze batch norm during fine-tuning with small batches
+- Log all metrics, hyperparameters, and model graph
+- Test with a single batch before full training
+- Handle device placement explicitly — never assume tensors are on correct device
+- Use tensor shape comments: `# (batch, channels, height, width)`
 
 ## References
   - references/architectures.md — Modern Deep Learning Architectures
@@ -296,6 +462,8 @@ if __name__ == "__main__":
   - references/generative-models.md — Generative Models
   - references/pytorch-tensorflow.md — PyTorch and TensorFlow Reference
   - references/training-optimization.md — Training Optimization Reference
+  - references/deep-learning-architecture-patterns.md — Deep Learning Architecture Patterns
+  - references/deep-learning-training-optimization.md — Training Optimization Deep Dive
 ## Handoff
 `ml-experiment-tracking` for logging deep learning experiments
 `ml-feature-engineering` for deep learning feature extraction

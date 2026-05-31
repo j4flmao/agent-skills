@@ -4,7 +4,7 @@ description: >
   Use this skill when the user asks about mobile security, secure storage,
   certificate pinning, SSL pinning, biometric authentication, data encryption,
   ProGuard, obfuscation, or OWASP Mobile Top 10.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -41,10 +41,65 @@ A markdown document containing:
 ### Response Format
 No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
 
-——
+---
 
 ### Max Response Length
 4096 tokens
+
+## Architecture
+
+### Security Control Layers
+```
+┌─────────────────────────────────────────────────┐
+│             Code Protection Layer                │
+│  ProGuard/R8 obfuscation, debug detection,       │
+│  root/jailbreak detection, integrity checks      │
+├─────────────────────────────────────────────────┤
+│           Authentication Layer                    │
+│  Biometric (Face ID / fingerprint), token        │
+│  storage, OAuth2 PKCE, session management        │
+├─────────────────────────────────────────────────┤
+│            Network Security Layer                 │
+│  Certificate pinning, TLS 1.2+, ATS, no          │
+│  cleartext traffic, anti-phishing                │
+├─────────────────────────────────────────────────┤
+│            Data at Rest Layer                     │
+│  Keychain (iOS), EncryptedSharedPrefs (Android), │
+│  flutter_secure_storage, SQLCipher, backup       │
+│  exclusion                                       │
+├─────────────────────────────────────────────────┤
+│        Threat Modeling & Compliance              │
+│  Data classification, OWASP review, privacy      │
+│  controls, penetration testing schedule          │
+└─────────────────────────────────────────────────┘
+```
+
+### Decision Tree: Security Requirements
+```
+What data does the app handle?
+├── PII (name, email, phone, address)
+│   ├── Encrypted storage at rest
+│   ├── Certificate pinning for all API calls
+│   ├── Biometric gate for display
+│   ├── Data deletion API required
+│   └── Privacy policy labels required
+├── Payment data (credit card, billing)
+│   ├── PCI DSS scope assessment needed
+│   ├── Tokenization — never store raw PAN
+│   ├── Certificate pinning mandatory
+│   ├── Biometric confirmation for payments
+│   └── Network security config hardened
+├── Health data (HIPAA)
+│   ├── All of the above +
+│   ├── Audit logging for all data access
+│   ├── BAA agreement with cloud providers
+│   ├── Encryption at rest + in transit (always)
+│   └── Penetration testing required before launch
+└── Non-sensitive (public data, no auth)
+    ├── HTTPS only (TLS 1.2+)
+    ├── Basic storage security
+    └── No biometric or pinning needed
+```
 
 ## Workflow
 
@@ -62,6 +117,12 @@ Integrate biometric authentication (Face ID, fingerprint) for sensitive operatio
 
 ### Step 5: Apply Code Protection
 Enable ProGuard/R8 minification, debug detection, and root/jailbreak detection for release builds.
+
+### Step 6: Configure Runtime Protection
+Implement runtime application self-protection (RASP) controls: debugger detection (prevent debugging in release builds), emulator detection (block or limit functionality in emulators), integrity verification (validate code signature at runtime), and anti-tampering (verify app hash against known good value). Runtime checks should degrade gracefully — log and limit rather than crash.
+
+### Step 7: Penetration Testing
+Schedule penetration testing at each major release. Cover: network interception testing with Burp Suite/mitmproxy, static analysis with MobSF, dynamic analysis on jailbroken/rooted devices, storage inspection via Objection/Frida, and API security testing for OWASP API Top 10. Document findings, track remediation in the security backlog, and re-test after fixes.
 
 ## Mobile Threat Landscape
 
@@ -135,19 +196,6 @@ security_decision_tree:
       medium: "ProGuard/R8 default configuration, basic obfuscation"
       low: "Minify only, no obfuscation needed"
 ```
-
-## Rules
-
-- Never store secrets in plain text — use platform secure storage always
-- Certificate pinning with at least two backup pins and an expiration date
-- Biometric auth for sensitive operations (payments, personal data viewing)
-- ProGuard/R8 must be enabled for all release builds
-- Auth tokens must be stored in secure storage, never SharedPreferences or UserDefaults
-- Debug builds must not expose debug endpoints or verbose logging in production
-- Root/jailbreak detection should degrade gracefully, not crash the app
-- All network traffic must use HTTPS with certificate validation enabled
-- OWASP Mobile Top 10 must be reviewed at the start of every mobile project
-- Security controls should be tested on both jailbroken/rooted and stock devices
 
 ## Data at Rest
 
@@ -231,6 +279,75 @@ buildTypes {
 }
 ```
 
+## Common Pitfalls
+
+- **Hardcoded secrets**: API keys, tokens, and passwords compiled into the binary can be extracted with string search tools. Always fetch from a secure server or use device-native storage.
+- **Insufficient backup exclusion**: Sensitive data in UserDefaults or SharedPreferences is included in device backups by default. Mark sensitive data with `NSURLIsExcludedFromBackupKey` (iOS) or `android:allowBackup="false"`.
+- **Pinning without backup pins**: If the primary certificate expires or is rotated without a backup pin, all API traffic fails. Always include at least 2 backup pins with staggered expiration.
+- **Biometric without fallback**: If biometric authentication fails (wet fingers, Face ID mismatch), users must have a fallback (device PIN/password) or they are locked out.
+- **Overlooking third-party SDKs**: Third-party analytics, crash reporting, and ad SDKs can leak data through their own network calls. Review each SDK's data practices before integration.
+- **Weak key derivation**: Using user passwords directly as encryption keys without PBKDF2/scrypt key stretching makes brute-force attacks practical. Always use platform key derivation APIs.
+- **Debug endpoints in release builds**: `staging`, `dev`, or `debug` API endpoints left in release builds allow attackers to access non-production environments. Strip debug configurations at build time.
+- **Ignoring clipboard security**: Sensitive data copied to the clipboard persists beyond the app. Disable clipboard for password fields, payment info, and PII display.
+
+## Compared With
+
+| Security Approach | Effort | Protection Level | User Friction |
+|-------------------|--------|-----------------|---------------|
+| Platform secure storage only | Low | Medium (basic data protection) | None |
+| + Certificate pinning | Medium | High (prevents MITM) | None |
+| + Biometric auth | Medium | High (device-level auth) | Low |
+| + ProGuard/R8 obfuscation | Low | Medium (deters static reverse engineering) | None |
+| + Root/jailbreak detection | Medium | Medium-High (prevents tampered-device attacks) | None |
+| + Runtime protection (RASP) | High | High (active attack prevention) | None |
+| + Full encryption (SQLCipher) | High | Very High (data never in plaintext) | None |
+| + Penetration testing + reward | Ongoing | Highest (validated through attack simulation) | None |
+
+## Performance
+
+- Platform secure storage read/write: Keychain ~5-15ms, EncryptedSharedPreferences ~10-30ms, hardware-backed keystore ~50-200ms
+- Certificate pinning validation: adds ~10-50ms per HTTPS handshake depending on cert chain length
+- Biometric authentication: Face ID ~1-2s, fingerprint ~200-500ms — do not call on app launch for non-sensitive screens
+- ProGuard/R8 obfuscation: increases build time by 30-120s for medium-size apps, adds ~5-10% to APK size from mapping files
+- Root/jailbreak detection: ~5-20ms per check — cache results for session duration, do not check on every screen
+- SQLCipher: 5-15% performance overhead vs plain SQLite — most impact on large write queries
+- Runtime integrity checks: ~50-100ms at app startup — run in background thread, do not block TTI
+
+## Tooling
+
+| Tool | Category | Platform |
+|------|----------|----------|
+| MobSF | Static + dynamic analysis | iOS, Android |
+| Burp Suite | Network interception testing | iOS, Android |
+| OWASP ZAP | Automated security scanning | iOS, Android |
+| Frida | Runtime instrumentation | iOS, Android |
+| Objection | Mobile exploration | iOS, Android |
+| Drozer | Android security assessment | Android |
+| Needle | iOS security testing | iOS |
+| Snyk / Dependabot | SCA (supply chain) | Cross-platform |
+| Checkmarx / SonarQube | SAST (static analysis) | Cross-platform |
+| Apple Security Bounty | Bug bounty platform | iOS |
+| Google Play Security Rewards | Bug bounty platform | Android |
+| Selenium / Appium | Security UI automation | iOS, Android |
+
+## Rules
+
+- Never store secrets in plain text — use platform secure storage always
+- Certificate pinning with at least two backup pins and an expiration date
+- Biometric auth for sensitive operations (payments, personal data viewing)
+- ProGuard/R8 must be enabled for all release builds
+- Auth tokens must be stored in secure storage, never SharedPreferences or UserDefaults
+- Debug builds must not expose debug endpoints or verbose logging in production
+- Root/jailbreak detection should degrade gracefully, not crash the app
+- All network traffic must use HTTPS with certificate validation enabled
+- OWASP Mobile Top 10 must be reviewed at the start of every mobile project
+- Security controls should be tested on both jailbroken/rooted and stock devices
+- Every third-party SDK must be evaluated for data practices before integration
+- Sensitive data must be excluded from device backups explicitly
+- Key derivation must use platform APIs (PBKDF2, scrypt) — never raw user passwords as keys
+- Penetration testing must be scheduled for every major release
+- Security findings must be tracked with severity, remediation steps, and re-test date
+
 ## References
   - references/auth.md — Mobile Authentication
   - references/data-protection.md — Mobile Data Protection
@@ -238,6 +355,8 @@ buildTypes {
   - references/mobile-security.md — Mobile Security Fundamentals
   - references/network-security.md — Mobile Network Security
   - references/security-hardening.md — Mobile Security Hardening
+  - references/mobile-security-penetration-testing.md — Mobile Security Penetration Testing
+  - references/mobile-security-compliance.md — Mobile Security Compliance
 ## Handoff
 
 Hand off to stack-specific skill for implementation.

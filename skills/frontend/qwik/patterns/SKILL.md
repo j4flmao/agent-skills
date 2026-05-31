@@ -75,12 +75,10 @@ No hydration: HTML contains serialized state (`data-qwik`) + QRL references to l
 export default component$(() => {
   const state = useStore({ items: [], filter: '' })
 
-  // $() wraps a lazy-loadable closure
   const log = $((msg: string) => {
     console.log(msg, state.items)
   })
 
-  // $ suffix on events creates lazy boundaries
   return (
     <input onInput$={(_, el) => state.filter = el.value} />
   )
@@ -91,18 +89,15 @@ Every `$` creates a separate lazy-loadable chunk. The optimizer extracts these i
 ### Step 3: Fine-Grained Reactivity
 ```tsx
 export default component$(() => {
-  // useSignal for primitives
   const count = useSignal(0)
   const name = useSignal('')
 
-  // useStore for objects with deep reactivity
   const form = useStore({
     email: '',
     password: '',
     errors: {} as Record<string, string>,
   })
 
-  // Computed-like patterns — $() + useComputed$
   const isFormValid = useComputed$(() =>
     form.email.includes('@') && form.password.length >= 8
   )
@@ -135,7 +130,7 @@ src/routes/
 ```
 All routes, layouts, data loaders, and actions are lazy-loaded. Use `<Slot />` for layout insertion points.
 
-### Step 5: Route Loaders & Actions
+### Step 5: Route Loaders and Actions
 ```tsx
 // src/routes/dashboard/index.tsx
 import { routeLoader$, routeAction$, Form } from '@builder.io/qwik-city'
@@ -179,7 +174,6 @@ export default component$(() => {
     <html>
       <head>
         <PrefetchServiceWorker />
-        <script dangerouslySetInnerHTML={/* service worker registration */} />
       </head>
       <body>
         <Slot />
@@ -192,7 +186,7 @@ PrefetchServiceWorker preloads QRL chunks for links in viewport, enabling instan
 
 ### Step 7: Server Functions
 ```tsx
-// src/components/createUser.ts — server function
+// src/components/createUser.ts
 import { server$ } from '@builder.io/qwik-city'
 
 export const createUser = server$(async (data: CreateUserInput) => {
@@ -203,6 +197,127 @@ export const createUser = server$(async (data: CreateUserInput) => {
 ```
 `server$()` marks a function to always run on the server. Callable from client components as if local.
 
+### Step 8: useVisibleTask$ for Client Effects
+```tsx
+export default component$(() => {
+  const elemRef = useSignal<Element>()
+
+  useVisibleTask$(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) analytics.trackView(entry.target.id)
+      })
+    })
+    if (elemRef.value) observer.observe(elemRef.value)
+    return () => observer.disconnect()
+  })
+
+  return <div ref={elemRef} id="tracked-element">Content</div>
+})
+```
+
+## Component Architecture
+
+### Component Decision Tree
+```
+Does the component need interactivity?
+  No  -> Static HTML, no component$() needed (plain function component)
+  Yes -> Does it need state?
+    No  -> Use component$() with props only
+    Yes -> Is the state simple (number, string)?
+      Yes -> useSignal
+      No -> useStore (object, array)
+
+Does the component need side effects?
+  No -> Skip useVisibleTask$
+  Yes -> Is it a data fetch?
+    No -> Is it DOM measurement, animation, or analytics?
+      Yes -> useVisibleTask$ with proper cleanup
+    Yes -> routeLoader$ in parent, pass as props
+```
+
+### Component Composition Patterns
+```tsx
+// Parent provides state, children receive props
+export default component$(() => {
+  const items = useSignal<string[]>([])
+  return (
+    <div>
+      <ItemList items={items.value} />
+    </div>
+  )
+})
+
+// Or use context for deep passing
+import { createContextId, useContextProvider, useContext } from '@builder.io/qwik'
+
+export const ThemeContext = createContextId<string>('theme')
+
+export const Root = component$(() => {
+  useContextProvider(ThemeContext, 'dark')
+  return <Slot />
+})
+
+export const Child = component$(() => {
+  const theme = useContext(ThemeContext)
+  return <div class={theme}>Content</div>
+})
+```
+
+## Common Pitfalls
+
+1. **Forgetting $ on event handlers**: `onClick` instead of `onClick$` — event never gets lazy loaded.
+2. **Using useState from React**: Qwik uses useSignal and useStore, not hooks from other frameworks.
+3. **Heavy useVisibleTask$ usage**: Every useVisibleTask$ blocks resumability. Keep them minimal.
+4. **Dynamic $() calls**: `$(someCondition ? fn1 : fn2)` breaks the optimizer. Use static boundaries.
+5. **Missing PrefetchServiceWorker**: Without it, lazy navigation produces visible network waterfalls.
+6. **Mutable state reassignment**: `state = newValue` instead of `state.value = newValue` for signals.
+7. **Nested reactivity with useStore**: Objects inside useStore are deeply reactive — use for form state.
+8. **Not using typed loaders**: routeLoader$ returns `unknown` without explicit typing.
+
+## Best Practices
+
+1. Every `$()` should be statically analyzable — no dynamic code inside dollar boundaries.
+2. `useSignal` for primitives, `useStore` for objects. Never plain `let` or `const`.
+3. Colocate routeLoader$ and routeAction$ in the route file that uses them.
+4. Use `useComputed$` for derived values — avoids manual synchronization.
+5. Keep useVisibleTask$ focused on a single concern — one observer per task.
+6. Lazy-load heavy libraries inside `$()` callbacks, not at module level.
+7. Use `NoSerialize` wrapper for non-serializable values (class instances, DOM refs).
+8. Prefetch critical routes after initial render with PrefetchServiceWorker.
+
+## Compared With
+
+| Aspect | Qwik | React (Client) | Solid |
+|--------|------|----------------|-------|
+| Rendering | Resumable | Hydrating | Hydrating |
+| Lazy loading | Per-event ($) | Per-component (lazy()) | Per-component (lazy()) |
+| Reactivity | Signal-based, fine-grained | Virtual DOM diff | Signal-based |
+| Serialization | Automatic via QRL | Manual (JSON) | Manual |
+| Server functions | Built-in (server$) | Via Server Actions | Via SolidStart |
+| Bundle size | ~10KB (initial) | ~40KB+ (React runtime) | ~8KB (initial) |
+
+## Performance
+
+1. Initial load: ~10KB JS baseline, zero hydration cost, instant TTI.
+2. Lazy chunks: Each $() is ~200-500 bytes, loaded on interaction only.
+3. Serialized state: HTML size increases by ~2-5KB per page with serialized signals.
+4. Prefetch: PrefetchServiceWorker uses idle time to download route chunks.
+5. Bundle splitting: Automatic at the $ boundary — no manual code splitting.
+6. Memory: Fine-grained signals use less memory than virtual DOM tree.
+7. Time to interactive: Near zero because there is no hydration to wait for.
+
+## Tooling
+
+1. `npm run qwik build` — production build with Qwik optimizer.
+2. `npm run qwik dev` — dev server with HMR and the Qwik DevTools panel.
+3. `npm run qwik lint` — ESLint with Qwik-specific rules (ensures $ boundaries).
+4. `npm run qwik qwik add` — CLI to add integrations (auth, database, UI).
+5. Qwik DevTools browser extension — inspect lazy boundaries and QRL chunks.
+6. `@builder.io/qwik-labs` — experimental features and utilities.
+7. `qwik-speak` — internationalization library for Qwik.
+8. `qwik-image` — optimized images with lazy loading.
+
 ## Rules
 - No eager code — every component, event, and closure is lazy by default via `$`.
 - `useSignal` for primitives, `useStore` for objects. Never use plain `let` or `const` for reactive state.
@@ -211,6 +326,7 @@ export const createUser = server$(async (data: CreateUserInput) => {
 - PrefetchServiceWorker is required for instant navigation — without it, lazy loading becomes waterfall.
 - Qwik optimizer must be able to see `$()` boundaries — no dynamic `$` calls.
 - Serialized state stays in HTML — never rely on sessionStorage for critical app state.
+- Dollar boundaries must be statically analyzable — no dynamic expressions inside $().
 
 ## References
   - references/qwik-city-patterns.md — Qwik City Patterns
@@ -219,6 +335,9 @@ export const createUser = server$(async (data: CreateUserInput) => {
   - references/qwik-routing.md — Qwik Routing Patterns
   - references/qwik-state-management.md — Qwik State Management
   - references/resumable-patterns.md — Qwik Resumable Patterns
+  - references/qwik-component-composition.md — Qwik Component Composition Reference
+  - references/qwik-form-validation.md — Qwik Form Validation Reference
+
 ## Handoff
 No artifact produced.
 Next skill: frontend-universal-testing for Qwik component tests. Or frontend-universal-performance.

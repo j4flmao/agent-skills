@@ -29,7 +29,6 @@ Exact phrases: "CSS strategy", "CSS Modules", "CSS-in-JS", "utility-first", "Tai
 - Project type (library, app, design system)
 - Current styling approach (if any)
 - Performance requirements (runtime cost, bundle size)
-- Existing Tailwind or CSS-in-JS setup
 
 ### Output Artifact
 CSS strategy recommendation with rationale, setup code, and organization pattern.
@@ -61,7 +60,6 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 - [ ] Component styling pattern established with examples
 - [ ] Responsive and state-based styling pattern defined
 - [ ] Build tool configured for chosen approach
-- [ ] Theming integration decided (CSS variables vs JS-based)
 
 ### Max Response Length
 4096 tokens
@@ -71,11 +69,11 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ### 1. Approach Decision
 ```
 Project type?
-├── Design system / component library → CSS Modules or vanilla-extract (zero runtime, scoped)
-├── Large app with many developers → Tailwind CSS (consistent, low decision fatigue)
-├── Highly themed / white-label app → CSS-in-JS or CSS variables (dynamic theming)
-├── Micro-frontend → CSS Modules (isolation)
-└── Small app / prototype → Any — pick based on team preference
+├── Design system / component library -> CSS Modules or vanilla-extract (zero runtime, scoped)
+├── Large app with many developers -> Tailwind CSS (consistent, low decision fatigue)
+├── Highly themed / white-label app -> CSS-in-JS or CSS variables (dynamic theming)
+├── Micro-frontend -> CSS Modules (isolation)
+└── Small app / prototype -> Any — pick based on team preference
 ```
 
 ### 2. Approach Comparison
@@ -94,26 +92,25 @@ Project type?
 ### 3. File Organization
 ```
 src/
-├── styles/
-│   ├── reset.css               /* CSS reset */
-│   ├── variables.css            /* CSS custom properties */
-│   ├── typography.css           /* Font faces, text styles */
-│   ├── utilities.css            /* Utility classes (if not Tailwind) */
-│   └── animations.css          /* Keyframes */
-├── components/
-│   ├── Button/
-│   │   ├── Button.tsx
-│   │   ├── Button.module.css   /* or Button.styled.ts for CSS-in-JS */
-│   │   └── Button.test.tsx
-│   └── Card/
-│       ├── Card.tsx
-│       ├── Card.module.css
-│       └── Card.test.tsx
-└── pages/
-    ├── Home/
-    │   ├── Home.tsx
-    │   └── Home.module.css
-    └── ...
+  styles/
+    reset.css               /* CSS reset */
+    variables.css            /* CSS custom properties */
+    typography.css           /* Font faces, text styles */
+    utilities.css            /* Utility classes (if not Tailwind) */
+    animations.css          /* Keyframes */
+  components/
+    Button/
+      Button.tsx
+      Button.module.css
+      Button.test.tsx
+    Card/
+      Card.tsx
+      Card.module.css
+      Card.test.tsx
+  pages/
+    Home/
+      Home.tsx
+      Home.module.css
 ```
 
 ### 4. CSS Modules Pattern
@@ -137,35 +134,10 @@ src/
   background: transparent;
   border: 1px solid var(--color-border);
 }
-
-.large {
-  padding: 12px 24px;
-  font-size: 1.125rem;
-}
-```
-
-```typescript
-// Button.tsx
-import styles from './Button.module.css'
-
-interface ButtonProps {
-  variant: 'primary' | 'secondary'
-  size?: 'default' | 'large'
-}
-
-export function Button({ variant, size, ...props }: ButtonProps) {
-  return (
-    <button
-      className={`${styles.root} ${styles[variant]} ${size === 'large' ? styles.large : ''}`}
-      {...props}
-    />
-  )
-}
 ```
 
 ### 5. Tailwind Pattern
 ```typescript
-// Button.tsx (Tailwind)
 export function Button({ variant = 'primary', ...props }: ButtonProps) {
   const variants = {
     primary: 'bg-blue-600 text-white hover:bg-blue-700',
@@ -183,7 +155,6 @@ export function Button({ variant = 'primary', ...props }: ButtonProps) {
 
 ### 6. Styled Components Pattern
 ```typescript
-// Button.styled.ts
 import styled, { css } from 'styled-components'
 
 interface ButtonProps {
@@ -229,17 +200,93 @@ export const StyledButton = styled.button<ButtonProps>`
 }
 ```
 
+## Component Architecture
+
+### Decision Tree for Mixed Approaches
+```
+Page layout (grid, sections)
+  -> Tailwind utility classes or CSS Grid in global styles
+  -> Reason: layout changes infrequently, benefits from standard grid
+
+Component appearance (color, spacing, typography)
+  -> CSS Modules or styled-components
+  -> Reason: encapsulation, no class name collisions
+
+Dynamic styles (theme-dependent, user-customizable)
+  -> CSS Variables
+  -> Reason: runtime theme switching without re-render
+
+Animations
+  -> CSS keyframes in global animations.css
+  -> Reason: reusable, hardware-accelerated
+```
+
+## Common Pitfalls
+
+1. **Mixing approaches inconsistently**: Using Tailwind in some components and CSS Modules in others without clear boundaries.
+2. **Runtime CSS-in-JS for static apps**: Adds unnecessary JS bundle when CSS Variables would work.
+3. **Over-nesting in SCSS**: More than 3 levels deep creates specificity problems.
+4. **Not purging unused styles**: With utility frameworks, purging is essential to keep bundle small.
+5. **Inline styles for dynamic values**: Use CSS variables instead (avoids specificity, enables transitions).
+6. **Missing design tokens**: Hardcoding values leads to inconsistency.
+7. **Specificity wars**: `!important` cascading indicates architectural problem.
+
+## Best Practices
+
+1. Pick one primary approach and stick with it — avoid mixing without clear boundaries.
+2. Design tokens in CSS custom properties, not JavaScript.
+3. Component styles never depend on global styles for layout.
+4. Utility classes preferred over one-off CSS for spacing, type, layout.
+5. CSS-in-JS only when dynamic theming is required beyond CSS variables.
+6. CSS Modules for zero-runtime scoping when dynamic theming not needed.
+7. Naming conventions consistent: camelCase for CSS Modules, kebab-case for utilities.
+8. Media queries use standard breakpoint values.
+9. Prefer CSS animations over JavaScript.
+10. Configure purging (Tailwind) or lint rules for dead styles.
+
+## Compared With
+
+| Aspect | Tailwind | CSS Modules | styled-components |
+|--------|----------|-------------|-------------------|
+| Setup time | 5 min | 1 min | 5 min |
+| Bundle impact | 0KB after purge | 0KB | ~12KB runtime |
+| Design consistency | Excellent (constraint-based) | Manual | Manual |
+| Learning curve | Medium | Low | Low |
+| Dynamic theming | Via CSS vars | Via CSS vars | Native |
+| Dev experience | Excellent with IDE plugin | Standard | Good with babel plugin |
+| Migration difficulty | High to change | Low | Medium |
+
+## Performance
+
+1. Tailwind purged: final CSS is typically 5-15KB gzipped for a large app.
+2. styled-components/Emotion: ~8-12KB runtime + inlined styles in JS bundle.
+3. CSS Modules: zero runtime cost, styles extracted to static CSS files.
+4. CSS Variables: no performance overhead, native browser optimization.
+5. Runtime CSS-in-JS adds ~0.4ms per style injection on initial render.
+6. Critical CSS extraction (inlining above-fold styles) improves FCP by 10-20%.
+
+## Tooling
+
+1. `tailwindcss` — utility-first CSS framework with JIT compiler.
+2. `postcss` — CSS transformer (autoprefixer, nesting, custom media).
+3. `sass` — SCSS preprocessor with mixins, functions, variables.
+4. `stylelint` — CSS linter with rules for ordering, naming, specificity.
+5. `vanilla-extract` — zero-runtime CSS-in-JS with TypeScript.
+6. `linaria` — zero-runtime CSS-in-JS with Babel/Macro.
+7. `critters` — inline critical CSS for SSR frameworks.
+8. `purgecss` — remove unused CSS (used by Tailwind internally).
+
 ## Rules
 1. CSS approaches are not mixed in a single project — pick one primary approach.
-2. Design tokens live in CSS custom properties, not in JavaScript — enables runtime theme switching without re-renders.
+2. Design tokens live in CSS custom properties, not in JavaScript.
 3. Component styles never depend on global styles for layout — each component is self-contained.
 4. Utility classes are preferred over one-off CSS for margins, padding, typography, and layout.
 5. CSS-in-JS is only chosen when dynamic theming is required and CSS variables are insufficient.
 6. CSS Modules are used for zero-runtime scoping when dynamic theming is not needed.
-7. Naming conventions are consistent across the entire codebase: camelCase for CSS Modules, kebab-case for utility classes.
-8. Media queries inside component styles use the project's standard breakpoint values (as CSS variables or JS constants).
+7. Naming conventions are consistent across the entire codebase.
+8. Media queries inside component styles use the project's standard breakpoint values.
 9. Animations prefer CSS over JavaScript — only JS animation when complex choreography is needed.
-10. Dead styles are removed — purging (Tailwind) or lint rules (no unused styles) are configured.
+10. Dead styles are removed — purging or lint rules are configured.
 11. `!important` is never used unless overriding a third-party library.
 12. CSS selectors never exceed 3 levels of specificity.
 
@@ -250,6 +297,9 @@ export const StyledButton = styled.button<ButtonProps>`
   - references/css-methodology.md — CSS Methodology
   - references/css-organization.md — CSS Organization
   - references/css-performance.md — CSS Performance
+  - references/css-architecture-methodologies.md — CSS Architecture Methodologies
+  - references/css-performance-bundle-optimization.md — CSS Performance Optimization
+
 ## Handoff
 No artifact produced unless requested.
 Next skill: `frontend-tailwind-css` — Tailwind-specific patterns, configuration, and optimization.

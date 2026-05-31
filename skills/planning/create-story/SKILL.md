@@ -2,7 +2,7 @@
 name: create-story
 description: >
   Use this skill when the user says 'create story', 'next story', 'implement STORY-XXX', 'pick up next ticket', 'what should I build next', 'story from PRD', or when the planning phase is done and implementation needs to start. This skill selects the next unimplemented story from the PRD backlog and produces a single, detailed implementation story file with acceptance criteria and technical notes. Do NOT use for: creating epics, writing briefs, technical specs, or recording ADRs.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -16,7 +16,35 @@ tags: [planning, phase-1, agile, stories]
 # Create Story
 
 ## Purpose
-Generate a single, well-defined implementation story from the PRD backlog, complete with acceptance criteria, technical notes, and complexity estimate. Ready for immediate implementation.
+Generate a single, well-defined implementation story from the PRD backlog, complete with acceptance criteria, technical notes, and complexity estimate. Ready for immediate implementation. A well-crafted story tells a developer exactly what to build, how to verify it, and how it fits into the broader system — while leaving implementation details to the developer's judgment.
+
+## Architecture/Decision Trees
+
+### Story Selection Decision Tree
+```
+Are there any blocked stories that need resolving?
+  |-- YES --> Select the highest-priority blocked story and resolve the blocker
+  |-- NO --> Are there stories in the highest-priority epic?
+        |-- YES --> Select the first unstarted story from that epic
+        |-- NO --> Move to next priority epic
+
+Does the selected story have dependencies on incomplete stories?
+  |-- YES --> Can we implement the dependency first?
+  |     |-- YES --> Select the dependency story instead
+  |     |-- NO  --> Mark as blocked, select next available story
+  |-- NO --> Proceed with this story
+```
+
+### Story Splitting Decision
+```
+Can the story be completed in 1-3 days?
+  |-- YES --> Good to go
+  |-- NO --> Can it be split into vertical slices?
+        |-- YES --> Split into 2+ stories, each touching all layers
+        |-- NO --> Does it involve significant research?
+              |-- YES --> Create a spike story first, then implementation stories
+              |-- NO --> Challenge scope assumptions — is everything truly necessary?
+```
 
 ## Agent Protocol
 
@@ -43,7 +71,7 @@ Saved to docs/stories/STORY-{NNN}.md
 Ready for implementation.
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick. No explanations.
+No preamble. No postamble. No explanations. No filler. Compress output.
 
 ### Completion Criteria
 - [ ] PRD read. Next unimplemented story identified from highest-priority epic.
@@ -129,6 +157,46 @@ Write to `docs/stories/STORY-{NNN}.md`.
 - Technical notes must reference specific files, not just "implement the feature."
 - If the story depends on an ADR, include the ADR number in technical notes.
 - Do not create stories for work that is already in progress (Status: "In Progress" in existing stories).
+- Use standard user role names consistently across all stories.
+
+## Best Practices
+- Write stories from the user's perspective, not the system's. "User can export report" not "System generates CSV".
+- Include acceptance criteria for non-functional aspects when relevant (performance, accessibility).
+- Reference design files (Figma, Sketch) in technical notes when available.
+- Tag related stories (epic, feature area) for filtering in project management tools.
+- Update story status as it progresses through the workflow.
+- Include edge case criteria that challenge the implementation — not just happy path.
+
+## Common Pitfalls
+- **Stories that are too large**: A story that takes more than 3 days should be split. If you find yourself writing "and" in the description, it is likely multiple stories.
+- **Missing technical context**: Developers need to know which files to touch, which patterns to follow, and which ADRs apply. Leaving this out causes rework.
+- **Vague acceptance criteria**: "It works" is not testable. Every criterion must be verifiable by a human or automated test.
+- **Technology prescriptions in stories**: "Add a Redis cache" tells the developer HOW, not WHAT. The requirement is "Pages load in under 2 seconds."
+- **No error scenarios**: Stories that only define happy path miss important implementation detail about error handling.
+- **Over-specifying**: Telling developers exactly how to implement (specific libraries, line-by-line instructions) defeats the purpose of a story.
+
+## Compared With
+| Artifact | Purpose | Detail Level | Audience |
+|----------|---------|-------------|----------|
+| Epic | Feature area, multiple stories | High | Product, Stakeholders |
+| Story | Single vertical slice of functionality | Medium | Dev, QA |
+| Task | Implementation breakdown of a story | High | Developer |
+| Bug | Defect report | Varies | Dev, QA |
+| Spike | Research or exploration | Medium | Developer |
+| Technical Spec | Full implementation plan | Very High | Developer, Architect |
+
+## Performance
+- A well-written story takes 15-30 minutes to generate.
+- Stories should be written at most 1 sprint ahead to avoid waste from changing priorities.
+- A team of 4-6 engineers typically completes 8-12 stories per 2-week sprint.
+- Story refinement (backlog grooming) should take 2-4 hours per week.
+
+## Tooling/Methodology
+- **Project management**: Jira, Linear, Asana, GitHub Issues, Shortcut.
+- **Story format**: Confluence, Notion, markdown files in repo.
+- **Gherkin**: Cucumber, SpecFlow for executable acceptance criteria.
+- **Estimation**: Planning poker, t-shirt sizing, dot voting.
+- **Workflow**: Todo -> In Progress -> Review -> Done (or similar Kanban states).
 
 ## References
   - references/acceptance-criteria.md — Acceptance Criteria Guide
@@ -136,7 +204,9 @@ Write to `docs/stories/STORY-{NNN}.md`.
   - references/create-story-fundamentals.md — Create Story Fundamentals
   - references/story-examples.md — Story Examples
   - references/story-refinement.md — Story Refinement
-  - references/story-template.md — STORY-{NNN}: {Title}
+  - references/story-template.md — Story Template
+  - references/user-story-splitting.md — User Story Splitting
+  - references/user-story-acceptance-criteria.md — User Story Acceptance Criteria
 ## Handoff
 Output: `docs/stories/STORY-{NNN}.md`
 Next skill: stack-specific implementation skill (backend or frontend depending on the story)

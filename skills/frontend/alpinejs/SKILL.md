@@ -59,13 +59,7 @@ No preamble. No postamble. No explanations. Compress output — why use many tok
 
 ### Step 1: Install Alpine.js
 ```html
-<!-- CDN (recommended for simplicity) -->
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
-<!-- npm -->
-<!-- npm install alpinejs -->
-<!-- import Alpine from 'alpinejs' -->
-<!-- Alpine.start() -->
 ```
 
 ### Step 2: Basic Component
@@ -130,13 +124,109 @@ No preamble. No postamble. No explanations. Compress output — why use many tok
 </div>
 ```
 
+### Step 6: Modals and Tabs
+```html
+<div x-data="{ activeTab: 'info' }">
+  <button @click="activeTab = 'info'" :class="{ active: activeTab === 'info' }">Info</button>
+  <button @click="activeTab = 'settings'" :class="{ active: activeTab === 'settings' }">Settings</button>
+
+  <div x-show="activeTab === 'info'">Info content</div>
+  <div x-show="activeTab === 'settings'">Settings content</div>
+</div>
+```
+
+### Step 7: Transitions
+```html
+<div x-data="{ open: false }">
+  <button @click="open = !open">Toggle</button>
+  <div x-show="open"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0 scale-90"
+       x-transition:enter-end="opacity-100 scale-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100 scale-100"
+       x-transition:leave-end="opacity-0 scale-90">
+    Animated content
+  </div>
+</div>
+```
+
+## Component Architecture
+
+### Alpine.js Decision Tree
+```
+Does the component need:
+  Local state only? -> x-data with inline object
+  Shared state across components? -> Alpine.store()
+  AJAX data loading? -> x-init with fetch()
+  User input binding? -> x-model
+  Conditional display? -> x-show (toggle) or x-if (DOM add/remove)
+  Loops? -> x-for with :key
+  Dynamic styles/classes? -> :style or :class binding
+  Side effects on data change? -> $watch or x-effect
+```
+
+## Common Pitfalls
+
+1. **Forgetting x-data on parent**: Child elements can't access state without a parent x-data scope.
+2. **Mixing Alpine with jQuery DOM manipulation**: Alpine manages the DOM — direct manipulation breaks reactivity.
+3. **Complex expressions in x-data**: Extract complex logic into component methods.
+4. **Overusing x-if instead of x-show**: x-show is more performant for frequent toggles.
+5. **Not using :key in x-for**: Without keys, Alpine may reuse DOM elements incorrectly.
+6. **Missing alpine:init for stores**: Alpine stores must be registered before components initialize.
+7. **Async data in x-data constructor**: Use x-init or async methods, not the x-data expression itself.
+
+## Best Practices
+
+1. State belongs in x-data, not in external JS files.
+2. Use Alpine.store() for global state shared across components.
+3. Use x-model for form inputs (two-way binding).
+4. Use x-show for toggles, x-if for conditional DOM removal.
+5. Use @click.prevent or .window modifiers for event control.
+6. Fetch side effects in x-init or via $nextTick.
+7. Keep x-data expressions simple; extract complex logic into methods.
+8. Use x-transition for smooth enter/leave animations.
+
+## Compared With
+
+| Aspect | Alpine.js | Vue | React | htmx |
+|--------|-----------|-----|-------|------|
+| Bundle size | ~10KB | ~33KB | ~42KB | ~14KB |
+| Build step | None | Optional | Required | None |
+| State management | x-data/store | data/props | useState | Server |
+| Templating | Directives | Vue templates | JSX | Server HTML |
+| Learning curve | Low | Medium | High | Very Low |
+| Best for | Server-rendered + interactivity | SPAs | SPAs/complex UIs | Hypermedia apps |
+
+## Performance
+
+1. Alpine.js is ~10KB min+gzip — negligible bundle impact.
+2. No virtual DOM — Alpine mutates real DOM directly.
+3. x-show uses CSS display:none (no DOM removal, faster toggles).
+4. x-if removes/adds DOM nodes (useful for conditional heavy content).
+5. No build step means no compile time — just load and use.
+6. Fine-grained reactivity — only updates change-dependent DOM parts.
+7. Alpine.store() is persistent across page navigations if page is SPA-like.
+
+## Tooling
+
+1. Alpine.js DevTools browser extension — inspect components, state, stores.
+2. `@alpinejs/collapse` — collapse/expand animation plugin.
+3. `@alpinejs/intersect` — intersection observer plugin.
+4. `@alpinejs/persist` — persist state to localStorage.
+5. `@alpinejs/focus` — focus trap plugin for modals.
+6. `@alpinejs/morph` — smooth DOM morphing plugin.
+7. `@alpinejs/mask` — input mask plugin.
+8. `alpine-ajax` — AJAX helper similar to htmx for Alpine.
+9. `alpinejs-tooltip` — tooltip plugin.
+
 ## Rules
 - State belongs in x-data, not in external JS files.
-- Use `Alpine.store()` for global state shared across components.
-- Use `x-model` for form inputs (two-way binding).
-- Use `x-show` for toggles, `x-if` for conditional DOM removal.
-- Use `@click.prevent` or `.window` modifiers for event control.
-- Fetch side effects in `x-init` or via `$nextTick`.
+- Use Alpine.store() for global state shared across components.
+- Use x-model for form inputs (two-way binding).
+- Use x-show for toggles, x-if for conditional DOM removal.
+- Use @click.prevent or .window modifiers for event control.
+- Fetch side effects in x-init or via $nextTick.
 - Avoid mixing Alpine with jQuery-like DOM manipulation — let Alpine manage the DOM.
 - Keep x-data expressions simple; extract complex logic into methods.
 
@@ -147,6 +237,9 @@ No preamble. No postamble. No explanations. Compress output — why use many tok
   - references/alpinejs-deployment.md — Alpine.js Deployment
   - references/alpinejs-fundamentals.md — Alpinejs Fundamentals
   - references/alpinejs-testing.md — Alpine.js Testing Reference
+  - references/alpinejs-component-patterns.md — Alpine.js Component Patterns
+  - references/alpinejs-state-management.md — Alpine.js State Management Reference
+
 ## Handoff
 No artifact produced.
 Next skill: alpine-laravel (if Laravel backend) or frontend-testing.

@@ -9,7 +9,7 @@ compatibility:
   claude-code: true
   cursor: true
   codex: true
-  windsure: true
+  windsurf: true
 tags: [frontend, pwa, phase-3, universal]
 ---
 
@@ -28,8 +28,6 @@ Exact phrases: "add pwa", "service worker", "offline support", "web manifest", "
 - Verify presence and content of `manifest.json` or `manifest.webmanifest`
 - Identify the build tool (Vite, Webpack, Next.js, Astro, etc.) for plugin-based SW generation
 - Determine caching requirements: static assets, API responses, full offline vs degraded offline
-- Check for existing notification permission requests or push notification setup
-- Note the current Lighthouse PWA score
 
 ### Output Artifact
 No file output unless requested.
@@ -38,19 +36,16 @@ No file output unless requested.
 1. Output service worker registration code and SW logic in full — never truncate with `/* ... */`
 2. For Workbox-based setups, output the `workbox-config.js` plus the import statement
 3. For the manifest, output the complete JSON object with all required and recommended fields
-4. Always include the registration snippet to be placed in the app entry point
-5. For push notifications, output both SW-side and client-side code
-6. No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+4. No preamble. No postamble. No explanations. No filler/hedging/transitions.
 
 ### Completion Criteria
-- [ ] Service worker registers without errors in Chrome DevTools > Application > Service Workers
-- [ ] At least one offline page (custom or app shell) renders when network is disconnected
-- [ ] `manifest.json` includes `name`, `short_name`, `start_url`, `display`, `icons` (192 and 512), `theme_color`, `background_color`
-- [ ] Caching strategy is appropriate for resource type (CacheFirst for static, NetworkFirst for API, StaleWhileRevalidate for mixed)
-- [ ] Service worker handles updates properly: `install` activates immediately, `activate` cleans old caches, `message` event listens for skip-waiting
-- [ ] Lighthouse PWA audit passes all "installable" and "PWA optimized" checks
-- [ ] HTTPS is enforced or a note is added that SW requires HTTPS (or localhost)
-- [ ] Update notification shown to user when new SW version is available
+- [ ] Service worker registers without errors
+- [ ] At least one offline page renders when network is disconnected
+- [ ] `manifest.json` includes name, short_name, start_url, display, icons (192 and 512), theme_color, background_color
+- [ ] Caching strategy appropriate for resource type
+- [ ] Service worker handles updates properly
+- [ ] Lighthouse PWA audit passes all checks
+- [ ] Update notification shown when new SW version is available
 
 ### Max Response Length
 150 lines for SW + manifest output combined.
@@ -117,13 +112,12 @@ self.addEventListener('message', (event) => {
 | Third-party CDN | StaleWhileRevalidate | cdn-v1 | — |
 
 ### Step 5: Implement Update Flow
-On the client:
 ```js
 registration.addEventListener('updatefound', () => {
   const installingWorker = registration.installing;
   installingWorker.addEventListener('statechange', () => {
     if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-      showUpdateToast(registration); // "New version available — Refresh"
+      showUpdateToast(registration);
     }
   });
 });
@@ -140,7 +134,7 @@ self.addEventListener('fetch', (event) => {
 });
 ```
 
-### Step 7: Push Notifications (Optional)
+### Step 7: Push Notifications
 ```js
 self.addEventListener('push', (event) => {
   const data = event.data.json();
@@ -151,36 +145,87 @@ self.addEventListener('push', (event) => {
 ### Step 8: Test Offline
 Use Chrome DevTools > Network > Offline. Verify: page loads from cache, API shows cached response, offline-specific UI appears.
 
+## Component Architecture
+
+### Service Worker Strategy Decision Tree
+```
+What resource type?
+├── Build-time asset (JS/CSS/img with hash)
+│   └── CacheFirst — never changes
+├── HTML navigation
+│   └── NetworkFirst — prefer fresh, fallback to cache
+├── API GET request
+│   ├── User-specific → NetworkFirst with timeout
+│   └── Public → StaleWhileRevalidate
+├── Third-party resource (CDN, analytics)
+│   └── StaleWhileRevalidate
+└── User-generated content (avatars, uploads)
+    └── CacheFirst with versioning
+```
+
+## Common Pitfalls
+
+1. **Caching authenticated responses**: Never cache user-specific API responses or auth tokens.
+2. **Missing cache version upgrade**: Old caches accumulate. Always purge in activate event.
+3. **No update UX**: Users don't know new version is available. Show a toast with Refresh button.
+4. **Registering SW inside a component**: Must register from entry point, not a lazy-loaded component.
+5. **Using CacheFirst for dynamic API**: API data changes — use NetworkFirst or StaleWhileRevalidate.
+6. **Forgetting fetch handler**: Without fetch listener, SW does nothing for navigation.
+7. **No offline fallback**: Users see browser's generic offline page. Provide a branded offline page.
+8. **Over-caching**: Caching too much data leads to quota exceeded errors.
+
 ## Best Practices
 
-| Practice | Why |
-|----------|-----|
-| Version cache names (`v1`, `v2`) | Enables clean upgrades without stale data |
-| Register SW on page load (not DOMContentLoaded) | Ensures SW controls page ASAP |
-| Cache-first for versioned assets | Content-hash URLs never change, no network overhead |
-| Network-first with timeout for API | Fresh data preferred, cache as fallback |
-| `skipWaiting()` on install | New SW activates immediately (with user consent flow) |
-| Purge old caches on activate | Prevents storage quota issues |
+1. Version cache names (`v1`, `v2`) to enable clean upgrades without stale data.
+2. Register SW on page load (not DOMContentLoaded) for immediate control.
+3. Cache-first for versioned assets — content-hash URLs never change.
+4. Network-first with timeout for API — fresh data preferred, cache as fallback.
+5. `skipWaiting()` on install with user consent flow — new SW activates when ready.
+6. Purge old caches on activate — prevents storage quota issues.
+7. Use Workbox for complex strategies — it handles edge cases (range requests, opaque responses).
+8. Test offline behavior with DevTools and real network throttling.
 
-## Pitfalls to Avoid
+## Compared With
 
-- **Caching authenticated responses**: Never cache user-specific API responses or auth tokens.
-- **Missing cache version upgrade**: Old caches accumulate. Always purge in `activate` event.
-- **No update UX**: Users don't know new version is available. Show a toast with "Refresh" button.
-- **Registering SW inside a component**: Must register from entry point, not a lazy-loaded component.
-- **Using `CacheFirst` for dynamic API**: API data changes — use `NetworkFirst` or `StaleWhileRevalidate`.
-- **Forgetting `fetch` handler**: Without a `fetch` listener, SW does nothing for navigation.
-- **No offline fallback**: Users see browser's generic offline page. Provide a branded offline page.
+| Aspect | Raw SW | Workbox | vite-plugin-pwa |
+|--------|--------|---------|-----------------|
+| Setup complexity | High | Medium | Low |
+| Strategy library | Manual | Built-in | Automatic |
+| Bundle splitting | Manual | Manual | Automatic |
+| TypeScript support | Manual | Good | Excellent |
+| Update management | Manual | Manual | Built-in |
+| Dev tools | Browser DevTools | Browser + Workbox | Browser + Vite |
+
+## Performance
+
+1. SW registration is async and non-blocking — does not affect page load.
+2. CacheFirst serves assets from cache instantly (0ms network wait).
+3. NetworkFirst with timeout balances freshness and performance (3s default timeout).
+4. Precache critical assets in install event — all pages get instant load after first visit.
+5. SW runs in separate thread — no main thread blocking.
+6. Cache storage quota: ~6% of available disk space per origin.
+7. Lighthouse PWA score impact: passing all audits requires SW, manifest, HTTPS, and 200 offline.
+
+## Tooling
+
+1. `workbox-cli` — generate service worker from config.
+2. `workbox-webpack-plugin` — Webpack integration.
+3. `vite-plugin-pwa` — Vite integration with auto-generation.
+4. `@serwist/next` — Next.js PWA toolkit (successor to next-pwa).
+5. Chrome DevTools > Application > Service Workers — debug SW lifecycle.
+6. `pwa-asset-generator` — generate all icon sizes from a source image.
+7. `Lighthouse` — audit PWA compliance.
+8. `Workbox DevTools` — inspect cache contents and strategies.
 
 ## Rules
-- Never cache user-specific or sensitive data (auth tokens, personal info) in the service worker
-- Always version cache names with a `CACHE_VERSION` constant at the top of the SW file
-- Never use `CacheFirst` for API requests that return dynamic data — use `NetworkFirst` or `StaleWhileRevalidate`
-- Always register the service worker from the app entry point (not from inside a component or route)
-- Always handle `skip-waiting` via a `message` event listener — never force update without user consent
-- Never use `eval` or `new Function` inside a service worker (Content Security Policy restriction)
-- Always purge unused caches in the `activate` event to prevent storage quota issues
-- Always check `navigator.serviceWorker` availability before registering
+- Never cache user-specific or sensitive data (auth tokens, personal info) in the service worker.
+- Always version cache names with a CACHE_VERSION constant at the top of the SW file.
+- Never use CacheFirst for API requests that return dynamic data — use NetworkFirst or StaleWhileRevalidate.
+- Always register the service worker from the app entry point (not from inside a component or route).
+- Always handle skip-waiting via a message event listener — never force update without user consent.
+- Never use eval or new Function inside a service worker (Content Security Policy restriction).
+- Always purge unused caches in the activate event to prevent storage quota issues.
+- Always check navigator.serviceWorker availability before registering.
 
 ## References
   - references/caching-strategies.md — Caching Strategies Reference
@@ -189,9 +234,10 @@ Use Chrome DevTools > Network > Offline. Verify: page loads from cache, API show
   - references/pwa-audit.md — PWA Audit Reference
   - references/pwa-testing.md — PWA Testing Reference
   - references/service-worker.md — Service Worker Reference
+  - references/pwa-service-worker-lifecycle.md — Service Worker Lifecycle Reference
+  - references/pwa-offline-sync.md — Offline Sync Reference
+
 ## Handoff
 No artifact produced unless requested.
 Next skill: `frontend-seo` (if the PWA needs search engine discoverability)
 Carry forward: SW registration pattern, manifest values, caching strategy decisions
-
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.

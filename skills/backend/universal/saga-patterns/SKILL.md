@@ -2,7 +2,7 @@
 name: backend-saga-patterns
 description: >
   Use this skill when the user says 'saga', 'distributed transaction', 'choreography saga', 'orchestration saga', 'compensating transaction', 'saga state machine', 'long running transaction', 'saga execution', 'transaction coordinator', 'saga pattern'. This skill enforces: saga for multi-service operations only, clear compensation for every step, saga state persistence, idempotent step execution, failure recovery. Applies to any backend stack. Do NOT use for: single-service transactions (use database transactions), simple pub/sub, or CQRS/event sourcing.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -16,7 +16,47 @@ tags: [backend, universal, saga, distributed-systems, patterns]
 # Backend Saga Patterns
 
 ## Purpose
-Manage distributed operations across multiple services with clear compensation paths for every step, ensuring system consistency without distributed transactions.
+Manage distributed operations across multiple services with clear compensation paths for every step, ensuring system consistency without distributed transactions. Sagas are the standard pattern for maintaining data consistency in microservice architectures where a single business operation spans multiple services and databases.
+
+## Architecture/Decision Trees
+
+### Saga Type Decision Tree
+```
+Do you have 2-3 services with simple linear flow?
+  |-- YES --> Can services react to events autonomously?
+  |     |-- YES --> Choreography (simpler, more decoupled)
+  |     |-- NO  --> Orchestration (need central control)
+  |-- NO --> Do you have 4+ services or branching logic?
+        |-- YES --> Orchestration (need coordinating state machine)
+        |-- NO --> Choreography with event sourcing for audit
+
+Do you need strong consistency guarantees?
+  |-- YES --> Orchestration with saga state persistence
+  |-- NO --> Choreography (eventual consistency is acceptable)
+```
+
+### State Machine Model
+```
+                    ┌──────────┐
+                    │ PENDING  │
+                    └────┬─────┘
+                         │ start
+                    ┌────▼─────┐
+              ┌─────│ RUNNING  │─────┐
+              │     └────┬─────┘     │
+              │          │           │
+     all steps       step fails   timeout
+     complete         │           │
+              │     ┌──▼──┐    ┌──▼──┐
+        ┌─────▼─┐ │COM- │  │ TIMED│
+        │COMP-  │ │PEN-  │  │ OUT  │
+        │LETED  │ │SATING│  └──────┘
+        └───────┘ └──┬───┘
+                     │ all comps done
+                 ┌───▼────┐
+                 │ FAILED │
+                 └────────┘
+```
 
 ## Agent Protocol
 
@@ -28,6 +68,8 @@ Exact user phrases: "saga", "distributed transaction", "choreography saga", "orc
 - Each service's action and its compensation (rollback).
 - Consistency requirements (eventual vs strong).
 - Whether a saga coordinator service exists.
+- Expected failure modes (network, timeout, business validation).
+- Existing messaging infrastructure.
 
 ### Output Artifact
 Saga design as text. No file unless requested.
@@ -83,7 +125,6 @@ async function handleOrderCreated(event: OrderCreatedEvent): Promise<void> {
     const payment = await paymentService.processPayment(event.data.customerId, event.data.total);
     await eventBus.publish(new PaymentProcessedEvent(event.data.orderId, payment.transactionId));
   } catch (err) {
-    // Compensation: payment failed — notify order service to cancel
     await eventBus.publish(new PaymentFailedEvent(event.data.orderId, err.message));
   }
 }
@@ -142,8 +183,6 @@ class OrderOrchestrator {
       processPayment: async () => await paymentClient.refund(saga.data.orderId),
       reserveInventory: async () => await inventoryClient.release(saga.data.orderId),
     };
-
-    // Execute compensations in reverse order
     const steps = saga.completedSteps.reverse();
     for (const step of steps) {
       if (compensations[step]) {
@@ -162,7 +201,7 @@ class OrderOrchestrator {
 CREATE TABLE saga_state (
   id UUID PRIMARY KEY,
   saga_type VARCHAR(100) NOT NULL,
-  status VARCHAR(20) NOT NULL, -- RUNNING, COMPLETED, FAILED
+  status VARCHAR(20) NOT NULL,
   data JSONB NOT NULL,
   completed_steps TEXT[] NOT NULL DEFAULT '{}',
   failed_step VARCHAR(100),
@@ -178,12 +217,11 @@ CREATE TABLE saga_state (
 async function handlePaymentStep(saga: Saga): Promise<void> {
   const existing = await paymentClient.getPaymentStatus(saga.data.orderId);
   if (existing.status === 'completed') {
-    return; // Already processed — idempotent
+    return;
   }
   if (existing.status === 'failed') {
     throw new Error('Payment previously failed');
   }
-  // Process fresh
   await paymentClient.charge(saga.data.orderId, saga.data.total);
 }
 
@@ -195,7 +233,7 @@ async function executeWithRetry(step: () => Promise<void>, maxRetries = 3): Prom
       return;
     } catch (err) {
       if (attempt === maxRetries) throw err;
-      await sleep(Math.pow(2, attempt) * 1000); // 2s, 4s, 8s
+      await sleep(Math.pow(2, attempt) * 1000);
     }
   }
 }
@@ -209,6 +247,52 @@ async function executeWithRetry(step: () => Promise<void>, maxRetries = 3): Prom
 - Each saga step is idempotent — safe to retry.
 - If a saga cannot complete after exhausting retries, it enters a FAILED state requiring manual intervention.
 - Log every saga state transition for observability and debugging.
+- Never execute compensations for steps that have not completed yet.
+- Always use distributed tracing IDs that propagate through all saga steps.
+- Timeout handling: set per-step timeouts, not just overall saga timeout.
+- Saga steps should be stateless — all state lives in the saga store.
+- Never mix synchronous (2PC) and saga patterns in the same flow.
+
+## Best Practices
+- Model sagas as explicit state machines with defined transitions.
+- Use saga orchestrators as a separate service (not embedded in business logic).
+- Implement saga recovery with a background process that scans for stuck sagas.
+- Version your saga definitions to handle long-running sagas that span deployments.
+- Test compensations independently before testing the full saga flow.
+- Use outbox pattern to guarantee event delivery for choreography sagas.
+- Monitor saga duration and alert on sagas exceeding expected completion time.
+
+## Common Pitfalls
+- **Missing compensation for a step**: Always define compensation at the same time as the forward action. If compensation is impossible, redesign the step.
+- **Non-idempotent steps**: If retrying a step creates duplicate side effects (double charge, duplicate reservation), the saga is broken. Make every step safe to retry.
+- **Compensation failure**: If compensation itself fails, the saga is stuck in COMPENSATING state. Implement retry-with-backoff for compensations too.
+- **Orchestrator single point of failure**: If the orchestrator crashes mid-saga, recovery must re-read saga state from the database and resume. Stateless orchestrators are essential.
+- **Event ordering in choreography**: Services may receive events out of order. Design for idempotent event handling with deduplication.
+- **Leaked resources**: A saga that times out without proper compensation may leave reserved resources (inventory, credits) permanently locked. Implement TTL-based auto-release as a safety net.
+
+## Compared With
+| Pattern | Consistency | Coordination | Best For |
+|---------|-------------|--------------|----------|
+| Saga (Choreography) | Eventual | Decentralized | Simple flows, few services |
+| Saga (Orchestration) | Eventual | Centralized | Complex flows, many services |
+| Two-Phase Commit (2PC) | Strong | Coordinator | Same-DB or XA transactions |
+| BASE (Basic Availability) | Eventual | Varies | High-availability systems |
+| Event Sourcing | Eventual | Event store | Audit-heavy domains |
+
+## Performance
+- Saga overhead is dominated by inter-service calls and database writes for state persistence.
+- Orchestration sagas add latency of the coordinator hop (1-5ms per step).
+- Choreography sagas have lower per-step latency but harder end-to-end observability.
+- Saga state persistence in PostgreSQL: ~2-5ms per write. Use separate database to avoid contention.
+- Compensations should be fast (sub-100ms) to minimize inconsistency window.
+- Parallel step execution can significantly reduce total saga duration.
+
+## Tooling/Methodology
+- **Event stores**: Kafka, EventStoreDB, RabbitMQ for choreography events.
+- **Saga frameworks**: Axon Framework (Java), Eventuate Tram, Temporal.io, Camunda.
+- **State persistence**: PostgreSQL, DynamoDB, Cosmos DB for saga state tables.
+- **Testing**: Testcontainers for integration tests, chaos engineering for failure testing.
+- **Monitoring**: OpenTelemetry spans for saga steps, custom metrics for saga duration and status.
 
 ## References
   - references/choreography-vs-orchestration.md — Choreography vs Orchestration
@@ -218,6 +302,8 @@ async function executeWithRetry(step: () => Promise<void>, maxRetries = 3): Prom
   - references/saga-state-management.md — Saga State Management
   - references/saga-testing.md — Saga Testing
   - references/saga-timeout-handling.md — Saga Timeout Handling
+  - references/saga-orchestration-choreography.md — Saga Orchestration vs Choreography Deep Dive
+  - references/saga-rollback-compensation.md — Saga Rollback and Compensation
 ## Handoff
 No artifact produced.
 Next skill: event-driven — for event-based communication in choreography sagas.

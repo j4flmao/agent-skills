@@ -9,7 +9,7 @@ compatibility:
   claude-code: true
   cursor: true
   codex: true
-  windsure: true
+  windsurf: true
 tags: [frontend, seo, phase-3, universal]
 ---
 
@@ -24,35 +24,31 @@ Optimize web applications for search engine ranking and rich snippet eligibility
 Exact phrases: "seo", "meta tags", "open graph", "og tags", "structured data", "json-ld", "schema.org", "sitemap", "robots.txt", "canonical url", "seo audit", "seo optimization", "ssr seo", "rich results", "hreflang", "core web vitals", "lighthouse seo"
 
 ### Input Context
-- Check for existing `<head>` meta tag patterns and SSR framework (Next.js, Nuxt, Astro, SvelteKit, Remix)
-- Determine if a sitemap (`sitemap.xml`) or robots.txt already exists
+- Check for existing `<head>` meta tag patterns and SSR framework
+- Determine if a sitemap or robots.txt already exists
 - Identify the routing library for canonical URL generation
-- Verify whether structured data (JSON-LD) is already present
+- Verify whether structured data is already present
 - Check multi-language setup for hreflang requirements
-- Note existing Lighthouse SEO scores
 
 ### Output Artifact
 No file output unless requested.
 
 ### Response Format
-1. Output complete HTML `<head>` snippet for meta tags — never abbreviate with `<!-- ... -->`
+1. Output complete HTML `<head>` snippet for meta tags — never abbreviate
 2. Output full JSON-LD blocks — never truncate with ellipsis
-3. For sitemaps, output the full XML structure with at least 3 example `<url>` entries
-4. For robots.txt, output the complete file
-5. For framework-specific meta, output the full component/page config
-6. No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+3. For sitemaps, output full XML structure with at least 3 example `<url>` entries
+4. No preamble. No postamble. No explanations.
 
 ### Completion Criteria
-- [ ] `<title>` (50-60 chars) and `<meta name="description">` (150-160 chars) present on every page
-- [ ] Open Graph tags (`og:title`, `og:description`, `og:image`, `og:url`, `og:type`) on every page
-- [ ] Twitter Card tags (`twitter:card`, `twitter:title`, `twitter:description`, `twitter:image`) present
-- [ ] Canonical URL `<link rel="canonical">` set on every page to prevent duplicate content
-- [ ] JSON-LD structured data present for relevant content types (Article, Product, FAQ, BreadcrumbList, Organization)
-- [ ] `sitemap.xml` lists all public pages with `<lastmod>`, `<changefreq>`, `<priority>`
-- [ ] `robots.txt` allows crawling of public paths, disallows admin/internal paths, references sitemap
-- [ ] SSR or prerendering ensures crawlers see fully rendered content (no empty shells)
-- [ ] Lighthouse SEO audit scores 90+ across all pages
-- [ ] Hreflang tags present for multi-language sites
+- [ ] `<title>` (50-60 chars) and `<meta name="description">` (150-160 chars) on every page
+- [ ] Open Graph tags on every page
+- [ ] Twitter Card tags present
+- [ ] Canonical URL set on every page
+- [ ] JSON-LD structured data present for relevant content types
+- [ ] `sitemap.xml` lists all public pages
+- [ ] `robots.txt` allows crawling of public paths
+- [ ] SSR or prerendering ensures crawlers see fully rendered content
+- [ ] Lighthouse SEO audit scores 90+
 
 ### Max Response Length
 150 lines unless generating full sitemap or multiple JSON-LD blocks.
@@ -60,13 +56,10 @@ No file output unless requested.
 ## Workflow
 
 ### Step 1: Audit Current State
-Check existing `<head>` for title, description, OG, Twitter cards, canonical. Run one Lighthouse SEO audit to baseline:
-
 ```bash
 npx lighthouse https://example.com --view --preset=desktop
 ```
-
-Identify missing or duplicate tags. Check `robots.txt` and `sitemap.xml` existence.
+Check existing `<head>` for title, description, OG, Twitter cards, canonical.
 
 ### Step 2: Implement Base Meta Tags
 Every page must have:
@@ -77,13 +70,6 @@ Every page must have:
 <meta name="robots" content="index, follow" />
 ```
 
-| Tag | Requirement | Character Limit |
-|-----|-------------|-----------------|
-| `title` | Unique per page, includes keyword | 50-60 |
-| `description` | Unique per page, CTA + value prop | 150-160 |
-| `canonical` | Absolute URL, no trailing slash mismatch | — |
-| `robots` | `index, follow` for public pages | — |
-
 ### Step 3: Add Social Graph Tags
 ```html
 <meta property="og:title" content="Primary Keyword — Site Name" />
@@ -93,13 +79,9 @@ Every page must have:
 <meta property="og:image:height" content="630" />
 <meta property="og:url" content="https://example.com/page" />
 <meta property="og:type" content="website" />
-<meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:site" content="@yourhandle" />
 ```
 
 ### Step 4: Inject Structured Data (JSON-LD)
-Add at minimum: `Organization` (homepage), `BreadcrumbList` (every page), content-specific types.
-
 ```html
 <script type="application/ld+json">
 {
@@ -113,9 +95,7 @@ Add at minimum: `Organization` (homepage), `BreadcrumbList` (every page), conten
 </script>
 ```
 
-### Step 5: Configure Sitemap & Robots
-Generate `sitemap.xml` with all public URLs. Create `robots.txt`:
-
+### Step 5: Configure Sitemap and Robots
 ```txt
 User-agent: *
 Allow: /
@@ -126,12 +106,10 @@ Sitemap: https://example.com/sitemap.xml
 ```
 
 ### Step 6: Implement SSR/SSG
-Ensure crawlers receive server-rendered HTML. Use framework head management for dynamic meta tags:
-
 | Framework | Meta API | Sitemap API |
 |-----------|----------|-------------|
 | Next.js App Router | `export const metadata: Metadata` | `app/sitemap.ts` |
-| Nuxt 3 | `useHead()` / `nuxt.config` | `@nuxtjs/sitemap` |
+| Nuxt 3 | `useHead()` | `@nuxtjs/sitemap` |
 | Astro | Frontmatter `head` | `src/pages/sitemap.xml.ts` |
 | SvelteKit | `svelte:head` | `src/routes/sitemap.xml/+server.ts` |
 
@@ -142,42 +120,93 @@ Ensure crawlers receive server-rendered HTML. Use framework head management for 
 <link rel="alternate" hreflang="x-default" href="https://example.com/page" />
 ```
 
-### Step 8: Run Audit & Fix
+### Step 8: Run Audit and Fix
 ```bash
 npx lhci collect --url=https://example.com
 npx lhci assert --preset=lighthouse:recommended
 ```
 
+## Component Architecture
+
+### Meta Tag Decision Tree
+```
+Is this a content page (article, product)?
+  Yes → Generate OG tags from content: title, description, image
+  No → Is this a listing/category page?
+    Yes → OG tags with category name + generic image
+    No → Default OG tags from site config
+
+Does the page have dynamic content?
+  Yes → Use framework meta API (generateMetadata, useHead)
+  No → Static metadata in page config
+
+Is the page paginated?
+  Yes → Add rel="next" and rel="prev", self-referencing canonical
+  No → Standard canonical to current URL
+```
+
+## Common Pitfalls
+
+1. **Duplicate titles/descriptions**: Every page must have unique values.
+2. **Missing canonical on paginated pages**: Each pagination page needs its own canonical.
+3. **Blocking CSS/JS in robots.txt**: Google needs CSS/JS for rendering assessment.
+4. **Relative URLs in canonical/sitemap**: Always use absolute URLs.
+5. **Client-only rendering for crawlers**: Googlebot executes JS but has a budget.
+6. **Overly large sitemaps**: Max 50,000 URLs or 50 MB per sitemap.
+7. **No lastmod in sitemap**: Helps Google understand freshness.
+8. **Missing alt text on images**: Accessibility and SEO issue.
+
 ## Best Practices
 
-| Area | Practice |
-|------|----------|
-| Title format | `Primary Keyword — Secondary Keyword | Brand` |
-| OG image | 1200x630px, < 300 KB, serve via CDN |
-| Canonical URL | Always absolute, no `?ref=` or tracking params |
-| JSON-LD placement | `<head>` or end of `<body>` — non-blocking |
-| Sitemap updates | Regenerate on content publish |
-| robots.txt | Allow CSS/JS (Google needs them to render) |
+1. Title format: `Primary Keyword — Secondary Keyword | Brand`
+2. OG image: 1200x630px, < 300 KB, serve via CDN
+3. Canonical URL always absolute, no tracking params
+4. JSON-LD in `<head>` or end of `<body>` — non-blocking
+5. Regenerate sitemap on content publish
+6. Allow CSS/JS in robots.txt — Google needs them to render
+7. Use structured data testing tool before deployment
+8. Monitor Core Web Vitals via Search Console
 
-## Pitfalls to Avoid
+## Compared With
 
-- **Duplicate titles/descriptions**: Every page must have unique values. Duplicate = cannibalization.
-- **Missing canonical on paginated pages**: Each page of pagination needs its own canonical pointing to itself.
-- **Blocking CSS/JS in robots.txt**: Google needs CSS/JS for rendering assessment. Only block if you know why.
-- **Relative URLs in canonical/sitemap**: Always use absolute URLs with `https://`.
-- **Client-only rendering for crawlers**: Googlebot executes JS but has a budget. SSR/SSG for content pages.
-- **Overly large sitemaps**: Max 50,000 URLs or 50 MB per sitemap. Use sitemap index if exceeded.
-- **No `lastmod` in sitemap**: Helps Google understand freshness. Always include.
+| Aspect | SSR/SSG | Client-side (CSR) | Hybrid |
+|--------|---------|-------------------|--------|
+| Crawler visibility | Full content | Limited (budget) | Full content |
+| Meta tag control | Server-side | Client injection | Server-side |
+| Sitemap generation | Framework API | Manual | Framework API |
+| Core Web Vitals | Good (fast FCP) | Variable | Good |
+| Complexity | Higher | Lower | Medium |
+| Use case | Content sites | Apps | Both |
+
+## Performance
+
+1. SSR improves LCP by 40-60% compared to CSR for content pages.
+2. JSON-LD in `<head>` adds ~1-5KB to HTML size.
+3. Sitemap generation: static at build time preferred over dynamic generation.
+4. Preconnect to CDN for OG images reduces LCP font/hero image delay.
+5. Inline critical CSS for above-the-fold content improves FCP.
+6. Proper cache headers on SSG pages enables CDN caching (s-maxage).
+
+## Tooling
+
+1. `Lighthouse` — SEO audit + performance audit.
+2. `Google Search Console` — monitor index status, submit sitemaps.
+3. `Ahrefs / Semrush` — competitive SEO analysis.
+4. `Google Rich Results Test` — validate JSON-LD.
+5. `Schema.org Validator` — validate structured data.
+6. `next-sitemap` — sitemap and robots.txt generation for Next.js.
+7. `sitemap-generator-cli` — standalone sitemap generator.
+8. `Yoast SEO` (WordPress) or equivalent for CMS.
 
 ## Rules
-- Never use `noindex` on public pages unless explicitly requested
-- Always set `canonical` URL to the preferred version (no trailing slash inconsistency, no `?ref=` params)
-- Never block CSS or JS files in robots.txt — Google needs them for rendering
-- Always use absolute URLs in canonical tags, sitemaps, and JSON-LD `@id` fields
-- Never duplicate `hreflang` tags — one per language variant, with self-referencing
-- Always use `application/ld+json` script tag for structured data — never JSON-LD in HTML attributes
-- Never include session IDs, tracking params, or filter params in canonical URLs
-- Always validate JSON-LD with Google Rich Results Test before deploying
+- Never use `noindex` on public pages unless explicitly requested.
+- Always set `canonical` URL to the preferred version.
+- Never block CSS or JS files in robots.txt.
+- Always use absolute URLs in canonical tags, sitemaps, and JSON-LD.
+- Never duplicate `hreflang` tags — one per language variant.
+- Always use `application/ld+json` for structured data.
+- Never include session IDs or tracking params in canonical URLs.
+- Always validate JSON-LD with Google Rich Results Test before deploying.
 
 ## References
   - references/meta-tags.md — Meta Tags Reference
@@ -186,9 +215,10 @@ npx lhci assert --preset=lighthouse:recommended
   - references/sitemap.md — Sitemap Reference
   - references/ssr-seo.md — SSR/SSG SEO Reference
   - references/structured-data.md — Structured Data Reference
+  - references/seo-technical-audit.md — Technical SEO Audit Reference
+  - references/seo-structured-data.md — Structured Data Reference
+
 ## Handoff
 No artifact produced unless requested.
 Next skill: `frontend-pwa` (if the app needs offline PWA capabilities alongside SEO)
 Carry forward: Canonical URL pattern, current meta tags, JSON-LD schema decisions
-
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.

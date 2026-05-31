@@ -65,9 +65,11 @@ com.project/
   config/
     SecurityConfig.java
     ObjectMapperConfig.java
+    OpenApiConfig.java
   shared/
     BaseEntity.java
     DomainEvent.java
+    PagedResult.java
   {feature}/
     domain/
       Order.java                          -- Domain entity (POJO)
@@ -77,17 +79,23 @@ com.project/
     application/
       in/
         PlaceOrderUseCase.java            -- Inbound port interface
+        CancelOrderUseCase.java
       out/
         OrderEventPublisher.java          -- Outbound port interface
+        PaymentService.java
       dto/
         PlaceOrderCommand.java
         OrderResponse.java
+        PagedOrdersQuery.java
     infrastructure/
       persistence/
         OrderJpaEntity.java               -- @Entity (JPA concern)
+        OrderJpaRepository.java            -- Spring Data interface
         OrderJpaRepositoryImpl.java        -- Implements OrderRepository
       messaging/
         OrderKafkaPublisher.java
+      adapters/
+        PaymentGatewayAdapter.java
     presentation/
       OrderController.java                -- @RestController
       OrderControllerAdvice.java           -- @ExceptionHandler
@@ -95,32 +103,47 @@ com.project/
 
 ### Step 2: Hexagonal with Spring
 ```java
-// PORT (domain layer — no Spring annotation)
+// PORT (domain layer -- no Spring annotation)
 public interface OrderRepository {
     Optional<Order> findById(OrderId id);
     Order save(Order order);
+    Page<Order> findAll(Pageable pageable);
+    void delete(OrderId id);
 }
 
-// ADAPTER (infrastructure layer — Spring-managed)
+// ADAPTER (infrastructure layer -- Spring-managed)
 @Component
 public class OrderJpaRepositoryImpl implements OrderRepository {
     private final SpringDataOrderRepository springRepo;
+    private final OrderJpaMapper mapper;
 
-    public OrderJpaRepositoryImpl(SpringDataOrderRepository springRepo) {
+    public OrderJpaRepositoryImpl(SpringDataOrderRepository springRepo, OrderJpaMapper mapper) {
         this.springRepo = springRepo;
+        this.mapper = mapper;
     }
 
     @Override
     public Order save(Order order) {
-        OrderJpaEntity entity = OrderJpaEntity.fromDomain(order);
+        OrderJpaEntity entity = mapper.toJpaEntity(order);
         OrderJpaEntity saved = springRepo.save(entity);
-        return saved.toDomain();
+        return mapper.toDomain(saved);
     }
 
     @Override
     public Optional<Order> findById(OrderId id) {
         return springRepo.findById(id.getValue())
-            .map(OrderJpaEntity::toDomain);
+            .map(mapper::toDomain);
+    }
+
+    @Override
+    public Page<Order> findAll(Pageable pageable) {
+        return springRepo.findAll(pageable)
+            .map(mapper::toDomain);
+    }
+
+    @Override
+    public void delete(OrderId id) {
+        springRepo.deleteById(id.getValue());
     }
 }
 
@@ -149,9 +172,11 @@ public class PlaceOrderService implements PlaceOrderUseCase {
 @RequestMapping("/v1/orders")
 public class OrderController {
     private final PlaceOrderUseCase placeOrder;
+    private final CancelOrderUseCase cancelOrder;
 
-    public OrderController(PlaceOrderUseCase placeOrder) {
+    public OrderController(PlaceOrderUseCase placeOrder, CancelOrderUseCase cancelOrder) {
         this.placeOrder = placeOrder;
+        this.cancelOrder = cancelOrder;
     }
 
     @PostMapping
@@ -160,16 +185,24 @@ public class OrderController {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(new OrderResponse(id.getValue()));
     }
+
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<Void> cancel(@PathVariable UUID id) {
+        cancelOrder.execute(new OrderId(id));
+        return ResponseEntity.noContent().build();
+    }
 }
 ```
 
 ### Step 3: MVC vs WebFlux Decision
 | Use Spring MVC when | Use WebFlux when |
-|--------------------|------------------|
+|---|---|
 | JDBC/JPA/ORM-based persistence | High concurrency (>10K req/s) |
 | Standard REST API | Streaming / Server-Sent Events |
 | Team is more familiar with blocking | Long-lived connections |
 | Existing MVC infrastructure | WebSocket-heavy application |
+| Transactional database operations | Reactive database (R2DBC, MongoDB) |
+| Mature library support needed | Backpressure-aware processing |
 
 ### Step 4: Configuration Management
 ```java
@@ -178,7 +211,17 @@ public class OrderController {
 public class OrderConfig {
     private int maxItemsPerOrder = 50;
     private Duration paymentTimeout = Duration.ofSeconds(300);
-    // getters and setters
+    private List<String> supportedCurrencies = List.of("USD", "EUR");
+    private boolean autoConfirmEnabled = true;
+
+    public int getMaxItemsPerOrder() { return maxItemsPerOrder; }
+    public void setMaxItemsPerOrder(int maxItemsPerOrder) { this.maxItemsPerOrder = maxItemsPerOrder; }
+    public Duration getPaymentTimeout() { return paymentTimeout; }
+    public void setPaymentTimeout(Duration paymentTimeout) { this.paymentTimeout = paymentTimeout; }
+    public List<String> getSupportedCurrencies() { return supportedCurrencies; }
+    public void setSupportedCurrencies(List<String> supportedCurrencies) { this.supportedCurrencies = supportedCurrencies; }
+    public boolean isAutoConfirmEnabled() { return autoConfirmEnabled; }
+    public void setAutoConfirmEnabled(boolean autoConfirmEnabled) { this.autoConfirmEnabled = autoConfirmEnabled; }
 }
 
 // application.yml
@@ -186,23 +229,226 @@ feature:
   order:
     max-items-per-order: 50
     payment-timeout-seconds: 300
+    supported-currencies: USD, EUR
+    auto-confirm-enabled: true
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASS}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
 ```
 
+### Step 5: Exception Mapping with ControllerAdvice
+```java
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(OrderNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(new ErrorResponse("NOT_FOUND", ex.getMessage()));
+    }
+
+    @ExceptionHandler(OrderValidationException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(OrderValidationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(new ErrorResponse("VALIDATION", ex.getMessage(), ex.getErrors()));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleMethodValidation(MethodArgumentNotValidException ex) {
+        List<String> errors = ex.getBindingResult().getFieldErrors().stream()
+            .map(e -> e.getField() + ": " + e.getDefaultMessage())
+            .toList();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(new ErrorResponse("VALIDATION", "Input validation failed", errors));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
+        log.error("Unhandled exception", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(new ErrorResponse("INTERNAL_ERROR", "An unexpected error occurred"));
+    }
+}
+
+public record ErrorResponse(String code, String message, Object details) {
+    public ErrorResponse(String code, String message) {
+        this(code, message, null);
+    }
+}
+```
+
+### Step 6: Testing with Hexagonal Architecture
+```java
+@SpringBootTest
+@AutoConfigureMockMvc
+class OrderControllerTest {
+
+    @Autowired private MockMvc mockMvc;
+    @MockitoBean private PlaceOrderUseCase placeOrderUseCase;
+
+    @Test
+    void shouldCreateOrder() throws Exception {
+        OrderId orderId = new OrderId(UUID.randomUUID());
+        when(placeOrderUseCase.execute(any(PlaceOrderCommand.class)))
+            .thenReturn(orderId);
+
+        mockMvc.perform(post("/v1/orders")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"customerId":"cust-1","items":[{"productId":"prod-1","quantity":2,"unitPrice":19.99}]}
+                """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").value(orderId.getValue().toString()));
+    }
+
+    @Test
+    void shouldReturn400ForInvalidInput() throws Exception {
+        mockMvc.perform(post("/v1/orders")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"customerId":""}"""))
+            .andExpect(status().isBadRequest());
+    }
+}
+```
+
+## Architecture Decision Trees
+
+### Packaging Strategy
+```
+Feature count > 20?
+  +-- Yes -> Can domain boundaries change?
+  |   +-- Yes -> Package by feature (recommended)
+  |   +-- No  -> Package by layer (only for tiny projects)
+  +-- No  -> Package by feature (always default)
+```
+
+### Hexagonal vs Layered
+```
+Need to swap infrastructure (DB, messaging) independently?
+  +-- Yes -> Hexagonal (ports/adapters). Domain has zero framework deps.
+  +-- No  -> Layered is simpler. Accept package coupling.
+```
+
+### MVC vs WebFlux
+```
+Primary DB is relational (JPA/JDBC)?
+  +-- Yes -> Use MVC. JPA is blocking, doesn't benefit from reactive.
+  +-- No  -> Need >10K concurrent connections?
+      +-- Yes -> WebFlux with R2DBC or MongoDB
+      +-- No  -> MVC is simpler and better-supported
+```
+
+## Common Pitfalls
+
+1. **@Autowired field injection**: Makes testing impossible without Spring context. Always use constructor injection.
+
+2. **@Transactional at controller level**: Too coarse. One controller method may call multiple services. Keep @Transactional at application service.
+
+3. **Domain entities with JPA annotations**: Pure domain objects should be POJOs. JPA entities are infrastructure concerns mapped separately.
+
+4. **Circular dependencies between services**: Usually signals missing domain concept. Extract shared logic into a third service.
+
+5. **Service/Repository interfaces in the wrong layer**: Domain defines the interface (port), infrastructure implements it (adapter).
+
+6. **Using @Entity for domain entities**: Creates tight coupling to JPA. Map JPA entities to domain objects via a mapper.
+
+7. **LazyInitializationException**: Accessing lazy-loaded relations outside a transaction. Use JOIN FETCH or entity graphs.
+
+8. **Giant application service classes**: More than 10 methods per service suggests missing domain subdivisions.
+
+9. **@MockBean overuse in tests**: Prefer @MockitoBean (Spring Boot 3.4+) or test slices for focused tests.
+
+10. **Missing @Validated on @ConfigurationProperties classes**: Properties binding silently fails without proper validation.
+
+## Best Practices
+
+1. **Domain entities validated in constructors**. Use factory methods like `Order.create()` that enforce invariants.
+
+2. **@ExceptionHandler in @ControllerAdvice maps domain exceptions to HTTP**. Controllers never have try-catch for domain logic.
+
+3. **@Valid on controller request bodies for input validation**. Domain entities are validated in domain constructors.
+
+4. **@Profile for environment-specific beans**. Dev, test, staging, production configurations are explicit.
+
+5. **Spring Data JPA specifications for dynamic queries**. Avoid creating repository methods for every query combination.
+
+6. **Audit fields (createdAt, updatedAt) in base entity**. Use @EnableJpaAuditing and @CreatedDate/@LastModifiedDate.
+
+7. **Fluent builder pattern for complex domain objects**. Avoid telescoping constructors.
+
+8. **Record types for DTOs**. Java 16+ records reduce boilerplate.
+
+## Compared With
+
+| Feature | Spring Boot MVC | Spring Boot WebFlux | Quarkus |
+|---|---|---|---|
+| Startup time | 2-4s | 2-4s | <0.3s |
+| Memory footprint | ~150MB | ~150MB | ~50MB |
+| GraalVM support | Limited | Limited | First-class |
+| Reactive support | No | Yes | Yes (via RESTEasy Reactive) |
+| JPA support | Full | Via Hibernate Reactive | Via Panache |
+| Testing | @SpringBootTest | @WebFluxTest | @QuarkusTest |
+| OpenAPI | springdoc-openapi | springdoc-openapi | SmallRye OpenAPI |
+
+## Performance
+
+- Startup time: 2-4 seconds (depends on classpath scanning). Use @ComponentScan lazy initialization to reduce.
+- Memory: ~150MB base. Use -Xmx and -Xms flags to control.
+- Connection pool: HikariCP with 10 connections default. Tune based on DB max connections.
+- Response compression: Enable `server.compression.enabled=true` for text payloads.
+- Caching: Spring Cache abstraction with Redis/Caffeine for repeatable queries.
+- JPA batch size: `spring.jpa.properties.hibernate.jdbc.batch_size=20` for bulk operations.
+- Read-only transactions: Mark queries as `@Transactional(readOnly=true)` for DB optimizations.
+
+## Tooling
+
+| Tool | Purpose |
+|---|---|
+| **Spring Initializr** | Project scaffolding |
+| **springdoc-openapi** | OpenAPI 3 documentation generation |
+| **MapStruct** | Entity-DTO mapping code generation |
+| **Lombok** | Boilerplate reduction |
+| **Testcontainers** | Integration testing with real databases |
+| **ArchUnit** | Architecture rule enforcement |
+| **Checkstyle / PMD** | Code quality |
+| **JaCoCo** | Code coverage |
+| **Gradle Enterprise / Maven** | Build tooling |
+| **Spring Boot Actuator** | Health checks, metrics |
+
 ## Rules
-- Domain package has ZERO Spring framework imports. A @Entity annotation on a JPA entity is acceptable but the pure domain entity should be annotation-free.
-- Controller/Service/Repository stereotypes belong in presentation/application/infrastructure respectively. Not in domain.
-- Constructor injection always. Never @Autowired on fields. Never @InjectMocks in tests.
-- @Transactional at the application service level only. Never in controllers.
-- @ExceptionHandler in @ControllerAdvice maps domain exceptions to HTTP. Controllers never have try-catch for domain logic.
-- @Valid on controller request bodies for input validation. Domain entities are validated in domain constructors/factory methods.
+
+- Domain package has ZERO Spring framework imports.
+- Controller/Service/Repository stereotypes belong in presentation/application/infrastructure respectively.
+- Constructor injection always. Never @Autowired on fields.
+- @Transactional at application service level only. Never in controllers.
+- @ExceptionHandler in @ControllerAdvice maps domain exceptions to HTTP.
+- @Valid on controller request bodies for input validation.
+- Domain entities validated in constructors/factory methods.
+- Package-by-feature with hexagonal ports/adapters.
+- @Entity classes are infrastructure, not domain.
+- DTOs are Java records or plain classes, never reused across layers.
+- @ConfigurationProperties for type-safe external config.
+- Tests at controller level use MockMvc or WebTestClient.
+- @SpringBootTest only for integration tests. Use test slices for unit tests.
+- Profile-specific application-{profile}.yml files for environment separation.
 
 ## References
+  - references/spring-boot-auto-configuration.md — Spring Boot Auto-Configuration
+  - references/spring-boot-testing-strategies.md — Spring Boot Testing Strategies
   - references/layered-architecture.md — Spring Boot Layered Architecture
   - references/reactive-webflux.md — Spring WebFlux Patterns
   - references/spring-boot-data-access.md — Spring Boot Data Access
   - references/spring-boot-observability.md — Spring Boot Observability
   - references/spring-boot-security.md — Spring Boot Security
   - references/spring-boot-testing.md — Spring Boot Testing
+
 ## Handoff
 No artifact produced.
 Next skill: backend-testing — test Spring Boot.

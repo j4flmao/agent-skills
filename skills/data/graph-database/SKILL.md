@@ -2,7 +2,7 @@
 name: data-graph-database
 description: >
   Use this skill when asked about Neo4j, Amazon Neptune, JanusGraph, graph database, graph model, Cypher, Gremlin, RDF, SPARQL, graph traversal, property graph, or knowledge graph. This skill enforces: graph data modeling (property graph, RDF), Neo4j/Cypher query patterns, Amazon Neptune/Gremlin traversal, JanusGraph architecture with backend storage, graph traversal optimization, knowledge graph design for connected domains, and performance tuning (indexing, caching, query planning). Do NOT use for: document storage, wide-column time-series, or full-text search.
-version: "1.0.0"
+version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -29,7 +29,7 @@ Before activating, verify:
 - Query patterns (depth of traversal, path enumeration, aggregations)
 - Transaction volume (reads/sec, writes/sec, complexity)
 - Consistency requirements (ACID vs CQRS)
-- Existing graph platform (Neo4j, Neptune, JanusGraph) or greenfield
+- Existing graph platform or greenfield
 - Integration points (existing databases, streaming, ML pipelines)
 - Expected graph size (millions, billions of nodes/edges)
 
@@ -65,170 +65,308 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ## Workflow
 
 ### Step 1: Graph Data Modeling
-Property graph: nodes (entities) with labels, relationships (edges) with types, properties on both. RDF: subject-predicate-object triples with URIs. Design around traversal patterns: ask "what queries will traverse from this node through which relationships?" Favor nodes for entities, relationships for connections, properties for attributes. Avoid overloading relationships with domain logic.
+Property graph: nodes (entities) with labels, relationships (edges) with types, properties on both. RDF: subject-predicate-object triples with URIs. Design around traversal patterns: ask "what queries will traverse from this node through which relationships?" Favor nodes for entities, relationships for connections, properties for attributes.
 
 ```cypher
-// Property graph schema
-CREATE CONSTRAINT customer_id IF NOT EXISTS FOR (c:Customer) REQUIRE c.id IS UNIQUE;
-CREATE CONSTRAINT product_id IF NOT EXISTS FOR (p:Product) REQUIRE p.id IS UNIQUE;
-CREATE INDEX product_category IF NOT EXISTS FOR (p:Product) ON (p.category);
-
-// Node:Customer {id, name, email, tier}
-// Node:Product {id, name, category, price}
-// Node:Order {id, total, status, created_at}
-// Rel:Customer->Order:PURCHASED {amount, timestamp}
-// Rel:Order->Product:CONTAINS {quantity, unit_price}
-// Rel:Customer->Product:REVIEWED {rating, text, timestamp}
+// Property graph model for e-commerce
+// (:Customer)-[:PURCHASED]->(:Order)-[:CONTAINS]->(:Product)
+// (:Customer)-[:REVIEWED]->(:Product)
+// Each relationship carries context: timestamp, quantity, rating
 ```
 
 ### Step 2: Node and Relationship Design
-Node labels represent entity types (User, Product, Location). Labels can be hierarchical: `User` and `PremiumUser`. Relationship types are directional verbs in present tense: `PURCHASED`, `REVIEWED`, `LOCATED_IN`, `MANAGED_BY`. Properties on relationships for context (rating, timestamp, quantity). Avoid generic relationships like `RELATED_TO`. Every relationship needs a direction, even if queried bidirectionally.
+Node labels represent entity types. Labels can be hierarchical. Relationship types are directional verbs in present tense. Properties on relationships for context. Avoid generic relationships like `RELATED_TO`.
 
 ```cypher
-// Bidirectional traversal: friends of friends
-MATCH (u:User {id: '123'})-[:FRIENDS_WITH]-(friend)-[:FRIENDS_WITH]-(fof:User)
-WHERE fof <> u
-RETURN fof.name, COUNT(*) AS mutualFriends
-ORDER BY mutualFriends DESC LIMIT 10;
+// Node labels
+CREATE CONSTRAINT customer_id FOR (c:Customer) REQUIRE c.id IS UNIQUE;
+CREATE CONSTRAINT product_sku FOR (p:Product) REQUIRE p.sku IS UNIQUE;
+
+// Composite index for lookup
+CREATE INDEX customer_region_idx FOR (c:Customer) ON (c.region, c.tier);
 ```
 
 ### Step 3: Indexing and Constraints
-Neo4j: BTREE indexes for exact property lookups, TEXT indexes for string contains/ends-with, RANGE for numeric/date comparisons, POINT for spatial queries, FULLTEXT for cross-label full-text search. Composite indexes for multi-property lookups. Node key constraints for uniqueness combinations. Existence constraints for mandatory properties.
+Neo4j: BTREE indexes for exact lookups, TEXT for string contains, RANGE for numeric/date, POINT for spatial, FULLTEXT for cross-label search. Composite indexes for multi-property lookups.
 
 ```cypher
-// Composite index
-CREATE INDEX customer_region_tier IF NOT EXISTS FOR (c:Customer)
-ON (c.region, c.tier);
+// RANGE index for date filtering
+CREATE RANGE INDEX order_date_idx FOR ()-[r:PURCHASED]-() ON (r.created_at);
 
-// Full-text index across multiple labels
-CREATE FULLTEXT INDEX product_search IF NOT EXISTS
-FOR (p:Product|Category) ON EACH [p.name, p.description];
+// TEXT index for product search
+CREATE TEXT INDEX product_name_idx FOR (p:Product) ON (p.name);
 
-// Node key constraint
-CREATE CONSTRAINT product_sku IF NOT EXISTS
-FOR (p:Product) REQUIRE (p.sku) IS NODE KEY;
+// FULLTEXT for cross-label search
+CREATE FULLTEXT INDEX entity_search FOR (n:Customer|Product|Order) ON EACH [n.name, n.description];
 ```
 
 ### Step 4: Traversal Optimization
-Cardinality estimation drives query planning. Start with most selective pattern. Use `LIMIT` early to cap fan-out. Profile queries to find `Expand(Into)` vs `Expand(All)` — the former uses relationship start/end filtering. Avoid cartesian products. Use `USING INDEX` to force index selection. Parameterize all queries to leverage query caching.
+Start with most selective pattern. Use LIMIT early. Profile queries to find Expand(Into) vs Expand(All). Avoid cartesian products. Use USING INDEX to force index selection. Parameterize all queries.
 
 ```cypher
-// Efficient traversal: start selective
-PROFILE
-MATCH (c:Customer {tier: 'premium'})
-MATCH (c)-[:PURCHASED]->(o:Order)
-WHERE o.total > 100 AND o.created_at > datetime('2025-01-01')
-MATCH (o)-[:CONTAINS]->(p:Product {category: 'electronics'})
-RETURN c.name, p.name, o.total
-LIMIT 100;
-```
+// Bad: full scan then filter
+MATCH (c:Customer)-[:PURCHASED]->(o:Order)-[:CONTAINS]->(p:Product)
+WHERE c.region = 'US' AND p.category = 'Electronics'
+RETURN c.name, p.name LIMIT 100;
 
-```groovy
-// Gremlin equivalent: start with selective filter
-g.V().has('Customer', 'tier', 'premium').
-  out('PURCHASED').hasLabel('Order').
-  has('total', gt(100)).has('created_at', gt(datetime('2025-01-01'))).
-  out('CONTAINS').has('Product', 'category', 'electronics').
-  limit(100).
-  project('customer', 'product', 'total').
-    by(in('PURCHASED').values('name')).
-    by(values('name')).
-    by(in('PURCHASED').values('total'))
+// Good: start with most selective, use indexes
+MATCH (c:Customer) WHERE c.region = 'US'
+WITH c LIMIT 100
+MATCH (c)-[:PURCHASED]->(o:Order)-[:CONTAINS]->(p:Product)
+WHERE p.category = 'Electronics'
+RETURN c.name, p.name;
+
+// Profile to verify plan
+PROFILE
+MATCH (c:Customer) WHERE c.region = 'US'
+USING INDEX c:Customer(region)
+RETURN count(c);
 ```
 
 ### Step 5: Platform Selection
-Neo4j: full ACID, Cypher, strongest ecosystem, community edition for single instance, Aura for cloud. Neptune: managed AWS, Gremlin + SPARQL, multi-AZ, IAM auth, integrations with S3/Lambda. JanusGraph: open-source, pluggable backend (Cassandra, HBase, Bigtable), Elasticsearch for indexing, TinkerPop Gremlin, horizontal scaling.
-
-| Feature | Neo4j | Neptune | JanusGraph |
-|---------|-------|---------|------------|
-| ACID | Yes | Per-transaction | Per-backend |
-| Query | Cypher | Gremlin + SPARQL | Gremlin |
-| Scaling | Read replicas | Multi-AZ | Horizontal (backed by Cassandra) |
-| Storage | Native graph | AWS internal | Cassandra/HBase/Bigtable |
-| HA | Causal clustering | Built-in | Depends on backend |
-
-### Step 6: Scaling and Performance
-Neo4j: causal clustering for writes, read replicas for reads, sharding via federation (4.0+). Neptune: auto-scaling storage (up to 128 TB), read replicas for read-heavy workloads. JanusGraph: partition graph across storage backend nodes, configure `storage.backend` for Cassandra/HBase, `index.search.backend` for Elasticsearch. PageRank and betweenness centrality: run as batch, not real-time.
+Neo4j: full ACID, Cypher, strongest ecosystem. Neptune: managed AWS, Gremlin + SPARQL. JanusGraph: open-source, pluggable backend, horizontal scaling.
 
 ```yaml
-# JanusGraph configuration
-storage.backend: cassandra
-storage.hostname: cassandra-node1,cassandra-node2,cassandra-node3
-storage.cassandra.keyspace: janusgraph
-storage.lock.wait-time: 10000ms
-
-index.search.backend: elasticsearch
-index.search.hostname: es-node1,es-node2
-index.search.elasticsearch.client-only: true
-
-cache.db-cache: true
-cache.db-cache-clean-wait: 20ms
-cache.db-cache-time: 180000
-
-ids.block-size: 100000
+# JanusGraph with Cassandra + Elasticsearch
+storage:
+  backend: cassandra
+  hostname: ["10.0.1.10", "10.0.1.11", "10.0.1.12"]
+  port: 9160
+  keyspace: janusgraph
+index:
+  search:
+    backend: elasticsearch
+    hostname: ["10.0.2.10", "10.0.2.11"]
+    port: 9200
+cache:
+  db-cache: true
+  db-cache-clean-wait: 20
 ```
 
-### Step 7: Graph Analytics and Algorithms
-Neo4j Graph Data Science (GDS) library for graph algorithms: centrality (PageRank, Betweenness, Closeness, Degree), community detection (Louvain, Label Propagation, Weakly Connected Components), path finding (Shortest Path, A*, Dijkstra), node similarity (Jaccard, Cosine, Pearson), and node embeddings (FastRP, GraphSAGE, node2vec). Run algorithms on projected in-memory graphs. Use graph catalog for managing multiple projections. Tune concurrency and batch size for large graphs.
+### Step 6: Scaling and Performance
+Neo4j: causal clustering, read replicas. Neptune: auto-scaling storage. JanusGraph: partition across storage backend, Elasticsearch for indexing.
+
+Neo4j causal clustering: core servers handle writes (RAFT consensus), read replicas handle reads. Minimum 3 core servers for production. Read replicas auto-scale based on query load.
+
+Neptune: serverless or provisioned. Storage auto-scales to 128TB. Use Neptune Streams for change data capture. Enable DFE (Data Format Efficiency) for faster query execution.
+
+JanusGraph: partition graph across Cassandra nodes. Configure `ids.block-size` based on write rate. Use `storage.lock.wait-time` for transaction conflict handling.
+
+### Step 7: Graph Algorithms
+Neo4j GDS: centrality (PageRank, Betweenness), community detection (Louvain, Label Propagation), path finding (Shortest Path), node similarity (Jaccard, Cosine). Run on projected in-memory graphs.
 
 ```cypher
-// PageRank in GDS
-CALL gds.pageRank.stream('myGraph', {
-    maxIterations: 20,
-    dampingFactor: 0.85,
-    concurrency: 4
-})
+// Project graph into memory
+CALL gds.graph.project('myGraph', 'Customer', {
+  PURCHASED: { orientation: 'UNDIRECTED' }
+});
+
+// Run PageRank
+CALL gds.pageRank.stream('myGraph')
 YIELD nodeId, score
-RETURN gds.util.asNode(nodeId).name AS name, score
+RETURN gds.util.asNode(nodeId).name AS customer, score
 ORDER BY score DESC LIMIT 20;
 
-// Community detection with Louvain
-CALL gds.louvain.stream('myGraph', {
-    maxLevels: 10,
-    maxIterations: 10,
-    includeIntermediateCommunities: false
-})
-YIELD nodeId, communityId, intermediateCommunityIds
-RETURN gds.util.asNode(nodeId).name AS name, communityId;
+// Community detection
+CALL gds.louvain.stream('myGraph')
+YIELD nodeId, communityId
+RETURN communityId, count(*) AS members;
+
+// Clean up
+CALL gds.graph.drop('myGraph');
 ```
 
-### Step 8: Graph Data Import and ETL
-Batch import: Neo4j-admin import for initial bulk loads from CSV (fastest), LOAD CSV for incremental imports with Cypher, APOC procedures for periodic execution and parallel processing. Streaming: Kafka connect for real-time graph updates. Data modeling for import: use temporary nodes for deduplication, batch commits every 1000-5000 rows, create constraints and indexes before import. Handle large CSV files with field terminator and quote character configuration.
+### Step 8: Graph Data Import
+Batch: neo4j-admin import, LOAD CSV, APOC. Stream: Kafka connect. Import best practices: temporary nodes for dedup, batch commits every 1000-5000 rows, create constraints before import.
+
+```bash
+# neo4j-admin bulk import
+neo4j-admin database import full \
+  --nodes=Customer=customers-header.csv,customers.csv \
+  --nodes=Product=products-header.csv,products.csv \
+  --relationships=PURCHASED=purchases-header.csv,purchases.csv \
+  --trim-strings=true \
+  --ignore-extra-columns=true
+```
 
 ```cypher
-// LOAD CSV with periodic commit
-:auto USING PERIODIC COMMIT 1000
-LOAD CSV WITH HEADERS FROM 'file:///customers.csv' AS row
-MERGE (c:Customer {id: row.customer_id})
-SET c.name = row.name, c.email = row.email, c.tier = row.tier;
-
-// APOC parallel batch processing
-CALL apoc.periodic.iterate(
-    'LOAD CSV WITH HEADERS FROM "file:///orders.csv" AS row RETURN row',
-    'MATCH (c:Customer {id: row.customer_id})
-     MERGE (o:Order {id: row.order_id})
-     SET o.total = toFloat(row.total), o.status = row.status
-     MERGE (c)-[:PURCHASED {timestamp: datetime(row.created_at)}]->(o)',
-    {batchSize: 1000, parallel: true, retries: 2}
+// APOC periodic batch commit
+CALL apoc.periodic.commit(
+  "MATCH (c:Customer) WHERE c.batch_id IS NULL
+   WITH c LIMIT 5000
+   SET c.batch_id = $batch
+   RETURN count(*)",
+  {batch: 123}
 );
 ```
 
 ### Step 9: Knowledge Graph Design
-Ontology: define classes, properties, and relationships as a schema. RDF/OWL for formal semantics with inference. Property graph for application use with performance needs. SKOS for taxonomies and thesauri. Named entity resolution: deduplicate via identity resolution (sameAs links). Graph embeddings for ML feature extraction.
+Ontology with RDF/OWL for formal semantics. Property graph for application use. SKOS for taxonomies. Named entity resolution via sameAs links. Graph embeddings for ML feature extraction.
 
-```sparql
-# SPARQL query for RDF knowledge graph
-PREFIX schema: <http://schema.org/>
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+```turtle
+# RDF ontology snippet
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <http://schema.org/> .
+@prefix ex: <http://example.org/ontology/> .
 
-SELECT ?person ?product WHERE {
-  ?person rdf:type schema:Person .
-  ?person schema:knows ?friend .
-  ?friend schema:purchased ?product .
-  ?product schema:category "electronics" .
-}
-LIMIT 50
+ex:Product a rdfs:Class ;
+  rdfs:label "Product" ;
+  rdfs:subClassOf schema:Product .
+
+ex:suppliedBy a rdf:Property ;
+  rdfs:domain ex:Product ;
+  rdfs:range ex:Supplier .
 ```
+
+### Step 10: GraphQL Integration
+Graph databases pair naturally with GraphQL APIs. Use Neo4j GraphQL library to auto-generate GraphQL schema from the graph model. This provides real-time graph traversal through a standard API.
+
+```javascript
+// Neo4j GraphQL schema
+const typeDefs = `
+  type Customer {
+    id: ID!
+    name: String!
+    email: String!
+    purchased: [Order!]! @relationship(type: "PURCHASED", direction: OUT)
+  }
+  type Order {
+    id: ID!
+    total: Float!
+    createdAt: DateTime!
+    contains: [Product!]! @relationship(type: "CONTAINS", direction: OUT)
+    customer: Customer! @relationship(type: "PURCHASED", direction: IN)
+  }
+  type Product {
+    id: ID!
+    name: String!
+    sku: String!
+    category: String!
+    reviews: [Review!]! @relationship(type: "REVIEWED", direction: IN)
+  }
+`;
+```
+
+## Architecture / Decision Trees
+
+### Platform Selection
+
+```
+Need graph database?
+  ├── Full ACID, rich ecosystem, Cypher? → Neo4j
+  ├── AWS-managed, Gremlin + SPARQL? → Neptune
+  ├── Open source, horizontal scale, pluggable? → JanusGraph
+  ├── Large-scale analytics, not OLTP? → TigerGraph
+  ├── RDF/SPARQL knowledge graph? → Stardog / GraphDB
+  └── Graph visualization and exploration? → Neo4j + Bloom / Linkurious
+```
+
+### Model Design
+
+```
+Design traversal:
+  1. List all query patterns
+  2. Identify entities → nodes
+  3. Identify connections → relationships
+  4. Identify attributes → properties
+  5. Choose property location (node vs relationship)
+  6. Define indexes for entry-point lookups
+  7. Profile traversal with representative data
+
+Property placement decision:
+  Attribute that describes the connection? → relationship property
+  Attribute that belongs to the entity? → node property
+  Attribute varies per connection? → relationship property
+  Attribute is constant for entity? → node property
+```
+
+## Common Pitfalls
+
+1. **Generic relationships**: `RELATED_TO`, `CONNECTED_TO` lose semantic meaning. Use specific verbs: `PURCHASED`, `MANAGED_BY`, `LOCATED_IN`.
+2. **Overly deep traversals**: 6+ hop queries in OLTP degrade performance. Pre-compute for deep paths.
+3. **Missing indexes on entry points**: every traversal starts somewhere. Index all high-traffic property lookups.
+4. **Fan-out explosion**: one node connected to millions of others. Use LIMIT and pagination.
+5. **Properties on nodes that belong on relationships**: context like timestamp and quantity belong on the relationship, not the node.
+6. **No schema constraints**: unlabeled nodes and invalid relationships accumulate. Always use constraints.
+7. **Loading entire graph into memory in GDS**: projected graphs must fit in available heap. Use node filtering to reduce size.
+8. **No batch commit on large imports**: importing millions of nodes in a single transaction causes OOM.
+9. **RDF without reasoning support**: SPARQL inference queries are slow without a reasoner engine.
+10. **JanusGraph backend storage mismatch**: Cassandra for write-heavy, BerkeleyDB for single-server, ScyllaDB for high-throughput.
+11. **Neptune query timeout not configured**: long-running Gremlin traversals timeout at 15min default. Set appropriate timeout for analytics queries.
+12. **Missing relationship direction in queries**: Cypher can traverse both ways but specifying direction improves plan stability.
+13. **Indexing relationship properties without need**: relationship property indexes are expensive. Index only if traversals filter on relationship properties.
+
+## Best Practices
+
+- Model for traversal patterns first, entity structure second.
+- Use composite indexes for multi-property lookups (region + tier).
+- Profile every query before production. Never guess traversal performance.
+- Keep traversal depth max 5 hops for OLTP. Use pre-computation for deeper paths.
+- Batch write operations in 1000-5000 transaction batches.
+- Use parameterized queries for plan caching.
+- Monitor cache hit ratio: target > 90% for read-heavy workloads.
+- Use APOC for complex operations: periodic execution, parallel processing.
+- For knowledge graphs: define ontology before ingesting data.
+- Use Neo4j Fabric for multi-database federated queries.
+- Model time-varying graphs with relationship properties (valid_from, valid_to) rather than separate nodes.
+- Use graph projections (GDS) for analytics to avoid production query interference.
+- Set Neo4j heap to 16-32GB for graphs up to 100M nodes/edges.
+- Enable query logging for queries exceeding 1 second in production.
+- Test with production-scale data — graph performance changes non-linearly with size.
+
+## Compared With
+
+| Feature | Neo4j | Neptune | JanusGraph | TigerGraph |
+|---|---|---|---|---|
+| ACID | Yes | Per-transaction | Per-backend | Yes |
+| Query | Cypher | Gremlin + SPARQL | Gremlin | GSQL |
+| Scaling | Read replicas, causal clustering | Multi-AZ, storage auto-scale | Horizontal (Cassandra) | MPP shared-nothing |
+| Storage | Native graph | Internal | Pluggable | Native MPP |
+| HA | Causal clustering | Built-in | Backend-dependent | Built-in |
+| Cloud | Aura | AWS | Any | TigerGraph Cloud |
+| In-memory analytics | GDS | DFE | N/A | Built-in |
+| OLTP vs OLAP | Both | Both | OLTP-heavy | OLAP-heavy |
+| Ecosystem | Largest | AWS-native | Open-source | Growing |
+
+Graph vs relational: graph excels at many-to-many relationships, variable-depth traversals, and path queries. Relational excels at aggregate queries, strict schemas, and ACID-compliant transactions over known relationships. Use graph when the value is in the connections, not just the entities.
+
+Graph vs document (MongoDB): document stores embed related data, limiting traversal to one level. Graph stores normalize relationships, enabling arbitrary-depth traversal. Use graph for highly connected data, document for aggregate-root patterns.
+
+## Performance
+
+- Cypher query planning: < 10ms for simple queries, < 100ms for complex.
+- Gremlin traversal on Neptune: 1000+ traversals/second per instance.
+- Neo4j GDS PageRank on 1M nodes, 10M edges: 30-60 seconds.
+- LOAD CSV import: 50K-100K nodes/second on single instance.
+- Index lookup: < 1ms per lookup (BTREE).
+- Full-text search: 10-50ms across 1M indexed entities.
+- Neo4j heap: allocate 50% of RAM to heap, 50% to OS page cache.
+- Write throughput: Neo4j 5K-20K writes/sec per core server (SSD-dependent).
+- Query cache: Neo4j caches query plans; reuse parameterized queries for 10-100x plan cache hits.
+- Page cache sizing: allocate enough page cache to hold the hot working set. For 100GB graph with 20GB working set, allocate 24GB page cache.
+- Neptune storage auto-scales but write I/O is limited by instance class. Use larger instances for write-heavy workloads.
+- JanusGraph: each query may hit both storage backend and index backend. Elasticsearch latency dominates query time for indexed lookups. Target <10ms ES response.
+- Bulk import (neo4j-admin): 1M nodes/sec on SSD. LOAD CSV with periodic commit: 10K-50K nodes/sec.
+
+## Tooling
+
+| Tool | Purpose |
+|---|---|
+| Neo4j Browser | Query editor and visualization |
+| Neo4j GDS | Graph algorithms library |
+| APOC | Utility procedures |
+| Cypher Shell | Command-line query tool |
+| Gremlin Console | Server-less query testing |
+| Neptune Workbench | Jupyter notebooks for Neptune |
+| JanusGraph Server | Gremlin server with backend config |
+| Arrows | Graph data modeling visualization |
+| Neo4j Bloom | Graph visualization for business users |
+| Linkurious | Graph visualization and investigation |
+| GraphXR | 3D graph visualization |
+| Apache TinkerPop | Graph computing framework |
+| Neo4j GraphQL | Auto-generated GraphQL from graph model |
+| RDF4J / Jena | RDF and SPARQL toolkits |
+| Stardog | Enterprise RDF knowledge graph |
 
 ## Rules
 - Model nodes for entities, relationships for connections
@@ -241,6 +379,16 @@ LIMIT 50
 - Use pagination and LIMIT for all user-facing queries
 - Batch write operations in transactions of 1000-5000 operations
 - Avoid fan-out patterns that explode cardinality
+- Index all entry-point properties (foreign keys, unique IDs)
+- Use parameterized queries for plan caching
+- Enable query logging for queries > 1 second in production
+- Set Neo4j page cache for hot working set
+- Test with production-scale data before deployment
+- Create constraints before bulk import
+- Use graph projections for analytics workloads
+- Monitor cache hit ratio (target > 90%)
+- Model time-varying data with valid_from/valid_to on relationships
+- Document every relationship type with direction semantics
 
 ## References
   - references/graph-algorithms.md — Graph Algorithms
@@ -249,6 +397,8 @@ LIMIT 50
   - references/graph-platforms.md — Graph Database Platforms
   - references/graph-use-cases.md — Graph Database Use Cases Reference
   - references/query-patterns.md — Graph Query Patterns Reference
+  - references/graph-data-modeling.md — Graph Data Modeling Deep Dive
+  - references/graph-query-performance.md — Query Performance Reference
 ## Handoff
 `data-nosql-database` for non-relational data stores
 `ml-feature-engineering` for graph feature extraction (PageRank, embeddings)
