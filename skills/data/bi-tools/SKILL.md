@@ -322,6 +322,112 @@ Alerts: metric drops below threshold, anomaly detection.
 Delivery by role and department.
 Review subscriptions quarterly, remove stale.
 
+### BI Tool Selection
+
+```yaml
+bi_tool_comparison:
+  tableau:
+    strengths: ["Best visualization library", "Strong calculated fields", "Large community"]
+    weaknesses: ["Expensive per-user licensing", "Limited self-service data prep", "Tableau Server admin overhead"]
+    best_for: "Enterprise dashboards, visual analytics, complex charting"
+    licensing: "Creator/Explorer/Viewer tiers, $15-70/user/month"
+  
+  looker:
+    strengths: ["LookML semantic layer (source of truth)", "Git-versioned content", "Embedded analytics"]
+    weaknesses: ["LookML learning curve", "Custom visualization limited", "Performance on complex queries"]
+    best_for: "Semantic layer governance, embedded analytics, git-versioned metrics"
+    licensing: "Standard/Enterprise, per-user or per-instance"
+  
+  power_bi:
+    strengths: ["Low cost", "Office 365 integration", "Power Query (data prep)", "DAX for complex measures"]
+    weaknesses: ["Desktop dependency", "Large dataset performance", "Limited Linux/cloud hosting"]
+    best_for: "Microsoft ecosystem, self-service analytics, cost-effective BI"
+    licensing: "Free (limited), Pro ($10), Premium ($20-5K/user/month)"
+  
+  metabase:
+    strengths: ["Open-source", "Easy setup", "SQL-native", "Self-hosted"]
+    weaknesses: ["Basic visualizations", "No scheduling in OSS", "Limited governance"]
+    best_for: "Startups, small teams, SQL-heavy analytics, open-source stack"
+    licensing: "OSS (free), Enterprise (paid)"
+  
+  superset:
+    strengths: ["Open-source", "Rich SQL editor", "Chart types", "Caching"]
+    weaknesses: ["Complex deployment", "Authentication limited", "No mobile"]
+    best_for: "Open-source stack, SQL-first teams, custom embedding"
+    licensing: "Apache 2.0 (free)"
+```
+
+### BI Performance Tuning
+
+```yaml
+performance_optimization:
+  dashboard_loading:
+    - "Use materialized views for all dashboard source data"
+    - "Limit rows returned: 10K max per query, 100K max per dashboard"
+    - "Pre-aggregate at warehouse level (daily/hourly rollups)"
+    - "Set query timeout: 60s max per query"
+    - "Use BI caching: dashboard cache (1hr), query cache (1hr)"
+    - "Implement cache warming: pre-load dashboards before business hours"
+  
+  query_optimization:
+    - "Avoid cross-joins, unaggregated detail tables in dashboards"
+    - "Use incremental refresh for large datasets"
+    - "Push filters to warehouse (WHERE clause, not in-memory)"
+    - "Limit dashboard tiles: max 10-15 charts per dashboard"
+    - "Use summary tables for trend lines over full detail"
+  
+  monitoring:
+    - "Dashboard load time: target < 5s, alert > 10s"
+    - "Query duration: target < 2s, alert > 10s"
+    - "Cache hit rate: target > 80%"
+    - "Concurrent users: track per dashboard, add resources at 90%"
+    - "Data freshness: track last refresh time per dashboard"
+```
+
+### BI Security and Governance
+
+```yaml
+security_model:
+  authentication:
+    - "SSO (SAML/OIDC) for all BI tools — no local passwords"
+    - "SCIM for automated user provisioning/deprovisioning"
+    - "MFA required for all admin accounts"
+  
+  authorization:
+    - "Row-level security at data source (warehouse views with WHERE clauses)"
+    - "Column-level security via warehouse masking policies"
+    - "Dashboard-level permissions by team/role"
+    - "Embed tokens: 1 hour max TTL, scoped to specific content"
+  
+  audit:
+    - "Log all dashboard views, query executions, data exports"
+    - "Monthly access review, quarterly permission audit"
+    - "Alert on: first-time export, bulk export, off-hours access"
+  
+  data_governance:
+    - "No raw SQL in dashboards — use semantic layer"
+    - "Certified dashboards only for executive consumption"
+    - "Deprecated dashboards removed within 30 days"
+    - "Export controls: CSV only, no full-dataset Excel exports"
+```
+
+### Decision Tree
+
+#### BI Tool Selection
+```
+Team and requirements?
+├── Enterprise, visual analytics, complex charts → Tableau
+├── Semantic layer governance, embedded analytics → Looker
+├── Microsoft ecosystem, self-service, cost-sensitive → Power BI
+├── Open-source, SQL-first, small team → Metabase or Superset
+└── Embedded customer-facing analytics → Looker or Superset
+
+Key question: centralized vs decentralized?
+├── Centralized (one semantic layer, governed metrics) → Looker (LookML)
+├── Decentralized (teams build own dashboards) → Power BI or Tableau
+└── Hybrid (central models, team dashboards) → Any with semantic layer
+```
+
 ## Rules
 - One semantic layer, many dashboards
 - Dashboard load under 5 seconds with caching
@@ -332,6 +438,10 @@ Review subscriptions quarterly, remove stale.
 - Cache aggressively — stale better than slow
 - Export controls prevent data leakage
 - Embed tokens short-lived (1 hour max)
+- Pre-aggregate at warehouse for dashboard performance
+- Monitor dashboard load times and cache hit rates
+- Use SSO + SCIM for BI user management
+- Automate dashboard generation from semantic layer definitions
 
 ## References
   - references/bi-security-governance.md — BI Security and Governance

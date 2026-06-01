@@ -2,7 +2,7 @@
 name: frontend-css-strategy
 description: >
   Use this skill when the user says 'CSS strategy', 'CSS Modules', 'CSS-in-JS', 'utility-first CSS', 'Tailwind CSS', 'styled-components', 'Emotion', 'CSS organization', 'CSS architecture', 'CSS approach', 'BEM', 'CSS naming convention', 'CSS preprocessor', 'Sass', 'PostCSS', 'styled-jsx', 'Linaria', 'vanilla-extract', 'CSS decision', 'styling approach'. This skill helps choose the right CSS approach based on project size, team composition, performance requirements, and build tooling. Works with any frontend framework. Do NOT use for: component design (use design-system skill), Tailwind-specific questions (use tailwind-css skill), or design token setup (use theming skill).
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -184,7 +184,31 @@ export const StyledButton = styled.button<ButtonProps>`
 `
 ```
 
-### 7. CSS Variables for Theming
+### 7. Vanilla Extract Pattern
+```typescript
+// Button.css.ts
+import { style, recipe } from '@vanilla-extract/css'
+import { vars } from './theme.css'
+
+export const button = recipe({
+  base: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 16px',
+    borderRadius: '6px',
+    fontWeight: 500,
+  },
+  variants: {
+    variant: {
+      primary: { background: vars.color.primary, color: 'white' },
+      secondary: { background: 'transparent', border: vars.color.border },
+    },
+  },
+})
+```
+
+### 8. CSS Variables for Theming
 ```css
 :root {
   --color-primary: #2563eb;
@@ -197,6 +221,34 @@ export const StyledButton = styled.button<ButtonProps>`
   --spacing-1: 4px;
   --spacing-2: 8px;
   --spacing-4: 16px;
+}
+```
+
+### 9. PostCSS Configuration
+```javascript
+// postcss.config.js
+module.exports = {
+  plugins: [
+    require('postcss-import'),
+    require('postcss-nesting'), // or postcss-nested
+    require('autoprefixer'),
+    require('cssnano')({ preset: 'default' }),
+  ],
+}
+```
+
+### 10. Container Queries with CSS Strategy
+```css
+/* Component-scoped responsive design */
+.card-container {
+  container-type: inline-size;
+}
+
+@container (min-width: 400px) {
+  .card {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+  }
 }
 ```
 
@@ -221,6 +273,33 @@ Animations
   -> Reason: reusable, hardware-accelerated
 ```
 
+### CSS Layers Strategy (cascade layers)
+```css
+/* Define layer order — lower priority first */
+@layer reset, base, tokens, components, utilities, overrides;
+
+/* Reset — lowest priority */
+@layer reset {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; }
+}
+
+/* Base — element defaults */
+@layer base {
+  body { font-family: system-ui; line-height: 1.5; }
+}
+
+/* Components — scoped component styles */
+@layer components {
+  .card { border-radius: 8px; padding: 16px; }
+}
+
+/* Utilities — highest priority (win over components) */
+@layer utilities {
+  .mt-4 { margin-top: 16px; }
+}
+```
+CSS Layers solve specificity wars by letting you define priority order explicitly. Tailwind v4 uses layers internally.
+
 ## Common Pitfalls
 
 1. **Mixing approaches inconsistently**: Using Tailwind in some components and CSS Modules in others without clear boundaries.
@@ -230,6 +309,9 @@ Animations
 5. **Inline styles for dynamic values**: Use CSS variables instead (avoids specificity, enables transitions).
 6. **Missing design tokens**: Hardcoding values leads to inconsistency.
 7. **Specificity wars**: `!important` cascading indicates architectural problem.
+8. **CSS-in-JS during SSR**: Some libraries (styled-components) require babel plugin for SSR. Always verify SSR compatibility.
+9. **Global CSS leakage**: CSS Modules and Shadow DOM prevent this. BEM and utility classes don't guarantee it.
+10. **Font loading flash**: Always specify `font-display: swap` or `font-display: optional` for web fonts.
 
 ## Best Practices
 
@@ -264,6 +346,14 @@ Animations
 4. CSS Variables: no performance overhead, native browser optimization.
 5. Runtime CSS-in-JS adds ~0.4ms per style injection on initial render.
 6. Critical CSS extraction (inlining above-fold styles) improves FCP by 10-20%.
+7. CSS Layers have no performance overhead — they're a cascade-ordering feature only.
+8. Container Queries have same performance as media queries — negligible cost.
+
+### Browser Rendering Considerations
+- CSS-in-JS during hydration can cause "flash of unstyled content" (FOUC) if SSR is not configured.
+- CSS Variables are resolved at computed-value time — referencing many vars in one rule is slightly slower than literals but negligible in practice.
+- Container Queries require the browser to track container dimensions — this has minimal overhead (similar to ResizeObserver).
+- `@layer` has no performance cost — it is purely a cascade-ordering mechanism.
 
 ## Tooling
 
@@ -275,6 +365,8 @@ Animations
 6. `linaria` — zero-runtime CSS-in-JS with Babel/Macro.
 7. `critters` — inline critical CSS for SSR frameworks.
 8. `purgecss` — remove unused CSS (used by Tailwind internally).
+9. `lightningcss` — Rust-based CSS parser/minifier (used by Vite, Parcel).
+10. `cssnano` — PostCSS-based CSS minifier.
 
 ## Rules
 1. CSS approaches are not mixed in a single project — pick one primary approach.
@@ -289,6 +381,8 @@ Animations
 10. Dead styles are removed — purging or lint rules are configured.
 11. `!important` is never used unless overriding a third-party library.
 12. CSS selectors never exceed 3 levels of specificity.
+13. PostCSS or LightningCSS is configured for autoprefixing and minification.
+14. CSS Layers are used to manage cascade order explicitly.
 
 ## References
   - references/container-queries.md — Container Queries

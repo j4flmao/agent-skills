@@ -2,7 +2,7 @@
 name: backend-grpc-patterns
 description: >
   Use this skill when the user says 'gRPC', 'protobuf', 'protocol buffers', 'streaming RPC', 'unary call', 'server streaming', 'client streaming', 'bidirectional streaming', 'gRPC interceptor', 'gRPC error handling', 'protobuf schema', 'service definition', 'RPC design', or when designing gRPC APIs. This skill enforces consistent protobuf schema conventions, streaming patterns, interceptor chains, and structured error handling for gRPC services. Applies to any backend stack using gRPC. Do NOT use for: REST API design, GraphQL schema, message queue design, or frontend data fetching.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -62,6 +62,38 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 Per RPC: 6 lines. Per service: unlimited.
+
+## Decision Tree
+
+### Which RPC Pattern?
+
+```
+What is the communication pattern?
+  ├── Request → Response (standard CRUD)
+  │   └── Unary RPC — simplest, HTTP/2 under the hood
+  ├── Request → stream of events (subscribe, watch, notifications)
+  │   └── Server-streaming RPC — send multiple responses for one request
+  ├── Stream of requests → single response (batch upload, long-form input)
+  │   └── Client-streaming RPC — aggregate client data into one result
+  ├── Stream → stream (chat, real-time sync, gaming)
+  │   └── Bidirectional streaming — full-duplex communication
+  └── Fire-and-forget (event, notification, pub/sub)
+      └── Consider message queue instead — gRPC streaming is for persistent connections
+```
+
+### When to Use gRPC vs REST vs Message Queue?
+
+```
+gRPC:               Internal service-to-service, low latency, high throughput
+                    Streaming, real-time, bidirectional
+                    Polyglot environments (codegen for many languages)
+REST:               External/public APIs (browsers, mobile, third-party)
+                    Simple CRUD, cacheable resources
+                    When HTTP semantics matter (caching, content negotiation)
+Message Queue:      Async communication, event-driven, fire-and-forget
+                    When services must be decoupled in time
+                    When you need guaranteed delivery, retries, DLQ
+```
 
 ## Workflow
 
@@ -169,6 +201,197 @@ message ErrorInfo {
 }
 ```
 
+### Step 7: Interceptor Chain
+Order matters — apply in this sequence:
+
+```
+Client side:
+  1. Deadline/timeout interceptor (outermost)
+  2. Auth token injection
+  3. Tracing (OpenTelemetry span injection)
+  4. Logging (request/response summary)
+  5. Circuit breaker / retry (innermost)
+
+Server side:
+  1. Tracing (span creation) (outermost)
+  2. Logging (request metadata)
+  3. Auth validation (JWT, mTLS)
+  4. Rate limiting
+  5. Deadline enforcement (innermost)
+```
+
+```typescript
+// gRPC server interceptor — auth + logging (Node.js)
+import { ServerInterceptor, status } from '@grpc/grpc-js';
+
+const authInterceptor: ServerInterceptor = (call, definition) => {
+  const deadline = call.getDeadline();
+  if (deadline && Date.now() > deadline.toMillis()) {
+    call.emit('error', { code: status.DEADLINE_EXCEEDED, details: 'Deadline exceeded' });
+    return;
+  }
+  const metadata = call.metadata;
+  const token = metadata.get('authorization')[0] as string;
+  if (!token) {
+    call.emit('error', { code: status.UNAUTHENTICATED, details: 'Missing token' });
+    return;
+  }
+  call.user = verifyToken(token);
+  return new (definition as any)(call, definition);
+};
+```
+
+```go
+// gRPC server interceptor — logging (Go)
+import (
+  "google.golang.org/grpc"
+  "google.golang.org/grpc/status"
+)
+
+func loggingUnaryInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+  start := time.Now()
+  resp, err := handler(ctx, req)
+  duration := time.Since(start)
+  level := slog.LevelInfo
+  if err != nil {
+    level = slog.LevelError
+  }
+  slog.LogAttrs(ctx, level, "gRPC call",
+    slog.String("method", info.FullMethod),
+    slog.Duration("duration", duration),
+    slog.String("status", status.Code(err).String()),
+  )
+  return resp, err
+}
+```
+
+### Step 8: Streaming Implementation Patterns
+
+Server-streaming with backpressure (Go):
+```go
+func (s *EventService) Subscribe(req *pb.SubscribeRequest, stream pb.EventService_SubscribeServer) error {
+  // Backpressure: server controls send rate
+  ch := s.eventBus.Subscribe(req.Topic)
+  defer s.eventBus.Unsubscribe(req.Topic, ch)
+
+  for {
+    select {
+    case event := <-ch:
+      if err := stream.Send(event); err != nil {
+        // Client disconnected or network error
+        return err
+      }
+    case <-stream.Context().Done():
+      // Client cancelled
+      return stream.Context().Err()
+    }
+  }
+}
+```
+
+Bidirectional streaming with flow control (Node.js):
+```typescript
+async function chat(call: ServerDuplexStream<ChatMessage, ChatMessage>) {
+  call.on('data', (msg: ChatMessage) => {
+    // Process incoming message
+    // Use backpressure: call.write returns boolean (true = buffer ok, false = backpressure)
+    const canWrite = call.write({
+      id: msg.id,
+      text: `Echo: ${msg.text}`,
+      timestamp: now(),
+    });
+    if (!canWrite) {
+      call.pause();  // Wait for drain event
+      call.once('drain', () => call.resume());
+    }
+  });
+  call.on('end', () => call.end());
+}
+```
+
+### Step 9: Client-Side Patterns
+
+```typescript
+// gRPC client with deadline and retry
+import { credentials, ServiceError } from '@grpc/grpc-js';
+
+async function callWithRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const grpcErr = err as ServiceError;
+      if (grpcErr.code === status.UNAVAILABLE && attempt < maxRetries - 1) {
+        await delay(Math.pow(2, attempt) * 100);  // exponential backoff
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('Unreachable');
+}
+
+const client = new UserServiceClient('localhost:50051', credentials.createInsecure());
+const response = await callWithRetry(() => client.getUser({ userId: '123' }));
+```
+
+### Step 10: Service Versioning
+
+```
+Package version in proto:   acme.users.v1 → acme.users.v2
+Never break existing v1 RPCs — add new RPCs in v2 or add fields to v1 messages
+Field deprecation:
+  string old_field = 3 [deprecated = true];
+  // Add replacement field
+  string new_field = 4;
+Client migration: run both versions simultaneously, migrate clients one by one
+```
+
+## Production Considerations
+
+| Concern | Practice |
+|---------|----------|
+| Timeouts | Every RPC must have a deadline. Server enforces; client sets |
+| Connection management | Keep-alive pings (server: 1h idle, client: 30s). gRPC connection pooling |
+| TLS | mTLS for inter-service. Use Kubernetes cert-manager or SPIFFE |
+| Load balancing | Client-side load balancing (lookaside) or proxy (Envoy, Linkerd). Avoid random LB |
+| Max message size | Default 4MB. Increase if needed, but prefer streaming for large payloads |
+| Flow control | HTTP/2 flow control is automatic. Monitor `GOAWAY` frames for connection issues |
+| Graceful shutdown | Drain connections: stop accepting, wait for in-flight, then shutdown |
+
+## Performance
+
+| Factor | Impact | Mitigation |
+|--------|--------|-----------|
+| Protobuf serialization | ~10x faster than JSON | Already using protobuf — good |
+| Connection reuse | HTTP/2 multiplexing — many RPCs on one connection | Enable keep-alive |
+| Message size | Large messages block the connection | Use streaming for >1MB |
+| TLS handshake | Adds 1-3 RTT per connection | Connection pooling, HTTP/2 reduces connections |
+| Reflection | Disable in production (security + startup perf) | Use proto descriptors, not reflection |
+
+## Security
+
+| Risk | Mitigation |
+|------|-----------|
+| No auth by default | Always require auth token in metadata. Use mTLS for inter-service |
+| Reflection enabled in prod | Disable `grpc.reflection` in production |
+| Large message DoS | Set `MaxReceiveMessageSize` (default 4MB, max 100MB) |
+| Slow loris attack | Set `MaxConcurrentStreams` and connection timeouts |
+| Unauthenticated streaming | Auth happens once at stream open — verify at reconnect |
+| Metadata leaking secrets | Never log metadata (may contain tokens) |
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It's Bad | Fix |
+|-------------|-------------|-----|
+| Reusing field numbers | Removed field can be confused with new one | Always `reserved` removed fields |
+| No deadlines | RPCs hang forever | Every RPC must set a deadline |
+| Using int64 for timestamps | No timezone, no formatting | Use `google.protobuf.Timestamp` |
+| Catching all errors as INTERNAL | Client cannot react appropriately | Return specific status codes |
+| Streaming for single-item responses | Over-engineered, more complexity | Use unary |
+| No backpressure in streaming | Server OOMs when client is slow | Respect `stream.Send()` return value |
+| Blocking the event loop | gRPC uses async I/O — blocking starves the connection | Offload CPU work to thread pool |
+
 ## Rules
 - Never reuse field numbers in protobuf — even after deletion, reserve them.
 - All RPCs must have a deadline/timeout. Server enforces it; client sets it.
@@ -178,6 +401,10 @@ message ErrorInfo {
 - Server-streaming calls must support a `cancel` mechanism at the application level.
 - Deprecate fields with `[deprecated = true]`, do not remove them until the next major package version.
 - Client-streaming and bidi RPCs must handle client disconnect gracefully.
+- Never use reflection in production.
+- Always enable keep-alive pings on both client and server.
+- Every interceptor must call the next handler exactly once.
+- Use connection pooling for high-throughput scenarios.
 
 ## References
   - references/grpc-error-handling.md — gRPC Error Handling

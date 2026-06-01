@@ -309,6 +309,111 @@ schedule:
     timezone: America/New_York
 ```
 
+### Advanced Sync Patterns
+
+#### Orchestrated Multi-Destination Sync
+
+```yaml
+sync_pipeline:
+  name: "customer_360_sync"
+  schedule: "0 */6 * * *"  # Every 6 hours
+  
+  steps:
+    - step: 1
+      action: "Extract from warehouse"
+      query: |
+        SELECT c.customer_id, c.email, c.name, c.tier,
+               o.last_order_date, o.lifetime_value,
+               ARRAY_AGG(DISTINCT s.segment) as segments
+        FROM customers c
+        LEFT JOIN order_summary o ON c.customer_id = o.customer_id
+        LEFT JOIN customer_segments s ON c.customer_id = s.customer_id
+        WHERE c.updated_at >= '{{ last_sync }}'
+        GROUP BY ALL
+      target: "staging.customer_sync_batch"
+    
+    - step: 2
+      action: "Apply identity resolution"
+      logic: "Merge duplicate customer records by email, phone, external_id"
+    
+    - step: 3
+      action: "Sync to Salesforce"
+      if: "customer.tier IN ('platinum', 'gold')"
+      destination: "salesforce.Contact"
+      mapping: |
+        salesforce.Email = customer.email
+        salesforce.Description = CONCAT(tier, ' | Last order: ', last_order_date)
+    
+    - step: 4
+      action: "Sync to HubSpot"
+      destination: "hubspot.contacts"
+      column_mapping:
+        email: customer.email
+        hs_lead_status: CASE WHEN tier = 'platinum' THEN 'ACTIVE' ELSE 'WARM' END
+    
+    - step: 5
+      action: "Sync to Segment"
+      destination: "segment.traits"
+      payload: |
+        { "userId": customer_id, "traits": { "tier": tier, "lifetime_value": lifetime_value } }
+```
+
+#### Identity Resolution for Reverse ETL
+
+```yaml
+identity_resolution:
+  challenge: "Warehouse and destination use different identity systems"
+  
+  strategies:
+    - name: "warehouse_primary_with_destination_mapping"
+      description: "Map warehouse keys to destination keys via lookup table"
+      implementation: |
+        CREATE TABLE identity_mapping (
+          warehouse_id STRING PRIMARY KEY,
+          destination_id STRING,
+          destination_type STRING,
+          last_synced TIMESTAMP
+        );
+      pros: "Clean separation, full control"
+      cons: "Requires initial mapping, needs refresh when destination changes"
+    
+    - name: "external_id_as_primary_key"
+      description: "Use destination external_id field to store warehouse FK"
+      implementation: |
+        # Most SaaS tools support external_id or custom_id field
+        # Store warehouse PK in external_id for idempotent syncs
+      pros: "No mapping table needed, idempotent"
+      cons: "Limited to fields that support external_id"
+    
+    - name: "email_as_join_key"
+      description: "Use email as primary join key between warehouse and destination"
+      implementation: |
+        WHERE customer.email IS NOT NULL  -- Email required as join key
+      pros: "Works across all platforms, human-readable"
+      cons: "Breaks on email change, not unique in all systems"
+```
+
+### Decision Tree
+
+#### Sync Strategy Selection
+```
+Destination type?
+├── CRM (Salesforce, HubSpot)
+│   ├── < 1M records → Full refresh nightly
+│   └── > 1M records → Incremental upsert on external_id
+├── Ad platforms (Google Ads, Facebook)
+│   ├── Audiences → Full refresh (replace list)
+│   └── Conversions → Incremental append (deduplicated by click_id)
+├── Marketing automation (Marketo, Braze)
+│   ├── Profile updates → Incremental upsert on email/external_id
+│   └── Event data → Append-only (streaming preferred)
+├── Data warehouses (downstream)
+│   └── Mirror sync (delete+insert to match source exactly)
+└── Custom API
+    ├── Supports upsert → Incremental batch
+    └── Append only → Incremental with dedup window
+```
+
 ## Rules
 - Source SQL must be idempotent with deduplication on identity key
 - Use incremental sync for tables > 10K rows; full refresh only for reference data < 10K rows
@@ -320,6 +425,9 @@ schedule:
 - Test sync queries on a 100-row sample before activating production sync
 - Set incremental watermark columns with appropriate types (TIMESTAMP not DATE for precision)
 - Document field mappings between warehouse column names and destination API fields
+- Build identity resolution mapping before activating sync
+- Orchestrate multi-destination syncs in dependency order
+- Monitor destination API changes that may break field mappings
 
 ## References
   - references/identity-resolution.md — Identity Resolution Reference

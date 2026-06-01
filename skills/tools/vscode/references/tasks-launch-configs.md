@@ -365,6 +365,199 @@ VS Code tasks automate build, test, and lint operations. Launch configurations d
 }
 ```
 
+## Advanced Debugging Patterns
+
+### Conditional Breakpoints
+```json
+{
+  "name": "Debug with Condition",
+  "type": "node",
+  "request": "launch",
+  "program": "${workspaceFolder}/src/index.ts",
+  "stopOnEntry": false,
+  "breakpoints": [
+    {
+      "condition": "user.id === 123",
+      "hitCondition": "3",
+      "logMessage": "User processed: {user.name}"
+    }
+  ]
+}
+```
+In VS Code: Right-click breakpoint → Edit Breakpoint → Add condition/hit count/log message.
+
+### Remote Debugging
+```json
+{
+  "name": "Attach to Docker",
+  "type": "node",
+  "request": "attach",
+  "port": 9229,
+  "restart": true,
+  "localRoot": "${workspaceFolder}",
+  "remoteRoot": "/app",
+  "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+  "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+  "sourceMaps": true,
+  "trace": true
+}
+```
+
+### Memory Leak Debugging
+```json
+{
+  "name": "Debug with Heap Snapshot",
+  "type": "node",
+  "request": "launch",
+  "program": "${workspaceFolder}/src/index.ts",
+  "runtimeArgs": [
+    "--inspect",
+    "--expose-gc"
+  ],
+  "env": {
+    "NODE_OPTIONS": "--max-old-space-size=4096"
+  },
+  "console": "integratedTerminal"
+}
+```
+
+## Advanced Task Patterns
+
+### Task with Multiple Problem Matchers
+```json
+{
+  "label": "Full Check",
+  "type": "shell",
+  "command": "npm run lint && npm run typecheck && npm test",
+  "problemMatcher": [
+    "$eslint-compact",
+    "$tsc",
+    "$jest"
+  ],
+  "group": {
+    "kind": "test",
+    "isDefault": true
+  },
+  "presentation": {
+    "reveal": "always",
+    "panel": "shared",
+    "showReuseMessage": false,
+    "clear": true
+  }
+}
+```
+
+### Task with Input Variables
+```json
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "testName",
+      "type": "promptString",
+      "description": "Test name pattern to run",
+      "default": ""
+    }
+  ],
+  "tasks": [
+    {
+      "label": "Run Specific Test",
+      "type": "npm",
+      "script": "test",
+      "args": ["--", "--testNamePattern", "${input:testName}"],
+      "problemMatcher": "$jest"
+    }
+  ]
+}
+```
+
+### Task with Pick Input
+```json
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "deployEnv",
+      "type": "pickString",
+      "description": "Select deployment environment",
+      "options": ["development", "staging", "production"],
+      "default": "development"
+    }
+  ],
+  "tasks": [
+    {
+      "label": "Deploy",
+      "type": "shell",
+      "command": "npx deploy ${input:deployEnv}",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    }
+  ]
+}
+```
+
+### Task with Env File
+```json
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start with Environment",
+      "type": "shell",
+      "command": "node server.js",
+      "options": {
+        "env": {
+          "NODE_ENV": "development",
+          "PORT": "3000",
+          "DATABASE_URL": "postgres://localhost:5432/mydb"
+        },
+        "cwd": "${workspaceFolder}/api"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": [{ "regexp": ".", "file": 1 }],
+        "background": {
+          "beginsPattern": "Server running",
+          "endsPattern": "Server stopped"
+        }
+      }
+    }
+  ]
+}
+```
+
+### PreLaunch Task Chain
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Backend",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/api/src/server.ts",
+      "preLaunchTask": "Build Backend",
+      "outFiles": ["${workspaceFolder}/api/dist/**/*.js"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack Debug",
+      "configurations": ["Launch Backend", "Launch Frontend"],
+      "preLaunchTask": "Build All",
+      "stopAll": true,
+      "presentation": {
+        "hidden": false,
+        "group": "debug",
+        "order": 1
+      }
+    }
+  ]
+}
+```
+
 ## Key Points
 - tasks.json defines build, test, and automation tasks
 - Shell tasks run arbitrary commands with problem matchers
@@ -393,3 +586,8 @@ VS Code tasks automate build, test, and lint operations. Launch configurations d
 - Debug configurations can inherit from other configs
 - Multi-root workspaces support folder-specific tasks
 - Task output encoding configures terminal character set
+- Input variables enable interactive task prompts
+- envFile loads environment variables from .env files
+- Task groups (build, test) organize related tasks
+- Task shortcuts (Ctrl+Shift+B for build) improve workflow
+- Debug configurations support `internalConsoleOptions` for output control

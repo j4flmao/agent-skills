@@ -1,213 +1,150 @@
 # Prompt Engineering Fundamentals
 
-## Overview
-Prompt Engineering is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
-
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Prompt Engineering helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### What Is a Prompt?
+A prompt is a structured input to a language model that instructs it to perform a specific task. It encodes the task description, constraints, context, and expected output format. Understanding prompt mechanics requires knowledge of how LLMs process and respond to text.
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Prompt Engineering solutions. These principles help maintain code quality and reduce technical debt.
+### Tokenization and Context Windows
+LLMs process text as tokens (not characters). A token is roughly 0.75 words for English. The context window is the maximum number of tokens the model can process in a single request.
 
-### Concept 3: Data Management
-Proper data management is essential for Prompt Engineering. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+| Model | Context Window | Typical Use |
+|-------|---------------|-------------|
+| GPT-4o | 128K tokens | Long documents, multi-turn |
+| Claude 3.5 Sonnet | 200K tokens | Extended analysis, large codebases |
+| Gemini 1.5 Pro | 1M tokens | Very long contexts |
+| Llama 3 70B | 8K-32K tokens | Standard tasks |
+| Mistral Large | 32K tokens | Balanced |
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+**Implication**: Every token in the prompt consumes context window space. Efficient prompt design maximizes task-relevant information per token.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Message Roles
 
-## Architecture Patterns
+| Role | Purpose | Typical Use |
+|------|---------|-------------|
+| System | Sets model behavior, persona, constraints | Role, task, rules, output format |
+| User | Represents the human input | Queries, data to process |
+| Assistant | Model's response (can be used for few-shot) | Examples, previous turns |
 
-### Pattern 1: Standard Architecture
-The standard architecture for Prompt Engineering follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+The system message has the strongest influence on model behavior and should appear first in the context.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+## Key Parameters
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Temperature
+Controls randomness in token selection. Lower values make output more deterministic; higher values increase diversity.
 
-## Implementation Guide
+| Range | Determinism | Best For |
+|-------|-------------|----------|
+| 0.0-0.2 | Maximum | Classification, extraction, code, math |
+| 0.3-0.5 | High | Factual QA, summarization, translation |
+| 0.6-0.8 | Moderate | Creative writing, chat, generation |
+| 0.9-1.0 | Low | Brainstorming, poetry, diverse outputs |
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+**Rule**: Temperature 0 does not guarantee identical outputs due to GPU nondeterminism and system floating-point variance. Use seed parameter when reproducibility is required.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Top-P (Nucleus Sampling)
+Cumulative probability threshold for token selection. The model considers only tokens whose cumulative probability reaches top-p.
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+- Top-p = 1.0: Consider all tokens (default, no restriction).
+- Top-p = 0.9: Consider the most likely tokens comprising 90% of probability mass.
+- Lower top-p increases determinism; combine with temperature for fine control.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+### Frequency and Presence Penalties
+- **Frequency penalty**: Reduces repetition by penalizing tokens that have already appeared. Range 0-2.0. Useful for reducing word/topic repetition.
+- **Presence penalty**: Penalizes tokens that have appeared at all (regardless of frequency). Range 0-2.0. Encourages topic diversity.
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+### Max Tokens
+The maximum number of tokens the model can generate. Set to expected output length + 20% buffer. Overly large max_tokens wastes compute; overly small truncates responses.
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### Stop Sequences
+Strings that terminate generation when encountered. Useful for structured output:
+- Stop at `\n\n` for single-paragraph responses.
+- Stop at `}` for JSON objects.
+- Stop at `\nUser:` for single-turn responses.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+## Prompt Anatomy
 
-## Best Practices
+### Essential Components
+Every prompt should address four questions:
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+1. **Role**: Who is the model? ("You are a senior data scientist specializing in time series analysis.")
+2. **Task**: What should it do? ("Analyze the following sales data and identify quarterly trends.")
+3. **Constraints**: What are the boundaries? ("Only use data provided below. Do not make assumptions about missing months.")
+4. **Output Format**: What structure should the response follow? ("Respond in three sections: Summary, Trend Analysis, Recommendations. Use markdown headers.")
 
-## Common Pitfalls
+### Optional Components
+- **Context**: Background information or data the model needs.
+- **Few-shot examples**: Input-output pairs demonstrating the desired pattern.
+- **Chain-of-thought trigger**: "Let's think step by step" for reasoning tasks.
+- **Negative constraints**: What to avoid (use sparingly; prefer positive directives).
+- **Tone specification**: "Respond in a professional tone suitable for executive audience."
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+## Output Structure Fundamentals
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+### Structured Output Types
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+| Type | Method | Parseability |
+|------|--------|--------------|
+| JSON | Schema specification + JSON mode | High (json.load) |
+| XML | Tag-delimited fields | Medium (XML parser) |
+| Markdown | Section headers + formatting | Low (heuristic) |
+| Enum | Single label from options list | High (exact match) |
+| Code block | Language-specified fences | Medium (AST parse) |
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+### JSON Output Best Practices
+```
+Respond with valid JSON matching this schema:
+{
+  "classification": "billing | technical | account",
+  "confidence": 0.0-1.0,
+  "explanation": "brief reason for classification"
+}
+Rules:
+- Output ONLY the JSON object.
+- No markdown fences, no code blocks, no additional text.
+- If you cannot classify, set confidence to 0.0.
+```
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+## Basic Prompt Design Principles
 
-## Tooling Ecosystem
+### Positive Directives Over Negative
+- **Favor**: "Provide a concise summary under 100 words."
+- **Avoid**: "Do not write a long summary."
+- **Favor**: "Only use information from the provided context."
+- **Avoid**: "Do not make up information."
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+Models interpret positive instructions more reliably than negative ones. Negative instructions ("don't do X") often cause the model to think about X.
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+### Specificity Over Vagueness
+- **Favor**: "Classify into one of: billing, technical, account, product."
+- **Avoid**: "Classify this customer message."
+- **Favor**: "Output JSON: {\"intent\": string, \"confidence\": number}"
+- **Avoid**: "Tell me what the customer wants."
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+### Position Matters
+- Most important instructions first (beginning of system prompt).
+- Output format specification near the end (recency bias).
+- Few-shot examples work best placed immediately before the query.
+- Constraints repeated at the end (sandwich pattern) improve adherence.
 
-## Integration Patterns
+### Context Window Edge Effects
+- Information at the very beginning and end of the context window receives the most attention.
+- Information in the middle is most likely to be ignored or forgotten ("lost in the middle").
+- Place the most critical instructions at the start and end of long prompts.
 
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
+## Common Pitfalls for Beginners
 
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
+1. **Assuming the model understands implicit context**: Be explicit about what the model should know and not know.
+2. **Overloading the system prompt**: More instructions do not equal better results. Test with minimal versions.
+3. **Neglecting output format**: Without explicit format constraints, the model chooses format arbitrarily.
+4. **Ignoring model differences**: A prompt that works well on GPT-4o may fail on a smaller model.
+5. **One-shot evaluation**: Testing on a single example gives no confidence in prompt quality.
 
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Prompt Engineering concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+## Key Takeaways
+- A prompt has four essential components: role, task, constraints, output format.
+- Temperature 0-0.2 for deterministic tasks; 0.7-1.0 for creative tasks.
+- Positive directives outperform negative ones.
+- The beginning and end of context windows have the strongest influence.
+- Always specify output format explicitly.
+- Test prompts quantitatively, not anecdotally.
+- Prompt quality is measured by consistency across diverse inputs, not peak performance on one input.

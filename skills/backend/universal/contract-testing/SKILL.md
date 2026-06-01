@@ -2,7 +2,7 @@
 name: backend-contract-testing
 description: >
   Use this skill when the user says 'contract testing', 'Pact', 'consumer-driven contracts', 'CDC', 'provider verification', 'pact test', 'pactflow', 'contract test', 'consumer test', 'provider test'. This skill implements consumer-driven contract testing using Pact to ensure microservices communicate correctly without brittle integration tests. Applies to any backend stack. Do NOT use for: API documentation, OpenAPI schemas, end-to-end testing, or unit testing.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -49,6 +49,30 @@ State: {provider state}
 ### Max Response Length
 6 lines per interaction. 20 lines for full test.
 
+## Architecture Decision Tree
+
+### Should I Use Contract Testing?
+
+```
+Do consumer and provider belong to different teams?
+  ├── Yes → Strongly consider contract testing
+  └── No → Is the provider used by multiple consumers?
+            ├── Yes → Contract testing recommended
+            └── No → Would an E2E test be too slow/brittle?
+                      ├── Yes → Contract testing may help
+                      └── No → Simple unit/integration tests may suffice
+```
+
+### Which Approach?
+
+```
+Can the consumer change the contract independently?
+  ├── Yes → Consumer-Driven Contract (CDC) with Pact
+  └── No → Is the provider owned by the same team as the consumer?
+            ├── Yes → Bi-Directional Contracts (Spring Cloud Contract or Pact)
+            └── No → Provider-Driven Contracts (OpenAPI + Specmatic)
+```
+
 ## Workflow
 
 ### Step 1: Write Consumer Test
@@ -80,7 +104,6 @@ class OrderApiProviderTest {
   @Test
   @State("order exists")
   void verifyOrderEndpoint() {
-    // Set up provider state — insert test data
     orderRepository.save(new Order(1, "pending"));
   }
 }
@@ -96,6 +119,253 @@ If verification fails: the provider made a breaking change. Either:
 - Fix the provider to match the contract, or
 - Update the consumer test, re-publish the pact, then fix the provider.
 
+## Pact Matchers — Flexible Contract Definition
+
+### Why Matchers?
+Hardcoded values in contracts cause brittle tests. Matchers define the shape without constraining exact values.
+
+```javascript
+// Instead of exact values:
+body: { id: 1, status: 'pending', createdAt: '2026-01-01T00:00:00Z' }
+
+// Use matchers for flexible contracts:
+body: {
+  id: Pact.Matchers.integer(1),
+  status: Pact.Matchers.term({ matcher: 'pending|shipped|delivered', generate: 'pending' }),
+  createdAt: Pact.Matchers.isoDate(),
+}
+```
+
+### Matcher Reference
+| Matcher | Purpose | Example |
+|---------|---------|---------|
+| `like(value)` | Type matching | `Pact.Matchers.like('any string')` |
+| `term({ matcher, generate })` | Regex pattern | `Pact.Matchers.term({ matcher: '\\d{4}-\\d{2}-\\d{2}' })` |
+| `eachLike(value, { min })` | Array matching | `Pact.Matchers.eachLike({ id: 1 }, { min: 1 })` |
+| `integer(value)` | Integer type | `Pact.Matchers.integer(42)` |
+| `decimal(value)` | Decimal type | `Pact.Matchers.decimal(99.99)` |
+| `boolean(value)` | Boolean type | `Pact.Matchers.boolean(true)` |
+| `isoDate()` | Date format | `Pact.Matchers.isoDate()` |
+| `isoDateTime()` | DateTime format | `Pact.Matchers.isoDateTime()` |
+| `uuid()` | UUID format | `Pact.Matchers.uuid()` |
+| `object(shape)` | Object shape | `Pact.Matchers.object({ name: like('') })` |
+
+## Provider State Management
+
+### Parameterized Provider States
+Provider states set up test data before verification. Parameterized states allow dynamic configuration.
+
+```javascript
+// Consumer test with parameterized state
+await provider
+  .given('order with ID exists', { orderId: 'order-123', status: 'shipped' })
+  .uponReceiving('a request for a specific order')
+  .withRequest({ method: 'GET', path: '/orders/order-123' })
+  .willRespondWith({
+    status: 200,
+    body: { id: Pact.Matchers.string('order-123'), status: 'shipped' },
+  });
+```
+
+```typescript
+// Provider state handler
+app.post('/test/setup', async (req, res) => {
+  for (const state of req.body.states) {
+    switch (state.name) {
+      case 'order with ID exists':
+        await seedOrder({ id: state.params.orderId, status: state.params.status });
+        break;
+      case 'customer exists':
+        await seedCustomer(state.params);
+        break;
+    }
+  }
+  res.status(200).send('OK');
+});
+```
+
+### State Handler Best Practices
+- Each state handler is idempotent — running it twice is safe
+- Clean up previous state before setting up new state
+- Use transaction rollback after verification to avoid pollution
+- States are isolated per interaction
+
+## Consumer Test Patterns
+
+### Single Endpoint Contract
+```javascript
+describe('GET /orders/:id', () => {
+  it('returns order by ID', async () => {
+    await provider
+      .given('order exists', { id: 1 })
+      .uponReceiving('a GET request for order by ID')
+      .withRequest({ method: 'GET', path: '/orders/1' })
+      .willRespondWith({ status: 200, body: { id: 1, status: 'pending' } });
+
+    await provider.executeTest(async (mockServer) => {
+      const client = new ApiClient(mockServer.url);
+      const order = await client.getOrder(1);
+      expect(order.status).toBe('pending');
+    });
+  });
+});
+```
+
+### Error Response Contract
+```javascript
+describe('GET /orders/:id — not found', () => {
+  it('returns 404 when order does not exist', async () => {
+    await provider
+      .given('order does not exist')
+      .uponReceiving('a GET request for non-existent order')
+      .withRequest({ method: 'GET', path: '/orders/999' })
+      .willRespondWith({ status: 404, body: { error: 'Order not found' } });
+
+    await provider.executeTest(async (mockServer) => {
+      const client = new ApiClient(mockServer.url);
+      await expect(client.getOrder(999)).rejects.toThrow('Order not found');
+    });
+  });
+});
+```
+
+## Provider Verification Patterns
+
+### Multiple Consumers
+```typescript
+@PactBroker(consumerVersionSelectors = [
+  { tag: 'main' },
+  { tag: 'prod' },
+])
+@Provider("OrderApi")
+class ProviderPactTest {
+  @BeforeEach
+  void setUpProviderStates(PactVerificationContext context) {
+    context.setTarget(new HttpTestTarget("localhost", 8080));
+  }
+
+  @TestTemplate
+  @ExtendWith(PactVerificationInvocationContextProvider.class)
+  void verifyPact(PactVerificationContext context) {
+    context.verifyInteraction();
+  }
+}
+```
+
+### Can-I-Deploy Check
+```bash
+# Check if the provider can be deployed without breaking consumers
+npx pact-broker can-i-deploy \
+  --pacticipant OrderApi \
+  --version 2.0.0 \
+  --to main
+
+# Check if the consumer can be deployed
+npx pact-broker can-i-deploy \
+  --pacticipant OrderWeb \
+  --version 1.5.0 \
+  --to main \
+  --latest prod
+```
+
+## Contract Testing in CI/CD
+
+### Consumer CI Pipeline
+```yaml
+# GitHub Actions — Consumer
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm test -- --testPathPattern=consumer              # Run consumer tests
+      - run: npx pact-broker publish ./pacts \                   # Publish contracts
+          --consumer-app-version ${{ github.sha }} \
+          --branch ${{ github.ref_name }}
+      - run: npx pact-broker can-i-deploy \                      # Check compatibility
+          --pacticipant OrderWeb \
+          --version ${{ github.sha }} \
+          --to main
+```
+
+### Provider CI Pipeline
+```yaml
+# GitHub Actions — Provider
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: test }
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm start & npx wait-on http://localhost:3000/health  # Start provider
+      - run: npx pact-provider-verifier \                         # Verify contracts
+          --provider-base-url http://localhost:3000 \
+          --pact-broker-base-url ${{ vars.PACT_BROKER_URL }} \
+          --broker-token ${{ secrets.PACT_BROKER_TOKEN }} \
+          --provider-app-version ${{ github.sha }} \
+          --provider-version-branch ${{ github.ref_name }}
+```
+
+## Production Considerations
+
+### Pact Broker Setup
+| Option | Pros | Cons |
+|--------|------|------|
+| PactFlow (SaaS) | Managed, webhooks, web UI | Cost per month |
+| Self-hosted broker | Free, full control | Operational overhead |
+| Pact files in S3/GCS | Simple, cheap | No can-i-deploy, no webhooks |
+
+### Webhook Integration
+Configure Pact Broker webhooks to trigger provider CI when consumer pacts change:
+- Consumer publishes → webhook triggers provider verification
+- Verification result → webhook notifies consumer
+
+### Contract Versioning Strategy
+- Tag contracts with branch name, environment, and version
+- Main branch contracts = latest stable
+- Feature branch contracts = work in progress
+- Prod contracts = currently deployed
+
+## Anti-Patterns
+
+### Over-Matchering
+Using matchers everywhere defeats the purpose of contracts. Use matchers for dynamic fields (IDs, dates, UUIDs) and exact values for business-important fields (status values, enum options, relationship keys).
+
+### Testing Implementation Details
+Pact tests should verify the API contract, not internal logic. Don't test database queries or business rules through Pact — those belong in unit tests.
+
+### Skipping Provider Verification
+Running consumer tests without verifying against the real provider gives false confidence. Always run provider verification in CI.
+
+### Hardcoded URLs in Tests
+Consumer tests should use the mock server URL (injected by Pact), not hardcoded URLs.
+
+### Missing Error Contracts
+Contracts should include both success and error responses. Consumer code must handle 4xx/5xx correctly.
+
+## Performance
+
+### Test Execution Time
+- Consumer tests: milliseconds (in-process mock server)
+- Provider verification: seconds (requires running provider)
+- Total contract test suite: typically < 2 minutes
+
+### Pact File Size
+- Each interaction adds ~1KB to the pact file
+- Monitor pact file growth — excessively large pact files may indicate testing too many details
+
+## Security
+
+- Pact broker tokens are secrets — store in CI secrets, never in code
+- Pact files contain request/response examples — don't include real PII
+- Provider state setup endpoints should only be accessible in test environments
+- Use separate Pact broker instances for different environments
+
 ## Rules
 - One pact file per consumer-provider pair.
 - Provider states must be meaningful and reproducible.
@@ -104,14 +374,19 @@ If verification fails: the provider made a breaking change. Either:
 - Always publish pacts from the consumer CI pipeline.
 - Always verify pacts in the provider CI pipeline.
 - Breaking a contract should fail the provider's CI build.
+- Every interaction needs a corresponding provider state.
+- Success and error responses both need contract tests.
+- Pact files are checked into version control alongside application code.
 
 ## References
-  - references/cdc-workflow.md — Consumer-Driven Contract Workflow
+  - references/contract-testing-fundamentals.md — Contract Testing Fundamentals
   - references/contract-testing-advanced.md — Contract Testing Advanced Patterns
+  - references/cdc-workflow.md — Consumer-Driven Contract Workflow
   - references/contract-testing-ci.md — Contract Testing CI Pipeline
   - references/contract-testing-tools.md — Contract Testing Tools
   - references/contract-testing-workflow.md — Contract Testing Workflow
   - references/pact-setup.md — Pact Contract Testing Setup
+  - references/provider-verification-deep.md — Provider Verification Deep Dive
 ## Handoff
 No artifact produced unless requested.
 Next skill: idempotency — add safe retry semantics to the API endpoints.

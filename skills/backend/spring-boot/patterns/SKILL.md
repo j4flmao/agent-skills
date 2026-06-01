@@ -18,6 +18,48 @@ tags: [backend, spring-boot, patterns, phase-10]
 ## Purpose
 Implement production-grade Spring Boot patterns — dependency injection, aspect-oriented programming, data access, security, transaction management, and testing.
 
+## Architecture Decision Trees
+
+### Injection Strategy
+
+| Criterion | Constructor | Field (@Autowired) | Setter |
+|-----------|------------|-------------------|--------|
+| Immutability | Yes (final fields) | No | No |
+| Testability | Instantiate directly | Reflection required | Easy override |
+| Null safety | Compiler-enforced | Runtime NPE if missing | Runtime NPE |
+| Circular dependency | Detected at startup | Hidden | Hidden |
+| Constructor params | All in one call | Zero-arg constructor needed | Mutable |
+| Framework coupling | None (pure Java) | Spring annotation | Spring annotation |
+
+Decision: Constructor injection always. Field injection only in tests (via `@InjectMocks`). Setter injection never.
+
+### Transaction Propagation
+
+| Propagation | Behavior | Use Case |
+|-------------|----------|----------|
+| REQUIRED (default) | Join existing or create new | Most service methods |
+| REQUIRES_NEW | Suspend existing, create new | Audit logging, independent actions |
+| NESTED | Savepoint within existing | Partial rollback within batch |
+| MANDATORY | Fail if no existing tx | Internal service calls that need caller tx |
+| NEVER | Fail if existing tx | Long-running reads, avoid connection hold |
+| SUPPORTS | Optional tx | Read-only queries, optional transactional |
+| NOT_SUPPORTED | Suspend existing | Background tasks, after-commit actions |
+
+Decision: REQUIRED for write operations. REQUIRES_NEW for audit/events. Read-only SUPPORTS.
+
+### Testing Slice Strategy
+
+| Annotation | Scope | What's Mocked | What's Real |
+|-----------|-------|--------------|-------------|
+| @SpringBootTest | Full app | Nothing (full context) | Everything |
+| @WebMvcTest | Web layer only | Service layer | Controllers, filters |
+| @DataJpaTest | JPA only | Nothing | Repositories, entities |
+| @JsonTest | JSON only | Nothing | JSON serialization |
+| @RestClientTest | REST client | Server | RestTemplate/WebClient |
+| @DataRedisTest | Redis | Nothing | Redis repos |
+
+Decision: @WebMvcTest for controller tests. @DataJpaTest for repository tests. @SpringBootTest for integration/E2E only.
+
 ## Agent Protocol
 
 ### Trigger
@@ -362,17 +404,42 @@ public class AsyncOrderHandler {
 }
 ```
 
-## Rules
-- Constructor injection always. Never @Autowired on fields.
-- @Transactional at application service level. Never in controllers.
-- Repository interface in domain, implementation in infrastructure.
-- AOP for cross-cutting (logging, metrics, auditing) only — never for business logic.
-- Security chain defined in single SecurityConfig class. No scattered config.
-- Events for loose coupling between aggregates/bounded contexts.
-- Slice tests for focused integration: @DataJpaTest, @WebMvcTest, @JsonTest.
-- TestContainers for database integration tests, WireMock for HTTP stubs.
+## Production Considerations
 
-## References
+### Performance
+- Connection pool: `spring.datasource.hikari.maximum-pool-size=20` (adjust per concurrent users)
+- JPA: `spring.jpa.open-in-view=false` (prevents lazy init exceptions in views, forces explicit fetch planning)
+- Caching: Spring Cache with Caffeine for local, Redis for distributed; annotate methods with `@Cacheable`
+- Async: `@Async` with custom `ThreadPoolTaskExecutor` (corePoolSize=10, maxPoolSize=50)
+- Logging: `logback-spring.xml` with structured JSON appender; async appender for high-throughput
+- Graceful shutdown: `server.shutdown=graceful` + `spring.lifecycle.timeout-per-shutdown-phase=30s`
+
+### Observability
+- Actuator: expose `/actuator/health`, `/actuator/metrics`, `/actuator/prometheus` (secured behind management port)
+- Metrics: Micrometer with MicrometerRegistry; custom metrics via `MeterRegistry` bean
+- Tracing: Micrometer Tracing with Brave + Zipkin for distributed tracing
+- Health indicators: custom `HealthIndicator` for external services (DB, Redis, Kafka, downstream APIs)
+
+### Common Pitfalls
+- N+1 query: use `@EntityGraph` or `JOIN FETCH` in JPQL; enable `hibernate.query.fail_on_pagination_over_collection_fetch`
+- Lazy loading exceptions: disable `open-in-view`, plan fetches explicitly
+- `@Transactional` on private methods: Spring proxies can't intercept private calls — move to public or use self-injection
+
+## Anti-Patterns
+
+| Anti-Pattern | Why | Fix |
+|-------------|-----|-----|
+| `@Autowired` on fields | Can't test without Spring; hidden deps | Constructor injection |
+| `@Transactional` in controllers | Transaction spans HTTP response; connection held | Service-layer only |
+| `@DataJpaTest` with full context | Slow test startup | Use slice annotations |
+| `@SpringBootTest` for every test | Slow CI; tests depend on full context | Slice tests per concern |
+| Catch-all `@ComponentScan` | Slow startup; unexpected beans picked up | Explicit configuration with `@Enable...` |
+| Giant `application.properties` | Hard to maintain; no type safety | Type-safe `@ConfigurationProperties` per module |
+| Using `@Query` with string concatenation | SQL injection risk | Use `@Param` + named parameters or Specification |
+| `@Async` without custom executor | Default SimpleAsyncTaskExecutor creates unlimited threads | Define ThreadPoolTaskExecutor bean |
+| Service calling service directly (no interface) | Tight coupling; can't proxy for tx/AOP | Define interface, proxy will apply cross-cutting |
+
+## Rules
   - references/spring-boot-data-access.md — Spring Boot Data Access Reference
   - references/spring-boot-deployment.md — Spring Boot Deployment
   - references/spring-boot-observability.md — Spring Boot Observability

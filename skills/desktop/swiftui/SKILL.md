@@ -1,8 +1,8 @@
 ---
-name: swiftui
+name: desktop-swiftui
 description: >
-  Use this skill when building declarative macOS/iOS apps with SwiftUI — Swift, previews, property wrappers, App Intents, SwiftData, cross-device adaptation. Do NOT use for: AppKit legacy apps requiring NSView/NSViewController, UIKit-only projects, cross-platform non-Apple apps.
-version: "1.0.0"
+  Use when the user asks about SwiftUI for macOS, SwiftUI desktop patterns, AppKit bridging, SwiftUI app lifecycle, or SwiftUI multiplatform apps. Do NOT use for: AppKit-only (desktop-appkit), or iOS SwiftUI (mobile skill).
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -10,232 +10,461 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [desktop, macos, swiftui, swift, apple, phase-4]
+tags: [desktop, swiftui, macos]
 ---
 
 # SwiftUI
 
 ## Purpose
-Build declarative macOS applications using SwiftUI with Swift, property wrappers, SwiftData persistence, and platform-adaptive patterns.
+Build native macOS applications using SwiftUI — Apple's declarative UI framework for all Apple platforms. SwiftUI on macOS provides automatic support for Dark Mode, Dynamic Type, Accessibility, and native window management with less code than AppKit.
 
 ## Agent Protocol
 
 ### Trigger
-User request includes: `swiftui`, `swift ui`, `macos swiftui`, `swiftui mac app`, `declarative mac`, `swiftdata`, `@State`, `@Observable`, `apple swift`.
+Exact user phrases: "SwiftUI macOS", "SwiftUI App", "macOS SwiftUI", "SwiftUI multiplatform", "SwiftUI scene", "NSViewRepresentable", "SwiftUI window", "SwiftUI settings", "SwiftUI commands".
 
 ### Input Context
-- Target platform (macOS, iOS, both)
-- Minimum OS version (macOS 14+, macOS 15+)
-- Data persistence (SwiftData, CoreData, UserDefaults)
-- Architecture (MVVM, MVC, TCA)
-- Deployment (Mac App Store, notarized .dmg)
+- Minimum macOS target (macOS 12+, macOS 14+ for latest APIs)
+- App lifecycle (SwiftUI App vs AppKit delegate with SwiftUI views)
+- Platform targets (macOS only vs multiplatform iOS + macOS)
+- Architecture (MVVM, TCA, Redux, Combine)
+- Core Data, SwiftData, or other persistence
+- Window types (single window, multiple windows, document-based, settings, menu bar)
 
 ### Output Artifact
-A markdown document containing:
-- App entry point with @main App struct
-- WindowGroup and Window configuration
-- SwiftUI views with property wrappers
-- Data flow (@State, @Environment, @Observable)
-- SwiftData model and persistence
-- Navigation (NavigationSplitView, NavigationStack)
-- Menu bar and commands
-- Previews for all views
-
-### Response Format
-Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick.
+SwiftUI macOS architecture with scene structure, view hierarchy, state management, and platform-specific patterns.
 
 ### Completion Criteria
-- @main App struct with WindowGroup.
-- Views use @Observable or @ObservableObject for state.
-- SwiftData model defined with @Model macro.
-- NavigationSplitView for sidebar + detail layout.
-- Menu commands added via .commands modifier.
-- Previews provided for all major views.
-- App builds and runs on target macOS version.
+- [ ] App structure defined (WindowGroup, DocumentGroup, MenuBarExtra, Settings)
+- [ ] Window management strategy (multiple windows, window group, custom scene)
+- [ ] View hierarchy with navigation (NavigationSplitView, NavigationStack)
+- [ ] State management (ObservableObject, @State, @Binding, @Environment)
+- [ ] Model layer (SwiftData, Core Data, or Codable structs)
+- [ ] Commands and menus (MenuBarExtra, CommandMenu, CommandGroup)
+- [ ] Toolbar and sidebar configuration
+- [ ] Drag and drop (NSDraggingDestination, .onDrop, .onDrag)
+- [ ] Accessibility integration (VoiceOver, keyboard navigation)
+- [ ] AppKit bridge (NSViewRepresentable for missing SwiftUI components)
 
 ### Max Response Length
-4096 tokens
+250 lines.
+
+## Framework/Methodology
+
+### SwiftUI for macOS Decision Tree
+```
+What type of macOS app?
+├── Simple single-window (settings, player, quick tool)
+│   → WindowGroup with NavigationStack
+│   → @AppStorage for preferences
+├── Multi-window MDI (editor, dashboard, browser)
+│   → WindowGroup with ID-based windows
+│   → WindowScene for custom window management
+├── Document-based (file editor, image viewer)
+│   → DocumentGroup with file types
+│   → SwiftData or Codable for document model
+├── Menu bar app (status bar, background)
+│   → MenuBarExtra scene
+│   → NSApplication activation policy: .accessory
+└── Preferences window
+    → Settings scene (macOS 13+)
+    → TabView with form-based controls
+```
+
+### SwiftUI macOS Scenes
+```
+@main struct MyApp: App {
+    var body: some Scene {
+        WindowGroup { ContentView() }          // Main window
+        DocumentGroup(...)                      // Document-based window
+        MenuBarExtra(...)                       // Menu bar app
+        Settings { SettingsView() }            // Preferences
+        Window("Name", id: "custom") { ... }  // Custom window (macOS 13+)
+        WindowGroup("Name", id: "group") { ... }
+    }
+}
+```
 
 ## Workflow
 
-### Step 1: App Entry Point
+### Step 1: Set Up macOS SwiftUI App
+
 ```swift
+// MyApp.swift
 import SwiftUI
-import SwiftData
 
 @main
-struct MyMacApp: App {
+struct MyApp: App {
+    @State private var appState = AppState()
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                .environment(appState)
+                .frame(minWidth: 800, minHeight: 600)
+        }
+        .windowResizability(.contentSize)
+        .windowToolbarStyle(.unified)
+        .defaultSize(width: 1000, height: 700)
+
+        Settings {
+            SettingsView()
+                .environment(appState)
+        }
+    }
+}
+
+@Observable
+class AppState {
+    var selectedItemID: UUID?
+    var items: [Item] = []
+    var isEditing = false
+}
+```
+
+### Step 2: Build NavigationSplitView (macOS Standard)
+
+```swift
+// ContentView.swift - Three-column macOS navigation
+import SwiftUI
+
+struct ContentView: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        NavigationSplitView {
+            // Sidebar
+            List(appState.items, selection: $appState.selectedItemID) { item in
+                Text(item.name)
+                    .tag(item.id)
+            }
+            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 300)
+        } content: {
+            // Content list (middle column)
+            if let id = appState.selectedItemID,
+               let item = appState.items.first(where: { $0.id == id }) {
+                ItemListView(item: item)
+            } else {
+                ContentUnavailableView(
+                    "Select an Item",
+                    systemImage: "sidebar.left",
+                    description: Text("Choose an item from the sidebar")
+                )
+            }
+        } detail: {
+            // Detail view (right column)
+            if let id = appState.selectedItemID,
+               let item = appState.items.first(where: { $0.id == id }) {
+                DetailView(item: item)
+            } else {
+                ContentUnavailableView(
+                    "No Selection",
+                    systemImage: "rectangle.and.text.magnifyingglass",
+                    description: Text("Select an item to view details")
+                )
+            }
+        }
+    }
+}
+```
+
+### Step 3: Toolbar and Commands
+
+```swift
+// Toolbar configuration
+struct ContentView: View {
+    @Environment(AppState.self) private var appState
+    @State private var isShowingSheet = false
+
+    var body: some View {
+        NavigationSplitView {
+            // Sidebar content
+        } content: {
+            // Content
+        } detail: {
+            // Detail
+        }
+        .toolbar {
+            ToolbarItem {
+                Button(action: { isShowingSheet = true }) {
+                    Label("Add Item", systemImage: "plus")
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: appState.refresh) {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+            }
+        }
+        .sheet(isPresented: $isShowingSheet) {
+            AddItemSheet()
+        }
+    }
+}
+
+// Menu commands
+struct MyCommands: Commands {
+    @FocusedBinding(\.selectedItem) private var selectedItem
+
+    var body: some Commands {
+        CommandGroup(replacing: .newItem) {
+            Button("New Item") {
+                // Create new item
+            }
+            .keyboardShortcut("n", modifiers: .command)
+        }
+
+        CommandMenu("Item") {
+            Button("Duplicate") {
+                // Duplicate selected item
+            }
+            .keyboardShortcut("d", modifiers: .command)
+            .disabled(selectedItem == nil)
+
+            Divider()
+
+            Button("Delete") {
+                // Delete selected item
+            }
+            .keyboardShortcut(.delete, modifiers: .command)
+        }
+    }
+}
+```
+
+### Step 4: Model Data with SwiftData (macOS 14+)
+
+```swift
+import SwiftData
+
+@Model
+final class Item {
+    var name: String
+    var detail: String
+    var creationDate: Date
+    var isFavorite: Bool
+    @Attribute(.externalStorage) var thumbnailData: Data?
+
+    init(name: String, detail: String) {
+        self.name = name
+        self.detail = detail
+        self.creationDate = .now
+        self.isFavorite = false
+    }
+}
+
+// Usage in app
+@main
+struct MyApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
         .modelContainer(for: Item.self)
-
-        Settings {
-            SettingsView()
-        }
     }
 }
-```
 
-### Step 2: SwiftData Model
-```swift
-import SwiftData
-import Foundation
-
-@Model
-final class Item {
-    var title: String
-    var details: String
-    var createdAt: Date
-    var isComplete: Bool
-
-    init(title: String, details: String = "") {
-        self.title = title
-        self.details = details
-        self.createdAt = Date()
-        self.isComplete = false
-    }
-}
-```
-
-### Step 3: Observable ViewModel
-```swift
-import Observation
-import SwiftData
-
-@Observable
-final class ItemViewModel {
-    var searchText = ""
-    var selectedItem: Item?
-    var isShowingEditor = false
-
-    private var modelContext: ModelContext
-
-    init(modelContext: ModelContext) {
-        self.modelContext = modelContext
-    }
-
-    func addItem(title: String) {
-        let item = Item(title: title)
-        modelContext.insert(item)
-        try? modelContext.save()
-    }
-
-    func deleteItem(_ item: Item) {
-        modelContext.delete(item)
-        try? modelContext.save()
-    }
-
-    func toggleComplete(_ item: Item) {
-        item.isComplete.toggle()
-        try? modelContext.save()
-    }
-}
-```
-
-### Step 4: Main View with Navigation
-```swift
-import SwiftUI
-import SwiftData
-
+// Usage in view
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var viewModel: ItemViewModel?
-    @Query(sort: \Item.createdAt, order: .reverse) private var items: [Item]
+    @Query(sort: \Item.creationDate, order: .reverse) private var items: [Item]
 
     var body: some View {
-        NavigationSplitView {
-            List(items) { item in
-                HStack {
-                    Image(systemName: item.isComplete ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(item.isComplete ? .green : .secondary)
-                    Text(item.title)
-                        .strikethrough(item.isComplete)
-                    Spacer()
-                    Text(item.createdAt, style: .date)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .onTapGesture { viewModel?.selectedItem = item }
+        List {
+            ForEach(items) { item in
+                Text(item.name)
             }
-            .navigationTitle("Items")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: { viewModel?.isShowingEditor = true }) {
-                        Label("Add", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            if let item = viewModel?.selectedItem {
-                ItemDetailView(item: item)
-            } else {
-                ContentUnavailableView("Select an Item",
-                    systemImage: "square.and.pencil")
-            }
+            .onDelete(perform: deleteItems)
         }
-        .onAppear {
-            viewModel = ItemViewModel(modelContext: modelContext)
-        }
-        .sheet(isPresented: Binding(get: { viewModel?.isShowingEditor ?? false },
-                                     set: { viewModel?.isShowingEditor = $0 })) {
-            ItemEditorView(viewModel: viewModel)
+    }
+
+    private func deleteItems(offsets: IndexSet) {
+        for index in offsets {
+            modelContext.delete(items[index])
         }
     }
 }
 ```
 
-### Step 5: Menu Bar and Keyboard Shortcuts
+### Step 5: AppKit Bridge (NSViewRepresentable)
+
 ```swift
-import SwiftUI
+// Wrapping NSTableView for complex table behavior
+struct TableViewWrapper: NSViewRepresentable {
+    @Binding var items: [Item]
+    var selectedItem: Binding<UUID?>
 
-struct MyMacApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
+    func makeNSView(context: Context) -> NSTableView {
+        let tableView = NSTableView()
+        tableView.delegate = context.coordinator
+        tableView.dataSource = context.coordinator
+        tableView.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
+
+        let column = NSTableColumn(identifier: .init("name"))
+        column.title = "Name"
+        column.width = 200
+        tableView.addTableColumn(column)
+
+        return tableView
+    }
+
+    func updateNSView(_ nsView: NSTableView, context: Context) {
+        nsView.reloadData()
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, NSTableViewDelegate, NSTableViewDataSource {
+        var parent: TableViewWrapper
+
+        init(_ parent: TableViewWrapper) {
+            self.parent = parent
         }
-        .commands {
-            CommandGroup(after: .newItem) {
-                Button("Duplicate") {
-                    // Duplicate selected item
-                }
-                .keyboardShortcut("d", modifiers: [.command, .shift])
-            }
 
-            CommandMenu("Actions") {
-                Button("Mark Complete") {
-                    // Toggle complete
-                }
-                .keyboardShortcut("i")
+        func numberOfRows(in tableView: NSTableView) -> Int {
+            parent.items.count
+        }
 
-                Divider()
+        func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+            let cell = tableView.makeView(withIdentifier: .init("cell"), owner: nil)
+                as? NSTableCellView ?? NSTableCellView()
 
-                Button("Export...") {
-                    // Export data
-                }
-                .keyboardShortcut("e")
-            }
+            let item = parent.items[row]
+            cell.textField?.stringValue = item.name
+            return cell
         }
     }
 }
 ```
 
-## Rules
-- @Observable over ObservableObject for new code.
-- @Model macro for all SwiftData entities.
-- NavigationSplitView for sidebar-detail layouts.
-- View extracted into small, focused structs with Previews.
-- @Environment for modelContext, dismiss, openWindow.
-- Previews provided for every view with sample data.
-- Menu commands via .commands modifier on Scene.
+### Step 6: Drag and Drop (SwiftUI Native)
+
+```swift
+List {
+    ForEach(viewModel.items) { item in
+        Text(item.name)
+            .onDrag {
+                NSItemProvider(object: item.id.uuidString as NSString)
+            }
+            .onDrop(of: [.text], delegate: ItemDropDelegate(item: item, viewModel: viewModel))
+    }
+}
+
+struct ItemDropDelegate: DropDelegate {
+    let item: Item
+    let viewModel: ViewModel
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard let provider = info.itemProviders(for: [.text]).first else { return false }
+        provider.loadObject(ofClass: NSString.self) { text, _ in
+            guard let idString = text as? String,
+                  let id = UUID(uuidString: idString) else { return }
+            Task { @MainActor in
+                viewModel.moveItem(id: id, to: item.id)
+            }
+        }
+        return true
+    }
+}
+```
+
+## Common Pitfalls
+
+| Pitfall | Description | Prevention |
+|---------|-------------|------------|
+| iOS patterns on macOS | TabView where NavigationSplitView belongs | Use NavigationSplitView for sidebar/content/detail |
+| Missing keyboard shortcuts | No keyboard navigation for menus | Use CommandMenu and .keyboardShortcut() |
+| No focus management | Keyboard tab order broken | Use @FocusState, .focused() modifier |
+| Single window assumption | App can't open multiple windows | Use WindowGroup, not fixed single window |
+| Heavy View.body | Frequent recomputation | Extract sub-views, use computed properties |
+| @Published in @StateObject | Using Combine when @Observable works | Prefer @Observable (iOS 17/macOS 14+) |
+| Missing Settings scene | No preferences window | Add Settings scene, use TabView + Form |
+| Ignoring @Environment values | Platform-specific behavior | Use @Environment(\.colorScheme), .controlSize, etc. |
+| No drag and drop | Users expect drag from lists | Implement .onDrag + .onDrop on List items |
+| Missing minimum window size | Window can shrink to unusable size | Use .frame(minWidth:minHeight:) |
+
+## Best Practices
+
+| Practice | Rationale |
+|----------|-----------|
+| NavigationSplitView for 3-panel | macOS standard Finder/Xcode pattern |
+| @Observable over ObservableObject | Simpler, less boilerplate, value semantics |
+| SwiftData over Core Data for new projects | Native Swift, macros, automatic iCloud |
+| Extract sub-views extensively | SwiftUI performance depends on small view bodies |
+| Use ViewThatFits for adaptive layout | Automatically selects best-fitting layout variant |
+| Menus and commands in a Commands struct | Separated from views, reusable, testable |
+| Prefer NSViewRepresentable over fighting SwiftUI | Some things (NSTableView perf) are best in AppKit |
+| Default size and minimum size always set | Prevents unusable tiny windows |
+| Test with VoiceOver | Accessibility is expected on macOS |
+| Use PreviewProvider in DEBUG | SwiftUI previews accelerate development |
+
+## Architecture Patterns
+
+### Window Identification (Multiple Windows)
+```swift
+WindowGroup(id: "editor") {
+    EditorView()
+        .environment(appState)
+}
+.windowResizability(.contentSize)
+
+// Open new editor window
+@Environment(\.openWindow) private var openWindow
+openWindow(id: "editor")
+```
+
+### Menu Bar Extra App
+```swift
+MenuBarExtra("MyApp", systemImage: "star.fill") {
+    Button("Show Window") { showWindow() }
+    Divider()
+    Button("Quit") { NSApplication.shared.terminate(nil) }
+}
+
+// Configure activation policy
+// In AppDelegate or Info.plist:
+// LSUIElement = true
+```
+
+### Form-Based Preferences
+```swift
+struct SettingsView: View {
+    @AppStorage("showSidebar") private var showSidebar = true
+    @AppStorage("recentFiles") private var recentFiles = 10
+    @AppStorage("theme") private var theme = "system"
+
+    var body: some View {
+        TabView {
+            Form {
+                Toggle("Show Sidebar", isOn: $showSidebar)
+                Picker("Recent Files", selection: $recentFiles) {
+                    Text("5").tag(5)
+                    Text("10").tag(10)
+                    Text("20").tag(20)
+                }
+            }
+            .tabItem { Label("General", systemImage: "gearshape") }
+
+            Form {
+                Picker("Theme", selection: $theme) {
+                    Text("System").tag("system")
+                    Text("Light").tag("light")
+                    Text("Dark").tag("dark")
+                }
+            }
+            .tabItem { Label("Appearance", systemImage: "paintpalette") }
+        }
+        .frame(width: 400, height: 250)
+    }
+}
+```
 
 ## References
-  - references/swiftui-advanced.md — Swiftui Advanced Topics
-  - references/swiftui-architecture.md — SwiftUI Architecture Reference
-  - references/swiftui-deployment.md — SwiftUI Deployment Reference
-  - references/swiftui-fundamentals.md — Swiftui Fundamentals
+  - references/swiftui-advanced.md — SwiftUI Advanced Topics
+  - references/swiftui-fundamentals.md — SwiftUI Fundamentals
   - references/swiftui-macos-patterns.md — SwiftUI macOS Patterns Reference
-  - references/swiftui-setup.md — SwiftUI Setup Reference
+  - references/swiftui-navigation.md — SwiftUI Navigation Patterns Reference
 ## Handoff
-Hand off to `desktop/appkit/SKILL.md` when need NSView/NSViewController, AppKit-level control, or backward compatibility with older macOS.
+Hand off to `desktop-appkit` for AppKit bridge details. Hand off to `design-accessibility` for VoiceOver testing.

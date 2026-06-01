@@ -8,7 +8,7 @@ compatibility:
   codex: true
   windsurf: true
 tags: [frontend, forms, phase-7, universal]
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 ---
@@ -17,7 +17,7 @@ license: "MIT"
 
 **Description:** Implements form handling — validation, state management, submission, complex field patterns. Triggered by "form handling", "form validation", "React Hook Form", "Formik", "form state", "form submission", "field validation", "form error", "controlled input", "uncontrolled input", "form schema", "Zod validation", "form dirty", "field array".
 
-**Version:** 1.0.0  
+**Version:** 2.0.0  
 **Author:** j4flmao  
 **License:** MIT
 
@@ -69,6 +69,70 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 4096 tokens
+
+## Form Architecture / Decision Trees
+
+### Library Selection Decision Tree
+```
+Form complexity?
+  |-- Simple (<10 fields, no dynamic fields) -->
+  |     Framework preference?
+  |     |-- React --> React Hook Form (uncontrolled, fast) or Formik (controlled, simpler)
+  |     |-- Vue --> VeeValidate + Zod
+  |     |-- Angular --> Reactive Forms (built-in)
+  |     |-- Svelte --> SvelteKit Forms or Felte
+  |
+  |-- Moderate (10-30 fields, field arrays, dependent fields) -->
+  |     |-- React --> React Hook Form + Zod (field arrays, useWatch)
+  |     |-- Framework-agnostic --> TanStack Form
+  |
+  |-- Complex (30+ fields, multi-step wizard, dynamic field arrays) -->
+  |     |-- React --> React Hook Form + Zod (persist step data, lazy register)
+  |
+  |-- Cross-framework / monorepo -->
+        |-- TanStack Form (React, Vue, Solid, Svelte)
+```
+
+### Validation Strategy Decision Tree
+```
+Validation timing?
+  |-- On change (every keystroke) -->
+  |     Use for: password strength, character count, real-time feedback
+  |     Risk: excessive re-renders, annoying UX for long forms
+  |     Mitigation: only on specific fields, not entire form
+  |
+  |-- On blur (when field loses focus) -->
+  |     Use for: most fields (email, name, phone, URL)
+  |     Best for: balance between feedback and interruption
+  |
+  |-- On submit (when form is submitted) -->
+  |     Use for: large forms, when you want to avoid premature error display
+  |     Risk: user sees many errors at once, can be overwhelming
+  |
+  |-- Hybrid -->
+        |-- Validate on blur for most fields
+        |-- Validate on change for password/username
+        |-- Validate everything on submit
+```
+
+### Multi-step Form Decision Tree
+```
+Paginated or wizard?
+  |-- Paginated (all steps visible, scroll-based) -->
+  |     Validity: All fields validated on each "Next" click
+  |     State: Single form, all fields registered
+  |
+  |-- Wizard (one step at a time) -->
+  |     Step persistence? -->
+  |     |-- Session only --> sessionStorage (survives refresh)
+  |     |-- Resume later --> API draft save (server-side)
+  |     Step validation? -->
+  |     |-- Validate current step only on "Next"
+  |     |-- Don't re-validate previous steps on "Back"
+  |     Submission? -->
+        |-- Per-step submit (save as you go) --> API call per step
+        |-- Final submit only --> Merge all step data, one API call
+```
 
 ---
 
@@ -227,6 +291,14 @@ Use `React.memo` on field components to prevent re-renders of unchanged fields. 
 ### Large Form Optimization
 For forms with 50+ fields, consider: virtualized field list (react-window), deferred field registration (register fields in batches), and lazy validation (validate only visible/required fields initially). Use field-level subscription instead of form-level subscription to minimize re-renders.
 
+### React Hook Form Performance Comparison
+| Approach | Re-renders on keystroke | Re-renders on submit | Bundle size |
+|----------|------------------------|---------------------|-------------|
+| Controlled (useState) | All fields | All fields | 0KB (built-in) |
+| Formik (controlled) | All fields | All fields | ~13KB |
+| React Hook Form (uncontrolled) | Only the field being typed | Only changed fields | ~9KB |
+| React Hook Form + useWatch | Subscribed fields only | Changed fields | ~9KB + deps |
+
 ## Form Testing Patterns
 
 ### React Hook Form Testing
@@ -254,6 +326,61 @@ describe('RegistrationForm', () => {
   });
 });
 ```
+
+### Form Security Patterns
+```typescript
+// CSRF token
+<form method="POST" action="/api/submit">
+  <input type="hidden" name="_csrf" value={csrfToken} />
+</form>
+
+// Input sanitization (prevent XSS)
+const sanitized = input.replace(/<[^>]*>/g, '')
+
+// Rate limiting on submit
+const [lastSubmit, setLastSubmit] = useState(0)
+const handleSubmit = async (data: FormData) => {
+  const now = Date.now()
+  if (now - lastSubmit < 2000) {
+    showToast('Please wait before submitting again')
+    return
+  }
+  setLastSubmit(now)
+  // ... actual submission
+}
+```
+
+## Common Pitfalls
+
+### 1. Submit Button Disabled Based on isValid
+```typescript
+// BAD -- user can't submit to see all errors
+<button disabled={!isValid}>Submit</button>
+
+// GOOD -- let user submit, show all errors then
+<button disabled={isSubmitting}>Submit</button>
+```
+
+### 2. No Unsaved Changes Warning
+Users lose form data when they accidentally navigate away. Always implement unsaved changes protection for forms with more than 3 fields.
+
+### 3. Trusting Client-Side Validation Only
+Client validation is for UX. Server validation is for security. Always re-validate on the server — client validation can be bypassed.
+
+### 4. Not Resetting Form After Submit
+```typescript
+// BAD -- form stays dirty after submit
+onSubmit: async (data) => { await api.post(data) }
+
+// GOOD -- reset to server response
+onSubmit: async (data) => {
+  const result = await api.post(data)
+  reset(result.data) // reset with server-returned values
+}
+```
+
+### 5. Excessive Re-renders with Controlled Inputs
+Every keystroke in a controlled input re-renders the entire form. Use React Hook Form's uncontrolled `register` or memoize field components.
 
 ## Rules
 

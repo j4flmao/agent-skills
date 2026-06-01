@@ -1,214 +1,124 @@
 # Mobile Widgets Advanced Topics
 
-## Introduction
-Advanced Mobile Widgets topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+## Overview
+Advanced mobile widgets cover interactive widgets, live activities (iOS), deep linking from widgets, widget animations, widget families, widget configuration UI, and performance optimization.
 
-## Advanced Architecture Patterns
+## Interactive Widgets
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+### iOS — Interactive Widgets (iOS 17+)
+Widgets support buttons, toggles, and sliders via `Button` and `Toggle` in widget view. `AppIntent` handles interaction: define intent with `@Parameter` for input data. System launches app in background to process intent. User does not leave home screen.
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+```swift
+// Intent
+struct MarkOrderPaidIntent: AppIntent {
+    static var title: LocalizedStringResource = "Mark Order Paid"
+    @Parameter(title: "Order ID") var orderId: String
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+    func perform() async throws -> some IntentResult {
+        await markPaid(orderId)
+        return .result()
+    }
+}
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+// Widget button
+Button(intent: MarkOrderPaidIntent(orderId: order.id)) {
+    Text("Mark Paid")
+}
+```
+
+### Android — Widget Actions
+`PendingIntent` for widget button clicks. `RemoteViews.setOnClickPendingIntent` for tap actions. `setOnClickFillInIntent` for list items. `Activity.startActivity` for app launch. Broadcast receiver for custom actions without opening app.
+
+### Widget Deep Linking
+iOS: `WidgetURL` or `Link` widget target opens app with deeplink. `AppDelegate` handles URL. Navigate to specific screen based on widget context. Deep link includes widget configuration data.
+
+Android: `PendingIntent.getActivity` with data extras or `Intent.setData(Uri.parse("myapp://orders/123"))`. Widget tap opens app to relevant screen. Handle in Activity `onNewIntent`.
+
+## Live Activities (iOS)
+
+### ActivityKit (iOS 16.1+)
+Live Activities display real-time updates on Dynamic Island and Lock Screen. Start activity via `Activity.request(attributes:contentState:)`. Update with `Activity.update(using:)`. End with `Activity.end(using:dismissalPolicy:)`.
+
+```swift
+// Start live activity
+let attributes = OrderAttributes(orderId: "123")
+let state = OrderAttributes.ContentState(status: "preparing")
+let activity = try Activity.request(attributes: attributes, content: state)
+
+// Update
+let updatedState = OrderAttributes.ContentState(status: "delivering")
+await activity.update(using: updatedState)
+
+// End
+await activity.end(using: finalState, dismissalPolicy: .default)
+```
+
+### Push to Start
+Remote notification launches Live Activity without app running. Payload includes `content-state` and `attributes`. APNs push token per activity. `attributes-type` identifies activity type. Supports data-only push for content updates.
+
+### Dynamic Island
+Automatic placement: compact (leading/trailing), minimal (center), expanded (long press). Design for all three presentations. Compact shows key info, expanded shows details. Use `island.content` for compact and `island.expandedContent` for expanded views.
+
+## Widget Families (iOS)
+
+### Supporting Multiple Sizes
+Provide different layouts for small, medium, large. `@Environment(\.widgetFamily)` to access size. Adaptive design per size: small = key metric, medium = metric + chart, large = full list.
+```swift
+struct WidgetView: View {
+    @Environment(\.widgetFamily) var family
+
+    var body: some View {
+        switch family {
+        case .systemSmall: SmallView()
+        case .systemMedium: MediumView()
+        case .systemLarge: LargeView()
+        default: SmallView()
+        }
+    }
+}
+```
+
+### Extra Large (iPad)
+`.systemExtraLarge` available on iPad. Full dashboard view. Same timeline provider, different layout. Use adaptive layout pattern for all sizes. Test on iPad home screen and Stage Manager.
+
+## Configuration UI
+
+### iOS — Intent Definition
+Define `Intent` in `.intentdefinition` file. Xcode generates Swift types. Parameters with `@Parameter` for user-configurable options (dropdown, text, number). `IntentDescription` for widget edit UI title. Supports dynamic options via `DynamicOptionsProvider`.
+
+### Android — Configuration Activity
+`android:configure` attribute in AppWidgetProviderInfo XML. Activity launched before widget added. User selects options, result passed back via `AppWidgetManager.EXTRA_APPWIDGET_ID`. Store config in SharedPreferences. Widget reads on first update.
+
+### Preview and Placeholder
+iOS: `placeholder(in:)` returns static placeholder during loading. `getSnapshot(in:)` for widget gallery preview. Use sample data, not real user data, in snapshots. Cache snapshot result to avoid blocking widget gallery.
 
 ## Performance Optimization
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+### Timeline Budget
+iOS WidgetKit has 30s timeline generation budget. Cache data between entries. Use shared container precomputed data. Avoid network calls in timeline provider (use app refresh). Timeline generated in background, not on home screen scroll.
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+### RemoteViews Performance
+Android RemoteViews serialization has overhead. Keep layout hierarchy shallow (max 3-4 levels). Avoid nested weights. Update only changed views with `setXXX` methods. Use `RemoteViewsService` for efficient list updates. Batch RemoteViews operations.
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+### Update Frequency
+iOS: timeline entries for known future data (schedule). `WidgetCenter.shared.reloadAllTimelines()` only when data changes (not periodically). Android: minimize `updatePeriodMillis` (30 min max). Use push-based updates via broadcasts. Batch updates for multiple widget instances.
 
-## Security Hardening
+## Testing
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+### Preview All Sizes
+Test widget in small, medium, large, extra large. Test on different home screen wallpapers. Test widget colors in light and dark mode. Test with actual data (not just placeholder). Verify timeline entries render correctly across time boundaries.
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+### Redundancy
+Handle data unavailability gracefully (loading state, error state, no data state). Test with network off, degraded data, and first launch. Widget should never show empty/blank. Default fallback content always visible.
 
 ## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- Interactive widgets (iOS 17+): AppIntent for button/toggle actions without app launch
+- Live Activities (iOS 16.1+): Dynamic Island + Lock Screen real-time updates
+- ActivityKit: request → update → end lifecycle
+- Push to Start: remote notification launches Live Activity
+- Widget families: small, medium, large, extra large (iPad)
+- Intent definition for configurable iOS widgets
+- Timeline budget: 30s — cache data, avoid network
+- RemoteViews hierarchy: shallow, no weights, batch updates
+- Deep link from widget tap to specific screen
+- Test all sizes, wallpapers, light/dark, and error states

@@ -4,7 +4,7 @@ description: >
   Use this skill when defining SLAs, SLOs, error budgets, and service reliability targets.
   This skill enforces: SLO definition, error budget calculation, burn rate alerts, multi-tier SLA structures.
   Do NOT use for: incident response, on-call scheduling, postmortem writing.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -47,7 +47,7 @@ SLA framework with SLO definitions, error budget calculations, burn rate alertin
 | {sli} | {target} | {window} | {method} |
 
 ### Error Budget
-Total allowed downtime: {value} = (1 - SLO) × window
+Total allowed downtime: {value} = (1 - SLO) x window
 Current consumption: {X%}
 Burn rate: {X/hour} — {fast / slow / nominal}
 Projected exhaustion: {date} at current burn rate
@@ -58,8 +58,8 @@ Standard: {SLO targets} — {penalty terms}
 Best-Effort: {no SLA} — {no penalty}
 
 ### Alerts
-Page (immediate): burn rate ≥ {threshold} for {duration}
-Digest (daily): burn rate ≥ {threshold} for {duration}
+Page (immediate): burn rate >= {threshold} for {duration}
+Digest (daily): burn rate >= {threshold} for {duration}
 Predictive: budget projected to exhaust within {timeframe}
 
 ### Feature Freeze Policy
@@ -95,11 +95,11 @@ Set SLO targets based on: customer requirements (what does the contract require?
 Use rolling windows for measurement: 30 days for availability SLOs, 7 days for latency SLOs. Rolling windows prevent permanent deficit from single incidents and allow recovery over time.
 
 ### Step 2: Error Budget Calculation
-Error budget = (1 - SLO) × total measurement units in window. For availability: (1 - 0.999) × 30 days × 24 hours × 60 minutes = 43.2 minutes allowed downtime per month. For latency: (1 - 0.99) × total requests = 1% of requests may exceed latency target.
+Error budget = (1 - SLO) x total measurement units in window. For availability: (1 - 0.999) x 30 days x 24 hours x 60 minutes = 43.2 minutes allowed downtime per month. For latency: (1 - 0.99) x total requests = 1% of requests may exceed latency target.
 
 Distinguish between error budgets for internal SLOs (engineering targets) and contractual SLAs (customer-facing guarantees). Internal SLOs should be tighter than external SLAs to provide buffer.
 
-Track error budget consumption rate: budget consumed / total budget × 100%. Monitor as a running percentage over the window. Define consumption thresholds: 50% (warning), 75% (alert), 100% (exhausted).
+Track error budget consumption rate: budget consumed / total budget x 100%. Monitor as a running percentage over the window. Define consumption thresholds: 50% (warning), 75% (alert), 100% (exhausted).
 
 Define budget exhaustion policy: at 100% consumption, all non-critical feature work stops. Team focuses exclusively on reliability improvements until budget is replenished (error rate drops, budget accumulates). This creates a direct feedback loop between reliability and feature velocity.
 
@@ -136,18 +136,57 @@ Service credits: calculate automatically based on breach duration and customer t
 
 Quarterly SLO review: engineering and product review SLO targets, error budget consumption trends, burn rate patterns, and credit costs. Adjust SLO targets if system capacity has changed (upgraded infrastructure) or customer requirements have evolved.
 
-## Rules
-- SLO targets must be achievable with current system capacity — do not commit to targets that cannot be met.
-- Error budgets must have documented consumption policies and escalation procedures.
-- Burn rate alerts must not fire during planned maintenance windows (with proper exclusion).
-- Multi-tier SLA requires clear mapping of customer to tier with documented contract terms.
-- SLA reports must be generated automatically from SLI data — no manual calculation.
-- Service credits must be calculated and issued automatically based on predefined formulas.
-- SLOs reviewed quarterly with engineering and product stakeholders.
-- Feature freeze enforced when error budget is fully consumed — reliability takes priority.
-- Internal SLOs must be stricter than external SLAs to provide buffer against breaches.
-- Error budget consumption rate must be visible to all engineering teams, not just management.
-- SLA monitoring must use request-based measurement for accuracy, not time-based approximation.
+## Decision Trees
+
+### SLO Target Selection Decision Tree
+
+1. Is there customer contractual SLA requirement?
+   - YES -> Set SLO at contractual level. Set internal SLO 2x stricter than contractual. Ensure measurement methodology matches contract language.
+   - NO -> Go to 2
+
+2. Is there existing historical performance data (3+ months)?
+   - YES -> Set SLO at current performance + 10% improvement margin. Validate achievable. Tighten quarterly.
+   - NO -> Set conservative SLO (99.9% availability, 500ms p99 latency). Monitor for 3 months. Adjust based on actual performance.
+
+3. Is the service customer-facing?
+   - YES -> Set SLO based on user experience metrics (request-based measurement, user-perceived latency). Include synthetic monitoring from user locations.
+   - NO -> Set SLO based on internal SLIs (system availability, internal API latency). May be looser than customer-facing services.
+
+4. Is the service revenue-critical?
+   - YES -> Set tight SLO (99.99%+). Low error budget tolerance. Fast burn rate alerts. Feature freeze at 50% budget consumption.
+   - NO -> Set standard SLO (99.9%). Normal error budget. Standard burn rate alerts. Feature freeze at 100% consumption.
+
+### Error Budget Policy Decision Tree
+
+1. Has error budget reached 50% consumption?
+   - YES -> Yellow status. Flag in engineering standup. Prioritize reliability work in next sprint. No feature freeze yet.
+   - NO -> Green status. Normal feature work. Continue monitoring.
+
+2. Has error budget reached 75% consumption?
+   - YES -> Orange status. Escalate to engineering manager. Reliability sprint planned. Feature freeze discussions begin. Daily burn rate monitoring.
+   - NO -> Continue current status.
+
+3. Has error budget reached 100% consumption?
+   - YES -> Red status. Feature freeze activated. All non-critical deployments blocked. Reliability rotation formed. Incident review accelerated. Budget replenishment plan required.
+   - NO -> Continue current status. Review trend.
+
+4. Is error budget replenishing after exhaustion?
+   - YES -> Track replenishment rate. Lift feature freeze when budget exceeds 25% and holding steady. Post-incident review completed.
+   - NO -> Investigate root cause of continued consumption. Escalate to executive. Consider SLO target adjustment.
+
+### Multi-Tier SLA Design Decision Tree
+
+1. Do customers have different willingness to pay?
+   - YES -> Design tiers aligned to price points. Higher price = tighter SLO + faster support response. Ensure price delta justifies operational cost delta.
+   - NO -> Single SLA tier for all customers. Consider two tiers (standard + premium) for future segmentation.
+
+2. Is there existing customer contract diversity?
+   - YES -> Map existing contracts to proposed tiers. Grandfather existing terms. Offer migration incentives to standardize.
+   - NO -> Define tiers from scratch. Align with product pricing tiers.
+
+3. Can operations team support differentiated response?
+   - YES -> Implement dedicated support for critical tier. Pooled support for standard. Self-service for best-effort.
+   - NO -> Start with two tiers (standard + premium). Expand as operations team grows.
 
 ## Framework / Methodologies
 
@@ -169,6 +208,20 @@ Stage 2 — Monitoring: implement instrumentation, build dashboards, configure a
 
 Stage 3 — Improvement: review targets quarterly, analyze breach patterns, invest in reliability, tighten SLOs as capability improves.
 
+### SLA Governance Framework
+
+#### SLA Review Cadence
+- Weekly: Error budget status in engineering standup. Burn rate trend review. Feature freeze status check.
+- Monthly: SLA attainment report reviewed by engineering management. Service credit cost analysis. Top breach causes identified.
+- Quarterly: SLO target review with engineering + product + executives. Tier structure assessment. Error budget policy adjustment. Capacity planning for reliability improvements.
+- Annually: Full SLA framework audit. Competitive benchmark. Customer satisfaction correlation analysis. Framework version update.
+
+#### SLA Governance Roles
+- SLO Owner: Defines and maintains SLO targets per service. Reviews attainment. Proposes adjustments.
+- Error Budget Manager: Monitors consumption. Enforces feature freeze policy. Escalates at threshold levels.
+- SLA Reporting Lead: Generates monthly reports. Automates measurement and calculation. Maintains reporting infrastructure.
+- Service Credit Approver: Validates credit calculations. Approves credit issuance. Tracks credit cost trends.
+
 ## Common Pitfalls
 
 ### SLOs Too Tight
@@ -188,6 +241,12 @@ Measuring internal metrics (server CPU, disk I/O) instead of user-facing metrics
 
 ### Ignoring the Error Budget Window
 Not accounting for the rolling window in error budget calculations. A fixed calendar month window resets every month, allowing a bad month to be followed by a fresh start. A rolling window carries deficits forward. Choose the window type that matches business requirements.
+
+### One-Size-Fits-All SLA
+All customers receive the same SLA regardless of their needs and revenue contribution. Enterprise customers overpay for basic SLA; small customers get SLA that cannot be operationally supported. Mitigation: implement multi-tier SLA structure. Align operational investment with customer value.
+
+### Alert Fatigue from Poor Burn Rate Configuration
+Single-threshold alerting on error budget creates too many pages. Team becomes desensitized and misses real incidents. Mitigation: implement multi-window, multi-burn-rate alerting. Calibrate thresholds per service. Test alert configurations.
 
 ## Best Practices
 
@@ -219,6 +278,13 @@ Not accounting for the rolling window in error budget calculations. A fixed cale
 - Review tier assignments annually — customers may have upgraded needs.
 - Support teams should be aligned with tiers (dedicated for critical, pooled for standard).
 
+### SLA Negotiation
+- Never commit to SLO targets that current system capacity cannot meet. Baseline for 3 months before negotiating.
+- Define measurement methodology explicitly in contract language. Ambiguity leads to disputes.
+- Include exclusion windows for planned maintenance. Define what counts as downtime and what does not.
+- Define service credit calculation formula precisely. Use tiered credit rates (more credit for larger breaches).
+- Include mutual SLA commitments: customer must maintain minimum usage, provide timely access, and follow integration guidelines.
+
 ## Templates & Tools
 
 ### SLO Definition Template
@@ -240,15 +306,15 @@ Uptime: {X%} | Latency: {X}ms | Error rate: {X}%
 SLO Target: {X%} availability
 Window: {30 days}
 Total minutes in window: 43,200
-Allowed downtime: 43,200 × (1 - {0.999}) = {43.2} minutes
-Allowed failed requests: total_requests × (1 - {0.999})
+Allowed downtime: 43,200 x (1 - {0.999}) = {43.2} minutes
+Allowed failed requests: total_requests x (1 - {0.999})
 Current budget consumed: {X minutes / X requests}
 Consumption rate: {X%}
 
 ### Burn Rate Status
 Fast burn (page): rate > {X}/hour for > {Y} minutes
 Slow burn (digest): rate > {X}/hour for > {Y} hours
-Nominal: rate ≤ expected rate
+Nominal: rate <= expected rate
 Projected exhaustion date: {date} at current burn rate
 ```
 
@@ -257,12 +323,12 @@ Projected exhaustion date: {date} at current burn rate
 ### Service: {service name} — SLO: {99.9%}
 Alert 1 — Fast burn (critical):
 - Window: 1 hour
-- Threshold: burn rate ≥ 10 (consuming 10x budget rate)
+- Threshold: burn rate >= 10 (consuming 10x budget rate)
 - Action: immediate page, incident response
 
 Alert 2 — Slow burn (warning):
 - Window: 6 hours
-- Threshold: burn rate ≥ 2 (consuming 2x budget rate)
+- Threshold: burn rate >= 2 (consuming 2x budget rate)
 - Action: daily digest email, investigation ticket created
 
 Alert 3 — Predictive (advisory):
@@ -370,6 +436,28 @@ A fintech service had a single alert: page when error budget drops below 50%. Al
 Implemented multi-window, multi-burn-rate alerting: fast burn (1-hour window, burn rate > 10) — immediate page, average 2 per week. Slow burn (6-hour window, burn rate > 2) — daily digest, average 5 per week but batched into one notification. Predictive (24-hour window, projected exhaustion within 7 days) — team notification, 1-2 per week.
 
 Results: pages reduced from 23 to 2 per week. Incident response time improved because the team responded to real pages instead of ignoring noise. Two incidents that would have been missed under the old system were caught early by slow burn alerts. Team satisfaction with on-call improved significantly.
+
+### SaaS SLA Negotiation Gone Wrong
+A B2B SaaS company negotiated a 99.99% SLA to win a large enterprise deal without validating current system capability. Actual system availability was 99.95%. The first month after signing delivered three incidents totaling 45 minutes of downtime. The error budget of 4.32 minutes was exhausted on day 3. Service credits for the first quarter exceeded the contract's annual revenue.
+
+Remediation: immediate reliability investment (multi-region deployment, load testing, redundancy). Renegotiated SLA to 99.95% with a 99.99% target for a subset of APIs. Implemented real-time SLO dashboards for the customer. Internal SLO set at 99.995% to provide buffer. Lessons learned: never negotiate SLA without validating against current system capability. Include phase-in period in new SLAs.
+
+## Rules
+- SLO targets must be achievable with current system capacity — do not commit to targets that cannot be met.
+- Error budgets must have documented consumption policies and escalation procedures.
+- Burn rate alerts must not fire during planned maintenance windows (with proper exclusion).
+- Multi-tier SLA requires clear mapping of customer to tier with documented contract terms.
+- SLA reports must be generated automatically from SLI data — no manual calculation.
+- Service credits must be calculated and issued automatically based on predefined formulas.
+- SLOs reviewed quarterly with engineering and product stakeholders.
+- Feature freeze enforced when error budget is fully consumed — reliability takes priority.
+- Internal SLOs must be stricter than external SLAs to provide buffer against breaches.
+- Error budget consumption rate must be visible to all engineering teams, not just management.
+- SLA monitoring must use request-based measurement for accuracy, not time-based approximation.
+- SLA negotiation requires validation against current system capacity before commitment.
+- Multi-tier SLA structure must align operational investment with customer revenue contribution.
+- Burn rate alert thresholds calibrated per service, not one-size-fits-all.
+- SLO targets tightened incrementally as reliability improves, not in large jumps.
 
 ## References
   - references/error-budget.md — Error Budget Management

@@ -1,213 +1,197 @@
-# Ai Evals Fundamentals
+# AI Evals Fundamentals
 
-## Overview
-Ai Evals is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+## What Are AI Evals?
 
-## Core Concepts
+AI evaluation (eval) is the systematic measurement of LLM performance against defined criteria. Evals answer: "How well does this model/prompt/system perform on the tasks we care about?"
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Ai Evals helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+Unlike traditional software testing (which verifies deterministic behavior), AI evals must handle:
+- **Non-deterministic outputs**: Same input can produce different responses.
+- **Semantic correctness**: Output can be correct without being verbatim.
+- **Subjective quality**: "Helpfulness" and "tone" depend on context and user.
+- **Emergent failures**: Hallucinations, bias, safety issues that aren't caught by unit tests.
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Ai Evals solutions. These principles help maintain code quality and reduce technical debt.
+## Why We Evaluate
 
-### Concept 3: Data Management
-Proper data management is essential for Ai Evals. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+| Reason | Description |
+|--------|-------------|
+| Regression detection | Catch quality drops from model updates, prompt changes, or system changes |
+| Model selection | Compare models objectively for a specific use case |
+| Prompt optimization | Measure whether prompt changes improve or degrade output quality |
+| Safety assurance | Verify the model behaves safely before deployment |
+| Capability benchmarking | Understand what the model can and cannot do |
+| Production monitoring | Detect quality drift in live traffic |
+| Customer confidence | Quantify quality for stakeholders |
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+## Evaluation Taxonomy
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### By Task Type
 
-## Architecture Patterns
+| Task Type | What's Being Measured | Example Metrics |
+|-----------|----------------------|-----------------|
+| **RAG QA** | Answer correctness grounded in retrieved context | Faithfulness, Context Precision, Context Recall |
+| **Text Generation** | Quality of free-form text output | Relevance, Coherence, Creativity (human eval) |
+| **Summarization** | Fidelity and conciseness of summary | ROUGE-L, Faithfulness, Compression Ratio |
+| **Classification** | Accuracy of label assignment | Accuracy, Precision, Recall, F1 |
+| **Extraction** | Correctness of extracted entities | Exact Match, Token F1 |
+| **Translation** | Fidelity of translated text | BLEU, COMET, chrF |
+| **Code Generation** | Correctness of generated code | Pass@k, Syntax Validity |
+| **Agent/Tool-Use** | Correctness of actions and outcomes | Task Completion, Tool Accuracy, Efficiency |
+| **Chat/Conversation** | Quality of multi-turn dialogue | Human Preference, Engagement, Task Success |
 
-### Pattern 1: Standard Architecture
-The standard architecture for Ai Evals follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+### By Measurement Approach
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+| Approach | How It Works | When to Use |
+|----------|-------------|-------------|
+| **Reference-based** | Compare output to a golden answer | Translation, extraction, classification |
+| **LLM-as-Judge** | Use a stronger LLM to score output | Semantic quality, when no reference exists |
+| **Human evaluation** | Human annotators score or rank outputs | Subjective quality, safety, creativity |
+| **Lexical overlap** | N-gram matching (BLEU, ROUGE) | Constrained outputs, as weak signal |
+| **Embedding similarity** | Semantic distance between output and reference | Answer relevance, semantic similarity |
+| **Functional testing** | Does the output pass behavioral tests | Code execution, tool call verification |
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### By Evaluation Scope
 
-## Implementation Guide
+| Scope | Description | Coverage |
+|-------|-------------|----------|
+| **Unit eval** | Single response quality | 1 input → 1 output |
+| **Scenario eval** | Multi-step interaction quality | Conversation, agent trajectory |
+| **Benchmark eval** | Standardized capability measurement | MMLU, HumanEval, GSM8K |
+| **Safety eval** | Harmlessness and alignment | Toxicity, bias, refusal rates |
+| **Stress eval** | Behavior under edge conditions | Long context, adversarial inputs |
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+## Basic Metrics
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Core Metrics for RAG
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+- **Faithfulness** (0-1): Fraction of claims in the answer supported by retrieved context. Target >0.90.
+- **Answer Relevance** (0-1): How directly the answer addresses the user's question. Target >0.80.
+- **Context Precision** (0-1): Fraction of retrieved chunks that are relevant. Target >0.70.
+- **Context Recall** (0-1): Fraction of needed information present in retrieved chunks. Target >0.80.
+- **Hallucination Rate** (0-1): 1 - Faithfulness. Target <0.05.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+### Classification Metrics
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+- **Accuracy**: Correct predictions / total predictions.
+- **Precision**: True positives / (true positives + false positives).
+- **Recall**: True positives / (true positives + false negatives).
+- **F1 Score**: Harmonic mean of precision and recall.
+- **AUC-ROC**: Area under the receiver operating characteristic curve.
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### Generation Metrics
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+- **ROUGE-L**: Longest common subsequence F-measure. Best for summarization.
+- **BLEU**: N-gram precision. Best for translation.
+- **METEOR**: N-gram matching with synonym support. Better correlation with human judgment than BLEU.
+- **Perplexity**: Model's uncertainty in predicting the next token. Lower is better.
 
-## Best Practices
+### Agent Metrics
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+- **Task Completion Rate**: Did the agent successfully complete the task?
+- **Tool Selection Accuracy**: Did the agent pick the correct tool?
+- **Parameter Correctness**: Were tool arguments valid?
+- **Efficiency**: Ratio of actual tool calls to optimal tool calls.
+- **Replan Rate**: How often did the agent need to recover from errors?
 
-## Common Pitfalls
+## Eval Datasets
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+### Dataset Types
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+**Golden (hand-curated)**: 50-200 examples written by domain experts. Highest quality, highest cost. Stable over time — the ground truth for regression detection.
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+**Synthetic (LLM-generated)**: 200-1000 examples generated by an LLM. Fast to produce, covers diverse scenarios. Requires quality filtering.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+**Production-sampled**: 100-500 real queries sampled from production logs. Most representative of actual usage. Requires PII stripping.
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+**Adversarial**: 20-100 edge cases designed to break the system. Covers missing context, ambiguous queries, out-of-scope inputs, injection attempts.
 
-## Tooling Ecosystem
+### Dataset Quality Requirements
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+- Minimum 100 examples per task category.
+- At least 20% edge cases (ambiguous, missing info, adversarial).
+- Balanced label distribution (unless naturally imbalanced).
+- Maximum 5% noise (mislabeled, irrelevant).
+- Every example has: input, expected_output, category, difficulty, tags.
+- Versioned and immutable after release.
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+### Dataset Versioning
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+```
+dataset:
+  name: "customer-support-v3"
+  version: "3.2.0"
+  created: "2026-03-15"
+  total: 750
+  splits:
+    golden: 100
+    synthetic: 400
+    production: 200
+    adversarial: 50
+  storage: "s3://evals/datasets/"
+  format: "jsonl"
+```
 
-## Integration Patterns
+### Dataset Maintenance Cadence
 
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
+- Golden: Quarterly review (add edge cases from production).
+- Synthetic: Every release (regenerate with updated criteria).
+- Production: Weekly sample (latest real user queries).
+- Adversarial: Monthly (add new attack vectors).
 
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
+## Eval Pipeline Fundamentals
 
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
+### Basic Pipeline Flow
 
-## Performance Optimization
+```
+Dataset → Eval Runner → Metric Calculator → Aggregator → Reporter
+                            ↑
+                      [LLM Judge / APIs]
+```
 
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
+### Pipeline Stages
 
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
+1. **Load dataset**: Read versioned dataset from storage.
+2. **Execute model**: Run each query through the model under evaluation.
+3. **Score responses**: Apply metrics (LLM judge, lexical, embedding, etc.).
+4. **Aggregate**: Compute summary statistics (mean, std, pass rates).
+5. **Compare to baseline**: Check for regression against historical results.
+6. **Report**: Output results (PR comment, dashboard, Slack).
 
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+### Pipeline Configuration
+
+```yaml
+pipeline:
+  name: "rag-eval-v2"
+  dataset:
+    source: s3://evals/datasets/rag-eval-v3.jsonl
+    sample: 200
+  models:
+    generator: meta-llama/Llama-3.1-8B-Instruct
+    judge: gpt-4o-mini
+  metrics:
+    - faithfulness:
+        type: llm_judge
+        min_score: 0.85
+        weight: critical
+    - context_precision:
+        type: ragas
+        min_score: 0.70
+        weight: high
+  execution:
+    batch_size: 20
+    parallel: true
+    max_concurrent: 10
+    cache: true
+```
 
 ## Key Points
-- Understand core Ai Evals concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
 
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- AI evals measure non-deterministic system behavior — fundamentally different from traditional software testing.
+- Choose eval approach based on task type, available data, and quality requirements.
+- Golden datasets are the gold standard but expensive; synthetic datasets scale but need quality filtering.
+- Always version datasets and pin versions in eval configs for reproducibility.
+- Metrics without thresholds are opinions — define pass/fail criteria.
+- Faithfulness is the most critical metric for RAG systems.
+- Human evaluation remains necessary for subjective quality dimensions.
+- Eval pipelines should be automated, cached, and integrated into CI/CD.
+- Never use observed test data to make prompt or model decisions.
+- Validate every eval approach against known examples before trusting results.

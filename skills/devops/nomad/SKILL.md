@@ -1,8 +1,22 @@
 ---
-name: devops-nomad
+name: nomad
 description: >
-  Use this skill when the user says 'Nomad', 'HashiCorp Nomad', 'Nomad job', 'Nomad job spec', 'Nomad workload', 'Nomad cluster', 'Nomad autoscaling', 'Consul Nomad', 'Nomad batch job', 'Nomad service job'. This skill enforces: job specification structure with task groups and tasks, service discovery via Consul integration, volume management with CSI and host volumes, autoscaling policies with Nomad Autoscaler, batch vs service job patterns, and multi-region deployment strategies. Do NOT use for: Kubernetes workload management, Docker Compose deployments, or Terraform infrastructure provisioning (use separate HashiCorp skills for those).
-version: "1.1.0"
+  Use this skill when the user says 'nomad', 'hashicorp nomad',
+  'nomad job', 'nomad cluster', 'nomad server', 'nomad client',
+  'nomad namespace', 'nomad ACL', 'nomad autoscaler', 'nomad
+  pack', 'nomad consul', 'nomad vault', 'nomad CSI', 'nomad
+  batch job', 'nomad system job', 'nomad service job',
+  'nomad periodic job', 'nomad parameterized job',
+  'nomad scaling', 'nomad canary', 'nomad update',
+  'nomad drain', 'nomad eval', 'nomad allocation',
+  'nomad volume', 'nomad host volume', 'nomad secrets',
+  'nomad template', 'nomad artifact', 'nomad dispatch',
+  'CNI', 'nomad networking', 'nomad service discovery',
+  'nomad connect', 'nomad consul connect', 'nomad envoy'.
+  Covers: HashiCorp Nomad job scheduling, cluster operations,
+  ACLs, secrets integration, CSI volumes, autoscaling, canary
+  deployments, networking with Consul Connect.
+version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -10,312 +24,652 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [devops, orchestration, hashicorp, phase-10]
+tags: [devops, nomad, hashicorp, orchestrator, scheduler, phase-4]
 ---
 
-# Nomad Workload Orchestration
+# Nomad
 
 ## Purpose
-Design and deploy Nomad job specifications covering task groups, service discovery, volume management, autoscaling, and multi-region operation for batch and service workloads.
+Deploy and operate HashiCorp Nomad for workload scheduling, service orchestration, batch processing, and canary deployments with Consul and Vault integration.
 
 ## Agent Protocol
 
 ### Trigger
-"Nomad", "HashiCorp Nomad", "Nomad job", "job spec", "Nomad workload", "Nomad cluster", "Nomad autoscaling", "Consul", "Nomad batch", "Nomad service", "Nomad job plan", "Nomad task group", "Nomad volume", "Nomad CSI", "Nomad canary", "Nomad update strategy".
+Exact user phrases: "nomad", "nomad job", "nomad cluster", "nomad server", "nomad client", "nomad ACL", "nomad autoscaler", "nomad pack", "nomad CSI", "nomad batch job", "nomad periodic job", "nomad scaling", "nomad canary", "nomad drain", "nomad template", "nomad service discovery", "nomad connect", "consul connect nomad".
 
 ### Input Context
-- Workload type (service, batch, system, sysbatch)
-- Task driver (Docker, exec, Java, QEMU, raw_exec)
-- Resource requirements (CPU, memory, network, storage)
-- Service discovery needs (Consul integration yes/no)
-- Volume requirements (host volume, CSI, NFS)
-- Scaling requirements (fixed count, horizontal autoscaling)
-- Multi-region or single-region deployment
+- Nomad cluster size and topology.
+- Integration with Consul and Vault.
+- Job types: service, batch, system, periodic, parameterized.
+- Networking: host, bridge, Consul Connect.
+- Storage: host volumes or CSI.
 
 ### Output Artifact
-Nomad deployment plan with complete job specifications, scaling configuration, service discovery setup, and operational runbooks.
+Nomad job specification (HCL) or cluster configuration.
 
 ### Response Format
-```
-Nomad Job: {job-name}
-Type: {service/batch/system}
-Region: {region}
-Task Groups: {count}
---- {task-group}: {count} tasks, {count} instances
-Volume Claims: {type}:{size}
-Update Strategy: {rolling/canary/blue-green}
-Service Discovery: {Consul/direct}
-Scaling: {fixed/autoscaling} ({min}-{max})
-```
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output -- why use many token when few do trick.
+Nomad HCL job specification. No preamble.
 
 ### Completion Criteria
-- [ ] Job type selected with justification (service vs batch vs system)
-- [ ] Task groups defined with CPU/memory reservations and constraints
-- [ ] Each task configured with driver, config, and resources
-- [ ] Service discovery configured with Consul (or alternative documented)
-- [ ] Volumes defined (host, CSI, or ephemeral)
-- [ ] Update strategy specified (rolling update, canary, blue-green)
-- [ ] Autoscaling policy defined if applicable
-- [ ] Multi-region considerations documented if applicable
+- [ ] Job specification written with correct type, task groups, tasks.
+- [ ] Networking configured (host, bridge, or Consul Connect sidecar).
+- [ ] Secrets from Vault or template stanza configured.
+- [ ] Update strategy (canary, rolling, blue-green) defined.
+- [ ] Scaling policy defined.
+- [ ] ACL policies and namespace configuration set.
+- [ ] Monitoring with Nomad autoscaler and Consul health checks.
 
 ### Max Response Length
-400 lines
+400 lines.
 
-## Workflow
+## Quick Start
+Write `job.hcl` → `nomad job plan job.hcl` (dry run) → `nomad job run job.hcl` → `nomad job status my-job` → `nomad alloc status <alloc-id>` → `nomad job promote my-job` for canary.
 
-### Step 1: Select Job Type
-Service: long-running processes (API servers, web apps, databases) -- supports updates, canaries, and scaling. Batch: finite workloads (ETL jobs, data processing, backups) -- can be periodic or parameterized. System: runs on every client node (logging agents, monitoring daemons, CNI plugins). Sysbatch: batch but runs on every node once. For parameterized batch, define `parameterized` block with `payload` or `meta_required` parameters. For periodic batch, use `periodic` block with `cron` expression and `prohibit_overlap = true` to prevent concurrent runs.
+## Decision Tree: Job Types
+| Job Type | Use Case | Lifecycle | Restart Policy |
+|----------|----------|-----------|----------------|
+| **service** | Web apps, API servers, long-running | Runs continuously | Always restart on failure |
+| **batch** | Data processing, migrations | Runs to completion | Retry on failure, then fail |
+| **system** | Log shippers, node-exporter, CNI | Runs on every client | Always restart, runs everywhere |
+| **periodic** | Cron jobs, scheduled tasks | Batch job run on cron | Each run is a batch job instance |
+| **parameterized** | CI/CD jobs, ad-hoc tasks | Dispatched with payload | Each dispatch is a batch job |
 
-### Step 2: Define Task Groups
-Each task group is a set of tasks that run together on the same client. Group by co-location requirement. Set count (instances), constraints (node attributes, datacenter), affinity rules (prefer SSD, prefer specific rack), and network configuration (host, bridge, or none). Use `spread` block to distribute across failure domains. Reserve CPU and memory at the task level -- never overcommit above 80% of node capacity. For GPU workloads, set `constraint { attribute = "${attr.driver.gpu.count}", operator = ">", value = "0" }`.
+## Core Workflow
 
+### Step 1: Nomad Cluster Configuration
 ```hcl
-group "api" {
-  count = 3
-  network {
-    mode = "bridge"
-    port "http" { to = 8080 }
+# server.hcl
+server {
+  enabled          = true
+  bootstrap_expect = 3
+  data_dir         = "/opt/nomad/data"
+}
+
+# Client configuration
+client {
+  enabled       = true
+  node_class    = "general"
+  servers       = ["10.0.1.10:4647", "10.0.1.11:4647", "10.0.1.12:4647"]
+  host_volume "docker-data" {
+    path      = "/data/docker"
+    read_only = false
   }
-  service {
-    name = "api"
-    port = "http"
-    tags = ["api", "production"]
-    check {
-      type     = "http"
-      path     = "/health"
-      interval = "10s"
-      timeout  = "2s"
-    }
+  host_volume "prometheus-data" {
+    path      = "/data/prometheus"
+    read_only = false
   }
-  task "server" {
-    driver = "docker"
-    config {
-      image = "org/api:v1.0.0"
-      ports = ["http"]
+}
+
+# Consul integration
+consul {
+  address             = "10.0.1.20:8500"
+  server_service_name = "nomad"
+  client_service_name = "nomad-client"
+  auto_advertise      = true
+}
+
+# Vault integration
+vault {
+  enabled          = true
+  address          = "https://vault.service.consul:8200"
+  create_from_role = "nomad-cluster"
+}
+
+# ACL configuration
+acl {
+  enabled = true
+}
+
+# Audit logging
+audit {
+  enabled = true
+}
+```
+
+### Step 2: Service Job with Canary
+```hcl
+# webapp.hcl
+job "webapp" {
+  datacenters = ["dc1"]
+  namespace   = "production"
+  type        = "service"
+
+  group "web" {
+    count = 3
+
+    network {
+      mode = "bridge"
+      port "http" {
+        to = 8080
+      }
     }
-    resources {
-      cpu    = 500
-      memory = 256
+
+    service {
+      name = "webapp"
+      port = "http"
+      provider = "consul"
+      tags = ["production", "web"]
+
+      check {
+        type     = "http"
+        path     = "/healthz"
+        interval = "10s"
+        timeout  = "2s"
+      }
+
+      check_restart {
+        limit           = 3
+        grace           = "30s"
+        ignore_warnings = false
+      }
+    }
+
+    task "web" {
+      driver = "docker"
+
+      config {
+        image = "myorg/webapp:${NOMAD_ALLOC_INDEX}"
+        ports = ["http"]
+        volumes = [
+          "local/config.yaml:/etc/webapp/config.yaml",
+        ]
+      }
+
+      template {
+        data        = <<EOH
+server:
+  port: {{ env "NOMAD_PORT_http" }}
+  environment: {{ key "environments/production/name" }}
+database:
+  url: {{ with secret "secret/data/webapp" }}{{ .Data.data.database_url }}{{ end }}
+EOH
+        destination = "local/config.yaml"
+      }
+
+      resources {
+        cpu    = 500
+        memory = 256
+      }
+
+      env {
+        LOG_LEVEL = "info"
+        NODE_NAME = "${node.unique.name}"
+      }
+    }
+
+    update {
+      max_parallel     = 1
+      canary           = 1
+      min_healthy_time = "30s"
+      healthy_deadline = "5m"
+      progress_deadline = "10m"
+      auto_revert       = true
+      auto_promote      = false
+      stagger           = "30s"
+    }
+
+    restart {
+      attempts = 3
+      delay    = "15s"
+      interval = "30m"
+      mode     = "fail"
+    }
+
+    reschedule {
+      attempts      = 10
+      interval      = "168h"
+      delay         = "30s"
+      delay_function = "exponential"
+      max_delay     = "1h"
     }
   }
 }
 ```
 
-### Step 3: Service Discovery with Consul
-Integrated via `service` block inside task group. Consul automatically registers service instances with health checks. Connect to Consul via `network.mode = "bridge"` with Consul DNS or `connect` block for service mesh. Service tags enable traffic splitting and blue-green routing. For Consul Connect native integration, configure `connect { sidecar_service { ... } }` block inside the task group. Native service mesh provides mTLS, L7 routing, and intent-based authorization without sidecar overhead.
+### Step 3: Batch Job (Data Processing)
+```hcl
+job "data-pipeline" {
+  datacenters = ["dc1"]
+  type        = "batch"
 
-### Step 4: Volume Management
-Host volumes: pre-configured on client nodes, simple bind mounts. CSI volumes: dynamic provisioning via CSI plugins (AWS EBS, GCE PD, Portworx). Ephemeral volumes: scratch space tied to allocation lifecycle. For stateful workloads, prefer CSI with backup strategy over host volumes. Define volume claim block referencing a `volume { type = "csi" ... }` or `host_volume "name"` on the client. CSI volumes support snapshots, cloning, and resize operations.
+  group "process" {
+    count = 1
 
-### Step 5: Update Strategy
-Rolling update: `max_parallel = 1`, `health_check = "checks"`, `min_healthy_time = "10s"`. Canary: percentage-based gradual rollout with manual promotion using `canary = 1` for initial canary group. Blue-green: deploy new version alongside old, switch traffic via Consul with `canary = -1` (does not automatically promote). Auto-revert: `auto_revert = true` on `sticky = true` to rollback on job failure. `progress_deadline` sets max time for deployment progress before auto-revert triggers. Monitor deployment with `nomad job status <job>` and `nomad deployment status <id>`.
+    task "etl" {
+      driver = "docker"
 
-### Step 6: Autoscaling
-Nomad Autoscaler: horizontal scaling based on CPU/memory utilization or custom metrics. Configure Horizontal Scaling Policy and Horizontal Scaling Check. Vertical scaling: adjust CPU/memory based on historical usage. Cooldown between scale events (minimum 5 minutes). Autoscaler runs as a Nomad job itself (`nomad-autoscaler`). Configure `scaling` block inside task group with policy source. Use `target` type for horizontal scaling with `min` and `max` count. APM strategies: `avg` for average across group, `max` for max across group.
+      config {
+        image = "myorg/etl:latest"
+        args  = ["--input", "${NOMARDATA_DIR}/input", "--output", "${NOMARDATA_DIR}/output"]
+      }
 
-### Step 7: Multi-Region Deployment
-Nomad Enterprise supports multi-region federation. Each region has its own server cluster. Jobs can be deployed across regions with `multiregion` block. Configure `region "us-east" { count = 3 }`, `region "eu-west" { count = 2 }`. Each region maintains independent scheduling state. Cross-region service discovery uses Consul WAN federation. For DR, run active-passive with replication via Consul KV snapshots and Nomad state backups.
+      artifact {
+        source      = "https://data.example.com/input/${NOMAD_JOB_NAME}.csv"
+        destination = "local/input"
+        options {
+          checksum = "md5:c2713d50..."
+        }
+      }
 
-### Step 8: Vault Integration
-Nomad integrates with HashiCorp Vault for secrets management. Configure `vault { policies = [...] }` block at task level. Vault token is automatically provisioned to the task. Use `template` block to render secrets to files within the allocation directory. Vault token TTL must exceed task's maximum runtime. For batch jobs, set `change_mode = "restart"` on template to read Vault secrets on renewal.
+      resources {
+        cpu    = 2000
+        memory = 4096
+      }
 
-### Step 9: Node Pools and Affinity
-Use `constraint` for hard requirements (must run on specific datacenter, OS, or architecture). Use `affinity` for soft preferences (prefer fast SSD, prefer specific rack). `spread` block distributes allocations evenly across targets. Combine spread with affinities for balanced placement with preferences. Weight is an integer from -100 to 100 on affinities. Node eligibility managed via `nomad node eligibility -self` or API.
+      logs {
+        max_files     = 3
+        max_file_size = 10
+      }
+    }
+  }
+}
+```
 
-## Architecture / Decision Trees
+### Step 4: System Job (Node-Level)
+```hcl
+job "node-exporter" {
+  datacenters = ["dc1"]
+  type        = "system"
 
-### Deployment Architecture Options
+  group "exporter" {
+    network {
+      mode = "host"
+      port "metrics" {
+        static = 9100
+      }
+    }
 
-| Architecture | Pros | Cons | Best For |
-|---|---|---|---|
-| Single Region, Single DC | Simple ops, low latency | No fault tolerance | Dev/test, small teams |
-| Single Region, Multi-DC | AZ fault tolerance, lower latency per AZ | Cross-AZ bandwidth costs | Production workloads |
-| Multi-Region (Enterprise) | Region-level DR, global services | Complex ops, WAN latency, licensing cost | Global enterprise |
-| Single Server Dev Mode | Quick evaluation | No HA, data loss risk | Local dev only |
+    service {
+      name     = "prometheus-node-exporter"
+      port     = "metrics"
+      provider = "consul"
+    }
 
-### Decision Tree: Clustered vs Standalone Consul
-Clustered Consul: required for production with service mesh, WAN federation, and KV store replication. Standalone dev Consul: acceptable for single-node dev clusters, no HA guarantees. Decision factor: if `connect` block or multi-region service discovery is needed, use clustered Consul.
+    task "exporter" {
+      driver = "docker"
 
-### Scheduling Strategy Decisions
+      config {
+        image = "prom/node-exporter:latest"
+        args  = [
+          "--path.rootfs=/host",
+          "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)",
+        ]
+        volumes = ["/:/host:ro,rslave"]
+      }
 
-| Strategy | Use When |
-|---|---|
-| Bin Pack | Maximize utilization, reduce node count |
-| Spread | Maximize availability, distribute evenly |
-| Node Classes | Separate workload types (GPU vs general) |
-| Resource Constraints | GPU workloads, special hardware |
+      resources {
+        cpu    = 100
+        memory = 64
+      }
+    }
+  }
+}
+```
 
-### Persistent Volume Decision Tree
-- Stateless app: ephemeral disk (no volume needed)
-- Stateful app, <= 1TB, single-region: CSI volume
-- Stateful app, multi-region: CSI with replication + backup
-- Legacy app, simple mount: host volume
-- Scratch space, temp data: ephemeral volume
+### Step 5: Periodic Job (Scheduled)
+```hcl
+job "db-backup" {
+  datacenters = ["dc1"]
+  type        = "batch"
 
-### Update Strategy Decision Tree
-- Zero downtime needed: canary with auto-promote
-- Quick rollback desired: blue-green
-- Simple, minimal config: rolling update
-- Stateful app cautious: canary with manual promote
+  periodic {
+    cron               = "0 2 * * *"
+    time_zone          = "UTC"
+    prohibit_overlap   = true
+  }
 
-## Common Pitfalls
+  group "backup" {
+    task "pg_dump" {
+      driver = "docker"
 
-### Pitfall 1: Running Batch Jobs Without Restart Blocks
-Batch jobs default to no restart on failure. Without explicit `restart` block, a failed batch allocation is permanently dead. Always define `restart { attempts = 3, interval = "30m", delay = "15s", mode = "delay" }` for batch jobs. Use `mode = "fail"` only when idempotency guarantees exist.
+      config {
+        image = "myorg/pg-backup:latest"
+        args  = [
+          "--host", "postgres.service.consul",
+          "--db", "production",
+          "--bucket", "s3://backups/db/"
+        ]
+      }
 
-### Pitfall 2: Over-allocating CPU/Memory
-Nomad does not enforce CPU limits by default (unlike K8s). A starving task consumes all available CPU on the node, starving other allocations. Always set explicit `resources { cpu = N, memory = M }`. Use `cpu = N/MHz` units. Monitor with `nomad alloc status -stats <alloc-id>`. Memory oversubscription must be explicitly enabled per client.
+      template {
+        data = <<EOH
+PGPASSWORD={{ with secret "secret/data/postgres" }}{{ .Data.data.password }}{{ end }}
+AWS_ACCESS_KEY_ID={{ with secret "secret/data/aws" }}{{ .Data.data.access_key }}{{ end }}
+AWS_SECRET_ACCESS_KEY={{ with secret "secret/data/aws" }}{{ .Data.data.secret_key }}{{ end }}
+EOH
+        destination = "secrets/env"
+        env         = true
+      }
 
-### Pitfall 3: Health Check Misconfiguration
-Missing health checks on service ports lead to failed deployments with no feedback. Health check misconfiguration (wrong path, too short timeout) causes flapping. Set `check_restart { limit = 3, grace = "30s", ignore_warnings = false }` to restart unhealthy allocations. gRPC checks require `type = "grpc"` with `port` and `service` fields.
+      resources {
+        cpu    = 500
+        memory = 512
+      }
+    }
+  }
+}
+```
 
-### Pitfall 4: Ignoring Network Configuration
-Default network mode is `none` -- tasks cannot communicate. Tasks needing network access must set `network { mode = "bridge" | "host" }`. Bridge mode requires port mapping. Host mode shares node IP. For Consul service mesh, `mode = "bridge"` is required. Cross-task communication within the same group happens over `localhost`.
+### Step 6: Parameterized Job (CI/CD Dispatch)
+```hcl
+job "ci-build" {
+  datacenters = ["dc1"]
+  type        = "batch"
 
-### Pitfall 5: Mismatched Nomad and Consul Versions
-Nomad and Consul version compatibility matters. Nomad 1.x requires Consul 1.x minimum. Always check the compatibility matrix before upgrade. Upgrade Consul before Nomad. Consul service mesh (Connect) requires Consul 1.6+.
+  parameterized {
+    payload       = "required"
+    payload_opts  = ["repository", "branch", "commit_sha"]
+  }
 
-### Pitfall 6: Not Pinning Docker Image Versions
-Using `latest` tag in Docker config causes non-deterministic deployments. Different nodes pull different versions. Always use semantic version tags or commit SHAs. Configure `image_pull_policy = "always"` vs `"if-not-present"` deliberately.
+  group "build" {
+    task "build" {
+      driver = "docker"
 
-### Pitfall 7: Single Server Deployment
-Running Nomad with one server offers no HA. Server failure = cluster downtime. Minimum 3 servers for production. Use odd number (3, 5, 7) for Raft consensus. Deploy servers across failure domains (AZs, racks).
+      config {
+        image = "myorg/ci-runner:latest"
+        args  = [
+          "build",
+          "--repo", "${NOMAD_META_repository}",
+          "--branch", "${NOMAD_META_branch}",
+          "--sha", "${NOMAD_META_commit_sha}",
+        ]
+        payload = "local/payload.tar.gz"
+      }
 
-### Pitfall 8: Volume Backup Without Strategy
-CSI volumes and host volumes are not backed up by default. Losing the underlying node loses the data. Always configure backup targets for stateful workloads. S3-compatible backup target minimum. Test restore procedure quarterly.
+      resources {
+        cpu    = 2000
+        memory = 4096
+      }
+    }
+  }
+}
+```
 
-### Pitfall 9: Ignoring Task Pinning
-Re-using the same port across tasks in a group without `static = true` leads to port conflicts on restart. Use `port "http" { static = 8080 }` for fixed ports or omit for dynamic ports. Use `to = N` for port mapping inside container.
+```bash
+# Dispatch a parameterized job
+nomad job dispatch -meta repository=myorg/app \
+  -meta branch=main \
+  -meta commit_sha=abc123 \
+  ci-build
 
-### Pitfall 10: GC and Garbage Collection Defaults
-Nomad GC reclaims resources from dead allocations. Default GC interval (5 minutes) can accumulate large state. Set `gc_interval = "30s"` for high-churn clusters. Monitor GC pressure with `nomad system gc`. Excessive GC delay causes disk space issues on server nodes.
+# Check status of specific dispatch
+nomad job status ci-build/dispatch-abc123
+```
 
-## Best Practices
+### Step 7: Consul Connect (Service Mesh)
+```hcl
+job "api" {
+  datacenters = ["dc1"]
+  type        = "service"
 
-### Job Specification
-- Use HCL2 `variables` for reusable job templates with `variable "count" { type = number }` and `count = var.count`
-- Separate template files: `variables.hcl`, `job.hcl`, `task-groups/`
-- Pin Docker versions with SHA256 digest: `image = "org/api@sha256:abc123..."`
-- Always set `restart` block for batch jobs
-- Use `check_restart` for all service jobs with health checks
-- Set `reschedule { attempts = 2, interval = "30m" }` for service jobs
-- Keep job spec files in version control alongside application code
+  group "api" {
+    count = 3
 
-### Clustering
-- Minimum 3 servers, 3+ clients in production
-- Deploy servers on separate nodes from clients
-- Use dedicated storage for server Raft logs (SSD/NVMe)
-- Enable `server_join.retry_join` with list of server addresses
-- Configure `encrypt` key for gossip protocol encryption
-- Set `verify_https_client` and `verify_server_hostname` for mTLS
+    network {
+      mode = "bridge"
+    }
 
-### Security
-- Enable ACLs in production: `acl { enabled = true }`
-- Create namespaces for multi-team isolation: `namespace "team-a" { ... }`
-- Use Vault for secret injection, never env vars in job spec
-- Enable mTLS between all Nomad components
-- Audit all API requests with audit logging (Nomad Enterprise)
-- Restrict raw_exec driver to trusted nodes only
+    service {
+      name = "api"
+      port = "http"
+      provider = "nomad"
+      connect {
+        sidecar_service {
+          proxy {
+            upstreams {
+              destination_name = "postgres"
+              local_bind_port  = 5432
+            }
+            upstreams {
+              destination_name = "redis"
+              local_bind_port  = 6379
+            }
+          }
+        }
+      }
+    }
 
-### Observability
-- Export Nomad metrics to Prometheus: `telemetry { prometheus_metrics = true }`
-- Key metrics to monitor: `nomad.client.allocated.memory`, `nomad.broker.total_ready`, `nomad.raft.applyTime`
-- Alert on: node down >5min, server leadership loss, eval backlog >100
-- Use `nomad operator debug` for cluster diagnostics
-- Enable structured logging: `log_level = "info"`, `log_json = true`
+    task "api" {
+      driver = "docker"
+      config {
+        image = "myorg/api:latest"
+      }
+      env {
+        DATABASE_URL = "postgres://user:pass@${NOMAD_UPSTREAM_ADDR_postgres}/db"
+        REDIS_URL    = "redis://${NOMAD_UPSTREAM_ADDR_redis}/0"
+      }
+      resources {
+        cpu    = 500
+        memory = 256
+      }
+    }
+  }
+}
+```
 
-## Compared With
+### Step 8: CSI Volume (PostgreSQL on Nomad)
+```hcl
+# Register volume first:
+# nomad volume create volume.hcl
 
-### Nomad vs Kubernetes
-| Aspect | Nomad | Kubernetes |
-|---|---|---|
-| Complexity | Low -- single binary, simple config | High -- control plane, CNI, CSI, CRDs, operators |
-| Scheduling | Bin-pack, spread, affinity, constraints | PodSpec, nodeSelector, affinity/anti-affinity, taints/tolerations |
-| Networking | Simple bridge/host mode | Complex -- CNI plugins, service mesh, ingress controllers |
-| Stateful Workloads | CSI volumes, host volumes | StatefulSets, PVC, CSI, operators |
-| Autoscaling | Nomad Autoscaler (separate install) | HPA/VPA, Cluster Autoscaler, KEDA |
-| Service Discovery | Consul integration (external) | Native DNS, built-in service mesh options |
-| Multi-Region | Enterprise feature | Federation V2 (alpha), cluster API |
-| Learning Curve | Low | High |
-| Community Size | Small-Medium | Very Large |
+# volume.hcl
+type = "csi"
+id   = "postgres-data"
+name = "postgres-data"
+capability {
+  access_mode     = "single-node-writer"
+  attachment_mode = "file-system"
+}
+plugin_id = "org.democratic-csi.nfs"
+secrets {
+  server    = "nfs.example.com"
+  share     = "/exports/postgres"
+}
 
-### Nomad vs Docker Compose
-Docker Compose: single-host container orchestration, no HA, no service discovery, no scaling. Nomad: multi-host, HA scheduling, service discovery, rolling updates, multi-region. Compose is appropriate for local dev only. Nomad for any multi-host deployment.
+# Job using CSI volume
+job "postgres" {
+  datacenters = ["dc1"]
+  type        = "service"
 
-### Nomad vs AWS ECS
-ECS: AWS-managed, EFS/EBS integration, no multi-cloud. Nomad: multi-cloud, multi-region, multi-datacenter. ECS simpler for AWS-only shops. Nomad better for hybrid/multi-cloud.
+  group "db" {
+    volume "data" {
+      type      = "csi"
+      source    = "postgres-data"
+      access_mode = "single-node-writer"
+      attachment_mode = "file-system"
+    }
 
-## Operations & Maintenance
+    network {
+      mode = "bridge"
+      port "postgres" {
+        to = 5432
+      }
+    }
 
-### Server Maintenance
-- Upgrades: always upgrade one minor version at a time. Never skip versions.
-- Server draining: `nomad server force-leave <server>` for dead servers only
-- Raft snapshot management: `nomad operator raft snapshot save` before upgrades
-- Server backup: backup `data_dir` on server nodes (Raft state, job specs, ACL tokens)
-- Monitor Raft leader stability: `nomad operator raft list-peers`
+    service {
+      name     = "postgres"
+      port     = "postgres"
+      provider = "consul"
+      check {
+        type     = "tcp"
+        interval = "10s"
+        timeout  = "2s"
+      }
+    }
 
-### Client Maintenance
-- Node draining: `nomad node drain -enable -yes <node-id>` before maintenance
-- Drain with deadline: `-deadline "1h"` forces stop after deadline
-- Monitor drain progress: `nomad node status <node-id>`
-- After maintenance: `nomad node drain -disable <node-id>`
-- For persistent volumes, migrate data before draining
-- Use node classes (`node_class = "gpu"`) for targeted scheduling during maintenance
+    task "postgres" {
+      driver = "docker"
+      config {
+        image = "postgres:16"
+      }
+      volume_mount {
+        volume      = "data"
+        destination = "/var/lib/postgresql/data"
+      }
+      env {
+        POSTGRES_PASSWORD = "{{ with secret \"secret/data/postgres\" }}{{ .Data.data.password }}{{ end }}"
+        POSTGRES_DB       = "app"
+      }
+      resources {
+        cpu    = 1000
+        memory = 1024
+      }
+    }
+  }
+}
+```
 
-### Backup and Restore
-- Server state: snapshot `data_dir/server/raft/snapshots/`
-- Job specs: store in version control, not just in cluster
-- ACL tokens: export with `nomad acl token list` periodically
-- Restore procedure: stop servers, restore data_dir, restart, verify quorum
-- Test restore in isolated environment first
+### Step 9: Autoscaling
+```hcl
+# autoscaler.hcl (Nomad Autoscaler configuration)
+apm "prometheus" {
+  driver = "prometheus"
+  config {
+    address = "http://prometheus.service.consul:9090"
+  }
+}
 
-### Capacity Planning
-- Monitor `nomad.client.allocated.cpu` and `.memory` against `nomad.client.unallocated.*`
-- Plan for 30% headroom on compute resources
-- Add nodes when aggregate allocation exceeds 70% of total capacity
-- Use `nomad node status -self` for per-node utilization
-- Batch jobs require peak capacity planning -- schedule during off-peak
+target "nomad" {
+  driver = "nomad"
+  config {
+    address = "http://localhost:4646"
+  }
+}
 
-### Incident Response
-1. Check server cluster health: `nomad server members`
-2. Check node status: `nomad node status`
-3. Check eval queue: `nomad eval list`
-4. Check job status: `nomad job status <job>`
-5. Check allocation logs: `nomad alloc logs <alloc-id>`
-6. For stuck allocations: `nomad alloc stop <alloc-id>`
-7. For deployment failures: `nomad deployment fail <deployment-id>`
-8. Gather debug info: `nomad operator debug`
+strategy "target-value" {
+  driver = "target-value"
+}
+
+# Scaling policy in job spec
+job "webapp" {
+  group "web" {
+    scaling {
+      enabled = true
+      min     = 3
+      max     = 20
+
+      policy {
+        cooldown            = "5m"
+        evaluation_interval = "1m"
+        check "cpu_util" {
+          source = "prometheus"
+          query  = "avg(cpu_usage_active{job=~\"${NOMAD_JOB_NAME}\"})"
+          strategy "target-value" {
+            target = 60
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Step 10: Nomad ACLs
+```hcl
+# policy.hcl
+namespace "production" {
+  policy = "write"
+  capabilities = ["list-jobs", "read-job", "submit-job", "dispatch-job", "read-logs", "read-exec", "sentinel-override"]
+}
+
+namespace "staging" {
+  policy = "write"
+  capabilities = ["list-jobs", "read-job", "submit-job", "dispatch-job"]
+}
+
+namespace "*" {
+  policy = "deny"
+}
+
+agent {
+  policy = "read"
+}
+
+operator {
+  policy = "read"
+}
+
+# Apply policy
+# nomad acl policy apply webapp-deploy webapp.hcl
+
+# Create token
+# nomad acl token create -name="webapp-ci" -policy=webapp-deploy
+```
+
+### Step 11: Monitoring and Observability
+```yaml
+Nomad metrics (Prometheus endpoint: :4646/v1/metrics):
+  - nomad.client.allocated.cpu / memory / disk
+  - nomad.client.unallocated.cpu / memory / disk
+  - nomad.nomad.job.summary.running / pending / dead
+  - nomad.client.allocation.memory.usage
+  - nomad.client.allocation.cpu.percent
+
+Audit logging:
+  - Enable audit log on servers
+  - Log to file or syslog
+  - Ship to Loki / Elasticsearch for centralized access
+
+Consul health checks:
+  - Service checks for every Nomad job
+  - Combine with Nomad check_restart for automatic rescheduling
+
+Key metrics to alert on:
+  - eval.blocked > 0 for > 5 min (cluster can't schedule)
+  - nomad.job.pending > 0 for > 2 min
+  - node down > 1 server (cluster degradation)
+  - Alloc failures per job
+```
 
 ## Rules
-- Resource reservations must include CPU and memory -- no infinite/unbounded resources
-- Every service port must have a health check (HTTP, TCP, gRPC, or script)
-- Batch jobs must have `restart` block for failure handling
-- Update strategies require `check_restart` or health check for canary validation
-- Sensitive variables must use Vault integration, not environment variables in job spec
-- Never run stateful workloads on host volumes without backup strategy
-- Autoscaling policies must have min/max bounds to prevent runaway scaling
-- Minimum 3 servers in production clusters -- odd numbers only
-- Server and client nodes must run on separate infrastructure
-- mTLS enabled between all Nomad components in production
-- Network encryption enabled with gossip key
-- Every job spec stored in version control alongside application code
-- Docker images pinned with tags or digests -- no `latest` in production
-- Node drain before any client maintenance -- always verify completions
-- One minor version upgrade at a time -- test in non-production first
-- Namespaces enabled for multi-team clusters
-- Raw_exec driver disabled except on trusted, isolated nodes
+- Always run `nomad job plan` before `nomad job run` for diff review.
+- Use `auto_revert = true` for all service jobs to rollback failed deployments.
+- Use `canary = 1` for production deployments — promote after verification.
+- Always template secrets from Vault — never embed in job HCL.
+- Use `bridge` networking mode for multi-port + Consul Connect jobs.
+- Set resource limits (CPU/memory) on every task — no unlimited jobs.
+- Use `check_restart` with 3 limit for production service jobs.
+- Set `progress_deadline` to prevent stuck deployments.
+- Use `max_parallel` = 1 for gradual rolling updates.
+- All system jobs must fit in 128 MB memory for minimal overhead.
+
+## Production Considerations
+- Nomad servers: 3 or 5 minimum for HA, always an odd number.
+- Consul ACL tokens should be scoped per job (`template` stanza with Vault).
+- Vault token role `nomad-cluster` must allow token creation for Nomad workloads.
+- CSI volumes need the Nomad CSI plugin installed and running as a system job.
+- Nomad Autoscaler requires Prometheus for metric queries.
+- Use `NOMAD_UPSTREAM_ADDR_<service>` env vars for Consul Connect upstream discovery.
+- Audit log to a separate volume — log volume can spike during attacks.
+- Set `address_mode = "driver"` in service definitions for bridge network support.
+- Use `host_volume` for persistent data; prefer CSI for production.
+- Parameterized jobs support `payload` as a tar.gz for build artifacts.
+- Periodic jobs use the same cron syntax as Unix — test with `nomad job plan`.
+
+## Anti-Patterns
+- No resource limits — one job can starve the cluster.
+- Using `type = "batch"` for long-running services — use `service` type.
+- No `auto_revert` on deployments — manual rollback takes too long.
+- Embedding secrets in job HCL — visible in API and logs.
+- Using `host` networking when bridge is available — less portable.
+- Overprovisioning CPU request — Nomad uses CPU shares, not limits.
+- Not setting `check_restart` — unhealthy containers keep running.
+- Using `canary` without `auto_promote = false` — manual gate needed.
+- CSI volumes without proper plugin setup — volume registration fails silently.
+- No audit logging — compliance violations go undetected.
 
 ## References
-- references/nomad-fundamentals.md -- Nomad Fundamentals
-- references/nomad-advanced.md -- Nomad Advanced Topics
-- references/nomad-jobs.md -- Nomad Job Specifications
-- references/nomad-integrations.md -- Nomad Integrations
-- references/nomad-operations.md -- Nomad Operations
-- references/nomad-production.md -- Nomad Production Operations
-- references/nomad-multi-region-deployment.md -- Nomad Multi-Region Deployment
-- references/nomad-security-hardening.md -- Nomad Security Hardening
-
+  - references/nomad-advanced.md — Nomad Advanced Topics
+  - references/nomad-fundamentals.md — Nomad Fundamentals
+  - references/nomad-cluster-setup.md — Nomad Cluster Configuration
+  - references/nomad-job-spec.md — Nomad Job Specification Reference
+  - references/nomad-consul-connect.md — Consul Connect with Nomad
+  - references/nomad-csi.md — CSI Volume Integration
+  - references/nomad-autoscaling.md — Nomad Autoscaler
+  - references/nomad-security.md — ACLs and Vault Integration
 ## Handoff
-`devops/incident-response` for Nomad cluster incident runbooks (allocation failures, node draining, cluster scale-up)
-`planning/create-adr` for Nomad architecture decisions (job structure, multi-region topology, Consul mesh)
+- `devops-consul` for Consul service discovery and Connect mesh.
+- `devops-vault` for Vault secrets management integration.
+- `devops-terraform` for Nomad cluster Terraform provisioning.
+- `devops-monitoring` for Prometheus/Grafana monitoring of Nomad.
+- `devops-kubernetes` for comparison when deciding between Nomad and K8s.

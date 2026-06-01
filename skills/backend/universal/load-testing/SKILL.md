@@ -2,7 +2,7 @@
 name: backend-load-testing
 description: >
   Use this skill when the user says 'load test', 'stress test', 'soak test', 'spike test', 'k6', 'Locust', 'Artillery', 'performance test', 'benchmark', 'throughput', 'RPS', 'latency p99', 'CI performance', 'regression test', 'load test results', or when planning performance verification. This skill enforces consistent load testing patterns: tool selection, test type selection, scenario design, results analysis, CI integration, and thresholds. Applies to any backend stack. Do NOT use for: rate limiting design, caching strategy, API design, or database indexing.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -67,6 +67,38 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 Per test scenario: 10 lines. Per test plan: unlimited.
+
+## Decision Tree
+
+### Which Load Test Type?
+
+```
+What do you need to validate?
+  ├── Script works, no config issues
+  │   └── Smoke test — 1-2 min, 1-5 VUs
+  ├── Handles expected traffic within SLOs
+  │   └── Load test — 10-30 min, target concurrent users
+  ├── Find breaking point and bottleneck
+  │   └── Stress test — 10-20 min, ramp until failure
+  ├── Memory leaks / degradation over time
+  │   └── Soak test — 2-24 hours, 80% of peak
+  └── Auto-scaling / burst handling
+      └── Spike test — 5-10 min, sudden 2-10x increase
+```
+
+### Which Tool?
+
+```
+What stack do you use?
+  ├── Any / no preference
+  │   └── k6 — JS scripting, high perf, Go engine, CI-friendly
+  ├── Python team
+  │   └── Locust — Python scripting, distributed, real-time Web UI
+  ├── Node.js team, WebSocket testing
+  │   └── Artillery — YAML/JS, WS/Socket.io, Lambda support
+  └── Need protocol-level (not HTTP)
+      └── ghz (gRPC) / wrk / hey (raw HTTP) / JMeter (complex scenarios)
+```
 
 ## Workflow
 
@@ -144,7 +176,89 @@ export default function () {
 }
 ```
 
-### Step 4: Define Metrics and Thresholds
+### Step 4: Multi-Scenario Test (k6)
+Test multiple user journeys in one script:
+
+```javascript
+import { group } from 'k6';
+
+export const options = {
+  scenarios: {
+    browse: {
+      executor: 'constant-vus',
+      vus: 50,
+      duration: '10m',
+      exec: 'browseScenario',
+      startTime: '0s',
+    },
+    checkout: {
+      executor: 'ramping-vus',
+      startVUs: 0,
+      stages: [
+        { duration: '2m', target: 10 },
+        { duration: '5m', target: 10 },
+        { duration: '1m', target: 0 },
+      ],
+      exec: 'checkoutScenario',
+      startTime: '30s',
+    },
+  },
+};
+
+export function browseScenario() {
+  group('browse products', () => {
+    http.get(`${BASE_URL}/api/products`);
+    sleep(3);
+    http.get(`${BASE_URL}/api/products/123`);
+    sleep(2);
+  });
+}
+
+export function checkoutScenario() {
+  group('complete purchase', () => {
+    const token = login();
+    const cart = addToCart(token);
+    const order = checkout(token, cart);
+    check(order, { 'order confirmed': (r) => r.status === 200 });
+    sleep(5);
+  });
+}
+```
+
+### Step 5: Locust Test Script (Python)
+```python
+from locust import HttpUser, task, between
+from uuid import uuid4
+
+class WebsiteUser(HttpUser):
+    wait_time = between(1, 5)
+
+    def on_start(self):
+        """Login on start and store token"""
+        resp = self.client.post("/api/v1/auth/login", json={
+            "email": f"user-{uuid4()}@test.com",
+            "password": "test123"
+        })
+        self.token = resp.json().get("token", "")
+
+    @task(3)
+    def browse_products(self):
+        self.client.get("/api/v1/products",
+            headers={"Authorization": f"Bearer {self.token}"})
+
+    @task(1)
+    def create_order(self):
+        self.client.post("/api/v1/orders",
+            json={"productId": "p1", "quantity": 1},
+            headers={"Authorization": f"Bearer {self.token}"})
+
+    @task(1)
+    def view_profile(self):
+        self.client.get("/api/v1/users/me",
+            headers={"Authorization": f"Bearer {self.token}"})
+```
+
+### Step 6: Define Metrics and Thresholds
 ```
 Essential metrics:
   - http_req_duration (p50, p95, p99, max)
@@ -166,7 +280,7 @@ Resource metrics (track alongside):
   - GC pauses (for JVM/Go/Erlang)
 ```
 
-### Step 5: Manage Test Data
+### Step 7: Manage Test Data
 ```
 Static data:     pre-generated CSV of users, products, etc.
   k6: SharedArray or CSV import for realistic data per VU
@@ -178,7 +292,22 @@ Data isolation:  use unique prefixes per test run to avoid collisions
   e.g., "test-user-{runId}-{vuId}"
 ```
 
-### Step 6: Analyze Results
+```javascript
+// k6 — CSV data loading
+import { SharedArray } from 'k6/data';
+import papaparse from 'https://jslib.k6.io/papaparse/5.1.1/index.js';
+
+const users = new SharedArray('users', function () {
+  return papaparse.parse(open('./test-users.csv'), { header: true }).data;
+});
+
+export default function () {
+  const user = users[__VU % users.length];
+  http.post(`${BASE_URL}/api/v1/auth/login`, JSON.stringify(user), params);
+}
+```
+
+### Step 8: Analyze Results
 ```
 Summary output:
   - Pass/fail per threshold
@@ -194,6 +323,103 @@ Interpretation:
   - Decreasing RPS at high VUs → contention or resource exhaustion
 ```
 
+### Step 9: CI Integration
+```yaml
+# GitHub Actions — k6 load test
+name: Load Test
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    services:
+      app:
+        image: ghcr.io/myorg/app:latest
+        ports: [3000:3000]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run k6 load test
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: tests/load/smoke-test.js
+          flags: --env BASE_URL=http://localhost:3000
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-report
+          path: k6-report.html
+```
+
+## Production Considerations
+
+| Concern | Practice |
+|---------|----------|
+| Production vs staging | Never load test production directly. Use dedicated staging or preview env. Exception: canary with 1-2% traffic |
+| Data isolation | Generate unique test data per run. Never reuse or share data between runs |
+| Monitoring | Watch server-side metrics: CPU, memory, DB pool, GC, network I/O |
+| Environment parity | Same instance size, same replicas, same DB config as production |
+| Warm-up | Allow 1-2 min ramp-up before measuring steady state (JIT compilation, connection pools) |
+| Tear-down | Clean up test data after completion (or use ephemeral environments) |
+
+## Security
+
+| Concern | Practice |
+|---------|----------|
+| Data contamination | Never use real user data in load tests. Generate synthetic data |
+| Credential rotation | Rotate test credentials before production-facing exposure |
+| Rate limit bypass | Get explicit exemption from rate limiting for load test accounts/IPs |
+| Network isolation | Run load tests in isolated VPC/network segment |
+| DoS concern | Coordinate with infra team before high-volume tests (>10K RPS) |
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It's Bad | Fix |
+|-------------|-------------|-----|
+| Testing only the health endpoint | Does not reflect real traffic patterns | Test critical user journeys |
+| No ramp-up period | Cold start skews results (JIT, connection pools) | Include 1-2 min ramp-up |
+| No think time | Overestimates system load (no real user is that fast) | Add realistic sleep/wait times |
+| Ignoring server-side metrics | Client metrics alone miss root cause | Watch CPU, memory, DB, GC |
+| Single-user test data | Lock contention, cache effects unrealistic | Use unique data per VU |
+| Running once, trusting results | Variance due to GC, cache warmup | Run 3+ times, take median |
+| No thresholds | A test without pass/fail criteria is a benchmark, not a test | Always set thresholds |
+
+## k6 Advanced Patterns
+
+```javascript
+// Custom metrics
+import { Trend, Rate, Counter, Gauge } from 'k6/metrics';
+
+const businessErrors = new Rate('business_errors');
+const checkoutLatency = new Trend('checkout_latency');
+
+// Checks vs thresholds
+export default function () {
+  const res = http.get('http://test.k6.io');
+  const passed = check(res, {
+    'status is 200': (r) => r.status === 200,
+    'body is not empty': (r) => r.body.length > 0,
+  });
+  if (!passed) businessErrors.add(1);
+}
+
+// gRPC testing with k6
+import grpc from 'k6/net/grpc';
+
+const client = new grpc.Client();
+client.load(['definitions'], 'user_service.proto');
+
+export default function () {
+  client.connect('localhost:50051', { plaintext: true });
+  const response = client.invoke('users.UserService/GetUser', { userId: '123' });
+  check(response, { 'status is OK': (r) => r.status === grpc.StatusOK });
+  client.close();
+}
+```
+
 ## Rules
 - Always ramp VUs gradually. Never start at full load.
 - Never load test against production without explicit approval and a canary strategy.
@@ -203,6 +429,10 @@ Interpretation:
 - Include think time (sleep) in scripts to simulate realistic user behavior.
 - Monitor server-side metrics (CPU, memory, DB, network) during the test, not just client metrics.
 - Run in an environment that mirrors production (same instance size, same replicas, same DB config).
+- Run at least 3 iterations of each test and report the median.
+- Always warm up the system (1-2 min) before measuring steady state.
+- Never hardcode secrets in test scripts — use environment variables.
+- Set fail-fast criteria: abort test if error rate exceeds 10% for more than 30 seconds.
 
 ## References
   - references/ci-integration.md — CI Integration

@@ -334,6 +334,100 @@ jobs:
       - run: soda scan -d prod_warehouse checks/orders.yml
 ```
 
+### Testing Pyramid for Data
+
+```
+                    ┌────────────────────────────┐
+                    │  Production Monitoring     │  Anomaly detection,
+                    │  (Observability checks)    │  freshness alerts
+                    ├────────────────────────────┤
+                    │  End-to-End Tests          │  Cross-system diffs,
+                    │  (Soda/GE scans)           │  row counts, schema
+                    ├────────────────────────────┤
+                    │  Integration Tests         │  CI pipeline checks,
+                    │  (dbt build --select)      │  contract enforcement
+                    ├────────────────────────────┤
+                    │  Regression Tests          │  Stage vs prod diffs,
+                    │  (DataDiff)                │  column value comparison
+                    ├────────────────────────────┤
+                    │  Unit Tests                │  dbt test, custom SQL
+                    │  (dbt test)                │  assertions, GE suites
+                    └────────────────────────────┘
+```
+
+### Test Types Matrix
+
+```yaml
+test_types:
+  schema_test:
+    scope: "Column names, types, nullability"
+    tool: "dbt contract, Soda schema check"
+    frequency: "Every deploy"
+    failure: "Block deployment"
+  
+  integrity_test:
+    scope: "Primary key uniqueness, FK relationships"
+    tool: "dbt test (unique, not_null, relationships)"
+    frequency: "Every build"
+    failure: "Block deployment"
+  
+  quality_test:
+    scope: "Null rates, value ranges, accepted values, distribution"
+    tool: "Soda, Great Expectations, dbt_expectations"
+    frequency: "Every deploy + scheduled runs"
+    failure: "Block deploy (critical), warn (non-critical)"
+  
+  regression_test:
+    scope: "Row counts, column values, aggregations match previous"
+    tool: "DataDiff, custom SQL comparison"
+    frequency: "Every deploy (stage vs prod 7-day window)"
+    failure: "Investigate difference — may indicate logic change or bug"
+  
+  contract_test:
+    scope: "Schema, SLA, and quality terms match contract"
+    tool: "Custom contract validation in CI/CD"
+    frequency: "Every PR"
+    failure: "Block PR merge"
+  
+  performance_test:
+    scope: "Query runtime, resource consumption"
+    tool: "Query profiling (warehouse-native)"
+    frequency: "Weekly"
+    failure: "Alert on > 50% regression in runtime"
+  
+  end_to_end_test:
+    scope: "Full pipeline from source → staging → mart"
+    tool: "dbt build --select tag:e2e, Soda scan"
+    frequency: "Daily"
+    failure: "PagerDuty alert"
+```
+
+### Decision Tree
+
+#### Test Selection
+```
+What aspect of the data pipeline are we validating?
+├── Schema correctness
+│   ├── Column names and types → dbt contract
+│   └── Schema evolution → Schema registry compatibility check
+├── Data integrity
+│   ├── PK uniqueness → unique + not_null test
+│   ├── FK validity → relationships test
+│   └── Referential integrity → custom SQL assertion
+├── Data quality
+│   ├── Value ranges → accepted_values, range check
+│   ├── Completeness → null rate check
+│   ├── Distribution stability → distribution comparison (KS/chi-squared)
+│   └── Freshness → source freshness threshold
+├── Pipeline correctness
+│   ├── Business logic → dbt unit test (v1.8+)
+│   ├── Row count consistency → equal_rowcount test
+│   └── Cross-environment consistency → DataDiff
+└── Production behavior
+    ├── Anomaly detection → Soda/Monte Carlo monitoring
+    └── SLA compliance → contract monitoring
+```
+
 ## Rules
 - Every dbt model must have at least unique + not_null tests on its primary key
 - Unit tests for models with CASE WHEN, window functions, or aggregations
@@ -344,6 +438,8 @@ jobs:
 - Alert on test failure immediately, not next business day
 - Test coverage reports generated monthly
 - Cross-environment diffs limited to last 7 days of data for performance
+- Apply testing pyramid: unit > integration > regression > E2E > monitoring
+- Match test type to data risk — schema failures block, quality failures alert
 
 ## References
   - references/contract-driven-testing.md — Contract-Driven Testing

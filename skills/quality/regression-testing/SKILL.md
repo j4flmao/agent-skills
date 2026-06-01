@@ -139,8 +139,224 @@ Layer 4 (Extended): 2-8 hours, run pre-release
 - Flaky test re-runs: add 2x execution time for flaky detection. Reduce by quarantining flaky tests
 - Time budget: allocate based on pipeline criticality. Commit stage: < 5 min. Merge stage: < 30 min
 
-## Rules
+## Regression Test Selection Examples
 
+### Dependency Graph-Based Selection
+```yaml
+# .regression/dependency-graph.yml
+services:
+  - name: "payment-service"
+    modules:
+      - "src/payment/**"
+      - "src/common/transactions/**"
+    affected_tests:
+      - "tests/payment/**"
+      - "tests/integration/checkout/**"
+    risk_score: 0.9
+    business_criticality: "P0"
+  - name: "user-service"
+    modules:
+      - "src/user/**"
+    affected_tests:
+      - "tests/user/**"
+      - "tests/integration/auth/**"
+    risk_score: 0.7
+    business_criticality: "P1"
+```
+
+### Risk Scoring Matrix
+```yaml
+risk_scoring:
+  factors:
+    change_proximity:
+      weight: 0.4
+      rules:
+        - "directly modified file: score 1.0"
+        - "imported by modified file: score 0.5"
+        - "transitively imported: score 0.2"
+    failure_history:
+      weight: 0.3
+      rules:
+        - "failed in last 10 runs: score 1.0"
+        - "failed in last 50 runs: score 0.5"
+        - "never failed: score 0.1"
+    business_criticality:
+      weight: 0.3
+      rules:
+        - "P0 (revenue-critical): score 1.0"
+        - "P1 (important): score 0.7"
+        - "P2 (standard): score 0.4"
+        - "P3 (nice-to-have): score 0.1"
+  thresholds:
+    run_always: ">= 0.8"
+    run_if_budget: ">= 0.4"
+    skip: "< 0.4"
+```
+
+## CI Integration for Regression Testing
+
+### GitHub Actions — Tiered Regression Pipeline
+```yaml
+name: Regression Tests
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 2 * * *"  # Daily full regression
+
+jobs:
+  smoke-tier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npx playwright test --grep @smoke --timeout 30000
+        env:
+          CI: true
+      - if: failure()
+        run: echo "Smoke tests failed - blocking merge"
+        # Pipeline stops here on failure
+
+  core-tier:
+    needs: smoke-tier
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compute affected tests
+        run: |
+          CHANGED=$(git diff --name-only origin/main...HEAD)
+          node .regression/select-tests.js --changes="$CHANGED" --tier=core
+      - run: npx vitest run --shard=${{ matrix.shard }}/3 $(cat test-list.txt)
+        env:
+          CI: true
+
+  full-regression:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - uses: actions/checkout@v4
+      - run: npx vitest run --shard=${{ matrix.shard }}/8
+```
+
+## Regression Testing Anti-Patterns
+
+### Anti-Pattern: Running Everything Every Time
+Running the complete regression suite on every commit wastes CI resources and slows feedback. Once a suite exceeds 100 tests, implement test selection. Start with dependency-graph-based selection, add risk scoring as historical data accumulates.
+
+### Anti-Pattern: No Flaky Test Quarantine
+Failing to quarantine flaky tests erodes trust in the entire test suite. Developers start ignoring failures, including real regressions. Quarantine flaky tests within 24 hours. Fix within one sprint or delete the test.
+
+### Anti-Pattern: Manual Regression Execution
+Running regression tests manually is slow, error-prone, and doesn't scale. Every regression test must be automated. Manual testing has its place (exploratory, UAT) but regression is repetitive by definition.
+
+### Anti-Pattern: Letting Suite Bloat
+Regression suites grow without bound as new features are added without removing obsolete tests. A 10,000-test suite that's never pruned has significant dead weight. Audit quarterly: remove tests for removed features, consolidate overlapping tests, retire flaky tests.
+
+### Anti-Pattern: No Time Budget Management
+Without time budgets, regression suites grow unbounded. Each sprint adds tests but never removes them. Set a total suite time budget. When the budget is exceeded, prioritize: run highest risk tests first, defer low-risk tests to nightly.
+
+### Anti-Pattern: Ignoring Test Selection Recall
+Using test selection without measuring recall means you don't know what you're missing (false negatives). Track bugs that escaped to production and should have been caught by regression. If recall drops below 75%, refine the selection model.
+
+## Regression Testing Maturity Model
+
+| Level | Characteristics | Practices |
+|---|---|---|
+| 1: Initial | Manual regression | Testers manually re-test critical paths, no automation, no tracking |
+| 2: Defined | Automated regression suite | Full suite automated, run on every merge, basic CI integration |
+| 3: Managed | Tiered regression | Smoke/core/full tiers, risk-based selection, test selection by dependency graph |
+| 4: Measured | Optimized regression | ML-based selection, flaky test auto-quarantine, regression metrics dashboard, < 60 min full suite |
+| 5: Optimized | Predictive regression | AI-driven test selection, mutation-based selection validation, automatic test generation from production failures |
+
+## Regression Metrics Dashboard
+
+```yaml
+metrics:
+  suite_health:
+    total_tests: 4250
+    active: 4120
+    quarantined: 45
+    flaky_rate: 1.1%
+    execution_time_avg: "42 minutes"
+  selection:
+    avg_tests_per_pr: 340
+    selection_recall: 87%
+    false_negative_rate: 2.3%
+    missed_bugs_last_quarter: 3
+  quality_gates:
+    smoke_pass_rate: 99.8%
+    core_pass_rate: 97.5%
+    full_pass_rate: 96.2%
+    blocking_failures_per_week: 2.1
+```
+
+## Flaky Test Management
+
+```yaml
+flaky_test_workflow:
+  detection:
+    - "Auto-detect: test fails in CI but passes re-run (max 3 retries)"
+    - "Mark as flaky: quarantine from main suite, notify owner"
+    - "Track: flaky rate per test, per suite, per team"
+  quarantine:
+    - "Move to quarantined suite: excluded from CI gates"
+    - "Assign owner: last modifier of test file"
+    - "Set SLA: fix within 5 business days or delete"
+  investigation:
+    steps:
+      - "Check test isolation: shared state, timing dependencies"
+      - "Check environment: resource contention, network latency"
+      - "Check data: non-deterministic fixtures, stale mocks"
+      - "Check assertions: race conditions, async timing"
+  resolution:
+    - "Fix root cause: improve isolation, add retry logic, stabilize data"
+    - "Verify: 10 consecutive runs in CI with zero failures"
+    - "Re-integrate: move from quarantined back to main suite"
+  metrics:
+    flaky_rate_target: "< 1% of total suite"
+    quarantine_age_target: "< 5 days"
+    auto_fix_rate: "> 50% (common patterns: wait strategies, data isolation)"
+```
+
+## Regression Test Data Strategy
+
+```yaml
+test_data_principles:
+  isolation:
+    - "Each test run gets its own dataset — no sharing across runs"
+    - "Use unique identifiers (timestamp + run ID) to avoid collisions"
+    - "Clean up after test: delete-by-run-id in afterAll"
+  factories:
+    - "Use factory functions with sensible defaults and overrides"
+    - "Generate unique values for constrained fields (email, username)"
+    - "Never hardcode IDs — they may not exist in test environment"
+  seeding:
+    - "API-level seeding: POST /api/test/seed with required entities"
+    - "Database-level seeding: SQL INSERT for bulk data needs"
+    - "Seed in beforeAll, clean in afterAll"
+  environments:
+    - "CI: fresh seed per run, cleanup guaranteed"
+    - "Staging: seeded data with known state, refreshed daily"
+    - "Production: never use in regression tests except read-only"
+```
+
+## Regression Testing Anti-Patterns (Additional)
+
+### Anti-Pattern: No Post-Release Validation
+Running regression tests only before release and not monitoring production after deployment. The pre-release suite may pass while production has problems due to configuration differences, data volume, or real user behavior. Implement production health checks and canary analysis alongside pre-release regression.
+
+### Anti-Pattern: Skipping Security Regression
+Security regression tests are skipped to save time in the deployment pipeline. Security vulnerabilities re-emerge when changes inadvertently reintroduce previously fixed issues. Security regression tests must run on every deployment regardless of change scope.
+
+### Anti-Pattern: Manual Regression Sign-Off
+Relying on manual testing for regression sign-off. Manual regression is slow, error-prone, and doesn't scale beyond a few tests. Every regression test must be automated. Reserve manual testing for exploratory testing and UAT.
+
+## Rules
 1. Every change must have at least a smoke test pass before regression is considered
 2. Do NOT run full regression on every commit — select based on risk assessment and time budget
 3. Flaky tests must be quarantined within 24 hours of detection — no false signals in main suite
@@ -157,6 +373,10 @@ Layer 4 (Extended): 2-8 hours, run pre-release
 14. New regression tests must pass 10 consecutive runs before being added to the suite
 15. Security regression tests must run even for unrelated changes (defense in depth)
 16. Regression test selection must include all tests for security-critical modules regardless of change scope
+17. Each regression tier must have a defined time budget and exit criteria
+18. False negative rate must be tracked and maintained below 5%
+19. Test data must be isolated per run — never share test data across regression runs
+20. Flaky tests are quarantined within 24 hours, fixed within 5 days, or deleted
 
 ## References
 - references/automation-maintenance.md — Test Automation Maintenance

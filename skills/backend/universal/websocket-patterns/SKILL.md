@@ -2,7 +2,7 @@
 name: backend-websocket-patterns
 description: >
   Use this skill when the user says 'WebSocket', 'real-time', 'socket.io', 'WS connection', 'reconnection', 'WS rooms', 'broadcast', 'WS scaling', 'WS clustering', 'pub/sub over WS', 'SSE', 'Server-Sent Events', 'long polling', 'WS handshake', or when designing real-time communication. This skill enforces consistent WebSocket patterns: connection lifecycle, room management, reconnection strategies, message framing, and horizontal scaling. Applies to any backend stack. Do NOT use for: REST API design, gRPC streaming, message queue design, or frontend rendering.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -67,6 +67,36 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 Per message type: 5 lines. Per connection spec: unlimited.
+
+## Decision Tree
+
+### Which Transport?
+
+```
+What is your use case?
+  ├── Bidirectional, need low latency, full control
+  │   └── Raw WebSocket — minimal overhead, no auto-reconnect, no fallback
+  ├── Bidirectional, need auto-reconnect, rooms, fallback
+  │   └── Socket.IO — rooms, namespaces, auto-reconnect, long-polling fallback
+  ├── Server→client only (notifications, stream updates)
+  │   └── SSE (Server-Sent Events) — simpler, HTTP-native, auto-reconnect via EventSource
+  └── Client needs to push AND receive, but SSE + POST is simpler
+      └── SSE for server→client + POST for client→server (REST-like)
+```
+
+### Single Node vs Multi-Node?
+
+```
+How many instances?
+  ├── Single instance (small app, dev, low traffic)
+  │   └── In-memory socket map, no external deps
+  ├── Multiple instances, sticky sessions available
+  │   └── Sticky sessions + in-memory socket map (server affinity)
+  ├── Multiple instances, no sticky sessions
+  │   └── External pub/sub (Redis, NATS, Kafka) for cross-node broadcast
+  └── Global scale, many regions
+      └── Global pub/sub + edge WebSocket termination
+```
 
 ## Workflow
 
@@ -161,6 +191,226 @@ Multi node:    external pub/sub (Redis, NATS, Kafka)
 
 Never trust sticky sessions alone for reliability. Always pair with external pub/sub.
 
+### Step 7: Raw WebSocket Server Implementation (Node.js)
+
+```typescript
+import { WebSocketServer, WebSocket } from 'ws';
+
+interface Client {
+  ws: WebSocket;
+  userId: string;
+  rooms: Set<string>;
+  lastPing: number;
+}
+
+class WSServer {
+  private clients = new Map<string, Client>();
+  private rooms = new Map<string, Set<string>>();
+  private wss: WebSocketServer;
+
+  constructor(port: number) {
+    this.wss = new WebSocketServer({ port });
+    this.wss.on('connection', (ws, req) => this.handleConnection(ws, req));
+    setInterval(() => this.checkHeartbeat(), 30000);
+  }
+
+  private handleConnection(ws: WebSocket, req: IncomingMessage) {
+    const token = new URL(req.url!, `http://${req.headers.host}`).searchParams.get('token');
+    if (!token) { ws.close(4001, 'Unauthorized'); return; }
+
+    const userId = verifyToken(token);
+    if (!userId) { ws.close(4001, 'Invalid token'); return; }
+
+    const client: Client = { ws, userId, rooms: new Set(), lastPing: Date.now() };
+    const clientId = `${userId}-${uuidv4()}`;
+    this.clients.set(clientId, client);
+
+    ws.on('message', (data) => this.handleMessage(clientId, client, data));
+    ws.on('close', () => this.handleDisconnect(clientId, client));
+    ws.on('pong', () => { client.lastPing = Date.now(); });
+
+    ws.send(JSON.stringify({ event: 'connected', data: { clientId } }));
+  }
+
+  private handleMessage(clientId: string, client: Client, data: WebSocket.RawData) {
+    try {
+      const msg = JSON.parse(data.toString());
+      switch (msg.event) {
+        case 'join':
+          this.joinRoom(client, msg.data.roomId);
+          break;
+        case 'leave':
+          this.leaveRoom(client, msg.data.roomId);
+          break;
+        case 'message':
+          this.broadcastToRoom(msg.data.roomId, { event: 'message', data: { clientId, text: msg.data.text }, id: uuidv4(), timestamp: new Date().toISOString() }, clientId);
+          break;
+        default:
+          client.ws.send(JSON.stringify({ event: 'error', data: { code: 'UNKNOWN_EVENT', message: `Unknown event: ${msg.event}` } }));
+      }
+    } catch (err) {
+      client.ws.send(JSON.stringify({ event: 'error', data: { code: 'PARSE_ERROR', message: 'Invalid JSON' } }));
+    }
+  }
+
+  private joinRoom(client: Client, roomId: string) {
+    client.rooms.add(roomId);
+    if (!this.rooms.has(roomId)) this.rooms.set(roomId, new Set());
+    this.rooms.get(roomId)!.add(client.ws as any);
+  }
+
+  private broadcastToRoom(roomId: string, message: object, exceptClientId?: string) {
+    const clients = this.rooms.get(roomId);
+    if (!clients) return;
+    for (const [id, client] of this.clients) {
+      if (id !== exceptClientId && client.rooms.has(roomId)) {
+        client.ws.send(JSON.stringify(message));
+      }
+    }
+  }
+
+  private checkHeartbeat() {
+    const now = Date.now();
+    for (const [id, client] of this.clients) {
+      if (now - client.lastPing > 60000) {
+        client.ws.terminate();
+        this.clients.delete(id);
+      }
+    }
+  }
+}
+```
+
+### Step 8: Socket.IO Implementation
+
+```typescript
+import { Server } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { createClient } from 'redis';
+
+const io = new Server({
+  cors: { origin: process.env.CORS_ORIGIN },
+  pingInterval: 25000,
+  pingTimeout: 20000,
+  maxHttpBufferSize: 1e5,  // 100KB max message
+});
+
+// Auth middleware
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  try {
+    socket.data.user = verifyToken(token);
+    next();
+  } catch (err) {
+    next(new Error('Authentication failed'));
+  }
+});
+
+io.on('connection', (socket) => {
+  socket.join(`user:${socket.data.user.id}`);
+
+  socket.on('join:room', (roomId) => socket.join(roomId));
+  socket.on('leave:room', (roomId) => socket.leave(roomId));
+
+  socket.on('message:room', (data) => {
+    io.to(data.roomId).emit('message', {
+      userId: socket.data.user.id,
+      text: data.text,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  socket.on('disconnect', () => {
+    logger.info('Client disconnected', { userId: socket.data.user.id });
+  });
+});
+
+// Redis adapter for multi-node
+const pub = createClient({ url: process.env.REDIS_URL });
+const sub = pub.duplicate();
+io.adapter(createAdapter(pub, sub));
+
+io.listen(3001);
+```
+
+### Step 9: Heartbeat and Connection Health
+
+```typescript
+// Raw WebSocket heartbeat
+const HEARTBEAT_INTERVAL = 25000;  // 25s
+const HEARTBEAT_TIMEOUT = 10000;   // 10s grace period
+
+function startHeartbeat(ws: WebSocket) {
+  const interval = setInterval(() => {
+    if (ws.readyState !== WebSocket.OPEN) { clearInterval(interval); return; }
+    ws.ping();
+  }, HEARTBEAT_INTERVAL);
+
+  ws.on('close', () => clearInterval(interval));
+}
+
+// Client-side heartbeat handler
+ws.addEventListener('close', (event) => {
+  if (event.code === 1006) {
+    // Abnormal closure — attempt reconnect
+    reconnect();
+  }
+});
+```
+
+### Step 10: Rate Limiting Per Connection
+
+```typescript
+class ConnectionRateLimiter {
+  private limits = new Map<string, { count: number; resetAt: number }>();
+
+  allow(clientId: string, maxPerSecond = 100): boolean {
+    const now = Date.now();
+    const entry = this.limits.get(clientId);
+    if (!entry || now > entry.resetAt) {
+      this.limits.set(clientId, { count: 1, resetAt: now + 1000 });
+      return true;
+    }
+    if (entry.count >= maxPerSecond) return false;
+    entry.count++;
+    return true;
+  }
+}
+```
+
+## Production Considerations
+
+| Concern | Practice |
+|---------|----------|
+| Connection limit per node | OS file descriptor limit. Set ulimit -n 65536. Monitor connection count |
+| Memory per connection | ~50KB for idle WebSocket, ~100KB for Socket.IO. Plan RAM accordingly |
+| Message throughput | Raw WS: ~100K msg/s per node. Socket.IO: ~10K msg/s per node |
+| Sticky sessions | Required for Socket.IO without Redis. Use cookie-based or header-based affinity |
+| Graceful shutdown | Drain connections: send close frame, wait for ack, then terminate |
+| TLS termination | At load balancer (AWS ALB, Nginx, Envoy), not in application |
+
+## Security
+
+| Risk | Mitigation |
+|------|-----------|
+| Unauthorized connections | Auth token in handshake (query param, header, or first message) |
+| Message injection | Validate and sanitize all message content server-side |
+| Cross-origin WebSocket | Check Origin header against allowlist on upgrade |
+| Message flooding | Rate limit per connection: 100 msg/s default |
+| Sensitive data in broadcast | Verify room membership before sending. Never broadcast to all |
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It's Bad | Fix |
+|-------------|-------------|-----|
+| Broadcasting to all clients | Privacy leak, spam, security risk | Always broadcast to specific rooms |
+| No heartbeat | Zombie connections accumulate | Ping/pong or application-level heartbeat |
+| Sending raw strings | Cannot parse or validate consistently | Use JSON envelope with event type |
+| No message size limit | OOM from large messages | Set 100KB max message size |
+| Sticky sessions without fallback | Node failure drops all connections | Add external pub/sub for redundancy |
+| Storing full message history in memory | Memory grows unbounded | Limit buffer to N messages per room with TTL |
+| Blocking event loop in handler | All connections starve | Offload heavy processing to worker threads or queue |
+
 ## Rules
 - Always use WSS (WebSocket over TLS) in production. Never WS.
 - Every connection must have a heartbeat (ping/pong or application-level).
@@ -170,6 +420,9 @@ Never trust sticky sessions alone for reliability. Always pair with external pub
 - Close connections that fail heartbeat N times (e.g., 3 missed pongs).
 - Use close codes 1000 (normal), 1001 (going away), 1008 (policy violation), 1011 (internal error).
 - Buffer messages for offline clients only up to a configurable TTL and limit.
+- Always verify room membership before broadcasting.
+- Never expose internal client IDs or socket IDs to unauthorized clients.
+- Use external pub/sub (Redis) for multi-node deployments — never rely on sticky sessions alone.
 
 ## References
   - references/reconnection-strategy.md — Reconnection Strategy

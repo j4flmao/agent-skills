@@ -284,13 +284,170 @@ module.exports = {
 };
 ```
 
+## Advanced Reporter Patterns
+
+### Reporter with Coverage Integration
+```typescript
+class CoverageReporter implements Reporter {
+  private coverageData: any[] = [];
+
+  onTestResult(test: Test, testResult: TestResult) {
+    if (testResult.coverage) {
+      this.coverageData.push({
+        file: testResult.testFilePath,
+        coverage: {
+          lines: testResult.coverage.lines,
+          branches: testResult.coverage.branches,
+          functions: testResult.coverage.functions,
+          statements: testResult.coverage.statements,
+        },
+      });
+    }
+  }
+
+  onRunComplete(contexts: Set<Context>, results: AggregatedResult) {
+    const totalFiles = this.coverageData.length;
+    const avgCoverage = this.coverageData.reduce((acc, curr) => ({
+      lines: acc.lines + curr.coverage.lines,
+      branches: acc.branches + curr.coverage.branches,
+      functions: acc.functions + curr.coverage.functions,
+      statements: acc.statements + curr.coverage.statements,
+    }), { lines: 0, branches: 0, functions: 0, statements: 0 });
+
+    if (totalFiles > 0) {
+      Object.keys(avgCoverage).forEach((key) => {
+        avgCoverage[key] = (avgCoverage[key] / totalFiles).toFixed(1);
+      });
+    }
+
+    console.log('\nCoverage Summary:');
+    console.log(`  Lines: ${avgCoverage.lines}%`);
+    console.log(`  Branches: ${avgCoverage.branches}%`);
+    console.log(`  Functions: ${avgCoverage.functions}%`);
+    console.log(`  Statements: ${avgCoverage.statements}%`);
+  }
+
+  getLastError(): Error | undefined {
+    const failed = this.coverageData.filter(
+      (d) => d.coverage.lines < 80
+    );
+    if (failed.length > 0) {
+      return new Error(
+        `Coverage threshold not met: ${failed.map((f) => f.file).join(', ')}`
+      );
+    }
+    return undefined;
+  }
+}
+```
+
+### Slack Notification Reporter
+```typescript
+class SlackReporter implements Reporter {
+  private results: { passed: number; failed: number; total: number } = {
+    passed: 0, failed: 0, total: 0,
+  };
+  private failedTests: string[] = [];
+
+  onTestResult(test: Test, testResult: TestResult) {
+    this.results.total += testResult.numPassingTests + testResult.numFailingTests;
+    this.results.passed += testResult.numPassingTests;
+    this.results.failed += testResult.numFailingTests;
+
+    testResult.testResults.forEach((result) => {
+      if (result.status === 'failed') {
+        this.failedTests.push(
+          `• ${result.fullName} — ${result.failureMessages?.[0]?.split('\n')[0]}`
+        );
+      }
+    });
+  }
+
+  async onRunComplete(contexts: Set<Context>, results: AggregatedResult) {
+    const duration = Math.round((Date.now() - results.startTime) / 1000);
+    const status = this.results.failed > 0 ? 'FAILED' : 'PASSED';
+    const color = this.results.failed > 0 ? '#dc3545' : '#28a745';
+
+    const message = [
+      `*Test Run ${status}*`,
+      `Passed: ${this.results.passed} | Failed: ${this.results.failed} | Total: ${this.results.total}`,
+      `Duration: ${duration}s`,
+      this.failedTests.length > 0 ? `\n*Failed Tests:*\n${this.failedTests.join('\n')}` : '',
+    ].join('\n');
+
+    await fetch(process.env.SLACK_WEBHOOK_URL!, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: message,
+        attachments: [{ color, text: message, mrkdwn_in: ['text'] }],
+      }),
+    });
+  }
+
+  getLastError() { return undefined; }
+}
+```
+
+### Markdown Summary Reporter
+```typescript
+class MarkdownReporter implements Reporter {
+  private suites: any[] = [];
+
+  onTestResult(test: Test, testResult: TestResult) {
+    this.suites.push({
+      file: testResult.testFilePath,
+      passed: testResult.numPassingTests,
+      failed: testResult.numFailingTests,
+      duration: testResult.perfStats.runtime,
+      results: testResult.testResults.map((r) => ({
+        name: r.fullName,
+        status: r.status,
+        duration: r.duration,
+        error: r.failureMessages?.[0],
+      })),
+    });
+  }
+
+  onRunComplete(contexts: Set<Context>, results: AggregatedResult) {
+    let md = `# Test Report\n\n`;
+    md += `Generated: ${new Date().toISOString()}\n\n`;
+    md += `## Summary\n\n`;
+    md += `| Metric | Value |\n|--------|-------|\n`;
+    md += `| Total Suites | ${results.numTotalTestSuites} |\n`;
+    md += `| Passed | ${results.numPassedTests} |\n`;
+    md += `| Failed | ${results.numFailedTests} |\n`;
+    md += `| Skipped | ${results.numPendingTests} |\n`;
+    md += `| Duration | ${(results.startTime / 1000).toFixed(2)}s |\n\n`;
+
+    this.suites.forEach((suite) => {
+      md += `## ${suite.file.split('/').pop()}\n\n`;
+      md += `Status: ${suite.failed > 0 ? '❌ FAILED' : '✅ PASSED'}\n\n`;
+      suite.results.forEach((r) => {
+        md += `- ${r.status === 'passed' ? '✅' : '❌'} ${r.name}`;
+        if (r.error) {
+          md += `\n  \`\`\`\n${r.error.split('\n')[0]}\n\`\`\`\n`;
+        }
+        md += '\n';
+      });
+      md += '\n';
+    });
+
+    fs.writeFileSync('test-report.md', md);
+    console.log('Markdown report generated: test-report.md');
+  }
+
+  getLastError() { return undefined; }
+}
+```
+
 ## Key Points
 - Reporter interface defines lifecycle methods: onRunStart, onTestResult, onRunComplete
 - Multiple reporters can be combined in jest.config.js
 - AggregateResult provides overall test statistics
 - TestResult provides per-file test details
 - Custom output formats include JSON, HTML, XML, Markdown
-- Notification reporters integrate with system notifications
+- Notification reporters integrate with system notifications (Slack, email)
 - Reporters access globalConfig for runtime settings
 - CI pipeline integration with JUnit XML format
 - Custom reporters can integrate with dashboards and monitoring
@@ -307,3 +464,8 @@ module.exports = {
 - Custom reporters track historical test trends
 - Sequential reporter execution processes results in order
 - Reporter error handling prevents failures from crashing the suite
+- Reporters can be async (return Promise from lifecycle methods)
+- Coverage data accessible through testResult.coverage object
+- Test failure details include failureMessages array
+- Snapshots summary available in snapshot property of AggregatedResult
+- onRunStart provides estimated time for progress indication

@@ -205,6 +205,35 @@ Launching self-serve PLG motion when the product is not ready for it. Onboarding
 
 ## Templates & Tools
 
+### North Star Metric Selection
+The North Star metric is the single metric that best captures customer value and correlates with long-term retention. For growth engineering, the North Star must be a leading indicator of sustainable growth, not a vanity metric.
+
+| Product Type | Example North Star | Why It Works |
+|-------------|-------------------|--------------|
+| Social/communication | Messages sent per user per week | Core value is communication |
+| SaaS B2B | Weekly active teams | Team adoption drives retention |
+| Marketplace | Successful transactions | Liquidity drives both sides |
+| Content platform | Weekly content consumption | Engagement drives subscription |
+| Fintech | Transactions per active user | Usage demonstrates value |
+
+Validate North Star against retention: segment users by North Star achievement (did they hit the threshold?), compare retention rates between segments, find the threshold that maximizes retention correlation. Target: users who achieve North Star should have >2x retention vs those who don't.
+
+### Growth Accounting Framework
+Growth accounting decomposes total growth into three sources to understand what drives it:
+
+1. **Organic growth:** New users from existing users (virality, referrals, content loops). Track as percentage of total new users. Target >50% for sustainable growth.
+
+2. **Paid growth:** New users from paid channels (ads, sponsorships, partnerships). Track CAC by channel and compare to LTV. Target LTV/CAC >3x.
+
+3. **Product growth:** New users from product features (integrations, embed, API, marketplace). Track integration-sourced signups. Network effects are the strongest form of product growth.
+
+**Growth decomposition formula:**
+```
+New Users(t) = Organic(t) + Paid(t) + Product(t)
+Growth Efficiency = (Organic + Product) / Total New Users
+```
+Target growth efficiency >0.7 — meaning most growth comes from product and organic sources, not paid. Track monthly and flag when paid exceeds 30% of total.
+
 ### Growth Loop Documentation Template
 ```
 ### Loop Name

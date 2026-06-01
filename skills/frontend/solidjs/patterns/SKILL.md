@@ -47,166 +47,521 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ### Max Response Length
 Code: 15 lines per example.
 
-## Workflow
+## Component Architecture / Decision Trees
 
-### Step 1: Data Fetching with createResource
+### Architecture Options
+
+| Approach | Trade-off | When to Use |
+|----------|-----------|-------------|
+| createResource + Suspense | Simple async data, loading states | API data fetching |
+| createResource with mutate | Optimistic updates, cache control | Dashboard, live data |
+| Controlled form with signals | Full control over validation | Complex forms |
+| Children as functions (render props) | Flexible composition | List, Table, Dropdown |
+| Slot pattern via props | Explicit API | Card, Layout, Modal |
+| createTransition | Pending state for deferred updates | Tab switching, navigation |
+
+### Decision Tree: Data Fetching
+
+```
+Is data needed on page load?
+  ├── Yes -> createResource in component
+  │    ├── Depends on signal? -> Pass signal as source
+  │    └── Static -> Pass constant source
+  └── No -> fetch on interaction (event handler)
+```
+
+### Decision Tree: Form Complexity
+
+```
+How many fields?
+  ├── 1-3 fields -> createSignal per field
+  ├── 4-10 fields -> createStore for the form object
+  └── 10+ fields or nested -> createStore + field arrays
+```
+
+### Decision Tree: Component Composition
+
+```
+Does the component need to customize rendering?
+  ├── Yes -> Children as functions or render props
+  └── No -> Regular props + children
+
+Does the component have optional sections?
+  ├── Yes -> Slot pattern (header, footer, sidebar)
+  └── No -> Single children slot
+```
+
+## Component Design Patterns
+
+### Data Fetching with Loading and Error States
+
 ```tsx
-function UserProfile(props: { userId: () => string }) {
-  const [user] = createResource(props.userId, async (id) => {
-    const res = await fetch(`/api/users/${id}`)
-    if (!res.ok) throw new Error('Failed')
-    return res.json()
-  })
+function ProductList() {
+  const [products] = createResource(() => '/api/products', fetchProducts)
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <h1>{user()?.name}</h1>
+    <Suspense fallback={<ProductSkeleton />}>
+      <ErrorBoundary fallback={<div>Failed to load products</div>}>
+        <For each={products()}>
+          {(product) => <ProductCard product={product} />}
+        </For>
+      </ErrorBoundary>
     </Suspense>
   )
 }
 ```
-Use `mutate` for optimistic updates. Use `refetch` for manual revalidation. Wrap Suspense around resource consumers.
 
-### Step 2: Forms (Controlled via Signals)
+### createResource with Dependent Fetching
+
 ```tsx
-function LoginForm() {
-  const [email, setEmail] = createSignal('')
-  const [password, setPassword] = createSignal('')
+function UserPosts() {
+  const params = useParams()
+  const userId = () => params.id
+  const [user] = createResource(userId, fetchUser)
+  const [posts] = createResource(user, (u) => u ? fetchPosts(u.id) : [])
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <h1>{user()?.name}'s Posts</h1>
+      <For each={posts()}>{(post) => <PostCard post={post} />}</For>
+    </Suspense>
+  )
+}
+```
+
+### Optimistic Update with mutate
+
+```tsx
+function LikeButton(props: { postId: string }) {
+  const [liked, setLiked] = createSignal(false)
+  const toggleLike = async () => {
+    const previous = liked()
+    setLiked(!liked()) // optimistic update
+    try {
+      await api.toggleLike(props.postId)
+    } catch {
+      setLiked(previous) // rollback
+    }
+  }
+  return <button onClick={toggleLike}>{liked() ? 'Unlike' : 'Like'}</button>
+}
+```
+
+### Complex Form with createStore
+
+```tsx
+function OrderForm() {
+  const [form, setForm] = createStore({
+    customer: { name: '', email: '' },
+    items: [] as { productId: string; quantity: number }[],
+    shipping: { address: '', city: '', zip: '' },
+    errors: {} as Record<string, string>,
+  })
+
+  const addItem = () => setForm('items', items => [...items, { productId: '', quantity: 1 }])
+  const removeItem = (i: number) => setForm('items', items => items.filter((_, idx) => idx !== i))
+  const updateItem = (i: number, field: string, value: any) => setForm('items', i, field, value)
+
+  const total = createMemo(() => form.items.reduce((sum, i) => sum + i.quantity * 10, 0))
+
   const handleSubmit = async (e: Event) => {
     e.preventDefault()
-    const result = schema.safeParse({ email: email(), password: password() })
-    if (!result.success) return setErrors(result.error.flatten().fieldErrors)
-    await fetch('/api/login', { method: 'POST', body: JSON.stringify(result.data) })
+    const result = orderSchema.safeParse(form)
+    if (!result.success) {
+      setForm('errors', result.error.flatten().fieldErrors)
+      return
+    }
+    await api.createOrder(result.data)
   }
+
   return (
     <form onSubmit={handleSubmit}>
-      <input value={email()} onInput={(e) => setEmail(e.currentTarget.value)} />
-      <input type="password" value={password()} onInput={(e) => setPassword(e.currentTarget.value)} />
-      <button type="submit">Login</button>
+      <input value={form.customer.name} onInput={(e) => setForm('customer', 'name', e.currentTarget.value)} />
+      <For each={form.items}>{(item, i) => (
+        <div>
+          <input value={item.productId} onInput={(e) => updateItem(i(), 'productId', e.currentTarget.value)} />
+          <input type="number" value={item.quantity} onInput={(e) => updateItem(i(), 'quantity', Number(e.currentTarget.value))} />
+          <button type="button" onClick={() => removeItem(i())}>Remove</button>
+        </div>
+      )}</For>
+      <button type="button" onClick={addItem}>Add Item</button>
+      <p>Total: {total()}</p>
+      <button type="submit">Submit Order</button>
     </form>
   )
 }
 ```
-For complex forms, use createStore for nested values and field arrays.
 
-### Step 3: Component Composition
+### Render Props Composition
+
 ```tsx
-// Render props via JSX children as functions
-function List(props: { each: any[]; children: (item: any, index: () => number) => any }) {
-  return <For each={props.each}>{(item, i) => props.children(item, i)}</For>
+function DataList<T>(props: {
+  each: T[]
+  children: (item: T, index: () => number) => JSX.Element
+}) {
+  return (
+    <ul>
+      <For each={props.each}>
+        {(item, i) => <li>{props.children(item, i)}</li>}
+      </For>
+    </ul>
+  )
 }
 
-// Slot pattern via spreads
-function Card(props: { header?: any; footer?: any; children: any }) {
+// Usage
+<DataList each={users()}>
+  {(user, i) => (
+    <div>
+      <span>{i() + 1}.</span>
+      <span>{user.name}</span>
+    </div>
+  )}
+</DataList>
+```
+
+### Slot Pattern
+
+```tsx
+function Card(props: {
+  header?: JSX.Element
+  footer?: JSX.Element
+  children: JSX.Element
+}) {
   return (
     <div class="card">
-      <div class="header">{props.header}</div>
-      <div class="body">{props.children}</div>
+      {props.header && <div class="card-header">{props.header}</div>}
+      <div class="card-body">{props.children}</div>
+      {props.footer && <div class="card-footer">{props.footer}</div>}
     </div>
   )
 }
 ```
 
-### Step 4: Animation
+### Debounced Search
+
 ```tsx
-// CSS transitions with signals
-const [expanded, setExpanded] = createSignal(false)
-<div classList={{ expanded: expanded() }} onClick={() => setExpanded(!expanded())}>
-  <div class="content">Animated content</div>
-</div>
+function Search() {
+  const [query, setQuery] = createSignal('')
+  const [debouncedQuery, setDebounced] = createSignal('')
 
-// createTransition for shared element transitions
-const [tab, setTab] = createSignal('home')
-const [pending, startTransition] = createTransition(() => setTab('settings'))
+  createEffect(() => {
+    const timer = setTimeout(() => setDebounced(query()), 300)
+    onCleanup(() => clearTimeout(timer))
+  })
+
+  const [results] = createResource(debouncedQuery, searchApi)
+
+  return (
+    <div>
+      <input value={query()} onInput={(e) => setQuery(e.currentTarget.value)} placeholder="Search..." />
+      <Suspense fallback={<div>Searching...</div>}>
+        <For each={results()}>{(item) => <div>{item.title}</div>}</For>
+      </Suspense>
+    </div>
+  )
+}
 ```
 
-## SolidJS SSR Patterns
+## State Management Patterns
 
-```yaml
-solidjs_ssr:
-  streaming_ssr:
-    description: "SolidJS supports streaming server-side rendering — sends HTML as it renders"
-    implementation: "Use SolidStart or custom Vite plugin with solid-ssr"
-    benefits:
-      - "Faster time to first byte (TTFB) — shell renders immediately"
-      - "Progressive enhancement — content streams as it becomes available"
-      - "Reduced time to interactive — island hydration for interactive parts"
-      
-  islands_architecture:
-    description: "Selective hydration — only interactive components hydrate on client"
-    vs_nextjs: "SolidJS islands are more granular than Next.js app router (page-level)"
-    implementation:
-      - "Static content renders to HTML on server — no JavaScript sent"
-      - "Interactive islands (counters, forms, search) hydrate independently"
-      - "Each island has its own JS bundle — no page-level JS required"
-    code:
-      pattern: 'Use <Island> component or SolidStart route export — only components using signals/effects need hydration'
-      example: "Header (static HTML) + SearchBar (interactive island) + Footer (static HTML)"
-      
-  data_loading_ssr:
-    pattern: "Use createResource on server, data serialized and rehydrated on client"
-    approach: "Server fetches data during render → data serialized in HTML → client deserializes without refetch"
-    code:
-      server: "createResource(() => fetch(`/api/data`)) — runs during SSR"
-      client: "createResource(() => fetch(`/api/data`)) — skips fetch if server data available"
+### Signal-Based Local State
+
+```tsx
+const [isOpen, setIsOpen] = createSignal(false)
+const [selectedTab, setSelectedTab] = createSignal('info')
 ```
 
-## State Management Decision Guide
+### Store-Based Complex State
 
-```yaml
-state_management:
-  component_local_state:
-    tool: "createSignal, createStore"
-    use_case: "Form inputs, toggle state, local UI state"
-    example: "const [name, setName] = createSignal('')"
-    
-  shared_state_without_server:
-    tool: "createContext + createSignal/createStore"
-    use_case: "Theme, user preferences, app-wide settings"
-    pattern: "Provider pattern — wrap app in context provider, consume with useContext"
-    
-  server_cache_state:
-    tool: "createResource + createMutation (optional)"
-    use_case: "API data that needs caching, refetching, optimistic updates"
-    libraries: "TanStack Solid Query (if using Solid 1.8+) or custom createResource wrapper"
-    features: ["Caching", "Background refetch", "Optimistic updates", "Pagination"]
-    
-  complex_shared_state:
-    tool: "createStore with actions/reducers pattern"
-    use_case: "Complex state with multiple consumers, undo/redo, middleware"
-    libraries: "Zustand (via zustand-solid), or manual store with createStore + signals"
-    trade_off: "More boilerplate but predictable state updates"
-    
-  global_state_with_persistence:
-    tool: "signal + localStorage/sessionStorage sync"
-    pattern: "Create signal, subscribe to changes, persist to storage on write, hydrate on load"
-    example: "const [theme, setTheme] = createSignal(localStorage.getItem('theme') || 'light')"
+```tsx
+const [filters, setFilters] = createStore({
+  search: '',
+  category: null as string | null,
+  priceRange: { min: 0, max: 1000 },
+  sortBy: 'date' as 'date' | 'price' | 'name',
+})
+setFilters('search', 'widget')
+setFilters('priceRange', 'max', 500)
 ```
 
-## Testing Patterns
+### Resource-Based Server State
 
-```yaml
-solidjs_testing:
-  unit_tests:
-    framework: "Vitest — native ESM, fast, compatible with SolidJS"
-    testing_library: "solid-testing-library — render, screen, fireEvent"
-    patterns:
-      signal_testing:
-        - "Create signals directly, test derived values with computed"
-        - "Test resource fetchers by mocking fetch/axios"
-      component_testing:
-        - "Render component with solid-testing-library"
-        - "Test user interactions with fireEvent"
-        - "Assert on rendered output with screen queries"
-        
-  integration_tests:
-    approach: "Test component compositions — parent + child interactions"
-    mock: "Mock API layer at network level (MSW — Mock Service Worker)"
-    coverage: "Test key user flows, not every component in isolation"
-    
-  e2e_tests:
-    tool: "Playwright — cross-browser, mobile emulation"
-    focus: "Critical user journeys (signup, purchase, search results)"
+```tsx
+const [data, { mutate, refetch }] = createResource(source, fetcher)
+mutate(optimisticData)  // update locally without refetch
+refetch()               // force server re-fetch
 ```
+
+### Context-Based Shared State
+
+```tsx
+const AppContext = createContext<{ theme: () => string; user: () => User | null }>()
+// Provider wraps app, consumer uses useContext(AppContext)
+```
+
+## Performance Optimization
+
+### Granular Reactivity
+SolidJS updates only the DOM nodes that depend on changed signals. A list with 10,000 items updating one item updates exactly one DOM text node — not the list, not the parent.
+
+### createMemo Caching
+Memos only recompute when their dependencies change. Use `createMemo` for expensive computations:
+
+```tsx
+const processed = createMemo(() => heavyComputation(items()))
+```
+
+### Avoiding Unnecessary Tracking
+Use `untrack` to read a signal without creating a dependency:
+
+```tsx
+createEffect(() => {
+  console.log(untrack(() => count())) // logs but doesn't subscribe
+})
+```
+
+### Lazy Loading Routes
+```tsx
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+// Dashboard code only loads when navigated to
+```
+
+### Batch Updates
+SolidJS batches updates automatically within event handlers and effects. No manual batching needed.
+
+## Build & Bundle Considerations
+
+### Production Build
+```bash
+npm run build
+# Output in dist/assets/ — JS chunks, CSS, HTML
+```
+
+### Bundle Analysis
+```bash
+npx vite build --analyze
+# or add rollup-plugin-visualizer to vite.config.ts
+```
+
+### Tree Shaking
+- SolidJS runtime treeshakes unused reactive primitives
+- Use named imports from solid-js (import { createSignal } not import * as Solid)
+- Unused components in lazy imports are not included
+
+### TypeScript Config
+```json
+{
+  "compilerOptions": {
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "target": "ESNext",
+    "module": "ESNext"
+  }
+}
+```
+
+## Testing Strategies
+
+### Unit Tests for Signals
+
+```tsx
+import { createSignal, createMemo, createEffect } from 'solid-js'
+import { describe, it, expect } from 'vitest'
+
+describe('signal logic', () => {
+  it('computed values update correctly', () => {
+    const [count, setCount] = createSignal(0)
+    const doubled = createMemo(() => count() * 2)
+    expect(doubled()).toBe(0)
+    setCount(3)
+    expect(doubled()).toBe(6)
+  })
+})
+```
+
+### Component Tests
+
+```tsx
+import { render, screen, fireEvent } from 'solid-testing-library'
+import { describe, it, expect } from 'vitest'
+import Counter from './Counter'
+
+describe('Counter', () => {
+  it('renders and increments', () => {
+    render(() => <Counter />)
+    const button = screen.getByRole('button')
+    expect(button).toHaveTextContent('0')
+    fireEvent.click(button)
+    expect(button).toHaveTextContent('1')
+  })
+})
+```
+
+### E2E Tests
+
+```tsx
+import { test, expect } from '@playwright/test'
+
+test('search flow', async ({ page }) => {
+  await page.goto('/products')
+  await page.fill('[placeholder="Search..."]', 'widget')
+  await page.waitForResponse(/api\/search/)
+  await expect(page.locator('.product-card')).toHaveCount(3)
+})
+```
+
+### Integration Tests with MSW
+
+```tsx
+import { server } from '../mocks/server'
+import { render, screen } from 'solid-testing-library'
+import ProductList from './ProductList'
+
+beforeAll(() => server.listen())
+afterEach(() => server.resetHandlers())
+afterAll(() => server.close())
+
+test('shows products from API', async () => {
+  render(() => <ProductList />)
+  await screen.findByText('Widget')
+  expect(screen.getByText('$10')).toBeDefined()
+})
+```
+
+## Migration Patterns
+
+### React to SolidJS
+
+```tsx
+// React useState + useEffect + useMemo
+const [user, setUser] = useState(null)
+const [posts, setPosts] = useState([])
+useEffect(() => { fetchUser(id).then(setUser) }, [id])
+useEffect(() => { if (user) fetchPosts(user.id).then(setPosts) }, [user])
+const displayName = useMemo(() => user?.name.toUpperCase(), [user])
+
+// SolidJS
+const [user] = createResource(() => id, fetchUser)
+const [posts] = createResource(user, (u) => u ? fetchPosts(u.id) : [])
+const displayName = createMemo(() => user()?.name.toUpperCase())
+```
+
+### Vue Options API to SolidJS
+
+```tsx
+// Vue: data() + computed + watch
+export default {
+  data: () => ({ count: 0 }),
+  computed: { doubled: () => this.count * 2 },
+  watch: { count(val) { console.log(val) } },
+}
+
+// Solid: createSignal + createMemo + createEffect
+const [count, setCount] = createSignal(0)
+const doubled = createMemo(() => count() * 2)
+createEffect(() => console.log(count()))
+```
+
+### Svelte to SolidJS
+
+```svelte
+// Svelte
+let count = $state(0)
+let doubled = $derived(count * 2)
+$effect(() => console.log(count))
+```
+
+```tsx
+// Solid
+const [count, setCount] = createSignal(0)
+const doubled = createMemo(() => count() * 2)
+createEffect(() => console.log(count()))
+```
+
+## Anti-Patterns
+
+### Using createEffect for Data Fetching
+
+```tsx
+// Anti-pattern
+createEffect(async () => {
+  const data = await fetch(`/api/users/${id()}`).then(r => r.json())
+  setUsers(data)
+})
+
+// Correct
+const [users] = createResource(() => id(), fetchUsers)
+```
+
+### Mutating createStore Directly
+
+```tsx
+// Anti-pattern: direct mutation on store ref
+const state = createStore({ count: 0 }) // returns [state, setState]
+state.count = 5 // doesn't trigger update
+
+// Correct
+const [state, setState] = createStore({ count: 0 })
+setState('count', 5)
+```
+
+### Overusing createEffect
+
+```tsx
+// Anti-pattern: effect for derived display logic
+createEffect(() => {
+  document.title = `Count: ${count()}`
+})
+// If this is the only thing that needs count, it's fine.
+// But consider: can you inline the expression?
+```
+
+### Conditional Signal Creation
+
+Components run once — signals at top level only.
+
+### Not Providing Error Boundaries
+
+Resources can throw. Wrap resource consumers in ErrorBoundary for production robustness.
+
+## Common Pitfalls
+
+1. **Destructuring signals** — always call `count()` not `count`
+2. **createEffect for computation** — use createMemo
+3. **Conditional createSignal** — top level only
+4. **Missing onCleanup** — always clean up subscriptions
+5. **createStore for single values** — use createSignal
+6. **Not using Suspense** — resources need Suspense boundaries
+7. **Mutating createStore directly** — use setState path syntax
+8. **Forgetting ErrorBoundary** — resources can throw
+
+## Best Practices
+
+1. `createSignal` for primitives, `createStore` for objects
+2. `createResource` for all async data — never fetch in effects
+3. `createMemo` for derived values — never createEffect
+4. Always onCleanup in effects with subscriptions
+5. Signals at top level only — never conditional
+6. Use `untrack()` to read without subscribing
+7. Prefer path syntax for createStore updates
+8. Wrap resource consumers in Suspense + ErrorBoundary
+
+## Compared With
+
+| Aspect | SolidJS | React | Vue |
+|--------|---------|-------|-----|
+| Reactivity | Fine-grained signals | VDOM diff | Proxy-based |
+| Component | Once, not re-run | Every render | Once (setup), re-run (template) |
+| Async | createResource | TanStack Query | useAsyncData |
+| Forms | Manual signals | React Hook Form | v-model |
+| Bundle | ~8KB | ~45KB | ~30KB |
+| SSR | SolidStart | Next.js | Nuxt |
+
+## Tooling
+
+1. `npm run dev` — HMR dev server
+2. `npm run build` — production build
+3. `npx solid-devtools` — CLI reactivity inspector
+4. Solid DevTools browser extension
+5. `npm create solid` — project scaffolding
 
 ## Rules
 - createResource for all async data — never fetch in effects.

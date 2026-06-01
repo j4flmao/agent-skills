@@ -1,13 +1,7 @@
 ---
-name: changelog-generator
+name: dev-loop-changelog-generator
 description: >
-  Use this skill when the user says 'generate changelog', 'CHANGELOG', 'release
-  notes', 'what changed in this release', 'commit history to changelog', or wants
-  to produce a changelog from git history. Covers: extracting commits via git log,
-  grouping by conventional commit type, formatting per Keep a Changelog spec, and
-  appending to CHANGELOG.md. Works with any project using conventional commits.
-  Do NOT use this for: writing commit messages, generating PR descriptions, or
-  README documentation.
+  Use when the user asks about generating changelogs, release notes, conventional commits to changelogs, automated release notes, or CHANGELOG.md management. Do NOT use for: git commit messages (dev-loop-git-workflow), or code review (dev-loop-code-review).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -16,268 +10,367 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [dev-loop, documentation, phase-4]
+tags: [dev-loop, changelog, release-notes, conventional-commits]
 ---
 
 # Changelog Generator
 
 ## Purpose
-Generate a well-structured CHANGELOG.md from git commit history following the Keep a Changelog format.
+Generate structured, human-readable changelogs and release notes from conventional commit history, GitHub release data, or JIRA release versions. Automated changelogs reduce manual release effort, enforce consistent formatting, and provide clear communication to users and stakeholders.
 
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "generate changelog", "CHANGELOG", "release notes", "what changed in this release", "commit history to changelog".
+Exact user phrases: "generate changelog", "release notes", "conventional changelog", "CHANGELOG.md", "auto-changelog", "git-cliff", "standard-version", "release-please", "semantic-release", "generate release notes".
 
 ### Input Context
-Before activating, verify:
-- The git history range is known (from tag, date, or commit range).
-- The project uses conventional commits (or manual summarization is needed).
+- Commit message convention (Conventional Commits, Angular convention, custom)
+- Output format (Keep a Changelog, custom Markdown, GitHub release, Slack message)
+- Tool preference (git-cliff, standard-version, release-please, semantic-release, auto-changelog)
+- Source of truth (git log, GitHub releases, JIRA)
+- Release cadence (continuous delivery, scheduled releases, hotfixes)
+- Versioning strategy (semver, calver, date-based, custom)
+- Monorepo structure (single changelog vs per-package)
 
 ### Output Artifact
-Appends to `CHANGELOG.md` in Keep a Changelog format.
-
-### Response Format
-Append to `CHANGELOG.md` in Keep a Changelog format.
-
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick. No explanation of Keep a Changelog format.
+Generated CHANGELOG.md or release notes document with categorized, versioned entries.
 
 ### Completion Criteria
-This skill is complete when:
-- [ ] Commits are collected from the specified range.
-- [ ] Commits are grouped by type (Added, Fixed, Changed, BREAKING).
-- [ ] Entries are sorted by importance within each section.
-- [ ] BREAKING CHANGES are at the top with migration notes.
-- [ ] PR/issue numbers are included for traceability.
+- [ ] Tool selected and configured
+- [ ] Conventional commit convention established
+- [ ] Parsing rules defined (commit scopes, types, breaking changes)
+- [ ] Changelog generated for current version
+- [ ] Unreleased section included for upcoming changes
+- [ ] Breaking changes highlighted prominently
+- [ ] Links to commits, issues, PRs included
+- [ ] Per-package changelogs (if monorepo)
+- [ ] CI automated generation configured
+- [ ] Version bump integrated with changelog
 
 ### Max Response Length
-Direct append to file. No response text.
+200 lines.
 
-## Architecture
+## Framework/Methodology
 
-### Changelog Generation Pipeline
+### Changelog Tool Decision Tree
 ```
-Git History ──> Commit Parsing ──> Classification ──> Grouping ──> Formatting ──> Output
-                                                                                    
-git log           Parse          Conventional       Section       Keep a          Append to
---format="%s"     scope, type,   commit type        assignment     Changelog       CHANGELOG.md
-                  breaking       → Added/Fixed/     Sort by        template with
-                  indicator      Changed/BREAKING   importance     version header
-```
-
-### Decision Tree: Commit Classification
-```
-What is the conventional commit type?
-├── feat → Added section
-│   ├── BREAKING CHANGE footer → BREAKING CHANGES section (top)
-│   └── No breaking change → Added section
-├── fix → Fixed section
-│   ├── BREAKING CHANGE footer → BREAKING CHANGES section (top)
-│   └── No breaking change → Fixed section
-├── refactor or perf → Changed section
-├── docs → Changed section (only if user-facing; omit internal docs changes)
-├── test or chore or style → Omit from changelog
-│   └── Unless it's a notable infrastructure change → note under Changed
-└── No conventional commit prefix
-    → Manual summarization needed — group by theme
+What is the project setup?
+├── Single package, standard git → git-cliff
+│   Configurable, TOML config, conventional commits
+├── Monorepo (lerna, nx, turborepo) → release-please
+│   Per-package changelogs, GitHub releases, PR-based
+├── npm package, simple → standard-version
+│   npm-aware, version bump + changelog + tag
+├── Full CI/CD pipeline → semantic-release
+│   Automated release from CI, npm/GitHub/GCR publish
+└── Custom needs → custom script with conventional-changelog
+    Flexible, integrate with any workflow
 ```
 
-## Quick Start
-Get commits since last release with `git log`. Group by conventional commit type. Format per Keep a Changelog. Append to CHANGELOG.md.
+### Conventional Commit Format
+```
+<type>(<scope>): <description>
 
-## When to Use This Skill
-- Preparing a release
-- User asks to generate changelog
-- Creating release notes
-- Updating project documentation before release
+[optional body]
 
-## Core Workflow
+[optional footer(s)]
+```
 
-### Step 1: Get Commits
+Types:
+- **feat**: A new feature (triggers minor version bump)
+- **fix**: A bug fix (triggers patch version bump)
+- **docs**: Documentation only changes
+- **style**: Code style changes (formatting, missing semicolons)
+- **refactor**: Code refactoring (neither fix nor feature)
+- **perf**: Performance improvement
+- **test**: Adding or correcting tests
+- **chore**: Maintenance, build, dependencies
+- **ci**: CI/CD configuration changes
+- **build**: Build system changes
+
+Breaking changes: Append `!` after type/scope or add `BREAKING CHANGE:` in footer (triggers major version bump).
+
+## Workflow
+
+### Step 1: Configure git-cliff
+
+```toml
+# cliff.toml
+[remote.github]
+owner = "myorg"
+repo = "myapp"
+
+[changelog]
+header = "# Changelog\n\nAll notable changes to this project will be documented in this file.\n"
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}
+  ### {{ group | upper_first }}
+  {% for commit in commits %}
+    - {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.message | upper_first }}
+      {% if commit.breaking %}[**breaking**]{% endif %}
+  {% endfor %}
+{% endfor %}
+"""
+trim = true
+postprocess = """
+sed -i 's/- \[**breaking**\]/⚠️ **BREAKING CHANGE:**/' CHANGELOG.md
+"""
+
+[git]
+conventional_commits = true
+commit_preprocessors = [
+  { pattern = "\\(#(\\d+)\\)", replace = "([#${1}](https://github.com/myorg/myapp/pull/${1}))" },
+]
+
+# Group definitions
+[[git.parsers]]
+message = "^feat"
+group = "Features"
+
+[[git.parsers]]
+message = "^fix"
+group = "Bug Fixes"
+
+[[git.parsers]]
+message = "^perf"
+group = "Performance"
+
+[[git.parsers]]
+message = "^refactor"
+group = "Refactoring"
+
+[[git.parsers]]
+message = "^docs"
+group = "Documentation"
+
+[[git.parsers]]
+message = "^test"
+group = "Tests"
+
+[[git.parsers]]
+message = ".*"
+group = "Other"
+```
+
+### Step 2: Generate Changelog
+
 ```bash
-# From last tag
-git log --oneline {last-tag}..HEAD
+# git-cliff: generate from last tag to HEAD
+git cliff -o CHANGELOG.md
 
-# From a specific date
-git log --oneline --since="2026-01-01"
+# Generate for specific tag range
+git cliff --tag 1.0.0..HEAD -o CHANGELOG.md
 
-# With conventional commit parsing
-git log --format="%s%n%b" {from}..{to}
+# Preview unreleased changes
+git cliff --unreleased -o CHANGELOG.md
+
+# Unreleased with specific date
+git cliff --unreleased --date-strategy "current"
 ```
 
-### Step 2: Group by Type
-| Type | Changelog Section |
-|------|-------------------|
-| `feat` | **Added** |
-| `fix` | **Fixed** |
-| `refactor` | **Changed** |
-| `perf` | **Changed** |
-| `docs` | — (omit, or include under Changed) |
-| `test` | — (omit) |
-| `chore` | — (omit) |
-| `style` | — (omit) |
-| `BREAKING CHANGE` | **BREAKING** (always at top) |
+### Step 3: Manual Changelog Structure (Keep a Changelog)
 
-### Step 3: Sort by Importance Within Sections
-Within each section, entries should be sorted by user impact, not chronologically:
-1. User-facing changes first (features, bug fixes visible to end users)
-2. API changes next (endpoint modifications, contract changes)
-3. Developer experience changes last (build tooling, CI improvements)
-Breaking changes at the top of the file with migration notes in a separate subsection.
-
-### Step 4: Format per Keep a Changelog
 ```markdown
 # Changelog
 
-## [1.2.0] - 2026-05-14
+All notable changes to this project will be documented in this file.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
 
 ### Added
-- feat(auth): add refresh token rotation (#123)
-- feat(api): add bulk user import endpoint (#124)
-
-### Fixed
-- fix(api): handle null user in /me endpoint (#121)
-- fix(db): correct index name in migration V4 (#119)
+- New feature description ([#42](https://github.com/org/repo/pull/42))
 
 ### Changed
-- refactor(payment): extract payment service from order module (#118)
-- perf(api): optimize user list query with eager loading (#120)
+- Updated dependency from v1 to v2
 
-### BREAKING
-- feat(api): change response envelope format (#122)
-  Migration: Update client parsers from `{data}` to `{results}`.
+### Fixed
+- Bug fix description ([#41](https://github.com/org/repo/pull/41))
+
+## [2.0.0] - 2026-05-15
+
+### ⚠️ BREAKING CHANGES
+- Removed deprecated `/old-endpoint` API. Use `/new-endpoint` instead.
+- Minimum Node.js version raised to 18.
+
+### Added
+- New dashboard component with real-time updates
+- Dark mode support for all pages
+
+### Fixed
+- Memory leak in websocket connection
+- Incorrect sorting in data table
+
+[2.0.0]: https://github.com/org/repo/releases/tag/v2.0.0
 ```
 
-### Step 5: Append to CHANGELOG.md
-Insert the new version section at the top of the file, under `# Changelog`. Keep the file in reverse chronological order so the latest release is always at the top. Validate the file renders correctly in the repository's markdown viewer.
+### Step 4: CI Automation
 
-### Step 6: Link to Compare URLs
-For each release, add a comparison link at the bottom of the file: `[1.2.0]: https://github.com/owner/repo/compare/v1.1.0...v1.2.0`. This makes navigation between releases easy in the rendered markdown. Maintain a reference list of all version links at the bottom of the file.
+```yaml
+# .github/workflows/release.yml
+name: Release
+on:
+  push:
+    branches: [main]
 
-### Step 7: Unreleased Section
-Maintain an `[Unreleased]` section at the top of the changelog that accumulates changes between releases. When cutting a new release, rename `[Unreleased]` to the new version number and create a fresh `[Unreleased]` section. This pattern keeps the changelog always up-to-date rather than requiring a bulk generation at release time.
+permissions:
+  contents: write
+  pull-requests: write
 
-## Models
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-### Changelog Format Template
+      - name: Generate changelog
+        uses: orhun/git-cliff-action@v3
+        with:
+          config: cliff.toml
+          args: --latest --output CHANGELOG.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: CHANGELOG.md
+          generate_release_notes: true
+```
+
+### Step 5: Monorepo Changelogs with release-please
+
+```yaml
+# .github/workflows/release-please.yml
+name: Release Please
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: node
+          monorepo-tags: true
+          packages:
+            packages/core: {}
+            packages/cli: {}
+            packages/ui: {}
+```
+
+### Step 6: Changelog with Custom Sections
+
+```typescript
+// scripts/generate-changelog.ts
+import conventionalChangelog from 'conventional-changelog';
+import { writeFileSync } from 'fs';
+
+const config: conventionalChangelog.Options = {
+  preset: {
+    name: 'conventionalcommits',
+    types: [
+      { type: 'feat', section: '🚀 Features' },
+      { type: 'fix', section: '🐛 Bug Fixes' },
+      { type: 'perf', section: '⚡ Performance' },
+      { type: 'refactor', section: '♻️ Refactoring' },
+      { type: 'docs', section: '📚 Documentation' },
+      { type: 'test', section: '✅ Tests' },
+      { type: 'chore', section: '🔧 Chores' },
+      { type: 'ci', section: '👷 CI/CD' },
+    ],
+  },
+  releaseCount: 10,
+  outputUnreleased: true,
+  lernaPackage: null,
+};
+
+conventionalChangelog(config)
+  .pipe(process.stdout)
+  .on('data', (chunk: Buffer) => {
+    writeFileSync('CHANGELOG.md', chunk.toString());
+  });
+```
+
+## Common Pitfalls
+
+| Pitfall | Description | Prevention |
+|---------|-------------|------------|
+| Non-conventional commits | Commits that don't match patterns are skipped | Enforce commitlint in CI, educate team |
+| No version tags | Tool can't find previous release to diff from | Always tag releases with v-prefix semver |
+| Monorepo tag collision | Multiple packages creating same tag | Use package-scoped tags: pkg@1.0.0 |
+| Breaking changes buried | Users miss critical upgrade info | BREAKING CHANGE: in commit footer always |
+| Changelog in wrong format | Doesn't follow Keep a Changelog | Validate with changelog-lint |
+| Generated file committed stale | Outdated if generated manually | CI enforces fresh generation on release |
+| Ignoring dependencies | Dependency updates need visibility | Group dep updates in "Dependencies" section |
+| No unreleased section | Changes between releases are invisible | Always keep Unreleased section up to date |
+
+## Best Practices
+
+| Practice | Rationale |
+|----------|-----------|
+| Follow Conventional Commits | Automated tooling can parse reliably |
+| Keep a Changelog format | Industry standard, human-parseable |
+| Always include Unreleased section | Transparency, makes release prep trivial |
+| Highlight breaking changes prominently | Users need to know before upgrading |
+| Link to PRs/issues | Traceability from changelog to source |
+| Group by type | Users scan for "Features" or "Bug Fixes" |
+| Generate at release time, not per-commit | One consistent document per version |
+| Pin tool version | Avoid unexpected formatting changes |
+| Include migration notes for breaking changes | Reduced support burden |
+| Automate in CI | Manual changelogs get skipped or stale |
+| Validate commit messages with commitlint | Catch non-conventional commits before merge |
+
+## Templates
+
+### Keep a Changelog Template
 ```markdown
 # Changelog
 
 ## [Unreleased]
 
 ### Added
-- (new features go here)
-
-### Fixed
-- (bug fixes go here)
-
 ### Changed
-- (refactors, performance, dependency updates)
-
-### BREAKING
-- (breaking changes with migration notes)
-
-## [1.2.0] - 2026-05-14
-
-### Added
-- ...
-
+### Deprecated
+### Removed
 ### Fixed
-- ...
+### Security
 
-[Unreleased]: https://github.com/owner/repo/compare/v1.2.0...HEAD
-[1.2.0]: https://github.com/owner/repo/compare/v1.1.0...v1.2.0
+## [MAJOR.MINOR.PATCH] - YYYY-MM-DD
+
+[MAJOR.MINOR.PATCH]: https://github.com/org/repo/releases/tag/vMAJOR.MINOR.PATCH
 ```
 
-### Conventional Commit to Changelog Section Mapping
+### Release Notes Template (PR-based)
+```markdown
+## v1.2.0 (June 1, 2026)
+
+### Highlights
+- [Summary of major changes this release]
+
+### New Features
+- #143: Add dark mode support
+- #142: Export data as CSV
+
+### Bug Fixes
+- #140: Fix memory leak in WebSocket connection
+- #139: Correct sort order in data table
+
+### Breaking Changes
+- #141: Remove deprecated v1 API endpoints (migration guide: [link])
+
+### Contributors
+- @user1, @user2
 ```
-feat:        → Added         (new feature)
-feat!:       → BREAKING      (breaking feature)
-fix:         → Fixed         (bug fix)
-fix!:        → BREAKING      (breaking fix)
-refactor:    → Changed       (code restructure)
-perf:        → Changed       (performance improvement)
-docs:        → Changed       (documentation, if notable)
-style:       → omitted       (formatting only)
-test:        → omitted       (test changes)
-chore:       → omitted       (tooling, CI, deps)
-ci:          → Changed       (CI/CD changes, if notable)
-build:       → Changed       (build system changes, if notable)
-revert:      → Fixed         (reverting a previous change)
-```
-
-## Rules & Constraints
-- Only include meaningful entries — skip chore, test, style commits
-- Sort entries within each section by importance (not chronologically)
-- Format: `- {type}({scope}): {description} (#{PR/issue number})`
-- BREAKING CHANGES always at the top, with migration notes
-- If the project doesn't use conventional commits, summarize changes manually
-- Include PR/issue references for traceability
-- Every release must have a date in ISO 8601 format (YYYY-MM-DD)
-- Unreleased section must be maintained incrementally — not generated from scratch at release
-- Compare URLs must be maintained at the bottom of the file for every version
-- Entries should use imperative mood and present tense: "Add login endpoint" not "Added login endpoint"
-- Group related entries under a common scope: multiple `feat(auth)` commits can be combined: `- feat(auth): add login, logout, and password reset`
-- Security-related changes should be in their own `### Security` section for high-severity fixes
-
-## Common Pitfalls
-
-- **Chronological sorting within sections**: Entries sorted by commit date obscure the most important changes. Always sort by user impact and importance.
-- **No migration notes for breaking changes**: Breaking changes without migration guidance leave downstream consumers stuck. Always include migration instructions.
-- **Merge commits in the log**: `git log` includes merge commits by default. Use `--no-merges` flag to exclude them from the source extraction.
-- **Missing compare links**: Without compare URLs, readers cannot navigate between releases. Maintain the link reference list at the bottom.
-- **Inconsistent date format**: Mixing date formats (May 14 2026 vs 2026-05-14 vs 14/05/2026) breaks automated tooling. Always use ISO 8601.
-- **Over-aggregating entries**: Combining too many changes into one entry loses detail. Each logical change should have its own entry.
-- **Unreleased section drift**: If the unreleased section is not maintained during development, it requires a painful bulk recovery at release time.
-- **Ignoring revert commits**: A revert of a previous feature is a notable change and should appear in the changelog, not be silently omitted.
-
-## Compared With
-
-| Tool | Input | Format | Automation Level |
-|------|-------|--------|-----------------|
-| git-cliff | Git log + config | Keep a Changelog, custom | Full CI automation |
-| standard-version | Conventional commits | Keep a Changelog | Version bump + changelog |
-| semantic-release | Conventional commits | Keep a Changelog | Full release pipeline |
-| release-please | Conventional commits | Keep a Changelog | Google Cloud release automation |
-| changelog-generator (manual) | Git log + manual edits | Keep a Changelog | Semi-automated |
-| Auto (intuit) | Conventional commits | Keep a Changelog | CI-integrated |
-| Conventional Changelog | Git log + conventional | Keep a Changelog | CLI-based generation |
-
-## Performance
-
-- Git log extraction: `git log --format="%s%n%b"` for 1000 commits completes in <500ms
-- Commit parsing: 500 conventional commit messages parsed and classified in ~200ms
-- Full changelog generation: from git log to formatted markdown, for a release with 50 commits, completes in <2 seconds
-- File appending: adding a new version section to CHANGELOG.md is a constant-time operation
-- CI integration: changelog generation adds <5 seconds to a CI pipeline for typical repositories
-- Repository size impact: CHANGELOG.md files typically grow at 5-15KB per major release, remaining negligible compared to code size
-
-## Tooling
-
-| Tool | Category | Use Case |
-|------|----------|----------|
-| git-cliff | Changelog generation | Configurable, template-based generation |
-| conventional-changelog-cli | Changelog generation | Standard conventional commit format |
-| semantic-release | Release automation | Full release pipeline including changelog |
-| standard-version | Version management | Version bump + changelog generation |
-| release-please | PR-based releases | Automated release PRs with changelog |
-| git log | History extraction | Raw commit extraction for parsing |
-| jq / sed / awk | Text processing | Post-processing formatting adjustments |
-| markdownlint | Format validation | Validate changelog markdown correctness |
-
-## Output Format
-Append to `CHANGELOG.md` in Keep a Changelog format.
 
 ## References
-  - references/auto-changelog-tools.md — Automatic Changelog Tools
-  - references/changelog-format.md — Changelog Format Reference
   - references/changelog-generator-advanced.md — Changelog Generator Advanced Topics
   - references/changelog-generator-fundamentals.md — Changelog Generator Fundamentals
-  - references/conventional-commits-guide.md — Conventional Commits Guide
-  - references/git-log-parsing.md — Git Log Parsing Reference
-  - references/changelog-formatting-templates.md — Changelog Formatting and Templates
-  - references/changelog-automation-ci.md — Changelog Automation and CI Integration
+  - references/conventional-commits.md — Conventional Commits Reference
+  - references/release-workflow.md — Release Workflow Reference
 ## Handoff
-After completing this skill:
-- Next skill: **readme-writer** — if the release needs updated project documentation
-- Pass context: changelog entries, version number, release date
+Hand off to `dev-loop-git-workflow` for version tagging strategy. Hand off to `dev-loop-code-review` for PR-based changelog entries.

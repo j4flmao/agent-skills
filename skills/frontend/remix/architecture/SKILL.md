@@ -91,6 +91,533 @@ Does the loader need server-only data (DB, secrets)?
        └── No -> Server loader
 ```
 
+### Decision Tree: Session Strategy
+
+```
+How should user sessions persist?
+  ├── Cookie-only (small payload) -> createCookieSessionStorage
+  ├── Server-side DB (large payload) -> createSessionStorage with DB
+  └── Signed cookies (medium payload) -> createCookie + session
+```
+
+### Decision Tree: Deployment Target
+
+```
+Which runtime?
+  ├── Node.js (Fly, Railway, DIY) -> @remix-run/node + @remix-run/serve
+  ├── Cloudflare Workers -> @remix-run/cloudflare
+  ├── Vercel Edge -> @remix-run/vercel preset
+  ├── Netlify Edge -> @remix-run/netlify
+  └── Deno -> @remix-run/deno
+```
+
+### Decision Tree: Error Handling Strategy
+
+```
+What type of error?
+  ├── Expected (404, 403, 400) -> throw new Response(status) + ErrorBoundary
+  ├── Unexpected (crash, network) -> ErrorBoundary per route + root fallback
+  └── Validation error -> return json({ errors }, { status: 400 }) + useActionData
+```
+
+## Component Design Patterns
+
+### Layout Route with Outlet
+
+```tsx
+// app/routes/dashboard.tsx
+import { Outlet, useLoaderData } from '@remix-run/react'
+import { json } from '@remix-run/node'
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const user = await getSessionUser(request)
+  if (!user) throw new Response('Unauthorized', { status: 401 })
+  return json({ user })
+}
+
+export default function DashboardLayout() {
+  const { user } = useLoaderData<typeof loader>()
+  return (
+    <div>
+      <nav><span>{user.name}</span><a href="/logout">Logout</a></nav>
+      <main><Outlet /></main>
+    </div>
+  )
+}
+```
+
+### Data-Fetching Route with defer
+
+```tsx
+// app/routes/products.$id.tsx
+import { json, defer } from '@remix-run/node'
+import { Await, useLoaderData } from '@remix-run/react'
+import { Suspense } from 'react'
+
+export async function loader({ params }: LoaderFunctionArgs) {
+  const product = await db.product.findUnique({ where: { id: params.id } })
+  if (!product) throw new Response('Not Found', { status: 404 })
+  const reviews = db.review.findMany({ where: { productId: params.id } })
+  return defer({ product, reviews })
+}
+
+export default function ProductPage() {
+  const { product, reviews } = useLoaderData<typeof loader>()
+  return (
+    <div>
+      <h1>{product.name}</h1>
+      <Suspense fallback={<div>Loading reviews...</div>}>
+        <Await resolve={reviews}>{(reviews) => <ReviewList reviews={reviews} />}</Await>
+      </Suspense>
+    </div>
+  )
+}
+```
+
+### Form with Validation
+
+```tsx
+// app/routes/settings.tsx
+import { Form, useActionData, useNavigation } from '@remix-run/react'
+import { json, redirect } from '@remix-run/node'
+import { z } from 'zod'
+
+const schema = z.object({ name: z.string().min(2), email: z.string().email() })
+
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = Object.fromEntries(await request.formData())
+  const result = schema.safeParse(formData)
+  if (!result.success) return json({ errors: result.error.flatten().fieldErrors }, { status: 400 })
+  await db.user.update({ where: { email: result.data.email }, data: result.data })
+  return redirect('/settings')
+}
+
+export default function Settings() {
+  const actionData = useActionData<typeof action>()
+  const navigation = useNavigation()
+  return (
+    <Form method="post">
+      <input name="name" aria-invalid={actionData?.errors?.name} />
+      {actionData?.errors?.name && <span>{actionData.errors.name}</span>}
+      <input name="email" aria-invalid={actionData?.errors?.email} />
+      <button type="submit" disabled={navigation.state === 'submitting'}>
+        {navigation.state === 'submitting' ? 'Saving...' : 'Save'}
+      </button>
+    </Form>
+  )
+}
+```
+
+### Resource Route (API Endpoint)
+
+```tsx
+// app/routes/api.products.tsx
+import { json } from '@remix-run/node'
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const url = new URL(request.url)
+  const category = url.searchParams.get('category')
+  const products = await db.product.findMany({
+    where: category ? { category } : undefined,
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  })
+  return json(products, {
+    headers: { 'Cache-Control': 'public, max-age=60' },
+  })
+}
+
+export async function action({ request }: ActionFunctionArgs) {
+  const product = await request.json()
+  const created = await db.product.create({ data: product })
+  return json(created, { status: 201 })
+}
+```
+
+### Optimistic UI with useFetcher
+
+```tsx
+// app/routes/products.$id.tsx
+import { useFetcher } from '@remix-run/react'
+
+function LikeButton({ productId, liked }: { productId: string; liked: boolean }) {
+  const fetcher = useFetcher()
+  const optimisticLiked = fetcher.formData?.get('liked') === 'true'
+  return (
+    <fetcher.Form method="post" action={`/api/products/${productId}/like`}>
+      <input type="hidden" name="liked" value={String(!optimisticLiked)} />
+      <button type="submit">{optimisticLiked ? 'Unlike' : 'Like'}</button>
+    </fetcher.Form>
+  )
+}
+```
+
+## State Management Patterns
+
+### Server State via Loaders (Primary Pattern)
+
+Remix's core philosophy: data in loaders, mutations in actions. No client-side cache needed for most data:
+
+```tsx
+export async function loader({ request }: LoaderFunctionArgs) {
+  const user = await getSessionUser(request)
+  const [posts, notifications] = await Promise.all([
+    db.post.findMany({ where: { authorId: user.id } }),
+    db.notification.findMany({ where: { userId: user.id, read: false } }),
+  ])
+  return json({ user, posts, notifications })
+}
+```
+
+### Session State via Cookies
+
+```tsx
+import { createCookieSessionStorage } from '@remix-run/node'
+
+const { getSession, commitSession, destroySession } = createCookieSessionStorage({
+  cookie: {
+    name: '__session',
+    secrets: ['s3cret'],
+    sameSite: 'lax',
+    httpOnly: true,
+    secure: true,
+    maxAge: 604_800, // 1 week
+  },
+})
+
+export async function getAuthSession(request: Request) {
+  const session = await getSession(request.headers.get('Cookie'))
+  return {
+    getUserId: () => session.get('userId'),
+    setUserId: (id: string) => session.set('userId', id),
+    getFlash: () => session.get('flash'),
+    setFlash: (key: string, value: string) => session.flash(key, value),
+    commit: () => commitSession(session),
+    destroy: () => destroySession(session),
+  }
+}
+```
+
+### URL State via Search Params
+
+```tsx
+export async function loader({ request }: LoaderFunctionArgs) {
+  const url = new URL(request.url)
+  const page = Number(url.searchParams.get('page')) || 1
+  const sort = url.searchParams.get('sort') || 'date'
+  const search = url.searchParams.get('q') || ''
+
+  const [products, total] = await Promise.all([
+    db.product.findMany({
+      skip: (page - 1) * 20,
+      take: 20,
+      orderBy: sort === 'price' ? { price: 'asc' } : { createdAt: 'desc' },
+      where: search ? { name: { contains: search } } : undefined,
+    }),
+    db.product.count(),
+  ])
+  return json({ products, total, page, sort, search })
+}
+```
+
+### Form State via useActionData
+
+```tsx
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData()
+  const result = schema.safeParse(Object.fromEntries(formData))
+  if (!result.success) {
+    return json({
+      errors: result.error.flatten().fieldErrors,
+      values: Object.fromEntries(formData),
+    }, { status: 400 })
+  }
+  return redirect('/success')
+}
+```
+
+## Performance Optimization
+
+### Parallel Data Loading
+Remix loads all matched route loaders in parallel. A page with `root.tsx` + `dashboard.layout.tsx` + `dashboard.index.tsx` fires all three loaders simultaneously. Use `Promise.all` inside individual loaders for further parallelization.
+
+### Caching Strategy
+```tsx
+export async function loader({ request }: LoaderFunctionArgs) {
+  return json(data, {
+    headers: { 'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=60' },
+  })
+}
+```
+- `max-age`: Browser cache duration
+- `s-maxage`: CDN cache duration
+- `stale-while-revalidate`: Background refresh window
+- Never cache authenticated routes
+
+### Bundle Size
+- Remix uses code-splitting per route automatically.
+- Server code (loaders, actions) is tree-shaken from client bundles.
+- Route components lazy-load on navigation for faster initial loads.
+
+### Streaming with defer
+```tsx
+export async function loader({ params }: LoaderFunctionArgs) {
+  const product = await db.product.findUnique({ where: { id: params.id } })
+  const reviews = db.review.findMany({ where: { productId: params.id } })
+  return defer({ product, reviews })
+}
+```
+Use `defer` + `<Suspense>` + `<Await>` for non-critical data. This sends the page shell immediately and streams in non-critical content.
+
+### Prefetching
+```tsx
+<Link prefetch="intent" to="/products">Products</Link>   // Prefetch on hover
+<Link prefetch="render" to="/about">About</Link>         // Prefetch when rendered
+<Link prefetch="viewport" to="/contact">Contact</Link>   // Prefetch when in viewport
+```
+
+## Build & Bundle Considerations
+
+### Vite Configuration
+
+```ts
+// vite.config.ts
+import { vitePlugin as remix } from '@remix-run/dev'
+import { defineConfig } from 'vite'
+import tsconfigPaths from 'vite-tsconfig-paths'
+
+export default defineConfig({
+  plugins: [remix(), tsconfigPaths()],
+  build: {
+    target: 'es2022',
+    sourcemap: process.env.SOURCE_MAP === 'true',
+  },
+})
+```
+
+### Build Commands
+```bash
+npm run build    # Production build (output in build/)
+npm run dev      # Dev server with HMR
+npx remix routes # Visualize route hierarchy
+```
+
+### Adapter-Specific Builds
+```ts
+// Cloudflare Pages
+import { cloudflarePages } from '@remix-run/cloudflare-pages'
+
+// Vercel
+import { vercelPreset } from '@remix-run/vercel'
+plugins: [remix({ presets: [vercelPreset()] })]
+
+// Custom Node server
+// build/server/index.js with @remix-run/serve
+```
+
+### Environment Variables
+```tsx
+// Server-side (in loaders/actions)
+process.env.DATABASE_URL
+
+// Client-side (bundled at build time)
+// Remix does not expose env vars to client automatically
+// Use loader to pass env vars: return json({ publicKey: process.env.PUBLIC_KEY })
+```
+
+### CSS Strategy
+- Remix supports CSS Modules, Tailwind, CSS-in-JS, and plain CSS
+- Global styles in `app/root.tsx` via `links` export
+- Route-level styles via `links` export for code-split CSS
+- Use Tailwind with `@tailwind base; @tailwind components; @tailwind utilities` in root CSS
+
+## Testing Strategies
+
+### Unit Testing Loaders
+
+```tsx
+// __tests__/products.loader.test.ts
+import { describe, it, expect } from 'vitest'
+import { loader } from '../app/routes/products._index'
+
+describe('products loader', () => {
+  it('returns paginated products', async () => {
+    const request = new Request('http://localhost/products?page=1&sort=date')
+    const response = await loader({ request, params: {}, context: {} })
+    const data = await response.json()
+    expect(data).toHaveProperty('products')
+    expect(data).toHaveProperty('total')
+  })
+
+  it('filters by search query', async () => {
+    const request = new Request('http://localhost/products?q=widget')
+    const response = await loader({ request, params: {}, context: {} })
+    const data = await response.json()
+    expect(data.products.every((p: any) => p.name.includes('widget'))).toBe(true)
+  })
+})
+```
+
+### Unit Testing Actions
+
+```tsx
+// __tests__/settings.action.test.ts
+import { describe, it, expect } from 'vitest'
+import { action } from '../app/routes/settings'
+
+describe('settings action', () => {
+  it('returns validation errors for invalid data', async () => {
+    const formData = new FormData()
+    formData.set('name', 'A')
+    const request = new Request('http://localhost/settings', {
+      method: 'POST',
+      body: formData,
+    })
+    const response = await action({ request, params: {}, context: {} })
+    expect(response.status).toBe(400)
+    const data = await response.json()
+    expect(data.errors).toHaveProperty('name')
+  })
+})
+```
+
+### Component Testing with useLoaderData Mock
+
+```tsx
+// __tests__/ProductPage.test.tsx
+import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import ProductPage from '../app/routes/products.$id'
+
+vi.mock('@remix-run/react', async () => {
+  const actual = await vi.importActual('@remix-run/react')
+  return { ...actual, useLoaderData: () => ({ product: { name: 'Widget', price: 10 } }) }
+})
+
+describe('ProductPage', () => {
+  it('renders product name', () => {
+    render(<ProductPage />)
+    expect(screen.getByText('Widget')).toBeDefined()
+  })
+})
+```
+
+### E2E Testing with Playwright
+
+```tsx
+// e2e/products.spec.ts
+import { test, expect } from '@playwright/test'
+
+test('loads product page', async ({ page }) => {
+  await page.goto('/products/1')
+  await expect(page.locator('h1')).toBeVisible()
+})
+
+test('submits review form', async ({ page }) => {
+  await page.goto('/products/1')
+  await page.fill('[name="rating"]', '5')
+  await page.fill('[name="comment"]', 'Great!')
+  await page.click('button[type="submit"]')
+  await expect(page.locator('.success')).toBeVisible()
+})
+```
+
+## Migration Patterns
+
+### React Router SPA to Remix
+
+**Phase 1 — Layout migration:**
+```
+// Before: SPA layout with client-side data fetching
+function App() { return <BrowserRouter><Routes>...</Routes></BrowserRouter> }
+
+// After: Remix root.tsx layout
+export default function Root() { return <html><body><Outlet /></body></html> }
+```
+
+**Phase 2 — Move data fetching to loaders:**
+```tsx
+// Before: useEffect + fetch in component
+useEffect(() => { fetch('/api/products').then(r => r.json()).then(setProducts) }, [])
+
+// After: loader
+export async function loader() { return json(await db.product.findMany()) }
+```
+
+**Phase 3 — Replace API routes:**
+```
+// Before: Express API route
+app.get('/api/products', (req, res) => res.json(products))
+
+// After: Remix resource route
+export async function loader() { return json(products) }
+```
+
+### Express/API + SPA to Remix
+
+| Express + SPA | Remix |
+|---------------|-------|
+| Express routes + React Router | Remix file-based routes |
+| Express API endpoints | Remix resource routes |
+| Session middleware | createCookieSessionStorage |
+| Client-side data fetching | Server loaders |
+| Form submission via fetch | <Form> with actions |
+| Client state management | Server state (loaders/actions) |
+
+## Anti-Patterns
+
+### Client-Side Data Fetching
+
+```tsx
+// Anti-pattern: fetching data in useEffect
+useEffect(() => {
+  fetch('/api/products').then(r => r.json()).then(setProducts)
+}, [])
+
+// Correct: load data in loader
+export async function loader() { return json(await db.product.findMany()) }
+```
+
+### Not Using Form for Mutations
+
+```tsx
+// Anti-pattern: fetch for form submission
+async function handleSubmit(e) {
+  e.preventDefault()
+  await fetch('/api/contact', { method: 'POST', body: new FormData(e.target) })
+}
+
+// Correct: use <Form>
+<Form method="post"><input name="email" /><button type="submit">Submit</button></Form>
+```
+
+### Returning Errors as Redirects
+
+```tsx
+// Anti-pattern: redirect on validation error
+return redirect('/form?error=invalid')
+
+// Correct: return JSON with error
+return json({ errors: { email: 'Invalid' } }, { status: 400 })
+```
+
+### One Giant Action Function
+
+```tsx
+// Anti-pattern: 100-line action function
+export async function action({ request }) {
+  const formData = await request.formData()
+  const intent = formData.get('intent')
+  // ... 100 lines of switch statement
+}
+```
+
+Extract validation logic, database operations, and error handling into separate utilities.
+
+### Missing Error Boundary
+
+Every layout route should have an ErrorBoundary. Without it, a runtime error crashes the entire page with a blank screen.
+
 ## Common Pitfalls
 
 ### Pitfall 1: Importing Loaders in Client Components
@@ -137,39 +664,6 @@ Remix is a full-stack framework with server loaders/actions. TanStack Router is 
 
 ### Remix vs SvelteKit
 Both embrace web standards (fetch, FormData, Request/Response). SvelteKit is more opinionated with file conventions and simpler syntax. Remix uses React and has a richer ecosystem for React developers.
-
-## Performance Considerations
-
-### Parallel Data Loading
-Remix loads all matched route loaders in parallel. A page with `root.tsx` + `dashboard.layout.tsx` + `dashboard.index.tsx` fires all three loaders simultaneously. Use `Promise.all` inside individual loaders for further parallelization.
-
-### Caching Strategy
-```tsx
-export async function loader({ request }: LoaderFunctionArgs) {
-  return json(data, {
-    headers: { 'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=60' },
-  })
-}
-```
-- `max-age`: Browser cache duration
-- `s-maxage`: CDN cache duration
-- `stale-while-revalidate`: Background refresh window
-- Never cache authenticated routes
-
-### Bundle Size
-- Remix uses code-splitting per route automatically.
-- Server code (loaders, actions) is tree-shaken from client bundles.
-- Route components lazy-load on navigation for faster initial loads.
-
-### Streaming with defer
-```tsx
-export async function loader({ params }: LoaderFunctionArgs) {
-  const product = await db.product.findUnique({ where: { id: params.id } })
-  const reviews = db.review.findMany({ where: { productId: params.id } })
-  return defer({ product, reviews })
-}
-```
-Use `defer` + `<Suspense>` + `<Await>` for non-critical data. This sends the page shell immediately and streams in non-critical content.
 
 ## Ecosystem & Tooling
 

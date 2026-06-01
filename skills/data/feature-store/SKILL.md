@@ -369,6 +369,66 @@ for col, rules in checks.items():
     assert features[col].max() <= rules["max"], f"{col}: max {features[col].max()} > {rules['max']}"
 ```
 
+### Feast Architecture
+
+```yaml
+feast_architecture:
+  feature_repository:
+    path: "features/"
+    components:
+      - feature_store.yaml  # Infrastructure config
+      - features/           # Feature definitions (Python)
+      - requirements.txt    # Feast version + dependencies
+      - .feastignore        # Files to exclude from registry
+  
+  feature_store_yaml:
+    project: "customer_features"
+    registry: "gs://feature-registry/registry.db"  # Shared registry
+    provider: "gcp"
+    
+    offline_store:
+      type: "bigquery"
+      dataset: "feature_store"
+    
+    online_store:
+      type: "redis"
+      connection_string: "redis://redis-cluster:6379"
+
+  serving_patterns:
+    batch_serving:
+      - "Feast.get_historical_features(entity_df, features) → Pandas/Spark DF"
+      - "Used for: training data generation, batch scoring"
+    
+    online_serving:
+      - "feast_client.get_online_features(features, entity_keys) → Proto/JSON"
+      - "Used for: real-time model inference, API serving"
+      - "Latency: p99 < 10ms for 100 entity keys"
+    
+    streaming_serving:
+      - "Push features to online store via Feast push API"
+      - "Streaming feature computation → push → online store"
+      - "Used for: real-time features in streaming ML"
+```
+
+### Feature Serving Decision Tree
+
+```
+Feature freshness requirement?
+├── Historical data only (batch training)
+│   └── Offline store: BigQuery/Redshift/Snowflake (point-in-time joins)
+├── Batch serving (daily/hourly predictions)
+│   ├── Materialized offline → batch inference
+│   └── Online store fallback for recent features
+├── Real-time serving (sub-second)
+│   ├── Pre-computed features → Online store: Redis/DynamoDB
+│   ├── Stream-computed features → Feature push API → Online store
+│   └── Feature TTL: 24h-7d for freshness-staleness tradeoff
+└── Streaming (event-time features)
+    ├── Streaming feature computation (Kafka/Flink)
+    ├── Push to online store via streaming sink
+    └── Feature TTL: minutes-hours for event-time features
+```
+
 ## Rules
 - All features have point-in-time correctness — no future data leakage
 - Entity definitions use the same ID type across all feature views
@@ -379,6 +439,8 @@ for col, rules in checks.items():
 - Feature validation runs before materialization
 - Monitoring tracks feature freshness, serving latency, and retrieval errors
 - Feature engineering pipelines are idempotent and incremental
+- Match serving store to latency requirements — batch for training, online for inference
+- Use Feast feature repository for version-controlled feature definitions
 
 ## References
   - references/feast-setup-guide.md — Feast Setup Guide

@@ -2,7 +2,7 @@
 name: blockchain-patterns
 description: >
   Use this skill when asked about blockchain design patterns, token standards, upgradeable contracts, oracle patterns, layer 2 scaling patterns, cross-chain communication patterns, and common blockchain architecture patterns. Covers ERC standards (20, 721, 1155, 4626, 4337), proxy patterns (UUPS, transparent, beacon), bridge patterns, state channel patterns, sidechain patterns, and MEV-aware design. Do NOT use for: specific language implementation (use blockchain-application), core protocol design (use blockchain-core), or web3 integration (use blockchain-web3).
-version: "1.1.0"
+version: "1.2.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -21,7 +21,7 @@ Catalog and guide the selection of blockchain design patterns covering token sta
 ## Agent Protocol
 
 ### Trigger
-"blockchain pattern", "token standard", "ERC-20", "ERC-721", "ERC-1155", "ERC-4626", "ERC-4337", "ERC-2612", "ERC-3525", "ERC-3643", "ERC-4907", "ERC-5192", "permit", "upgradeable contract", "proxy pattern", "UUPS", "oracle pattern", "bridge pattern", "layer 2", "state channel", "sidechain", "MEV", "cross-chain", "blockchain design pattern", "smart contract pattern", "vault pattern", "yield-bearing vault", "semi-fungible", "soulbound", "rollup", "validium", "optimistic rollup", "zk-rollup", "IBC", "LayerZero", "light client"
+"blockchain pattern", "token standard", "ERC-20", "ERC-721", "ERC-1155", "ERC-4626", "ERC-4337", "ERC-2612", "ERC-3525", "ERC-3643", "ERC-4907", "ERC-5192", "permit", "upgradeable contract", "proxy pattern", "UUPS", "oracle pattern", "bridge pattern", "layer 2", "state channel", "sidechain", "MEV", "cross-chain", "blockchain design pattern", "smart contract pattern", "vault pattern", "yield-bearing vault", "semi-fungible", "soulbound", "rollup", "validium", "optimistic rollup", "zk-rollup", "IBC", "LayerZero", "light client", "AMM", "constant product", "lending pool", "compound fork", "aave fork", "flash loan", "governance token", "veToken", "vote escrow", "factory pattern", "minimal proxy", "EIP-1167", "EIP-1967", "EIP-1822", "EIP-2535", "diamond pattern", "multi-facet", "federated sidechain", "ZK-bridge", "optimistic bridge", "PBS", "MEV-Boost", "ePBS", "ERC-5218", "NFT rental", "soulbound token", "account abstraction", "ERC-6551", "TBA", "token bound account", "ERC-6909"
 
 ### Input Context
 - Requirement type (token/upgrade/oracle/bridge/scaling)
@@ -85,14 +85,39 @@ Pattern recommendation with:
 
 ### Proxy Pattern Comparison
 
-| Feature | UUPS | Transparent | Beacon |
-|---|---|---|---|
-| Upgrade function | Implementation | Proxy | Beacon |
-| Gas cost per call | Low (1 SLOAD) | Medium (2 SLOAD) | Low (1 SLOAD + beacon read) |
-| Deployment cost | Low (no admin) | High (admin storage) | Medium (beacon deploy) |
-| Multiple implementations | No (1:1) | No (1:1) | Yes (1:N) |
-| Storage collision risk | Low | Low (admin at high slot) | Low |
-| Recommended | Default choice | Legacy projects | Many instances (ERC-1167 clones) |
+| Feature | UUPS | Transparent | Beacon | Diamond (EIP-2535) |
+|---|---|---|---|---|
+| Upgrade function | Implementation | Proxy | Beacon | Diamond owner |
+| Gas cost per call | Low (1 SLOAD) | Medium (2 SLOAD) | Low (1 SLOAD + beacon read) | Low (1 SLOAD + facet map) |
+| Deployment cost | Low (no admin) | High (admin storage) | Medium (beacon deploy) | High (facet setup) |
+| Multiple implementations | No (1:1) | No (1:1) | Yes (1:N) | Yes (N:M facets) |
+| Storage collision risk | Low | Low (admin at high slot) | Low | Low (diamond storage) |
+| Max implementations | 1 | 1 | Unlimited | Unlimited (48 facets) |
+| Recommended | Default choice | Legacy projects | Many instances (ERC-1167 clones) | Large, modular protocols |
+
+### Token Standard Selection Decision Tree
+
+```
+Decide: Token Standard
+├── Fungible token?
+│   ├── Standard → ERC-20 + ERC-2612 (permit)
+│   ├── Yield-bearing vault → ERC-4626 (share-based accounting)
+│   ├── Minimal gas (no permit) → ERC-20 (Solady)
+│   └── Semi-fungible → ERC-3525 (financial NFTs: invoices, bonds)
+├── Non-fungible token?
+│   ├── Standard → ERC-721
+│   ├── Rental support → ERC-4907 (adds user/expires roles)
+│   ├── Soulbound → ERC-5192 (non-transferrable)
+│   ├── Token-bound account → ERC-6551 (NFT owns assets)
+│   └── Fractionalized → ERC-20 wrapper (fractionalize floor prices)
+├── Multi-token contract?
+│   ├── Single contract → ERC-1155 (minimal deployment cost)
+│   ├── Tiered access → ERC-1155 with role mapping
+│   └── Dynamic supply → ERC-1155 with mint/burn hooks
+└── Account abstraction?
+    ├── Smart wallet → ERC-4337 (EntryPoint + account contract)
+    └── Session keys → ERC-4337 with ephemeral key module
+```
 
 ### Scaling Pattern Decision Tree
 
@@ -122,6 +147,50 @@ Decide: Scaling Pattern
     └── Push model (Pyth, Chronicle): Publisher → On-chain → Consumer
 ```
 
+### AMM Pattern Selection
+
+```
+Decide: AMM Model
+├── General trading (correlated assets)?
+│   ├── Constant Product (x*y=k) → Uniswap v2
+│   │   ├── Pros: Simple, proven, universal
+│   │   ├── Cons: High slippage on large trades
+│   │   └── Use: Correlated + uncorrelated pairs
+│   ├── Concentrated Liquidity → Uniswap v3
+│   │   ├── Pros: 4000x capital efficiency
+│   │   ├── Cons: LP complexity, IL management
+│   │   └── Use: Professional LPs, stable pairs
+│   └── Stable Swap → Curve
+│       ├── Pros: Minimal slippage for stablecoins
+│       └── Cons: Only works for near-identical assets
+├── Need dynamic fees?
+│   ├── Maverick: Directional LP (concentrated + dynamic)
+│   └── Trader Joe v2: Bin-step LP (narrow bins per fee tier)
+└── Need volatility-based pools?
+    └── Gyroscope: Multi-dimensional invariant
+```
+
+### Cross-Chain Bridge Architecture
+
+```
+Decide: Bridge Architecture
+├── Same chain family (EVM↔EVM)?
+│   ├── Trustless → Canonical bridge (L1↔L2)
+│   │   ├── Messages: ~30 min finality
+│   │   ├── Security: Inherits L1 security
+│   │   └── Cost: L1 gas for validity proof
+│   └── Fast → External validator (LayerZero, Axelar)
+│       ├── Messages: ~1 minute
+│       ├── Security: Trust in DVN/verifier set
+│       └── Cost: Oracle + relayer fees
+├── Heterogeneous chains (EVM↔Cosmos)?
+│   ├── IBC (if Cosmos-enabled)
+│   └── ZK-bridge (any pair, trustless)
+└── Maximum security?
+    ├── ZK light client bridge (trustless, unilateral)
+    └── Optimistic bridge (fraud proof window)
+```
+
 ## Common Pitfalls
 
 1. **Storage collision in proxy upgrades**: Adding new variables before existing ones shifts storage slots. Use unstructured storage (EIP-1967) and never change variable order.
@@ -134,6 +203,11 @@ Decide: Scaling Pattern
 8. **Beacon pattern update delay**: Beacon proxy updates affect ALL implementation contracts atomically—coordinate upgrades carefully.
 9. **EIP-1967 storage slot collision**: Using wrong storage slot for proxy admin or implementation UUID breaks proxy detection tools.
 10. **MEV extraction in AMM patterns**: Unprotected AMM functions enable sandwich attacks. Implement slippage protection and commit-reveal.
+11. **ERC-4626 inflation attack**: Early depositors can manipulate share price, stealing from later depositors. Use virtual shares + assets as defense.
+12. **ERC-2612 permit replay**: Without nonce or deadline checking, valid permits can be replayed. Always include nonce and validate deadline.
+13. **Cross-chain message timeout**: Messages stuck in bridge without timeout handling lock user funds forever. Implement cancelation with timeout.
+14. **Selfdestruct in proxy implementation**: If the implementation has `selfdestruct`, the proxy loses all funds. Never use selfdestruct in upgradeable contracts.
+15. **Diamond storage collision**: Multiple facets using the same storage namespace cause data corruption. Use diamond storage pattern with unique namespace.
 
 ## Best Practices
 
@@ -143,11 +217,14 @@ Decide: Scaling Pattern
 - Use ERC-1155 for multi-token contracts (games, metaverse)
 - Use ERC-4626 for yield-bearing vaults (standardized share accounting)
 - Use ERC-4337 for account abstraction (wallet contract + EntryPoint)
+- Use ERC-6551 for token-bound accounts (NFT owns other tokens)
+- Use ERC-6909 for minimal multi-token (gas-optimized multi-token)
 
 ### Upgradeable Contract Patterns
 - Default to UUPS proxy pattern for new projects
 - Use transparent proxy only for contracts with many upgrade functions
 - Use beacon pattern for ERC-1167 minimal proxy families
+- Use diamond (EIP-2535) for large, modular protocols with many functions
 - Always use `initialize` function instead of constructor (callable once)
 - Store implementation address in EIP-1967 storage slot for compatibility
 
@@ -157,6 +234,38 @@ Decide: Scaling Pattern
 - Use LayerZero for flexible cross-chain messaging with configurable security
 - Implement rate limiting and tiered withdrawal for high-value bridges
 - Use ZK-bridge for maximum trust minimization at higher cost
+- Always include timeout + cancelation for pending cross-chain messages
+
+### DeFi Protocol Patterns
+- AMM: Constant product (Uniswap v2) for simplicity, concentrated liquidity (v3) for efficiency
+- Lending: Pool-based (Aave/Compound) for capital efficiency, peer-to-peer for niche assets
+- Governance: Token-weighted for simplicity, quadratic for fairness, veToken for alignment
+- Oracle: Push (Pyth, Chronicle) for high-frequency, Chainlink pull for general purpose
+
+### MEV-Aware Design
+- Include slippage tolerance in all AMM interactions
+- Use commit-reveal schemes for order submission
+- Implement private mempool integration (Flashbots Protect)
+- Batch auctions for large trades (CowSwap model)
+- Oracle extraction protection: use TWAP not spot price for liquidations
+- Use `block.timestamp` and `block.number` guards against MEV timing manipulation
+
+## Advanced Token Standards Reference
+
+| Standard | Category | Key Feature |
+|---|---|---|
+| ERC-2612 | Fungible | Gasless approve via off-chain signature (permit) |
+| ERC-4626 | Vault | Standardized yield-bearing share accounting |
+| ERC-3525 | Semi-fungible | Financial NFTs with slot/value model |
+| ERC-3643 | Security | Permissioned transfer, compliance wrapper |
+| ERC-4907 | NFT | Rental roles (user + expires) |
+| ERC-5192 | NFT | Soulbound (non-transferrable) |
+| ERC-5218 | NFT | NFT rental with temporal ownership |
+| ERC-6551 | NFT | Token-bound account (NFT = smart wallet) |
+| ERC-6909 | Multi-token | Minimal ERC-1155 alternative (gas optimized) |
+| ERC-1155 | Multi-token | Single contract for infinite token types |
+| ERC-4337 | Account abstraction | Smart wallet via EntryPoint |
+| ERC-6900 | Account abstraction | Modular smart accounts |
 
 ## Compared With
 
@@ -169,6 +278,16 @@ Decide: Scaling Pattern
 | Capital efficiency | High | Medium | Low | High |
 | User experience | Good (like L1) | Excellent (instant) | Poor (challenge period) | Good |
 
+## DeFi Lending Pool Pattern Comparison
+
+| Feature | Pool-based (Aave/Compound) | Peer-to-peer (Morpho) | Isolated (Euler) |
+|---|---|---|---|
+| Capital efficiency | High (aggregated) | Medium (order book) | Medium (per-pair) |
+| Liquidation | Soft (health factor) | Hard (position level) | Soft + IRM-based |
+| Risk isolation | No (pool-wide risk) | Partial (per pair) | Yes (per market) |
+| Oracle dependency | Single oracle | Single oracle | Per-market oracle |
+| Upgradeability | Proxy-based | Proxy-based | Diamond (EIP-2535) |
+
 ## Performance Considerations
 
 - **UUPS vs. Beacon**: UUPS costs ~200 gas more per call than beacon, but avoids an external read
@@ -176,6 +295,11 @@ Decide: Scaling Pattern
 - **Calldata vs. blob cost**: EIP-4844 blobs reduce L2 data availability cost from ~16 gas/byte to ~1-2 gas/byte
 - **Merkle proof verification**: O(log n) gas for inclusion proof; optimize with sorted merkle trees
 - **Oracle update frequency**: Push-based oracles (Pyth) update every ~400ms vs pull-based (Chainlink) ~20 min
+- **Concentrated liquidity**: 2000x capital efficiency vs constant product at 1% fee tier
+- **ERC-1167 minimal proxy**: ~200 gas to deploy vs ~500,000 for full contract
+- **Beacon proxy**: ~100 gas overhead per call vs ~200 for transparent proxy
+- **Diamond proxy**: ~250 gas overhead per call (facet map lookup + delegatecall)
+- **EIP-2535 diamond storage**: No collision risk, but ~5000 gas per namespace registration
 
 ## Operations & Maintenance
 
@@ -184,12 +308,30 @@ Decide: Scaling Pattern
 - Test upgrades on testnet with exact bytecode before mainnet
 - Maintain implementation contract verified on block explorer
 - Document storage layout changes in each upgrade
+- Use `StorageSlot` library to prevent storage collision across upgrades
+- Maintain upgrade history with `__gap` arrays for future storage
 
 ### Bridge Operations
 - Monitor relayer uptime and gas economics
 - Track pending cross-chain messages for timeout expiry
 - Maintain emergency pause capabilities for bridge contracts
 - Regular security reviews of verifier set composition
+- Track total value secured (TVS) per bridge route
+- Monitor for anomalous message patterns (potential bridge attacks)
+
+### DeFi Protocol Operations
+- Monitor oracle price deviation and staleness daily
+- Track liquidity depth changes across all AMM pools
+- Verify liquidation health factors are in expected ranges
+- Run daily invariant checks (supply = borrow + reserves)
+- Gas optimization review every quarter (reduce costs for users)
+
+### MEV Monitoring
+- Detect sandwich attacks on AMM pools (frontrun + backrun same tx)
+- Track validator proposer boost usage for block reorgs
+- Monitor private mempool (Flashbots) usage and censored transactions
+- Report MEV extracted per block from the protocol
+- Implement MEV tax or redistribution when applicable
 
 ## Rules
 
@@ -209,6 +351,15 @@ Decide: Scaling Pattern
 14. All oracle price feeds must be redundant (minimum 3 independent sources)
 15. State channel designs must include watchtower service for offline user protection
 16. Proposer-builder separation (PBS) patterns require MEV-Boost or ePBS integration
+17. ERC-4626 vaults must implement virtual shares to prevent inflation attacks
+18. Cross-chain message timeout must be at least 2x the optimistic finality window
+19. AMM pools must have minimum liquidity threshold to prevent manipulation
+20. Lending pool oracles must use TWAP (not spot) for liquidation triggers
+21. Diamond facets must use unique namespace for each storage layout
+22. Beacon upgrades must be coordinated across all active proxies atomically
+23. NFT market contracts must implement EIP-2981 (royalty standard) for creator fees
+24. Off-chain oracles must not be the sole price source for liquidation-level decisions
+25. Token contracts must implement `_beforeTokenTransfer` hooks for composability
 
 ## References
 - references/advanced-token-standards.md — Advanced Token Standards

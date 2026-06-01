@@ -1,7 +1,7 @@
 ---
 name: data-data-observability
 description: >
-  Use this skill when asked about data observability, Monte Carlo, Sifflet, Bigeye, data downtime, data freshness, data volume, data distribution, data SLA, data quality monitoring, or data pipeline monitoring. This skill enforces: data observability dimensions (freshness, volume, distribution, schema, lineage), monitoring setup with vendor tools, anomaly detection for data, data SLA/SLO definition, and incident response for data. Do NOT use for: infrastructure monitoring, application performance monitoring, or business KPI dashboards.
+  Use this skill when designing data observability: data quality monitoring, data lineage, data profiling, anomaly detection, data health dashboards, freshness checks, row count tracking, schema drift detection, and data incident management. This skill enforces: monitoring all data pipeline stages, automated quality checks, column-level lineage, freshness SLAs, anomaly detection on row counts and distributions, and incident response playbooks. Do NOT use for: infrastructure monitoring (CPU/memory), application performance monitoring, or user analytics.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -10,271 +10,492 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [data, observability, monitoring, phase-11]
+tags: [data, observability, quality, phase-10]
 ---
 
-# Data Data Observability
+# Data Observability
 
 ## Purpose
-Build a data observability framework covering five dimensions (freshness, volume, distribution, schema, lineage) with monitoring tools, SLA definitions, anomaly detection, and incident response.
+Design comprehensive data observability across pipelines: freshness, volume, schema, quality, lineage, and incident management.
 
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "data observability", "Monte Carlo", "Sifflet", "Bigeye", "data downtime", "data freshness", "data volume", "data distribution", "data SLA", "data quality monitoring", "data pipeline monitoring", "data incident", "data health".
+Exact user phrases: "data observability", "data quality monitoring", "data profiling", "data health", "freshness check", "row count anomaly", "schema drift", "data incident", "data lineage", "data monitoring", "observability platform".
 
 ### Input Context
-- Data stack (warehouse, lake, streaming, transformation)
-- Critical data assets and their business impact
-- Current monitoring approach (if any)
-- Alerting infrastructure (PagerDuty, Slack, OpsGenie)
+- Data stack (warehouse, lake, pipelines, BI tools)
+- Number of tables/datasets to monitor
+- Existing quality checks and monitoring
 - Team size and on-call rotation
+- SLAs for data freshness and quality
+- Incident management workflow
+- Monitoring budget and tooling preferences
 
 ### Output Artifact
-Data observability framework with dimension definitions, monitoring tool configuration, SLA/SLO definitions, anomaly detection rules, and incident response runbook.
+Data observability architecture with monitoring checks, alerting rules, and incident response playbook.
 
 ### Response Format
 ```yaml
-# Observability dimensions with metrics
-# Monitoring tool config (Monte Carlo/Sifflet/Bigeye)
-# SLA + SLO definitions per dataset
-# Anomaly detection rules
-# Incident response flow
+# Observability checks per dataset
+# Freshness, volume, schema, quality
+# Alert thresholds
+# Incident response workflow
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
-
 ### Completion Criteria
-- [ ] Five observability dimensions defined with measurable metrics
-- [ ] Monitoring tool configured for all critical datasets
-- [ ] Anomaly detection rules tuned per dataset profile
-- [ ] SLA/SLO defined for each data tier
-- [ ] Incident response process documented with escalation
-- [ ] Observability dashboard built for stakeholders
-- [ ] Runbooks created for common failure modes
-
-### Max Response Length
-350 lines of configuration.
+- [ ] Freshness checks configured for all critical datasets
+- [ ] Volume monitoring with anomaly detection
+- [ ] Schema drift detection on source and staging tables
+- [ ] Quality checks on key columns (nulls, uniqueness, referential integrity)
+- [ ] Lineage tracking from source to dashboard
+- [ ] Alerting configured with severity levels
+- [ ] Incident response runbook written
 
 ## Workflow
 
-### Step 1: Define Observability Dimensions
+### Step 1: Dataset Inventory
+Catalog all datasets by criticality and ownership. Tier 1: executive dashboards, financial reports, customer-facing data, regulatory data. Tier 2: operational reports, team-level analytics, internal tools. Tier 3: experimental, exploratory, ad-hoc queries.
 
-| Dimension | Measure | Detection Method |
+#### Inventory Schema
+For each dataset: name, owner, tier, source system, freshness SLA, location (table/view/API), upstream dependencies, downstream consumers, expected row count range, quality rules.
+
+### Step 2: Freshness Monitoring
+
+#### Freshness Checks
+Check data arrival within expected SLA window. Monitor: last_updated timestamp vs expected schedule. For batch: compare DAG completion time to SLA time. For streaming: compare latest event timestamp to current time.
+
+#### Freshness SLAs
+| Tier | SLA | Alert After | Action |
+|---|---|---|---|
+| Tier 1 | < 1 hour | > 2 hours | PagerDuty |
+| Tier 2 | < 1 day | > 1 day | Slack #data-eng |
+| Tier 3 | < 1 week | > 1 week | Email digest |
+
+### Step 3: Volume Monitoring
+
+#### Row Count Tracking
+Track row counts per partition or table. Compute rolling statistics (7-day, 30-day window). Alert on significant deviations from expected range.
+
+#### Anomaly Detection Methods
+Static threshold: absolute or percentage change from expected. Statistical: Z-score on rolling window (> 3 sigma = alert). Seasonal: compare to same day-of-week, day-of-month. ML: Prophet, isolation forest for complex patterns.
+
+#### Volume Alert Thresholds
+| Tier | Warning | Critical |
 |---|---|---|
-| **Freshness** | Time since last successful data load | Scheduled check vs expected interval |
-| **Volume** | Row count, table size, partition count | Compare to trailing 30-day average |
-| **Distribution** | NULL ratio, min/max/avg/percentiles of numeric cols, cardinality | Z-score, KS test vs historical |
-| **Schema** | Column count, column names, data types, nullability | Compare to registered schema |
-| **Lineage** | Pipeline completeness, upstream failures | DAG traversal, root cause analysis |
+| Tier 1 | ±10% from rolling avg | ±20% from rolling avg |
+| Tier 2 | ±20% from rolling avg | ±50% from rolling avg |
+| Tier 3 | ±50% from rolling avg | ±80% from rolling avg |
 
-Each dimension scored 0-100 per dataset. Overall health = weighted average: freshness 25%, volume 15%, distribution 25%, schema 20%, lineage 15%.
+### Step 4: Schema Monitoring
 
-### Step 2: Select Monitoring Tool
+#### Drift Detection
+Compare current schema against expected schema (stored as reference in data catalog). Detect: column additions, removals, renames, type changes, null ratio changes, default value changes.
 
-| Tool | Strengths | Limitations |
-|---|---|---|
-| **Monte Carlo** | Auto-generated monitors, end-to-end lineage, Slack integration | Cost, vendor lock-in |
-| **Sifflet** | Active metadata, root cause analysis, column-level drift | Newer platform |
-| **Bigeye** | Hyperscalable, SLO-driven, code-first | Steeper learning curve |
-| **Open-source** | Great Expectations + Elementary + dbt | Requires assembly, no lineage |
+#### Schema Check Implementation
+```
+Schema Check: staging_orders
+  Expected: order_id STRING, customer_id STRING, total_amount DECIMAL(10,2), status STRING
+  Actual: order_id STRING, customer_id STRING, total_amount DECIMAL(10,2), status STRING, discount_code STRING
+  Status: WARNING — new column discount_code detected (non-breaking)
+  
+Schema Check: source_customers
+  Expected: customer_id INT, name STRING, email STRING
+  Actual: customer_id STRING, name STRING, email STRING
+  Status: CRITICAL — type change on customer_id (INT → STRING)
+```
 
-Default: Monte Carlo for mid-large orgs with budget. Open-source stack (GE + Elementary) for cost-sensitive teams. Hybrid: Monte Carlo for critical data, open-source for rest.
+### Step 5: Quality Monitoring
 
-### Step 3: Configure Monitoring (Monte Carlo Example)
+#### Quality Check Types
+Completeness: null rate on required columns. Uniqueness: duplicate count on PK columns. Referential integrity: FK values exist in referenced table. Accepted values: categorical columns contain only expected values. Range: numeric columns within expected bounds. Distribution drift: distribution comparison (KS test for numeric, chi-square for categorical).
+
+#### Quality Check Configuration
+```yaml
+quality_checks:
+  orders:
+    - check: not_null
+      columns: [order_id, customer_id, total_amount]
+      severity: critical
+    - check: unique
+      columns: [order_id]
+      severity: critical
+    - check: accepted_values
+      column: status
+      values: [draft, submitted, confirmed, shipped, delivered, cancelled]
+      severity: warning
+    - check: range
+      column: total_amount
+      min: 0
+      max: 100000
+      severity: warning
+    - check: relationship
+      column: customer_id
+      references: customers(customer_id)
+      severity: critical
+```
+
+### Step 6: Lineage Tracking
+
+#### Lineage Levels
+Table-level: which tables feed into which. Column-level: which source columns produce which target columns. Transformation-level: what SQL logic transforms the data.
+
+#### Implementation
+Parse SQL queries to extract column-level lineage. Use dbt artifacts (manifest.json) for dbt transformations. Use OpenLineage for Spark/Flink jobs. Store lineage in data catalog (Datahub, Marquez, OpenMetadata). Guide root cause analysis: when a dashboard number is wrong, trace from dashboard → mart → transform → staging → source.
+
+### Step 7: Data Health Dashboard
 
 ```yaml
-monitors:
-  - name: freshness_check_fct_orders
-    type: freshness
-    table: analytics.fct_orders
-    schedule: hourly
-    expectation: fresh_data_within: 3600  # 1 hour
-    severity: HIGH
-    action: alert_pagerduty
-
-  - name: volume_check_fct_orders
-    type: volume
-    table: analytics.fct_orders
-    granularity: day
-    field: row_count
-    expectation: within_range [50000, 200000]
-    lookback: 30
-    severity: HIGH
-
-  - name: distribution_check_total_amount
-    type: distribution
-    table: analytics.fct_orders
-    column: total_amount
-    method: z_score
-    threshold: 3.0
-    severity: MEDIUM
+dashboard:
+  - section: "Pipeline Health"
+    metrics:
+      - pipeline_success_rate: "> 99%"
+      - avg_completion_time: "+10% vs baseline"
+      - freshness_compliance: "> 95% within SLA"
+  
+  - section: "Data Quality"
+    metrics:
+      - quality_score: "weighted pass rate"
+      - open_incidents: "count by severity"
+      - MTTR: "mean time to resolve"
+  
+  - section: "Coverage"
+    metrics:
+      - datasets_monitored: "X / Y total"
+      - checks_per_dataset: "avg count"
+      - tier_1_coverage: "> 99%"
 ```
 
-### Step 4: Anomaly Detection
+### Step 8: Incident Response
 
-| Algorithm | Use Case | Parameters |
-|---|---|---|
-| **Z-score** | Numeric metrics, normal distribution | Threshold: 2.5-3.5 |
-| **IQR** | Non-normal distributions | Multiplier: 1.5-3.0 |
-| **Seasonal decomposition** | Time-series with seasonality | Period: 7d or 30d |
-| **KS test** | Distribution drift detection | P-value: 0.01 |
-| **DBSCAN** | Multi-dimensional anomalies | Eps: 0.5, MinPts: 5 |
+#### Severity Levels
+Sev1 (Critical): data down, customer-facing impact, financial report wrong. Response: 15min acknowledge, 1hr resolution or escalation. Sev2 (High): data delayed, internal report inaccurate, non-critical dashboard broken. Response: 1hr acknowledge, 4hr resolution. Sev3 (Medium): minor quality issue, cosmetic problem, non-blocking schema change. Response: next business day.
 
-Tune per dataset: profile 30 days of historical data, set thresholds at 99th percentile. Auto-adjust every 7 days.
+#### Incident Response Playbook
+1. Acknowledge: alert received, owning team notified
+2. Triage: assess severity, impact scope, affected consumers
+3. Mitigate: fix root cause, or rollback to previous version, or use backup data
+4. Communicate: notify consumers of issue, ETA for fix, workaround
+5. Resolve: fix deployed, data verified, consumers notified
+6. Post-mortem: root cause analysis, preventative measures, documentation
 
-### Step 5: Define SLA/SLO
+### Anomaly Detection Deep Dive
 
-| Tier | Examples | Freshness | Volume | Distribution | Schema |
-|---|---|---|---|---|---|
-| **Critical** | Financial reports, customer data | 99.9% on time | ±5% | Drift < 2% | 100% match |
-| **High** | Operational dashboards, team metrics | 99% on time | ±15% | Drift < 5% | 100% match |
-| **Medium** | Internal analysis, ad-hoc | 95% on time | ±30% | Drift < 10% | No check |
-| **Low** | Exploratory, experimental | Best effort | Best effort | Best effort | No check |
+#### Statistical Process Control (SPC)
 
-SLO: `freshness_pct = successful_runs / total_runs * 100` over 30d rolling window. Violation if below tier threshold for 2 consecutive windows.
+```python
+# SPC-based volume monitoring
+import numpy as np
+from scipy import stats
 
-#### SLO Definition YAML
+def detect_volume_anomaly(current_count, historical_counts, method="zscore"):
+    if method == "zscore":
+        mean = np.mean(historical_counts)
+        std = np.std(historical_counts)
+        z = (current_count - mean) / max(std, 1)
+        return abs(z) > 3  # Alert if > 3 sigma
+    elif method == "mad":
+        median = np.median(historical_counts)
+        mad = np.median(np.abs(historical_counts - median))
+        modified_z = 0.6745 * (current_count - median) / max(mad, 1)
+        return abs(modified_z) > 3.5  # Robust threshold
+    elif method == "iqr":
+        q1, q3 = np.percentile(historical_counts, [25, 75])
+        iqr = q3 - q1
+        lower = q1 - 1.5 * iqr  # Lower fence
+        upper = q3 + 1.5 * iqr  # Upper fence
+        return current_count < lower or current_count > upper
+```
+
+#### Prophet-Based Anomaly Detection
 
 ```yaml
-# slo-definitions/slo-fct-orders.yaml
-apiVersion: sloth/v1
-kind: PrometheusServiceLevel
-metadata:
-  name: slo-fct-orders
-  namespace: data-observability
-spec:
-  service: analytics.fct_orders
-  labels:
-    tier: critical
-    domain: finance
-    owner: data-engineers
-  slos:
-    - name: freshness-slo
-      objective: 99.9
-      description: "Orders table loaded within 1 hour of source availability"
-      sli:
-        events:
-          errorQuery: |
-            sum(rate(data_freshness_breach{table="analytics.fct_orders"}[30d]))
-          totalQuery: |
-            sum(rate(data_freshness_checks{table="analytics.fct_orders"}[30d]))
-      alerting:
-        pageAlert:
-          name: FreshnessSLOPage
-          labels:
-            severity: page
-          annotations:
-            summary: "Freshness SLO breach for fct_orders (99.9% target)"
-    - name: volume-slo
-      objective: 99.0
-      description: "Row count within ±5% of trailing 30-day average"
-      sli:
-        events:
-          errorQuery: |
-            sum(rate(data_volume_anomaly{table="analytics.fct_orders"}[30d]))
-          totalQuery: |
-            sum(rate(data_volume_checks{table="analytics.fct_orders"}[30d]))
+# Prophet configuration for daily volume forecasting
+prophet_config:
+  daily_volume:
+    changepoint_prior_scale: 0.05   # Flexibility of trend changes
+    seasonality_prior_scale: 10.0   # Strength of weekly/yearly seasonality
+    holidays_prior_scale: 10.0      # Holiday effect strength
+    seasonality_mode: multiplicative  # For volume that scales with growth
+    weekly_seasonality: true        # Day-of-week patterns
+    yearly_seasonality: true        # Month-of-year patterns
+    uncertainty_samples: 1000       # Prediction interval quality
+    interval_width: 0.99            # 99% prediction interval
+    
+  alert_rules:
+    - condition: "actual > upper_bound"
+      severity: critical
+      description: "Volume spike — possible duplicate data or pipeline issue"
+    - condition: "actual < lower_bound"
+      severity: critical
+      description: "Volume drop — possible ingestion failure or upstream issue"
+    - condition: "actual < lower_bound for 3 consecutive windows"
+      severity: critical
+      description: "Sustained volume drop — likely pipeline break"
 ```
 
-#### Bigeye Threshold Examples
+#### Column-Level Distribution Monitoring
+
+```python
+# Detect distribution drift on numeric columns
+def detect_distribution_drift(
+    current_sample, reference_sample, column_type="numeric"
+):
+    if column_type == "numeric":
+        # Two-sample Kolmogorov-Smirnov test
+        ks_stat, p_value = stats.ks_2samp(current_sample, reference_sample)
+        drift_detected = p_value < 0.05  # Significant distribution change
+        return { "statistic": ks_stat, "p_value": p_value, "drift": drift_detected }
+    elif column_type == "categorical":
+        # Chi-square test for categorical distribution
+        current_freq = pd.Series(current_sample).value_counts(normalize=True)
+        ref_freq = pd.Series(reference_sample).value_counts(normalize=True)
+        chi2, p_value = stats.chisquare(current_freq, ref_freq)
+        return { "statistic": chi2, "p_value": p_value, "drift": p_value < 0.05 }
+```
+
+### Step 9: Alert Routing and Escalation
+
+#### Alert Routing Matrix
+
+| Check Severity | Tier 1 Dataset | Tier 2 Dataset | Tier 3 Dataset |
+|---|---|---|---|
+| Critical | PagerDuty immediate + Slack @here | PagerDuty + Slack @channel | Slack @channel |
+| Warning | Slack @channel + email | Slack channel | Slack thread |
+| Info | Slack thread | Email digest | Log only |
+
+#### On-Call Rotation
 
 ```yaml
-# bigeye-monitors.yaml
-monitors:
-  - name: revenue_null_rate
-    metric: NULL_RATE
-    column: revenue_analytics.fct_orders.total_amount
-    threshold:
-      type: STATIC
-      min: 0.0
-      max: 0.05
-    severity: HIGH
-    schedule: EVERY_6_HOURS
+on_call:
+  schedule: "Primary / Secondary / Tertiary (weekly rotation)"
+  coverage: "24/7 for Tier 1, business hours for Tier 2-3"
+  
+  escalation_policies:
+    - level: 1
+      responder: "Primary data engineer"
+      response_sla: "15 minutes (Tier 1), 1 hour (Tier 2)"
+    - level: 2
+      responder: "Senior data engineer"
+      response_sla: "30 minutes after level 1 escalation"
+    - level: 3
+      responder: "Data engineering manager"
+      response_sla: "1 hour after level 2 escalation"
 
-  - name: order_count_volume
-    metric: ROW_COUNT
-    table: analytics.fct_orders
-    threshold:
-      type: SEASONAL
-      period: 7d
-      sensitivity: 2.5
-      min: 50000
-      max: 200000
-    severity: MEDIUM
-    schedule: EVERY_HOUR
-
-  - name: total_amount_distribution
-    metric: AVG
-    column: revenue_analytics.fct_orders.total_amount
-    threshold:
-      type: ZSCORE
-      zscore_threshold: 3.0
-      min_training_weeks: 4
-    severity: LOW
-    schedule: DAILY
-
-  - name: schema_change
-    metric: SCHEMA_CHANGE
-    table: analytics.fct_orders
-    threshold:
-      type: STATIC
-      change: DROP_COLUMN
-    severity: CRITICAL
-    schedule: ON_SCHEMA_CHANGE
-
-alerting:
-  - name: critical-pagerduty
-    targets:
-      - type: PAGER_DUTY
-        routing_key: ${PD_ROUTING_KEY}
-    when:
-      severity: [CRITICAL, HIGH]
-  - name: medium-slack
-    targets:
-      - type: SLACK
-        channel: "#data-alerts"
-    when:
-      severity: [MEDIUM, LOW]
+  handoff_process:
+    - review open incidents before handoff
+    - document known issues and ongoing investigations
+    - update runbooks for any new incident patterns
+    - confirm handoff in incident management tool
 ```
 
-### Step 6: Incident Response
+### Step 10: Runbook Templates
+
+#### Common Failure Scenarios
+
+```yaml
+runbook_stale_data:
+  name: "Data freshness SLA breach"
+  symptoms:
+    - "last_updated > SLA threshold"
+    - "Dashboard shows 'data as of X hours ago' warning"
+  triage:
+    - "Check upstream source system availability"
+    - "Check pipeline DAG for failures or delays"
+    - "Check for resource contention (concurrent jobs, insufficient compute)"
+    - "Check network connectivity to source system"
+  resolution:
+    - "If source issue: notify source owner, estimate recovery time"
+    - "If pipeline failure: retry from last checkpoint"
+    - "If resource contention: add compute resources or reschedule"
+  verification:
+    - "Data freshness check passes for 2 consecutive cycles"
+    - "Downstream consumers confirm data is current"
+
+runbook_volume_drop:
+  name: "Abnormal volume decrease"
+  symptoms:
+    - "Row count below lower bound for current partition"
+  triage:
+    - "Check upstream extraction SQL — did WHERE clause change?"
+    - "Check for schema changes — column removed or renamed?"
+    - "Check source system for data availability"
+    - "Check for deduplication logic errors"
+  resolution:
+    - "If extraction issue: fix SQL, backfill affected partition"
+    - "If schema change: update schema expectations, reconcile data"
+    - "If source issue: wait for recovery, document data gap"
+  verification:
+    - "Volume returns to expected range"
+    - "No missing data for downstream consumers"
+
+runbook_schema_drift:
+  name: "Unexpected schema change"
+  symptoms:
+    - "Schema check returns WARNING or CRITICAL"
+  triage:
+    - "Compare actual vs expected schema: what changed?"
+    - "Determine if change is breaking (type change, column removal)"
+    - "Identify source of change (source system update, API version)"
+    - "Assess impact on downstream consumers"
+  resolution:
+    - "If non-breaking: update expected schema, notify consumers"
+    - "If breaking: coordinate with source owner, plan migration"
+    - "Implement column mapping for backward compatibility"
+  verification:
+    - "Schema check passes with updated expectations"
+    - "Downstream queries and transformations run correctly"
+```
+
+### Step 11: Integration Patterns
+
+#### Observability-as-Code
+
+```yaml
+# dbt-expectations example (Great Expectations + dbt)
+# tests/generic/test_row_count_between.sql
+{% test row_count_between(model, min_count, max_count) %}
+    WITH row_count AS (
+        SELECT COUNT(*) AS cnt FROM {{ model }}
+    )
+    SELECT cnt FROM row_count
+    WHERE cnt < {{ min_count }} OR cnt > {{ max_count }}
+{% endtest %}
+
+# Apply to a model:
+# models/staging/stg_orders.yml
+models:
+  - name: stg_orders
+    tests:
+      - row_count_between:
+          min_count: 10000
+          max_count: 5000000
+          severity: error
+      - dbt_expectations.expect_column_values_to_be_between:
+          column_name: total_amount
+          min_value: 0
+          max_value: 100000
+          row_condition: "status != 'cancelled'"
+```
+
+#### Integration with Data Catalog
+
+```yaml
+# OpenMetadata integration
+# Automatically sync observed schemas to catalog
+# Link quality check results to dataset entries
+# Enable searching/filtering datasets by quality score
+
+integration_pipeline:
+  - step: "Ingest schemas from warehouse into catalog"
+  - step: "Run quality checks against ingested schemas"
+  - step: "Publish check results to data catalog as dataset properties"
+  - step: "Update dataset tier based on quality score trends"
+  - step: "Notify dataset owners when tier changes"
+
+quality_score_formula:
+  # Weighted score: critical checks count 3x, warnings 1x
+  score = (passed_critical * 3 + passed_warning * 1) / (total_critical * 3 + total_warning * 1)
+  tier_promotion: "score > 0.95 for 30 consecutive days → next tier"
+  tier_demotion: "score < 0.80 for 7 consecutive days → previous tier"
+```
+
+### Step 12: Observability Platform Selection
+
+#### Platform Comparison
+
+| Feature | Monte Carlo | Soda Cloud | Great Expectations | Elementary |
+|---|---|---|---|---|
+| Freshness monitoring | Automatic | Configurable | Custom | Manual |
+| Volume anomaly | ML-based | Rule-based | Custom | Rule-based |
+| Schema drift | Automatic | Configurable | Manual | Configurable |
+| Quality checks | Built-in | Custom SQL | Python expectations | dbt-based |
+| Lineage | Automatic | Manual | Via dbt | Via dbt |
+| Alerting | Slack, PagerDuty, email | Slack, email | Custom | Slack, email |
+| ML anomaly detection | Yes | No | No | No |
+| Self-hosted | No | Yes (Soda Core) | Yes | Yes |
+| Pricing | Per GB monitored | Per check row | Free (OSS) | Free (OSS) |
+
+#### Selection Decision Tree
 
 ```
-Alert fires (PagerDuty/Slack)
-  → Automated diagnostic (check upstream, check last good run)
-  → Assign severity (SEV1: critical data down, SEV2: degraded, SEV3: minor)
-  → Page on-call engineer
-  → Investigate (runbook: check logs, check upstream, check schema changes)
-  → Remediate (rollback, patch, reprocess)
-  → Postmortem (5 whys, action items)
-  → Update monitors (tune threshold if false positive)
+Team size and expertise?
+├── Small team (< 5), need quick setup
+│   └── Soda Cloud (fast deployment, good defaults)
+├── Large enterprise, many datasets
+│   ├── Budget available → Monte Carlo (ML-based, automatic)
+│   └── Budget constrained → Elementary + dbt (OSS, dbt-native)
+└── Deep data testing in CI/CD
+    └── Great Expectations (most flexible, Python-native)
 ```
 
-SEV1 response: 5 min acknowledge, 30 min mitigation. SEV2: 15 min acknowledge, 2 hr mitigation. SEV3: next business day.
+### Step 13: Cost of Observability
 
-### Step 7: Observability Dashboard
+#### Cost-Benefit Analysis
 
-Per-dataset tiles showing: health score (0-100), trend (7d sparkline), last check timestamp, dimension breakdown bars. Summary view: total datasets monitored, datasets with active alerts, mean health score by tier, top 5 failing monitors, freshness compliance (30d), volume anomalies today.
+```yaml
+# Cost of NOT having observability
+cost_of_no_observability:
+  - "Bad data reaching dashboards → wrong business decisions"
+  - "Engineers manually checking data freshness"
+  - "Delayed incident detection → hours of bad data served"
+  - "No root cause analysis → repeated incidents"
+  
+typical_roi:
+  # Example: mid-size data team (10 engineers, 500 tables)
+  without_observability:
+    - "5 incidents/month × 4 hours MTTR × $150/hr = $3,000/month"
+    - "2 bad data releases/month × $5,000 cleanup = $10,000/month"
+    - "Total: $13,000/month"
+  
+  with_observability:
+    - "Platform cost: $1,000-3,000/month"
+    - "Reduced MTTR: 4 hours → 1 hour = $750/month"
+    - "Prevented bad data releases: $10,000/month"
+    - "Net savings: $7,750-11,250/month"
+```
+
+### Decision Trees (continued)
+
+#### Quality Check Selection
+```
+What aspect are we validating?
+├── Completeness
+│   ├── Required fields → not_null check
+│   └── Optional fields with high fill rate → null_ratio trend
+├── Uniqueness
+│   ├── Primary key → unique check (fail on duplicates)
+│   └── Natural key → unique check (warn on duplicates)
+├── Accuracy
+│   ├── Numeric range → between values or percentile-based
+│   └── Categorical values → accepted values set
+├── Consistency
+│   ├── Cross-field logic → custom SQL expression
+│   └── Referential integrity → FK match in parent table
+└── Timeliness
+    ├── Batch arrival → freshness checkpoint
+    └── Streaming latency → event_time vs process_time delta
+```
 
 ## Rules
-- Every critical dataset monitored on all five dimensions
-- Anomaly thresholds tuned per dataset, not global
-- Freshness SLA defined and enforced for all production data
-- Automated diagnostic on every alert before paging
-- Monthly SLO report distributed to data domain owners
-- Observability alerts go to on-call rotation, not individual
-- Postmortem for every SEV1 and SEV2 incident
-- No dataset promoted to production without monitors
+- Monitor every pipeline stage — not just the final output
+- Fail the pipeline on critical quality checks — don't let bad data flow
+- Track lineage for root cause analysis
+- Set alert thresholds based on statistical baselines, not arbitrary values
+- Document ownership for every dataset
+- Review observability coverage quarterly
+- Automate incident response — runbooks for common failures
+- Monitor monitoring — if observability is down, you're blind
+- Alert on data freshness, not just pipeline completion
+- Track MTTR as a observability effectiveness metric
+- Use SPC or Prophet for anomaly detection — static thresholds miss gradual drift
+- Integrate observability with data catalog for single-pane-of-glass
+- Run column-level distribution monitoring for early schema change detection
+- Define escalation paths before incidents happen
+- Implement observability-as-code for version-controlled check definitions
+- Price observability platforms against cost of bad data, not just subscription cost
 
 ## References
-  - references/anomaly-detection-observability.md — Anomaly Detection for Data Observability
-  - references/monitor-config-examples.md — Monitor Configuration Examples
-  - references/observability-cost-monitoring.md — Observability Cost Monitoring
-  - references/observability-dashboards.md — Observability Dashboards
-  - references/observability-dimensions.md — Data Observability Dimensions
-  - references/observability-incident-response.md — Observability Incident Response
-  - references/observability-setup.md — Data Observability Setup
-  - references/slo-framework.md — SLO Framework
-## Handoff
-`data-data-quality` for detailed quality test configuration. `data-data-platform` for platform monitoring integration. `data-data-catalog` for linking observability metadata to catalog. `data-data-contracts` for SLA enforcement in contracts.
+  - references/data-quality-management.md — Data Quality Management
+  - references/observability-platform.md — Observability Platform
+  - references/observability-rules.md — Observability Rules Reference

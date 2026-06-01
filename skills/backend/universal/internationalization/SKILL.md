@@ -2,7 +2,7 @@
 name: backend-internationalization
 description: >
   Use this skill when implementing multi-language support, translation workflows, or locale-aware formatting. This skill enforces: BCP 47 locale tags, ICU MessageFormat for complex messages, dot-separated namespaced keys, fallback chains, and CI-validated translation files. Applies to any backend stack serving multi-region users. Do NOT use for: simple string key-value without plural/gender, or single-language applications.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -55,6 +55,42 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 200 lines of configuration and code.
+
+## Decision Tree
+
+### Which Library?
+
+```
+What tech stack and i18n needs?
+  ├── Node.js, need ICU support, flexible
+  │   └── i18next (most popular, rich ecosystem)
+  ├── React, need ICU, date/number formatting
+  │   └── FormatJS / react-intl (ICU native, Intl API integration)
+  ├── Python / Django
+  │   └── Babel + gettext (PO files, Django integration)
+  ├── Python, need ICU
+  │   └── Babel with babel-icu extension
+  ├── Go
+  │   └── go-i18n (ICU-like, YAML/TOML/JSON)
+  └── Java / Spring
+      └── ResourceBundle + ICU4J (standard Java i18n)
+```
+
+### How to Detect Locale?
+
+```
+Where does the user's locale come from?
+  ├── Browser sends Accept-Language header
+  │   └── Parse q-value, negotiate against supported list
+  ├── User has saved preference in profile
+  │   └── Use profile locale, ignore Accept-Language
+  ├── Domain or subdomain (fr.example.com)
+  │   └── Map domain to locale
+  ├── GeoIP (approximate location)
+  │   └── Use as default only — never override user preference
+  └── Authenticated API → JWT contains locale claim
+      └── Extract from token, fast-path locale resolution
+```
 
 ## Workflow
 
@@ -174,6 +210,28 @@ Use ICU for all formatting: `{value, date, medium}`, `{value, number, ::currency
 ### Step 7: RTL Support
 RTL locales: `ar`, `ar-SA`, `he`, `he-IL`, `fa`, `fa-IR`, `ur`, `ur-PK`. Set `dir="rtl"` attribute in HTML/email response. Handle bidirectional text (BiDi) with Unicode bidi algorithm (UBA). Wrap LTR text in RTL context with Unicode characters: `\u202B` (RTL Embed), `\u202C` (Pop Directional Formatting). Use logical CSS properties: `margin-inline-start` instead of `margin-left`, `padding-inline-end` instead of `padding-right`.
 
+### Step 8: Pluralization Rules by Language
+
+| Language | Plural Forms | Example |
+|----------|-------------|---------|
+| English | 2 (singular, plural) | 1 item, 5 items |
+| Russian | 4 (one, few, many, other) | 1, 2-4, 5-20, 21 |
+| Arabic | 6 (zero, one, two, few, many, other) | 0, 1, 2, 3-10, 11-99, 100+ |
+| Japanese | 1 (other) | All numbers use same form |
+| Chinese | 1 (other) | All numbers use same form |
+
+### Step 9: Pseudo-Localization for Testing
+
+```typescript
+// Pseudo-localization: expand strings to find layout issues
+function pseudoLocalize(enText: string): string {
+  return `[${enText.split('').map(c => {
+    const map: Record<string, string> = { 'a': 'α', 'e': 'ε', 'o': 'σ', 'i': 'ι' };
+    return map[c.toLowerCase()] || c;
+  }).join('')}!!!]`;
+}
+```
+
 ## Lazy Loading Strategy
 
 ```typescript
@@ -210,6 +268,37 @@ i18n:
     requireAllKeys: true
 ```
 
+## Production Considerations
+
+| Concern | Practice |
+|---------|----------|
+| Translation file size | Split by namespace. Namespace per feature. Lazy-load on first use |
+| Missing translations | Fallback chain: exact → parent → default → key name returned |
+| Performance | Cache translations in-memory. LRU with TTL |
+| CDN for translation files | Serve locale JSON from CDN with versioned URLs |
+| Translation coverage | CI fails if coverage < 80% of source keys |
+| Context for translators | Every key has description, max length hint, and screenshot |
+
+## Security
+
+| Risk | Mitigation |
+|------|-----------|
+| Injection via translation | ICU MessageFormat supports code execution in some parsers — always validate/sanitize |
+| Missing placeholders | CI validates argument matching between source and target locales |
+| RTL override injection | Sanitize user-generated content in RTL contexts (Unicode bidi overrides) |
+| Excessive locale loading | Rate-limit locale file requests, cache aggressively |
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It's Bad | Fix |
+|-------------|-------------|-----|
+| English-only keys as fallback (e.g., `checkout.error.card_declined` returns `"checkout.error.card_declined"`) | Confusing for users | Fallback to default locale (en-US) translation, not the key |
+| String concatenation | Breaks in RTL, wrong word order | Use placeholders: `Hello {name}` not `"Hello " + name` |
+| Large monolithic translation files | Slow to load, hard to maintain | Split by namespace per feature |
+| No ICU for plurals | Wrong grammar in many languages | Use ICU plural syntax |
+| Client-side only i18n | SEO fails, server errors not translated | Translate on server for SSR and API errors |
+| Inline strings mixed with code | Impossible to extract for translators | All strings in translation files, none in code |
+
 ## Rules
 - Locale = BCP 47 tag. Never language-only (`en` not `english`)
 - Keys are dot-separated and namespaced
@@ -220,6 +309,8 @@ i18n:
 - No concatenation of translated strings — use placeholders
 - Store timestamps in UTC, format at render time
 - RTL languages require `dir="rtl"` attribute and BiDi handling
+- Never translate error messages at client — always translate server-side
+- Extract translation strings as CI step, never manually maintain key lists
 
 ## References
   - references/i18n-architecture.md — Internationalization Architecture

@@ -1,213 +1,112 @@
 # Integration Patterns Fundamentals
 
 ## Overview
-Integration Patterns is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Enterprise integration connects systems across boundaries — different teams, technologies, and deployment models. This covers integration styles, message routing, anti-corruption layers, error handling, and schema management.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Integration Patterns helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Integration Styles
+| Style | Latency | Consistency | Volume | Best For |
+|-------|---------|-------------|--------|----------|
+| API (REST/gRPC) | Low | Strong | Low-Med | Real-time, synchronous, CRUD |
+| Messaging (RabbitMQ, SQS) | Medium | Eventual | Medium | Async, durable, decoupled |
+| Streaming (Kafka, Kinesis) | Low | Eventual | Very High | Real-time events, log processing |
+| File Transfer (SFTP, S3) | High | Eventual | High | Batch, legacy systems |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Integration Patterns solutions. These principles help maintain code quality and reduce technical debt.
+### Style Decision Tree
+```
+Real-time response required?
+├── Yes → Strong consistency needed?
+│   ├── Yes → API (REST/gRPC)
+│   └── No → Eventual consistency OK?
+│       ├── Yes → Messaging (async)
+│       └── No → Streaming (Kafka)
+└── No → Bulk data transfer?
+    ├── Yes → File Transfer (SFTP, S3)
+    └── No → Messaging (async)
+```
 
-### Concept 3: Data Management
-Proper data management is essential for Integration Patterns. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Anti-Corruption Layer (ACL)
+ACL prevents a system's internal model from leaking into other systems. Three components: Interface (stable contract), Translation (maps between domain models), Routing (directs to legacy or new system).
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+ACL patterns:
+- Facade: Wrap complex legacy API with simple interface
+- Adapter: Translate between different interfaces
+- Translator: Convert between data models (legacy XML -> modern JSON)
+- Gateway: Route and transform at proxy layer
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Message Routing Patterns
+| Pattern | Description |
+|---------|-------------|
+| Content-Based Router | Route by message content (field value, type) |
+| Header-Based Router | Route by message metadata |
+| Recipient List | Send to multiple destinations |
+| Splitter | Split one message into many |
+| Aggregator | Combine related messages |
+| Dead Letter Channel | Failed messages storage |
 
-## Architecture Patterns
+### Error Handling
+| Strategy | When | Details |
+|----------|------|---------|
+| Retry (exponential backoff) | Transient failures | Base delay 1s, max 30s, jitter 0.1 |
+| Circuit breaker | Persistent failures | Open after 50% failure rate in 10s window |
+| Dead letter queue | Poison messages | Review weekly, reprocess after fix |
+| Idempotency keys | All state-changing operations | De-duplicate on consumer side |
 
-### Pattern 1: Standard Architecture
-The standard architecture for Integration Patterns follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+## Message Brokers
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### Broker Selection
+```
+Throughput > 500K msg/s? -> Kafka (high-throughput, ordered per partition, replay)
+Complex routing needed? -> RabbitMQ (flexible exchanges, routing keys)
+Fully on AWS? -> SQS (simple, unlimited scale, no ordering guarantees)
+Need message replay? -> Kafka (retain and replay)
+Simple queue? -> SQS or RabbitMQ
+```
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Kafka vs RabbitMQ
+| Feature | Kafka | RabbitMQ |
+|---------|-------|----------|
+| Throughput | Very high (1M+ msg/s) | Medium (50K msg/s) |
+| Message retention | Configurable (days) | Until consumed |
+| Replay | Yes (by offset/timestamp) | No (must re-publish) |
+| Routing | Topic-based | Exchanges + bindings |
+| Ordering | Per partition | Per queue |
+| Delivery guarantees | At-least-once | At-most-once / at-least-once |
 
-## Implementation Guide
+## Schema Management
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Schema Registry
+Centralized registry for message schemas. Enforces compatibility on schema evolution. Produces validate before publishing. Consumers pull latest compatible schema.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
-
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
-
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
-
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
-
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
-
-## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+### Compatibility Types
+| Type | Allows | Prevents |
+|------|--------|----------|
+| Backward | Add optional fields, remove fields with defaults | Delete fields, change types |
+| Forward | Delete fields, add optional fields | Remove fields with defaults |
+| Full | Both backward and forward | Any breaking change |
+| None | Anything | Nothing |
 
 ## Common Pitfalls
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+### Database Sharing Between Services
+Direct database access creates tight coupling. Schema changes break other services. Always use APIs or message queues for service-to-service communication.
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+### No Anti-Corruption Layer
+Integrating directly with a legacy system's internal model propagates legacy problems. ACL isolates internal domain from external models.
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+### Synchronous Chaining
+A -> B -> C -> D means latency = sum of all. Failure of D takes down A, B, C. Use async messaging for non-real-time. Implement circuit breakers.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+### Unmonitored Dead Letter Queue
+Messages fail and go to DLQ but nobody monitors it. DLQ overflows, messages lost forever. Monitor DLQ depth, alert on growth, review weekly.
 
 ## Key Points
-- Understand core Integration Patterns concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- Integration style drives architecture — choose based on latency, volume, and consistency needs
+- Anti-corruption layer is mandatory between all bounded contexts
+- Schema registry prevents breaking changes from propagating
+- Idempotency keys on all state-changing operations prevent duplicate processing
+- Dead letter queues must be monitored, not ignored
+- Kafka for high-throughput streaming, RabbitMQ for flexible routing
+- Always plan for error handling: retry, circuit breaker, DLQ, manual intervention
+- Protocol transformation at boundaries prevents incompatibility issues

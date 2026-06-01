@@ -4,7 +4,7 @@ description: >
   Use this skill when building computer vision systems for image classification, object detection, segmentation, or image preprocessing/augmentation.
   This skill enforces: task selection (classification/detection/segmentation), model choice by task and budget, image preprocessing pipeline, augmentation strategy, training config with metrics (mAP, IoU), inference optimization.
   Do NOT use for: video streaming analytics, OCR (use separate OCR skill), medical imaging (requires domain-specific skill), NLP with image captions (use ml-nlp).
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -27,6 +27,67 @@ results[0].show()
 
 ## Purpose
 Design computer vision pipelines for image classification, object detection, and segmentation with appropriate model selection, preprocessing, augmentation, and training configuration.
+
+## Architecture/Decision Trees
+
+### Task Selection
+```
+What visual task do you need?
+  ├── Assign single label to entire image → Image Classification
+  │   ├── Small dataset (<1K/class) → ResNet (transfer learning)
+  │   ├── Large dataset (>10K/class) → ConvNeXt, EfficientNet, ViT
+  │   └── Zero-shot → CLIP (text-image alignment)
+  ├── Locate objects with bounding boxes → Object Detection
+  │   ├── Real-time (30+ FPS) → YOLOv8 (n/s/m/l/x)
+  │   ├── High accuracy, slower → RT-DETR, Faster R-CNN
+  │   └── Few classes, fixed size → YOLO (single-stage)
+  ├── Pixel-level classification → Segmentation
+  │   ├── Each pixel → Semantic Segmentation (U-Net, DeepLabV3+)
+  │   ├── Each object instance → Instance Segmentation (Mask R-CNN, YOLOv8-seg)
+  │   ├── Both → Panoptic Segmentation (Mask2Former)
+  │   └── Zero-shot → SAM (Segment Anything)
+  └── Image similarity / retrieval
+      ├── Feature extraction → DINOv2 (self-supervised)
+      └── Image + text → CLIP embedding
+```
+
+### Model Size vs Accuracy Tradeoff
+```
+                     Accuracy
+                        ↑
+  ViT-L/14           ●   │
+  ConvNeXt-XL       ●    │
+  EfficientNet-B7  ●     │
+  ResNet-152      ●      │
+  YOLOv8x        ●       │
+  ViT-B/16       ●       │
+  ResNet-50      ●       │
+  EfficientNet-B3●        │
+  YOLOv8n       ●         │
+  MobileNetV3  ●          │
+                        └─────────────→
+                          Parameters (log)
+```
+
+### Augmentation Strategy Decision Tree
+```
+Dataset size per class
+  ├── Large (>1000 images/class)
+  │   ├── Light augmentation: HorizontalFlip, slight rotation
+  │   ├── Color jitter (brightness=0.2, contrast=0.2)
+  │   └── Random crop (90-100%)
+  ├── Medium (100-1000 images/class)
+  │   ├── Light + color jitter (0.1-0.3 each)
+  │   ├── Random scaling (0.8-1.2), rotation (±15°)
+  │   ├── Cutout (1-2 holes), random affine
+  │   └── Mosaic for detection (YOLO)
+  └── Small (<100 images/class)
+      ├── Heavy + Mixup (α=0.2), CutMix
+      ├── RandAugment (auto magnitude)
+      ├── Grid distortion, elastic transform
+      ├── Coarse dropout, random erasing
+      └── Test-time augmentation (multi-scale + flip)
+```
 
 ## Agent Protocol
 
@@ -72,7 +133,7 @@ Schedule: {cosine / step / plateau} | Epochs: {N}
 Batch Size: {N} | Precision: {fp16 / bf16}
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output.
 
 ### Completion Criteria
 - [ ] Task type identified with class count and input resolution.
@@ -84,90 +145,227 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 - [ ] Per-class metrics tracked to identify weak categories.
 
 ### Max Response Length
-200 lines of configuration and code.
+300 lines of configuration and code.
 
 ## Workflow
 
 ### Step 1: Task & Model Selection
-Image classification: ResNet (simple, reliable, good for transfer learning), EfficientNet (better accuracy/parameter ratio, compound scaling), ConvNeXt (modernized ResNet, SOTA CNN), Vision Transformer ViT (best accuracy with sufficient data, needs >10M images for training from scratch, works with 1K+ for fine-tuning), DeiT (data-efficient ViT, works with ImageNet-1K scale). Object detection: YOLOv8 (real-time single-stage, best speed/accuracy, 5 variants nano to xlarge), DETR (transformer end-to-end, no anchor boxes, no NMS, simpler pipeline, slower convergence). RT-DETR (real-time DETR, combines YOLO speed with DETR simplicity). Faster R-CNN (two-stage, highest accuracy at speed cost, good for small objects). Instance segmentation: Mask R-CNN (extension of Faster R-CNN with mask head), YOLOv8-seg (real-time segmentation), SAM (foundation model, zero-shot, prompts via points/boxes/text). Semantic segmentation: U-Net (biomedical, efficient with limited data), DeepLabV3+ (atrous convolution for multi-scale), SegFormer (transformer-based, efficient). Panoptic segmentation: Mask2Former (unified architecture, state of the art). Foundation models: SAM (Segment Anything, zero-shot segmentation), DINOv2 (self-supervised visual features, good for few-shot), CLIP (text-image alignment, zero-shot classification). Use foundation models when labeled data is scarce and task aligns with pretraining.
+Image classification: ResNet (simple, reliable), EfficientNet (better accuracy/parameter ratio), ConvNeXt (modernized), ViT (best accuracy with sufficient data). Object detection: YOLOv8 (real-time, best speed/accuracy), DETR (transformer end-to-end, no NMS). Faster R-CNN (two-stage, best for small objects). Segmentation: Mask R-CNN, YOLOv8-seg, SAM (zero-shot). Semantic segmentation: U-Net, DeepLabV3+, SegFormer.
+
+```python
+# Classification backbone selection
+def select_classification_model(dataset_size, accuracy_target):
+    if dataset_size < 1000:
+        return "resnet50", "DEFAULT"  # ImageNet pretrained
+    elif dataset_size < 10000:
+        return "efficientnet_b3", "DEFAULT"
+    elif accuracy_target == "max":
+        return "convnext_large", "DEFAULT"
+    else:
+        return "vit_base_patch16_224", "IMAGENET1K_V1"
+```
 
 ### Step 2: Image Preprocessing
-Resize to fixed input size: 224x224 for classification (ResNet, EfficientNet), 640x640 for detection (YOLO), 800x1333 for Faster R-CNN (short side 800, long side <=1333). Letterbox resize: preserve aspect ratio by padding to square with constant color. Maintains object proportions. Center crop: crop center region after resize to square. Standard for ImageNet-style classification. Interpolation: bilinear for downscaling (smooth), bicubic for upscaling (sharper), nearest for masks (no interpolation artifacts on boundaries). Normalize: ImageNet mean [0.485, 0.456, 0.406] and std [0.229, 0.224, 0.225] for models pretrained on ImageNet. Dataset-specific normalization for custom pretraining. Color space: RGB for most models, BGR for OpenCV default (convert to RGB before model), grayscale for specific tasks (reduce channels). Data type: float32 for standard, float16 for half-precision inference, uint8 for input to normalization.
+Resize to fixed input size: 224x224 for classification, 640x640 for detection, 800x1333 for Faster R-CNN. Letterbox resize: preserve aspect ratio. Interpolation: bilinear for downscaling, bicubic for upscaling, nearest for masks. Normalize: ImageNet mean [0.485, 0.456, 0.406] and std [0.229, 0.224, 0.225].
+
+```python
+import cv2
+import numpy as np
+from torchvision import transforms
+
+def get_classification_transform(img_size=224):
+    return transforms.Compose([
+        transforms.Resize((img_size, img_size), interpolation=transforms.InterpolationMode.BILINEAR),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+def letterbox_resize(image, target_size=640):
+    h, w = image.shape[:2]
+    scale = target_size / max(h, w)
+    new_h, new_w = int(h * scale), int(w * scale)
+    resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+    dw, dh = (target_size - new_w) // 2, (target_size - new_h) // 2
+    canvas = np.full((target_size, target_size, 3), 114, dtype=np.uint8)
+    canvas[dh:dh+new_h, dw:dw+new_w] = resized
+    return canvas, (scale, dw, dh)
+```
 
 ### Step 3: Augmentation Strategy
-Light (1000+ samples per class): horizontal flip, slight rotation +-10 degrees, small random crop (90-100% of original), mild color jitter. Medium (100-1000 per class): light plus color jitter (brightness 0.2, contrast 0.2, saturation 0.2, hue 0.1), random scaling (0.8-1.2), cutout (1-2 random holes), random affine translation. Heavy (<100 per class): medium plus mixup (blend two images alpha=0.2), cutmix (patch from another image), RandAugment (automatically selected magnitude from range), grid distortion, elastic transform (non-linear warp), coarse dropout (multiple random regions). For object detection augmentation must be bbox-aware: ensure bounding boxes stay within image after crop, transform with image. Albumentations handles this natively. For segmentation: spatial transforms must apply identically to image and mask. Use same random seed for both. Albumentations: use DualTransform or DualIAATransform. Mosaic augmentation (YOLO-specific): combine 4 images into one — improves small object detection, especially beneficial for datasets with small objects.
+Light (1000+): horizontal flip, slight rotation ±10°, small random crop. Medium (100-1000): light + color jitter, random scaling, cutout. Heavy (<100): medium + mixup, cutmix, RandAugment, elastic transform.
+
+```python
+import albumentations as A
+
+def get_augmentation_pipeline(dataset_size):
+    if dataset_size >= 1000:
+        return A.Compose([
+            A.HorizontalFlip(p=0.5),
+            A.Rotate(limit=10, p=0.3),
+            A.RandomResizedCrop(224, 224, scale=(0.9, 1.0), p=0.5),
+            A.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1, p=0.3),
+        ])
+    elif dataset_size >= 100:
+        return A.Compose([
+            A.HorizontalFlip(p=0.5),
+            A.Rotate(limit=15, p=0.5),
+            A.RandomResizedCrop(224, 224, scale=(0.8, 1.0), p=0.5),
+            A.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.15, p=0.5),
+            A.Cutout(num_holes=2, max_h_size=32, max_w_size=32, p=0.3),
+            A.Affine(scale=(0.8, 1.2), translate_percent=(-0.1, 0.1), p=0.3),
+        ])
+    else:
+        return A.Compose([
+            A.HorizontalFlip(p=0.5),
+            A.RandomResizedCrop(224, 224, scale=(0.7, 1.0), p=0.5),
+            A.Rotate(limit=30, p=0.5),
+            A.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.2, p=0.5),
+            A.GridDistortion(p=0.3),
+            A.ElasticTransform(alpha=1, sigma=50, p=0.2),
+            A.CoarseDropout(max_holes=8, max_height=32, max_width=32, p=0.3),
+        ])
+
+# Detection-specific augmentation (bbox-aware)
+def get_detection_augmentation():
+    return A.Compose([
+        A.HorizontalFlip(p=0.5),
+        A.RandomBrightnessContrast(p=0.3),
+        A.HueSaturationValue(p=0.3),
+        A.Mosaic(p=0.5),  # YOLO-specific
+    ], bbox_params=A.BboxParams(format="yolo", min_visibility=0.3))
+```
 
 ### Step 4: Training Configuration
-Loss functions: cross-entropy for classification. Focal Loss for detection with class imbalance — gamma=2 focuses on hard examples. Dice loss + BCE for segmentation (hybrid loss handles both overlap and pixel accuracy). CIoU loss for bounding box regression (considers overlap, distance, aspect ratio). Optimizer: AdamW (default for most architectures, decoupled weight decay, better generalization). SGD with momentum (needs more tuning but can reach slightly higher accuracy with proper LR schedule). Learning rate: 1e-4 for AdamW, 1e-2 for SGD (linear scaling rule: base LR for batch_size=256, scale by batch_size/256). Schedule: cosine decay with warmup (best for ViTs and modern CNNs, 5-10% warmup), step decay (multiply by gamma every N epochs, good for ResNets), plateau reduce (reduce LR when metric plateaus, legacy). Label smoothing: epsilon=0.1 prevents overconfidence. Weight decay: 0.01-0.05 for AdamW, 1e-4 for SGD. Batch size: as large as GPU memory allows. Effective batch size matters more than per-GPU.
+Loss functions: cross-entropy for classification. Focal Loss for detection (gamma=2). Dice loss + BCE for segmentation. Optimizer: AdamW (default, decoupled weight decay). Learning rate: 1e-4 for AdamW, 1e-2 for SGD. Schedule: cosine decay with warmup (5-10%). Label smoothing: epsilon=0.1.
+
+```python
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+def configure_training(model, config):
+    # Loss
+    if config["task"] == "classification":
+        criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    elif config["task"] == "detection":
+        criterion = nn.BCEWithLogitsLoss()  # multi-label
+    elif config["task"] == "segmentation":
+        criterion = nn.BCEWithLogitsLoss()  # or Dice loss
+
+    # Optimizer
+    optimizer = optim.AdamW(
+        model.parameters(),
+        lr=config["learning_rate"],
+        weight_decay=config["weight_decay"],
+    )
+
+    # Scheduler
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(
+        optimizer,
+        T_max=config["epochs"],
+        eta_min=config["learning_rate"] * 0.01,
+    )
+
+    # Mixed precision
+    scaler = torch.cuda.amp.GradScaler() if config["mixed_precision"] else None
+
+    return criterion, optimizer, scheduler, scaler
+```
 
 ### Step 5: Evaluation Metrics
-Classification: top-1 accuracy, top-5 accuracy (for many classes), per-class F1, confusion matrix, log loss. Detection: mAP@0.5 (PASCAL VOC standard), mAP@0.5:0.95 (COCO standard, average over IoU thresholds 0.5 to 0.95 step 0.05), precision at IoU threshold, recall at max detections. Per-class mAP: identify which classes model struggles with — often tail classes, visually similar classes. Segmentation: mean IoU (mIoU) average over all classes, Dice coefficient (F1 for segmentation), boundary IoU (stricter, penalizes boundary errors), pixel accuracy (less informative for imbalanced). Per-class IoU: identify classes with poor overlap.
+Classification: top-1 accuracy, top-5 accuracy, per-class F1. Detection: mAP@0.5:0.95 (COCO standard). Segmentation: mean IoU, Dice coefficient. Per-class metrics essential for identifying weak categories.
 
-### Integration with Deployment Pipeline
-Export trained model to ONNX format for cross-platform deployment.
-Quantize model to FP16 or INT8 for edge device deployment (Jetson, mobile).
-Containerize inference server with Triton Inference Server or TorchServe.
-Set up model monitoring for prediction distribution drift and input quality checks.
-Implement A/B testing for new model versions with gradual traffic rollout.
-Cache preprocessed images to reduce inference latency for repeated inputs.
-Log inference results with image hash, model version, and latency for audit trail.
+```python
+def compute_map(predictions, targets, iou_thresholds=np.arange(0.5, 0.96, 0.05)):
+    """Simplified mAP computation (full implementation requires matching)."""
+    aps = []
+    for iou_thresh in iou_thresholds:
+        tp, fp, num_pos = compute_tp_fp(predictions, targets, iou_thresh)
+        if num_pos == 0:
+            continue
+        precision = tp / (tp + fp + 1e-10)
+        recall = tp / num_pos
+        # Interpolated AP
+        ap = np.trapz(np.sort(precision), np.sort(recall))
+        aps.append(ap)
+    return np.mean(aps)  # mAP@0.5:0.95
+```
 
 ### Step 6: Inference Optimization
-Model export: PyTorch -> ONNX (cross-platform), ONNX -> TensorRT (NVIDIA GPU max speed). Quantization: FP16 (2x speed, minimal accuracy loss), INT8 (4x, calibration on 500-1000 samples needed to set scale/zero-point). TensorRT: graph optimization, layer fusion, precision calibration, kernel auto-tuning, dynamic shape support. Batch inference: process multiple images together for max GPU utilization. TorchScript: export for C++ runtime without Python dependency. OpenVINO: Intel CPU optimized inference. NMS optimization: for detection models, use fast NMS (parallel implementation), batched NMS (single op for all classes), or remove NMS entirely (DETR does not need NMS). Model pruning: structured pruning (remove channels/filters) achieves 2x compression with <1% mAP loss. Knowledge distillation: train small student model from large teacher (e.g., YOLOv8n from YOLOv8x).
+Model export: PyTorch → ONNX, ONNX → TensorRT. Quantization: FP16 (2x speed), INT8 (4x). Batch inference for max GPU utilization. NMS optimization: fast NMS, batched NMS. Model pruning: structured pruning (2x compression, <1% mAP loss).
 
-### Common Pitfalls
-Normalizing with wrong mean/std values — ImageNet stats only for ImageNet-pretrained models.
-Using different input sizes for training and inference — accuracy degrades from size mismatch.
-Training without data augmentation on small datasets — model overfits to training set specifics.
-Not using mixed precision training — 2x speedup available with minimal accuracy loss.
-Forgetting to set model to eval mode before inference — BatchNorm and Dropout behave differently.
-Using excessive NMS IoU threshold — too low removes overlapping detections, too high keeps duplicates.
-Training object detectors without mosaic augmentation — worse performance on small objects.
+```python
+import torch
 
-## Rules
-- Always normalize with dataset-specific mean/std, not just divide by 255.
-- Use the same input size for training and inference — mismatched sizes hurt accuracy.
-- Learning rate should scale with batch size: LR = base_LR * (batch_size / base_batch_size).
-- Warmup is critical for vision transformers — 5-10% of total steps.
-- Monitor training loss curves: loss should decrease smoothly, not oscillate.
-- For small datasets (<1000 images), use heavy augmentation and transfer learning.
-- COCO pretrained weights are better than ImageNet for detection tasks — use task-relevant pretraining.
-- YOLOv8 default anchors work for most datasets — no need to recalculate.
-- mAP@0.5:0.95 is the standard metric for detection, not just mAP@0.5.
-- Never evaluate on the training set — monitor validation mAP for overfitting.
-- Test-time augmentation (horizontal flip, multi-scale) gives 1-3% mAP boost at inference cost.
-- Mosaic augmentation improves small object detection but may confuse very small datasets.
-- Gradient accumulation simulates larger batch size without increasing memory.
-- Mixed precision (AMP) gives ~2x training speedup with negligible accuracy loss.
+def export_to_onnx(model, dummy_input, output_path="model.onnx"):
+    model.eval()
+    torch.onnx.export(
+        model,
+        dummy_input,
+        output_path,
+        opset_version=17,
+        input_names=["input"],
+        output_names=["output"],
+        dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
+    )
 
-### Production Monitoring
-Track mAP@0.5:0.95 over time on a held-out validation set to detect performance regression.
-Monitor inference latency (preprocessing + model + postprocessing) for each endpoint.
-Track per-class average precision — detection of specific classes may degrade while overall mAP stays stable.
-Monitor input image statistics: resolution, brightness, blur score — drift affects model performance.
-Log prediction metadata: class confidences, bounding box counts, inference time for every request.
-Set up data drift detection on image embeddings extracted from the model backbone.
-Monitor model calibration — confidence scores should match actual accuracy (expected calibration error).
+def optimize_tensorrt(onnx_path, engine_path, precision="fp16"):
+    import tensorrt as trt
+    logger = trt.Logger(trt.Logger.WARNING)
+    builder = trt.Builder(logger)
+    network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
+    parser = trt.OnnxParser(network, logger)
+    with open(onnx_path, "rb") as f:
+        parser.parse(f.read())
+    config = builder.create_builder_config()
+    if precision == "fp16":
+        config.set_flag(trt.BuilderFlag.FP16)
+    serialized = builder.build_serialized_network(network, config)
+    with open(engine_path, "wb") as f:
+        f.write(serialized)
+```
 
-### Troubleshooting Guide
-Low mAP on validation → check for overfitting, insufficient augmentation, class imbalance, or learning rate issues.
-Model missing small objects → increase input resolution, add mosaic augmentation, use feature pyramid network.
-High false positive rate → increase NMS IoU threshold, check for class imbalance, adjust confidence threshold.
-Training loss not decreasing → reduce learning rate, check data loading, verify labels, normalize inputs properly.
-Out of memory during training → reduce batch size, enable gradient accumulation, use mixed precision, downscale images.
-Inference too slow → quantize to FP16/INT8, use TensorRT, reduce model size, batch inference requests.
-Augmentation causing label misalignment → use bbox-aware transforms for detection, verify augmentation visually.
-Model performs poorly on specific classes → check per-class sample count, add class weighting or focal loss.
+## Anti-Patterns
+
+- **Normalizing with wrong mean/std**: ImageNet stats only for ImageNet-pretrained models.
+- **Different input sizes for train and inference**: Accuracy degrades from size mismatch.
+- **Training without augmentation on small datasets**: Model overfits to training specifics.
+- **Not using mixed precision**: 2x speedup available with minimal accuracy loss.
+- **Forgetting model.eval()**: BatchNorm and Dropout behave differently in eval mode.
+- **Excessive NMS IoU threshold**: Too low removes overlapping detections, too high keeps duplicates.
+- **Training detectors without mosaic**: Worse performance on small objects.
+- **Not handling class imbalance**: With long-tail datasets, use focal loss or class weights.
+- **Using wrong interpolation for masks**: Nearest interpolation for segmentation masks, bilinear for images.
+
+## Production Considerations
 
 ### Deployment Checklist
-Export model to ONNX or TensorRT format for optimized production inference.
-Profile inference on target hardware (CPU/GPU/edge) to validate throughput requirements.
-Set confidence threshold based on precision-recall tradeoff for the specific deployment use case.
-Implement image preprocessing as part of the inference pipeline, not as a separate step.
-Containerize model with preprocessing and post-processing in a single service endpoint.
-Set up A/B testing for gradual model version rollout with automatic rollback.
-Monitor for adversarial or out-of-distribution inputs using confidence thresholds and embedding distances.
-Log model version, preprocessing config, inference time, and detection results for every request.
+- Export to ONNX or TensorRT for optimized production inference.
+- Profile on target hardware to validate throughput requirements.
+- Set confidence threshold based on precision-recall tradeoff.
+- Implement preprocessing as part of inference pipeline.
+- Containerize model with preprocessing and post-processing.
+- Set up A/B testing for gradual rollout with automatic rollback.
+- Monitor for adversarial inputs using confidence thresholds.
+
+### Monitoring
+- Track mAP@0.5:0.95 over time to detect performance regression.
+- Monitor inference latency (preprocessing + model + postprocessing).
+- Track per-class AP — specific classes may degrade while overall mAP stays stable.
+- Monitor input image statistics: resolution, brightness, blur score.
+- Log prediction metadata: class confidences, bbox counts, inference time.
+
+## Rules
+- Always normalize with dataset-specific mean/std.
+- Use the same input size for training and inference.
+- Learning rate scales with batch size: LR = base_LR * (batch_size / base_batch_size).
+- Warmup is critical for vision transformers (5-10% of total steps).
+- COCO pretrained weights better than ImageNet for detection tasks.
+- mAP@0.5:0.95 is the standard metric for detection.
+- Never evaluate on the training set.
+- Test-time augmentation gives 1-3% mAP boost at inference cost.
+- Gradient accumulation simulates larger batch size.
+- Mixed precision (AMP) gives ~2x speedup.
 
 ## References
   - references/computer-vision-advanced.md — Computer Vision Advanced Topics
@@ -179,4 +377,4 @@ Log model version, preprocessing config, inference time, and detection results f
   - references/image-segmentation.md — Image Segmentation
   - references/video-analysis.md — Video Analysis
 ## Handoff
-Hand off to ml-experiment-tracking for training runs. For model deployment on edge devices, hand off to devops-ml-serving. For video processing pipelines, use dedicated video-streaming skill.
+Hand off to ml-experiment-tracking for training runs. For model deployment on edge devices, hand off to devops-ml-serving.

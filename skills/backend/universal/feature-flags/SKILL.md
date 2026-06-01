@@ -2,7 +2,7 @@
 name: backend-feature-flags
 description: >
   Use this skill when implementing feature flags, canary releases, A/B testing, or kill switches. This skill enforces: flag ownership with removal date, cached evaluation, kill switches for critical features, safe defaults (off). Applies to LaunchDarkly, Unleash, Flagsmith, or custom flag systems. Do NOT use for: permanent configuration, environment variables, or build-time feature toggles.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -56,6 +56,36 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 200 lines of configuration and code.
+
+## Decision Tree
+
+### What Type of Flag?
+
+```
+How long does this flag live?
+  ├── Days to weeks (feature under development)
+  │   └── Release toggle — remove immediately after full rollout
+  ├── Weeks to months (A/B test, experiment)
+  │   └── Experiment toggle — remove after analysis complete
+  ├── Months to years (kill switch, operational control)
+  │   └── Ops toggle — highest risk, requires kill switch
+  └── Permanent (access control, early access)
+      └── Permission toggle — effectively access control, use RBAC instead
+```
+
+### How to Evaluate?
+
+```
+Where is the flag evaluated?
+  ├── Client-side UI (show/hide elements, A/B test variants)
+  │   └── Client SDK — streaming evaluation, user-facing latency critical
+  ├── Server-side request path (enable new feature logic)
+  │   └── Server SDK — cached evaluation, bulk evaluation for batch
+  ├── Backend service (behavior change)
+  │   └── Server SDK — sub-millisecond evaluation, deterministic
+  └── Infrastructure (deployment, routing, scaling)
+      └── Ops toggle — short cache TTL (5s), near-instant propagation
+```
 
 ## Workflow
 
@@ -225,6 +255,43 @@ Kill switch: master flag that disables a feature globally regardless of other ta
 | Circuit breaker | Failure rate threshold | <30s activation | Integration test |
 | Approval workflow | PR + code review | Minutes-hours | Documented process |
 
+### Step 8: Custom Flag Evaluation (No SDK)
+
+```typescript
+// Lightweight in-app flag evaluation with Redis
+class FlagEvaluator {
+  constructor(private redis: Redis) {
+    this.loadFlags();
+  }
+
+  async loadFlags(): Promise<void> {
+    // Load flags from Redis, refresh every 30s
+    setInterval(async () => {
+      this.flags = await this.redis.hgetall('feature-flags');
+    }, 30000);
+  }
+
+  isEnabled(flagKey: string, userId: string): boolean {
+    const flag = this.flags[flagKey];
+    if (!flag) return false;  // default off
+    if (flag.users?.includes(userId)) return true;
+    if (flag.percentage && this.hash(userId, flagKey) < flag.percentage) return true;
+    return false;
+  }
+
+  private hash(userId: string, flagKey: string): number {
+    // Simple hash for consistent percentage assignment
+    let hash = 0;
+    const str = `${userId}:${flagKey}`;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash = hash & hash;  // Convert to 32-bit int
+    }
+    return ((hash % 100) + 100) % 100;
+  }
+}
+```
+
 ## Configuration Reference
 
 ```json
@@ -277,6 +344,7 @@ Kill switch: master flag that disables a feature globally regardless of other ta
 - A/B experiment flags include tracking exposure event
 - Never nest flag evaluation inside another flag evaluation
 - Flag name matches codebase convention: `kebab-case` with domain prefix
+- Remove flags immediately after full release — do not let them accumulate
 
 ## References
   - references/experimentation.md — A/B Testing and Experimentation Reference

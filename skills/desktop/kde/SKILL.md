@@ -1,8 +1,8 @@
 ---
-name: kde
+name: desktop-kde
 description: >
-  Use this skill when building KDE desktop applications — Qt 6, Kirigami convergent UI, KDE Frameworks, Plasma extensions. Covers KDevelop, CMake, KPlugin, KConfig, KIO, Plasma UI. Do NOT use for: GNOME-specific apps, non-KDE Qt projects, cross-platform mobile-only apps.
-version: "1.0.0"
+  Use when the user asks about KDE Plasma development, KDE Frameworks, KConfig, KXMLGUI, KIO, KService, Kirigami, or KDE Plasma applets. Do NOT use for: Qt (desktop-qt), or GNOME (desktop-gnome).
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -10,143 +10,247 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [desktop, linux, kde, qt, kirigami, plasma, phase-4]
+tags: [desktop, kde, linux, qt]
 ---
 
 # KDE
 
 ## Purpose
-Build KDE desktop applications using Qt 6, Kirigami convergen UI, KDE Frameworks (KConfig, KIO, KPlugin), and Plasma extensions.
+Build applications and Plasma extensions for the KDE desktop environment using KDE Frameworks — Kirigami (adaptive UI), KConfig (settings), KIO (network-transparent file access), KXMLGUI (menus/toolbars), and Plasma applet APIs.
 
 ## Agent Protocol
 
 ### Trigger
-User request includes: `kde`, `plasma`, `kirigami`, `kde framework`, `kconfig`, `kio`, `kplugin`, `plasmoid`, `kde app`, `kdevelop`.
+Exact user phrases: "KDE app", "KDE Plasma", "Kirigami", "KConfig", "KIO", "KXMLGUI", "Plasma applet", "KDE Frameworks", "KService", "KAboutData", "KStatusNotifierItem".
 
 ### Input Context
-- Language (C++, QML, Python)
-- KDE Frameworks version (6.x)
-- Project type (Plasma applet, Kirigami app, KCM module, KRunner plugin)
-- Build system (CMake + KDE extra-cmake-modules)
-- Qt version (6.5+)
+- App type (Kirigami adaptive app, traditional QtWidgets/KDE, Plasma applet)
+- KDE Frameworks version (KF5 vs KF6 — KF6 for new projects)
+- Qt version (Qt6 with KF6, Qt5 with KF5)
+- Display backend (X11, Wayland, both)
+- Target form factor (desktop, mobile, convergent)
+- Distribution (Flatpak via KDE Flatpak runtime, distro packages, Snap)
 
 ### Output Artifact
-A markdown document containing:
-- CMakeLists.txt with KDE dependencies
-- Kirigami application shell (ApplicationWindow + PageRouter)
-- KConfig XT settings definitions
-- KAction collection for keyboard shortcuts
-- KIO worker or file operations
-- Plasma applet/plasmoid structure
-- KPackage metadata
-- Icon theme integration
-
-### Response Format
-Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick.
+KDE application architecture with Kirigami layout, data model with KConfig, and Plasma integration.
 
 ### Completion Criteria
-- CMakeLists.txt uses find_package with KF6 components.
-- Kirigami.ApplicationWindow with PageRouter and page stack.
-- KConfig XT file defines settings with defaults.
-- KActionCollection created with standard keyboard shortcuts.
-- Plasma applet .desktop file with ServiceTypes=Plasma/Applet.
-- App installable via KPackage.
+- [ ] App type selected (Kirigami vs traditional QtWidgets)
+- [ ] Application class derived (KirigamiApplication or KAboutData + QApplication)
+- [ ] UI layout designed (Kirigami.Page, Action, OverlaySheet; or KXMLGUI)
+- [ ] Settings architecture (KConfig XT for type-safe settings)
+- [ ] Data model and storage (KIO for files, KConfig for preferences, Qt SQL for data)
+- [ ] Plasma integration (KStatusNotifierItem, MPRIS, KRunner)
+- [ ] Notifications and jobs (KNotification, KJob)
+- [ ] Localization (KLocalizedString, ki18n)
+- [ ] CMakeLists.txt with KDE Framework dependencies
+- [ ] Flatpak manifest (org.kde.Platform runtime)
 
 ### Max Response Length
-4096 tokens
+250 lines.
+
+## Framework/Methodology
+
+### KDE App Decision Tree
+```
+What type of KDE application?
+├── Adaptive/Convergent (mobile + desktop) → Kirigami
+│   → Kirigami.Application, Kirigami.Page, Kirigami.Card
+│   → KConfig XT, KIO, KNotifications
+├── Traditional desktop application → QtWidgets + KDE Frameworks
+│   → KMainWindow, KXMLGUI, KConfig, KIO
+│   → Full control over widget layout
+├── Plasma applet (widget on desktop/panel) → Plasma Framework
+│   → Plasma::Applet, Plasma::Containment
+│   → QML-based UI with Plasma components
+├── KRunner plugin → KRunner Framework
+│   → KRunner::AbstractRunner
+│   → Match results, actions, configuration
+└── Background service → KDE Daemon pattern
+    → KDEDModule, D-Bus interfaces
+    → No UI, system-level integration
+```
+
+### KDE Framework Stack
+```
+Application
+├── Kirigami (adaptive UI) | QtWidgets (traditional)
+├── KConfig (settings) | KIO (file I/O) | KNotify (notifications)
+├── KXMLGUI (menus) | KService (plugin system) | KAboutData (about dialog)
+├── KWallet (secrets) | KStatusNotifierItem (system tray)
+└── Qt6 (QtWidgets, QtQuick, QtCore)
+    ↓
+KDE Plasma (if applet: Plasma::Applet, Plasma::Containment)
+```
 
 ## Workflow
 
-### Step 1: CMake Project
+### Step 1: Set Up Kirigami Application
+
 ```cmake
 # CMakeLists.txt
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.16)
 project(MyApp VERSION 1.0.0 LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
 
 find_package(ECM REQUIRED NO_MODULE)
 set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
 
-find_package(Qt6 REQUIRED COMPONENTS Core Qml Quick QuickControls2)
-find_package(KF6 REQUIRED COMPONENTS
-    Kirigami
-    KConfig
-    KCoreAddons
-    KIO
-    I18n
-    Notifications
-    XmlGui
-)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 Widgets)
+find_package(KF6 REQUIRED COMPONENTS Kirigami CoreAddons I18n ConfigWidgets Notifications)
 
-qt_add_executable(myapp
+add_executable(myapp
     src/main.cpp
-    src/mainwindow.cpp src/mainwindow.h
-    resources/resources.qrc
+    src/app.cpp
+    src/Settings.qml
+    resources.qrc
 )
 
 target_link_libraries(myapp PRIVATE
-    Qt6::Core Qt6::Qml Qt6::Quick Qt6::QuickControls2
-    KF6::Kirigami
-    KF6::KConfig
-    KF6::KCoreAddons
-    KF6::KIO
-    KF6::I18n
-    KF6::Notifications
+    Qt6::Quick Qt6::QuickControls2 Qt6::Widgets
+    KF6::Kirigami KF6::CoreAddons KF6::I18n KF6::ConfigWidgets KF6::Notifications
 )
 
-install(TARGETS myapp ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
+install(TARGETS myapp DESTINATION ${KDE_INSTALL_TARGETS_DESTINATION})
 ```
 
-### Step 2: Kirigami App Shell
+```cpp
+// src/main.cpp
+#include <QApplication>
+#include <KAboutData>
+#include <KLocalizedString>
+#include <KDBusService>
+#include <QQmlApplicationEngine>
+#include <QQuickStyle>
+
+int main(int argc, char *argv[]) {
+    QApplication app(argc, argv);
+
+    KLocalizedString::setApplicationDomain("myapp");
+
+    KAboutData aboutData(
+        QStringLiteral("myapp"),
+        i18n("My App"),
+        QStringLiteral("1.0.0"),
+        i18n("A KDE Kirigami Application"),
+        KAboutLicense::GPL_V3,
+        i18n("(c) 2026 Author")
+    );
+    aboutData.addAuthor(i18n("Author"), i18n("Developer"));
+    KAboutData::setApplicationData(aboutData);
+
+    QQuickStyle::setStyle(QStringLiteral("org.kde.desktop"));
+
+    QQmlApplicationEngine engine;
+    engine.loadFromModule("org.kde.myapp", "Main");
+
+    KDBusService service(KDBusService::Unique);
+
+    return app.exec();
+}
+```
+
+### Step 2: Build Kirigami QML UI
+
 ```qml
-// src/main.qml
+// qml/Main.qml
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 
 Kirigami.ApplicationWindow {
     id: root
-    title: "My App"
+    title: i18n("My App")
     width: 800
     height: 600
 
-    // Global drawer (hamburger menu)
+    // Global drawer (navigation sidebar)
     globalDrawer: Kirigami.GlobalDrawer {
+        isCollapsible: true
         actions: [
             Kirigami.Action {
-                text: "Home"
+                text: i18n("Home")
                 icon.name: "go-home"
-                onTriggered: pageRouter.currentIndex = 0
+                onTriggered: pageStack.layers.clear()
             },
             Kirigami.Action {
-                text: "Settings"
+                text: i18n("Settings")
                 icon.name: "settings-configure"
-                onTriggered: pageRouter.currentIndex = 1
-            },
-            Kirigami.Action {
-                text: "About"
-                icon.name: "help-about"
-                onTriggered: pageRouter.currentIndex = 2
+                onTriggered: pageStack.push("qrc:/qml/Settings.qml")
             }
         ]
     }
 
-    // Page router for navigation
-    pageStack.initialPage: [
-        mainPage,
-        settingsPage,
-        aboutPage
-    ][pageRouter.currentIndex]
+    pageStack.initialPage: Kirigami.ScrollablePage {
+        title: i18n("Home")
+
+        Kirigami.Card {
+            banner.title: i18n("Welcome")
+            banner.source: "qrc:/images/banner.png"
+            content: Item {
+                implicitWidth: delegate.implicitWidth
+                implicitHeight: delegate.implicitHeight
+                QQC2.Label {
+                    id: delegate
+                    text: i18n("Welcome to My KDE App!")
+                    wrapMode: Text.WordWrap
+                }
+            }
+        }
+    }
 }
 ```
 
-### Step 3: KConfig XT Settings
-```ini
-# src/settings.kcfg
+```qml
+// qml/Settings.qml
+import QtQuick
+import QtQuick.Controls as QQC2
+import QtQuick.Layouts
+import org.kde.kirigami as Kirigami
+import org.kde.kconfig as KConfig
+
+Kirigami.ScrollablePage {
+    title: i18n("Settings")
+
+    Kirigami.FormLayout {
+        anchors.left: parent.left
+        anchors.right: parent.right
+
+        QQC2.TextField {
+            id: nameField
+            Kirigami.FormData.label: i18n("Name:")
+            text: settings.name
+        }
+
+        QQC2.CheckBox {
+            id: autoSaveCheck
+            Kirigami.FormData.label: i18n("Auto-save:")
+            checked: settings.autoSave
+        }
+
+        QQC2.ComboBox {
+            id: themeCombo
+            Kirigami.FormData.label: i18n("Theme:")
+            model: [i18n("System"), i18n("Light"), i18n("Dark")]
+            currentIndex: settings.theme
+        }
+
+        QQC2.Button {
+            text: i18n("Save")
+            onClicked: {
+                settings.name = nameField.text
+                settings.autoSave = autoSaveCheck.checked
+                settings.theme = themeCombo.currentIndex
+                settings.save()
+            }
+        }
+    }
+}
+```
+
+### Step 3: Type-Safe Settings with KConfig XT
+
+```kcfg
 <?xml version="1.0" encoding="UTF-8"?>
 <kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -154,70 +258,208 @@ Kirigami.ApplicationWindow {
                           http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
   <kcfgfile name="myapprc"/>
   <group name="General">
-    <entry name="theme" type="String">
-      <default>auto</default>
-      <label>Color scheme</label>
+    <entry name="Name" type="String">
+      <default></default>
     </entry>
-    <entry name="autoSave" type="Bool">
+    <entry name="AutoSave" type="Bool">
       <default>true</default>
-      <label>Auto-save documents</label>
     </entry>
-    <entry name="maxItems" type="Int">
-      <default>100</default>
-      <min>10</min>
-      <max>1000</max>
-      <label>Maximum items in list</label>
+    <entry name="Theme" type="Enum">
+      <default>0</default>
+      <choices>
+        <choice name="System"/>
+        <choice name="Light"/>
+        <choice name="Dark"/>
+      </choices>
+    </entry>
+    <entry name="WindowWidth" type="Int">
+      <default>800</default>
+    </entry>
+    <entry name="WindowHeight" type="Int">
+      <default>600</default>
     </entry>
   </group>
 </kcfg>
 ```
 
-### Step 4: Plasma Applet Structure
-```
-myplasmoid/
-├── metadata.desktop
-├── contents/
-│   ├── ui/
-│   │   └── main.qml
-│   └── config/
-│       └── config.qml
-└── CMakeLists.txt
+```cpp
+// KConfig XT generates SettingsBase class
+#include "settings.h"
+
+// Usage:
+Settings::setAutoSave(true);
+Settings::setName("User Name");
+Settings::self()->save();
+
+QString name = Settings::name();
+bool autoSave = Settings::autoSave();
+int theme = Settings::theme(); // 0=System, 1=Light, 2=Dark
 ```
 
-```desktop
-# metadata.desktop
-[Desktop Entry]
-Name=My Plasmoid
-Comment=A KDE Plasma applet
-Icon=applications-system
-Type=Service
-ServiceTypes=Plasma/Applet
-X-Plasma-API=javascript
-X-Plasma-MainScript=ui/main.qml
-X-KDE-PluginInfo-Author=My Name
-X-KDE-PluginInfo-Email=my@email.com
-X-KDE-PluginInfo-Name=myplasmoid
-X-KDE-PluginInfo-Version=1.0
-X-KDE-PluginInfo-License=MIT
-X-KDE-PluginInfo-EnabledByDefault=true
+### Step 4: File I/O with KIO
+
+```cpp
+#include <KIO/Job>
+#include <KIO/OpenUrlJob>
+#include <KIO/StoredTransferJob>
+#include <KFileWidget>
+
+// Open file dialog
+void openFile() {
+    auto *fileWidget = new KFileWidget(QUrl("kfiledialog:///myapp"), this);
+    fileWidget->setOperationMode(KFileWidget::Opening);
+    fileWidget->setFilter("*.txt|Text Files\n*|All Files");
+
+    connect(fileWidget, &KFileWidget::okClicked, this, [this, fileWidget]() {
+        QUrl url = fileWidget->selectedUrl();
+        fileWidget->close();
+        loadFile(url);
+    });
+    fileWidget->show();
+}
+
+// Load file asynchronously
+void loadFile(const QUrl &url) {
+    KIO::StoredTransferJob *job = KIO::storedGet(url, KIO::NoReload, KIO::HideProgressInfo);
+    connect(job, &KJob::result, this, [this, job, url]() {
+        if (job->error()) {
+            KMessageBox::error(this, job->errorString());
+            return;
+        }
+        QByteArray data = job->data();
+        // Process data...
+    });
+}
+
+// Network-transparent: works with file://, ftp://, sftp://, fish://, smb://
 ```
 
-## Rules
-- Kirigami.ApplicationWindow for convergent desktop/mobile apps.
-- KConfig XT for all user-configurable settings.
-- KActionCollection for keyboard shortcuts — never manual key bindings.
-- KIO for file operations (network transparent).
-- Plasma applets use metadata.desktop with correct ServiceTypes.
-- ECM (Extra CMake Modules) required for KDE CMake helpers.
-- Breeze icon theme naming conventions for icons.
-- KPackage for installable app module distribution.
+### Step 5: Plasma Applet (QML)
+
+```qml
+// plasma-applet/contents/ui/main.qml
+import QtQuick 2.15
+import QtQuick.Layouts 1.15
+import org.kde.plasma.plasmoid 2.0
+import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.components as PlasmaComponents
+
+PlasmoidItem {
+    id: root
+
+    // Plasmoid configuration
+    Plasmoid.icon: "myapplet"
+    Plasmoid.title: i18n("My Applet")
+    Plasmoid.toolTipMainText: i18n("My Applet")
+    Plasmoid.toolTipSubText: i18n("Shows useful information")
+
+    // Compact representation (panel)
+    compactRepresentation: MouseArea {
+        implicitWidth: PlasmaCore.Units.iconSizes.small
+        implicitHeight: PlasmaCore.Units.iconSizes.small
+        onClicked: root.expanded = !root.expanded
+
+        PlasmaCore.IconItem {
+            anchors.centerIn: parent
+            source: "myapplet"
+        }
+    }
+
+    // Full representation (popup)
+    fullRepresentation: Item {
+        Layout.minimumWidth: PlasmaCore.Units.gridUnit * 15
+        Layout.minimumHeight: PlasmaCore.Units.gridUnit * 10
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: PlasmaCore.Units.gridUnit
+
+            PlasmaComponents.Label {
+                text: i18n("Hello from Plasma!")
+                font.pointSize: 16
+            }
+
+            PlasmaComponents.Button {
+                text: i18n("Refresh")
+                onClicked: {
+                    // Update content
+                }
+            }
+        }
+    }
+}
+```
+
+### Step 6: KRunner Plugin
+
+```cpp
+// krunner-myplugin.cpp
+#include <KRunner/AbstractRunner.h>
+#include <KRunner/RunnerManager.h>
+
+class MyRunner : public KRunner::AbstractRunner
+{
+    Q_OBJECT
+
+public:
+    MyRunner(QObject *parent, const KPluginMetaData &metaData)
+        : KRunner::AbstractRunner(parent, metaData) {}
+
+    void match(KRunner::RunnerContext &context) override {
+        QString query = context.query();
+        if (query.startsWith("myapp ")) {
+            KRunner::QueryMatch match(this);
+            match.setText(i18n("My App Action"));
+            match.setRelevance(0.8);
+            match.setData(query.mid(6));
+            context.addMatch(match);
+        }
+    }
+
+    void run(const KRunner::RunnerContext &context, const KRunner::QueryMatch &match) override {
+        QString action = match.data().toString();
+        // Execute action
+    }
+};
+
+K_EXPORT_PLASMA_RUNNER(myrunner, MyRunner)
+```
+
+## Common Pitfalls
+
+| Pitfall | Description | Prevention |
+|---------|-------------|------------|
+| Hardcoded strings | No i18n support | Use i18n(), i18nc() for every user-facing string |
+| Ignoring Wayland | X11-specific code (global mouse, window positioning) | Use platform-agnostic APIs |
+| Missing KConfig XT | Manual QSettings, no generated accessors | Use KConfig XT for type-safe settings |
+| KF5 on new projects | KF6 is the current release | Start with KF6 + Qt6 |
+| Kirigami vs desktop confusion | Using desktop-only patterns in Kirigami | Use Kirigami components for adaptive UI |
+| Not using KIO | Direct file I/O, no network transparency | Use KIO for all file operations |
+| Plasma-specific in non-Plasma app | Using Plasma::Applet outside Plasma | Conditional includes with QT_PLASMA |
+| Ignoring KService | Static plugin loading, no discoverability | Use KService + KPluginLoader |
+| No D-Bus integration | App not scriptable, no IPC | Expose actions via org.kde.MyApp D-Bus interface |
+
+## Best Practices
+
+| Practice | Rationale |
+|----------|-----------|
+| KF6 + Qt6 for all new projects | Current release, ongoing support |
+| Kirigami for new apps | Adaptive, mobile-friendly, convergent |
+| KConfig XT over raw QSettings | Type safety, generated code, KCM integration |
+| KIO over QFile | Network transparency, progress reporting, error handling |
+| KLocalizedString over QObject::tr | KDE i18n infrastructure, context support |
+| Plasma-style QQC2 style | Native look in Plasma, Kirigami apps |
+| CMake + ECM module system | Standard KDE build system, find modules included |
+| Test on both X11 and Wayland | Both display servers in active use |
+| Ship via Flatpak | KDE Flatpak runtime, automatic runtime updates |
+| KNotification over QSystemTrayIcon | Modern, configurable, Do Not Disturb aware |
+| D-Bus service for unique instances | Prevent duplicate app runs, CLI integration |
+| KAboutData for metadata | Consistent about dialog, library dependency listing |
 
 ## References
-  - references/kde-advanced.md — Kde Advanced Topics
-  - references/kde-dev-setup.md — KDE Dev Setup Reference
-  - references/kde-development.md — KDE Development Reference
-  - references/kde-framework.md — KDE Frameworks Reference
-  - references/kde-fundamentals.md — Kde Fundamentals
-  - references/kirigami-guide.md — Kirigami Guide Reference
+  - references/kde-advanced.md — KDE Advanced Topics
+  - references/kde-fundamentals.md — KDE Fundamentals
+  - references/kde-kirigami.md — Kirigami Adaptive UI Reference
+  - references/kde-plasma-applet.md — Plasma Applet Development Reference
 ## Handoff
-Hand off to `desktop/qt/SKILL.md` for generic Qt 6 apps without KDE Frameworks. Hand off to `desktop/gnome/SKILL.md` when targeting GNOME desktop.
+Hand off to `desktop-qt` for Qt-specific widget details. Hand off to `desktop-gtk` for GTK/KDE interoperability.

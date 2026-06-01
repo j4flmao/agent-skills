@@ -4,7 +4,7 @@ description: >
   Use this skill when performing hyperparameter tuning, optimizing model performance via search strategies, or configuring tuning frameworks (Optuna, Ray Tune, Hyperopt).
   This skill enforces: search space definition, strategy selection (grid/random/Bayesian), framework configuration, pruning/early stopping, distributed execution, multi-objective optimization.
   Do NOT use for: model architecture search (NAS), feature selection, threshold tuning for classification, experiment tracking (use ml-experiment-tracking).
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -20,31 +20,68 @@ tags: [ml, hyperparameter, optimization, phase-11]
 ## Purpose
 Design hyperparameter tuning pipelines with structured search spaces, optimal strategy selection, and production-ready framework configuration.
 
+## Architecture/Decision Trees
+
+### Strategy Selection Decision Tree
+```
+How long does each trial take?
+  ├── <10 seconds
+  │   ├── <4 hyperparameters → Grid Search (exhaustive)
+  │   └── >4 hyperparameters → Random Search (better coverage)
+  ├── 10 seconds - 1 minute
+  │   └── Bayesian Optimization (TPE or GP)
+  ├── 1 minute - 1 hour
+  │   ├── Bayesian + ASHA Pruning (aggressive early stopping)
+  │   └── Hyperband (adaptive resource allocation)
+  └── >1 hour
+      ├── Population-Based Training (evolve HP + weights)
+      └── Bayesian with aggressive pruning + checkpoint reuse
+```
+
+### Search Space Scale Decision Tree
+```
+How many trials can you afford?
+  ├── <20 trials → Manual tuning or grid on 2-3 key params
+  ├── 20-100 trials → Random Search or Bayesian (TPE)
+  ├── 100-1000 trials → Bayesian (GP/SMAC) + Median Pruner
+  ├── 1000-10000 trials → Hyperband + Distributed (Ray)
+  └── >10000 trials → Population-Based Training
+```
+
+### Parameter Scale Decision Tree
+```
+What type of hyperparameter?
+  ├── Learning rate, regularization, weight decay
+  │   └── Log-uniform scale (trial.suggest_float(..., log=True))
+  ├── Tree depth, number of layers, batch size, hidden units
+  │   └── Integer uniform (trial.suggest_int)
+  ├── Optimizer, activation, pooling type
+  │   └── Categorical (trial.suggest_categorical)
+  └── Conditional (momentum only when optimizer==sgd)
+      └── if/else branching in objective function
+```
+
+### Pruning Strategy Decision Tree
+```
+├── <10 trials budget → No pruning (too few to prune reliably)
+├── 10-100 trials → MedianPruner (n_warmup_steps=10)
+├── 100-1000 trials → ASHA (async, distributed-friendly)
+└── >1000 trials → Hyperband (multi-bracket resource allocation)
+```
+
 ## Agent Protocol
 
 ### Trigger
-User request includes: hyperparameter tuning, Optuna, Ray Tune, Hyperopt, grid search, random search, Bayesian optimization, pruning, early stopping, search space, trial, study, HP optimization, parameter sweep, learning rate search, neural architecture HP, auto-ML, parameter search, tune model, optimize hyperparams, model selection.
+User request includes: hyperparameter tuning, Optuna, Ray Tune, Hyperopt, grid search, random search, Bayesian optimization, pruning, early stopping.
 
 ### Input Context
 Before activating, verify:
-- Model type and training pipeline (sklearn, PyTorch, TensorFlow, XGBoost/LightGBM, custom).
-- Approximate training time per trial (seconds, minutes, hours).
-- Available compute resources (single machine, multi-core, multi-GPU, cluster, cloud).
-- Which hyperparameters are known to matter from prior experiments or domain knowledge.
-- Whether the data fit criteria is known — smaller search space for limited budget.
-- Whether cross-validation is needed inside each trial (adds Nx cost to each evaluation).
-- Whether the objective function is deterministic or stochastic (affects number of repeats needed).
-
-### Protocol
-1. Identify model type and which hyperparameters matter most (learning rate, depth, regularization, batch size, optimizer, architecture-specific params).
-2. Define search space with ranges, distributions (uniform, log-uniform, categorical), and conditional dependencies between parameters.
-3. Select search strategy based on budget and dimensionality of the search space — grid for <4 dims, random for cheap high-dim, Bayesian for expensive trials.
-4. Configure tuning framework with study/trial management, sampling algorithm, and result persistence.
-5. Set pruning policy for early stopping of unpromising trials to save compute — median, Hyperband, ASHA.
-6. Enable distributed execution for parallel trial evaluation across workers.
-7. Configure multi-objective optimization if multiple competing metrics exist (accuracy vs latency, F1 vs model size).
-8. Define trial logging, checkpointing, and result persistence to experiment tracking system.
-9. Plan post-tuning analysis: parameter importance, best config stability, optimization convergence.
+- Model type and training pipeline.
+- Approximate training time per trial.
+- Available compute resources (single machine, multi-core, multi-GPU, cluster).
+- Which hyperparameters are known to matter.
+- Whether cross-validation is needed inside each trial.
+- Whether the objective function is deterministic or stochastic.
 
 ### Output Artifact
 Hyperparameter tuning setup with search space design, strategy selection, framework configuration, pruning policy, and distributed execution plan.
@@ -54,7 +91,6 @@ Hyperparameter tuning setup with search space design, strategy selection, framew
 ## Tuning Config
 ### Search Space
 Param: {name} | Type: {float/int/categorical} | Range: [{min}, {max}] | Scale: {linear/log}
-Param: {name} | Type: {float/int/categorical} | Choices: [{a}, {b}, {c}]
 
 ### Strategy
 Method: {grid / random / Bayesian / TPE / CMA-ES}
@@ -64,129 +100,242 @@ Budget: {N trials} | Parallel: {N workers} | Timeout: {duration}
 Tool: {Optuna / Ray Tune / Hyperopt}
 Study: {name} | Direction: {minimize / maximize}
 Metric: {metric_name} | Pruning: {none / median / Hyperband / ASHA}
-
-### Distributed
-Executor: {local / Dask / Ray / Kubernetes}
-Workers: {N} | Timeout: {duration} | Fault Tolerance: {true/false}
-
-### Multi-Objective
-Objectives: [{metric1}, {metric2}]
-Weights: [{w1}, {w2}] | Strategy: {Pareto / scalarized}
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output.
 
 ### Completion Criteria
-- [ ] Search space defined with all tunable parameters and their distributions and scales.
-- [ ] Search strategy selected based on trial budget and dimensionality of the space.
-- [ ] Tuning framework configured with study/trial lifecycle and database storage.
-- [ ] Pruning policy set to terminate unpromising trials early with minimum budget checks.
-- [ ] Distributed execution configured with appropriate parallelism and fault tolerance.
-- [ ] Result persistence configured for best params and trial history.
-- [ ] Random seed set for reproducibility of each individual trial.
-- [ ] Parameter importance analysis planned after tuning completion.
-
-### Max Response Length
-200 lines of configuration and code.
+- [ ] Search space defined with all tunable parameters, distributions, and scales.
+- [ ] Search strategy selected based on trial budget and dimensionality.
+- [ ] Tuning framework configured with study/trial lifecycle.
+- [ ] Pruning policy set with minimum budget checks.
+- [ ] Distributed execution configured with fault tolerance.
+- [ ] Result persistence configured.
+- [ ] Random seed set for reproducibility.
+- [ ] Parameter importance analysis planned after tuning.
 
 ## Workflow
 
 ### Step 1: Search Space Definition
-Define parameter types and ranges properly. Use log-uniform scale for positive-valued parameters that span orders of magnitude — learning rate (1e-5 to 1e-1), regularization strength (1e-4 to 1e-1), weight decay (1e-6 to 1e-2), L1/L2 penalties. Use uniform scale for bounded additive parameters — tree depth (3-15), hidden units (32-512), number of layers (1-5), dropout rate (0.0-0.5). Use categorical choices for discrete options — optimizer (adam, sgd, adamw), activation (relu, gelu, tanh), pooling type (max, avg, adaptive), initialization scheme. Define conditional search spaces where parameters depend on other choices — momentum only when optimizer is sgd, kernel size only when layer type is conv, num_heads only when using transformer. For tree-based models (XGBoost, LightGBM, RF): n_estimators (50-1000, log scale), max_depth (3-15, linear), min_samples_split (2-20), learning_rate (0.01-0.3, log), subsample (0.5-1.0), colsample_bytree (0.3-1.0), reg_alpha (1e-4 to 10, log), reg_lambda (1e-4 to 10, log), min_child_weight (1-10). For neural networks: learning rate (1e-5 to 1e-1, log), batch size (16, 32, 64, 128, 256, categorical), hidden units per layer (32-1024, log), num_layers (1-5), dropout (0.0-0.5), weight decay (1e-6 to 1e-2, log), optimizer type, activation function. For gradient boosting: max_leaves, min_data_in_leaf, feature_fraction, bagging_fraction, bagging_freq, lambda_l1, lambda_l2, min_gain_to_split. Recommended pilot ranges: start with wide ranges (at least one order of magnitude beyond expected optimum), run 20-30 pilot trials, then use param importance to narrow ranges for second phase.
+Use log-uniform for positive-valued parameters spanning orders of magnitude (learning rate 1e-5 to 1e-1, regularization 1e-4 to 1e-1). Use uniform for bounded additive parameters (depth 3-15, units 32-512). Use categorical for discrete options (optimizer, activation). Define conditional spaces where parameters depend on other choices.
+
+```python
+import optuna
+
+def create_search_space(trial, model_type="xgboost"):
+    if model_type == "xgboost":
+        return {
+            "n_estimators": trial.suggest_int("n_estimators", 50, 1000),
+            "max_depth": trial.suggest_int("max_depth", 3, 15),
+            "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.3, log=True),
+            "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.3, 1.0),
+            "min_child_weight": trial.suggest_int("min_child_weight", 1, 10),
+            "reg_alpha": trial.suggest_float("reg_alpha", 1e-4, 10.0, log=True),
+            "reg_lambda": trial.suggest_float("reg_lambda", 1e-4, 10.0, log=True),
+        }
+    elif model_type == "neural_network":
+        n_layers = trial.suggest_int("n_layers", 1, 5)
+        params = {
+            "learning_rate": trial.suggest_float("learning_rate", 1e-5, 1e-1, log=True),
+            "batch_size": trial.suggest_categorical("batch_size", [16, 32, 64, 128, 256]),
+            "dropout": trial.suggest_float("dropout", 0.0, 0.5),
+            "weight_decay": trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True),
+            "optimizer": trial.suggest_categorical("optimizer", ["Adam", "AdamW", "SGD"]),
+        }
+        params["hidden_units"] = [
+            trial.suggest_int(f"hidden_units_{i}", 32, 512, log=True)
+            for i in range(n_layers)
+        ]
+        return params
+```
 
 ### Step 2: Strategy Selection
-Grid search: exhaustive enumeration over discrete grid points. Only use when dimensionality < 4 AND budget covers full grid. Total runs = product of cardinalities — 3 params with 5 values each = 125 trials, 4 params = 625 trials. Exponential cost makes grid infeasible beyond 4 dimensions. Random search: sample uniformly from defined distributions. Always prefer over grid when dimensionality > 4 — with same budget, random covers more distinct values per parameter. With 100 trials and 10 params: random explores ~10 distinct values per param, grid explores only ~2. Random search finds good regions faster when only some parameters matter (the 10% rule). Bayesian optimization (GP or TPE): builds surrogate model of objective and uses acquisition function to guide search. GP works well for <10 continuous params and <1000 trials O(n^3). TPE scales better to mixed/categorical/high-dimensional spaces. Requires 10-20 initial random trials for surrogate warm-up. Expected Improvement (EI) acquisition balances exploration vs exploitation. CMA-ES: covariance matrix adaptation evolution strategy for continuous optimization. Best for 5-20 continuous parameters, non-convex rugged landscapes, deterministic objectives. Population-based training (PBT): evolves both hyperparameters and model weights simultaneously. Best for deep learning with long training times (>1 hour per trial). Uses checkpoint migration between workers. Decision guide: trial <10s with <4 params = grid; trial <10s with >4 params = random; trial >1 min <1 hour = Bayesian (TPE); trial >1 hour = PBT or Bayesian with aggressive ASHA pruning.
+Grid search: only for <4 dims AND budget covers full grid. Random search: always prefer over grid when >4 dims. Bayesian optimization: GP for <10 continuous params, TPE for mixed/categorical/high-dim. CMA-ES: for 5-20 continuous parameters, non-convex landscapes.
+
+```python
+def select_strategy(n_params, trial_time_seconds, budget):
+    dims_continuous = sum(1 for p in n_params if p["type"] in ("float", "int") and p.get("log", False))
+    dims_discrete = len(n_params) - dims_continuous
+
+    if trial_time_seconds < 10:
+        if dims_discrete < 4:
+            return "grid"
+        return "random"
+    elif budget < 100:
+        return "random" if dims_discrete > 0 else "bayesian_gp"
+    elif trial_time_seconds < 300:
+        return "bayesian_tpe"
+    else:
+        return "bayesian_tpe_with_pruning"
+```
 
 ### Step 3: Framework Configuration
-Optuna: objective function uses trial.suggest_float(name, low, high, log=True) for log scale, trial.suggest_int() for integers, trial.suggest_categorical() for choices. Create study with create_study(direction=minimize, sampler=TPESampler(n_startup_trials=10), pruner=MedianPruner(n_startup_trials=10, n_warmup_steps=20)). Run with study.optimize(objective, n_trials=100, timeout=3600, n_jobs=4, callbacks=[callback]). Storage: SQLite for single-machine (sqlite:///study.db), PostgreSQL for distributed (postgresql://user:pass@host/db). Visualize with optuna.visualization module: plot_param_importances, plot_parallel_coordinate, plot_contour. Load existing study with load_study(study_name, storage). Ray Tune: config space uses tune.loguniform(), tune.uniform(), tune.randint(), tune.choice(). Use Tuner(train_fn, param_space=config, tune_config=TuneConfig(metric=val_loss, mode=min, num_samples=100, search_alg=OptunaSearch(), scheduler=ASHAScheduler(max_t=100, grace_period=10, reduction_factor=3)), run_config=RunConfig(name=exp, storage_path=~/ray_results, log_to_file=True)). Automatic logging to MLflow, W&B, TensorBoard. Hyperopt: space uses hp.loguniform(lr, log_lo, log_hi), hp.uniform(), hp.quniform(), hp.choice(). Run with fmin(fn=objective, space=space, algo=tpe.suggest, max_evals=100, trials=Trials(), rstate=np.random.RandomState(42)).
+Optuna: trial.suggest_float/log/int/categorical. Study with TPE sampler + MedianPruner. Storage for persistence. Ray Tune: tune.{loguniform/uniform/randint/choice} with ASHA scheduler. Hyperopt: hp.{loguniform/uniform/quniform/choice}.
+
+```python
+# Optuna complete example
+import optuna
+from optuna.samplers import TPESampler
+from optuna.pruners import MedianPruner
+import xgboost as xgb
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import cross_val_score
+
+def objective(trial):
+    params = {
+        "n_estimators": trial.suggest_int("n_estimators", 100, 1000),
+        "max_depth": trial.suggest_int("max_depth", 3, 12),
+        "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.3, log=True),
+        "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+        "colsample_bytree": trial.suggest_float("colsample_bytree", 0.4, 1.0),
+        "min_child_weight": trial.suggest_int("min_child_weight", 1, 10),
+        "reg_alpha": trial.suggest_float("reg_alpha", 1e-4, 10.0, log=True),
+        "reg_lambda": trial.suggest_float("reg_lambda", 1e-4, 10.0, log=True),
+        "eval_metric": "logloss",
+        "random_state": 42 + trial.number,
+    }
+    model = xgb.XGBClassifier(**params, use_label_encoder=False)
+
+    score = cross_val_score(model, X_train, y_train, cv=3, scoring="roc_auc", n_jobs=-1).mean()
+
+    for epoch in range(10):
+        trial.report(score, epoch)
+        if trial.should_prune():
+            raise optuna.TrialPruned()
+
+    return score
+
+study = optuna.create_study(
+    direction="maximize",
+    sampler=TPESampler(n_startup_trials=10, seed=42),
+    pruner=MedianPruner(n_startup_trials=10, n_warmup_steps=5, n_min_trials=3),
+    storage="sqlite:///optimization.db",
+    study_name="xgboost_tuning",
+    load_if_exists=True,
+)
+study.optimize(objective, n_trials=100, timeout=3600, n_jobs=4)
+
+print(f"Best value: {study.best_value}")
+print(f"Best params: {study.best_params}")
+
+# Visualization
+optuna.visualization.plot_param_importances(study)
+optuna.visualization.plot_parallel_coordinate(study)
+optuna.visualization.plot_optimization_history(study)
+```
 
 ### Step 4: Pruning & Early Stopping
-Median pruner: stop trial if intermediate value metric falls below median of all completed trials at same step. Requires n_startup_trials (minimum trials before pruning activates, default 10), n_warmup_steps (minimum steps before evaluating, default 20), interval_steps (check frequency, default 5). Hyperband: adaptive resource allocation across brackets. Each bracket evaluates many configurations with minimal budget, promotes top 1/eta to larger budget. eta=3 (reduction factor) means each round keeps 1/3 of trials and gives 3x budget. Number of brackets = 4-6. Best for variable-budget optimization. ASHA (Asynchronous Successive Halving): distributed variant of Hyperband for parallel settings. Handles stragglers well — doesn't wait for all trials in bracket. Best when >32 parallel trials. Threshold pruner: stop if metric exceeds known acceptable range (e.g., validate loss > 10). Percentile pruner: stop trials in bottom Nth percentile at each checkpoint. Always set minimum budget checks: at least 10% of total epochs, minimum 1 epoch for rapid-convergence models, minimum 5 epochs for deep learning. Never prune on first evaluation — single noisy evaluation can cause incorrect early termination.
+Median pruner: stop if intermediate value falls below median of completed trials at same step. Requires n_startup_trials, n_warmup_steps. Hyperband: adaptive resource allocation. ASHA: distributed variant for parallel settings.
+
+```python
+# Ray Tune with ASHA pruning
+from ray import tune
+from ray.tune.schedulers import ASHAScheduler
+
+def train_fn(config):
+    model = xgb.XGBClassifier(**config)
+    for epoch in range(100):
+        model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=0)
+        preds = model.predict_proba(X_val)[:, 1]
+        score = roc_auc_score(y_val, preds)
+        tune.report(metrics={"auc": score, "epoch": epoch})
+
+scheduler = ASHAScheduler(
+    max_t=100,
+    grace_period=10,
+    reduction_factor=3,
+    brackets=1,
+)
+
+tuner = tune.Tuner(
+    train_fn,
+    param_space={
+        "learning_rate": tune.loguniform(1e-3, 0.3),
+        "max_depth": tune.randint(3, 12),
+        "subsample": tune.uniform(0.5, 1.0),
+    },
+    tune_config=tune.TuneConfig(
+        metric="auc",
+        mode="max",
+        num_samples=100,
+        scheduler=scheduler,
+    ),
+)
+results = tuner.fit()
+```
 
 ### Step 5: Distributed Execution
-Local multi-core CPU: set n_jobs=-1 for sklearn, n_jobs=4 for Optuna. Works for tree-based models and small neural networks (<10 min per trial). Dask distributed: wrap Optuna with DaskStorage or use OptunaSearchCV with Dask ML backend for sklearn. Scales to dozens of workers. Ray distributed: native parallelism with tune.run(resources_per_trial={cpu: 2, gpu: 0.5}). Ray can distribute across a cluster with ray.init(address=auto). Best for deep learning on multi-GPU clusters. Kubernetes: run Optuna with PostgreSQL shared storage, each trial as a Kubernetes job. Use Kueue or Volcano for batch scheduling. NFS or S3 for checkpoint storage. Fault tolerance: checkpoint each trial to shared filesystem (NFS, S3, GCS). On worker failure, trial is retried from last checkpoint (Optuna supports this with storage backends). Per-trial timeout: use timeout parameter to prevent single hanging trial from blocking the study. Scale guideline: start with 4-8 parallel workers, monitor efficiency (total compute time / wall clock time). If efficiency < 50%, workers spend too much time waiting for results — increase trials per batch or reduce parallelism. For GPU tuning: use fractional GPUs (gpu=0.5 for 2 trials per GPU) to maximize utilization.
+Local multi-core: n_jobs=-1. Dask distributed: wrap Optuna with DaskStorage. Ray distributed: tune.run(resources_per_trial). Kubernetes: each trial as K8s job. Fault tolerance: checkpoint to shared filesystem.
 
-### Step 6: Multi-Objective Optimization
-Define two or more competing objectives: classification accuracy vs inference latency (ms), F1 score vs model size (MB), RMSE vs prediction time, revenue vs recommendation diversity, precision vs recall. Pareto front approach: find set of non-dominated solutions where no objective can be improved without degrading another. Solutions on Pareto front are equally optimal — choice depends on business constraints. Optuna supports directions=[maximize, minimize] with NSGA-II sampler (genetic algorithm) or MOTPE sampler (multi-objective TPE). Scalarized approach: combine objectives into single score using weighted sum or product — alpha * normalized_metric1 + (1-alpha) * normalized_metric2. Normlize metrics to same scale (0-1) before combining. Tune alpha weights based on business priorities: 0.7 accuracy + 0.3 latency for latency-sensitive apps, 0.5 F1 + 0.5 model size for edge deployment. Pareto front analysis: after tuning, select final configuration based on deployment constraint. Example: if latency must be <10ms, pick the highest-accuracy config meeting that latency constraint. Report the full Pareto front in the output, not just a single selected point.
+```python
+# Optuna distributed with PostgreSQL
+study = optuna.create_study(
+    storage="postgresql://user:pass@host/db",
+    study_name="distributed_tuning",
+    load_if_exists=True,
+)
+# Each worker runs: study.optimize(objective, n_trials=100)
+```
 
-### Step 7: Tracking & Reproducibility
-Log every trial's full parameter config, intermediate metrics per iteration, final metrics, trial duration, system resource utilization (GPU/CPU memory, temperature). Save best configuration as JSON or YAML in experiment tracking system (MLflow, W&B, Neptune, Comet). Set random seed per trial: base_seed + trial_number as reproducible seed. Use deterministic algorithms where available — XGBoost deterministic mode, PyTorch with torch.use_deterministic_algorithms(True), sklearn with fixed random_state. Cross-validate within each trial to reduce noise from data split variance: use same CV splitter across all trials by fixing CV indices. For sklearn: pass fixed cv object to RandomizedSearchCV rather than integer. After tuning: run best config 3-5 times with different random seeds to estimate performance variance. Export results: best_params dict, best_value scalar, param_importance dataframe, optimization history plot image. Store study database durably — it contains the entire search history for future analysis.
+### Step 6: Post-Tuning Analysis
+Parameter importance (fANOVA-based), parallel coordinate plot, contour plot (top 2 params interaction), optimization history, failure analysis.
 
-### Step 8: Post-Tuning Analysis
-Parameter importance analysis: use Optuna study.param_importances (based on fANOVA) to identify which parameters most influence the objective. Critical for prioritizing future tuning efforts — tune important params more finely, fix unimportant params to default values. Parallel coordinate plot: visualize which parameter combinations produce best and worst results. Identify regions of search space that consistently underperform. Contour plot: 2D interaction between top two parameters — check if effect is additive (parallel contours) or interactive (crossing contours). Optimization history: plot best value vs trial number — should show improvement then plateau. Stop study early if best value does not improve for 20-50 trials (use Optuna callbacks). Failure analysis: check which parameter combinations caused trial failures (NaN loss, OOM errors, divergence). Common failure patterns: learning rate too high (NaN), batch size too large (OOM), network too deep (vanishing gradients). Archive: save study database, best configs for each deployment target (most accurate, fastest inference, smallest model), and parameter importance ranking for future tuning iterations.
+```python
+def analyze_study(study):
+    importances = optuna.visualization.plot_param_importances(study)
+    parallel = optuna.visualization.plot_parallel_coordinate(study)
+    history = optuna.visualization.plot_optimization_history(study)
 
-### Common Pitfalls
-Learning rate too high → loss diverges to NaN.
-Learning rate too low → training stalls, slow convergence.
-Batch size too large → OOM on GPU, poor generalization.
-Too many epochs with pruning → trials pruned before convergence.
-Overlapping trial evaluations on same GPU → memory contention.
-Not fixing CV splits → high variance in objective values, misleading comparisons.
-Overly narrow search space → best optimum outside bounds.
-Overly wide search space → wasted budget exploring irrelevant regions.
-Ignoring conditional params → momentum sampled even for Adam, wasting budget.
+    df = study.trials_dataframe()
+    failed = df[df["state"] == "FAIL"]
+    print(f"Total trials: {len(df)}, Failed: {len(failed)}")
+    if len(failed) > 0:
+        print(f"Failure reasons: {failed['user_attrs'].value_counts()}")
 
-### Integration with Experiment Tracking
-Log every trial to MLflow or Weights and Biases for full traceability.
-Store study database in a persistent shared location for team access.
-Tag experiments with project name, model type, and dataset version.
-Export best parameters as a configuration file consumable by training pipeline.
-Link tuned model checkpoints to the study trial that produced them.
-Generate a tuning report with optimization history, parameter importance, and Pareto front visualizations.
-Automate retuning when new data arrives or model architecture changes — use study.load_if_exists=True to continue from previous state.
+    return importances, parallel, history
+```
+
+## Anti-Patterns
+
+- **Grid search for >4 dimensions**: exponential cost, random search covers more distinct values per parameter.
+- **No pruning for expensive trials**: wastes budget on clearly bad configurations.
+- **Pruning too aggressively**: stopping before minimum budget leads to incorrect early termination.
+- **Learning rate too high**: loss diverges to NaN. Too low: training stalls.
+- **Not fixing CV splits**: high variance in objective values, misleading comparisons.
+- **Overly narrow search space**: best optimum outside bounds.
+- **Overly wide search space**: wasted budget exploring irrelevant regions.
+- **Ignoring conditional params**: momentum sampled even for Adam, wasting budget.
+- **Not setting random seed per trial**: non-deterministic results, can't reproduce best trial.
+
+## Production Considerations
+
+### Monitoring
+- Track objective value trend — if new runs produce worse results, data may have drifted.
+- Monitor trial failure rate (>10% indicates pipeline issues).
+- Track search space utilization — best params at boundary means space too narrow.
+- Log study metadata: number of trials, best params, optimization history.
+- Track compute cost (GPU hours, wall time) for budget forecasting.
+
+### Deployment
+- Embed best HP configuration in model artifact metadata.
+- Store study database durably for future warm-starting.
+- Automate retuning when dataset grows >2x or new features added.
+- Pin random seed per trial for exact reproduction.
+- Archive best configs for each deployment target (accuracy, speed, size).
+- Validate best config with 3-5 different seeds before production.
 
 ## Rules
-- Random search beats grid search when dimensionality > 4 — always prefer random over grid.
-- Bayesian optimization requires at least 10-20 initial random trials to seed the surrogate model.
-- Pruning must have a minimum budget (e.g., 10% of total epochs) before termination.
-- Log-scale learning rates, regularization, and any positive parameter spanning orders of magnitude.
-- Use conditional search spaces for hierarchical parameters (momentum depends on optimizer choice).
-- Each trial must be deterministic given its parameter seed for reproducibility.
-- Never prune too aggressively: minimum 5-10 trials before any pruning decision.
-- Distributed tuning requires shared filesystem or object store for checkpoints.
-- Multi-objective optimization: always show the Pareto front, not just a single point.
-- Parameter importance analysis reveals which parameters to prioritize in future tuning iterations.
-- Warm-start subsequent studies from best parameters of prior study when possible.
-- Use same CV splits across all trials for fair comparison — fix cross-validation folds.
-- Monitor trial failure rate: >10% failures indicates bug or resource issue, investigate before scaling up.
-- Set study timeout (wall time limit) to prevent runaway experiments exceeding budget.
-- Store study database durably — losing the study means losing all trial history.
-- A single tuning run is not enough — validate best config with multiple random seeds.
-
-### Production Monitoring
-Monitor objective value trend over time — if new tuning runs produce worse results, data may have drifted.
-Track trial failure rate (>10% indicates pipeline issues: data loading, OOM, NaN losses).
-Monitor search space utilization — if best params cluster at boundary, space is too narrow.
-Alert on convergence failure: best value not improving after 50 trials.
-Log study metadata: number of trials, best params, optimization history every run.
-Track per-trial compute cost (GPU hours, wall time) for budget forecasting.
-Compare best value against baseline (default params) to quantify tuning ROI.
-
-### Troubleshooting Guide
-Trials failing with NaN → reduce learning rate upper bound, add gradient clipping, check for data issues.
-Trials running out of memory → reduce batch size range, reduce model size range, add memory profiling.
-Pruning all trials early → increase n_warmup_steps, reduce pruning aggressiveness, check if pruning metric correlates with final metric.
-Best params at search space boundary → expand the range in that direction for the next tuning phase.
-High variance in objective values → increase CV folds, fix random seeds, increase training data.
-Tuning too slow → reduce n_trials, increase parallelism, use pruner, reduce search space.
-Multi-objective producing trivial solutions → normalize objectives to same scale, adjust weights.
-
-### Deployment Checklist
-Pickle or ONNX-export the model trained with best hyperparameters for production deployment.
-Embed the best hyperparameter configuration in the model artifact metadata for traceability.
-Store the study database in a durable location for future reference and warm-starting.
-Automate retuning when dataset size grows by more than 2x or when new features are added.
-Set up a tuning schedule: full search weekly for stable models, daily for rapidly changing pipelines.
-Pin the random seed for each trial to enable exact reproduction of the best run.
-Document search space bounds, strategy, and budget for reproducibility by other team members.
-Archive the parameter importance analysis to guide future tuning iterations.
-Tag the experiment in the tracking system with git commit hash, dataset version, and model name.
-Run the best configuration with 3-5 different seeds to estimate performance variance before production.
-Create a configuration file (YAML/JSON) consumable by the training pipeline for hands-free retraining.
-Validate that the tuned model generalizes on a truly held-out test set untouched during tuning.
-Set up CI pipeline to run a light tuning (50 trials) on every significant code change.
-Define a rollback plan: store previous best config and study snapshot for easy reversion.
-Establish a maximum compute budget per tuning run and enforce it via timeout limits.
+- Random search beats grid when >4 dims.
+- Bayesian optimization needs 10-20 initial random trials.
+- Pruning needs minimum budget (e.g., 10% of total epochs).
+- Log-scale learning rate, regularization, and all positive params spanning OoM.
+- Use conditional search spaces for hierarchical params.
+- Each trial must be deterministic given its seed.
+- Never prune too aggressively: min 5-10 trials before pruning.
+- Distributed tuning requires shared filesystem for checkpoints.
+- Multi-objective: always show Pareto front, not single point.
+- Store study database durably.
 
 ## References
   - references/automl-tuning.md — AutoML Tuning
@@ -194,8 +343,8 @@ Establish a maximum compute budget per tuning run and enforce it via timeout lim
   - references/hyperparameter-tuning-fundamentals.md — Hyperparameter Tuning Fundamentals
   - references/multi-fidelity.md — Multi-Fidelity Optimization
   - references/optimization-methods.md — Hyperparameter Optimization
-  - references/search-strategies.md — Search Strategies for Hyperparameter Tuning
-  - references/tuning-at-scale.md — Distributed Hyperparameter Tuning
+  - references/search-strategies.md — Search Strategies
+  - references/tuning-at-scale.md — Distributed Tuning
   - references/tuning-frameworks.md — Tuning Frameworks
 ## Handoff
-Pass tuned hyperparameters to ml-experiment-tracking for logging. Hand off to ml-model-evaluation for evaluating tuned model performance. For model architecture search (NAS), use a separate neural architecture search skill.
+Pass tuned hyperparameters to ml-experiment-tracking for logging. Hand off to ml-model-evaluation for evaluating tuned model.

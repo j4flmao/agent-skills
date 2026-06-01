@@ -4,7 +4,7 @@ description: >
   Use this skill when the user asks about microfrontend, Module Federation, Web
   Components, iframe integration, shared dependencies, or cross-app communication
   between frontend applications.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -56,6 +56,59 @@ Produce the artifact directly. No preamble. No postamble. No explanations. No fi
 
 ### Max Response Length
 4096 tokens
+
+## Microfrontend Architecture / Decision Trees
+
+### Integration Method Decision Tree
+```
+Number of independent teams?
+  |-- 1-2 teams -->
+  |     |-- Monolith SPA recommended (microfrontend overhead not justified)
+  |     |-- Alternative: monorepo with package boundaries
+  |
+  |-- 3+ teams on same product -->
+  |     Same framework across all teams?
+  |     |-- YES -->
+  |     |     Module Federation (best sharing, smallest total bundle)
+  |     |     Build tool? Webpack 5 / Rspack / Vite (with federation plugin)
+  |     |
+  |     |-- NO -->
+  |           Strict isolation needed? (different auth, sandboxed, legacy app)
+  |           |-- YES: iframe (complete isolation, poor perf/SEO)
+  |           |-- NO: Web Components (framework-agnostic, Shadow DOM)
+```
+
+### MFE Granularity Decision Tree
+```
+What is the boundary?
+  |-- Feature / domain (orders, products, users) -->
+  |     GOOD -- team-aligned, independent deploy, clear ownership
+  |
+  |-- Page / route (home, checkout, settings) -->
+  |     GOOD -- natural routing boundary, can be lazy-loaded
+  |
+  |-- Single component (button, card, modal) -->
+  |     BAD -- too fine-grained, federation overhead > benefit
+  |     Instead: shared component library via federation or package
+```
+
+### Shared Dependency Decision Tree
+```
+What type of library?
+  |-- Framework (React, Vue, Angular, ReactDOM) -->
+  |     MUST be singleton. Two instances break hooks/context/events.
+  |
+  |-- State management (Redux, Zustand, Pinia) -->
+  |     Singleton if shared state. Standalone if isolated per MFE.
+  |
+  |-- Utility library (lodash, date-fns, axios) -->
+  |     Shared with version range (same version reused, fallback to standalone).
+  |
+  |-- Component library (design system) -->
+        Singleton (shared as federated module for visual consistency).
+```
+
+---
 
 ## Workflow
 
@@ -251,6 +304,34 @@ orders-app/
 3. **Module Federation setup** — configure host to load existing monolith as remote
 4. **Feature extraction** — one feature at a time, extract into independent MFE
 5. **Monolith replacement** — when all features extracted, monolith can be fully replaced by remotes
+
+## Performance Considerations
+
+### Federation Loading Strategy
+| Strategy | Description | When |
+|----------|-------------|------|
+| Eager | remoteEntry.js loaded on app init | Always-needed features (auth, nav) |
+| Lazy | remoteEntry.js loaded on route change | Route-scoped features |
+| Preload | remoteEntry.js loaded after idle | Predicted next navigation |
+
+### Bundle Sharing Savings
+With 3 MFEs each using React (45KB gzipped):
+- Without federation: 3 x 45KB = 135KB shared deps loaded separately
+- With federation (singleton): 45KB loaded once = 3x savings on shared deps
+
+## Accessibility Considerations
+
+- Each MFE must manage its own focus management and aria-live regions
+- Navigation between MFEs must preserve focus (don't lose keyboard focus)
+- Loading states between MFE transitions need aria-busy or aria-live announcements
+- Shared design system components must maintain consistent a11y across MFEs
+
+## Security Considerations
+
+- Each MFE should be isolated in its own origin or use iframe sandboxing
+- Cross-MFE communication via custom events must validate message origin
+- Shared auth state needs secure token storage (httpOnly cookies, not localStorage for sensitive tokens)
+- Module Federation remoteEntry.js URLs should use HTTPS and SRI (Subresource Integrity)
 
 ## Anti-Patterns
 

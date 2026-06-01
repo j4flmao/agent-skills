@@ -288,6 +288,255 @@ Schema registry vs data catalog: schema registry focuses on schema storage, comp
 | kcat | Kafka command-line tool with schema support |
 | SchemaCrawler | Schema visualization and documentation |
 
+### Protobuf Schema Definition
+
+```protobuf
+syntax = "proto3";
+package com.org.data.orders;
+import "google/protobuf/timestamp.proto";
+
+message Order {
+  string order_id = 1;
+  string customer_id = 2;
+  repeated LineItem line_items = 3;
+  double total_amount = 4;
+  Currency currency = 5;
+  OrderStatus status = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  map<string, string> metadata = 9;
+  
+  message LineItem {
+    string product_id = 1;
+    int32 quantity = 2;
+    double unit_price = 3;
+  }
+  
+  enum Currency {
+    CURRENCY_UNSPECIFIED = 0;
+    USD = 1;
+    EUR = 2;
+    GBP = 3;
+  }
+  
+  enum OrderStatus {
+    STATUS_UNSPECIFIED = 0;
+    PENDING = 1;
+    CONFIRMED = 2;
+    SHIPPED = 3;
+    DELIVERED = 4;
+    CANCELLED = 5;
+  }
+}
+```
+
+### JSON Schema Definition
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Order",
+  "type": "object",
+  "properties": {
+    "order_id": { "type": "string", "description": "Unique order identifier" },
+    "customer_id": { "type": "string" },
+    "line_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": { "type": "string" },
+          "quantity": { "type": "integer", "minimum": 1 },
+          "unit_price": { "type": "number", "minimum": 0 }
+        },
+        "required": ["product_id", "quantity", "unit_price"]
+      }
+    },
+    "total_amount": { "type": "number", "minimum": 0 },
+    "status": { "type": "string", "enum": ["pending", "confirmed", "shipped", "delivered", "cancelled"] },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["order_id", "customer_id", "total_amount"]
+}
+```
+
+### Registry Deployment Patterns
+
+```yaml
+# Confluent Schema Registry HA deployment
+registry_cluster:
+  nodes: 3  # Minimum 3 for quorum-based HA
+  storage: "kafka"  # Uses internal Kafka topic _schemas
+  replication_factor: 3
+  kafka_bootstrap_servers: "broker1:9092,broker2:9092,broker3:9092"
+  
+  # Multi-datacenter setup
+  primary_region: "us-east-1"
+  secondary_region: "us-west-2"
+  replication:
+    type: "active-standby"  # Primary handles writes, standby serves reads
+    sync_interval: "5s"     # Schema replication delay
+  
+  # Security
+  ssl:
+    enabled: true
+    mutual_auth: true  # mTLS for producer/consumer auth
+  rbac:
+    enabled: true      # Role-based access control
+    admin_principal: "schema-admin"
+
+# Apicurio Registry deployment (alternative, multi-format)
+apicurio_registry:
+  storage: "sql"  # PostgreSQL, SQL Server, or Kafka
+  formats: ["AVRO", "PROTOBUF", "JSON_SCHEMA", "ASYNCAPI", "OPENAPI"]
+  rules:
+    global: ["VALIDITY", "COMPATIBILITY"]
+    per_artifact: true
+  auth: "keycloak"  # OIDC integration
+  ui: true
+```
+
+### SerDe Configuration
+
+```yaml
+# Kafka Avro SerDe (Confluent)
+kafka_producer_config:
+  key.serializer: "org.apache.kafka.common.serialization.StringSerializer"
+  value.serializer: "io.confluent.kafka.serializers.KafkaAvroSerializer"
+  schema.registry.url: "https://schema-registry:8081"
+  auto.register.schemas: false
+  use.latest.version: true  # Use latest compatible schema version
+
+kafka_consumer_config:
+  key.deserializer: "org.apache.kafka.common.serialization.StringDeserializer"
+  value.deserializer: "io.confluent.kafka.serializers.KafkaAvroDeserializer"
+  schema.registry.url: "https://schema-registry:8081"
+  specific.avro.reader: true
+
+# Kafka Protobuf SerDe
+kafka_protobuf_producer:
+  key.serializer: "org.apache.kafka.common.serialization.StringSerializer"
+  value.serializer: "io.confluent.kafka.serializers.protobuf.KafkaProtobufSerializer"
+  schema.registry.url: "https://schema-registry:8081"
+
+# Batch processing with Avro (Spark)
+spark_avro_config:
+  spark.sql.avro.compression.codec: "snappy"
+  spark.sql.avro.schema.literal: "{\"type\":\"record\",\"name\":\"Order\",...}"  # Or use schema registry
+```
+
+### CI/CD Schema Governance
+
+```yaml
+# GitHub Action: validate schema compatibility on PR
+schema_validation:
+  name: "Validate Schema Change"
+  steps:
+    - "Extract new schema version from PR diff"
+    - "Register in schema registry with compatibility check only (dry-run)"
+    - "Validate: compatibility_mode = BACKWARD"
+    - "If compatible: merge PR, register new schema version"
+    - "If breaking: reject PR, notify producer + consumer owners"
+  
+  compatibility_rules:
+    BACKWARD:
+      - "New schema can read data written with old schema"
+      - "Allowed: adding optional fields, removing default fields"
+      - "Breaking: removing required fields, changing field types"
+    FORWARD:
+      - "Old schema can read data written with new schema"
+      - "Allowed: removing fields, adding default fields"
+      - "Breaking: adding required fields"
+    FULL:
+      - "Both backward and forward compatible"
+      - "Most restrictive — use for shared datasets"
+
+  # Example: CI check script
+  check_schema_compatibility:
+    cli: "curl -X POST https://registry:8081/compatibility/subjects/orders-value/versions \
+      -H 'Content-Type: application/vnd.schemaregistry.v1+json' \
+      -d '{\"schema\": \"$(cat new_schema.avsc | jq -Rs .)\"}'"
+```
+
+### Subject Naming Strategy
+
+```yaml
+subject_naming:
+  pattern: "<domain>.<dataset-name>-<key|value>"
+  examples:
+    - "orders.order-events-value"
+    - "inventory.stock-updates-key"
+    - "analytics.user-sessions-value"
+  
+  record_name_strategy:
+    # Confluent default: topic-name-value
+    # RecordNameStrategy: uses schema record name
+    # TopicRecordNameStrategy: topic-name + record name
+    use: "TopicRecordNameStrategy"
+    rationale: "Allows multiple record types per topic, better for union types"
+```
+
+### Schema Migration Workflow
+
+```yaml
+migration_workflow:
+  phase_1_propose:
+    - "Create new schema version in development branch"
+    - "Run compatibility check against latest production version"
+    - "Document: what changed, why, expected impact"
+    - "Tag with semver change type (MAJOR/MINOR/PATCH)"
+  
+  phase_2_review:
+    - "Notify all topic consumers of upcoming change"
+    - "Check consumer compatibility reports"
+    - "If BACKWARD compatible: standard review"
+    - "If breaking: consumer acceptance required, migration plan needed"
+  
+  phase_3_deploy:
+    - "Register new schema version (not yet default)"
+    - "Stage deployment: producers and consumers upgrade gradually"
+    - "Phase A: all consumers upgraded to handle new schema (read-compatible)"
+    - "Phase B: producers switch to new schema version"
+    - "Phase C: old schema deprecated, retention period starts"
+  
+  phase_4_cleanup:
+    - "Archive old schema versions after retention (typically 6 months)"
+    - "Remove deprecated field documentation from registry"
+    - "Update consumer documentation with new schema details"
+```
+
+### Decision Trees
+
+#### Compatibility Mode Selection
+```
+Consumer deployment flexibility?
+├── Consumers can upgrade at any time (same team/org)
+│   └── BACKWARD compatibility (default, practical)
+├── Consumers on fixed release cycles (out of sync)
+│   └── FULL compatibility (both directions)
+├── Producers need flexibility to iterate quickly
+│   └── FORWARD compatibility (producers can remove fields)
+├── Protobuf with wire compatibility
+│   └── Use Protobuf built-in compatibility (field numbers never reused)
+└── Experimental / dev topics
+    └── NONE (no compatibility enforcement, dev only)
+```
+
+#### Schema Format Selection
+```
+Primary use case?
+├── Kafka streaming, Confluent ecosystem
+│   └── Avro (best tooling, native Confluent support)
+├── Cross-language services, gRPC
+│   └── Protobuf (fastest, most language bindings)
+├── REST APIs, web frontends, NoSQL
+│   └── JSON Schema (readable, web-native)
+├── Event-driven APIs, AsyncAPI
+│   └── JSON Schema with AsyncAPI wrapper
+└── Mixed ecosystem
+    └── Apicurio (multi-format registry)
+```
+
 ## Rules
 - Every Kafka topic has a registered schema (key + value)
 - Production topics enforce BACKWARD or FULL compatibility
@@ -304,6 +553,9 @@ Schema registry vs data catalog: schema registry focuses on schema storage, comp
 - Document field semantics in schema `doc` attribute
 - Test schema changes with shadow consumers before production rollout
 - Maintain a schema changelog visible to all consumers
+- Use latest schema version in consumers for forward compatibility
+- Never reuse field numbers in Protobuf schemas
+- Validate schemas in CI/CD before merging PRs
 
 ## References
   - references/registry-setup.md — Schema Registry Setup

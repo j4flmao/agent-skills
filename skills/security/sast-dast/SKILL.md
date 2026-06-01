@@ -336,6 +336,170 @@ SAST finds issues early in development (shift-left) with file/line precision. DA
 - Parallel scans: run SAST + DAST in parallel in CI. SAST gates before merge, DAST reports after.
 - Scan frequency: PR-level SAST, daily full SAST, per-deployment DAST baseline, weekly DAST active.
 
+## Semgrep Custom Rule Examples
+
+### Rule: Hardcoded AWS Credentials
+```yaml
+# .semgrep/rules/security/aws-creds.yml
+rules:
+  - id: hardcoded-aws-creds
+    patterns:
+      - pattern-regex: (?:AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY)\s*=\s*['"](?!\{\{)
+      - pattern-not-regex: \{\{.*\}\}
+    message: "Hardcoded AWS credential detected"
+    severity: ERROR
+    languages: [generic]
+    metadata:
+      category: security
+      technology: aws
+```
+
+### Rule: SQL Injection via String Interpolation
+```yaml
+# .semgrep/rules/security/sql-injection.yml
+rules:
+  - id: sql-injection-py
+    patterns:
+      - pattern: |
+          cursor.execute(f"...$QUERY...")
+      - pattern-not: |
+          cursor.execute("...", ...)
+    message: "SQL injection via f-string interpolation"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: CWE-89
+      owasp: A03:2021
+```
+
+### Rule: NoSQL Injection
+```yaml
+# .semgrep/rules/security/nosql-injection.yml
+rules:
+  - id: mongodb-nosql-injection
+    patterns:
+      - pattern: |
+          $DB.find({ $KEY: { "\$where": $VAL } })
+      - pattern-not: |
+          $DB.find({ $KEY: { "\$where": literal($VAL) } })
+    message: "NoSQL injection via $where operator"
+    severity: ERROR
+    languages: [javascript, typescript]
+```
+
+## CI Pipeline Configuration Examples
+
+### GitHub Actions — SAST + DAST Pipeline
+```yaml
+# .github/workflows/security-scan.yml
+name: Security Scan
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+jobs:
+  sast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Semgrep SAST
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/owasp-top-ten
+            .semgrep/rules/
+          auditOn: push
+          generateSarif: true
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+  dast:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12
+        with:
+          target: https://staging.example.com
+          rules_file_name: .zap/rules.tsv
+          cmd_options: '-a'
+```
+
+### Quality Gate Configuration
+```yaml
+# .github/security-gates.yml
+quality_gates:
+  sast:
+    error_threshold: 0
+    warn_threshold: 10
+    block_on_error: true
+    block_on_warn: false
+  dast:
+    high_findings_threshold: 0
+    medium_findings_threshold: 5
+    block_on_high: true
+    block_on_medium: false
+```
+
+## SAST/DAST Maturity Model
+
+### Level 1: Basic (Ad-hoc)
+Manual scanning by security team. No CI integration. No defined SLAs. Findings tracked in spreadsheets. No correlation between SAST and DAST.
+
+### Level 2: Standardized (CI-Integrated)
+SAST runs in CI on every PR. DAST runs weekly on staging. Basic severity-gated policy (block on CRITICAL). False positives tracked in YAML files. Weekly scan reports.
+
+### Level 3: Advanced (Automated)
+Diff-aware SAST + full daily scan. DAST baseline per deployment + full DAST weekly. Custom rules for framework-specific patterns. SAST-DAST correlation with prioritized backlog. SLAs enforced with automated ticket creation.
+
+### Level 4: Optimized (Continuous)
+Real-time scanning in IDE. AI-assisted false positive triage. Automated rule generation from incident patterns. Runtime verification correlates SAST findings with live behavior. Supply chain + SAST + DAST unified risk scoring. Self-healing: auto-rollback on critical findings in production.
+
+## SAST Anti-Patterns
+
+### Anti-Pattern: Blocking All Findings
+Blocking CI on MEDIUM or LOW findings creates negative developer sentiment and leads to rule bypass. Block only on ERROR/CRITICAL/confirmed HIGH. Use lower severity for trends and education only.
+
+### Anti-Pattern: Running Only Default Rules
+Default rule packs are generic and miss framework-specific vulnerabilities. Always add custom rules for your ORM, auth library, template engine, and serialization framework.
+
+### Anti-Pattern: No False Positive Feedback Loop
+Without documenting and reviewing false positives, the same noise appears in every scan. Developers learn to ignore results. Create `.sast-fps.yml` with rationale, review quarterly.
+
+### Anti-Pattern: SAST Without DAST Correlation
+SAST produces theoretical findings; DAST confirms exploitation. Running SAST in isolation generates high noise. Prioritize findings confirmed by both tools.
+
+### Anti-Pattern: DAST on Production
+Active DAST scanning sends real attack payloads that can corrupt data, trigger security alerts, or crash services. Target staging or dedicated test environments. Production gets passive baseline only.
+
+## DAST Anti-Patterns
+
+### Anti-Pattern: Unauthenticated Scanning Only
+Scanning only public pages misses 80-90% of the application attack surface. Always configure authenticated sessions with the appropriate user role. Test authentication injection before full scan.
+
+### Anti-Pattern: No Scope Definition
+Scanning without URL scope includes third-party services, CDNs, and auth providers. This generates irrelevant alerts and may violate terms of service. Define scope with precise regex patterns.
+
+### Anti-Pattern: Ignoring API Endpoints
+Modern applications have more API endpoints than UI pages. DAST must cover REST, GraphQL, and gRPC endpoints using OpenAPI/GraphQL schema imports. API-only scans with ZAP or dedicated API scanners.
+
+### Anti-Pattern: No Rate Limiting in DAST
+Default scan speeds can overwhelm staging environments. Configure delays: `-t` for threads, `-d` for delay in ZAP. For API scanning, respect rate limits to avoid false network error findings.
+
+## SRE/Operations Considerations
+
+- SAST runner memory: 2-4GB RAM minimum for full codebase scans. Diff scans need <1GB.
+- ZAP Docker container: 2-4GB RAM for active scans, 1GB for baseline. CPU: 2-4 cores.
+- Scan duration budgets: SAST diff <5min, SAST full <60min, ZAP baseline <30min, ZAP active <4h.
+- Schedule full SAST and DAST scans during off-peak hours to avoid CI congestion.
+- Store scan artifacts (SARIF, HTML reports, raw logs) for 90 days minimum for compliance.
+- Parallel scan execution: SAST + dependency scan run in parallel. DAST runs after staging deployment.
+- Cache SAST databases and dependency scan caches across CI runs for faster execution.
+- Monitor scan infrastructure: disk space for reports, memory for ZAP active scans, network bandwidth for DAST.
+
 ## Rules
 - DAST targets staging only — never production
 - Custom Semgrep rules stored in `.semgrep/rules/` with tests

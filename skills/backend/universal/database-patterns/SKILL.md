@@ -2,7 +2,7 @@
 name: backend-database-patterns
 description: >
   Use this skill when the user says 'database design', 'schema design', 'query optimization', 'slow query', 'migration', 'index', 'ORM', 'repository pattern', 'N+1 problem', 'transaction', or when designing or troubleshooting the data layer. This skill enforces schema design principles, indexing strategy, N+1 detection and fixing, transaction boundaries, migration best practices, and the repository pattern. Applies to PostgreSQL, MySQL, MongoDB, and ORMs (TypeORM, Prisma, SQLAlchemy, Diesel, GORM, Spring Data). Do NOT use for: API design, caching, or frontend state management.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -38,7 +38,6 @@ Schema design:
 ## {entity}
 | Field | Type | Constraints | Index |
 |-------|------|-------------|-------|
-| {field} | {type} | {constraints} | {yes/no/type} |
 ```
 
 Query fix:
@@ -54,10 +53,8 @@ Migration:
 ## Migration: {description}
 Up: {SQL}
 Down: {SQL}
-Backward-compatible: {yes/no — if no, explain risk}
+Backward-compatible: {yes/no}
 ```
-
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
 
 ### Completion Criteria
 - [ ] Schema design follows normalization principles (3NF by default).
@@ -68,7 +65,53 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 - [ ] Transaction boundaries are documented.
 
 ### Max Response Length
-Schema: unlimited (table format). Query fix: 6 lines. Migration: 10 lines.
+Schema: unlimited. Query fix: 6 lines. Migration: 10 lines.
+
+## Architecture Decision Tree
+
+### Normalize or Denormalize?
+
+```
+Is the data write-heavy with complex relationships?
+  ├── Yes → Normalize (3NF by default)
+  └── No → Is there a proven read performance problem (profiled)?
+            ├── Yes → Denormalize (with documented trade-offs)
+            └── No → Normalize first, optimize later
+```
+
+### Primary Key Choice
+
+```
+Is the system single-node with no sharding?
+  ├── Yes → BIGSERIAL (auto-increment)
+  └── No → Is time-sortable ordering needed?
+            ├── Yes → UUID v7 (time-ordered, distributed-safe)
+            └── No → UUID v4 (random, distributed-safe)
+```
+
+### Index Type Selection
+
+```
+Query pattern:
+  ├── Equality lookup (WHERE x = ?) → B-tree
+  ├── Range query (WHERE x BETWEEN ? AND ?) → B-tree
+  ├── Multi-column filter → Composite B-tree (high-selectivity first)
+  ├── Partial subset → Partial index (WHERE status = 'active')
+  ├── Full-text search → GIN (tsvector)
+  ├── JSON/array containment → GIN (jsonb, @>)
+  ├── Geospatial query → GiST (geography, geometry)
+  └── All columns in query → Covering index (INCLUDE)
+```
+
+### ORM vs Raw SQL?
+
+```
+What is your priority?
+  ├── Developer productivity, CRUD-heavy → ORM (Prisma, TypeORM, SQLAlchemy)
+  ├── Complex queries, performance-critical → Raw SQL + query builder (kysely, SQLAlchemy core)
+  ├── Migration management → ORM migrations or standalone (Alembic, Flyway)
+  └── Need both → Repository pattern with ORM for 80%, raw SQL for 20%
+```
 
 ## Workflow
 
@@ -76,8 +119,22 @@ Schema: unlimited (table format). Query fix: 6 lines. Migration: 10 lines.
 - Normalize to 3NF by default. Denormalize only when a performance measurement proves it necessary.
 - UUID v7 for primary keys (time-sortable, no collisions in distributed systems).
 - Every table has: id (UUID PK), created_at (TIMESTAMPTZ), updated_at (TIMESTAMPTZ).
-- Soft deletes: use deleted_at TIMESTAMPTZ or is_active boolean. Hard deletes are a privileged operation.
-- Use native database enum types, not string columns with app-level validation.
+- Soft deletes: use deleted_at TIMESTAMPTZ or is_active boolean.
+
+```sql
+CREATE TABLE orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers(id),
+  status order_status NOT NULL DEFAULT 'pending',
+  total_amount NUMERIC(10,2) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  deleted_at TIMESTAMPTZ  -- soft delete
+);
+
+CREATE INDEX idx_orders_customer_id ON orders(customer_id);
+CREATE INDEX idx_orders_status ON orders(status) WHERE deleted_at IS NULL;
+```
 
 ### Step 2: Indexing Strategy
 | Index Type | When | Example |
@@ -88,37 +145,34 @@ Schema: unlimited (table format). Query fix: 6 lines. Migration: 10 lines.
 | Covering | All columns in query covered | Include selected columns to avoid heap lookups |
 | GIN | JSON, arrays, full-text | `WHERE tags @> ['urgent']` |
 | Unique | Uniqueness enforcement | `WHERE email IS NOT NULL` |
-
-Rules:
-- Index every foreign key column.
-- Index columns used in WHERE, JOIN, ORDER BY clauses.
-- Do not index low-cardinality columns (boolean, single-digit enums) alone.
-- Use `EXPLAIN ANALYZE` to verify index usage before and after.
-- Composite index column order: highest selectivity first.
+| BRIN | Large, naturally-ordered data | Time-series data, logs |
+| Hash | Equality only, large values | URL lookup (smaller than B-tree) |
 
 ### Step 3: N+1 Detection and Fix
-Detection pattern: the same query appears N times in logs, where N = number of parent rows.
+```typescript
+// N+1 — BAD
+const users = await db.user.findMany();  // 1 query
+for (const user of users) {
+  const posts = await db.post.findMany({ where: { userId: user.id } });  // N queries
+}
 
-```
-NOT N+1 (eager):
-  users = db.user.findMany({ include: { posts: true } })
-  -> 1 query with JOIN
-
-N+1 (lazy):
-  users = db.user.findMany()
-  for user in users:
-    user.posts
-    -> 1 query for users + N queries for posts
+// Fixed — eager loading
+const users = await db.user.findMany({ include: { posts: true } });  // 1 query with JOIN
 ```
 
-Fix strategies:
-- Eager loading / JOIN / INCLUDE
-- DataLoader pattern for batch loading
-- Query batching
+```python
+# N+1 — BAD
+users = await User.objects.all()  # 1 query
+for user in users:
+    posts = await Post.objects.filter(user=user).all()  # N queries
+
+# Fixed — select_related
+users = await User.objects.select_related('posts').all()  # 1 query
+```
 
 ### Step 4: Migration Best Practices
 1. Every migration must have BOTH up and down scripts.
-2. All migrations must be backward-compatible: old application code must work with the new schema.
+2. All migrations must be backward-compatible.
 3. Three-phase destructive changes:
    - Phase 1: Add new column/table. Dual-write to old and new.
    - Phase 2: Backfill data. Switch reads to new. Verify consistency.
@@ -126,11 +180,40 @@ Fix strategies:
 4. Never drop a column in the same deployment that stops writing to it.
 5. Test migrations against a copy of production data before running in production.
 
+```sql
+-- Phase 1: Add new column, dual-write
+ALTER TABLE orders ADD COLUMN status_v2 VARCHAR(20);
+-- Application writes to both `status` (old) and `status_v2` (new)
+
+-- Phase 2: Backfill and switch reads
+UPDATE orders SET status_v2 = status WHERE status_v2 IS NULL;
+-- Application reads from `status_v2`, writes to `status_v2` only
+
+-- Phase 3: Remove old column
+ALTER TABLE orders DROP COLUMN status;
+```
+
 ### Step 5: Transaction Boundaries
 - Transactions belong in Application use cases, NOT in controllers or repositories.
-- Keep transactions as short as possible. Never hold a transaction open during external API calls or file I/O.
-- Use Unit of Work pattern for coordinating multiple repository operations in a single transaction.
-- For distributed transactions spanning multiple services: use Saga pattern. Never use two-phase commit (2PC) across service boundaries.
+- Keep transactions as short as possible.
+- Never hold a transaction open during external API calls or file I/O.
+- Use Unit of Work pattern for coordinating multiple repository operations.
+
+```typescript
+class TransferFundsHandler {
+  async execute(command: TransferFundsCommand): Promise<Result> {
+    return this.unitOfWork.execute(async () => {
+      const from = await this.accountRepo.findById(command.fromAccountId);
+      const to = await this.accountRepo.findById(command.toAccountId);
+      from.withdraw(command.amount);
+      to.deposit(command.amount);
+      await this.accountRepo.save(from);
+      await this.accountRepo.save(to);
+      return Result.success();
+    });
+  }
+}
+```
 
 ### Step 6: Repository Pattern
 ```
@@ -139,7 +222,6 @@ Interface (Domain):
     findById(id: UserId): Promise<User | null>
     findByEmail(email: Email): Promise<User | null>
     save(user: User): Promise<void>
-    delete(id: UserId): Promise<void>
   }
 
 Implementation (Infrastructure):
@@ -149,41 +231,173 @@ Implementation (Infrastructure):
   }
 ```
 
-## PK/FK Decision Rules
+### Step 7: Pagination Patterns
 
-### PK Rules
-- **Use UUID v7** as default PK. Never natural keys (email, SSN, username).
-- **Use BIGSERIAL** only when single-node, no sharding, no merge.
-- **Composite PK** only for junction/join tables: `PRIMARY KEY (order_id, product_id)`.
+```sql
+-- OFFSET-based (BAD for large datasets — scans skipped rows)
+SELECT * FROM orders ORDER BY id LIMIT 20 OFFSET 40;
 
-### FK Rules
-- **Index EVERY FK column**. Missing FK index = full table scan on DELETE + deadlock risk.
-- **Prefer ENUM over tiny table+FK** when values <20 rows, static, no attributes.
-- **ON DELETE RESTRICT** by default. CASCADE only for aggregate roots (Order → Items).
-- **DEFERRABLE** for circular references (manager_id → employees).
-- **NOT VALID + VALIDATE** for zero-downtime FK addition on large tables.
-- **Polymorphic FK** = anti-pattern. Use separate join tables instead.
+-- Keyset / cursor-based (GOOD — uses index, constant time)
+SELECT * FROM orders WHERE id > 'last-uuid' ORDER BY id LIMIT 20;
+```
 
-### ENUM vs Table Decision
+```typescript
+// Keyset pagination with composite cursor
+async function paginateOrders(cursor?: { id: string; createdAt: Date }, limit = 20) {
+  return db.order.findMany({
+    where: cursor ? {
+      OR: [
+        { createdAt: { lt: cursor.createdAt } },
+        { createdAt: cursor.createdAt, id: { lt: cursor.id } },
+      ],
+    } : undefined,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: limit,
+  });
+}
+```
+
+### Step 8: View / Materialized View Patterns
+
+```sql
+-- Materialized view for expensive aggregations
+CREATE MATERIALIZED VIEW monthly_sales AS
+SELECT
+  DATE_TRUNC('month', created_at) AS month,
+  COUNT(*) AS order_count,
+  SUM(total_amount) AS revenue
+FROM orders
+WHERE status = 'completed'
+GROUP BY DATE_TRUNC('month', created_at)
+WITH DATA;
+
+-- Refresh on schedule (not on every write)
+REFRESH MATERIALIZED VIEW CONCURRENTLY monthly_sales;
+```
+
+## Query Optimization
+
+### EXPLAIN ANALYZE Checklist
+```sql
+EXPLAIN ANALYZE SELECT * FROM orders WHERE customer_id = '123' AND status = 'pending';
+
+-- What to check:
+-- 1. Seq Scan vs Index Scan → Seq Scan means missing index
+-- 2. Actual rows vs estimated rows → Large difference means stale statistics
+-- 3. Execution time → Is it acceptable?
+-- 4. Nested Loop vs Hash Join → Nested Loop with many rows means missing index
+```
+
+### Common Optimization Patterns
+| Problem | Pattern | Fix |
+|---------|---------|-----|
+| Seq scan on large table | Missing index | Add index on filtered columns |
+| Slow JOIN | Missing FK index | Index all foreign keys |
+| Slow ORDER BY | Sort-based | Index on sort column |
+| Slow COUNT(*) on big table | Full scan | Use approximate count or index-only scan |
+| Slow pagination | OFFSET-based | Use keyset pagination (WHERE id > ?) |
+| Slow DISTINCT | Sort-based | Add index on distinct column |
+| Slow GROUP BY | Hash/sort | Add index on group + aggregate columns |
+
+### Query Tuning Workflow
 
 ```
-ENUM: <20 static values, no attributes, rarely changes
-      Example: order_status, payment_type, user_role
-
-TABLE + FK: >20 values, has attributes, admin-managed, multi-language
-            Example: product_categories, countries, tax_rates
+1. Identify slow query (APM, pg_stat_statements, slow query log)
+2. Run EXPLAIN ANALYZE
+3. Check for Seq Scan → Add index
+4. Check for sort (filesort) → Add index on sort column
+5. Check row estimate vs actual → Run ANALYZE
+6. Check for Nested Loop with large outer → Consider Hash Join or better index
+7. Measure improvement, repeat if needed
 ```
+
+## Performance
+
+### Connection Pool Configuration
+```yaml
+# PostgreSQL connection pool
+pool:
+  min: 2          # Keep at least 2 connections
+  max: 20         # Max connections (CPU cores × 2 + disk)
+  idleTimeout: 10000     # Close idle connections after 10s
+  acquireTimeout: 30000  # Wait 30s before timing out
+  maxUses: 5000          # Recycle connection after 5000 uses
+```
+
+### Batch Operations
+```typescript
+// Batch insert — avoid individual INSERT statements
+await db.insert(users).values([
+  { name: 'Alice', email: 'alice@example.com' },
+  { name: 'Bob', email: 'bob@example.com' },
+  // ... up to 1000 rows
+]);
+```
+
+### Read Replicas
+```
+Write → Primary node
+Read  → Replica nodes (load-balanced)
+
+Application patterns:
+  - Use read replicas for reporting, analytics, background jobs
+  - Be aware of replication lag (typically <100ms in same region)
+  - Read-your-writes: after a write, route reads to primary for N seconds
+  - Never assume replica is fully in sync with primary
+```
+
+## Security
+
+### SQL Injection Prevention
+```typescript
+// BAD — string interpolation
+await db.query(`SELECT * FROM users WHERE email = '${email}'`);  // SQL injection!
+
+// GOOD — parameterized query
+await db.query('SELECT * FROM users WHERE email = $1', [email]);
+await db.user.findUnique({ where: { email } });  // ORM handles parameterization
+```
+
+### Least Privilege
+```sql
+-- Application user should have minimal permissions
+GRANT SELECT, INSERT, UPDATE ON orders TO app_user;
+GRANT USAGE ON SEQUENCE orders_id_seq TO app_user;
+-- No DELETE, no DROP, no schema modifications
+```
+
+## Anti-Patterns
+
+1. **SELECT \***: Retrieves more columns than needed, breaks index-only scans.
+2. **No migration down script**: Makes rollbacks impossible.
+3. **Breaking migration**: Adding NOT NULL without default to existing table.
+4. **N+1 in API response**: Lazy-loading in serializers causes N+1 queries.
+5. **Too many indexes**: Each INSERT/UPDATE has to update all indexes.
+6. **No FK indexes**: DELETE on parent locks full child table scan.
+7. **Oversized transactions**: Holding transactions during API calls or file I/O.
+8. **Enum as string**: Using VARCHAR with app-level validation instead of native DB enum.
+9. **Missing unique constraint**: Relying on application-level uniqueness only.
+10. **No read replicas for reporting**: Heavy reporting queries impact user-facing transactions.
+11. **Connection leak**: Not releasing connections in all code paths.
+12. **Lazy loading in serializers**: N+1 generated by framework serialization.
 
 ## Rules
 - Never expose raw database entities (ORM models) outside the Infrastructure layer.
 - Always use parameterized queries. Never string interpolation in SQL.
 - Every SELECT explicitly lists columns. No SELECT *.
 - Migrations must be reviewed and tested. Never run untested migrations on production.
-- Before optimizing, run EXPLAIN ANALYZE. Assumptions about slow queries are often wrong.
-- Transactions are Application-layer concerns. Domain entities have no transaction logic.
+- Before optimizing, run EXPLAIN ANALYZE. Assumptions are often wrong.
+- Index every foreign key column.
+- Every migration has both up and down scripts.
+- Soft deletes by default. Hard deletes are a privileged operation.
+- Transactions belong in Application layer, never in controllers or repositories.
+- Use keyset pagination for large datasets, never OFFSET.
+- Test migrations against production-sized data before deployment.
+- Always use native DB enums instead of VARCHAR with app-level validation.
 
 ## References
   - references/connection-pooling.md — Connection Pooling
+  - references/database-fundamentals.md — Database Patterns Fundamentals
   - references/database-migration-patterns.md — Database Migration Patterns
   - references/database-sharding.md — Database Sharding
   - references/database-testing.md — Database Testing
@@ -191,6 +405,7 @@ TABLE + FK: >20 values, has attributes, admin-managed, multi-language
   - references/migration-strategies.md — Migration Strategies
   - references/query-optimization.md — Database Query Optimization Guide
   - references/table-design-rules.md — Table Design Rules
+  - references/transaction-isolation.md — Transaction Isolation Levels
 ## Handoff
 No artifact produced.
 Next skill: backend-auth-patterns — secure the data layer.

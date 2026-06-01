@@ -4,7 +4,7 @@ description: >
   Use this skill when explaining model predictions, computing feature importance, generating SHAP/LIME explanations, creating dependence plots, or building trust in ML model decisions.
   This skill enforces: global + local explanation coverage, SHAP value computation, permutation importance baseline, visualization choice (waterfall/force/dependence/summary), model-specific methods, feature interaction detection.
   Do NOT use for: model evaluation metrics (use ml-model-evaluation), hyperparameter tuning (use ml-hyperparameter-tuning), causal inference, or privacy-preserving explanations.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -29,16 +29,58 @@ shap.summary_plot(shap_values, X)
 ## Purpose
 Design interpretability strategies combining global explanations (which features matter overall) and local explanations (why this specific prediction) with appropriate visualizations.
 
+## Architecture/Decision Trees
+
+### Method Selection Decision Tree
+```
+Need global or local explanation?
+  ├── Global (which features matter overall)
+  │   ├── Model-agnostic
+  │   │   ├── Permutation importance (fast, unbiased, any model)
+  │   │   └── Partial dependence plots (marginal effect, any model)
+  │   └── Model-specific
+  │       ├── Tree → TreeSHAP, impurity-based importance
+  │       ├── Linear → Coefficients, odds ratios
+  │       └── Neural → Integrated Gradients, Neuron Coverage
+  ├── Local (why this specific prediction)
+  │   ├── Model-agnostic
+  │   │   ├── SHAP (game-theoretic, consistent, any model)
+  │   │   ├── LIME (sparse surrogate, fast but unstable)
+  │   │   └── ICE curves (per-instance feature effect)
+  │   └── Model-specific
+  │       ├── Tree → TreeSHAP (exact, fast)
+  │       └── Image → Grad-CAM, Saliency Maps
+  └── Feature Interactions
+      ├── SHAP interaction values (exact for trees)
+      ├── H-statistic (Friedman, range 0-1)
+      └── Pairwise PDP (visual interaction patterns)
+```
+
+### Audience-Specific Output
+```
+Who is the explanation for?
+  ├── Data scientist debugging
+  │   └── SHAP summary + dependence + waterfall plots
+  ├── Domain expert validation
+  │   └── Top 5 features with actual values and direction
+  ├── Business stakeholder
+  │   └── Force plot + simplified reason codes (top 3 factors)
+  └── Regulator / Compliance
+      ├── Global + local explanations documented
+      ├── Methodology, validation results, feature engineering
+      └── Audit trail with prediction + explanation logged
+```
+
 ## Agent Protocol
 
 ### Trigger
-User request includes: SHAP, LIME, feature importance, model interpretability, explainability, partial dependence, PDP, ICE, SHAP values, feature contribution, global explanation, local explanation, permutation importance, breakdown plot, reason code.
+User request includes: SHAP, LIME, feature importance, model interpretability, explainability, partial dependence, PDP, ICE, SHAP values, feature contribution, global explanation, local explanation, permutation importance.
 
 ### Input Context
 Before activating, verify:
 - Model type (tree, linear, neural network, ensemble).
-- Stakeholder audience (data scientist debugging, domain expert validation, regulator compliance, end user trust).
-- Deployment context (batch inference requiring speed, real-time serving, offline analysis).
+- Stakeholder audience (data scientist, domain expert, regulator, end user).
+- Deployment context (batch inference, real-time serving, offline analysis).
 - Regulatory requirements (GDPR right to explanation, model risk management).
 
 ### Output Artifact
@@ -49,122 +91,238 @@ Model interpretability strategy with global and local methods, visualization app
 ## Interpretability Strategy
 ### Model Type
 {tree / linear / neural / ensemble}
-Complexity: {low / medium / high}
 
 ### Global Methods
 Method: permutation_importance | Score: {value}
 Method: partial_dependence | Features: [{f1}, {f2}]
-Method: {shap / feature_importance} | Ranking: [{f1}, {f2}, {f3}]
+Method: shap | Ranking: [{f1}, {f2}, {f3}]
 
 ### Local Methods
 Method: {shap / lime / ice} | Samples: {N}
 Output: {waterfall / force / explanation_text}
-
-### Feature Interactions
-Interactions: [{f1} x {f2}, {f1} x {f3}]
-Strength: {value}
-
-### Validation
-Metric: {consistency / faithfulness / stability}
-Score: {value}
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble. No postamble. No explanations. No filler. Compress output.
 
 ### Completion Criteria
 - [ ] Global explanation method selected and applied to rank feature importance.
 - [ ] Local explanation method selected for individual prediction interpretation.
-- [ ] Visualizations chosen based on audience: data science vs business vs regulator.
+- [ ] Visualizations chosen based on audience.
 - [ ] Feature interactions checked for non-linear models.
-- [ ] Explanations validated for faithfulness to the model.
-- [ ] Model-specific method used if applicable (TreeSHAP, coefficients).
+- [ ] Explanations validated for faithfulness.
+- [ ] Model-specific method used if applicable.
 - [ ] Explanation uncertainty and limitations documented.
-
-### Max Response Length
-200 lines of configuration and code.
 
 ## Workflow
 
 ### Step 1: Global Interpretability
-Permutation importance: shuffle each feature, measure performance drop. Model-agnostic, computationally efficient, not biased by feature cardinality. Run 5-10 repetitions for stable estimates. Feature importance from tree models: built-in impurity-based importance, but biased toward high-cardinality features and continuous variables. Prefer permutation or SHAP importance over impurity. SHAP global: mean absolute SHAP values across all samples. Shows average impact magnitude. Produces ranking with direction (positive/negative association). Partial dependence plots: marginal effect of feature on predictions. Y-axis = predicted outcome, X-axis = feature value. Assumes feature independence — beware of correlated features. Feature interaction: H-statistic (Friedman, range 0-1), SHAP interaction values (exact for trees), or pairwise PDP visualization. Report top-10 feature importance with direction and magnitude.
+Permutation importance: shuffle each feature, measure performance drop. Model-agnostic, unbiased. Tree feature importance: built-in but biased toward high-cardinality features. SHAP global: mean absolute SHAP values across all samples. Partial dependence: marginal effect of feature.
+
+```python
+from sklearn.inspection import permutation_importance
+import pandas as pd
+import numpy as np
+
+def permutation_importance_analysis(model, X_val, y_val, n_repeats=10):
+    result = permutation_importance(
+        model, X_val, y_val,
+        n_repeats=n_repeats, random_state=42, n_jobs=-1,
+    )
+    importance_df = pd.DataFrame({
+        "feature": X_val.columns,
+        "importance": result.importances_mean,
+        "std": result.importances_std,
+    }).sort_values("importance", ascending=False)
+    return importance_df
+
+def global_shap_analysis(model, X, sample_size=1000):
+    if sample_size < len(X):
+        X_sample = X.sample(sample_size, random_state=42)
+    else:
+        X_sample = X
+
+    # Use appropriate explainer
+    if str(type(model)).find("xgboost") > -1 or str(type(model)).find("RandomForest") > -1:
+        explainer = shap.TreeExplainer(model)
+    elif str(type(model)).find("linear") > -1 or str(type(model)).find("LogisticRegression") > -1:
+        explainer = shap.LinearExplainer(model, X_sample)
+    else:
+        explainer = shap.KernelExplainer(model.predict_proba, X_sample, link="logit")
+
+    shap_values = explainer.shap_values(X_sample)
+
+    # Mean absolute SHAP for global importance
+    mean_shap = np.abs(shap_values).mean(axis=0)
+    importance_df = pd.DataFrame({
+        "feature": X_sample.columns,
+        "mean_abs_shap": mean_shap,
+    }).sort_values("mean_abs_shap", ascending=False)
+
+    return importance_df, shap_values, explainer
+```
 
 ### Step 2: Local Interpretability
-SHAP values: Shapley values from cooperative game theory. Each feature gets a contribution that sums to difference from baseline. Locally accurate, consistent, and unique (only method satisfying all Shapley properties). TreeSHAP for tree models (exact O(TL2^M), fast in practice). KernelSHAP for any model (slower, uses weighted linear regression). LIME: fit sparse local surrogate model around prediction point. Perturb input, weight by proximity, fit Lasso/ridge. Faster than KernelSHAP for high dimensions but unstable — results vary across runs. Run 5 times with different seeds to verify consistency. ICE curves: individual conditional expectation — how changing one feature changes this specific prediction. PDP is average of ICE curves. Centered ICE (C-ICE) starts all curves at zero at reference point — better for heterogeneity detection.
+SHAP values: Shapley values from cooperative game theory. Locally accurate, consistent, unique. TreeSHAP for trees (exact, fast). KernelSHAP for any model (slower). LIME: fit sparse local surrogate. Faster but less stable.
+
+```python
+def local_shap_explanation(model, X_instance, X_background, feature_names):
+    """Explain a single prediction with SHAP."""
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X_instance)
+
+    # If classification, get positive class
+    if isinstance(shap_values, list):
+        shap_values = shap_values[1]
+
+    # Create explanation dataframe
+    explanation = pd.DataFrame({
+        "feature": feature_names,
+        "value": X_instance.flatten(),
+        "shap_value": shap_values.flatten(),
+        "contribution": np.abs(shap_values.flatten()),
+    }).sort_values("contribution", ascending=False)
+
+    return explanation
+
+def lime_explanation(model, X_instance, feature_names, n_features=5):
+    """LIME explanation (run multiple times for stability)."""
+    import lime
+    import lime.lime_tabular
+
+    explainer = lime.lime_tabular.LimeTabularExplainer(
+        X_train, feature_names=feature_names,
+        class_names=["negative", "positive"],
+        mode="classification",
+        random_state=42,
+    )
+    exp = explainer.explain_instance(
+        X_instance, model.predict_proba,
+        num_features=n_features,
+    )
+    return exp.as_list()
+```
 
 ### Step 3: Model-Specific Methods
-Tree models: TreeSHAP is exact and fast. Feature importance from node impurity. Partial dependence for visualizing split thresholds. Linear models: coefficients are natural explanations if features are standardized on same scale and independent. For logistic regression: odds ratios = exp(coef). For correlated features: use SHAP or permutation importance instead. Neural networks: Integrated Gradients (satisfies sensitivity and implementation invariance). Grad-CAM for convolutional layers in image models. Attention weights for transformers — interpret with caution (attention is not explanation). Layer-wise relevance propagation (LRP) for deep networks. SmoothGrad for reducing gradient noise by averaging over perturbed inputs.
+```python
+# Linear model coefficients
+def linear_model_explanation(model, feature_names):
+    coef_df = pd.DataFrame({
+        "feature": feature_names,
+        "coefficient": model.coef_.flatten(),
+        "abs_coefficient": np.abs(model.coef_).flatten(),
+    }).sort_values("abs_coefficient", ascending=False)
+    return coef_df
+
+# Grad-CAM for CNNs
+def grad_cam(model, image, layer_name, class_idx=None):
+    import tensorflow as tf
+    grad_model = tf.keras.models.Model(
+        [model.inputs],
+        [model.get_layer(layer_name).output, model.output],
+    )
+    with tf.GradientTape() as tape:
+        conv_output, predictions = grad_model(image)
+        if class_idx is None:
+            class_idx = tf.argmax(predictions[0])
+        loss = predictions[:, class_idx]
+    grads = tape.gradient(loss, conv_output)
+    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+    heatmap = tf.reduce_mean(tf.multiply(pooled_grads, conv_output), axis=-1)[0]
+    heatmap = np.maximum(heatmap, 0) / np.max(heatmap)
+    return heatmap
+```
 
 ### Step 4: Visualization Selection
-Summary plot (beeswarm): one dot per sample per feature, colored by feature value. Best for global overview — shows importance ranking, effect direction, and heterogeneity. Waterfall plot: one prediction, cumulative feature contributions from base value. Best for single prediction explanation to business stakeholders. Force plot: interactive waterfall in HTML format, good for presentations and regulatory documentation. Dependence plot: SHAP value vs feature value, colored by interaction feature. Shows main effect, interaction strength, and heterogeneity. Bar plot: mean SHAP or mean absolute SHAP per feature. Simplest global view for non-technical audience. Decision plot: cumulative feature contributions as line chart. Good for comparing multiple predictions.
+Summary plot (beeswarm): best for global overview. Waterfall: single prediction explanation. Force plot: interactive, good for presentations. Dependence plot: main effect + interaction. Bar plot: simplest global view.
+
+```python
+import matplotlib.pyplot as plt
+
+def visualize_explanations(shap_values, X, feature_names):
+    """Generate standard interpretability visualizations."""
+    # Summary plot (beeswarm)
+    shap.summary_plot(shap_values, X, feature_names=feature_names, show=False)
+    plt.savefig("shap_summary.png", bbox_inches="tight", dpi=150)
+    plt.close()
+
+    # Dependence plot for top 2 features
+    shap.dependence_plot(feature_names[0], shap_values, X,
+                         feature_names=feature_names, show=False)
+    plt.savefig("shap_dependence.png", bbox_inches="tight", dpi=150)
+    plt.close()
+
+    # Waterfall for first prediction
+    shap.plots.waterfall(shap.Explanation(
+        values=shap_values[0],
+        base_values=shap_values.base_values[0] if hasattr(shap_values, 'base_values') else 0,
+        data=X.iloc[0].values,
+        feature_names=feature_names,
+    ), show=False)
+    plt.savefig("shap_waterfall.png", bbox_inches="tight", dpi=150)
+    plt.close()
+```
 
 ### Step 5: Explanation Validation
-Consistency: similar inputs should have similar explanations (compactness). Sample near neighbor, compare explanation similarity. Faithfulness: removing top contributing features should change prediction. Remove top-k features (set to baseline), if prediction does not change, explanation is unfaithful. Monotonicity: confidence of feature effect direction should be consistent across feature range for monotonic relationships. Local accuracy: explanation model must approximate original model near the prediction point (SHAP satisfies this, LIME approximately). Stability: small input perturbations should not drastically change explanations. Add Gaussian noise, measure explanation similarity. Reproducibility: same input + same model = same explanation. Set random seeds for LIME, check deterministic SHAP implementations.
+```python
+def validate_explanation(model, X, explanation_fn, top_k=5):
+    """Validate explanation by removing top-k features."""
+    base_pred = model.predict_proba(X.mean().to_frame().T)[0][1]
 
-### Integration with Model Evaluation
-Combine interpretability with evaluation: use SHAP to understand which features drive errors.
-For misclassified samples, compute SHAP values to identify which features pushed prediction wrong.
-Track feature importance stability across CV folds — high variance means unreliable feature.
-Export explanations alongside predictions for audit trail and regulatory compliance.
-Automate explanation generation for every production prediction using batch SHAP pipelines.
-Use permutation importance as a gating metric — if feature is not important, consider removing it.
-Generate interpretability report with summary plot, dependence plots, and feature interaction analysis.
+    top_features = explanation_fn(X)[:top_k]["feature"].values
+    X_modified = X.copy()
+    for f in top_features:
+        X_modified[f] = X_modified[f].mean()  # set to baseline
 
-### Step 6: Reporting
-For data scientists: full SHAP analysis with summary, dependence, and interaction plots. For domain experts: top-5 features per prediction with actual values and direction. For regulators: legal basis, methodology description, validation results, feature engineering documentation. For end users: simple reason codes (e.g., your loan was denied because of [top 3 factors]) with recourse (what would need to change). Template for prediction explanation: Prediction: {value}. Key drivers: {feature1} ({actual_value}, {direction}+{magnitude}), {feature2}, {feature3}. Compared to average: {baseline}. For compliance: generate explanation on every prediction and log for audit trail.
+    modified_pred = model.predict_proba(X_modified)[0][1]
+    change = abs(base_pred - modified_pred)
 
-### Common Pitfalls
-Trusting tree-based feature importance blindly — permutation importance is unbiased, tree importance is not.
-Interpreting SHAP values without knowing the baseline — always report base value context.
-Using LIME without running multiple times to check stability — single run can be misleading.
-Showing partial dependence plots without checking for feature correlations — correlated features distort PDPs.
-Over-interpreting attention weights as explanations — attention is correlation, not causation.
-Forgetting to document feature engineering when explaining — transformations change interpretation.
-Generating explanations for every prediction without sampling — computational cost can be prohibitive.
+    return {
+        "base_prediction": base_pred,
+        "modified_prediction": modified_pred,
+        "change": change,
+        "faithful": change > 0.05,
+    }
+```
+
+## Anti-Patterns
+
+- **Trusting tree-based feature importance blindly**: Use permutation or SHAP instead.
+- **Interpreting SHAP without baseline**: Always report base value context.
+- **LIME without multiple runs**: Single run can be misleading.
+- **PDP without checking feature correlations**: Correlated features distort PDPs.
+- **Attention weights as explanations**: Attention is correlation, not causation.
+- **Forgetting feature engineering documentation**: Transforms change interpretation.
+- **Explaining every prediction without sampling**: Computational cost prohibitive.
+
+## Production Considerations
+
+### Monitoring
+- Track top-5 feature importance stability over time.
+- Monitor SHAP value distribution per feature.
+- Check explanation consistency for similar inputs.
+- Log explanations for random sample of predictions.
+- Trigger retraining investigation if importance ranking changes significantly.
+
+### Deployment
+- Generate explanations for every production prediction requiring compliance.
+- Cache SHAP values for frequent patterns.
+- Version the background dataset for SHAP computation.
+- Document explanation methods for model governance.
+- Log explanations alongside predictions for audit trail.
 
 ## Rules
-- Always compute global permutation importance as a baseline — model-agnostic and unbiased.
-- TreeSHAP is preferred over KernelSHAP for tree-based models — faster and exact.
-- LIME explanations can be unstable — run multiple times with different seeds to verify.
-- SHAP assumes feature independence in the interventional formulation — note this limitation.
-- Partial dependence plots assume feature independence — check for correlations before interpreting.
-- Never interpret linear model coefficients directly if features are correlated or unstandardized.
-- For deep learning, use Integrated Gradients or SmoothGrad over vanilla gradients.
-- Validate explanations on known edge cases (missing values, outliers) before trusting.
-- Report explanation uncertainty where possible (confidence intervals for SHAP values).
-- Document feature engineering: transformations, interactions, encoding affect interpretability.
-- SHAP waterfall plots are the gold standard for individual prediction explanations.
-- Summary plot + dependence plot covers 80% of interpretability needs.
-- Attention weights alone are not explanations for transformer models — use integrated gradients or SHAP.
-- For regulatory compliance (GDPR, ECOA), both global and local explanations are required.
-
-### Production Monitoring
-Track top-5 feature importance stability over time — large changes indicate data distribution shift.
-Monitor SHAP value distribution per feature — if distribution shifts, model behavior may be unreliable.
-Check explanation consistency: similar inputs should produce similar explanations in production.
-Log explanations for a random sample of production predictions for audit trail and debugging.
-Trigger retraining investigation if feature importance ranking changes significantly.
-Monitor the base value (expected prediction) — shifts indicate changes in the underlying population.
-Set up alerts for unexpected explanation patterns (e.g., feature with opposite direction than expected).
-
-### Troubleshooting Guide
-SHAP values take too long on large datasets → use TreeSHAP for tree models, subsample background data for KernelSHAP.
-LIME giving different results each run → increase the number of samples, fix the random seed, check kernel width.
-Feature importance inconsistent across CV folds → feature may be unstable, check for multicollinearity.
-Partial dependence plot looks unreliable → check for correlated features that violate the independence assumption.
-SHAP dependence showing unexpected patterns → check for missing interaction features in the dependence plot.
-Linear model coefficients not matching SHAP direction → check for multicollinearity or unscaled features.
-Explanation blames the wrong feature → validate by removing the top feature and checking if prediction changes.
-Force plot too cluttered for high-dimensional models → show only top-5 features, group the rest as others.
-
-### Deployment Checklist
-Generate explanations for every production prediction that requires regulatory compliance.
-Cache SHAP values for frequent prediction patterns to reduce serving cost.
-Version the background/reference dataset used for SHAP computation.
-Document which explanation methods are used and why for model governance.
-Set up automated explanation validation: faithfulness, consistency, stability checks per batch.
-Log explanations alongside predictions for post-hoc analysis and debugging.
-Establish explanation generation SLAs based on latency requirements (batch vs real-time).
-Record explanation metadata: model version, explainer type, computation time, background dataset hash.
+- Always compute global permutation importance as baseline.
+- TreeSHAP preferred over KernelSHAP for trees.
+- LIME: run multiple times to verify stability.
+- SHAP assumes feature independence — note limitation.
+- PDP assumes feature independence — check correlations first.
+- Never interpret linear coefficients directly with correlated features.
+- Use Integrated Gradients for deep learning, not vanilla gradients.
+- Validate explanations on known edge cases first.
+- Report explanation uncertainty where possible.
+- SHAP waterfall = gold standard for individual explanations.
+- Summary + dependence = covers 80% of needs.
+- Attention weights alone are NOT explanations.
 
 ## References
   - references/fairml-auditing.md — Fairness & Model Auditing

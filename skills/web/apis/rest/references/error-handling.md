@@ -265,8 +265,153 @@ async function apiClient<T>(
 }
 ```
 
+## Decision Trees
+
+### Choose HTTP Status Code
+```
+Is the client request malformed?
+├── Yes → Is the request syntax invalid?
+│   ├── Yes → 400 Bad Request
+│   └── No → Is it a validation failure?
+│       ├── Yes → 422 Unprocessable Entity (semantic errors)
+│       └── No → 400 Bad Request
+├── No → Is the client unauthorized?
+│   ├── Yes → Is authentication missing/invalid?
+│   │   ├── Yes → 401 Unauthorized + WWW-Authenticate header
+│   │   └── No → 403 Forbidden (authenticated but no permission)
+│   └── No → Is the resource not found?
+│       ├── Yes → Was it ever there?
+│       │   ├── Yes → 410 Gone (permanently removed)
+│       │   └── No → 404 Not Found
+│       └── No → Is it a conflict (race condition)?
+│           ├── Yes → 409 Conflict + current state
+│           └── No → Is it rate-limited?
+│               ├── Yes → 429 Too Many Requests + Retry-After
+│               └── No → 500 Internal Server Error
+```
+
+### Choose Retry Strategy
+```
+Is the error retryable?
+├── Yes → Is it a 429 (rate limit)?
+│   ├── Yes → Use Retry-After header (fixed delay)
+│   └── No → Is it a 5xx (server error)?
+│       ├── Yes → Exponential backoff with jitter
+│       └── No → 408 Request Timeout?
+│           ├── Yes → Linear retry with timeout
+│           └── No → Do not retry (4xx client errors)
+└── No → Return error to caller immediately
+```
+
+## Anti-Patterns
+- **Stack traces in production responses**: Exposes internals, security risk
+- **Generic 400 for everything**: Makes debugging impossible for clients
+- **No error correlation IDs**: Cannot trace errors across logs
+- **Inconsistent error format**: Different shape per endpoint confuses clients
+- **HTML error pages for API endpoints**: Must return structured JSON/XML
+- **Retrying non-retryable errors**: Wastes resources on 400, 401, 403, 404
+- **No rate limiting**: Allows abuse and DoS attacks
+- **Exposing database internals**: "Duplicate entry 'x' for key 'PRIMARY'" reveals schema
+- **Validation errors without field context**: "Invalid input" is useless
+- **Not logging request IDs**: Makes debugging in production impossible
+
+## Implementation Patterns
+
+### Express Global Error Handler
+```javascript
+class AppError extends Error {
+  constructor(statusCode, code, message, details = null) {
+    super(message);
+    this.statusCode = statusCode;
+    this.code = code;
+    this.details = details;
+    this.timestamp = new Date().toISOString();
+    this.requestId = null;
+  }
+}
+
+function errorHandler(err, req, res, next) {
+  const statusCode = err.statusCode || 500;
+  const body = {
+    error: {
+      code: err.code || 'INTERNAL_ERROR',
+      message: statusCode === 500 ? 'Internal server error' : err.message,
+      requestId: req.id || err.requestId,
+      timestamp: err.timestamp || new Date().toISOString(),
+    },
+  };
+
+  if (err.details) {
+    body.error.details = err.details;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    body.error.stack = err.stack;
+  }
+
+  res.status(statusCode).json(body);
+}
+
+// Usage
+app.post('/users', async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      throw new AppError(422, 'VALIDATION_ERROR', 'Email is required', {
+        fields: [{ field: 'email', message: 'Email is required' }],
+      });
+    }
+    // ...
+  } catch (err) {
+    next(err);
+  }
+});
+```
+
+### Axios Client Interceptor with Retry
+```javascript
+import axios from 'axios';
+
+const api = axios.create({ baseURL: '/api/v1' });
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Retry on 429 or 5xx, max 3 times
+    if (
+      (error.response?.status === 429 ||
+        (error.response?.status >= 500 && error.response?.status < 600)) &&
+      !originalRequest._retryCount
+    ) {
+      originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
+      if (originalRequest._retryCount <= 3) {
+        const delay = originalRequest._retryCount === 1
+          ? parseInt(error.response.headers['retry-after'] || '1', 10) * 1000
+          : Math.min(1000 * 2 ** originalRequest._retryCount + Math.random() * 1000, 30000);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return api(originalRequest);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+```
+
+### Correlation ID Middleware
+```javascript
+import { v4 as uuidv4 } from 'uuid';
+
+function correlationIdMiddleware(req, res, next) {
+  req.id = req.headers['x-request-id'] || uuidv4();
+  res.setHeader('x-request-id', req.id);
+  next();
+}
+```
+
 ## Key Points
-- RFC 7807 Problem Details provides standard error format
 - Use appropriate HTTP status codes for each error type
 - Error codes enable programmatic error handling
 - Validation errors include field-level messages
@@ -292,3 +437,5 @@ async function apiClient<T>(
 - Error responses should not expose internal implementation details
 - Circuit breakers prevent cascading failures in clients
 - Fallback responses degrade gracefully when upstream fails
+- Global error handler middleware catches unhandled errors
+- Client-side interceptors centralize error handling logic

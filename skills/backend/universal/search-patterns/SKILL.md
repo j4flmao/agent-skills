@@ -2,7 +2,7 @@
 name: backend-search-patterns
 description: >
   Use this skill when designing search functionality, indexing strategies, or relevance tuning. This skill enforces: derived index from source of truth, index aliases for zero-downtime reindex, proper field mapping with analyzers, and resource limits. Applies to Elasticsearch, Meilisearch, Algolia, or any search engine. Do NOT use for: primary database queries, simple LIKE/ILIKE lookups, or full-text search in application DB.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -58,6 +58,40 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 300 lines of mapping, queries, and configuration.
+
+## Decision Tree
+
+### Which Search Engine?
+
+```
+What kind of search do you need?
+  ├── Complex search: aggregations, geo, custom scoring, multi-language
+  │   └── Elasticsearch / OpenSearch — full control, steep learning curve
+  ├── Simple typo-tolerant full-text search, instant setup
+  │   └── Meilisearch — excellent out-of-box relevance, minimal config
+  ├── Managed, no ops, global edge network, per-query pricing
+  │   └── Algolia — fastest time-to-value for e-commerce and content
+  ├── Fast, simpler alternative to Elasticsearch, lower resource usage
+  │   └── Typesense — REST-first, good relevance, low memory footprint
+  └── Already using AWS ecosystem, simple search needs
+      └── OpenSearch Service — managed, familiar if coming from ES 6.x
+```
+
+### How to Index?
+
+```
+How fresh does search data need to be?
+  ├── Real-time (seconds), high throughput
+  │   └── CDC (Debezium) → Kafka → search consumer
+  ├── Near real-time (seconds-minutes), moderate throughput
+  │   └── Webhook / event-driven index updates
+  ├── Near real-time, strong consistency (read-your-writes)
+  │   └── Dual-write: DB + search in same operation (with outbox pattern)
+  ├── Batch (hours-days), small dataset, infrequent changes
+  │   └── Periodic full reindex — truncate and retransform all data
+  └── I don't know yet
+      └── Start with batch reindex daily. Add CDC when freshness requirement emerges
+```
 
 ## Workflow
 
@@ -141,6 +175,22 @@ Full-text: `match` and `multi_match` with field boosting (`title^3`, `descriptio
 ### Step 5: Relevance Tuning
 BM25 parameters: `k1` (1.2 default) controls term frequency saturation — increase to 2.0 for long descriptions, decrease to 0.5 for short titles. `b` (0.75 default) controls length normalization — decrease to 0.3 for uniform-length fields. Field boosting: `title^5`, `description^2`, `tags^1.5`. Function scoring: recency (Gaussian on date), popularity (field_value_factor), personalization (script score for user history). Synonyms: configure as analyzer filter for query expansion. Rescore: run expensive scoring on top-100 results only.
 
+```json
+{
+  "query": {
+    "function_score": {
+      "query": { "multi_match": { "query": "wireless headphones", "fields": ["title^5", "description^2"] } },
+      "functions": [
+        { "gauss": { "createdAt": { "origin": "now", "scale": "30d", "decay": 0.5 } } },
+        { "field_value_factor": { "field": "popularity", "factor": 1.5, "modifier": "log1p" } }
+      ],
+      "score_mode": "multiply",
+      "boost_mode": "multiply"
+    }
+  }
+}
+```
+
 ### Step 6: Index Aliases for Zero-Downtime Reindex
 Always use aliases for production reads/writes. Reindex: create new index with updated mappings → bulk load data → atomically swap alias from old to new → delete old index. Write alias points to index accepting writes. Read alias points to index serving queries.
 
@@ -174,6 +224,84 @@ monitoring:
     - shard_count > node_count * 20
 ```
 
+### Step 8: Autocomplete Implementation
+
+```json
+// Edge n-gram based autocomplete (built into mapping above)
+// Query:
+{
+  "query": {
+    "match": { "title.autocomplete": "wirel" }
+  }
+}
+
+// Completion suggester (faster, prefix-based):
+{
+  "mappings": {
+    "properties": {
+      "title_suggest": { "type": "completion" }
+    }
+  }
+}
+// Query:
+{
+  "suggest": {
+    "title_suggest": {
+      "prefix": "wirel",
+      "completion": { "field": "title_suggest", "size": 5 }
+    }
+  }
+}
+```
+
+### Step 9: Meilisearch Integration (Simpler Alternative)
+
+```bash
+# Meilisearch — minimal config, excellent out-of-box relevance
+# Index settings:
+curl -X PATCH 'http://localhost:7700/indexes/products/settings' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "searchableAttributes": ["title", "description", "brand"],
+    "filterableAttributes": ["category", "price", "inStock"],
+    "sortableAttributes": ["price", "createdAt"],
+    "rankingRules": ["words", "typo", "proximity", "attribute", "sort", "exactness"]
+  }'
+```
+
+## Production Considerations
+
+| Concern | Practice |
+|---------|----------|
+| Reindex during traffic | Use aliases. Build new index in background, swap atomically |
+| GC pauses (Elasticsearch) | Set heap ≤ 31GB, use G1GC, monitor GC pauses > 1s |
+| Mapping explosion | `dynamic: strict` in production. Never auto-map unknown fields |
+| Slow queries | Use query profiler. Common fix: too many shards, missing filters, large aggregations |
+| Disk space | Guardrail: trigger alert at 85% disk usage. ES stops allocating at 95% |
+| Security | Enable auth, use TLS, restrict to VPC/private network |
+
+## Security
+
+| Risk | Mitigation |
+|------|-----------|
+| Unauthorized search access | API key auth (Elasticsearch), token-based (Meilisearch), restrict network |
+| Data exposure in search results | Field-level security (Elasticsearch), document-level security |
+| Injection via query parameters | Never pass raw user input to search DSL without sanitization |
+| Cluster hijacking | Disable public access, use mTLS or VPN |
+| Index deletion | Snapshot before any destructive operation, RBAC to restrict delete |
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It's Bad | Fix |
+|-------------|-------------|-----|
+| Searching primary database | Expensive, slow, no relevance ranking | Use dedicated search engine |
+| Index as source of truth | Rebuildable = better | Derive index from source of truth DB |
+| Dynamic mappings | Mapping explosions, unexpected field types | Use `dynamic: strict` |
+| No index aliases | Downtime on reindex | Always use aliases for production |
+| Over-sharding | Too many small shards = poor performance | 20-40GB per shard |
+| Ignoring analyzers | Wrong stemming, bad relevance for language | Set language-specific analyzers per field |
+| No synonyms | Users search 'laptop' but data says 'notebook' | Configure synonym filter |
+
 ## Rules
 - Search index is derived data — rebuildable from source of truth
 - Never search the primary database
@@ -183,6 +311,9 @@ monitoring:
 - Tune refresh interval for write-heavy workloads (30s default, increase to 60-120s for bulk)
 - Use `dynamic: strict` for production mappings
 - Synonyms should be content-managed, not hardcoded
+- Always use field-level doc_values for aggregation/sorting fields
+- Test relevance changes with A/B testing before rolling to all users
+- Snapshot indices daily for disaster recovery
 
 ## References
   - references/indexing-strategies.md — Indexing Strategies and Relevance

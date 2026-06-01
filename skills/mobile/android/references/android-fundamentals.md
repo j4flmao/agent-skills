@@ -1,213 +1,79 @@
 # Android Fundamentals
 
 ## Overview
-Android is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Android is Google's mobile operating system based on the Linux kernel. Android apps are primarily written in Kotlin (preferred) or Java, compiled to bytecode, and run on the Android Runtime (ART). The modern Android development stack uses Jetpack Compose for UI, Kotlin coroutines for concurrency, and Gradle for builds.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Android helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Activity & Fragment Lifecycle
+Activities and Fragments have well-defined lifecycle callbacks: `onCreate`, `onStart`, `onResume`, `onPause`, `onStop`, `onDestroy`. Use `LifecycleObserver` or `repeatOnLifecycle` for lifecycle-aware coroutines. Avoid logic in lifecycle methods — delegate to ViewModel.
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Android solutions. These principles help maintain code quality and reduce technical debt.
+### Intents and Navigation
+Explicit intents navigate within the app; implicit intents invoke system actions. Use Navigation Compose with `NavHost` and `NavController` for declarative navigation. Define routes as sealed classes for type safety. Support deep links via intent filters in the manifest.
 
-### Concept 3: Data Management
-Proper data management is essential for Android. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Resources and Configuration
+Resources (`res/`) are separated by qualifiers: layout, drawable, values, strings. Configuration qualifiers (language, screen size, orientation, night mode) allow resource overrides. Use `R.java` generated references. For Compose, use `MaterialTheme` and `LocalConfiguration` for runtime configuration.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Manifest and App Components
+`AndroidManifest.xml` declares all app components (activities, services, broadcast receivers, content providers), permissions, features, and the application class. Every component except broadcast receivers must be explicitly registered.
 
 ## Architecture Patterns
 
-### Pattern 1: Standard Architecture
-The standard architecture for Android follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+### MVVM with Compose
+The standard architecture for modern Android apps: UI (Composable functions) observes ViewModel state via `StateFlow`. ViewModel exposes state and handles actions. Repository abstracts data sources. Use `hiltViewModel()` in Compose for DI integration.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### Clean Architecture with Modules
+Domain layer (pure Kotlin): use cases, repository interfaces, models. Data layer: repository implementations, API services, DAOs. Presentation layer: Compose screens, ViewModels. Each layer is a Gradle module for strict dependency boundaries.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Repository Pattern
+Repository is the single entry point for data access. Returns `Flow` for reactive reads, `suspend` functions for one-shot operations. Repository decides data source (network vs cache) based on offline strategy and staleness TTL.
 
-## Implementation Guide
+## Data Management
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Room Database
+Room is an abstraction layer over SQLite. Define entities with `@Entity`, DAOs with `@Dao`, database with `@Database`. Room provides compile-time SQL verification, Flow-based reactive queries, and migration support. Use `@Transaction` for complex operations.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### DataStore
+Jetpack DataStore replaces SharedPreferences for key-value storage. `Preferences DataStore` for simple settings (type-safe, async). `Proto DataStore` for typed objects with schema evolution. DataStore uses `Flow` for reactive reads and runs on `Dispatchers.IO`.
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+### File Storage
+Use `context.filesDir` for app-private files, `context.cacheDir` for temporary data, `context.getExternalFilesDir()` for external storage. MediaStore API for shared media. SAF (Storage Access Framework) for user-selected files.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+## Security Fundamentals
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+### EncryptedSharedPreferences
+Wrap sensitive key-value data with `EncryptedSharedPreferences` using AES256 encryption. Master key stored in Android KeyStore (hardware-backed on supported devices). Mark the key as `KeyProperties.PURPOSE_ENCRYPT | PURPOSE_DECRYPT`.
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### Network Security Config
+Use `network_security_config.xml` to enforce HTTPS, pin certificates, and disable cleartext traffic. Reference in `AndroidManifest.xml` via `android:networkSecurityConfig`. Include backup pins with expiration dates.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+### Biometric Authentication
+Use `BiometricPrompt` with `BIOMETRIC_STRONG` for sensitive operations. Always allow `DEVICE_CREDENTIAL` fallback. Check `BiometricManager.canAuthenticate()` before showing prompt.
 
-## Best Practices
+## Build & Dependency Management
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+### Gradle Build System
+Android uses Gradle with Kotlin DSL (`build.gradle.kts`). Key configurations: `compileSdk`, `minSdk`, `targetSdk`, `applicationId`, `versionCode`, `versionName`. Use `libs.version.toml` for centralized version catalog.
 
-## Common Pitfalls
+### Dependency Injection with Hilt
+Hilt is the standard DI framework for Android. Annotate Application with `@HiltAndroidApp`, Activities with `@AndroidEntryPoint`, ViewModels with `@HiltViewModel`. Define modules with `@Module` and `@InstallIn`.
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Android concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
+## Testing
 
 ### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
+JUnit 5 + MockK for Kotlin mocking. Test ViewModels with `MainDispatcherRule` and `runTest`. Test use cases with mocked repositories. Aim for 80%+ coverage on domain and ViewModel layers.
 
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
+### UI Testing
+Compose UI tests with `createComposeRule()`. Use `onNodeWithText`, `onNodeWithTag`, `performClick`, `assertIsDisplayed`. Paparazzi for golden/snapshot tests. Espresso for legacy View-based tests.
 
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+## Key Points
+- Kotlin is the preferred language for new Android development
+- Jetpack Compose is the modern UI toolkit (replaces XML layouts)
+- ViewModel survives configuration changes (rotation, locale switch)
+- Lifecycle-aware components prevent memory leaks
+- Room provides compile-time SQL verification and reactive queries
+- Hilt manages dependency injection with compile-time validation
+- Gradle with Kotlin DSL and version catalogs for build management
+- Test with JUnit + MockK + Compose UI tests
+- ProGuard/R8 for release build optimization and obfuscation
+- Android App Bundle (AAB) for Play Store distribution

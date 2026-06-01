@@ -242,6 +242,171 @@ Alerts:
 Dashboard: auth failure heatmap, rate limit hits,
 top abused endpoints, WAF trigger trends.
 
+## API Security Implementation Examples
+
+### Express.js JWT Authentication Middleware
+```javascript
+const jwt = require('jsonwebtoken');
+
+function authenticateJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing token' });
+  }
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_PUBLIC_KEY, {
+      algorithms: ['RS256'],
+      issuer: 'https://auth.example.com',
+      audience: 'api.example.com',
+    });
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(403).json({ error: 'Invalid token' });
+  }
+}
+```
+
+### Python FastAPI Rate Limiting with SlowAPI
+```python
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
+
+@app.get("/api/resource")
+@limiter.limit("100/minute")
+async def get_resource(request: Request):
+    return {"data": "resource"}
+
+@app.post("/api/login")
+@limiter.limit("5/minute")
+async def login(request: Request):
+    return {"token": "..."}
+```
+
+### Go API Gateway JWT Validation
+```go
+func jwtMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        tokenStr := extractBearerToken(r)
+        if tokenStr == "" {
+            http.Error(w, "Missing token", http.StatusUnauthorized)
+            return
+        }
+        claims := &Claims{}
+        token, err := jwt.ParseWithClaims(tokenStr, claims, keyFunc)
+        if err != nil || !token.Valid {
+            http.Error(w, "Invalid token", http.StatusForbidden)
+            return
+        }
+        ctx := context.WithValue(r.Context(), "user", claims)
+        next.ServeHTTP(w, r.WithContext(ctx))
+    })
+}
+```
+
+### Python Input Validation with Pydantic
+```python
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional
+
+class CreateUserRequest(BaseModel):
+    email: EmailStr
+    name: str = Field(..., min_length=1, max_length=100)
+    age: int = Field(..., ge=0, le=150)
+    role: str = Field(..., pattern="^(admin|user|viewer)$")
+
+@app.post("/api/users")
+async def create_user(user: CreateUserRequest):
+    return {"id": uuid4(), **user.model_dump()}
+```
+
+## API Security Anti-Patterns
+
+### Anti-Pattern: JWT with alg: none
+JWT library configured to accept `alg: none` allows attackers to forge arbitrary tokens. Always enforce a specific algorithm (RS256 or ES256). Never accept `alg: none`. Validate algorithm on every token parse.
+
+### Anti-Pattern: Sequential Numeric IDs
+Using auto-increment IDs (1, 2, 3, ...) in URLs enables enumeration attacks: `GET /api/users/1`, `/api/users/2`. Use UUID v4 or ULID for all resource identifiers. Enforce object-level authorization checks.
+
+### Anti-Pattern: Overly Permissive CORS
+Setting `Access-Control-Allow-Origin: *` or reflecting the Origin header without validation allows any website to make cross-origin requests. Restrict to specific origins. Do not allow credentials with wildcard origins.
+
+### Anti-Pattern: Rate Limiting at Application Only
+Rate limiting implemented in application code can be bypassed by attacking the application server directly. Enforce rate limits at the API gateway or reverse proxy level (Nginx, Kong, Envoy). Application-level limits are defense-in-depth.
+
+### Anti-Pattern: Returning Stack Traces
+Detailed error messages and stack traces in API responses reveal implementation details, library versions, and code paths. Always return generic error messages to clients. Log detailed errors server-side.
+
+### Anti-Pattern: No API Version Strategy
+Changing API behavior without versioning breaks existing clients. Use URL prefix (`/api/v1/`, `/api/v2/`) or header-based versioning (`Accept: application/vnd.api+json;version=2`). Maintain deprecated versions with sunset headers.
+
+### Anti-Pattern: Unauthenticated Health/Admin Endpoints
+Health check, metrics, and admin endpoints exposed without authentication. `/actuator`, `/health`, `/metrics`, `/swagger-ui.html` leak information. Secure all endpoints including operational ones.
+
+## API Security Maturity Model
+
+### Level 1: Basic
+- Basic auth or API keys
+- No rate limiting
+- No input validation
+- No audit logging
+- Default CORS policy
+
+### Level 2: Standard
+- JWT authentication (RS256)
+- Rate limiting per endpoint
+- Input validation with schema
+- Basic CORS restrictions
+- Request logging
+
+### Level 3: Advanced
+- OAuth2 with PKCE
+- RBAC/ABAC authorization
+- Rate limiting per user + per endpoint (distributed)
+- WAF with API-specific rules
+- Request signing for critical operations
+- Audit logging with alerting
+
+### Level 4: Optimized
+- Zero-trust API architecture
+- Behavioral anomaly detection
+- Adaptive rate limiting (ML-based)
+- API security mesh (service mesh + WAF + API gateway)
+- Automated threat response
+- Continuous API discovery and shadow API detection
+
+## API Security Operations
+
+### Daily Operations
+- Monitor rate limit breach alerts
+- Review auth failure spikes (may indicate credential stuffing)
+- Check WAF block trends for new attack patterns
+- Verify API gateway health
+
+### Weekly Operations
+- Review audit logs for suspicious access patterns
+- Analyze rate limit hit distribution by consumer tier
+- Tune WAF rules for false positives
+- Review new API endpoints added in last week
+
+### Monthly Operations
+- OWASP API Top 10 review for all new endpoints
+- Rotate API keys for privileged consumers
+- Review and update rate limit tiers
+- Penetration test of critical API endpoints
+- API inventory reconciliation (discover shadow APIs)
+
+### Incident Response
+1. Detect: rate limit breach, auth failure spike, WAF block surge, anomalous payload patterns
+2. Assess: identify affected endpoints, consumer, data potentially exposed
+3. Contain: revoke compromised keys, block IP/subnet, enable maintenance mode for affected endpoints
+4. Investigate: audit logs, WAF logs, gateway access logs
+5. Remediate: patch vulnerability, update WAF rules, rotate all affected credentials
+6. Post-mortem: write incident report, update threat model, improve detection rules
+
 ## Rules
 - No hardcoded secrets, API keys, or tokens in code
 - JWT validated on every request — signature, expiry, issuer

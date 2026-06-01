@@ -8,7 +8,7 @@ compatibility:
   codex: true
   windsurf: true
 tags: [mobile, kmp, kotlin, phase-7]
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 ---
@@ -33,14 +33,6 @@ Phrases: "Kotlin Multiplatform", "KMP", "Compose Multiplatform", "shared Kotlin"
 Working KMP module with: commonMain business logic, expect/actual declarations, Compose Multiplatform screens, Gradle multi-module build configuration.
 
 ### Response Format
-```
-<kmp-module>
-<common>{shared types, interfaces, expect decls}</common>
-<platform-specific>{actual implementations}</platform-specific>
-<compose>{shared UI screens}</compose>
-<build>{gradle config}</build>
-</kmp-module>
-```
 No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
 
 ### Completion Criteria
@@ -52,6 +44,52 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 8000 tokens
+
+## Architecture Decision Trees
+
+### UI Strategy
+```
+Need shared UI?
+├── Yes → Compose Multiplatform
+│   Pros: Single UI codebase, Material3 theming, navigation
+│   Cons: Cannot render native components (Map, Camera, WebView)
+├── Native UI per platform
+│   Pros: Full native API access, platform-native UX
+│   Cons: Two UI codebases, more maintenance
+└── Hybrid → Compose Multiplatform + expect/actual for native components
+    Strategy: 80% shared UI via Compose, 20% platform composable via expect
+```
+
+### Networking Strategy
+```
+API complexity?
+├── REST + JSON → Ktor Client + kotlinx.serialization
+│   Engine: OkHttp (Android), Darwin (iOS)
+├── GraphQL → Apollo Kotlin (KMP support)
+└── gRPC → KMP-gRPC (emerging, check compatibility)
+```
+
+### Persistence Strategy
+```
+Data model complexity?
+├── Relational (SQL, joins) → SQLDelight
+│   Common schema, platform drivers, Flow support
+├── Key-value (settings, preferences) → multiplatform-settings
+│   Wraps SharedPreferences (Android), NSUserDefaults (iOS)
+├── NoSQL/Document → Realm Kotlin SDK
+│   KMP-native, reactive, synchronization
+└── Encrypted → SQLCipher (SQLDelight cipher) or platform Keychain/Keystore
+```
+
+### Dependency Injection
+```
+DI framework preference?
+├── Lightweight, KMP-native → Koin
+│   No code gen, easy setup, reasonable runtime performance
+├── Compile-time verified → Anvil (Dagger-based)
+│   Works with KMP, faster than Kapt
+└── Manual → Constructor injection with factory pattern
+```
 
 ## Workflow
 
@@ -108,6 +146,16 @@ val httpClient = HttpClient {
 - **Generic type erasure**: `expect`/`actual` with generics requires `@Suppress("NO_ACTUAL_FOR_EXPECT")` in some cases.
 - **CocoaPods vs SPM**: CocoaPods + KMP is more mature than SPM integration. Prefer CocoaPods for iOS dependency distribution.
 
+## Anti-Patterns
+
+- **Fat platform source sets**: If androidMain has more than 10 files, you're not sharing enough — refactor to commonMain
+- **expect/actual for everything**: Interfaces with platform implementations are more testable than expect/actual
+- **Ignoring iOS concurrency model**: Kotlin coroutines on iOS use custom dispatch — test iOS-specific threading scenarios
+- **No commonTest coverage**: If commonTest is empty, you lose the main advantage of KMP — shared test coverage
+- **Manual memory management on iOS**: Kotlin/Native uses ARC — but watch for cyclic references between Kotlin and Swift objects
+- **Outdated libs.versions.toml**: KMP ecosystem moves fast — update Ktor, Kotlin, Compose versions together
+- **Mixing KMP modules with Android-only dependencies**: Keep KMP modules pure — put Android UI in separate :app module
+
 ## Configuration Reference
 
 ```kotlin
@@ -130,6 +178,14 @@ kotlin {
             implementation("app.cash.sqldelight:runtime:2.0.2")
             implementation(compose.runtime); implementation(compose.foundation)
             implementation(compose.material3); implementation(compose.ui)
+        }
+        androidMain.dependencies {
+            implementation("io.ktor:ktor-client-okhttp:3.0.3")
+            implementation("app.cash.sqldelight:android-driver:2.0.2")
+        }
+        iosMain.dependencies {
+            implementation("io.ktor:ktor-client-darwin:3.0.3")
+            implementation("app.cash.sqldelight:native-driver:2.0.2")
         }
     }
 }

@@ -1,8 +1,8 @@
 ---
 name: design-brand-identity
 description: >
-  Use when the user asks about brand identity, brand guidelines, logo design, brand colors, brand voice, logo systems, visual identity, or branding. Do NOT use for: visual design (design-visual-design), design systems (design-design-systems), or marketing design.
-version: "1.0.0"
+  Use when the user asks about brand identity, brand guidelines, visual identity, brand strategy, logo usage, brand voice, or brand consistency. Do NOT use for: visual design (design-visual-design), design systems (design-design-systems), or UX research (design-ux-research).
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -16,191 +16,321 @@ tags: [design, brand-identity, phase-3]
 # Brand Identity
 
 ## Purpose
-Create and document brand identity: logo systems, brand guidelines, color palettes, typography, brand voice, and visual consistency across all touchpoints.
+Define and maintain a cohesive brand identity — visual language, voice, personality, and guidelines — that communicates a product's or company's values consistently across all touchpoints. Brand identity bridges strategy (who you are, why you exist) and execution (how you look, sound, and feel).
 
 ## Agent Protocol
 
 ### Trigger
-- "brand identity", "brand guidelines", "logo design", "brand colors", "brand voice", "visual identity", "branding"
-- "brand strategy", "brand audit", "rebrand", "brand refresh"
+Exact user phrases: "brand identity", "brand guidelines", "visual identity", "brand strategy", "logo usage", "brand voice", "brand consistency", "brand book", "style guide", "corporate identity".
 
 ### Input Context
-- Company name, industry, existing brand materials (if any)
-- Target audience and brand personality (modern, luxury, playful, serious)
-- Deliverables needed (logo, guidelines, full identity system)
-- Timeline and budget constraints
+- Company name, mission, vision, values
+- Target audience demographics and psychographics
+- Competitive landscape (3-5 key competitors)
+- Existing brand assets (logo, colors, typefaces, marketing materials)
+- Product type and industry (B2B SaaS, consumer retail, healthcare, etc.)
+- Brand personality archetype (if defined)
 
 ### Output Artifact
-- Brand identity system document with logo, colors, typography, voice, and usage guidelines
-- SVG logo files or descriptions
-- Brand guideline document
+Brand identity system with mission/values, visual language, voice guidelines, and application rules.
 
 ### Completion Criteria
-- [ ] Logo system defined (primary, secondary, icon, monochrome)
-- [ ] Color palette defined with hex/rgb values and accessibility checks
-- [ ] Typography selected with hierarchy and size scale
-- [ ] Brand voice documented with do/don't examples
-- [ ] Usage guidelines for all applications
-- [ ] Accessibility requirements met (WCAG contrast ratios)
+- [ ] Brand mission, vision, and values documented
+- [ ] Brand personality defined (5 traits with behavioral examples)
+- [ ] Brand voice guidelines with tone parameters and do/don't examples
+- [ ] Color palette with primary, secondary, accent, neutral, and semantic colors
+- [ ] Typography system with typeface selections, hierarchy, and usage rules
+- [ ] Logo usage guidelines (clear space, minimum size, incorrect usage)
+- [ ] Visual language rules (photography style, illustration, iconography, motion)
+- [ ] Application guidelines (digital, print, environmental)
+- [ ] Brand guidelines document structure outlined
+
+### Max Response Length
+200 lines of spec, patterns, and guidance.
+
+## Framework/Methodology
+
+### Brand Identity Decision Tree
+```
+What is the primary brand challenge?
+├── No existing identity → Build from strategy
+│   → Mission → Values → Personality → Visual Identity → Voice → Guidelines
+├── Existing identity is inconsistent → Audit and unify
+│   → Brand audit → Gap analysis → Unification → Guidelines → Governance
+├── Rebranding or refresh → Evolve with purpose
+│   → Strategic rationale → Audience research → Evolution → Rollout plan
+└── Need application guidelines → Extend and document
+    → Touchpoint audit → Template creation → Usage examples → Exceptions
+```
+
+### Brand Identity Process
+```
+Discovery → Strategy → Visual Identity → Voice & Tone → Guidelines → Application → Governance
+   │           │            │               │              │             │            │
+   ├ Research  ├ Mission    ├ Logo          ├ Voice       ├ Document    ├ Digital    ├ Reviews
+   ├ Audit     ├ Vision     ├ Color         ├ Vocabulary  ├ Rules       ├ Print      ├ Updates
+   ├ Analysis  ├ Values     ├ Typography    ├ Tone map    ├ Examples    ├ Environ.   ├ Training
+   └ Goals     ├ Persona    ├ Imagery       └ Do/Don't    └ Templates   └ Motion    └ Enforcement
+               └ Position   └ Layout
+```
+
+### Brand Archetype Framework
+
+| Archetype | Core Desire | Brand Examples | Personality Traits |
+|-----------|-------------|----------------|-------------------|
+| The Innocent | Safety, simplicity | Dove, Nintendo | Honest, optimistic, pure |
+| The Explorer | Freedom, discovery | Jeep, Patagonia | Adventurous, independent |
+| The Sage | Truth, knowledge | Google, BBC | Analytical, wise, informed |
+| The Hero | Mastery, achievement | Nike, BMW | Courageous, disciplined |
+| The Outlaw | Revolution, disruption | Harley-Davidson, Virgin | Rebellious, bold |
+| The Magician | Transformation | Disney, Dyson | Visionary, innovative |
+| The Everyman | Belonging, connection | IKEA, Target | Relatable, down-to-earth |
+| The Lover | Intimacy, passion | Chanel, Godiva | Sensuous, passionate |
+| The Jester | Joy, spontaneity | M&M's, Old Spice | Playful, irreverent |
+| The Ruler | Control, stability | Rolex, Microsoft | Authoritative, refined |
+| The Caregiver | Nurture, protection | Johnson & Johnson | Compassionate, supportive |
+| The Creator | Innovation, expression | Lego, Apple | Creative, visionary |
 
 ## Workflow
 
-### Brand Identity Components
-| Component | Description | Deliverable |
-|-----------|-------------|-------------|
-| Logo | Primary symbol, horizontal, icon-only | SVG files, usage guide |
-| Color palette | Primary, secondary, neutral, accent | Hex/rgb values, usage rules |
-| Typography | Primary + secondary typefaces | Font files, size scale |
-| Brand voice | Tone, vocabulary, personality | Writing guidelines |
-| Imagery | Photo style, illustration style, icons | Style guide |
+### Step 1: Define Brand Strategy
 
-### Brand Identity Process
+Brand Mission Statement Template:
+```
+[Brand Name] exists to [action verb] [target audience] to [achieve outcome] by [unique approach].
+```
+Example: "Patagonia exists to build the best product, cause no unnecessary harm, and use business to inspire and implement solutions to the environmental crisis."
 
-#### Step 1: Brand Audit
-Assess existing brand materials, competitor brands, and market positioning:
+Brand Values (4-6 core values):
+Each value needs a name, a brief definition, and 2-3 behavioral examples of how it manifests.
+
 ```yaml
-brand_audit:
-  internal:
-    - "Existing logo, collateral, digital presence"
-    - "Brand perception surveys from stakeholders"
-    - "Current brand usage inconsistencies"
-  external:
-    - "Top 5 competitor brand analysis"
-    - "Industry visual trends"
-    - "Target audience preference research"
-  positioning:
-    - "Brand archetype (Hero, Outlaw, Sage, Innocent, etc.)"
-    - "Brand personality dimensions (sincerity, excitement, competence, sophistication, ruggedness)"
-    - "Differentiation from competitors"
+values:
+  - name: "Craftsmanship"
+    definition: "We obsess over quality in every detail..."
+    behaviors:
+      - "We ship only when it meets our quality bar"
+      - "We invest in tools that elevate our output"
+      - "We seek and act on critical feedback"
 ```
 
-#### Step 2: Brand Strategy Definition
-Define the strategic foundation before visual design:
+Brand Personality (5 traits on a 1-5 scale):
+
+| Dimension | Low (1) | High (5) |
+|-----------|---------|----------|
+| Sincerity | Cynical | Wholesome |
+| Excitement | Calm | Energetic |
+| Competence | Inefficient | Reliable |
+| Sophistication | Rustic | Elegant |
+| Ruggedness | Delicate | Tough |
+
+### Step 2: Create Visual Identity
+
+Logo Architecture:
+- **Wordmark**: Text-only logo (Google, Coca-Cola) — good for unique names
+- **Lettermark**: Initials (IBM, HBO) — good for long names
+- **Pictorial**: Icon-only (Apple, Twitter) — requires recognition
+- **Abstract**: Geometric symbol (Nike, Chase) — flexible, ownable
+- **Combination**: Mark + text (Adidas, Burger King) — most common
+- **Emblem**: Text inside symbol (Starbucks, NFL) — traditional, cohesive
+
+Logo Rules:
+- Clear space: Minimum the height of the logo mark on all sides
+- Minimum size: Never scale below [X]px digital, [X]mm print
+- Color variations: Full color, single color (black), reversed (white), grayscale
+- Background restrictions: Never place on busy backgrounds without clear space
+- Prohibited: Stretching, rotating, recoloring, adding effects, rearranging elements
+
+Color Palette Structure:
 ```yaml
-brand_strategy:
-  mission: "What the brand exists to do"
-  vision: "What the brand aspires to become"
-  values: "3-5 core values that guide decisions and behavior"
-  personality: "3-5 adjectives describing brand character"
-  audience:
-    primary: "Main target demographic with psychographics"
-    secondary: "Adjacent audience segments"
-  positioning_statement: "For [target], [brand] is the [category] that [point of difference]"
+primary:
+  main: "#0052CC" (brand blue)
+  light: "#4C8CFF"
+  dark: "#003399"
+secondary:
+  main: "#00B8D9" (teal accent)
+  light: "#61E0FF"
+  dark: "#0085A3"
+neutrals:
+  100: "#FFFFFF" (white)
+  200: "#F4F5F7" (page background)
+  300: "#DFE1E6" (borders)
+  400: "#7A869A" (secondary text)
+  500: "#42526E" (body text)
+  600: "#172B4D" (headings)
+semantic:
+  success: "#36B37E"
+  warning: "#FFAB00"
+  error: "#FF5630"
+  info: "#0065FF"
 ```
 
-#### Step 3: Visual Identity Design
-Design the visual system starting with the logo lockup:
-```yaml
-logo_system:
-  primary_lockup:
-    - "Full logo: wordmark + icon/symbol (horizontal)"
-    - "Used on: website header, business cards, social media banners"
-  secondary_lockup:
-    - "Stacked or vertical variant"
-    - "Used on: square spaces, app icons, favicon"
-  icon_symbol:
-    - "Standalone symbol or letterform mark"
-    - "Used on: avatar, favicon, mobile icon, watermark"
-  monochrome:
-    - "Black and white versions of all lockups"
-    - "Used on: single-color printing, embroidery, grayscale contexts"
-  clear_space:
-    - "Minimum clear space = height of the logo mark"
-    - "No text, graphics, or edges within clear space"
-  minimum_size:
-    - "Print: 1 inch wide"
-    - "Digital: 32px wide (icon), 120px wide (full lockup)"
-  incorrect_usage:
-    - "Do not stretch, recolor arbitrarily, add effects, rotate, or place on busy backgrounds"
+### Step 3: Define Brand Voice
+
+Voice Dimensions:
+- **Formal** ↔ **Casual**: Language formality
+- **Serious** ↔ **Playful**: Tone weight
+- **Respectful** ↔ **Irreverent**: Deference
+- **Enthusiastic** ↔ **Matter-of-fact**: Energy level
+- **Concrete** ↔ **Abstract**: Specificity
+
+Tone Map (adjust voice by context):
+
+| Context | Tone Description | Example |
+|---------|-----------------|---------|
+| Error message | Empathetic, direct, helpful | "Something went wrong. We've saved your work and our team is on it." |
+| Marketing | Energetic, benefits-focused | "Do more in less time with one-click automation." |
+| Onboarding | Encouraging, educational | "Let's get you set up — it only takes 2 minutes." |
+| Social media | Conversational, timely | "We heard you! Dark mode is now available. 🌙" |
+| Legal | Precise, neutral | As required by regulation, this notice informs you..." |
+| Technical docs | Clear, direct, jargon-aware | "The API returns a 200 status code on success." |
+
+Do/Don't Examples:
+```
+DO: "We're here to help. Reach out anytime."
+DON'T: "Feel free to contact our customer service department at your earliest possible convenience."
+
+DO: "Starting at $19/month."
+DON'T: "Our pricing begins at the low, low price of $19 per month!!"
 ```
 
-#### Step 4: Color System Design
-Build a systematic color palette:
+### Step 4: Create Brand Guidelines
+
+Guidelines Document Structure:
+1. **Brand Overview** — Mission, vision, values, personality, positioning statement
+2. **Logo** — Primary, secondary, clear space, minimum size, color variations, incorrect usage
+3. **Color** — Primary, secondary, neutral, semantic palettes with usage rules and accessibility
+4. **Typography** — Typefaces, hierarchy, sizing, usage rules, pairings, web font loading
+5. **Imagery** — Photography style, illustration guidelines, iconography, image treatment
+6. **Layout** — Grid systems, spacing, composition principles, white space
+7. **Voice & Tone** — Voice dimensions, tone map, vocabulary, do/don't examples
+8. **Applications** — Email, social, print, presentation, signage, merchandise
+9. **Motion** — Animation principles, transitions, loading states, video style
+10. **Governance** — Review process, update cycle, exceptions, contacts
+
+### Step 5: Implement and Govern
+
+Brand Audit (quarterly):
+- Collect all brand touchpoints (digital, print, environmental)
+- Score each against brand guidelines (0=violation, 1=partial, 2=full compliance)
+- Identify top 3-5 inconsistencies and create remediation plan
+- Track brand consistency score over time
+
+Digital Brand Enforcement:
+- Design system tokens enforce color, typography, spacing
+- Shared component libraries enforce layout and interaction patterns
+- Automated linting checks for brand color usage
+- Template-based email, social, and presentation systems
+
+## Common Pitfalls
+
+| Pitfall | Description | Prevention |
+|---------|-------------|------------|
+| Generic brand | "Quality, innovation, integrity" — every brand says this | Use specific, ownable language tied to real behaviors |
+| Inconsistent voice | Different teams use different tone on different channels | Central voice guidelines + channel-specific tone maps |
+| Over-designed logo | Too complex, doesn't scale, works only at one size | Test at 16px favicon to 10ft billboard |
+| Color overload | 15+ brand colors with no system | Limit core palette to 4-6 colors max |
+| Neglecting dark mode | Brand looks wrong on dark backgrounds | Design for light and dark equally |
+| Rigid guidelines | No room for context, leading to guideline violations | Include exception rules and usage principles |
+| No governance | Guidelines exist but no one enforces them | Assign brand owners, quarterly audits |
+| Designing in isolation | Brand doesn't connect with audience | Validate identity concepts with target users |
+
+## Best Practices
+
+| Practice | Rationale |
+|----------|-----------|
+| Design for flexibility | Brand should work across mediums, sizes, contexts |
+| Pattern over prescription | Explain why, not just what — enables good decisions |
+| Include anti-patterns | "Don't do this" examples are more effective than "do this" |
+| Version your guidelines | Brand evolves — document what changed and why |
+| Make guidelines accessible | Searchable, web-based, not a locked PDF |
+| Test in context | Brand elements must work in real environments |
+| Audit regularly | Brands drift without systematic governance |
+| Train the organization | Guidelines only work if people understand them |
+| Lead from strategy | Every visual decision connects back to brand strategy |
+| Design for extension | Third parties, partners, and co-branding scenarios |
+
+## Templates & Tools
+
+### Brand Brief Template
 ```yaml
-color_system:
-  primary:
-    usage: "Main brand color for key elements (logo, buttons, headlines)"
-    accessibility: "Must pass WCAG AA contrast against white and black"
-  secondary:
-    usage: "Supporting color for accents, secondary elements"
-    relationship: "Complementary, analogous, or triadic to primary"
-  neutral:
-    usage: "Text, backgrounds, borders, UI surfaces"
-    range: "Light gray (#F5F5F5) through dark charcoal (#333333)"
-  semantic:
-    success: "Green for positive states"
-    warning: "Amber for caution states"
-    error: "Red for error states"
-    info: "Blue for informational states"
-  application:
-    "Hero backgrounds": "Primary or secondary at 10-20% opacity"
-    "Text": "Dark neutral (#1A1A1A) for body, light neutral for dark mode"
-    "Buttons": "Primary for CTA, secondary for ghost, neutral for tertiary"
+brand_name: "AcmeCorp"
+industry: "B2B SaaS — Project Management"
+tagline: "Ship faster, together"
+mission: "Empower teams to deliver exceptional products on time, every time."
+vision: "A world where every team ships with confidence."
+target_audience:
+  primary: "Engineering managers at 50-500 person companies"
+  secondary: "CTOs and VPs of Engineering"
+competitive_landscape:
+  - "Asana (established, feature-rich)"
+  - "Jira (technical, enterprise)"
+  - "Linear (fast, developer-focused)"
+positioning: "For engineering teams who value speed without sacrificing quality"
+personality:
+  - "Competent (4/5): Reliable, precise, knows their craft"
+  - "Exciting (3/5): Energizing, forward-looking, not boring"
+  - "Sincere (4/5): Transparent, honest, no marketing fluff"
+  - "Sophisticated (2/5): Clean but not precious"
+  - "Rugged (2/5): Sturdy but not rough"
 ```
 
-#### Step 5: Typography System
-Select and specify typefaces:
+### Brand Consistency Scorecard
 ```yaml
-typography_system:
-  primary_typeface:
-    selection_criteria: ["Legibility at multiple sizes", "Multiple weights available", "License covers usage"]
-    usage: "Headlines, subheadlines, navigation"
-    weights: ["Light", "Regular", "Medium", "Bold", "Black"]
-  secondary_typeface:
-    selection_criteria: ["Readability at small sizes", "Character set coverage", "Web performance"]
-    usage: "Body text, labels, captions, long-form content"
-    weights: ["Regular", "Medium", "Bold"]
-  size_scale:
-    display: "48-72px — hero headlines"
-    h1: "36-48px — page titles"
-    h2: "28-36px — section headers"
-    h3: "22-28px — card titles"
-    body: "16-18px — paragraph text"
-    small: "13-14px — labels, captions"
-  line_height:
-    headings: "1.2-1.3"
-    body: "1.5-1.7"
+touchpoints:
+  - name: "Website hero section"
+    owner: "Marketing"
+    score: 2  # 0=violation, 1=partial, 2=full compliance
+    issues: ["Font weight mismatch on H1"]
+  - name: "Mobile app onboarding"
+    owner: "Product"
+    score: 2
+  - name: "Email newsletter"
+    owner: "Marketing"
+    score: 1
+    issues: ["Secondary color used where primary should be"]
+overall_score: 5/6 (83%)
 ```
 
-#### Step 6: Brand Voice Guidelines
-Document the brand's verbal identity:
-```yaml
-brand_voice:
-  principles:
-    - "Principle 1: Clear over clever — prioritize understanding over wordplay"
-    - "Principle 2: Confident but not arrogant — authoritative tone without superiority"
-    - "Principle 3: Human and approachable — write like a person, not a corporation"
-  vocabulary:
-    always_use: ["Brand-approved terms and product names"]
-    never_use: ["Jargon, buzzwords, negative competitor mentions"]
-  tone_by_channel:
-    marketing: "Aspirational, benefit-focused, energetic"
-    support: "Empathetic, solution-oriented, patient"
-    technical: "Precise, direct, assumption-free"
-    social: "Conversational, timely, engaging"
-```
+## Case Studies
 
-### Logo System
-- Primary logo (full color, horizontal)
-- Secondary logo (stacked or vertical variant)
-- Icon/symbol (simplified for small spaces)
-- Monochrome (black and white versions)
+### Case Study 1: Brand Unification After Merger
+Two SaaS companies merged, each with established but conflicting brand identities. Company A was blue, serious, enterprise-focused. Company B was orange, playful, startup-oriented. The merged brand audit showed 78% inconsistency across touchpoints. The solution was not to blend but to create a third identity — a deep purple primary with a new positioning ("Powerful yet approachable") that neither company owned. The visual identity was entirely new, avoiding favoritism. Post-launch employee satisfaction with brand identity rose from 42% to 89%, and customer surveys showed 34% improvement in brand perception clarity.
 
-### Brand Guidelines Structure
-1. Brand story and values
-2. Logo: usage, clear space, minimum size, incorrect usage
-3. Color: primary, secondary, neutral, semantic, accessibility requirements
-4. Typography: typefaces, hierarchy, line heights, examples
-5. Voice and tone: principles, do/don't, examples
-6. Imagery: photo direction, illustration style, iconography
-7. Applications: business cards, social media, presentations
+Method: Strategy-first rebrand with neutral territory visual identity
+Key insight: After mergers, a completely new identity avoids "us vs them" dynamics
+Impact: Brand perception clarity +34%, employee satisfaction +47 points
+
+### Case Study 2: Design System Improves Brand Consistency
+A 200-person product team had 14 different button styles, 6 different blues, and 8 distinct border radii across products. Brand consistency audits scored below 40%. Implementing a comprehensive design system with brand tokens, component library, and automated linting raised consistency to 95% within 6 months. The design system enforced brand rules at the code level, making violations impossible rather than merely discouraged.
+
+Method: Brand tokens → Component library → Automated enforcement
+Key insight: Code-level enforcement is more effective than guideline documentation
+Impact: Brand consistency from <40% to 95% in 6 months
+
+## Rules
+- Brand must be defined by specific behaviors, not generic adjectives ("quality," "innovation")
+- Logo clear space = height of logo mark on all sides (minimum)
+- Minimum logo size: 24px digital, 1cm print
+- Maximum 2 typeface families in brand typography
+- Core palette: 4-6 colors maximum (expand via tints/shades)
+- Every color must have a defined usage rule
+- Voice guidelines include both do AND don't examples
+- Guidelines are living documents — versioned, reviewed quarterly
+- All brand touchpoints must pass quarterly consistency audits
+- Brand identity must work in both light and dark environments
+- Iconography style must be unified (outline, filled, duotone — pick one)
+- Photography style guide includes lighting, composition, color treatment, subjects
+- Third-party usage requires specific guidelines section (partners, co-branding)
+- Brand guidelines must be accessible as a searchable web resource
+- Rebrand announcements include rationale, timeline, and migration guide
 
 ## References
-  - references/brand-consistency.md — Brand Consistency
-  - references/brand-guidelines.md — Brand Guidelines Structure
   - references/brand-identity-advanced.md — Brand Identity Advanced Topics
   - references/brand-identity-fundamentals.md — Brand Identity Fundamentals
-  - references/brand-voice.md — Brand Voice Guide
-  - references/logo-systems.md — Logo Systems
+  - references/brand-messaging.md — Brand Messaging and Voice Reference
+  - references/brand-touchpoint-audit.md — Brand Touchpoint Audit Reference
+  - references/logo-design.md — Logo Design Reference
+  - references/visual-identity-guidelines.md — Visual Identity Guidelines Reference
 ## Handoff
-Hand off to `design-visual-design` for UI implementation of brand guidelines. Hand off to `design-design-systems` for component-level brand application. Hand off to `frontend-universal-css` for CSS variable implementation of color and typography tokens.
+Hand off to `design-visual-design` for visual system implementation. Hand off to `design-design-systems` for token/component implementation. Hand off to `design-ux-research` for audience validation.

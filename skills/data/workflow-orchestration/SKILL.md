@@ -313,6 +313,126 @@ Temporal is workflow-as-code for long-running, fault-tolerant stateful workflows
 
 Kestra combines YAML declarative flows with event-driven triggers. Flows define tasks (Python, dbt, shell, API) with dependencies, retries, and error handlers. Supports scheduled, event (S3/Kafka/webhook), and flow-triggered execution. Built-in dashboard for execution history, logs, and SLA tracking. Git-native workflow definitions. Use Kestra for GitOps data pipelines with declarative YAML.
 
+### Orchestration Patterns
+
+#### Dependency Strategies
+
+```yaml
+dependency_types:
+  linear:
+    description: "Tasks execute in sequence"
+    pattern: "task1 >> task2 >> task3"
+    best_for: "Simple ETL, linear data flow"
+  
+  fan_out:
+    description: "One task triggers multiple parallel tasks"
+    pattern: "task1 >> [task2a, task2b, task2c]"
+    best_for: "Parallel processing of independent partitions"
+  
+  fan_in:
+    description: "Multiple tasks converge to one"
+    pattern: "[task1a, task1b] >> task2"
+    best_for: "Join/union after parallel extraction"
+  
+  conditional_branch:
+    description: "Choose path based on data or result"
+    pattern: "BranchPythonOperator → choose path"
+    best_for: "Different processing for incremental vs full refresh"
+  
+  dynamic_tasks:
+    description: "Tasks created at runtime based on input"
+    pattern: "expand() in Dagster, DynamicTaskMapping in Airflow"
+    best_for: "Variable number of partitions, shards"
+```
+
+#### Error Handling Strategies
+
+```python
+# Retry with exponential backoff
+from airflow.utils.timeout import timeout
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=60, min=60, max=600),
+    reraise=True
+)
+def extract_with_retry(source_config):
+    """Extract with 3 retries, 1min-10min backoff"""
+    return extract_from_source(source_config)
+
+# Circuit breaker pattern
+class CircuitBreaker:
+    def __init__(self, failure_threshold=5, reset_timeout=300):
+        self.failure_count = 0
+        self.failure_threshold = failure_threshold
+        self.reset_timeout = reset_timeout
+        self.last_failure_time = 0
+        self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
+    
+    def call(self, func, *args, **kwargs):
+        if self.state == "OPEN":
+            if time.time() - self.last_failure_time > self.reset_timeout:
+                self.state = "HALF_OPEN"
+            else:
+                raise Exception("Circuit breaker OPEN")
+        try:
+            result = func(*args, **kwargs)
+            if self.state == "HALF_OPEN":
+                self.state = "CLOSED"
+            self.failure_count = 0
+            return result
+        except Exception as e:
+            self.failure_count += 1
+            self.last_failure_time = time.time()
+            if self.failure_count >= self.failure_threshold:
+                self.state = "OPEN"
+            raise e
+```
+
+#### Orchestrator Comparison
+
+```yaml
+orchestrator_selection:
+  airflow:
+    strengths: ["Mature ecosystem", "Python-native", "Huge community"]
+    weaknesses: ["Scripting bottlenecks for complex branching", "No built-in asset lineage"]
+    best_for: "General-purpose data pipeline orchestration, heterogeneous tech stack"
+  
+  dagster:
+    strengths: ["Asset-centric model", "dbt integration", "Auto-materialization", "Column-level lineage"]
+    weaknesses: ["Smaller community", "Steeper learning curve for DAG developers"]
+    best_for: "dbt-native pipelines, software-defined assets, data quality at orchestration"
+  
+  prefect:
+    strengths: ["Python-native", "Automatic retry", "Event-driven", "Serverless option"]
+    weaknesses: ["Limited enterprise features (OSS)", "Dependency management"]
+    best_for: "Python-heavy pipelines, serverless execution, retry-heavy workflows"
+  
+  temporal:
+    strengths: ["Long-running stateful workflows", "Exactly-once execution", "Survives crashes"]
+    weaknesses: ["Not data-specific (general purpose)", "No built-in scheduling"]
+    best_for: "Stateful multi-step business processes, microservice orchestration"
+  
+  kestra:
+    strengths: ["YAML declarative", "Git-native", "Event-driven triggers"]
+    weaknesses: ["Newer project", "Limited plugins vs Airflow"]
+    best_for: "GitOps data pipelines, declarative YAML workflows, quick setup"
+```
+
+### Decision Tree
+
+#### Orchestrator Selection
+```
+Primary pipeline model?
+├── DAG-based, Python-heavy → Airflow (most flexible, largest ecosystem)
+├── Asset/DAG, dbt-native → Dagster (asset lineage + dbt integration)
+├── Python-native, lightweight → Prefect (simpler retry, event-driven)
+├── Stateful long-running workflows → Temporal (exactly-once, crash-proof)
+├── Declarative YAML/GitOps → Kestra (Git-native) or Dagster (YAML + code)
+└── Kubernetes-native only → Argo Workflows (Kubernetes CRD-based)
+```
+
 ## Rules
 - Every DAG/flow must be idempotent (rerun produces same result)
 - Set retry with exponential backoff on all tasks (3 retries, 5-10min base)
@@ -322,6 +442,10 @@ Kestra combines YAML declarative flows with event-driven triggers. Flows define 
 - CI pipeline must validate DAGs (import + cycle check)
 - Test with same image/version in staging before prod
 - Monitor queue depth, scheduler heartbeat, and missed SLAs
+- Use dynamic tasks for variable-partition workflows (expanding partitions)
+- Implement circuit breaker pattern for external API calls
+- Match orchestrator to pipeline model — not all orchestrators fit all patterns
+- Separate orchestration logic from business logic (tasks call external code)
 
 ## References
   - references/airflow-architecture.md — Airflow Architecture Reference

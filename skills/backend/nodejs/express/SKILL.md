@@ -1,5 +1,5 @@
 ---
-name: nodejs-express
+name: nodejs-express-skill
 description: >
   Use this skill when building Express.js apps — app setup, middleware chain, routing, error handling, validation. This skill enforces: proper middleware ordering, global error handler, Zod/Joi validation, module-based routing, environment config. Do NOT use for: database schema design, frontend, DevOps, non-Express Node backends (Fastify/Hono).
 version: "1.0.0"
@@ -43,6 +43,34 @@ Produce artifact directly. No preamble, no postamble, no explanations. No filler
 
 ### Max Response Length
 4096 tokens
+
+## Architecture Decision Trees
+
+### Express vs Fastify vs Hono (within Node.js)
+
+| Criterion | Express | Fastify | Hono |
+|-----------|---------|---------|------|
+| Performance | ~30k req/s | ~50k req/s | ~60k req/s |
+| Plugin ecosystem | Largest | Growing | Small |
+| TypeScript | Manual annotations | Schema-first (TypeBox/Zod) | Full (TypeBox) |
+| Serialization | JSON.stringify | Fast JSON serialization | Built-in |
+| Middleware model | Callback chain | Plugin registration | Express-like |
+| Validation | Manual middleware | Schema-compiled serializer | Middleware-based |
+
+Decision: Largest ecosystem / wide support → Express. Performance + schema-first → Fastify. Edge/Cloudflare Workers → Hono.
+
+### Middleware Order Decision
+
+| Layer | Middleware | Position |
+|-------|-----------|----------|
+| Security | Helmet, CORS, CSP | 1st (before any body) |
+| Parsing | JSON, URL-encoded | 2nd |
+| Observability | Logger, request ID | 3rd |
+| Protection | Rate limiter | 4th |
+| Auth | JWT/Session check | 5th |
+| Routes | Domain routers | 6th |
+| Fallback | 404 handler | 7th |
+| Error | Global error handler | Last |
 
 ## Workflow
 
@@ -213,9 +241,7 @@ export const userController = {
     res.status(204).send();
   }),
 };
-```
 
-```typescript
 // modules/users/user.routes.ts
 import { Router } from 'express';
 import { userController } from './user.controller';
@@ -234,18 +260,6 @@ router.put('/:id', validate(updateUserSchema), userController.update);
 router.delete('/:id', userController.remove);
 
 export default router;
-```
-
-```typescript
-// modules/routes.ts
-import { Router } from 'express';
-import userRoutes from './users/user.routes';
-import orderRoutes from './orders/order.routes';
-
-const router = Router();
-router.use('/users', userRoutes);
-router.use('/orders', orderRoutes);
-export { router as routes };
 ```
 
 ### Step 6: Validation Middleware
@@ -300,9 +314,7 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
     },
   });
 }
-```
 
-```typescript
 // common/middleware/async-handler.ts
 import { Request, Response, NextFunction } from 'express';
 
@@ -311,9 +323,7 @@ export function asyncHandler(fn: (req: Request, res: Response, next: NextFunctio
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 }
-```
 
-```typescript
 // common/errors/app-error.ts
 export class AppError extends Error {
   constructor(
@@ -374,27 +384,118 @@ export function authorize(...roles: string[]) {
 }
 ```
 
-### Step 9: Request Logging Middleware
-```typescript
-// common/middleware/request-logger.ts
-import { Request, Response, NextFunction } from 'express';
-import { logger } from '../../shared/logger';
+## Implementation Patterns
 
-export function requestLogger(req: Request, res: Response, next: NextFunction) {
-  const start = Date.now();
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    logger.info(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`, {
-      method: req.method,
-      url: req.originalUrl,
-      status: res.statusCode,
-      duration,
-      ip: req.ip,
-    });
-  });
+### Pattern: Dependency Injection Container (awilix)
+
+```typescript
+// shared/container.ts
+import { createContainer, asClass, asValue, Lifetime } from 'awilix';
+import { PrismaClient } from '@prisma/client';
+
+const container = createContainer();
+
+container.register({
+  prisma: asValue(new PrismaClient()),
+  userService: asClass(UserService).scoped(Lifetime.SCOPED),
+  userController: asClass(UserController).scoped(Lifetime.SCOPED),
+});
+
+export { container };
+
+// app.ts — DI middleware
+app.use((req, res, next) => {
+  req.container = container.createScope();
   next();
-}
+});
 ```
+
+### Pattern: Health Check Endpoint
+
+```typescript
+// modules/health/health.controller.ts
+export const healthController = {
+  check: asyncHandler(async (req: Request, res: Response) => {
+    const checks = {
+      database: await checkDatabase(),
+      redis: await checkRedis(),
+      uptime: process.uptime(),
+    };
+    const healthy = Object.values(checks).every(c => c.status === 'ok');
+    res.status(healthy ? 200 : 503).json({
+      status: healthy ? 'healthy' : 'degraded',
+      checks,
+    });
+  }),
+};
+```
+
+## Production Considerations
+
+### Performance
+- Enable `trust proxy` behind nginx/ELB: `app.set('trust proxy', 1)`
+- Use response compression: `compression()` middleware
+- Limit body size: `express.json({ limit: '1mb' })`
+- Cluster mode: `pm2 start app.js -i max`
+- Memory: monitor with `node --heapsnapshot-signal=SIGUSR2`
+
+### Security Headers
+```typescript
+app.use(helmet({
+  contentSecurityPolicy: { directives: { defaultSrc: ["'self'"] } },
+  hsts: { maxAge: 31536000, includeSubDomains: true },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+}));
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why | Fix |
+|-------------|-----|-----|
+| `app.listen` in app module | Can't test app without starting server | App factory pattern |
+| Naked `try/catch` in controllers | Duplicated error handling | `asyncHandler` wrapper |
+| Direct `req.body` without validation | Security vulnerability | Zod schema in middleware |
+| Multiple `res.json` calls in one handler | `ERR_HTTP_HEADERS_SENT` | Single code path |
+| Sync `crypto.randomBytes` in request | Blocks event loop | Use `crypto.randomBytes` callback or async |
+
+## Security Considerations
+- Helmet sets security headers — always include first in middleware chain
+- CORS with explicit origin list — never `*` with credentials
+- Rate limiting per IP per route group
+- JWT: validate algorithm, set short expiration (15m access + 7d refresh)
+- SQL injection: use parameterized queries via Prisma/Knex — never raw string concat
+- CSRF: `csurf` middleware for cookie/session auth
+- Input validation: Zod with `.strip()` (default) — remove unknown properties
+
+## Testing Strategies
+
+```typescript
+import request from 'supertest';
+import { createApp } from '../src/app';
+
+const app = createApp();
+
+describe('POST /api/v1/users', () => {
+  it('should create user with valid data', async () => {
+    const res = await request(app)
+      .post('/api/v1/users')
+      .send({ name: 'John', email: 'john@test.com' })
+      .expect(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('id');
+  });
+
+  it('should return 400 for invalid email', async () => {
+    const res = await request(app)
+      .post('/api/v1/users')
+      .send({ name: 'John', email: 'invalid' })
+      .expect(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+});
+```
+
+Use `testcontainers` for DB integration. Mock HTTP with `nock`. Use `jest` with `--detectOpenHandles` for unclosed connections.
 
 ## Rules
 - Middleware order: security -> parsing -> logging -> rate-limit -> routes -> 404 -> error. Never deviate.

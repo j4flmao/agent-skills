@@ -1,213 +1,446 @@
-# Graphql Federation Fundamentals
+# GraphQL Federation Fundamentals
 
 ## Overview
-Graphql Federation is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+GraphQL Federation is a distributed GraphQL architecture pattern enabling multiple subgraphs to compose into a unified supergraph. Each subgraph owns a bounded domain, exposes its own GraphQL schema, and is independently deployable. The supergraph gateway (Apollo Router or Gateway) plans and executes queries across subgraphs transparently to clients.
+
+Federation v2 (the current standard) eliminates boilerplate directives from v1, making schemas cleaner and composition more intuitive. All examples here use Federation v2 unless stated.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Graphql Federation helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Supergraph
+The supergraph is the unified schema clients query against. It merges all subgraph schemas, resolves type conflicts, and defines how entities extend across service boundaries. Generated at build time via `rover supergraph compose` or at runtime via Apollo GraphOS.
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Graphql Federation solutions. These principles help maintain code quality and reduce technical debt.
+### Subgraph
+An independently deployable GraphQL service owning a bounded domain context. Each subgraph:
+- Defines its own schema with types, queries, mutations, subscriptions
+- Declares entities using `@key` for cross-subgraph identity
+- Optionally extends types from other subgraphs
+- Has its own data store (database, external API, cache)
+- Can be developed, tested, scaled, and deployed independently
 
-### Concept 3: Data Management
-Proper data management is essential for Graphql Federation. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Entity
+A GraphQL type referenceable across subgraph boundaries via `@key`. The origin subgraph defines the entity with its primary key; other subgraphs extend it by adding fields.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+```graphql
+# Accounts subgraph — origin
+type User @key(fields: "id") {
+  id: ID!
+  name: String!
+  email: String!
+}
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+# Orders subgraph — extension (no @extends in v2)
+type User @key(fields: "id") {
+  id: ID!
+  orders: [Order!]!
+}
 
-## Architecture Patterns
+# Reviews subgraph — extension
+type User @key(fields: "id") {
+  id: ID!
+  reviews: [Review!]!
+}
+```
 
-### Pattern 1: Standard Architecture
-The standard architecture for Graphql Federation follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+### Composition
+The process of merging subgraph schemas into one supergraph schema:
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+1. Collect all subgraph schemas
+2. Resolve name conflicts (same type name, different definitions)
+3. Merge entity types by matching `@key` directives
+4. Generate a unified schema with all fields from all subgraphs
+5. Produce a supergraph schema artifact used for query planning
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Query Planning
+The router analyzes an incoming GraphQL operation to determine:
+- Which subgraphs resolve each requested field
+- Execution order (Sequence vs. Parallel) for subgraph fetches
+- What entity representations (`__typename` + key fields) to pass
+- How to merge results from multiple subgraphs
 
-## Implementation Guide
+```graphql
+# Query spanning 3 subgraphs
+query {
+  me {                  # Accounts
+    name
+    orders {            # Orders (needs User key from Accounts)
+      total
+      items {
+        product {
+          name          # Products (needs Product key from OrderItem)
+        }
+      }
+    }
+  }
+}
+```
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+Resulting plan:
+```
+Sequence:
+  Fetch(Accounts): { me { name } }
+  Sequence:
+    Fetch(Orders): { _entities(representations) { orders { items { product { __typename id } } } } }
+    Fetch(Products): { _entities(representations) { name } }
+```
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+## Federation v2 Directives — Complete Reference
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+### @key
+Declares entity identity. Types with `@key` can be extended across subgraphs.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+```graphql
+# Simple key
+type User @key(fields: "id") { id: ID! }
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+# Compound key (multiple fields)
+type Order @key(fields: "orderId lineItemId") { orderId: ID!; lineItemId: ID! }
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+# Nested key (key via relationship)
+type User @key(fields: "organization { id }") { id: ID!; organization: Organization! }
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+# Multiple alternative keys
+type Product @key(fields: "id") @key(fields: "sku") @key(fields: "upc") { ... }
 
-## Best Practices
+# Non-resolvable key (reference only, no entity resolution)
+type Product @key(fields: "id", resolvable: false) { id: ID! }
+```
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+### @shareable
+Field resolvable by multiple subgraphs. Router picks the fastest response.
 
-## Common Pitfalls
+```graphql
+type Product @key(fields: "id") {
+  id: ID!
+  name: String! @shareable   # Catalog and Search subgraphs both resolve this
+  price: Float!              # Only one subgraph resolves this
+}
+```
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+### @provides
+Advertises that a subgraph can resolve extra fields on an entity it references, reducing fetch boundaries.
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+```graphql
+# Products subgraph: topProducts returns Product with name inline
+# No need to fetch name from Catalog — Products provides it
+type Query {
+  topProducts: [Product!]!
+}
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+extend type Product @key(fields: "id") {
+  id: ID! @external
+  name: String! @external @provides(fields: "name")
+  price: Float! @external @provides(fields: "currency")
+}
+```
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+### @requires
+Declares a field depends on data from another subgraph. The router pre-fetches required data and includes it in the representation.
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+```graphql
+extend type Product @key(fields: "id") {
+  id: ID! @external
+  weight: Int @external
+  shippingCost: Float @requires(fields: "weight")
+}
+```
 
-## Tooling Ecosystem
+Resolution flow:
+1. Router fetches `weight` from the owning subgraph
+2. Includes `weight` in representation: `{"__typename": "Product", "id": "1", "weight": 10}`
+3. Shipping subgraph computes `shippingCost` using `ref.weight`
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+### @override
+Migrates field resolution from one subgraph to another during gradual migration.
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+```graphql
+# New search subgraph takes over name field from catalog
+type Product @key(fields: "id") {
+  id: ID!
+  name: String! @override(from: "catalog")
+  description: String!
+}
+```
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+### @inaccessible
+Hides a field/type from the supergraph (internal use only).
 
-## Integration Patterns
+```graphql
+type User {
+  internalId: ID! @inaccessible
+  name: String!
+}
+```
 
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
+### @composeDirective
+Propagates a custom directive from subgraph into the supergraph schema.
 
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
+```graphql
+extend schema @composeDirective(name: "@authorized")
+directive @authorized(role: String!) on FIELD_DEFINITION
 
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
+type Query {
+  adminData: [Secret!]! @authorized(role: "admin")
+}
+```
 
-## Performance Optimization
+### @interfaceObject
+Treats an interface as an entity-like type that can be extended by other subgraphs.
 
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
+```graphql
+# Subgraph A defines interface
+interface Media { id: ID!; title: String! }
 
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
+# Subgraph B extends interface as if it were an entity
+type Media @interfaceObject @key(fields: "id") {
+  id: ID!
+  averageRating: Float!
+}
+```
 
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+## Subgraph Design Principles
+
+### Bounded Context Mapping
+Map each subgraph to a DDD bounded context:
+
+| Subgraph | Domain | Owns | Extends |
+|----------|--------|------|---------|
+| Accounts | User identity, auth | User, Organization | — |
+| Catalog | Product info, categories | Product, Category | — |
+| Orders | Order processing | Order, LineItem | User, Product |
+| Reviews | User feedback | Review | User, Product |
+| Inventory | Stock, fulfillment | — | Product |
+| Shipping | Delivery | Shipment | Product, Order |
+
+### Subgraph Independence Rules
+1. Each subgraph has its own database — no shared data stores
+2. Subgraphs communicate only through the supergraph (no direct subgraph-to-subgraph HTTP calls)
+3. Each subgraph deploys independently without coordinated releases
+4. Adding a new subgraph does not change existing subgraphs
+5. Subgraph failure must not cascade — circuit breakers and timeouts per subgraph
+6. Subgraphs must not assume other subgraphs' internal implementation details
+
+### Entity Ownership Pattern
+- Exactly one origin subgraph defines the entity's `@key`
+- Extension subgraphs add fields but never change field types or keys
+- The origin implements `__resolveReference` returning the full entity by key
+- Extension subgraphs implement `__resolveReference` returning just enough to resolve their fields (often just `{ id: ref.id }`)
+
+## Schema Design Patterns
+
+### Value Types vs. Entities
+```graphql
+# Value type — no @key, fully owned by one subgraph, cannot be extended
+type Address {
+  street: String!
+  city: String!
+  zip: String!
+}
+
+# Entity — has @key, extendable across subgraphs
+type User @key(fields: "id") {
+  id: ID!
+  address: Address!
+}
+```
+
+### Value types stay private to their owning subgraph. Use entities for any type that needs cross-subgraph references.
+
+### Avoiding Circular Entity Dependencies
+```graphql
+# BAD — circular: User references Organization, Organization references User
+type User @key(fields: "id") { organization: Organization! }
+type Organization @key(fields: "id") { users: [User!]! }
+
+# GOOD — break cycle: query-level access instead of entity field
+type User @key(fields: "id") { organization: Organization! }
+extend type Query {
+  organizationUsers(orgId: ID!): [User!]!
+}
+```
+
+### Interface Distribution
+Interfaces must be redeclared in each subgraph that uses them. All implementing types across subgraphs must share the same `@key`.
+
+```graphql
+# Subgraph A
+interface Node { id: ID! }
+type Product implements Node @key(fields: "id") { id: ID!; name: String! }
+
+# Subgraph B
+interface Node { id: ID! }
+extend type Product implements Node @key(fields: "id") {
+  id: ID! @external
+  reviews: [Review!]!
+}
+```
+
+### Enum and Union Merging
+```graphql
+# Subgraph A
+enum Status { ACTIVE INACTIVE }
+union SearchResult = Product | Review
+
+# Subgraph B — extends both
+extend enum Status { PENDING ARCHIVED }
+extend union SearchResult = User | Article
+```
+
+Enums merge by unioning values; unions merge by unioning member types. Duplicates are deduplicated.
+
+## Entity Resolution Mechanics
+
+### Reference Resolver (Origin Subgraph)
+```typescript
+const resolvers = {
+  User: {
+    __resolveReference(ref, context) {
+      return context.dataSources.users.findById(ref.id);
+    },
+  },
+};
+```
+
+### Reference Resolver (Extension Subgraph)
+```typescript
+const resolvers = {
+  User: {
+    __resolveReference(ref) {
+      // Only needs the ID — the field resolvers fetch from own DB
+      return { id: ref.id };
+    },
+    orders(parent, _, context) {
+      return context.dataSources.orders.findByUserId(parent.id);
+    },
+    reviews(parent, _, context) {
+      return context.dataSources.reviews.findByAuthorId(parent.id);
+    },
+  },
+};
+```
+
+### Multi-Key Resolution
+```typescript
+const resolvers = {
+  Product: {
+    __resolveReference(ref, context) {
+      if (ref.id) return context.dataSources.products.findById(ref.id);
+      if (ref.sku) return context.dataSources.products.findBySku(ref.sku);
+      if (ref.upc) return context.dataSources.products.findByUpc(ref.upc);
+      return null;
+    },
+  },
+};
+```
+
+### Batch Entity Resolution (Preventing N+1)
+```typescript
+class BatchReferenceResolver {
+  private pending = new Map<string, Promise<any>>();
+
+  resolve(__typename: string, id: string): Promise<any> {
+    const key = `${__typename}:${id}`;
+    if (!this.pending.has(key)) {
+      this.pending.set(key, this.batchLoad(__typename, [id]).then(
+        results => results[0]
+      ));
+    }
+    return this.pending.get(key)!;
+  }
+
+  private async batchLoad(__typename: string, ids: string[]): Promise<any[]> {
+    switch (__typename) {
+      case 'User': return db.users.findByIds(ids);
+      case 'Product': return db.products.findByIds(ids);
+      default: return ids.map(() => null);
+    }
+  }
+}
+```
+
+## Composition Pipeline
+
+### Supergraph Config
+```yaml
+federation_version: 2
+subgraphs:
+  accounts:
+    routing_url: http://accounts:4001/graphql
+    schema:
+      file: ./schemas/accounts.graphql
+  catalog:
+    routing_url: http://catalog:4002/graphql
+    schema:
+      file: ./schemas/catalog.graphql
+  reviews:
+    routing_url: http://reviews:4003/graphql
+    schema:
+      file: ./schemas/reviews.graphql
+```
+
+### Composition Command
+```bash
+rover supergraph compose --config ./supergraph.yaml > supergraph.graphql
+```
+
+### CI/CD Pipeline
+```yaml
+# .github/workflows/supergraph.yml
+on:
+  pull_request:
+    paths: ['schemas/**']
+jobs:
+  check-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: apollographql/setup-rover@v2
+      - name: Validate composition
+        run: |
+          rover supergraph compose --config ./supergraph.yaml --output /dev/null
+      - name: Breaking change check
+        run: |
+          rover subgraph check my-graph@current \
+            --schema ./schemas/accounts.graphql --name accounts
+      - name: Publish
+        if: github.ref == 'refs/heads/main'
+        run: |
+          rover subgraph publish my-graph@current \
+            --schema ./schemas/accounts.graphql --name accounts \
+            --routing-url http://accounts:4001/graphql
+```
+
+## Router vs. Gateway Decision
+
+| Aspect | Apollo Router (Rust) | Apollo Gateway (Node.js) |
+|--------|---------------------|--------------------------|
+| Performance | ~10x faster, 1ms overhead | ~10ms overhead per request |
+| Configuration | YAML file | Programmatic (JS/TS) |
+| Extensibility | Rhai scripting, native plugins | Node.js middleware |
+| Startup | Instant | Schema fetch on boot |
+| Memory | ~50MB baseline | ~200MB baseline |
+| Best for | Production at scale | Dev, moderate traffic, custom JS logic |
+
+## Common Composition Errors and Fixes
+
+| Error | Cause | Resolution |
+|-------|-------|------------|
+| `ENUM_MISMATCH` | Enum values differ between subgraphs | Align enum definitions across all subgraphs |
+| `TYPE_MISMATCH` | Same name used as type in one, interface in another | Unify type kind |
+| `EXTERNAL_MISSING` | @requires field not marked external | Ensure field is resolvable from owning subgraph |
+| `KEY_MISSING` | Extended type without @key in origin | Add @key to origin subgraph |
+| `REQUIRES_MISSING` | @requires references unavailable field | Field must be @external or locally defined |
+| `DUPLICATE_FIELD` | Same field in multiple subgraphs without @shareable | Add @shareable or remove from one subgraph |
+| `VALUE_TYPE_FIELD_MISMATCH` | Value type fields differ between subgraphs | Align value type definitions (best to keep in one subgraph) |
 
 ## Key Points
-- Understand core Graphql Federation concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- Each subgraph owns its domain with independent deployment, testing, and scaling
+- @key defines entity identity for cross-subgraph resolution
+- Federation v2 eliminates @extends and @external — they are now implicit
+- Composition merges subgraph schemas into a unified supergraph at build time
+- Query planning automatically routes field resolution to appropriate subgraphs
+- Entity resolution via __resolveReference enables cross-subgraph data retrieval
+- @provides reduces fetch boundaries by embedding fields inline
+- @requires declares field dependencies resolved by the router before resolution
+- The router propagates user context (auth, tracing) to subgraphs via headers
+- Value types are fully owned by a single subgraph and cannot be extended
+- Circular entity references should be broken with query-level access patterns

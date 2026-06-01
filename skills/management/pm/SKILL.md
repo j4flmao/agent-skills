@@ -45,7 +45,7 @@ Answer in the format matching the request:
 - **Risk Register**: Risk + likelihood + impact + mitigation.
 - **Status Report**: What was done + what's blocked + what's next.
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick. No explanations of agile methodology.
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output.
 
 ### Completion Criteria
 This skill is complete when:
@@ -62,7 +62,7 @@ Sprint plan: 20 lines. Risk register: 15 lines. Status report: 10 lines.
 Given sprint length (default 2 weeks) and team capacity:
 
 1. Calculate capacity:
-   - Team members × sprint days × hours/day × focus factor (0.6-0.8)
+   - Team members sprint days hours/day focus factor (0.6-0.8)
    - Subtract ceremonies, PTO, support rotation
 2. Select backlog items by priority:
    - Top stories that fit within capacity
@@ -82,11 +82,11 @@ Risks: {list}
 ### Step 2: Estimation
 
 | Technique | When | Output |
-|-----------|------|--------|
-| **Planning Poker** | Story-level, team consensus | Fibonacci (1,2,3,5,8,13,21) |
-| **T-shirt Sizing** | Epic-level, quick triage | XS, S, M, L, XL, XXL |
-| **Three-Point** | Task-level, high accuracy | Optimistic + Most Likely + Pessimistic |
-| **Affinity Mapping** | Large backlog, batch | Relative sizing by comparison |
+|---|---|---|
+| Planning Poker | Story-level, team consensus | Fibonacci (1,2,3,5,8,13,21) |
+| T-shirt Sizing | Epic-level, quick triage | XS, S, M, L, XL, XXL |
+| Three-Point | Task-level, high accuracy | Optimistic + Most Likely + Pessimistic |
+| Affinity Mapping | Large backlog, batch | Relative sizing by comparison |
 
 ```
 Story: STORY-42 (User login with MFA)
@@ -103,7 +103,7 @@ Breakdown:
 
 ```
 | Risk | Likelihood | Impact | Mitigation | Owner |
-|------|------------|--------|------------|-------|
+|---|---|---|---|---|
 | Third-party API rate limit | High | High | Implement caching + fallback | Dev lead |
 | Team member PTO mid-sprint | Medium | Medium | Cross-train on critical paths | PM |
 | Performance regression | Low | High | Benchmark gate in CI | QA lead |
@@ -139,23 +139,34 @@ Velocity: {n} / {n} points (on track / at risk / behind)
 
 ```
 ## Sprint {n} Retro
-
 ### Keep Doing
 - Daily standups are focused and under 15min
 - PR reviews completed within 4h
-
 ### Stop Doing
 - Committing stories without proper acceptance criteria
 - Last-minute scope changes mid-sprint
-
 ### Start Doing
 - Write acceptance criteria before development
 - Add QA review column to board
-
 ### Action Items
 - [ ] Define acceptance criteria template (BA lead, by Wed)
 - [ ] Configure board with QA review column (PM, by Fri)
 ```
+
+### Step 6: Dependency Management
+Identify and track dependencies between teams, systems, and external parties. Categorize each dependency: hard (blocking — must be resolved before work can proceed), soft (sequential — Team A must finish before Team B starts), informational (need to know, not blocking). For each dependency: assign an owner, define the deliverable and due date, track status weekly at Scrum of Scrums. Escalate unresolved dependencies immediately.
+
+### Step 7: Stakeholder Communication Plan
+Define per-stakeholder communication: frequency (daily/weekly/monthly), format (email/Slack/dashboard/meeting), content focus (technical details for dev team, metrics for executives, progress for clients), and owner. Map communication intensity to project phase (more frequent during high-risk periods). Maintain a distribution list and calendar of communications.
+
+### Step 8: Capacity Planning Across Sprints
+Use historical velocity to forecast future capacity. Calculate the rolling average of the last 3-5 sprints. Apply focus factor adjustments for known leaves and ceremonies. Maintain a capacity calendar showing planned vs available person-days per sprint. Use this data during sprint planning to set realistic commitments.
+
+### Step 9: Project Health Dashboard
+Define and track key project health indicators: schedule (planned vs actual milestone dates), budget (planned vs actual spend), quality (defect metrics, test coverage), risk (open risk count and score), team health (squad health check, turnover rate). Display on a single dashboard visible to all stakeholders. Update weekly. Flag items in red immediately.
+
+### Step 10: Escalation and Issue Resolution
+Define escalation path for different issue types: technical (architect -> engineering manager -> CTO), schedule (PM -> sponsor -> executive), resource (PM -> department head -> HR), external (PM -> legal -> executive). For each escalation, document the trigger condition, the responsible person at each level, the target response time, and the escalation format (what happened, impact, proposed resolution).
 
 ## Agile at Scale Frameworks
 
@@ -164,35 +175,24 @@ Velocity: {n} / {n} points (on track / at risk / behind)
 ```yaml
 agile_at_scale:
   team_of_teams:
-    description: "Multiple Scrum teams working independently with coordination"
-    structure: "2-5 teams, each with own Scrum process, weekly sync between leads"
-    coordination:
-      - "Weekly Scrum of Scrums — team leads sync on dependencies"
-      - "Cross-team backlog refinement for shared work items"
-      - "Joint sprint review for stakeholder demo"
+    structure: "2-5 teams, each with own Scrum, weekly sync between leads"
+    ceremonies: "Weekly Scrum of Scrums, cross-team backlog refinement, joint review"
     best_for: "15-50 engineers, single product, moderate cross-team dependencies"
-    
+
   scaled_agile_framework:
-    description: "SAFe — structured framework with program increment (PI) planning"
-    structure: "Agile Release Train (ART) — 5-12 teams, 8-12 week PI cadence"
-    ceremonies:
-      - "PI Planning every 8-12 weeks — 2-day event with all teams"
-      - "System demo at end of each iteration"
-      - "Inspect and Adapt workshop at end of PI"
-    artifacts: ["Program backlog", "PI objectives", "ART board", "WSJF prioritization"]
-    best_for: "50-200 engineers, multiple products, enterprise compliance requirements"
-    trade_offs: "Heavy process overhead, less autonomy, requires dedicated RTE"
-    
+    structure: "ART — 5-12 teams, 8-12 week PI cadence"
+    ceremonies: "PI Planning every 8-12 weeks, system demo, Inspect and Adapt"
+    best_for: "50-200 engineers, multiple products, enterprise compliance"
+    trade_offs: "Heavy process overhead, requires dedicated RTE"
+
   lean_agile:
-    description: "Lean principles applied to agile — Kanban at scale"
     structure: "Value stream teams with end-to-end ownership"
-    practices: ["Kanban with work-in-progress limits", "Service level agreements (SLAs)", "Flow metrics (cycle time, throughput)"]
+    practices: "Kanban with WIP limits, SLAs, flow metrics"
     best_for: "Maintenance-heavy work, operations teams, continuous delivery"
-    
+
   shape_up:
-    description: "Basecamp's 6-week cycle / 2-week cooldown approach"
-    structure: "Shaped pitches → 6-week building cycles → 2-week cooldown"
-    practices: ["Pitch document (problem, solution, appetite, rabbit holes)", "No daily standups, no sprint backlogs", "Vertical slicing — build thin, then iterate"]
+    structure: "6-week cycles / 2-week cooldown"
+    practices: "Pitch documents, vertical slicing, no daily standups"
     best_for: "Small teams (3-8), product-focused, high autonomy"
 ```
 
@@ -202,24 +202,24 @@ agile_at_scale:
 estimation_framework:
   question_1_precision_needed:
     "Do you need high precision (budgeting, contractual)?":
-      yes: "Three-point estimation (PERT) — optimistic + most likely + pessimistic"
+      yes: "Three-point estimation (PERT)"
       no:
         question_2_artifact_level:
           "What level are you estimating?":
-            epic: "T-shirt sizing (XS-XXL) or story points with affinity mapping"
+            epic: "T-shirt sizing (XS-XXL) or affinity mapping"
             story: "Planning Poker with Fibonacci sequence"
-            task: "Hours or half-days — engineering judgment"
-            
+            task: "Hours or half-days"
+
   question_3_team_familiarity:
     "Is the team familiar with the work domain?":
-      yes: "Relative estimation (story points) — compare to known baseline stories"
-      no: "T-shirt sizing with wide ranges — accept uncertainty, re-estimate after first iteration"
-      
+      yes: "Relative estimation (story points)"
+      no: "T-shirt sizing with wide ranges"
+
   question_4_audience:
     "Who needs the estimate?":
-      leadership: "T-shirt sizing + quarter-level ranges — don't give false precision"
-      product: "Story points — relative sizing for prioritization"
-      engineering: "Hours — task-level breakdown for sprint capacity"
+      leadership: "T-shirt sizing + quarter-level ranges"
+      product: "Story points for prioritization"
+      engineering: "Hours for sprint capacity"
 ```
 
 ### Delivery Risk Management
@@ -236,26 +236,78 @@ delivery_risk:
       - "Unclear requirements or acceptance criteria"
       - "Dependency on external teams"
       - "Stakeholder availability for feedback"
-      - "Approval gate timing"
     resource:
       - "Team member availability (PTO, turnover, sickness)"
       - "Skill gaps in critical areas"
-      - "Tooling or environment availability"
     external:
       - "Regulatory changes mid-project"
       - "Vendor or partner delays"
-      - "Market timing pressure"
-      
+
   risk_response_strategies:
-    mitigate: "Reduce likelihood or impact — spike to validate architecture, add buffer"
-    avoid: "Change approach to eliminate risk — use proven technology instead of bleeding edge"
-    transfer: "Shift risk to third party — fixed-price contract, insurance, SaaS over custom build"
-    accept: "Acknowledge and monitor — low impact risks with contingency plan if triggered"
-    
-  tracking:
-    format: "Risk register — one row per risk with likelihood, impact, response, owner"
-    review: "Reassess at each sprint planning — likelihood and impact may change"
-    escalation: "Critical risks (high likelihood + high impact) escalate to project sponsor"
+    mitigate: "Reduce likelihood or impact"
+    avoid: "Change approach to eliminate risk"
+    transfer: "Shift risk to third party"
+    accept: "Acknowledge and monitor"
+```
+
+## Common Pitfalls
+
+1. **Estimates treated as deadlines**: Estimates are ranges, not promises. Never treat estimates as deadlines.
+2. **No buffer in planning**: Teams commit to 100% capacity leaving no room for unknowns. Always include 15-20% buffer.
+3. **Velocity as performance metric**: Velocity is a planning tool, not a performance metric. Never use it to evaluate individuals.
+4. **Status reports without actions**: Reports that state facts but don't flag issues or propose solutions.
+5. **Stakeholders not identified early**: Missing stakeholders cause late-stage surprises.
+6. **No dependency tracking**: Dependencies are discovered mid-sprint causing delays.
+7. **Sprint goal forgotten**: Team completes stories but loses sight of the sprint objective.
+8. **Scope creep mid-sprint**: Adding work after sprint commitment without adjusting scope.
+9. **Risk register not updated**: Risks created at project start and never reviewed again.
+10. **One-size-fits-all communication**: Same status update for dev team, executives, and clients.
+
+## Best Practices
+
+- Estimates are ranges, not promises — never treat estimates as deadlines
+- Velocity is a planning tool, not a performance metric
+- Every risk must have both a likelihood AND an impact rating
+- Status reports must include blockers with unblock plans
+- Retrospectives produce action items with owners
+- Sprint goal must be achievable within the sprint
+- Choose agile-at-scale framework based on team count and dependency complexity
+- Estimation precision should match the audience
+- Risk register must be reviewed at least every sprint planning
+- Communicate bad news immediately, do not wait for the next status report
+
+## Compared With
+
+| Approach | Strengths | Weaknesses |
+|---|---|---|
+| Waterfall PM | Clear phases, predictable, documented | Rigid, late feedback |
+| Agile PM (this skill) | Adaptive, fast feedback, iterative | Requires stakeholder availability |
+| PRINCE2 | Governance, roles, controlled | Heavy process |
+| Critical Path Method | Schedule optimization | Requires detailed task breakdown |
+| Lean PM | Waste reduction, value focus | Less structure for planning |
+| Extreme PM | High uncertainty projects | Chaotic for stable projects |
+
+## Templates and Tools
+
+### Capacity Planning Template
+```
+Sprint: {n} | Start: {date} | End: {date}
+Team Members: {n} | Working Days: {n}
+Total Capacity: {n} hours
+  - Ceremonies: {n} hours ({n}%)
+  - Support: {n} hours ({n}%)
+  - PTO: {n} hours ({n}%)
+  - Available: {n} hours ({n}%)
+Focus Factor: {n}%
+Effective Capacity: {n} points (at {n} points/person-sprint)
+```
+
+### Dependency Tracking Template
+```
+ID | Type | Description | Depends On | Owner | Due Date | Status
+D-01 | Hard | Auth service API | Team Auth | Alice | Sprint 5 | On track
+D-02 | Soft | Design system components | Team Design | Bob | Sprint 6 | At risk
+D-03 | Info | Migration timeline | Ops | Carol | Sprint 7 | Not started
 ```
 
 ## Rules
@@ -263,11 +315,16 @@ delivery_risk:
 - Velocity is a planning tool, not a performance metric
 - Every risk must have both a likelihood AND an impact rating
 - Status reports must include blockers with unblock plans
-- Retrospectives produce action items with owners — no complaints without solutions
+- Retrospectives produce action items with owners
 - Sprint goal must be achievable within the sprint — not aspirational
-- Choose agile-at-scale framework based on team count and dependency complexity, not popularity
-- Estimation precision should match the audience — don't give hour-level estimates to leadership
-- Risk register must be reviewed at least every sprint planning — risks change over time
+- Choose agile-at-scale framework based on team count and dependency complexity
+- Estimation precision should match the audience
+- Risk register must be reviewed at least every sprint planning
+- Communicate bad news immediately, do not wait for the next status report
+- Dependencies must be tracked and assigned owners
+- Stakeholder communication must be tailored per group
+- Capacity planning must account for ceremonies, support, and PTO
+- Sprint buffer of 15-20% for unknowns is mandatory
 
 ## References
   - references/ceremony-guide.md — Agile Ceremony Guide
@@ -276,6 +333,7 @@ delivery_risk:
   - references/pm-advanced.md — Pm Advanced Topics
   - references/pm-fundamentals.md — Pm Fundamentals
   - references/risk-register-template.md — Risk Register Template
+
 ## Handoff
 After completing this skill:
 - Next skill: **ba** — to elaborate requirements for planned stories

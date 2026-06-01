@@ -1,214 +1,518 @@
-# Ai Evals Advanced Topics
+# AI Evals Advanced Topics
 
 ## Introduction
-Advanced Ai Evals topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
 
-## Advanced Architecture Patterns
+Advanced AI evaluation covers production-grade eval systems, continuous evaluation pipelines, regression testing frameworks, cross-model comparison methodologies, and eval data management at scale. This reference builds on fundamentals.
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+## Production Eval Systems
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+### Architecture for Scale
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+```
+                         ┌──────────────┐
+                         │  Dataset Store │
+                         │  (S3 / GCS)   │
+                         └──────┬───────┘
+                                │
+┌──────────┐    ┌──────────┐    │    ┌──────────┐    ┌──────────┐
+│ Trigger  │───▶│ Eval     │────┴───▶│ Metric   │───▶│ Results  │
+│ (CI/Git) │    │ Runner   │─────────▶│ Computer │    │ Store    │
+└──────────┘    └────┬─────┘         └──────────┘    └────┬─────┘
+                     │                                     │
+                     ▼                                     ▼
+              ┌──────────────┐                      ┌──────────────┐
+              │ LLM Judge    │                      │ Dashboard /  │
+              │ (API / Batch)│                      │ Reporting    │
+              └──────────────┘                      └──────────────┘
+```
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+### Distributed Eval Architecture
 
-## Performance Optimization
+For large-scale evaluation (10K+ examples/day):
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+```yaml
+components:
+  orchestrator:
+    - Distributes work to worker nodes
+    - Handles retries and failure recovery
+    - Tracks job progress
+    - Service: AWS Batch / Kubernetes Job
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+  workers:
+    - Stateless eval runners
+    - Auto-scaling based on queue depth
+    - Each worker processes N examples per batch
+    - Max concurrency per worker: configurable (respect API rate limits)
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+  cache:
+    - Distributed cache (Redis / Memcached)
+    - Key: hash(query + response + rubric)
+    - TTL: 24-48 hours
+    - Reduces LLM API calls by 30-60%
 
-## Security Hardening
+  storage:
+    - Dataset store: Object storage with versioning
+    - Result store: Time-series DB (for trending) + object storage (for raw)
+    - Baseline store: Versioned key-value store
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+  monitoring:
+    - Worker health: Prometheus metrics
+    - Job progress: Custom dashboard
+    - Cost tracking: Per-run, per-model, per-metric
+    - Alerting: On failure, regression, budget exceeded
+```
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+### Scaling Considerations
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+| Dimension | Strategy |
+|-----------|----------|
+| Dataset size | Shard across workers, each processes 100-500 examples |
+| API rate limits | Exponential backoff, jitter, semaphore per worker |
+| Cost control | Budget per run, cache hits, tiered judge models |
+| Latency | Parallel execution per batch, streaming where possible |
+| Reliability | Retry with backoff (3 attempts), dead letter queue for failures |
+| Reproducibility | Pin dataset version, model version, judge config |
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+## Continuous Evaluation
 
-## Monitoring and Observability
+### Monitoring Eval Metrics in Production
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+Production eval monitoring samples live traffic and evaluates responses in a shadow mode (non-blocking to user traffic).
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+```python
+class ProductionEvalMonitor:
+    def __init__(self, sample_rate: float = 0.01):
+        self.sample_rate = sample_rate
+        self.buffer = []
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+    async def on_response(self, query: str, response: str, context: list, metadata: dict):
+        if random.random() > self.sample_rate:
+            return
+        sample = {
+            "query": query,
+            "response": response,
+            "context": context,
+            "metadata": metadata,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        self.buffer.append(sample)
+        if len(self.buffer) >= 100:
+            await self.flush()
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+    async def flush(self):
+        results = await self.evaluate_batch(self.buffer)
+        await self.store_results(results)
+        regression = await self.check_regression(results)
+        if regression:
+            await self.alert(regression)
+        self.buffer = []
+```
 
-## Scalability and Reliability
+### Drift Detection
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+Monitor metric distributions over time to detect model or data drift.
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+```python
+class EvalDriftDetector:
+    def __init__(self, window_size: int = 1000):
+        self.window_size = window_size
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+    def detect_drift(self, metric_history: list) -> list:
+        if len(metric_history) < self.window_size * 2:
+            return []
+        recent = metric_history[-self.window_size:]
+        baseline = metric_history[:self.window_size]
+        signals = []
+        for metric in recent[0].keys():
+            recent_vals = [r[metric] for r in recent]
+            base_vals = [r[metric] for r in baseline]
+            from scipy import stats
+            stat, p_value = stats.ks_2samp(recent_vals, base_vals)
+            if p_value < 0.01:
+                mean_recent = statistics.mean(recent_vals)
+                mean_base = statistics.mean(base_vals)
+                signals.append({
+                    "metric": metric,
+                    "drift_detected": True,
+                    "p_value": p_value,
+                    "baseline_mean": mean_base,
+                    "recent_mean": mean_recent,
+                    "delta": mean_recent - mean_base,
+                })
+        return signals
+```
 
-## Integration and Interoperability
+### Production Shadow Evaluation
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+Run a candidate model alongside the production model, evaluating both against the same live traffic.
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+```
+User Query
+    │
+    ├──▶ Production Model → Response → User
+    │
+    └──▶ Candidate Model → Response → Shadow Eval
+                                        │
+                                        ▼
+                              Compare scores: production vs candidate
+                              Report: quality delta, cost delta, latency delta
+```
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+## Regression Testing
 
-## DevOps and Automation
+### Regression Detection Methodology
 
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
+Regression detection compares current eval results against a historical baseline using statistical methods:
 
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
+1. **Baseline computation**: Rolling window (7-30 days) of eval results per metric.
+2. **Z-score detection**: Flag if current score is >2σ below baseline mean.
+3. **Trend detection**: Flag if metric has been declining for 5+ consecutive runs.
+4. **Segment analysis**: Check for regressions in specific categories or user segments.
 
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+```python
+class RegressionDetector:
+    def __init__(self, z_threshold: float = -2.0, trend_window: int = 5):
+        self.z_threshold = z_threshold
+        self.trend_window = trend_window
+
+    def check(self, current: dict, history: list) -> dict:
+        findings = []
+        for metric, value in current.items():
+            baseline = [h["metrics"][metric] for h in history if metric in h.get("metrics", {})]
+            if len(baseline) < 3:
+                continue
+            mean = statistics.mean(baseline)
+            std = statistics.stdev(baseline) if len(baseline) > 1 else 0
+            z = (value - mean) / max(std, 0.0001)
+            if z < self.z_threshold:
+                findings.append({
+                    "type": "z_score",
+                    "metric": metric,
+                    "value": value,
+                    "baseline_mean": mean,
+                    "baseline_std": std,
+                    "z_score": z,
+                    "severity": "critical" if z < -3 else "warning",
+                })
+            recent_trend = baseline[-self.trend_window:]
+            if len(recent_trend) >= self.trend_window:
+                if all(recent_trend[i] > recent_trend[i+1] for i in range(self.trend_window - 1)):
+                    findings.append({
+                        "type": "trend",
+                        "metric": metric,
+                        "severity": "warning",
+                        "message": f"Declining for {self.trend_window} consecutive runs",
+                    })
+        return {"regressions": findings, "count": len(findings)}
+```
+
+### Multi-Stage Regression Detection
+
+| Stage | Frequency | Dataset | Metrics | Gate |
+|-------|-----------|---------|---------|------|
+| PR Check | Every PR | 50 samples (golden + adversarial) | Faithfulness, safety | Blocking |
+| Nightly | Daily | Full dataset (750 samples) | All metrics | Alert |
+| Release | Per deployment | Full dataset + human review | All + human | Sign-off required |
+| Production | Continuous | 1% live traffic sample | Quality + drift | Alert on drift |
+
+## Eval Data Management
+
+### Data Lifecycle
+
+```
+Creation → Validation → Versioning → Storage → Consumption → Deprecation → Archive
+```
+
+### Versioning Strategy
+
+```yaml
+versioning:
+  scheme: "semver"
+  major: "New categories or task types"
+  minor: "New examples added"
+  patch: "Fixes (label corrections, metadata updates)"
+
+  policies:
+    - Pin dataset version in eval config for reproducibility
+    - Tag each version with git hash of codebase
+    - Store change log alongside dataset
+    - Never modify a released version — create new version
+
+  storage:
+    format: "jsonl"
+    compression: "gzip"
+    location: "s3://evals/datasets/{dataset_name}/v{version}/"
+    metadata: "s3://evals/datasets/{dataset_name}/v{version}/metadata.yaml"
+```
+
+### Data Governance
+
+| Concern | Practice |
+|---------|----------|
+| PII | Strip before storage. Hash user IDs. No raw user messages in datasets. |
+| Access control | Read-only for most team members. Write requires review. |
+| Retention | Keep all versions for reproducibility. Archive after 1 year. |
+| Quality | Automated validation on every version creation. 10% manual review. |
+| Lineage | Track dataset → git hash → model version → eval run. |
+| Bias monitoring | Check demographic distribution in production-sampled data. |
+
+### Dataset Lineage Tracking
+
+```python
+class DatasetLineage:
+    def __init__(self):
+        self.graph = {}
+
+    def record_creation(self, dataset_name: str, version: str, metadata: dict):
+        node_id = f"{dataset_name}@{version}"
+        self.graph[node_id] = {
+            "type": "dataset",
+            "metadata": metadata,
+            "parents": [],
+            "children": [],
+        }
+
+    def record_eval_run(self, run_id: str, dataset: str, model: str, prompt: str):
+        self.graph[run_id] = {
+            "type": "eval_run",
+            "dataset": dataset,
+            "model": model,
+            "prompt": prompt,
+        }
+        self.graph[dataset]["children"].append(run_id)
+
+    def trace_to_source(self, run_id: str) -> list:
+        visited = set()
+        path = []
+
+        def dfs(node):
+            if node in visited:
+                return
+            visited.add(node)
+            path.append(self.graph[node])
+            for parent in self.graph[node].get("parents", []):
+                dfs(parent)
+
+        dfs(run_id)
+        return path
+```
+
+## Cross-Model Comparison
+
+### Methodology
+
+Cross-model comparisons require strict controls to produce meaningful results:
+
+1. **Identical dataset**: Every model evaluated on the same examples.
+2. **Identical metrics**: Same metrics, rubrics, judge prompts.
+3. **Identical evaluation procedure**: Same batch size, parallelism, temperature.
+4. **Statistical significance**: Report confidence intervals and effect sizes.
+5. **Multi-dimensional**: Compare across multiple metrics, not just one.
+6. **Cost-adjusted**: Include cost-per-query alongside quality scores.
+
+### Comparison Framework
+
+```python
+class CrossModelComparison:
+    def __init__(self, dataset: list, metrics: list):
+        self.dataset = dataset
+        self.metrics = metrics
+
+    async def evaluate_models(self, models: dict) -> pd.DataFrame:
+        rows = []
+        for model_name, model_fn in models.items():
+            for example in self.dataset:
+                start = time.time()
+                response = await model_fn(example["query"])
+                latency = time.time() - start
+                scores = {}
+                for metric in self.metrics:
+                    score = await metric.evaluate(
+                        example["query"],
+                        response,
+                        example.get("context", ""),
+                    )
+                    scores[metric.name] = score
+                rows.append({
+                    "model": model_name,
+                    "example_id": example.get("id"),
+                    "latency": latency,
+                    **scores,
+                })
+        return pd.DataFrame(rows)
+
+    def generate_report(self, df: pd.DataFrame) -> dict:
+        report = {}
+        metric_cols = [m.name for m in self.metrics]
+        for metric in metric_cols:
+            grouped = df.groupby("model")[metric]
+            stats = grouped.agg(["mean", "std", "count"])
+            # Pairwise significance tests
+            from scipy.stats import ttest_ind
+            comparisons = {}
+            models = df["model"].unique()
+            for i, m1 in enumerate(models):
+                for m2 in models[i+1:]:
+                    g1 = df[df["model"] == m1][metric]
+                    g2 = df[df["model"] == m2][metric]
+                    stat, p = ttest_ind(g1, g2, equal_var=False)
+                    comparisons[f"{m1}_vs_{m2}"] = {
+                        "t_statistic": stat,
+                        "p_value": p,
+                        "significant": p < 0.05,
+                    }
+            report[metric] = {"statistics": stats.to_dict(), "comparisons": comparisons}
+        return report
+```
+
+### Multi-Dimensional Model Scoring
+
+Beyond single-metric comparisons, use a weighted composite score:
+
+```python
+class WeightedModelScore:
+    def __init__(self, weights: dict):
+        self.weights = weights  # {"faithfulness": 0.4, "relevance": 0.3, "cost": 0.15, "latency": 0.15}
+
+    def compute(self, model_scores: dict) -> float:
+        weighted_sum = 0
+        for metric, weight in self.weights.items():
+            score = model_scores.get(metric, 0)
+            if metric == "cost":
+                score = self._normalize_cost(score, model_scores.get("all_costs", []))
+            elif metric == "latency":
+                score = self._normalize_latency(score, model_scores.get("all_latencies", []))
+            weighted_sum += score * weight
+        return weighted_sum
+
+    def _normalize_cost(self, cost: float, all_costs: list) -> float:
+        if not all_costs:
+            return 1.0
+        min_cost = min(all_costs)
+        max_cost = max(all_costs)
+        return 1 - (cost - min_cost) / max(max_cost - min_cost, 0.001)
+```
+
+## Eval Pipeline Optimization
+
+### Caching Strategy
+
+| Cache Layer | Key | TTL | Hit Rate |
+|-------------|-----|-----|----------|
+| Judge response | hash(query + response + rubric) | 24h | 30-50% |
+| Embedding | hash(text) | 7d | 60-80% |
+| Template rendering | hash(template + variables) | ∞ | 100% |
+| Model response | hash(query + model + params) | 1h | 10-20% |
+
+### Parallelism and Concurrency
+
+```python
+import asyncio
+from typing import List, Dict, Optional
+
+class ParallelEvalRunner:
+    def __init__(self, max_concurrent: int = 10, batch_size: int = 20):
+        self.semaphore = asyncio.Semaphore(max_concurrent)
+        self.batch_size = batch_size
+
+    async def run(self, model_fn, dataset: List[Dict]) -> List[Dict]:
+        results = []
+        for i in range(0, len(dataset), self.batch_size):
+            batch = dataset[i:i + self.batch_size]
+            async with self.semaphore:
+                batch_results = await asyncio.gather(*[
+                    self._evaluate_one(model_fn, item) for item in batch
+                ], return_exceptions=True)
+                for item, result in zip(batch, batch_results):
+                    if isinstance(result, Exception):
+                        results.append({"item": item, "error": str(result)})
+                    else:
+                        results.append({"item": item, **result})
+        return results
+
+    async def _evaluate_one(self, model_fn, item: Dict) -> Dict:
+        response = await model_fn(item["query"])
+        return {"response": response}
+```
+
+## Eval Infrastructure as Code
+
+### Terraform for Eval Infrastructure
+
+```hcl
+# eval-infrastructure.tf
+resource "aws_batch_compute_environment" "eval" {
+  compute_environment_name = "llm-eval-cluster"
+  type                     = "MANAGED"
+  compute_resources {
+    type           = "EC2"
+    instance_types = ["c6i.large", "c6i.xlarge"]
+    min_vcpus      = 0
+    max_vcpus      = 256
+    desired_vcpus  = 0
+    security_group_ids = [aws_security_group.eval.id]
+    subnets            = var.subnets
+  }
+}
+
+resource "aws_s3_bucket" "eval_datasets" {
+  bucket = "evals-datasets-${var.environment}"
+  versioning {
+    enabled = true
+  }
+}
+
+resource "aws_s3_bucket" "eval_results" {
+  bucket = "evals-results-${var.environment}"
+  versioning {
+    enabled = true
+  }
+}
+```
+
+### Kubernetes for Eval Orchestration
+
+```yaml
+# eval-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nightly-eval
+spec:
+  parallelism: 10
+  completions: 1
+  template:
+    spec:
+      containers:
+      - name: eval-runner
+        image: eval-runner:latest
+        env:
+        - name: DATASET_PATH
+          value: "s3://evals-datasets/v3.2.0/"
+        - name: RESULTS_PATH
+          value: "s3://evals-results/$(date +%Y-%m-%d)/"
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+      restartPolicy: Never
+  backoffLimit: 2
+```
 
 ## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
 
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- Design eval infrastructure for scale from the start — it's harder to retrofit.
+- Implement continuous evaluation with production shadow monitoring.
+- Use statistical methods (z-score, trend detection) for regression detection.
+- Adopt multi-stage evaluation: fast PR checks, comprehensive nightly, in-depth release.
+- Version datasets with semantic versioning and never modify released versions.
+- Track data lineage from dataset creation through eval runs.
+- Use cross-model comparison with identical conditions for fair comparisons.
+- Weighted composite scores help make multi-dimensional model decisions.
+- Cache aggressively — judge calls are the most expensive part of any eval pipeline.
+- Use infrastructure-as-code for eval compute to ensure reproducibility.
+- Implement cost tracking per eval run and set budget alerts.
+- Regular dataset health checks prevent staleness and bias accumulation.

@@ -108,6 +108,506 @@ Does the logic produce UI?
        └── Animation -> Animation hook
 ```
 
+### Decision Tree: Data Flow Direction
+
+```
+Where does data come from?
+  ├── Server API -> TanStack Query (useQuery/useMutation)
+  ├── Parent component -> Props (drilled or composed)
+  ├── Global client state -> Zustand/Jotai store
+  └── URL params -> useParams, useSearchParams
+```
+
+### Decision Tree: Composing Components
+
+```
+Do child components need to share state with siblings?
+  ├── Yes -> Lift state to common parent
+  │    ├── Only 1-2 levels -> Prop drilling
+  │    └── 3+ levels -> Context or store
+  └── No -> Local state in each component
+```
+
+## Component Design Patterns
+
+### Compound Component
+
+```tsx
+interface TabsContext {
+  activeTab: string
+  setActiveTab: (tab: string) => void
+}
+const TabsCtx = createContext<TabsContext | null>(null)
+
+function Tabs({ children, defaultTab }: { children: ReactNode; defaultTab: string }) {
+  const [activeTab, setActiveTab] = useState(defaultTab)
+  return <TabsCtx.Provider value={{ activeTab, setActiveTab }}>{children}</TabsCtx.Provider>
+}
+
+Tabs.List = function List({ children }: { children: ReactNode }) {
+  return <div role="tablist">{children}</div>
+}
+
+Tabs.Tab = function Tab({ value, children }: { value: string; children: ReactNode }) {
+  const ctx = useContext(TabsCtx)!
+  return <button role="tab" onClick={() => ctx.setActiveTab(value)}>{children}</button>
+}
+
+Tabs.Panel = function Panel({ value, children }: { value: string; children: ReactNode }) {
+  const ctx = useContext(TabsCtx)!
+  return ctx.activeTab === value ? <div role="tabpanel">{children}</div> : null
+}
+```
+
+### Custom Hook for Data Fetching
+
+```tsx
+function useUsers(search: string) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['users', search],
+    queryFn: () => api.getUsers({ q: search }),
+    staleTime: 30_000,
+    select: (users) => search
+      ? users.filter(u => u.name.toLowerCase().includes(search.toLowerCase()))
+      : users,
+  })
+  return { users: data ?? [], isLoading, error }
+}
+```
+
+### Custom Hook for Browser API
+
+```tsx
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => matchMedia(query).matches)
+  useEffect(() => {
+    const mql = matchMedia(query)
+    const handler = (e: MediaQueryListEvent) => setMatches(e.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [query])
+  return matches
+}
+```
+
+### Error Boundary Wrapper
+
+```tsx
+class ErrorBoundary extends React.Component<
+  { fallback?: ReactNode; children: ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  state = { hasError: false, error: null }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error }
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    logError(error, info.componentStack)
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? <h1>Something went wrong</h1>
+    }
+    return this.props.children
+  }
+}
+```
+
+### Route-Level Code Splitting
+
+```tsx
+const UsersPage = lazy(() => import('./features/users'))
+const OrdersPage = lazy(() => import('./features/orders'))
+
+function App() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <Routes>
+        <Route path="/users" element={<UsersPage />} />
+        <Route path="/orders" element={<OrdersPage />} />
+      </Routes>
+    </Suspense>
+  )
+}
+```
+
+## State Management Patterns
+
+### Local UI State
+
+```tsx
+function Toggle() {
+  const [isOpen, setIsOpen] = useState(false)
+  return <button onClick={() => setIsOpen(!isOpen)}>{isOpen ? 'Close' : 'Open'}</button>
+}
+```
+
+### Complex Local State with useReducer
+
+```tsx
+type FormState = { name: string; email: string; errors: Partial<Record<string, string>> }
+type Action = { type: 'SET_FIELD'; field: string; value: string } | { type: 'SET_ERRORS'; errors: Record<string, string> }
+
+function formReducer(state: FormState, action: Action): FormState {
+  switch (action.type) {
+    case 'SET_FIELD':
+      return { ...state, [action.field]: action.value }
+    case 'SET_ERRORS':
+      return { ...state, errors: action.errors }
+    default:
+      return state
+  }
+}
+
+function SignupForm() {
+  const [state, dispatch] = useReducer(formReducer, { name: '', email: '', errors: {} })
+  return <form>{/* fields */}</form>
+}
+```
+
+### Server State with TanStack Query
+
+```tsx
+function useProducts(filters: ProductFilters) {
+  const queryClient = useQueryClient()
+  const query = useQuery({
+    queryKey: ['products', filters],
+    queryFn: () => api.getProducts(filters),
+    staleTime: 60_000,
+  })
+  const mutation = useMutation({
+    mutationFn: api.createProduct,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
+  })
+  return { products: query.data ?? [], isLoading: query.isLoading, createProduct: mutation.mutate }
+}
+```
+
+### Global Client State with Zustand
+
+```tsx
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+
+interface AuthStore {
+  user: User | null
+  token: string | null
+  login: (email: string, password: string) => Promise<void>
+  logout: () => void
+}
+
+const useAuthStore = create<AuthStore>()(
+  persist(
+    (set) => ({
+      user: null,
+      token: null,
+      login: async (email, password) => {
+        const { user, token } = await api.login(email, password)
+        set({ user, token })
+      },
+      logout: () => set({ user: null, token: null }),
+    }),
+    { name: 'auth-storage' }
+  )
+)
+```
+
+### Atomic State with Jotai
+
+```tsx
+import { atom, useAtom } from 'jotai'
+
+const searchAtom = atom('')
+const debouncedSearchAtom = atom((get) => {
+  const search = get(searchAtom)
+  return search // debounce logic
+})
+const resultsAtom = atom(async (get) => {
+  const q = get(debouncedSearchAtom)
+  if (!q) return []
+  return api.search(q)
+})
+
+function Search() {
+  const [search, setSearch] = useAtom(searchAtom)
+  const [results] = useAtom(resultsAtom)
+  return <input value={search} onChange={(e) => setSearch(e.target.value)} />
+}
+```
+
+## Performance Optimization
+
+### Re-render Optimization
+React re-renders components when state changes. Strategies to minimize:
+- `React.memo` for pure components receiving the same props
+- `useMemo` for expensive computations
+- `useCallback` for stable function references
+- `React Compiler` (automated memoization in React 19+)
+
+### Bundle Size
+- React + react-dom: ~45KB gzipped
+- Feature-based structure aids tree-shaking
+- Code-split at route level with `React.lazy` + `Suspense`
+- Lazy load heavy libraries (chart, markdown, date picker)
+
+### Virtual DOM Cost
+Large lists (1000+ items) benefit from:
+- Windowed rendering (react-window, react-virtuoso)
+- Stable keys (`item.id`, never index)
+- Avoiding inline functions in list item renders
+
+### State Management Size
+| Library | Size (gzipped) |
+|---------|----------------|
+| useState/useReducer | 0KB (built-in) |
+| Context | 0KB (built-in) |
+| Zustand | ~1KB |
+| Jotai | ~3KB |
+| TanStack Query | ~13KB |
+| Redux Toolkit | ~12KB |
+
+### React Compiler (React 19+)
+
+```tsx
+// vite.config.ts
+import reactCompiler from 'vite-plugin-react-compiler'
+export default defineConfig({
+  plugins: [reactCompiler({ target: '19' }), react()],
+})
+```
+The React Compiler automatically memoizes components and hooks, eliminating manual `useMemo`, `useCallback`, and `React.memo`.
+
+## Build & Bundle Considerations
+
+### Build Configuration
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+        },
+      },
+    },
+    target: 'es2020',
+    sourcemap: false,
+  },
+})
+```
+
+### Code Splitting Strategy
+- Route-level: `React.lazy(() => import('./features/users'))`
+- Component-level: `React.lazy(() => import('./shared/components/HeavyChart'))`
+- Library-level: Dynamic import inside `useEffect` or event handler
+
+### Bundle Analysis
+```bash
+npx vite build --analyze  # if using vite-plugin-visualizer
+npx source-map-explorer dist/assets/*.js
+```
+
+### Tree Shaking
+- Use named exports for libraries that support tree-shaking (lodash-es, date-fns)
+- Avoid `import * as` — prefer named imports
+- Configure `sideEffects: false` in package.json
+
+### Environment Variables
+```tsx
+const apiUrl = import.meta.env.VITE_API_URL
+const mode = import.meta.env.MODE // 'development' | 'production'
+```
+Prefix with `VITE_` for Vite projects. Access via `import.meta.env`.
+
+## Testing Strategies
+
+### Unit Testing Components
+
+```tsx
+// __tests__/Button.test.tsx
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, it, expect, vi } from 'vitest'
+import { Button } from './Button'
+
+describe('Button', () => {
+  it('renders children', () => {
+    render(<Button>Click</Button>)
+    expect(screen.getByText('Click')).toBeDefined()
+  })
+
+  it('calls onClick when clicked', async () => {
+    const onClick = vi.fn()
+    render(<Button onClick={onClick}>Click</Button>)
+    await userEvent.click(screen.getByText('Click'))
+    expect(onClick).toHaveBeenCalledOnce()
+  })
+})
+```
+
+### Testing Custom Hooks
+
+```tsx
+// __tests__/useMediaQuery.test.ts
+import { renderHook, act } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
+import { useMediaQuery } from './useMediaQuery'
+
+describe('useMediaQuery', () => {
+  it('returns current match state', () => {
+    const { result } = renderHook(() => useMediaQuery('(min-width: 768px)'))
+    expect(result.current).toBeTypeOf('boolean')
+  })
+})
+```
+
+### Testing Smart Components with Providers
+
+```tsx
+// __tests__/UsersPage.test.tsx
+import { render, screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { UsersPage } from './UsersPage'
+
+function renderWithProviders(ui: ReactElement) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>)
+}
+
+test('shows loading state', () => {
+  renderWithProviders(<UsersPage />)
+  expect(screen.getByTestId('skeleton')).toBeDefined()
+})
+```
+
+### E2E Testing
+
+```tsx
+// e2e/users.spec.ts
+import { test, expect } from '@playwright/test'
+
+test('creates a new user', async ({ page }) => {
+  await page.goto('/users')
+  await page.click('[data-testid="add-user"]')
+  await page.fill('[name="name"]', 'John')
+  await page.click('button[type="submit"]')
+  await expect(page.locator('text=John')).toBeVisible()
+})
+```
+
+## Migration Patterns
+
+### Class Component to Functional Component
+
+```tsx
+// Before
+class Counter extends React.Component<{}, { count: number }> {
+  state = { count: 0 }
+  render() {
+    return <button onClick={() => this.setState({ count: this.state.count + 1 })}>{this.state.count}</button>
+  }
+}
+
+// After
+function Counter() {
+  const [count, setCount] = useState(0)
+  return <button onClick={() => setCount(c => c + 1)}>{count}</button>
+}
+```
+
+### Context to Zustand Migration
+
+```tsx
+// Before: Context + useReducer
+const AppContext = createContext(...)
+const AppProvider = ({ children }) => {
+  const [state, dispatch] = useReducer(appReducer, initialState)
+  return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>
+}
+
+// After: Zustand
+const useAppStore = create((set) => ({
+  ...initialState,
+  updateUser: (user) => set({ user }),
+}))
+```
+
+### CRA to Vite Migration
+```
+npm uninstall react-scripts
+npm install -D vite @vitejs/plugin-react
+Move index.html to root
+Rename .js to .jsx where JSX is used
+Update tsconfig for Vite paths
+```
+
+## Anti-Patterns
+
+### Props Drilling Beyond 3 Levels
+
+```tsx
+// Anti-pattern
+<Page user={user} />
+  <Header user={user} />
+    <Nav user={user} />
+      <Avatar user={user} />
+
+// Correct: composition or context
+<Page>
+  <Header><Nav><Avatar user={user} /></Nav></Header>
+```
+
+### Inline Functions in List Renders
+
+```tsx
+// Anti-pattern: new function on every render
+{items.map(item => <Item key={item.id} onClick={() => handleClick(item.id)} />)}
+
+// Correct: stable callback
+function handleClick(id: string) { ... }
+{items.map(item => <Item key={item.id} onClick={handleClick} id={item.id} />)}
+```
+
+### Fetching on Every Render
+
+```tsx
+// Anti-pattern: useQuery without staleTime — refetches on mount
+useQuery({ queryKey: ['users'], queryFn: fetchUsers })
+
+// Correct: cache for 30 seconds
+useQuery({ queryKey: ['users'], queryFn: fetchUsers, staleTime: 30_000 })
+```
+
+### Giant Component Files
+
+```tsx
+// Anti-pattern: 400-line component
+function ProfilePage() { /* 400 lines of JSX, logic, and styles */ }
+
+// Correct: split into smaller components + hooks
+function ProfilePage() {
+  const { user } = useProfile()
+  return <ProfileHeader user={user} /><ProfileContent user={user} /><ProfileFooter user={user} />
+}
+```
+
+### Direct Store Access in Dumb Components
+
+```tsx
+// Anti-pattern: dumb component accesses store
+function UserCard({ id }: { id: string }) {
+  const user = useStore((s) => s.users[id]) // smart behavior in dumb component
+  return <div>{user.name}</div>
+}
+```
+
 ## Common Pitfalls
 
 ### Pitfall 1: Deep Imports Across Features
@@ -167,37 +667,6 @@ Both encapsulate reactive state. React hooks run on every render and depend on c
 
 ### React Compound Components vs Slots
 Compound components (`<Select><Select.Trigger/><Select.Options/></Select>`) give explicit control over rendered structure. Slots (Svelte, Vue) are simpler but less flexible for advanced composition.
-
-## Performance Considerations
-
-### Re-render Optimization
-React re-renders components when state changes. Strategies to minimize:
-- `React.memo` for pure components receiving the same props
-- `useMemo` for expensive computations
-- `useCallback` for stable function references
-- `React Compiler` (automated memoization in React 19+)
-
-### Bundle Size
-- React + react-dom: ~45KB gzipped
-- Feature-based structure aids tree-shaking
-- Code-split at route level with `React.lazy` + `Suspense`
-- Lazy load heavy libraries (chart, markdown, date picker)
-
-### Virtual DOM Cost
-Large lists (1000+ items) benefit from:
-- Windowed rendering (react-window, react-virtuoso)
-- Stable keys (`item.id`, never index)
-- Avoiding inline functions in list item renders
-
-### State Management Size
-| Library | Size (gzipped) |
-|---------|----------------|
-| useState/useReducer | 0KB (built-in) |
-| Context | 0KB (built-in) |
-| Zustand | ~1KB |
-| Jotai | ~3KB |
-| TanStack Query | ~13KB |
-| Redux Toolkit | ~12KB |
 
 ## Ecosystem & Tooling
 

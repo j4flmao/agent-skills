@@ -2,7 +2,7 @@
 name: frontend-responsive-design
 description: >
   Use this skill when the user says 'responsive design', 'container queries', 'breakpoints', 'mobile-first', 'fluid typography', 'responsive layout', 'media queries', 'clamp', 'adaptive design', or when building responsive frontend UIs. This skill enforces: mobile-first CSS, container queries for component-level responsiveness, a consistent breakpoint system, and fluid typography with clamp(). Works with any frontend framework. Do NOT use for: print styles, email templates, or native mobile app layout.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -50,6 +50,64 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 4096 tokens.
+
+## Responsive Design Architecture / Decision Trees
+
+### Responsive Approach Decision Tree
+```
+Page-level layout or component-level?
+  |-- Page-level (header, main grid, footer) -->
+  |     Viewport media queries are appropriate
+  |     Use standard breakpoints (640/768/1024/1280)
+  |     Mobile-first: base = mobile, expand via min-width
+  |
+  |-- Component-level (card, sidebar, widget) -->
+  |     Container queries preferred (container-type: inline-size)
+  |     Component responds to its own container, not the viewport
+  |     Fallback: viewport media queries for older browsers
+  |
+  |-- Typography -->
+        Fluid: clamp() with viewport-relative preferred value
+        Scale: --text-sm to --text-2xl as fluid values
+```
+
+### Breakpoint Strategy Decision Tree
+```
+How many unique layouts?
+  |-- 2 (mobile + desktop) -->
+  |     Single breakpoint: 768px
+  |     Simple, manageable, fewer edge cases
+  |
+  |-- 3 (mobile + tablet + desktop) -->
+  |     Breakpoints: 640px + 1024px
+  |     Balance between specificity and complexity
+  |
+  |-- 4+ (fine-grained responsive) -->
+  |     Breakpoints: 640px + 768px + 1024px + 1280px
+  |     Use CSS custom properties: --bp-sm, --bp-md, etc.
+  |
+  |-- Component-level -->
+        Container queries with breakpoints at 300px, 400px, 600px
+        These are container-relative, not viewport-relative
+```
+
+### Layout Decision Tree
+```
+Number of columns needed?
+  |-- Fixed (2 columns on mobile, 3 on desktop) -->
+  |     CSS Grid with media queries or container queries
+  |     grid-template-columns: 1fr 1fr (mobile) → 1fr 1fr 1fr (desktop)
+  |
+  |-- Fluid (automatic columns based on available space) -->
+  |     CSS Grid with auto-fill + minmax
+  |     grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr))
+  |
+  |-- Sidebar + content -->
+  |     |-- Mobile: stack vertically (sidebar on top)
+  |     |-- Desktop: grid with sidebar-fixed + content-fluid
+```
+
+---
 
 ## Workflow
 
@@ -168,6 +226,112 @@ button, a, input, select {
   gap: 12px; /* at least 8px gap between targets */
 }
 ```
+
+### Step 7: Responsive Navigation Patterns
+```css
+/* Mobile: hamburger menu */
+.nav-links {
+  display: none; /* hidden on mobile */
+}
+
+.nav-toggle:checked + .nav-links {
+  display: flex; /* shown when toggled */
+  flex-direction: column;
+}
+
+/* Desktop: horizontal nav */
+@media (min-width: 768px) {
+  .nav-links {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+  }
+
+  .nav-toggle {
+    display: none; /* hide hamburger on desktop */
+  }
+}
+```
+
+### Step 8: Responsive Images
+```html
+<!-- Responsive image with srcset -->
+<img
+  src="photo-640.jpg"
+  srcset="
+    photo-640.jpg 640w,
+    photo-768.jpg 768w,
+    photo-1024.jpg 1024w,
+    photo-1280.jpg 1280w
+  "
+  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+  alt="Description"
+  style="max-width: 100%; height: auto;"
+/>
+```
+
+## Common Pitfalls
+
+### 1. Desktop-First CSS
+```css
+/* BAD -- desktop-first: base = desktop, then override for mobile */
+.card { flex-direction: row; }
+@media (max-width: 767px) { .card { flex-direction: column; } }
+
+/* GOOD -- mobile-first: base = mobile, then expand */
+.card { flex-direction: column; }
+@media (min-width: 768px) { .card { flex-direction: row; } }
+```
+
+### 2. Arbitrary Breakpoints
+Using `@media (max-width: 850px)` or `@media (min-width: 900px)` creates inconsistencies. Always use a predefined breakpoint system.
+
+### 3. Component Based on Viewport
+A `Card` component should respond to its container, not the viewport. A card in a narrow sidebar and a card in a wide main area should use the same breakpoint values — which is only possible with container queries.
+
+### 4. Fixed Font Sizes
+```css
+/* BAD -- text too large on mobile, too small on 4K */
+font-size: 16px;
+
+/* GOOD -- fluid typography scales naturally */
+font-size: clamp(0.875rem, 1vw + 0.75rem, 1.125rem);
+```
+
+### 5. No Mobile Navigation Strategy
+Mobile users need touch-friendly navigation. Hamburger menus, bottom nav bars, or collapsible sections are essential.
+
+## Compared With
+
+| Approach | Responsiveness | Browser Support | Component-Level | Complexity |
+|----------|---------------|-----------------|-----------------|------------|
+| Viewport media queries | Page-level | 100% | No | Low |
+| Container queries | Component-level | ~90% | Yes | Medium |
+| CSS Grid auto-fill | Layout-level | 98% | Yes | Low |
+| Flexbox wrap | Simple layout | 100% | Yes | Low |
+| Tailwind responsive | Utility-level | 100% | No | Low |
+
+## Performance Considerations
+
+- Container queries trigger style recalculation on container resize. For many containers on a page, use `contain: layout style` to limit scope
+- Viewport media queries have near-zero performance cost
+- `clamp()` is evaluated once per render and has no runtime overhead
+- CSS Grid with `auto-fill`/`minmax` is highly optimized in modern browsers
+- Avoid `ResizeObserver`-based responsive JS — prefer native container queries
+
+## Accessibility Considerations
+
+- Touch targets must be at least 44x44px (WCAG 2.5.8)
+- Navigation patterns must work with keyboard (not just touch)
+- Responsive layouts must maintain focus order (DOM order, not visual order)
+- Zoom shouldn't break layout — use rem/em, not px, for spacing
+- Text must be resizable up to 200% without losing content
+
+## Security Considerations
+
+- Container queries cannot be used for tracking (no script injection)
+- No specific security concerns unique to responsive design
+- CSS injection via user-controlled styles could affect responsive breakpoints
 
 ## Rules
 - Mobile-first: always write base styles for smallest screen, then `min-width` media queries.

@@ -8,7 +8,7 @@ compatibility:
   codex: true
   windsurf: true
 tags: [mobile, dotnet, maui, phase-7]
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 ---
@@ -33,14 +33,6 @@ Phrases: ".NET MAUI", "MAUI app", "Xamarin", "MAUI Shell", "MAUI page", "MAUI MV
 MAUI solution with: AppShell, Pages with ViewModels, Services, Platform-specific code in Platforms/ folder, CommunityToolkit.Mvvm integration.
 
 ### Response Format
-```
-<maui-app>
-<shell>{routes, flyout/tab structure}</shell>
-<pages>{page-viewmodel pairs, bindings}</pages>
-<services>{DI registration, platform services}</services>
-<platform>{platform-specific handlers}</platform>
-</maui-app>
-```
 No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
 
 ### Completion Criteria
@@ -52,6 +44,40 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 8000 tokens
+
+## Architecture Decision Trees
+
+### Shell vs NavigationPage
+```
+App navigation structure?
+├── Tab bar + flyout menu → Shell (FlyoutItem, TabBar, Tab)
+│   Pros: Built-in navigation bar, flyout, tabs, search, back behavior
+├── Simple stack navigation → NavigationPage
+│   Push/pop modal stack, simpler API
+└── Tabbed app without flyout → TabbedPage
+    Simpler than Shell, but less flexible
+```
+
+### MVVM Framework
+```
+Team preference?
+├── CommunityToolkit.Mvvm → Source generators, [ObservableProperty], [RelayCommand]
+│   Pros: Minimal boilerplate, compile-time binding validation
+├── Prism.Maui → Full MVVM framework, navigation service, DI integration
+│   Pros: Navigation service, regions, platform service abstraction
+└── Manual INotifyPropertyChanged → Lightweight, no dependency
+    Cons: More code, no source generators
+```
+
+### Platform-Specific Code Strategy
+```
+Volume of platform code?
+├── Small (1-5 specialized views) → #if ANDROID / #if IOS preprocessor
+├── Medium → Platform handlers in MauiProgram.cs ConfigureMauiHandlers
+│   Preferred approach — maps cross-platform properties to native views
+└── Large → Conditional compilation with partial class files per platform
+    Use Platforms/Android/, Platforms/iOS/ folders for large blocks
+```
 
 ## Workflow
 
@@ -96,6 +122,15 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 - **Android WebView mixed content**: `usesCleartextTraffic="true"` in AndroidManifest for HTTP resources in WebView.
 - **XAML Hot Reload limitations**: Doesn't work for constructor changes, new page creation, or C# changes — only XAML property edits.
 
+## Anti-Patterns
+
+- **Code-behind with business logic**: Keep to DI constructor + InitializeComponent
+- **Singleton ViewModels**: ViewModels should be transient — new instance per navigation
+- **Messaging abuse**: WeakReferenceMessenger for cross-ViewModel, not for general pub-sub
+- **Direct static navigation calls**: Use Shell routing — never instantiate pages directly
+- **Platform API calls without #if guard**: Platform-specific APIs crash on unsupported targets
+- **Ignoring linker configuration**: Linker strips dynamically accessed types — preserve them explicitly
+
 ## Configuration Reference
 
 ```xml
@@ -103,6 +138,12 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 <PropertyGroup Condition="$(TargetFramework.Contains('android'))">
   <AndroidSigningKeyStore>release.keystore</AndroidSigningKeyStore>
   <AndroidSigningKeyAlias>app-alias</AndroidSigningKeyAlias>
+</PropertyGroup>
+
+<!-- .csproj — iOS version -->
+<PropertyGroup Condition="$(TargetFramework.Contains('ios'))">
+  <CFBundleVersion>1.0.0</CFBundleVersion>
+  <CFBundleShortVersionString>1.0</CFBundleShortVersionString>
 </PropertyGroup>
 ```
 

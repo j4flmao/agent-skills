@@ -316,6 +316,154 @@ Scalability: DataHub scales horizontally by adding GMS instances. Search scales 
 | SQLGlot | SQL parser for lineage extraction |
 | Great Expectations | Data quality for catalog integration |
 
+### Catalog Implementation Patterns
+
+#### DataHub Ingestion Pipeline
+
+```yaml
+# DataHub ingestion recipe: snowflake + dbt + tableau
+datahub_ingestion:
+  source:
+    type: snowflake
+    config:
+      account_id: "xyz12345"
+      warehouse: "transforming"
+      include_views: true
+      include_tables: true
+      profiling:
+        enabled: true
+        profile_table_level_only: false
+        profile_pattern:
+          allow: ["analytics.*"]
+  
+  source:
+    type: dbt
+    config:
+      manifest_path: "./target/manifest.json"
+      catalog_path: "./target/catalog.json"
+      sources_path: "./target/sources.json"
+      enable_meta_mapping: true
+      node_type_pattern:
+        allow: ["model", "source", "test"]
+  
+  source:
+    type: tableau
+    config:
+      connect_uri: "https://10ay.online.tableau.com"
+      site: "my-site"
+      projects: ["default", "executive"]
+      extract_lineage: true
+      ingest_dashboards: true
+  
+  sink:
+    type: datahub-rest
+    config:
+      server: "http://datahub-gms:8080"
+```
+
+#### Metadata Model
+
+```yaml
+metadata_model:
+  dataset:
+    required_fields:
+      - id: "fully qualified name"
+      - name: "human-readable name"
+      - schema: { columns: [{ name, type, description, nullable }] }
+      - owner: "team or individual"
+      - tier: [1, 2, 3]
+      - domain: "business domain tag"
+    
+    optional_fields:
+      - glossary_terms: ["term1", "term2"]
+      - tags: ["PII", "FINANCIAL", "EXPERIMENTAL"]
+      - lineage: { upstream: [], downstream: [] }
+      - quality: { score: 0.95, last_checked: "2026-05-01" }
+      - usage: { weekly_queries: 500, top_users: [] }
+      - profile: { row_count: 5000000, size_bytes: 1073741824 }
+  
+  glossary_term:
+    required_fields:
+      - id: "term_id"
+      - name: "term_name"
+      - description: "term definition"
+      - domain: "responsible domain"
+    
+    optional_fields:
+      - synonyms: ["also_known_as"]
+      - related_terms: ["parent", "child"]
+      - stewardship: { owner: "data_governance@org.com" }
+
+  tag:
+    required_fields:
+      - name: "tag_name"
+      - description: "tag purpose"
+    optional_fields:
+      - color: "#hex"
+      - inherit_from_dataset: true
+```
+
+#### Catalog API Usage
+
+```python
+# DataHub GraphQL queries for catalog integration
+import requests
+
+def search_datasets(keyword, domain=None, tier=None):
+    query = """
+    query searchDatasets($query: String!, $filters: [FacetFilterInput!]) {
+        search(input: { type: DATASET, query: $query, filters: $filters }) {
+            total results { entity { urn type ...on Dataset { name platform { name } } } }
+        }
+    }
+    """
+    variables = {"query": keyword, "filters": []}
+    if domain: variables["filters"].append({"field": "domains", "value": domain})
+    if tier: variables["filters"].append({"field": "tier", "value": str(tier)})
+    
+    response = requests.post(
+        "http://datahub-gms:8080/api/graphql",
+        json={"query": query, "variables": variables},
+        headers={"Authorization": "Bearer <token>"}
+    )
+    return response.json()
+
+def update_metadata(dataset_urn, metadata):
+    """Update dataset description and tags via DataHub API"""
+    mutation = """
+    mutation updateDataset($urn: String!, $input: DatasetUpdateInput!) {
+        updateDataset(urn: $urn, input: $input) { urn }
+    }
+    """
+    variables = {
+        "urn": dataset_urn,
+        "input": {
+            "editableProperties": {
+                "description": metadata.get("description", ""),
+                "tags": metadata.get("tags", [])
+            }
+        }
+    }
+    return requests.post("http://datahub-gms:8080/api/graphql",
+        json={"query": mutation, "variables": variables})
+```
+
+### Decision Trees
+
+#### Catalog Implementation
+```
+Team size and metadata requirements?
+├── Small team (< 10), need quick data discovery
+│   └── Amundsen (simple, search-focused)
+├── Mid-size team, need lineage + governance
+│   ├── Python/Spark/Airflow stack → DataHub (best lineage support)
+│   └── dbt-native stack → OpenMetadata (dbt integration)
+├── Large enterprise, compliance-driven
+│   └── DataHub or Atlan (strong governance, RBAC, audit)
+└── Hadoop/Hive-centric ecosystem
+    └── Apache Atlas (native Hive/HBase/Spark integration)
+```
+
 ## Rules
 - Every production dataset documented in catalog with owner
 - Column-level lineage tracked for all critical data assets
@@ -329,6 +477,9 @@ Scalability: DataHub scales horizontally by adding GMS instances. Search scales 
 - Metadata quality scored and published for accountability
 - Glossary terms linked to columns, not just tables
 - Catalog used as single entry point for data discovery
+- Automate metadata ingestion from data sources, dbt, and BI tools
+- Link glossary terms, tags, and ownership for searchable metadata
+- Expose catalog via API for integration with other tools
 
 ## References
   - references/catalog-api-examples.md — Catalog API Examples

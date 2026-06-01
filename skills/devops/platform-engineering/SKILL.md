@@ -50,11 +50,17 @@ Markdown with architecture diagrams (ASCII), decision tables, and configuration 
 ### Max Response Length
 Unlimited for architecture design. 50 lines for configuration snippets.
 
+## Decision Tree: IDP Platform Components
+- Developer portal needed → Backstage (open source, extensible), Port (SaaS, low-code), or custom
+- Infrastructure orchestration → Crossplane (Kubernetes-native), Terraform/Pulumi (stateful), or custom
+- Service catalog → Backstage catalog (YAML/API registration), automated ingestion from K8s/CI/CD
+- Software templates → Backstage scaffolder (React + JavaScript), custom API, Cookiecutter
+- Policy enforcement → OPA/Gatekeeper, Kyverno, or custom validation webhooks
+- Docs platform → Backstage TechDocs (MkDocs), GitBook, Confluence API
+
 ## Workflow
 
 ### Step 1: Assess Current State
-Identify existing tools, team topology, and friction points.
-
 | Area | Questions |
 |------|-----------|
 | CI/CD | What pipeline tool? How long to add a new service? |
@@ -89,15 +95,183 @@ Orchestrator (Terraform/Pulumi/Crossplane)
 - Automated discovery (ingest from Kubernetes, Terraform, CI/CD)
 - Linked to monitoring, cost, security, and testing data
 
-### Step 5: Rollout & Iterate
-- Phase 1: Service catalog + documentation (quick wins)
-- Phase 2: Software templates for 2-3 common paths
-- Phase 3: Self-service actions for infrastructure
-- Phase 4: Policy enforcement + cost/showback
-- Phase 5: Inner source and platform contributions
+### Step 5: Backstage Configuration — Catalog
+```yaml
+# app-config.yaml
+catalog:
+  rules:
+  - allow: [Component, API, Resource, Group, User, System, Domain]
+  providers:
+    kubernetes:
+      schedule:
+        frequency: { minutes: 5 }
+        timeout: { seconds: 90 }
+    terraform:
+      schedule:
+        frequency: { minutes: 15 }
+        timeout: { minutes: 2 }
+      resources:
+      - group: '.*'
+        type: '.*'
+        stacks: ['production']
 
-## Platform Maturity Model
+kubernetes:
+  serviceLocatorMethod:
+    type: 'multiTenant'
+  clusterLocatorMethods:
+  - type: 'config'
+    clusters:
+    - name: production
+      url: https://prod-cluster.example.com
+      authProvider: serviceAccount
+      skipTLSVerify: false
+      dashboardUrl: https://k8s-dashboard.example.com
+```
 
+### Step 6: Backstage Software Template
+```yaml
+apiVersion: backstage.io/v1beta1
+kind: Template
+metadata:
+  name: microservice-template
+  title: New Microservice
+  description: Scaffold a new microservice with CI/CD, K8s, and monitoring
+spec:
+  owner: platform-team
+  type: service
+  parameters:
+  - title: Service Details
+    properties:
+      serviceName:
+        title: Service Name
+        type: string
+        pattern: '^[a-z0-9-]+$'
+      description:
+        title: Description
+        type: string
+      language:
+        title: Language
+        type: string
+        enum: [typescript, python, go, java]
+      owner:
+        title: Team
+        type: string
+        ui:field: OwnerPicker
+        ui:options:
+          allowedKinds: [Group]
+  - title: Infrastructure
+    properties:
+      databaseRequired:
+        title: Database Required?
+        type: boolean
+        default: false
+      cacheRequired:
+        title: Cache Required?
+        type: boolean
+        default: false
+  steps:
+  - id: fetch-base
+    name: Fetch Base Template
+    action: fetch:template
+    input:
+      url: ./skeletons/microservice
+      values:
+        serviceName: ${{ parameters.serviceName }}
+        language: ${{ parameters.language }}
+        owner: ${{ parameters.owner }}
+  - id: create-repo
+    name: Create Repository
+    action: publish:github
+    input:
+      repoUrl: github.com?owner=myorg&repo=${{ parameters.serviceName }}
+      defaultBranch: main
+  - id: register-catalog
+    name: Register in Catalog
+    action: catalog:register
+    input:
+      repoContentsUrl: ${{ steps['create-repo'].output.repoContentsUrl }}
+      catalogInfoPath: /catalog-info.yaml
+  - id: provision-infra
+    name: Provision Infrastructure
+    action: custom:provision-infra
+    if: ${{ parameters.databaseRequired }}
+    input:
+      serviceName: ${{ parameters.serviceName }}
+      environment: production
+      resources:
+      - type: postgres
+        size: small
+  output:
+    links:
+    - title: Repository
+      url: ${{ steps['create-repo'].output.remoteUrl }}
+    - title: Open in Catalog
+      ui:redirect: /catalog/default/component/${{ parameters.serviceName }}
+```
+
+### Step 7: Backstage Custom Action (TypeScript)
+```typescript
+import { createTemplateAction } from '@backstage/plugin-scaffolder-backend';
+
+export const provisionDatabaseAction = createTemplateAction<{
+  serviceName: string;
+  environment: string;
+  engine: string;
+}>({
+  id: 'custom:provision-database',
+  description: 'Provisions a database instance for a service',
+  schema: {
+    input: {
+      type: 'object',
+      properties: {
+        serviceName: { type: 'string' },
+        environment: { type: 'string' },
+        engine: { type: 'string', enum: ['postgres', 'mysql', 'redis'] },
+      },
+    },
+  },
+  async handler(ctx) {
+    ctx.logger.info(`Provisioning ${ctx.input.engine} for ${ctx.input.serviceName}`);
+    // Call Terraform Cloud API or Crossplane to provision
+    const result = await provisionDatabase({
+      name: `${ctx.input.serviceName}-${ctx.input.environment}`,
+      engine: ctx.input.engine,
+    });
+    ctx.output('connectionString', result.connectionString);
+    ctx.output('databaseHost', result.host);
+  },
+});
+```
+
+### Step 8: Golden Path Content — New Microservice
+```
+service-name/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml              # Lint, test, build, scan
+│       └── cd.yml              # Deploy to staging/prod
+├── src/
+│   ├── index.ts                # Entry point
+│   ├── health.ts               # /health/live, /health/ready, /health/startup
+│   └── routes/
+│       └── api.ts              # API route handler
+├── k8s/
+│   ├── deployment.yaml         # Production deployment manifest
+│   ├── service.yaml            # Service manifest
+│   ├── ingress.yaml            # Ingress with TLS
+│   ├── hpa.yaml                # HPA config
+│   └── kustomization.yaml      # Kustomize overlay
+├── config/
+│   ├── staging.yaml
+│   └── production.yaml
+├── Dockerfile
+├── package.json
+├── tsconfig.json
+├── catalog-info.yaml           # Backstage catalog registration
+└── mkdocs.yml                  # TechDocs documentation
+```
+
+### Step 9: Platform Maturity Model
 ```yaml
 platform_maturity:
   level_0_no_platform:
@@ -108,7 +282,7 @@ platform_maturity:
       - "Each team reinvents CI/CD, monitoring, deployment"
       - "No service catalog or discovery"
     dev_experience: "Slow — days to provision resources, weeks to add new service"
-    
+
   level_1_automated_infrastructure:
     description: "Infrastructure automation exists but is team-specific"
     characteristics:
@@ -117,7 +291,7 @@ platform_maturity:
       - "Basic monitoring and alerting"
       - "Shared credentials management"
     dev_experience: "Better — hours to provision, but inconsistent across teams"
-    
+
   level_2_platform_emerges:
     description: "Dedicated platform team forms, shared tooling emerges"
     characteristics:
@@ -126,7 +300,7 @@ platform_maturity:
       - "Service catalog with basic metadata"
       - "Standardized container images and base configurations"
     dev_experience: "Good — minutes to provision, consistent tooling across teams"
-    
+
   level_3_internal_developer_platform:
     description: "Self-service IDP with developer portal"
     characteristics:
@@ -136,7 +310,7 @@ platform_maturity:
       - "Automated cost tagging and showback"
       - "Policy as code with automated guardrails"
     dev_experience: "Excellent — minutes to scaffold service, click to provision infra"
-    
+
   level_4_platform_ecosystem:
     description: "Platform is a product with inner source contributions"
     characteristics:
@@ -148,60 +322,47 @@ platform_maturity:
     dev_experience: "Exceptional — platform anticipates needs, teams focus on business logic"
 ```
 
-## Golden Path Design Patterns
+### Step 10: Platform Team Models
+| Model | Structure | Best For |
+|-------|-----------|----------|
+| **Platform as a service** | Dedicated team builds and maintains platform | >50 engineers, multiple product teams |
+| **Platform as a product** | Platform team with product manager, roadmap, and SLAs | >100 engineers, formal adoption |
+| **Federated platform** | Platform core + embedded platform champions | Large org, diverse tech stacks |
+| **Platform enablement** | Platform team enables teams to self-serve, minimal gatekeeping | DevOps-mature org, strong SRE culture |
 
+### Step 11: Adoption KPIs
+| Metric | Target | Measurement |
+|--------|--------|-------------|
+| Time-to-production for new service | < 1 day | From first PR to production traffic |
+| Golden path adoption rate | > 80% | % of new services using golden paths |
+| Platform NPS | > 30 | Quarterly developer survey |
+| Self-service completion rate | > 90% | % of infra requests via self-service |
+| Platform uptime | > 99.9% | Platform components availability |
+| On-call burden reduction | 50% | Reduction in OpsGenie alerts per team |
+
+### Step 12: IDP Cost Showback
 ```yaml
-golden_path_patterns:
-  path_structure:
-    what_it_produces:
-      - "Source repository with starter code template"
-      - "CI/CD pipeline configuration"
-      - "Containerization (Dockerfile, Helm chart, or serverless config)"
-      - "Monitoring dashboard and alert rules"
-      - "Documentation template (README, API docs, runbook)"
-      - "Security scanning configuration"
-      - "Environment configurations (dev, staging, prod)"
-      
-    scaffolding_approach:
-      template_based: "Cookiecutter / yeoman / plop — generate repo from template"
-      pipeline_integrated: "Backstage software templates — scaffold from developer portal"
-      composition: "Assemble from modular building blocks — terraform modules, pipeline templates"
-      
-  exit_strategy:
-    when_to_exit: "Team outgrows golden path defaults (custom framework, unusual architecture)"
-    how_to_exit: "Fork the template, document deviations, register custom service in catalog"
-    platform_role: "Accept deviations, review for platform improvement opportunities, maintain compatibility"
-    
-  measurement:
-    adoption: "% of new services created via golden path"
-    satisfaction: "Developer NPS on golden path experience"
-    productivity: "Time from idea to production for golden path services"
-    maintenance: "Cost to update golden path when platform changes"
-```
-
-## Platform Adoption Anti-Patterns
-
-```yaml
-adoption_anti_patterns:
-  build_it_and_they_will_come:
-    problem: "Platform team builds features without developer input"
-    sign: "Low adoption rates, teams building parallel solutions"
-    solution: "Treat platform as product — developer research, feedback loops, beta programs"
-    
-  forced_adoption:
-    problem: "Mandating platform usage without flexibility"
-    sign: "Shadow platforms emerge, teams find workarounds"
-    solution: "Golden paths with escape hatches, demonstrate value before mandating"
-    
-  platform_team_as_ops:
-    problem: "Platform team becomes bottleneck — every request goes through them"
-    sign: "Platform team doing manual work, no self-service"
-    solution: "Prioritize self-service capabilities, automate common requests"
-    
-  over_abstraction:
-    problem: "Platform hides too much — developers can't debug or customize"
-    sign: "Teams can't diagnose production issues, frustrated by magic"
-    solution: "Expose appropriate details, provide debugging tools, document internals"
+# Backstage cost plugin configuration
+costInsights:
+  products:
+    compute:
+      name: Kubernetes Compute
+      aggregation: [namespace]
+      breakdown: [deployment, service]
+    storage:
+      name: Cloud Storage
+      aggregation: [bucket, volume]
+    database:
+      name: Managed Databases
+      aggregation: [instance]
+  currency: USD
+  engineerCost: 150000  # Fully loaded annual cost
+  alerts:
+    - title: Cost Anomaly Detected
+      filter:
+        product: compute
+        metric: cost
+        change: 50%  # Alert if cost jumps 50%+
 ```
 
 ## Rules
@@ -213,6 +374,25 @@ adoption_anti_patterns:
 - Adopt incrementally — level 1 before level 2, never skip maturity levels
 - Platform features should be optional first, compelling second, default third
 - Every golden path must include observability, security, and cost tracking
+
+## Production Considerations
+- Backstage needs PostgreSQL and adequate compute for catalog processing.
+- Software templates should include CodeQL/Snyk scanning by default.
+- Service catalog entities must auto-expire if not refreshed within 30 days.
+- Platform SLAs: catalog < 200ms p99, template scaffolding < 30s.
+- Monitor golden path adoption rates dashboards weekly.
+- Conduct quarterly platform roadmap reviews with developer feedback.
+- Implement cost showback early to drive efficient resource usage.
+
+## Anti-Patterns
+- Build it and they will come — platform built without developer input, low adoption.
+- Forced adoption — teams create shadow platforms as workarounds.
+- Platform team as ops bottleneck — every request goes through them, no self-service.
+- Over-abstraction — too much hidden, developers can't debug or customize.
+- Boiling the ocean — trying to build everything at once, never shipping.
+- Not serving your own dogfood — platform team doesn't use the platform.
+- Gold-plating — perfecting features for the 10% case, ignoring the 90%.
+- No exit strategy — golden paths become golden handcuffs.
 
 ## References
   - references/backstage-config.md — Backstage Configuration Guide

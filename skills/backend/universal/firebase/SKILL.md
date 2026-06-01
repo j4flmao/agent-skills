@@ -4,7 +4,7 @@ description: >
   Use this skill when working with Firebase platform — Firestore, Authentication, Cloud Storage, Cloud Functions, Hosting, Security Rules, Firebase Admin SDK, Firebase Extensions.
   This skill enforces: proper security rules, Firestore data modeling (no nesting >3), auth provider configuration, function cold start mitigation, cost-aware query design.
   Do NOT use for: Supabase, AWS Amplify, custom backend, general PostgreSQL/NoSQL database design.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -47,6 +47,43 @@ Produce artifact directly. No preamble, no postamble, no explanations. No filler
 
 ### Max Response Length
 4096 tokens
+
+## Decision Tree
+
+### Firestore vs Realtime Database?
+
+```
+What data access pattern do you need?
+  ├── Complex queries, filtering, sorting, transactions
+  │   └── Firestore — rich querying, multi-collection, auto-scaling
+  ├── Low-latency real-time sync, simple key-value data
+  │   └── Realtime Database — lower latency, simpler pricing (bandwidth), WebSocket-native
+  └── I need both
+      └── Use Firestore for structured data, RTDB for presence/live cursors
+```
+
+### Data Model: Subcollection vs Top-Level?
+
+```
+How does this data relate and grow?
+  ├── 1:few relationship (<100 items, bounded), always accessed together
+  │   └── Subcollection — query within parent document context
+  ├── 1:many relationship (unbounded), independent queries needed
+  │   └── Top-level collection — separate queries, no parent dependency
+  └── Many:many or cross-collection needs
+      └── Top-level collection + composite indexes
+```
+
+### Cloud Function Trigger Location?
+
+```
+Where in the data lifecycle?
+  ├── After document write → onCreate, onUpdate, onDelete
+  ├── On HTTP request → onRequest (Express-style handler)
+  ├── On schedule → pubsub.schedule (cron-like)
+  ├── On auth event → functions.auth.user().onCreate
+  └── On storage event → functions.storage.object().onFinalize
+```
 
 ## Workflow
 
@@ -194,6 +231,137 @@ const decoded = await adminAuth.verifyIdToken(idToken);
 if (decoded.role === 'admin') { /* allow */ }
 ```
 
+### Step 6: Firestore Query Patterns
+
+```typescript
+// Efficient queries — always use existing indexes
+const posts = await adminDb
+  .collection('posts')
+  .where('published', '==', true)
+  .where('tags', 'array-contains', 'javascript')
+  .orderBy('createdAt', 'desc')
+  .limit(20)
+  .get();
+
+// Pagination with cursors
+const firstPage = await adminDb
+  .collection('posts')
+  .orderBy('createdAt', 'desc')
+  .limit(10)
+  .get();
+
+const lastVisible = firstPage.docs[firstPage.docs.length - 1];
+const secondPage = await adminDb
+  .collection('posts')
+  .orderBy('createdAt', 'desc')
+  .startAfter(lastVisible)
+  .limit(10)
+  .get();
+
+// Aggregation (use counters, don't count docs)
+async function updatePostCount(userId: string, delta: number) {
+  await adminDb.runTransaction(async (tx) => {
+    const ref = adminDb.doc(`counters/${userId}`);
+    const snap = await tx.get(ref);
+    const current = snap.data()?.postCount ?? 0;
+    tx.set(ref, { postCount: current + delta }, { merge: true });
+  });
+}
+```
+
+### Step 7: Batched Writes and Transactions
+
+```typescript
+// Batched write (atomic, up to 500 operations)
+async function createPostWithTags(post: Post, tagIds: string[]) {
+  const batch = adminDb.batch();
+  const postRef = adminDb.collection('posts').doc();
+  batch.set(postRef, { ...post, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+
+  for (const tagId of tagIds) {
+    const tagRef = adminDb.doc(`tags/${tagId}`);
+    batch.update(tagRef, { postCount: admin.firestore.FieldValue.increment(1) });
+  }
+
+  await batch.commit();
+}
+
+// Transaction (read-then-write, strong consistency)
+async function transferPoints(fromId: string, toId: string, amount: number) {
+  await adminDb.runTransaction(async (tx) => {
+    const fromRef = adminDb.doc(`users/${fromId}`);
+    const toRef = adminDb.doc(`users/${toId}`);
+    const fromSnap = await tx.get(fromRef);
+    const toSnap = await tx.get(toRef);
+
+    if (fromSnap.data()!.points < amount) {
+      throw new Error('Insufficient points');
+    }
+
+    tx.update(fromRef, { points: admin.firestore.FieldValue.increment(-amount) });
+    tx.update(toRef, { points: admin.firestore.FieldValue.increment(amount) });
+  });
+}
+```
+
+### Step 8: Cost Optimization
+
+| Strategy | Impact | Implementation |
+|----------|--------|---------------|
+| Limit document reads | 90% cost reduction | Paginate, cache, avoid listing all docs |
+| Use collection group queries instead of subcollection per doc | Avoid per-doc reads | @firebase/ Firestore collection group indexes |
+| Denormalize frequently-read data | Fewer reads | Store user displayName directly in post documents |
+| Avoid listening to large collections | Unbounded reads | Always filter with where() clauses |
+| Use Firestore bundle for static data | Zero reads for cached data | Generate bundles on schedule, deploy to CDN |
+| Shard hot documents at >1 write/s | Avoid contention | Add random suffix to document IDs |
+| Set TTL policies | Auto-delete old data | Firestore TTL policy on collections |
+
+### Step 9: Firebase Extensions
+
+Use built-in extensions to reduce custom code:
+- **Resize Images**: auto-resize on storage upload
+- **Translate Text**: auto-translate Firestore fields using Cloud Translation
+- **Trigger Email**: send emails from Firestore writes
+- **Delete User Data**: cascade delete when auth user is removed
+- **Firestore Stripe Subscriptions**: manage subscriptions via Firestore writes
+
+## Production Considerations
+
+| Concern | Practice |
+|---------|----------|
+| Firestore max 1 write/s per doc | Use distributed counters for hot documents |
+| Cold start for Functions | Set minInstances for latency-sensitive endpoints. Budget impact: cost per idle instance |
+| Function timeouts | Set timeout: 60s for HTTP, 540s for event-driven. Increase for heavy processing |
+| Memory allocation | 256MB for light triggers, 1GB+ for image processing, 2GB+ for ML/model loading |
+| Emulator suite | Run locally for development. Never develop against production |
+| Point-in-time recovery | Enable PITR (7d) for production projects. Additional cost |
+| App Check | Enable to block unauthorized client requests. Supports reCAPTCHA, App Attest, SafetyNet |
+| Secret management | Store service account JSON in Secret Manager, never in repo |
+
+## Security
+
+| Risk | Mitigation |
+|------|-----------|
+| Unsecured Firestore | Validate security rules with Firebase emulator. Deploy rules before app |
+| Over-permissive read rules | Always scope reads with auth checks. Don't allow `read: if true` for private data |
+| Client-side validation bypass | Security rules validate every request independently |
+| Function endpoint abuse | Callable functions verify auth automatically. HTTP functions must validate |
+| Storage public access | Use signed URLs with expiry for private files. Block public by default |
+| API key exposure | Firebase API keys are public-by-design. Use App Check for additional security |
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It's Bad | Fix |
+|-------------|-------------|-----|
+| Deeply nested data >20 levels | Cannot query, hard to secure | Use subcollections or top-level collections |
+| Counting documents with get() | O(N) reads, expensive | Use distributed counter or maintained count field |
+| Listening to entire collection | Unbounded reads and updates | Always use where() filters |
+| Reading document in security rule for every access | 1 extra read per access | Use custom claims for role info |
+| Functions without error handling | Silent failures, debugging nightmare | Always wrap in try/catch, log errors |
+| Huge batched writes (>500 ops) | Batch limit is 500 operations | Split into multiple batches or use more targeted updates |
+| Storing arrays for data that grows | Cannot atomically modify large arrays | Use subcollection or map with keys |
+| Over-indexing | Each index adds write cost | Only create indexes for actual queries |
+
 ## Rules
 - Firestore: max 1 write per second on a document — use aggregations for counters.
 - Use subcollections instead of nested objects when data grows unbounded.
@@ -204,6 +372,9 @@ if (decoded.role === 'admin') { /* allow */ }
 - Enable Firestore PITR (point-in-time recovery) for production.
 - Functions: use `minInstances` for latency-sensitive endpoints (cost trade-off).
 - Store service account JSON outside the repo — use secret manager.
+- Every Firebase SDK call from client must be scoped by security rules.
+- Denormalize for read performance — data duplication is acceptable in Firestore.
+- Always use emulator for development. Never point a client SDK at production Firestore during development.
 
 ## References
   - references/cloud-functions.md — Cloud Functions

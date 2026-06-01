@@ -1,14 +1,19 @@
 ---
 name: serverless
 description: >
-  Use this skill when the user says 'serverless', 'Lambda', 'Cloud Functions',
-  'cold start', 'function optimization', 'event source', 'Serverless Framework',
-  'SAM', 'AWS Lambda', 'Azure Functions', 'Google Cloud Functions', 'Function
-  as a Service', 'FaaS', 'SQS Lambda', 'S3 event', 'API Gateway Lambda',
-  'provisioned concurrency', 'Lambda layer', 'Lambda container image'.
-  Covers: Lambda functions, cold start mitigation, function optimization, event
-  sources, Serverless Framework, SAM, IAM for Lambda, monitoring.
-  Do NOT use this for: EC2, ECS, EKS, or container orchestration.
+  Use this skill when the user says 'serverless', 'lambda', 'aws
+  lambda', 'functions', 'function as a service', 'faas', 'azure
+  functions', 'google cloud functions', 'knative', 'openfaas',
+  'serverless framework', 'chalice', 'zappa', 'apigw', 'api
+  gateway', 'event-driven', 'cold start', 'provisioned
+  concurrency', 'reserved concurrency', 'lambda layers',
+  'step functions', 'durable functions', 'serverless
+  observability', 'serverless monitoring', 'serverless
+  security', 'serverless cost', 'serverless best practices',
+  'serverless framework deployment'.
+  Covers: AWS Lambda, Azure Functions, Google Cloud Functions,
+  serverless framework, event-driven patterns, cold start
+  optimization, monitoring, security, and cost management.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -17,69 +22,69 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [devops, serverless, lambda, faas, phase-5]
+tags: [devops, serverless, faas, lambda, event-driven, phase-5]
 ---
 
 # Serverless
 
 ## Purpose
-Build and optimize serverless functions using AWS Lambda and the Serverless Framework.
+Design, deploy, and operate serverless functions (AWS Lambda, Azure Functions, GCP Cloud Functions) with event-driven patterns, cold start optimization, monitoring, security, and cost management.
 
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "serverless", "Lambda", "Cloud Functions", "cold start", "function optimization", "event source", "Serverless Framework", "SAM", "provisioned concurrency", "Lambda layer", "Lambda container image", "SQS Lambda", "S3 event", "API Gateway Lambda".
+Exact user phrases: "serverless", "lambda", "azure functions", "cloud functions", "functions", "faas", "step functions", "serverless framework", "cold start", "provisioned concurrency", "reserved concurrency".
 
 ### Input Context
-Before activating, verify:
-- Cloud provider (AWS, GCP, Azure).
+- Cloud provider (AWS, Azure, GCP).
 - Runtime (Node.js, Python, Go, Java, .NET, Rust).
-- Event source (API Gateway, SQS, S3, DynamoDB Streams, EventBridge).
-- Cold start sensitivity (latency requirements).
+- Event sources (API Gateway, SQS, S3, EventBridge, Kafka, Timer).
+- Deployment framework (Serverless Framework, SAM, CDK, Pulumi, Terraform).
+- Existing observability and security tools.
 
 ### Output Artifact
-Writes to `serverless.yml`, `template.yaml` (SAM), `function.zip` build scripts, and/or Terraform for Lambda.
+Serverless function configuration with event source mapping, IAM, monitoring, and deployment config.
 
 ### Response Format
-serverless.yml, SAM template, or Terraform HCL with no extraneous explanation.
-
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+YAML/JSON configuration (serverless.yml, SAM template) or Terraform HCL. No preamble.
 
 ### Completion Criteria
-This skill is complete when:
-- [ ] Function handler is defined with appropriate runtime and memory.
-- [ ] Event source is configured and IAM permissions are scoped.
-- [ ] Cold start mitigation is applied (provisioned concurrency or SnapStart).
-- [ ] Environment variables and secrets are configured.
-- [ ] Monitoring (CloudWatch, X-Ray) and error handling are in place.
+- [ ] Function code with handler, event source, IAM permissions.
+- [ ] Cold start strategy (provisioned concurrency, SnapStart, warmers).
+- [ ] Monitoring: error rate, latency, invocation count, throttles.
+- [ ] Cost estimate for expected invocation volume.
+- [ ] Security: least-privilege IAM, VPC if needed, secrets via env/SSM.
+- [ ] Deployment pipeline (CI/CD with testing and staged deployments).
+- [ ] Observability: CloudWatch or equivalent, structured logging, distributed tracing.
 
 ### Max Response Length
-Direct file write. No response text.
+400 lines.
 
 ## Quick Start
-serverless.yml: service definition → function with handler + runtime + memory → event trigger (HTTP, SQS, S3) → IAM role → CloudWatch logs. Deploy with `sls deploy`.
+Define handler function → Configure event source (API Gateway HTTP API) → Set IAM role (least privilege) → Set memory/timeout → Deploy with Serverless Framework → Monitor with CloudWatch → Tune provisioned concurrency for critical functions.
 
-## When to Use This Skill
-- Building new serverless APIs with API Gateway + Lambda
-- Processing S3 uploads, SQS messages, or DynamoDB Streams
-- Optimizing existing Lambda functions for performance and cost
-- Migrating from monolithic apps to event-driven serverless
+## Decision Tree: Serverless Provider
+| Provider | Runtime Support | Event Sources | Cold Start | Cost Model |
+|----------|----------------|---------------|------------|------------|
+| **AWS Lambda** | Node, Python, Go, Java, .NET, Ruby, Rust (custom) | 15+ native triggers | 1-10ms (SnapStart) | Per ms + requests |
+| **Azure Functions** | C#, Node, Python, Java, PowerShell, Go (custom) | 10+ native triggers | 1-50ms (premium plan) | Per second + requests |
+| **GCP Cloud Functions** | Node, Python, Go, Java, .NET, Ruby | 8+ native triggers | 100-500ms (1st gen) | Per second + invocations |
+| **Cloudflare Workers** | JS/TS, WASM, Python (via Pyodide) | HTTP, KV, D1, R2, Queues | <1ms (v8 isolates) | Per request, very cheap |
+| **Knative / OpenFaaS** | Any (container) | Any | 0-1000ms | Container-based |
 
 ## Core Workflow
 
-### Step 1: Serverless Framework Setup
+### Step 1: Function Configuration
 ```yaml
-# serverless.yml
-service: my-api
-
-frameworkVersion: "4"
+# serverless.yml (AWS Lambda)
+service: user-service
+frameworkVersion: '3'
 
 provider:
   name: aws
-  runtime: nodejs22.x
+  runtime: python3.12
   region: us-east-1
   stage: ${opt:stage, 'dev'}
-  architecture: arm64
   memorySize: 512
   timeout: 30
   logRetentionInDays: 14
@@ -94,206 +99,354 @@ provider:
             - dynamodb:GetItem
             - dynamodb:PutItem
             - dynamodb:Query
-          Resource: !GetAtt MyTable.Arn
+          Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/users-${sls:stage}
+        - Effect: Allow
+          Action:
+            - ssm:GetParameter
+          Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/service/${sls:stage}/*
 
 functions:
   createUser:
-    handler: src/handlers/users.createUser
+    handler: handlers/users.create
     events:
-      - http:
+      - httpApi:
+          method: POST
           path: /users
-          method: post
-          cors: true
-    environment:
-      TABLE_NAME: !Ref MyTable
-      REGION: ${self:provider.region}
+    description: Create a new user record
+    memorySize: 1024
+    reservedConcurrency: 10
 
-resources:
-  Resources:
-    MyTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${self:service}-${self:provider.stage}-users
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: id
-            AttributeType: S
-        KeySchema:
-          - AttributeName: id
-            KeyType: HASH
+  getUser:
+    handler: handlers/users.get
+    events:
+      - httpApi:
+          method: GET
+          path: /users/{id}
+    description: Get user by ID
+    provisionedConcurrency: 5
 ```
 
-### Step 2: Lambda Handler
-```typescript
-// src/handlers/users.ts
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
-import { randomUUID } from "node:crypto";
+### Step 2: Handler Implementation
+```python
+# handlers/users.py
+import json
+import os
+import boto3
+from aws_lambda_powertools import Logger, Tracer, Metrics
+from aws_lambda_powertools.metrics import MetricUnit
+from aws_lambda_powertools.event_handler import APIGatewayRestResolver
 
-const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+logger = Logger(service="user-service")
+tracer = Tracer(service="user-service")
+metrics = Metrics(namespace="UserService", service="user-service")
+app = APIGatewayRestResolver()
 
-interface CreateUserEvent {
-  body: string;
-}
+dynamodb = boto3.resource("dynamodb")
+table = dynamodb.Table(os.environ["TABLE_NAME"])
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: string;
-}
+@app.post("/users")
+@tracer.capture_method
+def create_user():
+    body = app.current_event.json_body
+    user_id = body["id"]
 
-export const createUser = async (event: CreateUserEvent) => {
-  const body: Omit<User, "id" | "createdAt"> = JSON.parse(event.body);
+    # Validate input
+    if not body.get("email"):
+        return {"error": "email required"}, 400
 
-  const user: User = {
-    id: randomUUID(),
-    ...body,
-    createdAt: new Date().toISOString(),
-  };
-
-  await client.send(
-    new PutCommand({
-      TableName: process.env.TABLE_NAME,
-      Item: user,
+    table.put_item(Item={
+        "pk": f"USER#{user_id}",
+        "email": body["email"],
+        "name": body.get("name", ""),
+        "created_at": app.current_event.time
     })
-  );
 
-  return {
-    statusCode: 201,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(user),
-  };
-};
+    metrics.add_metric(name="UserCreated", unit=MetricUnit.Count, value=1)
+    return {"id": user_id, "message": "User created"}, 201
+
+
+@app.get("/users/<id>")
+@tracer.capture_method
+def get_user(id: str):
+    result = table.get_item(Key={"pk": f"USER#{id}"})
+    user = result.get("Item")
+    if not user:
+        return {"error": "not found"}, 404
+    return {"user": user}, 200
+
+
+@metrics.log_metrics
+def handler(event, context):
+    # Structured logging already via powertools
+    logger.info("Processing request", extra={
+        "path": event.get("path"),
+        "method": event.get("httpMethod")
+    })
+    return app.resolve(event, context)
 ```
 
-### Step 3: Event Sources
+### Step 3: Event Source Mapping (SQS + S3 + EventBridge)
 ```yaml
-# SQS trigger
+# serverless.yml — event-driven functions
 functions:
-  orderProcessor:
-    handler: src/handlers/orders.processOrder
+  processOrder:
+    handler: handlers/orders.process
     events:
       - sqs:
-          arn: !GetAtt OrderQueue.Arn
+          arn: !GetAtt OrdersQueue.Arn
           batchSize: 10
           maximumBatchingWindowInSeconds: 5
-          functionResponseTypes:
-            - ReportBatchItemFailures
-
-# S3 event trigger
-functions:
-  imageProcessor:
-    handler: src/handlers/images.processImage
-    events:
-      - s3:
-          bucket: my-uploads-bucket
-          event: s3:ObjectCreated:*
-          rules:
-            - prefix: uploads/
-            - suffix: .jpg
-          existing: true
-
-# DynamoDB Streams
-functions:
-  streamProcessor:
-    handler: src/handlers/streams.processStream
-    events:
-      - stream:
-          type: dynamodb
-          arn: !GetAtt MyTable.StreamArn
-          batchSize: 100
-          startingPosition: LATEST
-          maximumRetryAttempts: 3
-
-# EventBridge
-functions:
-  eventHandler:
-    handler: src/handlers/events.handleEvent
-    events:
       - eventBridge:
           pattern:
             source:
-              - aws.ec2
+              - "custom.order"
             detail-type:
-              - EC2 Instance State-change Notification
+              - "OrderCreated"
+      - schedule:
+          rate: rate(5 minutes)
+          enabled: true
+      - s3:
+          bucket: !Ref UploadBucket
+          event: s3:ObjectCreated:*
+          rules:
+            - prefix: inbound/
+            - suffix: .csv
 ```
 
-### Step 4: Cold Start Mitigation
+### Step 4: Infrastructure with Terraform
+```hcl
+resource "aws_lambda_function" "api" {
+  function_name = "api-handler-${var.environment}"
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "main.handler"
+  runtime       = "python3.12"
+  filename      = "function.zip"
+  source_code_hash = filebase64sha256("function.zip")
+  timeout       = 30
+  memory_size   = 512
+  publish       = true
+
+  environment {
+    variables = {
+      TABLE_NAME   = aws_dynamodb_table.users.name
+      STAGE        = var.environment
+      POWERTOOLS_SERVICE_NAME = "api-handler"
+    }
+  }
+
+  tracing_config {
+    mode = "Active"
+  }
+
+  reserved_concurrent_executions = 20
+}
+
+resource "aws_lambda_function_event_invoke_config" "api" {
+  function_name = aws_lambda_function.api.function_name
+  qualifier     = aws_lambda_function.api.version
+
+  destination_config {
+    on_failure {
+      destination = aws_sqs_queue.dlq.arn
+    }
+    on_success {
+      destination = aws_sns_topic.success.arn
+    }
+  }
+}
+
+resource "aws_lambda_permission" "apigw" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.api.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
+}
+```
+
+### Step 5: Cold Start Optimization
 ```yaml
-# Provisioned Concurrency
-functions:
-  latencySensitive:
-    handler: src/handlers/latency.handler
-    provisionedConcurrency: 5
-    reservedConcurrency: 20
-    events:
-      - http:
-          path: /fast
-          method: get
+Strategies by runtime:
+  Python:  1-50ms cold starts — use AWS Lambda Web Adapter for faster responses
+            Enable provisioned concurrency for latency-critical endpoints
+  Node:    5-100ms — compile on deploy, minimize dependencies
+            Use esbuild bundler: tree-shake, reduce package size
+  Java:    500-5000ms — use SnapStart (Lambda SnapStart for Java 11+)
+            Prefer GraalVM native image (AWS provided, ~50ms cold start)
+  Go:      1-5ms — compile to native binary, almost no cold start
+            Best cold start of any interpreted/compiled runtime
+  .NET:    300-3000ms — use .NET 8 (Native AOT) for cold starts under 100ms
+  Rust:    1-3ms — compile to native, minimal cold start overhead
 
-# SnapStart (Java only)
-functions:
-  javaFunction:
-    handler: com.example.Handler
-    runtime: java21
-    snapStart:
-      applyOn: PublishedVersions
+Provisioned concurrency:
+  - $0.0000040827 per GB-second for provisioned (vs. $0.0000133334 for on-demand)
+  - Schedule scaling: EventBridge rule to auto-scale provisioned concurrency
+  - Use for: API endpoints, latency-sensitive functions, canary deployments
 
-# Lambda@Edge (pre-warmed)
-functions:
-  edgeFunction:
-    handler: src/handlers/edge.handler
-    events:
-      - cloudFront:
-          eventType: viewer-request
-          includeBody: false
+Warmers (anti-pattern):
+  - CloudWatch scheduled event pinging functions every 5 min
+  - Not reliable — Lambda scales instances independently
+  - Better to use provisioned concurrency or SnapStart
 ```
 
-### Step 5: Monitoring and Error Handling
+### Step 6: Serverless Security
 ```yaml
-# DLQ configuration
-functions:
-  fragileProcessor:
-    handler: src/handlers/fragile.handler
-    onError: !Ref FragileDLQ
-    maximumRetryAttempts: 2
-    maximumEventAgeInSeconds: 3600
-    destinations:
-      onSuccess: !Ref SuccessTopic
-      onFailure: !Ref FailureTopic
+IAM least privilege:
+  - Never use LambdaFullAccess — scope per function
+  - Use condition keys: sourceVpce, sourceIp, resourceArn, aws:SourceAccount
+  - Prefer execution role per function over shared role
+  - Rotate function URLs and API keys regularly
 
-# DLQ resource
-resources:
-  Resources:
-    FragileDLQ:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: ${self:service}-${self:provider.stage}-fragile-dlq
-        MessageRetentionPeriod: 1209600  # 14 days
+Secrets management:
+  - AWS: SSM Parameter Store (SecureString) or Secrets Manager
+  - Azure: Key Vault references in App Settings
+  - GCP: Secret Manager
+  - Never hardcode secrets in function code or env vars
+  - Use SDK to fetch at initialization (outside handler)
+
+VPC considerations:
+  - Lambda in VPC: needs VPC endpoints for S3, DynamoDB, etc.
+  - No public internet by default — use NAT Gateway or VPC endpoints
+  - Adds 5-10ms cold start latency (ENI creation)
+  - Best practice: keep Lambda outside VPC unless accessing RDS/ElastiCache
+
+Function URLs:
+  - Direct HTTPS endpoint for Lambda without API Gateway
+  - Support IAM auth or AWS_IAM auth
+  - Simple, no additional cost, but no custom domains natively
+
+Code signing:
+  - AWS Signer for Lambda — sign and verify function code
+  - Enforce signing policies: require code signing profile
+  - Prevents tampered code from being deployed
 ```
 
-## Rules & Constraints
-- Never hardcode secrets — use environment variables with KMS encryption or Parameter Store
-- Always set `reservedConcurrency` for critical functions to prevent throttling
-- Set `memorySize` between 512-1024 for balanced cost/performance
-- Enable Lambda Insights and X-Ray tracing for all production functions
-- Use ARM64 (Graviton) architecture for 20% cost savings and better cold starts
-- Configure DLQs and retry policies for async event sources
-- Set `logRetentionInDays` to avoid infinite CloudWatch log growth
-- Prefer `ReportBatchItemFailures` for SQS partial batch failures
+### Step 7: Serverless Observability
+```yaml
+Structured logging:
+  - JSON format with correlation ID (API Gateway request ID or Lambda context)
+  - Fields: level, timestamp, service, message, request_id, duration_ms, error
+  - Use Lambda Powertools (Python, TypeScript, Java, .NET)
 
-## Output Format
-`serverless.yml`, SAM `template.yaml`, or Terraform Lambda resources.
+Distributed tracing:
+  - AWS: X-Ray with segments, subsegments, and annotations
+  - Azure: Application Insights
+  - GCP: Cloud Trace
+  - OpenTelemetry: collector as Lambda layer + OTLP exporter
+
+Metrics:
+  - Invocations: count, errors, throttles, duration, concurrent executions
+  - Async: age of oldest message, dead-letter queue depth
+  - Business metrics: custom metrics via embedded metric format (EMF)
+  - Alert thresholds:
+    - Error rate > 1% for > 5 min
+    - Duration P99 > timeout * 0.8
+    - Throttles > 0 for > 1 min
+    - Dead-letter queue depth > 10
+```
+
+### Step 8: Cost Management
+```yaml
+Cost factors:
+  - Requests: $0.20 per 1M requests (AWS)
+  - Duration: $0.0000166667 per GB-second
+  - Provisioned concurrency: additional charge per GB-second
+  - Data transfer: Lambda → internet/$0.09 per GB, Lambda → same-region services is free
+
+Optimization strategies:
+  - Right-size memory: more memory = proportionally more CPU (and cost)
+  - 1024 MB is the sweet spot for most Python/Node workloads
+  - Minimize runtime by optimizing code, reducing dependencies
+  - Batch SQS messages: batchSize > 1 reduces invocations
+  - Use Lambda function URLs for simple HTTP APIs (no API Gateway cost)
+  - Set reserved concurrency to prevent runaway cost from traffic spikes
+  - Use ephemeral storage /tmp for scratch files (512 MB - 10 GB)
+  - Monitor with cost allocation tags (Environment, Service, Team)
+
+Estimated cost per 10M invocations (Python, 512 MB, 500 ms):
+  - Requests: $2.00
+  - Duration: ~$69.44
+  - Total: ~$71.44/month
+```
+
+### Step 9: Advanced Patterns
+```yaml
+Step Functions workflows:
+  - Express Workflows: high-volume, <5 min, $1 per 1000 state transitions
+  - Standard Workflows: long-running, up to 1 year, $0.025 per 1000 transitions
+  - Patterns: fan-out, parallel, wait for callback, saga (compensating transactions)
+
+Lambda + DynamoDB Streams:
+  - Capture change data capture (CDC) events
+  - Fan out to SQS, SNS, EventBridge
+  - Handle duplicate events (idempotency via dynamodb-toolbox or idempotency key)
+
+Lambda + WebSockets:
+  - API Gateway WebSocket API → Lambda integration
+  - $connect, $disconnect, $default routes
+  - Maintain connection IDs in DynamoDB
+
+Lambda + EFS:
+  - Mount EFS for shared filesystem across concurrent invocations
+  - Cold start: ~1-2 seconds additional (mount time)
+  - Use for ML model inference, large reference data
+
+Lambda response streaming:
+  - Stream responses up to 20 MB
+  - Pay-as-you-go response streaming (no API Gateway buffering)
+  - Good for large JSON, CSV generation, AI streaming
+```
+
+## Rules
+- Every function must have a dead-letter queue (DLQ) for async invocations.
+- Set reserved concurrency for every production function to prevent runaway costs.
+- Enable X-Ray (or equivalent tracing) on all functions.
+- Use structured JSON logging with a correlation ID for traceability.
+- Never store secrets in environment variables — use SSM/Secrets Manager.
+- Align function memory with timeout: more memory = faster = less cost per invocation.
+- Deploy with immutable versioning (publish = true)—never use $LATEST in production.
+- Use Lambda versions and aliases for canary deployments (5% new, 95% old).
+- Test cold start behavior with your runtime before production — measure and tune.
+- Use Powertools (or equivalent) for logging, tracing, and metrics standardization.
+
+## Production Considerations
+- Lambda function URLs need resource-based policy or IAM authentication — don't leave open.
+- SQS batch processing: handle partial failures with `reportBatchItemFailures`.
+- Lambda in VPC: create a VPC endpoint for SSM and CloudWatch Logs.
+- SnapStart: requires Java 11+ and idempotent initialization code.
+- Recursive loops: Lambda writing to S3 → S3 event → Lambda (infinite loop protection needed).
+- `aws:SourceAccount` condition on Lambda resource policies to prevent confused deputy.
+- Lambda + RDS: use RDS Proxy to avoid connection pool exhaustion.
+- Lambda ephemeral storage default 512 MB — can increase to 10 GB for data processing.
+- Function URL CORS: configure allowed origins, methods, and headers.
+- Set `function_response_type=RequestResponse` for synchronous invocations.
+- CloudFront + Lambda@Edge: 5 sec viewer-request/response, 30 sec origin-request/response.
+
+## Anti-Patterns
+- No reserved concurrency — one buggy function consumes all account concurrency.
+- Maximum memory allocation without testing — linear cost increase with minimal perf benefit.
+- Synchronous calls between functions — use event-driven (SQS, SNS, EventBridge).
+- Monolithic function — violates single responsibility, cold start suffers.
+- Long timeouts (5+ min) — Lambda is for short-lived compute; use ECS/Step Functions.
+- No error handling in async handlers — failures are silently retried then discarded.
+- VPC for every function — unnecessary latency for functions that don't need it.
+- Using Lambda for persistent connections (WebSocket) without proper cleanup.
+- No idempotency handling — duplicates cause data corruption.
+- Not testing Lambda@Edge cold start latency — adds latency to every request.
 
 ## References
-  - references/event-sources.md — Event Sources
-  - references/function-optimization.md — Function Optimization
-  - references/lambda-basics.md — Lambda Basics
   - references/serverless-advanced.md — Serverless Advanced Topics
-  - references/serverless-framework.md — Serverless Framework
   - references/serverless-fundamentals.md — Serverless Fundamentals
+  - references/aws-lambda.md — AWS Lambda Deep Dive
+  - references/azure-functions.md — Azure Functions Configuration
+  - references/gcp-cloud-functions.md — GCP Cloud Functions
+  - references/serverless-framework.md — Serverless Framework Deployment
+  - references/step-functions.md — AWS Step Functions Workflows
+  - references/lambda-monitoring.md — Lambda Monitoring and Observability
+  - references/lambda-security.md — Lambda Security Best Practices
 ## Handoff
-After completing this skill:
-- Next skill: **aws** — VPC, IAM roles, API Gateway configuration
-- Pass context: function names, event sources, IAM role ARNs
+- `devops-aws` for API Gateway, DynamoDB, SQS, EventBridge integration.
+- `devops-observability` for AWS X-Ray and CloudWatch configuration.
+- `devops-cicd-pipeline` for CI/CD pipelines with Lambda deployment.
+- `devops-security` for IAM and secrets management.
+- `devops-monitoring` for Lambda-specific monitoring dashboards.

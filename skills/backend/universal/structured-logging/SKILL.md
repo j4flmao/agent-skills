@@ -2,7 +2,7 @@
 name: backend-structured-logging
 description: >
   Use this skill when implementing logging frameworks, log formats, or distributed tracing correlation. This skill enforces: JSON lines format, strict log schema with correlation IDs, PII redaction, log level discipline, and stdout-only output. Applies to any backend stack with Winston/Pino/Serilog/Log4j/logrus/zerolog. Do NOT use for: metrics collection, audit trail systems, or application performance monitoring.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -55,6 +55,38 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 200 lines of configuration and code.
+
+## Decision Tree
+
+### Which Log Level?
+
+```
+What happened?
+  ├── Application cannot continue (OOM, DB connection lost for good)
+  │   └── FATAL — page on-call immediately
+  ├── Request failed, user got an error
+  │   └── ERROR — alert if rate exceeds threshold
+  ├── Request succeeded but degraded (fallback used, retry happened)
+  │   └── WARN — investigate if persistent
+  ├── State transition normal (order created, user registered)
+  │   └── INFO — sampled in production
+  ├── Need to trace request through the system
+  │   └── DEBUG — header-activated per request
+  └── Deep internal details (loop iterations, variable values)
+      └── TRACE — never enabled in production
+```
+
+### What to Include in a Log Event?
+
+```
+What is the context?
+  ├── Correlate to a request → include trace.id, span.id, http.request.id
+  ├── Identify the service → include service.name, service.version
+  ├── Describe the operation → include event.action, event.outcome, event.duration
+  ├── Contains sensitive data → redact with pattern-based censor
+  ├── Large payload (>10KB) → truncate or omit, log key reference instead
+  └── High cardinality (user IDs, order IDs) → OK as labels, not as metric tags
+```
 
 ## Workflow
 
@@ -157,6 +189,25 @@ logger.Info().Str("orderId", orderId).Float64("amount", 49.99).Msg("Order create
 logger.Error().Err(err).Str("orderId", orderId).Msg("Payment failed")
 ```
 
+```python
+# structlog — Python
+import structlog
+
+structlog.configure(
+    processors=[
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso", utc=True),
+        structlog.dev.ConsoleRenderer() if is_dev else structlog.processors.JSONRenderer(),
+    ],
+    context_class=structlog.threadlocal.wrap_dict(dict),
+    logger_factory=structlog.stdlib.LoggerFactory(),
+)
+
+log = structlog.get_logger()
+log.info("order.created", order_id="ord_123", amount=49.99)
+```
+
 ### Step 4: Context Propagation
 Correlation ID: generated at ingress (API gateway or first service), propagated via HTTP headers (`X-Correlation-ID`, `x-request-id`) through all service calls. Async boundaries: manually pass correlation ID through message headers for queues, streams, and event buses. Every log entry includes the correlation context.
 
@@ -174,6 +225,30 @@ function loggingMiddleware(req: Request, res: Response, next: NextFunction) {
 }
 ```
 
+Async context propagation:
+```typescript
+// Using AsyncLocalStorage for automatic context propagation
+import { AsyncLocalStorage } from 'async_hooks';
+
+const logContext = new AsyncLocalStorage<LogContext>();
+
+function withLogContext(ctx: LogContext, fn: () => Promise<void>) {
+  return logContext.run(ctx, fn);
+}
+
+function info(message: string, data?: Record<string, unknown>) {
+  const ctx = logContext.getStore();
+  logger.info({ ...ctx, message, ...data });
+}
+
+// Usage: every async call automatically has context
+app.use((req, res, next) => {
+  withLogContext({ correlationId: req.headers['x-correlation-id'] }, () => {
+    next();
+  });
+});
+```
+
 ### Step 5: PII Redaction
 Pattern-based redaction at the logger boundary (never in business logic). Redact: passwords, secrets, tokens, API keys, SSN, email addresses, credit card numbers, phone numbers. Masked format: `j***@example.com`, `****-****-****-1234`. Store reversible hash for audit purposes.
 
@@ -183,6 +258,26 @@ const REDACTION_PATTERNS = [
   { pattern: /\b(?:\d{4}[-\s]?){3}\d{4}\b/g, replacement: '****-****-****-****' },
   { pattern: /\b(?:password|secret|token|api[_-]?key|authorization)\s*[:=]\s*\S+/gi, replacement: '$1: [REDACTED]' },
 ];
+
+function redact(obj: unknown, depth = 0): unknown {
+  if (depth > 5) return '[DEEP]';
+  if (typeof obj === 'string') {
+    for (const { pattern, replacement } of REDACTION_PATTERNS) {
+      if (pattern.test(obj)) return obj.replace(pattern, replacement);
+    }
+    return obj;
+  }
+  if (Array.isArray(obj)) return obj.map(v => redact(v, depth + 1));
+  if (obj && typeof obj === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      if (REDACTION_KEYS.has(key.toLowerCase())) { result[key] = '[REDACTED]'; continue; }
+      result[key] = redact(value, depth + 1);
+    }
+    return result;
+  }
+  return obj;
+}
 ```
 
 ### Step 6: Sampling and Rate Limiting
@@ -194,6 +289,26 @@ const REDACTION_PATTERNS = [
 | DEBUG | Dynamic | 1% or header-activated |
 
 Adaptive sampling: increase INFO sample rate from 10% to 50% when error rate spikes, decrease when stable. Rate limiting: max 5000 entries/second per service instance, drop oldest exceeding limit.
+
+```typescript
+// Adaptive sampler
+class AdaptiveSampler {
+  private errorRate = 0;
+  private baseRate = 0.1;
+
+  onError() { this.errorRate = Math.min(1, this.errorRate + 0.1); }
+  onSuccess() { this.errorRate = Math.max(0, this.errorRate - 0.01); }
+
+  shouldSample(level: string): boolean {
+    if (level === 'error' || level === 'warn') return true;
+    if (level === 'info') {
+      const rate = this.errorRate > 0.05 ? 0.5 : this.baseRate;
+      return Math.random() < rate;
+    }
+    return false;
+  }
+}
+```
 
 ### Step 7: Log Output and Shipping
 JSON lines format (LDJSON/NDJSON): one JSON object per line, no pretty printing. Output to stdout only — never write to files in production. Stderr for fatal/crash errors. Log shipping via sidecar (Vector, Fluentd, Logstash) or cloud agent (CloudWatch agent, Datadog agent). Never use file appenders in containers.
@@ -225,6 +340,50 @@ logging:
     debug: 7d
 ```
 
+## Production Considerations
+
+| Concern | Practice |
+|---------|----------|
+| Log volume at scale | 1000 req/s × 5 logs/req = 5000 logs/s. Budget: 5 GB/day per instance |
+| Multi-line stack traces | Collapse into single JSON field: `error.stack` |
+| Log latency | Async logging only — never block the request on disk I/O |
+| Log loss tolerance | Acceptable to lose DEBUG logs. ERROR must not be lost |
+| Disk pressure | Stdout only in containers. Files rotate at 100MB × 5 in VMs |
+| Compliance retention | ERROR: 90d, INFO: 14d. Configure in log shipper, not app |
+
+## Performance
+
+| Scenario | Best Logger | Throughput (100B msg) |
+|----------|-------------|----------------------|
+| Node.js high-throughput | Pino | ~200,000 msg/s |
+| Python sync | structlog + orjson | ~50,000 msg/s |
+| Go | Zerolog | ~500,000 msg/s |
+| Java | Log4j2 async | ~300,000 msg/s |
+| .NET | Serilog | ~150,000 msg/s |
+
+Performance tips: pre-allocate structured fields (avoid dynamic object creation in hot path), use string builders for message templates, disable caller info (file/line) in production.
+
+## Security
+
+| Risk | Mitigation |
+|------|-----------|
+| PII exposure | Censor at logger boundary, never in business code |
+| Log injection | Sanitize newlines and control characters in log messages |
+| Secrets in logs | Blocklist-sensitive keys: `password`, `secret`, `token`, `key` |
+| Log tampering | Ship logs immediately via sidecar, write to append-only storage |
+| DoS via log flood | Rate limit by source, drop samplable logs when backlogged |
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It's Bad | Fix |
+|-------------|-------------|-----|
+| Logging in hot loops | 100K logs/sec kills performance | Sample or remove |
+| String interpolation in message | Cannot query structured fields | Use structured fields `log.info({ userId, action })` |
+| Logging to files in containers | Files lost on restart, no rotation | Log to stdout |
+| Catching + logging + rethrowing | Duplicate logs, lost context | Let error propagate to middleware |
+| Logging stack traces for expected errors | Noise, expensive | Log message only for expected errors |
+| Inconsistent field names | Hard to query across services | Enforce ECS schema |
+
 ## Rules
 - Logs are JSON lines — one JSON object per line
 - No multi-line logs
@@ -236,6 +395,10 @@ logging:
 - Logs go to stdout — not files
 - Log shipping is infrastructure concern, not application concern
 - Follow ECS (Elastic Common Schema) for field naming
+- Never log credentials, tokens, or secrets — even masked, they risk leakage
+- Always include `event.action` for programmatic log processing
+- Always include `event.duration` for performance-sensitive operations
+- Log at most once per error — choose the boundary layer (controller or use case)
 
 ## References
   - references/log-aggregation.md — Log Aggregation and Analysis

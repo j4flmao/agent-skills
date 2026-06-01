@@ -4,7 +4,7 @@ description: >
   Use this skill when managing third-party vendors, suppliers, and service providers.
   This skill enforces: vendor selection, contract negotiation, risk assessment, performance management.
   Do NOT use for: employee hiring, procurement of off-the-shelf goods, internal resource allocation.
-version: "2.0.0"
+version: "3.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -61,6 +61,62 @@ Tier 4 - Low: Off-the-shelf tools and services with no data access. Requires min
 | Support & Service     | 10%            | SLA terms, support model, professional services   |
 
 Adjust weights based on procurement context: security-heavy for data processors, cost-heavy for commodity services.
+
+## Decision Trees
+
+### Vendor Risk Tier Assignment Decision Tree
+
+1. Does the vendor have direct access to production systems or customer data?
+   - YES -> Potential Tier 1 or Tier 2. Go to 2.
+   - NO -> Potential Tier 3 or Tier 4. Go to 4.
+
+2. Is the vendor critical to core business operations (outage would cause revenue loss > $100K/hour)?
+   - YES -> Tier 1 - Critical. Enhanced due diligence required. Exit strategy before signing.
+   - NO -> Go to 3.
+
+3. Does the vendor handle PII, PHI, or other regulated data?
+   - YES -> Tier 1 - Critical. DPA required. Regulatory compliance validation.
+   - NO -> Tier 2 - High. Standard due diligence. Fallback plan required.
+
+4. Does the vendor have any data access (even indirect or aggregated)?
+   - YES -> Tier 3 - Medium. Basic due diligence. Annual review.
+   - NO -> Tier 4 - Low. Minimum documentation. No formal review required.
+
+### Make vs Buy Decision Tree
+
+1. Is the capability core to your business differentiation?
+   - YES -> Build in-house. Control over roadmap, data, and IP. Higher initial cost but long-term strategic value.
+   - NO -> Buy from vendor. Focus internal resources on differentiators. Commodity capabilities belong to vendors.
+
+2. Does a mature commercial solution exist in the market?
+   - YES -> Buy. Avoid reinventing the wheel. Evaluate top 3 vendors. Select based on criteria weighting.
+   - NO -> Consider build or partner. If build: estimate 2-3x initial vendor cost. If partner: identify ISV for co-development.
+
+3. Is the timeline urgent (< 6 months to production)?
+   - YES -> Buy. Building from scratch takes 12-24 months for mature capability. Vendor provides faster time-to-market.
+   - NO -> Either path feasible. Evaluate build vs buy TCO over 3-year horizon. Include maintenance, upgrades, and staffing.
+
+4. Can the vendor meet security and compliance requirements?
+   - YES -> Buy. Validate certifications (SOC2, ISO 27001). Review DPA. Conduct security assessment.
+   - NO -> Build. Vendor cannot meet requirements. Internal development ensures compliance control.
+
+### Contract Negotiation Priority Decision Tree
+
+1. Is the vendor a startup (< 3 years, < $10M revenue)?
+   - Highest priority: Financial stability protections. Short initial term. Performance milestones before long-term commitment. IP escrow for source code. Right to audit financial health.
+   - Secondary: Flexible termination. Data portability guarantee.
+
+2. Is the vendor handling regulated data (PII, PHI, PCI)?
+   - Highest priority: Data protection terms. DPA with specific data handling requirements. Breach notification within 24 hours. Sub-processor approval rights. Data deletion certification.
+   - Secondary: Liability cap for data breaches (exclude from standard cap). Audit rights for security controls.
+
+3. Is the vendor a sole-source or critical dependency?
+   - Highest priority: SLA commitments with meaningful credits. Termination assistance terms. Transition period with knowledge transfer. Source code escrow (if applicable).
+   - Secondary: Price protection (multi-year cap). Right to assign. Non-solicitation of your employees.
+
+4. Is the contract high-value (> $1M annual)?
+   - Highest priority: Volume discounts. Price protection duration. Right to audit pricing. Most-favored-customer clause.
+   - Secondary: Professional services scope and rates. Overage pricing. Support tier and response times.
 
 ## Agent Protocol
 
@@ -185,6 +241,37 @@ Monitoring sources:
 - Internal incident data (vendor-related outages)
 - Renewal timing (start renewal process 6 months before end of term)
 
+## Governance Framework
+
+### Vendor Governance Board Structure
+- Procurement Lead: Owns vendor selection process. Manages RFP issuance. Oversees contract execution.
+- Security Officer: Validates vendor security posture. Reviews due diligence artifacts. Approves data access.
+- Legal Counsel: Reviews contract terms. Negotiates liability, IP, and data protection clauses.
+- Business Owner: Defines requirements. Validates functional fit. Monitors day-to-day performance.
+- Finance Representative: Validates pricing and TCO. Approves budget. Tracks total vendor spend.
+
+### Vendor Review Cadence
+
+| Review Type | Frequency | Participants | Focus |
+|---|---|---|---|
+| Operational Review | Monthly | Vendor PM + Internal Owner | SLA metrics, incidents, support tickets |
+| Business Review | Quarterly | Vendor Account Team + Internal Stakeholders | Performance scorecard, roadmap, relationship health |
+| Risk Review | Bi-Annual | Security + Vendor CISO | Security posture, penetration test results, compliance changes |
+| Strategic Review | Annual | Executive Sponsors | Contract renewal, market alternatives, strategic alignment |
+| Competitive Review | Annual | Procurement + Business Owner | Market evaluation, pricing benchmark, alternative vendors |
+
+### Vendor Consolidation Criteria
+Consolidation triggers: redundant tools with overlapping capabilities. Total vendor count exceeds management capacity. Spend fragmentation across multiple small vendors. Lack of standardization creating integration complexity.
+
+Consolidation process:
+1. Inventory all vendors by category and spend
+2. Identify overlapping capabilities
+3. Score each vendor on performance, cost, strategic value
+4. Select primary vendor per category
+5. Plan migration from secondary vendors
+6. Execute phase-out with sunset timelines
+7. Track savings realization
+
 ## Common Pitfalls
 
 Pitfall 1: Selecting on cost alone. The cheapest vendor often costs more in the long run through hidden fees, poor support, and migration pain. Total cost of ownership includes implementation, integration, training, and eventual exit.
@@ -201,6 +288,10 @@ Pitfall 6: Under-resourcing relationship management. Assigning an owner who has 
 
 Pitfall 7: Not negotiating data portability terms. When the relationship ends, you need your data back in a usable format. Negotiate data export assistance and timeline into the contract.
 
+Pitfall 8: Vendor lock-in through proprietary APIs or data formats. The vendor becomes irreplaceable because migration cost exceeds value. Mitigation: require standard APIs, data export in open formats, and documented migration assistance terms.
+
+Pitfall 9: Ignoring sub-processor risk. The vendor may subcontract your work to third parties without your knowledge. Require sub-processor list and approval rights in contract. Monitor sub-processor changes quarterly.
+
 ## Best Practices
 
 Practice 1: Maintain a vendor scorecard. Rate each vendor quarterly on performance, cost, support, and risk. Flag declining trends. The scorecard informs renewal and consolidation decisions.
@@ -212,6 +303,12 @@ Practice 3: Conduct annual competitive reviews. Even with a happy vendor, evalua
 Practice 4: Standardize onboarding with a playbook. Create a repeatable vendor onboarding process with security review, integration pattern, monitoring setup, and documentation requirements. Apply to all vendors regardless of size.
 
 Practice 5: Centralize vendor data. A vendor management system or spreadsheet with all contracts, contacts, renewal dates, and key terms. Assign owners. Set renewal reminders 90 days in advance.
+
+Practice 6: Include vendor performance in internal SLAs. When a vendor outage causes internal service degradation, the internal team should not bear the SLA impact alone. Map vendor SLAs to internal service commitments.
+
+Practice 7: Conduct post-exit vendor reviews. After every vendor transition, document lessons learned: what went well, what went wrong, what would improve future transitions. Build findings into onboarding playbook updates.
+
+Practice 8: Align vendor incentives with business outcomes. Structure contracts so vendor success metrics align with business success. Example: link support tier pricing to resolution time, not ticket volume.
 
 ## Templates & Tools
 
@@ -257,6 +354,26 @@ Risk Tier: {Critical/High/Medium/Low}
 Exit Strategy: {documented location, portability terms}
 ```
 
+### QBR Scorecard Template
+```
+### QBR Scorecard: {Vendor Name}
+Period: {quarter} {year}
+Review Date: {date}
+
+| Category | Rating (1-5) | Trend | Notes |
+|----------|-------------|-------|-------|
+| SLA Attainment | {score} | {up/down/flat} | {notes} |
+| Support Quality | {score} | {up/down/flat} | {notes} |
+| Incident Response | {score} | {up/down/flat} | {notes} |
+| Feature Delivery | {score} | {up/down/flat} | {notes} |
+| Cost/Value | {score} | {up/down/flat} | {notes} |
+| Relationship | {score} | {up/down/flat} | {notes} |
+
+Overall Score: {score}/5.0
+Overall Trend: {improving/stable/declining}
+Verdict: {renew/renegotiate/replace}
+```
+
 ### Tools Reference
 - Coupa / SAP Ariba for procurement and vendor management
 - OneTrust / Vendorpedia for vendor risk management
@@ -277,6 +394,9 @@ Following an acquisition, a company found itself managing 347 unique vendors acr
 ### Case Study 3: Startup Vendor Negotiation
 A Series A startup with limited leverage negotiated favorable terms with a critical infrastructure vendor by offering a case study, product feedback commitment, and multi-year commitment. The contract included 40% discount off list price, 90-day termination for convenience, and dedicated support. Lessons: leverage what you have (marketing value, product feedback, reference-ability) even if you lack spend volume.
 
+### Case Study 4: Vendor Security Incident Response
+A SaaS company discovered that one of their Tier-2 vendors (analytics provider) had suffered a data breach exposing customer behavioral data. The vendor took 72 hours to notify, exceeding the contract's 24-hour notification SLA. The company escalated to executive level, invoked the breach notification clause, and initiated the exit strategy they had documented at contract signing. Replacement vendor was onboarded within 30 days. Lessons: enforce SLA notifications, maintain current exit strategies, and test incident response with vendors.
+
 ## Rules
 - All vendor engagements must have signed contracts before services commence.
 - Critical vendors require enhanced due diligence including on-site assessment.
@@ -294,6 +414,8 @@ A Series A startup with limited leverage negotiated favorable terms with a criti
 - Vendor onboarding follows standardized playbook with security review gate.
 - Contract renewal review begins minimum 90 days before end of term.
 - Vendor-related security incidents reported under same SLA as internal incidents.
+- Sub-processor changes require notification and approval within 30 days.
+- Post-exit review conducted for all vendor transitions over $50K annual value.
 
 ## References
   - references/contract-negotiation.md -- Contract Negotiation Guide

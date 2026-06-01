@@ -1,226 +1,318 @@
 ---
 name: dev-loop-pr-writer
 description: >
-  Use this skill when the user says 'PR description', 'pull request', 'create PR', 'PR template', 'write PR', 'PR summary', 'PR body', 'write pull request', 'PR for changes'. Generates a well-structured PR description from git diff. Do NOT use for: commit messages or changelogs.
+  Use when the user asks about writing pull requests, PR descriptions, PR templates, effective code reviews, or pull request best practices. Do NOT use for: code review content (dev-loop-code-review), or git workflow branching (dev-loop-git-workflow).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
 compatibility:
   claude-code: true
   cursor: true
   codex: true
   windsurf: true
-tags: [dev-loop, pr, github, phase-7]
-version: "2.0.0"
-author: "j4flmao"
-license: "MIT"
+tags: [dev-loop, pr-writer, pull-request, code-review]
 ---
 
-# Dev Loop PR Writer
+# PR Writer
 
 ## Purpose
-Generate well-structured pull request descriptions from git diffs. Enforces conventional commit format, organizes changes by category, and includes testing notes and checklists for consistent PR quality across the team.
-
-Eliminates vague PR descriptions, missing context, and inconsistent formatting. Every PR produced by this skill is ready to paste into GitHub, GitLab, or Bitbucket without editing. Designed for teams practicing trunk-based development with short-lived feature branches. Consistent PR quality reduces review cycle time and makes changelog generation automatic.
+Write effective pull request descriptions — clear, structured, and reviewable — that communicate what changed, why it changed, and how it was validated. Good PR descriptions reduce review time, catch bugs earlier, and create an auditable project history.
 
 ## Agent Protocol
 
 ### Trigger
-"PR description", "pull request", "create PR", "PR template", "write PR", "PR summary", "PR body", "write pull request", "PR for changes"
+Exact user phrases: "write PR", "pull request", "PR description", "PR template", "create PR", "open a PR", "draft PR", "PR summary", "PR title", "write a pull request".
 
 ### Input Context
-- `git diff HEAD` output (required) — full diff with file paths and line numbers
-- List of changed files with diff stats (insertions, deletions, rename status)
-- Optional: issue/feature reference numbers (e.g. #123, PROJ-456)
-- Optional: branch name for scope inference (feature/ prefix, fix/ prefix)
-- Optional: related PR numbers for cross-reference in change list
-- Optional: previous PR template from the repository for consistency
+- PR type (feature, bugfix, refactor, chore, docs, hotfix)
+- Code changes (files changed, additions/deletions, key modifications)
+- Issue or ticket reference (GitHub issue, JIRA, Linear)
+- Testing done (unit, integration, manual, E2E)
+- Dependencies or breaking changes
+- Reviewer notes (areas of concern, decisions made)
 
 ### Output Artifact
-PR body text — title, summary paragraph, change list (grouped by category), testing notes, checklist
-
-### Response Format
-- Output starts with PR title as markdown H2 heading
-- Followed by summary paragraph (2-4 sentences: problem, solution, effect)
-- Then change list as bullet groups with sub-headings per logical category
-- Then testing notes section with edge cases explicitly called out
-- Then checklist with markdown checkboxes for each verification step
-- Compression footer appended verbatim as the final line
-- No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+Pull request with title following convention, structured description, and review guidance.
 
 ### Completion Criteria
-PR body is complete, formatted, and ready to paste into GitHub/ GitLab / Bitbucket. Title does not exceed 72 characters. All four body sections (summary, changes, testing, checklist) are present. Conventional commit type and scope are correct.
+- [ ] PR title follows Conventional Commits format
+- [ ] Description includes what, why, and how
+- [ ] Related issues linked
+- [ ] Screenshots or screen recordings included (UI changes)
+- [ ] Testing methodology described
+- [ ] Breaking changes highlighted
+- [ ] Deployment considerations noted
+- [ ] Reviewers added with specific focus areas
+- [ ] CI status checked and passing
 
 ### Max Response Length
-2000 tokens
+150 lines.
 
-## Architecture
+## Framework/Methodology
 
-### PR Generation Pipeline
+### PR Size Decision Tree
 ```
-Git Diff ──> Diff Analysis ──> Categorization ──> Section Generation ──> PR Body
-                                                                          
-Parse diff        Identify         Group changes     Title (conv commit)
-stats +           changed          by primary type   Summary (problem → solution → effect)
-file paths        files            (feat/fix/        Change list (grouped bullets with file refs)
-                  + line           refactor/chore/   Testing notes (unit, integration, edge cases)
-                  ranges           test/docs)        Checklist (standardized verification steps)
+How large is the change?
+├── Small (< 100 lines, single concern)
+│   → Direct review, one reviewer
+│   → Merge after single approval
+├── Medium (100-500 lines, 1-3 files)
+│   → Standard review, 1-2 reviewers
+│   → Focus on logic and edge cases
+├── Large (500-2000 lines, multiple files)
+│   → Consider splitting into smaller PRs
+│   → Request specific reviewers for specific areas
+└── Huge (> 2000 lines)
+    → MUST split into multiple PRs
+    → Each PR must be independently reviewable
 ```
 
-### Decision Tree: Change Classification
+### PR Title Conventions
 ```
-What is the primary nature of this change?
-├── Adds new user-facing functionality
-│   → type: feat, scope: feature area
-│   Example: feat(auth): add password reset flow
-├── Corrects incorrect behavior
-│   → type: fix, scope: affected area
-│   Example: fix(payments): handle declined card response
-├── Restructures code without behavior change
-│   → type: refactor, scope: module name
-│   Example: refactor(database): extract query builder
-├── Updates tooling, CI, or dependencies
-│   → type: chore, scope: system area
-│   Example: chore(ci): pin GitHub Actions runner
-├── Adds or fixes tests
-│   → type: test, scope: tested area
-│   Example: test(api): add rate limit middleware tests
-└── Documentation updates only
-    → type: docs, scope: document name
-    Example: docs(readme): update quickstart steps
+<type>(<scope>): <description>
+
+Examples:
+feat(api): add user avatar upload endpoint
+fix(auth): handle expired token refresh race condition
+refactor(state): extract state management into dedicated module
+docs(readme): update API documentation links
+chore(deps): upgrade TypeScript to v5.4
 ```
 
 ## Workflow
 
-1. **Analyze diff** — Read `git diff HEAD` output. Identify all changed files with their diff stats. Categorize each change by primary type: feat (new feature — adds user-facing functionality), fix (bug fix — corrects incorrect behavior), refactor (restructure without behavior change — rename, extract, inline), chore (tooling, CI, dependency updates, config changes), test (additions or corrections to test suite), docs (documentation changes — README, JSDoc, ADRs). Note specific file:line ranges for the change list references.
+### Step 1: Set Up PR Template
 
-2. **Write PR title** — Use conventional commit format with required scope: `feat(feature): description`, `fix(area): description`, `refactor(module): description`. Keep under 72 characters total. Use imperative mood ("Add" not "Added" or "Adds"). Scope is a noun (the module or area changed). No trailing period.
+```markdown
+<!-- .github/PULL_REQUEST_TEMPLATE.md -->
+## Description
+<!-- Briefly describe what this PR does and why -->
 
-3. **Write summary** — One paragraph (2-4 sentences) explaining what changed and why. Structure: state the problem that existed, describe the solution implemented, note the effect on users or developers. Focus on motivation and context. Avoid restating the diff — the diff already shows what changed, the summary explains why it matters. Reference the issue number with a keyword: `Closes #123` or `Relates to #456`.
+Fixes #ISSUE_NUMBER
 
-4. **Add change list** — Bullet points per logical change (not per file — multiple small files in one logical change get one bullet). Reference specific files and function names with `file.ts:42` format. Group related changes under sub-headings for readability (## API Changes, ## Bug Fixes, ## Internal Refactoring). Each bullet starts with an imperative verb. No trailing punctuation.
+## Type of Change
+- [ ] 🚀 New feature
+- [ ] 🐛 Bug fix
+- [ ] ♻️ Refactoring (no functional changes)
+- [ ] 📚 Documentation
+- [ ] 🔧 Chore (deps, build, CI)
+- [ ] ⚡ Performance improvement
 
-5. **Add testing notes** — Describe how the change was verified: unit tests added with count and coverage, integration tests for API contracts, manual testing steps for UI changes. List edge cases covered: empty state, error state, boundary conditions, null inputs, concurrent access. Mention test framework and assertion count for credibility.
+## How Has This Been Tested?
+- [ ] Unit tests added/updated
+- [ ] Integration tests added/updated
+- [ ] Manual testing (describe scenarios)
+- [ ] Tested in production/staging environment
 
-6. **Add checklist** — Ensure all items are checked before submission: self-review of diff completed, tests added for new code, existing tests pass without regression, documentation updated (API docs, README, ADR), no linting or type errors, edge cases handled (empty, error, loading states), backwards compatibility verified, API changes documented in OpenAPI spec if applicable.
+## Screenshots (if applicable)
+<!-- Before/after for UI changes -->
 
-7. **Add reviewer guidance** — Include a section with specific questions or areas where the author wants feedback: "Focus review on the retry logic in `Fetcher.ts:120-180`", "Are there edge cases in the rate limiting config I may have missed?", "Should this be behind a feature flag?" Explicit guidance gets reviewers to the right code faster and improves review quality.
+## Key Decisions
+<!-- Explain WHY you made specific choices -->
 
-8. **Handle breaking changes** — If the diff modifies API contracts, database schemas, or public interfaces, add `BREAKING CHANGE:` in a blockquote at the bottom of the description. Include migration instructions for downstream consumers: what changed, what the old behavior was, how to update consuming code, and a before/after example.
+## Breaking Changes
+<!-- List any breaking changes and migration steps -->
 
-## Models
+## Deployment Notes
+<!-- Database migrations, env vars, feature flags, rollback plan -->
 
-### Conventional Commit Types
-```
-feat      New feature for the user or consumer of the code
-fix       Bug fix for the user or consumer
-refactor  Code change with no behavioral change (rename, extract)
-chore     Tooling, CI, dependency management, configuration
-test      Adding or correcting automated tests
-docs      Documentation-only changes (README, comments, ADRs)
-perf      Performance improvement
-style     Formatting changes only (whitespace, semicolons)
-```
-
-### Title Examples
-```
-feat(auth): add password reset flow with email verification
-fix(payments): handle Stripe 402 response for declined cards
-refactor(database): extract query builder from UserRepository
-chore(ci): pin GitHub Actions runner to ubuntu-24.04
-test(api): add integration tests for rate limiting middleware
-docs(readme): update quickstart with new env vars
-```
-
-### PR Body Structure
-```
-## Title (conv commit format, <=72 chars)
-
-## Summary
-Problem: what was wrong. Solution: what was implemented. Effect: what this means for users.
-
-## Changes
-### Category Heading
-- Imperative verb description of logical change (file.ts:start-end)
-- Imperative verb description of another logical change (other.ts:start-end)
-
-## Testing
-- Unit tests: X new, covering Y scenarios
-- Integration tests: API contract verification
-- Edge cases: empty state, error response, null input
-- Manual testing: steps performed on staging
+## Reviewer Focus Areas
+<!-- What specific parts should the reviewer pay attention to? -->
 
 ## Checklist
+- [ ] My code follows project style guidelines
 - [ ] Self-review completed
-- [ ] Tests added for new code
-- [ ] Existing tests pass
-- [ ] Documentation updated
-- [ ] No lint or type errors
-- [ ] Edge cases handled
-- [ ] Backwards compatible
-
-## Reviewer Focus
-- (specific areas for reviewer attention)
-
-> BREAKING CHANGE: (if applicable, with migration notes)
+- [ ] Documentation updated (if needed)
+- [ ] No new warnings introduced
+- [ ] Tests pass locally
 ```
 
-## Rules
+### Step 2: Write the PR Body
 
-- **Title must follow conventional commits** — type(scope): description. No exceptions. Scope is mandatory for clarity. Never use a bare type without scope.
-- **Summary explains why, not what** — The diff already shows what changed. The summary explains the motivation, context, and reasoning behind the change.
-- **Change list references specific files** — Every bullet in the changes section references at least one file with line range. Vague references like "fixed stuff" are rejected. Use `path/to/file.ts:42-56` format.
-- **Testing notes include edge cases** — Happy path alone is insufficient. Every testing section must document at least one boundary condition, error path, or empty state tested.
-- **No filler phrases** — Strip "This PR", "This commit", "Please review", "This change", "I have". Start every change bullet with an imperative verb. Start the summary with the problem statement.
-- **One PR = one logical change** — No bundled unrelated changes. If the diff touches multiple concerns, split into multiple PRs. A single PR with both a bug fix and a refactor should be two PRs.
-- **Issues are referenced, not re-described** — Use `Closes #123` or `Relates to #456`. Do not re-explain the issue content in the PR summary. The link provides context.
-- **Breaking changes get a visible footnote** — If the change modifies an API contract, database schema, or public interface, add `BREAKING CHANGE:` in a blockquote at the bottom of the description.
-- **PR title and branch prefix match** — If the branch starts with `fix/`, the PR title should use `fix(scope)`. Branch prefix and conventional commit type should align.
-- **Reviewer guidance must be specific** — "Please review" is not guidance. Ask specific questions about risky areas, design decisions, or edge cases.
-- **PR description must be self-contained** — A reviewer should understand the change and its context from the PR alone, without switching to external tickets.
-- **Screenshots for UI changes** — If the diff includes UI changes, include before/after screenshots. A picture catches layout regressions that code review misses.
-- **Performance impact noted** — If the change could affect performance (query changes, new API endpoints, image processing), include benchmark results or performance analysis.
+```markdown
+## Description
+Adds user avatar upload functionality. Users can now upload a profile
+photo from their settings page. Images are resized to 256x256, stored
+in S3, and served via CDN.
+
+Fixes #142
+
+## Type of Change
+- [x] 🚀 New feature
+
+## How Has This Been Tested?
+- [x] Unit tests for AvatarService (image validation, resize, upload)
+- [x] Integration test for S3 upload mock
+- [x] Manual: uploaded images in various formats (PNG, JPG, GIF, WEBP)
+- [x] Manual: tested with files >5MB (correctly rejected)
+- [x] Manual: verified avatar displays in header, settings, profile pages
+
+## Screenshots
+| Before | After |
+|--------|-------|
+| ![before](https://i.imgur.com/old.png) | ![after](https://i.imgur.com/new.png) |
+
+## Key Decisions
+- **ImageMagick for resizing**: Sharp was faster but has native dependency
+  issues in our CI. ImageMagick via shell is more portable.
+- **256x256 max size**: Based on UI analysis — avatar displays at max 48px
+  in most places. 256px provides retina-ready quality.
+- **CDN cache TTL: 7 days**: Avatars rarely change, long cache improves
+  load times. Etag-based invalidation for immediate updates.
+
+## Breaking Changes
+None. This is additive only.
+
+## Deployment Notes
+- Requires: `AVATAR_S3_BUCKET` and `CDN_URL` env vars (added to Terraform)
+- New migration: `add_avatar_url_to_users` (automated, zero-downtime)
+- S3 bucket and CDN distribution via Terraform PR #138
+
+## Reviewer Focus Areas
+- @alice: Image validation logic in `src/services/avatar.ts` (security)
+- @bob: S3 integration and error handling (reliability)
+
+## Checklist
+- [x] Code follows style guidelines
+- [x] Self-review completed
+- [x] Documentation updated (README API section)
+- [x] No new warnings
+- [x] All tests passing
+```
+
+### Step 3: PR Description Generator Script
+
+```bash
+#!/bin/bash
+# scripts/generate-pr-body.sh
+# Generate PR body from conventional commit + git diff summary
+
+COMMIT_MSG=$(git log --format="%s" HEAD~1..HEAD)
+COMMIT_BODY=$(git log --format="%b" HEAD~1..HEAD | sed '/^$/d')
+CHANGED_FILES=$(git diff HEAD~1..HEAD --stat -- ':!package-lock.json')
+DIFF_STATS=$(echo "$CHANGED_FILES" | tail -1)
+
+cat << PRBODY
+## Description
+
+$COMMIT_BODY
+
+## Changes
+
+$CHANGED_FILES
+
+## Checklist
+- [ ] Code follows project style guidelines
+- [ ] Self-review completed
+- [ ] Tests pass locally
+
+PRBODY
+```
+
+### Step 4: PR Best Practices
+
+```yaml
+pr_writing_rules:
+  - "PR title must follow Conventional Commits format"
+  - "PR must reference at least one issue (or explain why not)"
+  - "PR description must explain WHY, not WHAT (code shows WHAT)"
+  - "UI changes must include screenshots or recordings"
+  - "Breaking changes must be clearly marked with migration steps"
+  - "Keep PRs under 400 lines for reviewability"
+  - "Multiple PRs for features spanning more than 3 days of work"
+  - "Draft PRs for incomplete work (WIP prefix or Draft mode)"
+  - "Self-review before requesting external review"
+
+pr_do_dont:
+  - DO: "Explain the problem being solved"
+  - DO: "Link to related issues, discussions, or decisions"
+  - DO: "Call out areas needing special attention"
+  - DO: "Include test evidence (coverage, manual scenarios)"
+  - DONT: "Write 'See commits for details'"
+  - DONT: "Leave PR body empty"
+  - DONT: "Include unrelated changes"
+  - DONT: "Skip screenshots for UI changes"
+
+reviewer_etiquette:
+  - "Request specific reviewer with context why"
+  - "Respect reviewer time: make PRs easy to review"
+  - "Respond to comments within 24 hours"
+  - "Thank reviewers for thorough feedback"
+  - "Don't merge without all comments resolved"
+```
 
 ## Common Pitfalls
 
-- **Summary repeats the diff**: "Changed X to Y" is not a summary. The summary should explain _why_ X was changed to Y. Focus on motivation, not mechanics.
-- **No issue reference**: PRs without linked issues lose context after merge. Every PR should reference at least one issue with `Closes`, `Fixes`, or `Relates to`.
-- **Overly broad scope**: A PR titled `feat(api): add endpoints` is too vague. `feat(api): add bulk user import and export endpoints` is specific and useful in changelogs.
-- **Checklist items unchecked**: An unchecked "Tests added" checkbox when tests are present looks sloppy. Only include checklist items that are verified complete.
-- **Missing screenshots for UI changes**: Code review alone cannot catch visual regressions. Always include before/after screenshots or a screen recording for UI changes.
-- **Ignoring the "why" for refactors**: Refactors need extra motivation. If the PR says "extract function" without explaining why extraction improves the codebase, reviewers will question the value.
-- **Breaking changes without migration notes**: Breaking the API contract without migration guidance forces downstream teams to reverse-engineer the migration path. Always provide explicit migration steps.
+| Pitfall | Description | Prevention |
+|---------|-------------|------------|
+| Empty or minimal description | Reviewer has no context | Always fill in what/why/how |
+| GIANT PR (2000+ lines) | Impossible to review properly | Split into logical, reviewable chunks |
+| No screenshots for UI | Reviewer must run code to see changes | Always include before/after screenshots |
+| Forgetting issue links | PR has no context reference | Template enforces issue link |
+| Vague testing description | "Tested locally" without details | List specific test scenarios |
+| Mixed concerns | Bug fix + refactor + feature in one PR | One concern per PR |
+| No decision rationale | Questions like "why this approach?" unanswered | Document key decisions |
+| Missing migration steps | DB changes applied without coordination | Always note deployment steps |
 
-## Compared With
+## Best Practices
 
-| Tool | Input | Output Customization | Platform Support |
-|------|-------|---------------------|------------------|
-| This skill | git diff | Template-based, team conventions | GitHub, GitLab, Bitbucket |
-| GitHub Copilot PR | git diff + context | AI-completed sections | GitHub only |
-| GPT-based PR generators | git diff | Free-form AI output | Generic |
-| Conventional PR template | Manual | Human-written | Any |
-| Release-drafter | GitHub labels | PR-based release notes | GitHub only |
-| PR Pilot | git diff + AI | Automated PR creation | GitHub, GitLab |
+| Practice | Rationale |
+|----------|-----------|
+| Fill out the template | Consistent structure speeds review |
+| Keep PR under 400 lines | Research shows review effectiveness drops sharply after 400 lines |
+| One PR = one concern | Easier to review, revert, and understand |
+| Screenshots for UI | Visual context that code cannot convey |
+| Link issues | Traceability from code to requirement |
+| Call out risky changes | Focus reviewer attention where it matters |
+| Self-review before submitting | Catches 50%+ of issues before review |
+| Respond to feedback with changes, not excuses | Address the concern in code |
+| Use Draft PR for early feedback | Get architecture review before implementation detail |
+| Write PR description BEFORE the last commit | Describes intent, not just summary |
 
-## Performance
+## Templates & Tools
 
-- Diff analysis: parsing a 500-line diff with 10 changed files completes in <200ms
-- Title generation: <50ms using heuristic classification of changed file paths and diff content
-- Full PR body generation: <1 second for a typical feature branch with 10-20 changed files
-- Breaking change detection: heuristic analysis of diff content (interface changes, schema modifications) in <100ms
-- Template rendering: <50ms to fill in sections and format markdown
-- Checklist generation: static template, negligible time
-- The generation runs entirely locally — no API calls needed, no latency from external services
+### Quick PR (Small Change)
+```markdown
+## Description
+Fixes #142 — null pointer when user has no profile
 
-## Tooling
+## Type
+- [x] 🐛 Bug fix
 
-| Tool | Category | Use Case |
-|------|----------|----------|
-| git diff | Input source | Diff analysis for change extraction |
-| gh CLI | PR creation | Create PRs from generated descriptions |
-| GitKraken / Fork | Visual client | Manual PR review before submission |
-| GitHub CLI | GitHub integration | PR creation, status checks, reviews |
-| GitLab CLI | GitLab integration | PR creation for GitLab projects |
-| Browser extension (Refined GitHub) | Review UX | Enhanced PR viewing experience |
-| GitHub Actions / GitLab CI | Automation | Auto-generate descriptions in CI |
-| conventional-changelog | Changelog | Link generated PRs to changelog entries |
+## Testing
+- Added test for null profile edge case
+- Manual: verified login with new user (no profile)
 
+## Checklist
+- [x] Code follows style
+- [x] Self-reviewed
+- [x] Tests pass
+```
+
+### Hotfix PR
+```markdown
+## Description
+Hotfix for production incident #INC-2026-05-01:
+NullPointerException when calculating user score for inactive accounts.
+
+Root cause: ScoreService.GetUserScore() doesn't check user.IsActive flag.
+
+Fix: Added active user check before score calculation.
+
+## Testing
+- [x] Unit test for inactive user score = 0
+- [x] Manual: reproduced incident scenario → verified fix
+- [x] E2E: full user lifecycle test
+
+## Deployment
+Critical fix — deploy ASAP. Already merged to release/v2.0 branch.
+Hotfix tag: v2.0.1
+```
+
+## References
+  - references/pr-writer-advanced.md — PR Writer Advanced Topics
+  - references/pr-writer-fundamentals.md — PR Writer Fundamentals
+  - references/pr-writer-templates.md — PR Templates Reference
+  - references/pr-writer-workflow.md — PR Workflow Reference
 ## Handoff
-git-workflow for commit + push. After the PR body is written, hand off to the git-workflow skill to commit the changes and push the branch for review.
+Hand off to `dev-loop-code-review` for PR review. Hand off to `dev-loop-changelog-generator` for release note generation from PR.

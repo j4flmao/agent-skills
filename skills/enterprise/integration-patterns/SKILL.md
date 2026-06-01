@@ -4,7 +4,7 @@ description: >
   Use this skill when designing enterprise system integrations with message routing, protocol transformation, and error handling.
   This skill enforces: anti-corruption layers, SLA-defined integrations, dead letter queue monitoring.
   Do NOT use for: in-process function calls, simple REST API clients, database replication tools.
-version: "1.1.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -19,6 +19,103 @@ tags: [enterprise, integration, phase-8]
 
 ## Purpose
 Designs enterprise integration systems with message routing, protocol transformation, and error handling.
+
+## Framework/Methodology
+
+### INTEGRATE Framework
+A six-phase methodology for enterprise integration:
+
+Phase 1 - Identify: Map all systems requiring integration. Define system-of-record per data domain. Document protocols, data formats, and latency requirements. Identify integration touchpoints and data flows.
+
+Phase 2 - Negotiate: Define contracts between systems (API specs, message schemas, SLA terms). Establish consumer-driven contracts. Agree on error handling and retry policies.
+
+Phase 3 - Transform: Build anti-corruption layers between bounded contexts. Implement protocol and data format transformations. Enforce schema validation at boundaries.
+
+Phase 4 - Route: Design message routing topology. Select integration style (API/messaging/streaming/file). Configure content-based, header-based, or topic-based routing.
+
+Phase 5 - Govern: Monitor SLAs per integration flow. Track DLQ depth and error rates. Implement end-to-end tracing. Manage schema evolution with compatibility checks.
+
+Phase 6 - Retire: Decommission deprecated integration points. Migrate consumers to new endpoints. Archive integration documentation.
+
+### Enterprise Integration Patterns (EIP) Catalog
+
+Messaging Patterns:
+- Point-to-Point Channel: One-to-one message delivery
+- Publish-Subscribe Channel: One-to-many message delivery
+- Dead Letter Channel: Failed messages storage
+- Guaranteed Delivery: Persistent messaging
+- Message Bus: Shared messaging infrastructure
+
+Routing Patterns:
+- Content-Based Router: Route by message content
+- Header-Based Router: Route by message metadata
+- Recipient List: Send to multiple destinations
+- Splitter: Split composite message into individual messages
+- Aggregator: Combine related messages into single message
+
+Transformation Patterns:
+- Message Translator: Convert between data formats
+- Enricher: Add data from external source
+- Normalizer: Convert semantically equivalent messages
+- Claim Check: Store large data externally, pass reference
+
+## Architecture / Decision Trees
+
+### Integration Style Decision Tree
+```
+Is real-time response required?
+├── Yes → Is strong consistency needed?
+│   ├── Yes → API (REST/gRPC) synchronous
+│   └── No → Can consumer tolerate eventual consistency?
+│       ├── Yes → Messaging (async, durable)
+│       └── No → Streaming (Kafka, Kinesis)
+└── No → Is it a bulk data transfer?
+    ├── Yes → File Transfer (SFTP, S3)
+    └── No → Messaging (async, queue-based)
+```
+
+### Integration Style Comparison
+
+| Style | Latency | Consistency | Volume | Best For |
+|---|---|---|---|---|
+| API (REST/gRPC) | Low | Strong | Low-Med | Real-time, CRUD, synchronous |
+| Messaging (RabbitMQ, SQS) | Medium | Eventual | Medium | Async, durable, decoupled |
+| Streaming (Kafka, Kinesis) | Low | Eventual | Very High | Real-time events, log processing |
+| File Transfer (SFTP, S3) | High | Eventual | High | Batch, legacy systems |
+| Database Sharing | Low | Strong | High | Shared schema (avoid if possible) |
+
+### Message Broker Decision Tree
+```
+Is throughput > 500K messages/second?
+├── Yes → Apache Kafka (high-throughput, ordered per partition)
+└── No → Are complex routing rules needed?
+    ├── Yes → RabbitMQ (flexible exchanges, routing keys)
+    └── No → Is it fully on AWS?
+        ├── Yes → SQS (simple, unlimited scale)
+        └── No → RabbitMQ (balanced features)
+
+Do you need message replay/reprocessing?
+├── Yes → Apache Kafka (retain and replay)
+└── No → RabbitMQ or SQS (consume and remove)
+```
+
+### Integration Topology Options
+
+| Topology | Flexibility | Complexity | Maintenance |
+|---|---|---|---|
+| Point-to-Point | Low | Low | High (N*N connections) |
+| Hub-and-Spoke (ESB) | Medium | Medium | Medium (single broker) |
+| Message Bus | High | High | Medium (routing rules) |
+| Event Mesh | Very High | Very High | High (distributed brokers) |
+
+### Anti-Corruption Layer Strategies
+
+| Strategy | Use When |
+|---|---|
+| Facade | Legacy system API is complex or inconsistent |
+| Adapter | Legacy API differs from modern contract |
+| Translator | Data models differ between systems |
+| Event Translation | Events from legacy use different schema |
 
 ## Agent Protocol
 
@@ -87,46 +184,6 @@ Implement retry with exponential backoff (base delay 1s, max 30s, jitter 0.1). D
 
 ### Step 6: Monitoring Integration Flows
 End-to-end distributed tracing with trace ID propagation. SLA tracking (latency, throughput, error rate). Throughput dashboards partitioned by integration flow. Alert on DLQ depth, latency spikes, error rate thresholds.
-
-## Architecture / Decision Trees
-
-### Integration Style Decision Tree
-
-| Style | Latency | Consistency | Volume | Best For |
-|---|---|---|---|---|
-| API (REST/gRPC) | Low | Strong | Low-Med | Real-time, CRUD, synchronous |
-| Messaging (RabbitMQ, SQS) | Medium | Eventual | Medium | Async, durable, decoupled |
-| Streaming (Kafka, Kinesis) | Low | Eventual | Very High | Real-time events, log processing |
-| File Transfer (SFTP, S3) | High | Eventual | High | Batch, legacy systems |
-| Database Sharing | Low | Strong | High | Shared schema (avoid if possible) |
-
-### Message Broker Decision Tree
-
-| Broker | Throughput | Durability | Ordering | Best For |
-|---|---|---|---|---|
-| RabbitMQ | 50k msg/s | High | Per queue | Task queues, RPC |
-| Apache Kafka | 1M+ msg/s | Very High | Per partition | Event streaming, logging |
-| AWS SQS | Unlimited | Very High | Best-effort | Simple queuing, Lambda |
-| AWS SNS+SQS | 100k+ msg/s | Very High | No | Pub-sub fanout |
-| Google Pub/Sub | 1M+ msg/s | Very High | Per subscription | GCP-native streaming |
-
-### Integration Topology Options
-
-| Topology | Flexibility | Complexity | Maintenance |
-|---|---|---|---|
-| Point-to-Point | Low | Low | High (N*N connections) |
-| Hub-and-Spoke (ESB) | Medium | Medium | Medium (single broker) |
-| Message Bus | High | High | Medium (routing rules) |
-| Event Mesh | Very High | Very High | High (distributed brokers) |
-
-### Anti-Corruption Layer Strategies
-
-| Strategy | Use When |
-|---|---|
-| Facade | Legacy system API is complex or inconsistent |
-| Adapter | Legacy API differs from modern contract |
-| Translator | Data models differ between systems |
-| Event Translation | Events from legacy use different schema |
 
 ## Common Pitfalls
 
@@ -224,6 +281,229 @@ Integration: connecting systems, message routing, protocol transformation. Orche
 - Schema deprecation: notify consumers, set deprecation date
 - Schema deletion: only after all consumers migrated
 
+## Code Examples
+
+### Anti-Corruption Layer (Python)
+```python
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, asdict
+import json
+
+# Legacy system domain model
+@dataclass
+class LegacyOrder:
+    order_id: str
+    customer_code: str
+    item_list: str  # Comma-separated
+    total_dollars: float
+    created_dt: str  # MM/DD/YYYY string
+
+# Modern system domain model
+@dataclass
+class ModernOrder:
+    id: str
+    customer_id: str
+    items: list[str]
+    total_cents: int
+    created_at: str  # ISO 8601
+
+class AntiCorruptionLayer(ABC):
+    @abstractmethod
+    def translate(self, legacy: LegacyOrder) -> ModernOrder:
+        pass
+
+class OrderTranslator(AntiCorruptionLayer):
+    def translate(self, legacy: LegacyOrder) -> ModernOrder:
+        from datetime import datetime
+        return ModernOrder(
+            id=legacy.order_id,
+            customer_id=legacy.customer_code,
+            items=[i.strip() for i in legacy.item_list.split(",")],
+            total_cents=int(legacy.total_dollars * 100),
+            created_at=datetime.strptime(legacy.created_dt, "%m/%d/%Y").isoformat()
+        )
+
+# Facade for legacy API
+class LegacyOrderFacade:
+    def __init__(self, legacy_api_url):
+        self.api_url = legacy_api_url
+
+    def get_order(self, order_id: str) -> LegacyOrder:
+        # Simulated legacy API call
+        return LegacyOrder(
+            order_id=order_id,
+            customer_code="CUST001",
+            item_list="Widget A, Widget B, Gadget C",
+            total_dollars=149.99,
+            created_dt="01/15/2025"
+        )
+
+# Modern consumer
+class OrderService:
+    def __init__(self, translator: AntiCorruptionLayer, legacy_facade: LegacyOrderFacade):
+        self.translator = translator
+        self.legacy_facade = legacy_facade
+
+    def get_modern_order(self, order_id: str) -> dict:
+        legacy = self.legacy_facade.get_order(order_id)
+        modern = self.translator.translate(legacy)
+        return asdict(modern)
+```
+
+### Message Router with Content-Based Routing (Python)
+```python
+import json, enum
+from typing import Callable
+
+class Message:
+    def __init__(self, body: dict, headers: dict = None):
+        self.body = body
+        self.headers = headers or {}
+
+class RoutingRule:
+    def __init__(self, name: str, condition: Callable[[Message], bool], destination: str):
+        self.name = name
+        self.condition = condition
+        self.destination = destination
+
+class ContentBasedRouter:
+    def __init__(self):
+        self.rules: list[RoutingRule] = []
+
+    def add_rule(self, rule: RoutingRule):
+        self.rules.append(rule)
+
+    def route(self, message: Message) -> list[str]:
+        destinations = []
+        for rule in self.rules:
+            if rule.condition(message):
+                destinations.append(rule.destination)
+        return destinations or ["dead-letter-queue"]
+
+# Example usage
+router = ContentBasedRouter()
+router.add_rule(RoutingRule(
+    name="high-value-orders",
+    condition=lambda m: m.body.get("amount", 0) > 10000,
+    destination="order-fulfillment-premium"
+))
+router.add_rule(RoutingRule(
+    name="international-shipments",
+    condition=lambda m: m.body.get("region") == "international",
+    destination="shipping-international"
+))
+router.add_rule(RoutingRule(
+    name="fraud-review",
+    condition=lambda m: m.body.get("risk_score", 0) > 0.8,
+    destination="fraud-detection"
+))
+
+msg = Message({"amount": 15000, "region": "domestic", "risk_score": 0.3})
+print(router.route(msg))  # ['order-fulfillment-premium']
+```
+
+### Retry with Exponential Backoff (Python)
+```python
+import time, random
+from functools import wraps
+
+def retry_with_backoff(max_retries=3, base_delay=1.0, max_delay=30.0, jitter=True):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    if attempt < max_retries:
+                        delay = min(base_delay * (2 ** attempt), max_delay)
+                        if jitter:
+                            delay = delay * (0.5 + random.random() * 0.5)
+                        time.sleep(delay)
+            raise last_exception
+        return wrapper
+    return decorator
+
+@retry_with_backoff(max_retries=3, base_delay=1.0)
+def call_downstream_service(url):
+    # Simulated API call
+    response = requests.get(url, timeout=5)
+    response.raise_for_status()
+    return response.json()
+```
+
+### Schema Registry Compatibility Check (Python)
+```python
+class SchemaRegistry:
+    def __init__(self):
+        self.schemas = {}
+
+    def register_schema(self, subject: str, schema: dict, compatibility: str = "backward"):
+        if subject in self.schemas:
+            existing = self.schemas[subject][-1]
+            if compatibility == "backward":
+                self._check_backward_compatibility(existing, schema)
+            elif compatibility == "forward":
+                self._check_forward_compatibility(existing, schema)
+            elif compatibility == "full":
+                self._check_backward_compatibility(existing, schema)
+                self._check_forward_compatibility(existing, schema)
+        self.schemas.setdefault(subject, []).append(schema)
+
+    def _check_backward_compatibility(self, existing, new_schema):
+        existing_fields = {f["name"]: f for f in existing.get("fields", [])}
+        for field in new_schema.get("fields", []):
+            if field["name"] in existing_fields:
+                if field.get("type") != existing_fields[field["name"]].get("type"):
+                    raise ValueError(f"Field {field['name']} type changed from "
+                                     f"{existing_fields[field['name']]['type']} to {field['type']}")
+        print("Backward compatibility check passed")
+
+    def _check_forward_compatibility(self, existing, new_schema):
+        new_field_names = {f["name"] for f in new_schema.get("fields", [])}
+        for field in existing.get("fields", []):
+            if field["name"] not in new_field_names:
+                if not field.get("optional", False):
+                    raise ValueError(f"Field {field['name']} removed but not optional")
+        print("Forward compatibility check passed")
+
+registry = SchemaRegistry()
+registry.register_schema("order-value", {
+    "type": "record",
+    "fields": [
+        {"name": "order_id", "type": "string"},
+        {"name": "amount", "type": "float"}
+    ]
+})
+registry.register_schema("order-value", {
+    "type": "record",
+    "fields": [
+        {"name": "order_id", "type": "string"},
+        {"name": "amount", "type": "float"},
+        {"name": "currency", "type": "string", "default": "USD"}
+    ]
+})
+```
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Point-to-Point Spaghetti
+Every system connects directly to every other system. N systems create N² connections. Changes ripple across the entire network. Use a message broker or API gateway as a central routing point. Limit direct connections to stable, high-throughput paths.
+
+### Anti-Pattern 2: The Single ESB Monolith
+Routing, transformation, orchestration, protocol conversion, business rules — all in one ESB. The ESB becomes a monolith that is harder to change than any of the systems it connects. Decompose into discrete: message broker, API gateway, transformation service, workflow engine.
+
+### Anti-Pattern 3: Synchronous Chaining
+Service A calls B calls C calls D. Latency equals the sum of all four. Failure of D takes down A, B, and C. Use async messaging between non-real-time steps. Implement circuit breakers and timeouts. Consider CQRS to separate read/write.
+
+### Anti-Pattern 4: Schema Evolution Without Consumers
+Producer changes a message schema without notifying consumers. Consumers break silently. Always use a schema registry with compatibility checks. Notify consumer teams before schema changes. Version all schemas.
+
+### Anti-Pattern 5: Unmonitored Dead Letter Queue
+Messages fail, go to DLQ, but nobody monitors it. DLQ messages accumulate and eventually overflow retention. Critical business events are permanently lost. Monitor DLQ depth with alerts. Review DLQ content weekly. Have a reprocessing workflow.
+
 ## Rules
 - Always use anti-corruption layer between bounded contexts
 - Never share databases between services -- use APIs or message queues
@@ -248,7 +528,8 @@ Integration: connecting systems, message routing, protocol transformation. Orche
 - references/integration-architectures.md -- Integration Architectures
 - references/etl-integration.md -- ETL Integration Patterns
 - references/enterprise-integration-architecture.md -- Enterprise Integration Architecture
-- references/event-driven-integration.md -- Event-Driven Integration
+  - references/event-driven-integration.md -- Event-Driven Integration
+  - references/api-gateway-patterns.md -- API Gateway Patterns
 
 ## Handoff
 For monitoring integration SLAs, hand off to `enterprise-sla-management`. For data governance across integrations, hand off to `enterprise-data-governance`.

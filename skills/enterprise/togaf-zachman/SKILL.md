@@ -4,7 +4,7 @@ description: >
   Use this skill when applying TOGAF ADM or Zachman Framework for enterprise architecture.
   This skill enforces: ADM phase governance, Zachman cell analysis, architecture content production, stakeholder viewpoint alignment.
   Do NOT use for: solution architecture, implementation coding, infrastructure provisioning.
-version: "1.1.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -85,9 +85,74 @@ Govern implementation. Conduct architecture compliance reviews. Manage architect
 ### Step 6: Requirements Management
 Capture, track, and prioritize requirements throughout ADM. Assess requirements impact on all architecture domains. Maintain requirements traceability. Feed requirements back into phases. Requirements repository linked to architecture artifacts.
 
-## Architecture / Decision Trees
+## Decision Trees
 
 ### Framework Selection Decision Tree
+
+1. Does the organization need a structured method for architecture development?
+   - YES -> Use TOGAF ADM as primary method. Provides step-by-step process, governance, and deliverable templates.
+   - NO -> Use Zachman for classification and gap analysis. Descriptive rather than prescriptive.
+
+2. Is the organization in a highly regulated industry (finance, healthcare, government)?
+   - YES -> Use TOGAF. Its governance framework and phase gate reviews align with regulatory compliance requirements. Supplement with Zachman rows for audit trail completeness.
+   - NO -> Consider lighter framework. If still need structure: tailored TOGAF (remove heavy deliverables, focus on value-adding artifacts). If need holistic classification: Zachman.
+
+3. Are you documenting current architecture or designing future architecture?
+   - Current state: Zachman (6x6 matrix provides comprehensive inventory of what exists). Use interrogatives (What, How, Where, Who, When, Why) to ensure complete coverage.
+   - Future state: TOGAF ADM (method drives from vision through implementation). Phases A-F provide structured path from strategy to execution.
+
+4. What is the EA team size and maturity?
+   - < 5 architects, low maturity: Zachman first (simple classification, low ceremony). Add TOGAF ADM elements gradually as capability matures.
+   - 5-20 architects, medium maturity: TOGAF ADM with Zachman overlay. Use ADM for method, Zachman for classification framework.
+   - 20+ architects, high maturity: Full TOGAF + Zachman hybrid. ADM phases driven by EA program, Zachman for taxonomy.
+
+5. Hybrid approach: Use TOGAF ADM as the method and Zachman as the ontology. Map ADM deliverables to Zachman cells. Use Zachman rows (Executive, Business, Architect, Engineer, Technician) as viewpoint templates during ADM phases. This provides both process and structure.
+
+### ADM Phase Entry Decision Tree
+
+1. Is there an approved architecture vision?
+   - NO -> Begin at Phase A. Stakeholders not aligned. Scope not defined. Business case not approved.
+   - YES -> Proceed to Phase B-D. Vision provides scope and stakeholder alignment.
+
+2. Are baseline and target architectures documented?
+   - NO for any domain -> Execute Phase B-D for missing domains. Business first, then data, application, technology.
+   - YES for all domains -> Proceed to Phase E. Gap analysis complete. Ready for solutions.
+
+3. Are implementation opportunities identified?
+   - NO -> Execute Phase E. Group gaps into work packages. Identify solutions. Estimate costs.
+   - YES -> Proceed to Phase F. Create migration plan. Prioritize projects.
+
+4. Is the migration plan approved?
+   - NO -> Refine Phase F. Adjust priorities. Validate business case. Resubmit for approval.
+   - YES -> Proceed to Phase G. Implementation begins. Governance active.
+
+5. Is the implementation complete?
+   - NO -> Continue Phase G. Monitor compliance. Review contracts. Manage changes.
+   - YES -> Enter Phase H. Update repository. Plan next ADM cycle. Continuous improvement.
+
+### Zachman Cell Prioritization Decision Tree
+
+1. What perspective (row) does the stakeholder need?
+   - Executive (Row 1): Scope contextual. High-level goals, strategy, external factors. Deliverable: business strategy map, value chain.
+   - Business Owner (Row 2): Business model conceptual. Processes, organization, locations. Deliverable: process models, org charts.
+   - Architect (Row 3): System model logical. Requirements, data models, application logic. Deliverable: architecture specifications.
+   - Engineer (Row 4): Technology model physical. Implementation details, platform specs. Deliverable: design documents.
+   - Technician (Row 5): Detailed specifications. Configuration, deployment, operation. Deliverable: runbooks, configs.
+   - User (Row 6): Functioning system. Runtime view, actual instances. Deliverable: system documentation, dashboards.
+
+2. Which interrogative (column) is the focus?
+   - What (Data): Data entities, information architecture. Prioritize for data-intensive initiatives.
+   - How (Function): Processes, functions, transformations. Prioritize for business process reengineering.
+   - Where (Network): Locations, distribution, connectivity. Prioritize for geographic expansion or cloud migration.
+   - Who (People): Roles, responsibilities, organizations. Prioritize for organizational change.
+   - When (Time): Events, cycles, schedules. Prioritize for real-time systems or scheduling.
+   - Why (Motivation): Goals, strategies, objectives. Prioritize for strategic planning.
+
+3. Fill cells in priority order: start with Row 1-2 for stakeholder alignment, then Row 3 for architecture specification. Fill Row 4-5 only when preparing for implementation. Skip Row 6 cells (system already exists).
+
+## Architecture / Decision Tables
+
+### Framework Selection Decision Table
 
 | Framework | Strengths | Weaknesses | Best For |
 |---|---|---|---|
@@ -128,6 +193,46 @@ Capture, track, and prioritize requirements throughout ADM. Assess requirements 
 | Governance Log | Review decisions, waivers, changes | Audit trail |
 | Requirements Repository | Stakeholder requirements, traceability | Impact analysis |
 
+## Governance Framework
+
+### Architecture Governance Board Structure
+- Executive Sponsor: C-level accountable for EA program. Approves major architecture decisions. Resolves escalated conflicts.
+- Chief Architect: Leads EA team. Manages ADM cycle. Owns architecture repository. Reports to executive sponsor.
+- Domain Architects: Business, data, application, technology architects. Develop domain architectures. Perform gap analysis.
+- Architecture Review Board: Cross-functional team (architecture, security, operations, business). Reviews compliance. Approves exceptions.
+- Stakeholder Representatives: Business unit leads. Provide requirements. Validate architecture against business needs.
+
+### Phase Gate Review Process
+
+Preliminary Gate: Architecture principles documented. Governance bodies established. Tools selected. Repository initialized. Decision: proceed to Phase A or refine framework setup.
+
+Phase A Gate: Architecture vision approved by stakeholders. Business case validated. Scope and constraints documented. Decision: proceed to Phase B-D or refine vision.
+
+Phase B-D Gate: Baseline and target architectures documented per domain. Gap analysis complete. Roadmaps defined. Decision: proceed to Phase E or iterate on architecture domains.
+
+Phase E Gate: Implementation opportunities identified. Work packages defined. Solutions evaluated. Decision: proceed to Phase F or replan opportunities.
+
+Phase F Gate: Migration plan approved. Projects prioritized. Business case confirmed. Decision: proceed to Phase G or review priorities.
+
+Phase G Gate: Implementation compliance reviewed. Architecture contracts active. Changes managed. Decision: continue monitoring or remediate.
+
+Phase H Gate: Architecture repository updated. Context changes assessed. Next cycle planned. Decision: continue to next ADM iteration or close program.
+
+### Architecture Compliance Classification
+- Conformant: Implementation fully aligns with target architecture. No issues. Standard approval.
+- Conformant with Exceptions: Minor deviations with documented justification. Time-limited waiver required. Review at next phase gate.
+- Non-Conformant: Material deviation from target architecture. Requires re-architecture or board escalation. Architecture board decides: approve deviation, mandate re-architecture, or update target architecture.
+
+### Architecture Maturity Assessment
+Use the following dimensions to assess EA maturity annually:
+- Process Maturity: Are ADM phases followed consistently? Are phase gates enforced? Is tailoring documented?
+- People Maturity: Are architects trained and certified? Is there a career path? Are business stakeholders engaged?
+- Technology Maturity: Is the architecture repository active? Are EA tools integrated with other systems? Is automation in place?
+- Governance Maturity: Does the architecture board have authority? Are compliance reviews effective? Are exceptions tracked?
+- Value Maturity: Is architecture driving business decisions? Are cost savings measured? Is time-to-market improving?
+
+Rate each dimension 1-5 (1=Initial, 2=Managed, 3=Defined, 4=Quantitatively Managed, 5=Optimizing). Target score: 3+ for all dimensions. Improvement plan for any dimension scoring below 3.
+
 ## Common Pitfalls
 
 ### Pitfall 1: Architecture Without Business Alignment
@@ -150,6 +255,12 @@ Architecture artifacts stored in documents nobody reads provide no value. Reposi
 
 ### Pitfall 7: Skipping Phase H (Change Management)
 Completing the ADM cycle and stopping changes the organization. Phase H is continuous: monitor architecture context, manage changes, update repository. Without Phase H, architecture becomes stale. Schedule regular architecture review cycles.
+
+### Pitfall 8: Waterfall ADM Execution
+Running ADM as a rigid sequential process ignores the reality that architecture domains evolve at different speeds. Run ADM iteratively: focus on high-value domains first, revisit others in subsequent cycles. Use agile EA approaches for faster delivery.
+
+### Pitfall 9: Architecture Repository Tool as Silver Bullet
+Buying an EA tool (Sparx, LeanIX) and expecting it to solve architecture problems. Tools enable, they do not create architecture. The method (ADM), the people (architects), and the governance (review board) are what create value. Tool is infrastructure, not solution.
 
 ## Best Practices
 
@@ -180,6 +291,12 @@ Completing the ADM cycle and stopping changes the organization. Phase H is conti
 - Standard exception process with expiry dates
 - Architecture repository as single source of truth
 - Regular architecture capability assessments
+
+### ADM Tailoring for Different Contexts
+- Startup/Scale-up: Use ADM Phases A, B-D, E only. Skip Preliminary, G-H until maturity increases. Focus on application and technology architecture.
+- Mid-market: Use full ADM but reduce deliverable count. Combine Phase B-D into single iteration. Phase E-F combined into migration roadmap.
+- Large Enterprise: Full ADM with all phases. Separate domain architects for B-D. Architecture board with business representation.
+- Digital Transformation: Heavy on Phase A (vision) and Phase E (solutions). Light on documentation. Prioritize speed over completeness.
 
 ## Compared With
 
@@ -225,6 +342,29 @@ Zachman: 6x6 matrix ontology for classifying EA artifacts. ArchiMate: visual mod
 5. Non-conformant projects require re-architecture or board escalation
 6. Review artifacts added to governance log
 
+## Case Studies
+
+### Case Study 1: TOGAF ADM for Financial Services Transformation
+A large bank with 40+ legacy systems needed to modernize their customer onboarding process. Using TOGAF ADM, the EA team started with Phase A (Architecture Vision) to align stakeholders across retail banking, compliance, and IT. Phase B documented the as-is business process requiring 14 system touchpoints and 3-day onboarding time. Phase C mapped data entities (customer, KYC documents, account products) and identified 7 redundant data stores. Phase D designed the target technology architecture with an API gateway, event-driven microservices, and a customer data platform.
+
+Gap analysis revealed 23 capability gaps between baseline and target. Phase E grouped these into 4 work packages: customer portal, KYC automation, account opening engine, and integration layer. Phase F created a 3-phase migration plan progressing from quick wins (portal UX) through core transformation (KYC automation) to full platform. Architecture governance through Phase G ensured each work package maintained compliance with the target architecture. Phase H established quarterly architecture reviews.
+
+Results: Onboarding time reduced from 3 days to 15 minutes. System touchpoints reduced from 14 to 3. Regulatory compliance improved with automated KYC checks. The ADM cycle completed in 9 months for the first iteration.
+
+### Case Study 2: Zachman Framework for Healthcare Data Architecture
+A healthcare organization needed to understand their complete data landscape for HIPAA compliance and interoperability planning. They used the Zachman Framework's What column (Data) across all six rows to inventory their information architecture.
+
+Row 1 (Executive): Identified 5 key data domains — patient records, billing, clinical research, operational, regulatory reporting. Row 2 (Business Owner): Mapped 34 business entities with their lifecycle and ownership. Row 3 (Architect): Created logical data model with entity relationships, cardinality, and data flows. Row 4 (Engineer): Documented physical database schemas across 12 systems including EHR, billing, and lab systems. Row 5 (Technician): Detailed configuration of database servers, backup policies, and data retention rules. Row 6 (User): Catalogued actual data instances, volumes, and growth rates.
+
+The Zachman analysis revealed: 3 data entities with no clear owner (governance gap), 2 systems storing duplicate patient demographic data (redundancy), and 1 critical data flow with no backup path (resiliency gap). Remediation: assigned data owners, consolidated patient data into master data management system, and added failover for the critical data flow. Passed HIPAA audit with zero findings related to data governance.
+
+### Case Study 3: Hybrid TOGAF-Zachman for Cloud Migration
+A retail company with 200+ applications planned a 3-year cloud migration. The EA team used TOGAF ADM for the migration method and Zachman for architecture completeness. Phase A (Vision) established the cloud strategy and stakeholder alignment. Phase B-D used Zachman's What/How/Where columns to document the current application portfolio (What applications exist, How they integrate, Where they run). This revealed 35 applications with unknown dependencies and 12 applications running on unsupported OS versions.
+
+Phase E prioritized migration waves: low-hanging fruit (15 standalone apps), medium complexity (42 apps with simple dependencies), high complexity (28 apps with complex integrations), and retain on-premise (5 apps with hardware dependencies). Phase F created a detailed migration roadmap with quarterly milestones. Phase G governed migration compliance with cloud architecture standards.
+
+The hybrid approach ensured both method (ADM phases kept migration on track) and completeness (Zachman cells identified gaps that pure ADM would have missed). Migration completed 6 months ahead of schedule because the Zachman analysis uncovered hidden dependencies early.
+
 ## Rules
 - All architecture outputs must be stored in the architecture repository
 - Viewpoints must map explicitly to identified stakeholder concerns
@@ -239,6 +379,12 @@ Zachman: 6x6 matrix ontology for classifying EA artifacts. ArchiMate: visual mod
 - Exceptions require documented business justification and expiry date
 - Architecture capability assessed annually for improvement areas
 - EA team engaged before project initiation for alignment
+- ADM tailored to organizational maturity — not all deliverables required for every cycle
+- Architecture decisions must be traceable to business strategy and stakeholder concerns
+- Repository health checked monthly for completeness, accuracy, and currency
+- Architecture capability assessments include people, process, and technology dimensions
+- ADM cycle reviews incorporate lessons learned from previous cycle for continuous improvement
+- Zachman cell analysis includes both current and target states to identify transformation scope
 
 ## References
 - references/togaf-zachman-fundamentals.md -- Togaf Zachman Fundamentals

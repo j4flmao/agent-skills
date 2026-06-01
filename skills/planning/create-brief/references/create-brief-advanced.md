@@ -1,214 +1,87 @@
-# Create Brief Advanced Topics
+# Brief Advanced Topics
 
-## Introduction
-Advanced Create Brief topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+## Q&A Strategy Selection
 
-## Advanced Architecture Patterns
+### Exhaustive Q&A
+Best for vague ideas, first-time founders, or non-technical stakeholders. Ask all 5 questions sequentially. Risk of misalignment is lowest but time to draft is highest (~5 turns).
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+### Gap-Filling Q&A
+Best when user provided partial information. Ask only the missing questions. Faster but risks unstated assumptions.
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+### Zero Q&A
+Best for experienced PMs, follow-up briefs, or internal projects where the user already articulated all 5 components. Fastest but highest risk of misalignment if assumptions are wrong.
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+## Question Depth Techniques
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+### When Users Say "I Don't Know"
+Never default to generic assumptions. Provide 2-3 concrete options:
+- **Target user**: "Are we building for individual consumers, small teams (<10 people), or large organizations (>50 people)?"
+- **Problem**: "Is the pain about cost, time, quality, or something else?"
+- **Differentiator**: "Is the advantage price, speed, ease of use, or a feature no one else has?"
 
-## Performance Optimization
+### When Users Are Too Vague
+- "Everyone" → "If we had to pick the first 100 users, who would they be?"
+- "Fixes communication" → "Walk me through the moment this becomes a problem. What happened right before?"
+- "Like X but better" → "What specifically does X do poorly that your users complain about?"
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+## Handling Different Product Types
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+### B2B SaaS
+- Buyer != user. Identify both personas
+- Include integration requirements (SSO, data import/export, API)
+- Success metrics tied to business outcomes (efficiency gain, cost reduction)
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+### B2C Consumer
+- Behavioral triggers are critical. When and why does the user engage?
+- Acquisition channels determine growth strategy
+- Time-to-value must be measured in minutes, not weeks
 
-## Security Hardening
+### Marketplace
+- Liquidity is the primary risk. How do you get supply and demand in balance?
+- Chicken-and-egg strategy must be explicit
+- Success metrics include fill rate, conversion, and take rate
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+### Internal Tools
+- Adoption is the primary risk. Users did not choose this tool
+- Training and onboarding must be part of scope
+- Integration with existing workflows is non-negotiable
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+## Iteration Management
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+### Three Round Protocol
+- **Round 1**: Present draft. Collect changes. Apply and re-present.
+- **Round 2**: Collect further changes. Apply and re-present.
+- **Round 3**: Last call. Apply changes. If user wants more, state: "I suggest we proceed with the current version."
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+### Feature Creep Resistance
+Track feature count across rounds. If it increases >20%, push back. "Which features are truly MVP vs. v2?"
 
-## Monitoring and Observability
+### Restructuring
+If the user requests significant restructuring, rewrite the full template rather than patching. Patched briefs read incoherently.
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+## Success Metrics by Product Type
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+| Product Type | Primary Metric | Secondary Metric | Measurement |
+|--------------|----------------|------------------|-------------|
+| B2B SaaS | Activation rate (% completing core action in 7 days) | Net revenue retention | Product analytics + billing |
+| B2C Consumer | D7 retention | Time-to-value | Cohort analysis |
+| Marketplace | Liquidity rate (transactions / available supply) | Take rate | Transaction data |
+| Internal Tool | Weekly active users / total licenses | Feature adoption rate | Usage analytics |
+| API/Platform | Time to first successful call | Developer NPS | Onboarding flow |
+| Mobile App | D1 retention | Session frequency | App analytics |
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+## Common Edge Cases
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+**User wants to clone a known product**: The brief must identify why the clone is needed. "Like Trello but for legal document management" is a specific differentiator. "Like Trello" without modification is not a brief.
 
-## Scalability and Reliability
+**User has existing users/code**: The brief should document current state, what needs to change, and constraints imposed by the existing system. "We have 500 users and a Python monolith. We want to..."
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+**Brief for a non-digital product**: The same framework applies but technical constraints become physical constraints (manufacturing, shipping, retail distribution).
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+**Multiple stakeholders with conflicting visions**: Document each stakeholder's perspective. Flag the conflict. Escalate to a decision-maker before drafting.
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+## Connection to Lean Canvas
+The Lean Canvas is a pre-brief tool for business model exploration. The 9 boxes (problem, solution, key metrics, UVP, unfair advantage, channels, customer segments, cost structure, revenue) feed directly into the brief. Extract the brief from boxes 1, 2, 4, and 7 (problem, solution, UVP, customer segments) and expand.
 
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+## Connection to JTBD
+Jobs To Be Done reframes the brief around user motivation. Instead of "who," ask "what job." Instead of "what features," ask "what outcome." This is useful when the user has clear product examples but fuzzy problem definition.

@@ -1,13 +1,8 @@
 ---
-name: git-workflow
+name: dev-loop-git-workflow
 description: >
-  Use this skill when the user says 'commit message', 'branch name', 'git workflow',
-  'PR template', 'conventional commits', 'git strategy', 'merge vs rebase', 'release
-  workflow', or when managing git operations. Covers: conventional commits format,
-  branch naming conventions, PR workflows, merge strategies, and release workflows.
-  Works with any project using git. Do NOT use this for: code review, CI/CD pipeline
-  design, or GitHub-specific configuration.
-version: "1.0.0"
+  Use when the user asks about Git workflows, branching strategies, git hooks, merge strategies, git history management, or team git conventions. Do NOT use for: code review (dev-loop-code-review), changelogs (dev-loop-changelog-generator), or CI/CD configuration.
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -15,154 +10,337 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [dev-loop, git, phase-4]
+tags: [dev-loop, git, branching, version-control]
 ---
 
 # Git Workflow
 
 ## Purpose
-Establish consistent git conventions for commit messages, branching, and pull requests.
+Establish and maintain effective Git workflows — branching strategy, commit conventions, merge patterns, and history management — that enable team collaboration, continuous integration, and reliable releases.
 
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "commit message", "branch name", "git workflow", "PR template", "conventional commits", "git strategy", "merge vs rebase", "release workflow".
+Exact user phrases: "git workflow", "branching strategy", "git flow", "trunk-based", "commit convention", "merge strategy", "git hooks", "git history", "rebase vs merge", "git best practices", "commit message format".
 
 ### Input Context
-Before activating, verify:
-- The context is known (new commit, new branch, PR, or release).
-- The project's git conventions or lack thereof is understood.
-- The user's intent (what they want to do with git) is clear.
+- Team size (solo, small team <10, medium 10-50, large 50+)
+- Release cadence (continuous, weekly, monthly, scheduled)
+- Deployment model (feature flags, release branches, environment-based)
+- CI/CD setup (GitHub Actions, GitLab CI, Jenkins, CircleCI)
+- Current pain points (merge conflicts, messy history, broken main, long-lived branches)
+- Platform (GitHub, GitLab, Bitbucket, Azure DevOps)
 
 ### Output Artifact
-No file output. This skill produces git commands or templates.
-
-### Response Format
-Git command sequence or conventional commit template.
-
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick. No explanation of why git conventions matter.
+Git workflow specification with branching model, commit convention, merge strategy, and hook configuration.
 
 ### Completion Criteria
-This skill is complete when:
-- [ ] The correct git command or commit message template is produced.
-- [ ] The response follows conventional commits format if applicable.
-- [ ] Branch naming follows the project convention.
-- [ ] Merge strategy is specified if asked.
+- [ ] Branching strategy selected (trunk-based, git-flow, GitHub Flow)
+- [ ] Branch naming convention defined
+- [ ] Commit message convention specified (Conventional Commits)
+- [ ] Merge strategy chosen (squash, rebase, merge commit)
+- [ ] Branch protection rules configured
+- [ ] Git hooks implemented (commitlint, pre-commit linting, post-merge)
+- [ ] Release branching and tagging strategy defined
+- [ ] Hotfix workflow documented
+- [ ] Conflict resolution strategy documented
 
 ### Max Response Length
-15 lines.
+200 lines.
 
-## Quick Start
-Conventional commits: `<type>(<scope>): <description>`. Branch: `<type>/<ticket>-<description>`. One concern per PR.
+## Framework/Methodology
 
-## When to Use This Skill
-- Writing commit messages
-- Creating branches
-- Reviewing PR conventions
-- Setting up release workflow
-- Onboarding team to git conventions
-
-## Core Workflow
-
-### Step 1: Conventional Commits
+### Branching Strategy Decision Tree
 ```
-<type>(<scope>): <description>
-
-<body (optional)>
-
-<footer (optional)>
-```
-
-**Types**:
-| Type | When to Use |
-|------|-------------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation changes |
-| `style` | Formatting, missing semicolons (no behavior change) |
-| `refactor` | Code restructuring (no behavior change) |
-| `perf` | Performance improvement |
-| `test` | Adding or fixing tests |
-| `chore` | Build config, tooling, CI |
-| `ci` | CI configuration |
-
-**Examples**:
-```
-feat(auth): add refresh token rotation
-
-Adds automatic refresh token rotation on each token refresh.
-Invalidates old refresh tokens to prevent reuse if compromised.
-
-Closes #123
+What is the team's release model?
+├── Continuous deployment (multiple deploys per day)
+│   → Trunk-based development: short-lived feature branches → main
+│   → Feature flags for incomplete features
+│   → No release branches (main is always deployable)
+├── Scheduled releases (weekly/monthly)
+│   → GitHub Flow: feature → main → release branch → tag
+│   → Release branches for patch backports
+│   → Version tags on release commits
+├── Multiple versions in support (LTS, enterprise)
+│   → Git Flow: develop + main + release branches + hotfix
+│   → Long-lived release branches, cherry-pick fixes
+└── Open source / community
+    → Forking workflow: fork → PR → maintainer review → merge
+    → Maintainer has squash + rebase options
 ```
 
+### Branching Strategy Comparison
 ```
-fix(api): handle null user in /me endpoint
-
-The /me endpoint throws a NullPointerException when
-the user context is missing. Now returns 401 instead.
-```
-
-### Step 2: Branch Naming
-```
-<type>/<ticket-id>-<short-description>
-Examples:
-feat/AUTH-42-user-registration
-fix/ORD-17-price-calculation
-refactor/PAY-03-extract-payment-service
+Strategy           Complexity  Best For                    Release Model
+──────────────────────────────────────────────────────────────────────────
+Trunk-based        Low         Small teams, high CI        Continuous
+GitHub Flow        Low-Med     Most teams, standard        On-demand
+Git Flow           High        Multi-version, enterprise   Scheduled
+Forking            High        Open source, external       PR-driven
 ```
 
-### Step 3: PR Workflow
-1. One concern per PR — not "added feature + refactored + fixed bug"
-2. Title follows conventional commit format
-3. Description includes: what, why, how (not just "what")
-4. Reference the issue/story: `Closes STORY-042`
-5. Request review from relevant team members
+## Workflow
 
-### Step 4: Merge Strategy Decision
-| Strategy | When to Use |
-|----------|-------------|
-| **Squash & Merge** | Topic branch with multiple WIP commits → clean history on main |
-| **Rebase & Merge** | Clean, well-organized branch commits → linear history |
-| **Merge Commit** | Preserving full history, multi-author branches |
+### Step 1: Choose Branch Naming Convention
 
-### Step 5: Release Workflow
+```yaml
+convention: "scoped names with forward slashes"
+patterns:
+  features: "feat/<issue-number>-<short-description>"
+    # e.g. feat/142-add-user-avatar
+  fixes: "fix/<issue-number>-<short-description>"
+    # e.g. fix/87-null-pointer-on-login
+  chores: "chore/<description>"
+    # e.g. chore/update-dependencies
+  releases: "release/<version>"
+    # e.g. release/v2.1.0
+  hotfixes: "hotfix/<version>-<description>"
+    # e.g. hotfix/v2.0.1-security-patch
+
+team_rules:
+  - "All branches must reference an issue number (if applicable)"
+  - "Use kebab-case, no uppercase"
+  - "Delete remote branch after merge"
+  - "Maximum branch lifetime: 3 days (trunk-based) or 1 week"
+```
+
+### Step 2: Commit Message Convention
+
+```yaml
+format: |
+  <type>(<scope>): <description>
+
+  [optional body]
+
+  [optional footer(s)]
+
+types:
+  feat: "New feature (bumps minor)"
+  fix: "Bug fix (bumps patch)"
+  docs: "Documentation"
+  style: "Formatting, no logic change"
+  refactor: "Code restructuring"
+  perf: "Performance improvement"
+  test: "Adding/fixing tests"
+  chore: "Maintenance, deps, build"
+  ci: "CI/CD changes"
+
+rules:
+  - "Subject line: max 72 characters, imperative mood, lowercase"
+  - "Body: wrap at 72 characters, describe WHY not WHAT"
+  - "Footer: BREAKING CHANGE: or references (closes #142)"
+  - "Breaking change: append ! after type/scope"
+```
+
 ```bash
-# Create release branch
-git checkout -b release/v1.2.0 main
+# Good commit messages
+feat(api): add user avatar upload endpoint
 
-# Bump version
-npm version patch  # or minor, major
+feat(api)!: remove deprecated v1 endpoints
 
-# Generate changelog
-# (use changelog-generator skill)
+BREAKING CHANGE: The `/api/v1/users` endpoint is removed.
+Use `/api/v2/users` instead.
 
-# Create PR from release/v1.2.0 → main
+fix(auth): handle null token on session refresh
 
-# After merge, tag
-git tag v1.2.0
-git push origin v1.2.0
+Closes #142
+
+docs(readme): update installation instructions
+
+# Bad commit messages
+"fix stuff"
+"update"
+"WIP"
+"asdf"
+"final_final_v2_REAL"
 ```
 
-## Rules & Constraints
-- Commit subject: imperative mood, no period, < 72 characters
-- Commit body: wrap at 72 characters, explain WHY not WHAT
-- Never commit directly to main — always use PRs
-- Never force push to shared branches (main, develop, release)
-- One logical change per commit — not "fix a bunch of things"
-- Branch names: lowercase, kebab-case, no spaces
+### Step 3: Configure Branch Protection
 
-## Output Format
-Git command sequence or conventional commit template.
+```yaml
+# GitHub branch protection rules (for main branch)
+branch_protection:
+  main:
+    required_status_checks:
+      - "Lint / lint (ubuntu-latest)"
+      - "Test / test (ubuntu-latest)"
+      - "Test / test (windows-latest)"
+      - "Build / build"
+      - "CodeQL / Analyze"
+
+    required_pull_request_review:
+      required_approving_review_count: 1
+      dismiss_stale_reviews: true
+      require_code_owner_reviews: false
+      require_last_push_approval: true
+
+    restrictions:
+      push_restrictions: []
+      allow_force_pushes: false
+      allow_deletions: false
+
+    other:
+      linear_history: false  # Allow merge commits, but prefer squash
+      require_conversation_resolution: true
+      delete_branch_on_merge: true
+      required_linear_history: false
+```
+
+### Step 4: Choose Merge Strategy
+
+```yaml
+# Recommended: squash merge for feature branches
+default: "squash merge"
+rationale: |
+  Clean history on main. Each feature or fix becomes a single
+  well-described commit. Easy to revert. Simple git bisect.
+
+strategies:
+  - name: "Squash merge"
+    when: "Standard feature branch or bugfix"
+    what: "All commits in feature branch become one commit on main"
+    commit_message: "<type>(<scope>): <description> (#PR-number)"
+    pros:
+      - "Clean linear history on main"
+      - "Easy to revert (one commit per feature)"
+      - "bisect-friendly"
+    cons:
+      - "Loses individual commit history of feature branch"
+
+  - name: "Rebase and merge"
+    when: "Small change with clean commits, open source PR"
+    what: "Individual commits preserved, no merge commit"
+    commit_message: "Original commits kept"
+    pros:
+      - "Preserves detailed commit history"
+      - "No merge commits"
+    cons:
+      - "Requires clean commit history from contributor"
+
+  - name: "Merge commit"
+    when: "Complex merge, multiple collaborators on branch"
+    what: "Merge commit created, all commits preserved"
+    commit_message: "Merge branch 'feat/...' into main"
+    pros:
+      - "Preserves full history and co-author attribution"
+    cons:
+      - "Cluttered history, harder to bisect"
+```
+
+### Step 5: Git Hooks with Husky + commitlint
+
+```bash
+# .husky/commit-msg
+npx --no -- commitlint --edit $1
+```
+
+```javascript
+// commitlint.config.js
+module.exports = {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'type-enum': [2, 'always', [
+      'feat', 'fix', 'docs', 'style', 'refactor',
+      'perf', 'test', 'chore', 'ci'
+    ]],
+    'subject-case': [2, 'always', 'lower-case'],
+    'subject-max-length': [2, 'always', 72],
+    'header-max-length': [2, 'always', 72],
+    'scope-case': [2, 'always', 'lower-case'],
+  }
+};
+```
+
+```bash
+# .husky/pre-commit - lint staged files
+npx lint-staged
+```
+
+```json
+// package.json
+{
+  "lint-staged": {
+    "*.{ts,tsx}": ["eslint --fix", "prettier --write"],
+    "*.{json,md,yaml}": ["prettier --write"]
+  }
+}
+```
+
+### Step 6: Release Workflow
+
+```yaml
+release_workflow:
+  steps:
+    - "Create release branch from main: release/v2.1.0"
+    - "Bump version in package.json, changelog"
+    - "Run full CI suite on release branch"
+    - "Create PR from release/v2.1.0 → main"
+    - "After approval, merge using merge commit (preserve release commit)"
+    - "Tag the merge commit: git tag v2.1.0 && git push --tags"
+    - "Deploy from tag or release branch"
+
+  hotfix_workflow:
+    - "Create branch from tag: hotfix/v2.0.1-security-fix"
+    - "Apply fix, bump patch version"
+    - "Create PR → main (merge via squash)"
+    - "Cherry-pick to older release branches if needed"
+    - "Tag: git tag v2.0.1 && git push --tags"
+
+  rules:
+    - "Never commit directly to main"
+    - "Never force push to shared branches"
+    - "Always squash merge feature/fix branches"
+    - "Always delete branch after merge"
+    - "Rebase feature branch before creating PR"
+```
+
+### Step 7: Conflict Resolution
+
+```bash
+# Resolving merge conflicts
+git checkout main
+git pull origin main
+git checkout feature/my-feature
+git rebase main
+# Fix conflicts in each commit
+git add <resolved-files>
+git rebase --continue
+# Force push (if not shared with others)
+git push --force-with-lease
+```
+
+## Common Pitfalls
+
+| Pitfall | Description | Prevention |
+|---------|-------------|------------|
+| Long-lived branches | Diverged from main, huge merge conflicts | Trunk-based: max 3 days per branch |
+| Force push to shared branches | Losing teammates' work | Use --force-with-lease, ban force push on shared |
+| Messy history with WIP commits | Unhelpful commit messages | Squash on merge, use meaningful commits locally |
+| Cherry-pick duplication | Same commit cherry-picked to multiple branches | Note cherry-pick source, use git cherry |
+| No hooks → inconsistent commits | Formatting, commit messages not enforced | pre-commit + commitlint in CI and hooks |
+| Rebase instead of merge at wrong time | Rebasing already-pushed branch | Don't rebase public branches; use merge |
+| Ignoring .gitignore patterns | Committing node_modules, .env, secrets | Audit .gitignore, use .gitattributes |
+| Large binary files in repo | Repo size balloons, slow clones | Git LFS for binaries, exclude build artifacts |
+
+## Best Practices
+
+| Practice | Rationale |
+|----------|-----------|
+| One feature = one branch = one PR | Clean separation, atomic changes |
+| Squash merge feature branches | Clean linear history on main |
+| Conventional Commits | Enables automated tooling (changelog, versioning) |
+| Trunk-based development for CI | Short branches, frequent integration, less conflict |
+| Branch protection on main | Prevents accidental pushes, enforces review |
+| Git hooks for commit quality | Catches issues before CI runs |
+| Delete branches after merge | Reduces clutter, no stale branches |
+| Use .gitattributes for line endings | Users on any OS get correct line endings |
+| Prefer --force-with-lease over --force | Won't overwrite others' pushes |
+| Keep commits small and focused | Easier review, revert, bisect |
 
 ## References
-  - references/branch-strategies.md — Branch Strategies
-  - references/conventional-commits.md — Conventional Commits Specification
-  - references/git-advanced-workflows.md — Advanced Git Workflows
   - references/git-workflow-advanced.md — Git Workflow Advanced Topics
+  - references/git-workflow-branching.md — Branching Strategy Reference
   - references/git-workflow-fundamentals.md — Git Workflow Fundamentals
-  - references/merge-conflict-resolution.md — Merge Conflict Resolution
+  - references/git-workflow-hooks.md — Git Hooks Reference
 ## Handoff
-After completing this skill:
-- Next skill: **security-auditor** — ensure git practices are secure
-- Pass context: branch strategy, commit conventions, PR workflow
+Hand off to `dev-loop-code-review` for PR review process. Hand off to `dev-loop-changelog-generator` for release notes from commits.

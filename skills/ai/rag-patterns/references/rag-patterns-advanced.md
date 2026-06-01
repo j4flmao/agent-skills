@@ -1,214 +1,359 @@
-# Rag Patterns Advanced Topics
+# RAG Advanced Patterns Deep Dive
 
-## Introduction
-Advanced Rag Patterns topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+## Overview
+This reference covers sophisticated RAG patterns that go beyond simple retrieve-and-generate: self-reflection, corrective retrieval, adaptive strategies, fusion, and routing architectures. These patterns address the core failure modes of Naive RAG — missed retrieval, hallucination, irrelevant context, and rigid one-size-fits-all strategies.
 
-## Advanced Architecture Patterns
+## Self-RAG (Self-Reflective RAG)
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+### Concept
+Self-RAG trains or prompts the LLM to emit special **reflection tokens** during generation, controlling whether to retrieve and whether its output is supported by retrieved context. This makes the RAG process self-aware and self-correcting.
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+### Reflection Tokens
+| Token | Meaning | Effect |
+|-------|---------|--------|
+| `<retrieve>` | Retrieval needed | Triggers retrieval step |
+| `<no_retrieve>` | No retrieval needed | Uses parametric knowledge only |
+| `<relevant>` | Retrieved context is relevant | Proceed with generation |
+| `<irrelevant>` | Context not relevant | Re-retrieve or skip |
+| `<supported>` | Generated text supported by context | Output as-is |
+| `<unsupported>` | Text contradicts context | Revise generation |
+| `<useful>` | Output is useful for the query | Keep output |
+| `<not_useful>` | Output is not useful | Re-generate |
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+### Implementation Sketch
+```python
+class SelfRAG:
+    def __init__(self, model, retriever, tokenizer):
+        self.model = model  # fine-tuned for reflection tokens
+        self.retriever = retriever
+        self.tokenizer = tokenizer
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+    async def generate(self, query: str) -> str:
+        reflection = await self.model.generate(f"Query: {query}\n<retrieve>")
+        if "<retrieve>" in reflection:
+            chunks = await self.retriever.retrieve(query)
+            context = "\n".join(chunks)
 
-## Performance Optimization
+            draft = await self.model.generate(
+                f"Query: {query}\nContext: {context}\nDraft:"
+            )
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+            support_check = await self.model.generate(
+                f"Query: {query}\nDraft: {draft}\n<supported> or <unsupported>?"
+            )
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+            if "<unsupported>" in support_check:
+                draft = await self.model.generate(
+                    f"Query: {query}\nContext: {context}\nRevise draft: {draft}\nImproved:"
+                )
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+            return draft
+        else:
+            return await self.model.generate(f"Query: {query}\nAnswer:")
+```
 
-## Security Hardening
+### When to Use Self-RAG
+- Applications where hallucination is unacceptable (medical, legal, finance).
+- When the model must decide whether to retrieve (saving cost for simple queries).
+- Systems with a clear preference for grounded over fluent but unsupported output.
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+### Limitations
+- Requires fine-tuning or specialized prompting for reflection tokens.
+- Increases token usage (multiple generation calls per query).
+- More complex to evaluate (need to track reflection quality).
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+---
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+## Corrective RAG (CRAG)
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+### Concept
+CRAG introduces a **retrieval evaluator** that scores the quality of retrieved documents. When retrieval quality is low, CRAG triggers corrective actions: web search fallback, query decomposition, or alternative retrieval strategies.
 
-## Monitoring and Observability
+### Architecture
+```
+Query
+  │
+  ▼
+Retrieve from Vector DB
+  │
+  ▼
+Retrieval Evaluator (cross-encoder scoring)
+  │
+  ├── High confidence (> threshold)
+  │     └── Generate with retrieved context
+  │
+  ├── Low confidence (marginal)
+  │     ├── Query decomposition → sub-queries
+  │     ├── Retrieve for each sub-query
+  │     └── Generate from combined results
+  │
+  └── Low confidence (no relevant results)
+        ├── Web search or fallback KB
+        ├── Combine web + vector DB results
+        └── Generate from combined results
+```
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+### Retrieval Evaluator
+```python
+class RetrievalEvaluator:
+    def __init__(self, scoring_model, threshold_high=0.7, threshold_low=0.3):
+        self.model = scoring_model
+        self.threshold_high = threshold_high
+        self.threshold_low = threshold_low
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+    async def evaluate(self, query: str, chunks: list[dict]) -> str:
+        scores = []
+        for chunk in chunks:
+            score = await self.model.score(query, chunk["text"])
+            scores.append(score)
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+        avg_score = sum(scores) / max(len(scores), 1)
+        max_score = max(scores) if scores else 0
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+        if max_score >= self.threshold_high:
+            return "high", chunks
+        elif avg_score >= self.threshold_low:
+            return "low", chunks
+        else:
+            return "none", chunks
+```
 
-## Scalability and Reliability
+### Corrector
+```python
+class CRAGCorrector:
+    def __init__(self, vector_retriever, web_search, llm, evaluator):
+        self.vector_retriever = vector_retriever
+        self.web_search = web_search
+        self.llm = llm
+        self.evaluator = evaluator
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+    async def query(self, query: str) -> dict:
+        chunks = await self.vector_retriever.retrieve(query, k=10)
+        level, chunks = await self.evaluator.evaluate(query, chunks)
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+        if level == "high":
+            context = self._format_chunks(chunks)
+        elif level == "low":
+            sub_queries = await self._decompose_query(query)
+            all_chunks = list(chunks)
+            for sq in sub_queries:
+                more = await self.vector_retriever.retrieve(sq, k=5)
+                all_chunks.extend(more)
+            context = self._format_chunks(all_chunks)
+        else:
+            web_results = await self.web_search.search(query, k=5)
+            context = self._format_web_results(web_results)
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+        prompt = f"""Context:\n{context}\n\nQuestion: {query}\n\nAnswer with citations:"""
+        answer = await self.llm.ainvoke(prompt)
+        return {"answer": answer, "strategy": level}
 
-## Integration and Interoperability
+    async def _decompose_query(self, query: str) -> list[str]:
+        prompt = f"""Break this question into 2-3 simpler sub-questions for better retrieval:
+Query: {query}
+Sub-questions:"""
+        result = await self.llm.ainvoke(prompt)
+        return [line.strip() for line in result.content.strip().split("\n") if line.strip() and ". " in line[:4]]
+```
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+### When to Use CRAG
+- Heterogeneous query distribution (some simple, some complex).
+- Knowledge base has coverage gaps (CRAG handles gracefully).
+- Production systems requiring consistent quality across query types.
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+### Limitations
+- Adds latency (evaluator + corrective action).
+- Web search fallback may surface low-quality or conflicting information.
+- Determining evaluator thresholds requires calibration.
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+---
 
-## DevOps and Automation
+## Adaptive RAG
 
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
+### Concept
+Adaptive RAG uses a **query complexity classifier** to route each query to the optimal retrieval strategy. Simple factual queries use fast BM25; complex reasoning queries use dense + multi-hop; ambiguous queries use rewrite + hybrid.
 
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
+### Query Complexity Classifier
+```python
+class QueryComplexityClassifier:
+    def __init__(self, llm):
+        self.llm = llm
 
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+    async def classify(self, query: str) -> str:
+        prompt = f"""Classify this query into one of:
+- simple: factual lookup, short query, single entity
+- complex: multi-step reasoning, comparison, analysis
+- ambiguous: vague terms, multiple interpretations
+
+Query: {query}
+Classification:"""
+        result = await self.llm.ainvoke(prompt)
+        label = result.content.strip().lower()
+        if "complex" in label:
+            return "complex"
+        elif "ambigu" in label:
+            return "ambiguous"
+        return "simple"
+```
+
+### Adaptive Router
+```python
+class AdaptiveRAG:
+    def __init__(self, classifier, bm25_retriever, dense_retriever, hyrid_retriever, llm):
+        self.classifier = classifier
+        self.retrievers = {
+            "simple": bm25_retriever,
+            "complex": dense_retriever,
+            "ambiguous": hyrid_retriever,
+        }
+        self.llm = llm
+
+    async def query(self, query: str) -> dict:
+        query_type = await self.classifier.classify(query)
+        retriever = self.retrievers[query_type]
+
+        top_k = {"simple": 3, "complex": 10, "ambiguous": 15}[query_type]
+        chunks = await retriever.retrieve(query, k=top_k)
+
+        system_prompt = f"You are answering a {query_type} query. Be {'concise and factual' if query_type == 'simple' else 'thorough with reasoning' if query_type == 'complex' else 'comprehensive covering multiple angles'}."
+
+        context = "\n\n".join(c["text"] for c in chunks)
+        prompt = f"{system_prompt}\n\nContext:\n{context}\n\nQuestion: {query}\n\nAnswer:"
+        answer = await self.llm.ainvoke(prompt)
+        return {"answer": answer, "query_type": query_type, "retrieval_strategy": query_type}
+```
+
+### Strategy Configuration Table
+| Query Type | Retriever | Top-K | Re-rank | LLM Mode |
+|-----------|-----------|-------|---------|----------|
+| Simple/Factual | BM25 | 3-5 | No | Concise |
+| Complex/Reasoning | Dense (multi-query) | 10-15 | Yes | Detailed with reasoning |
+| Ambiguous/Broad | Hybrid (RRF) | 15-20 | Yes | Comprehensive, covering angles |
+
+### When to Use Adaptive RAG
+- Production systems with diverse user queries.
+- Cost optimization: cheap retrieval for simple queries, expensive for complex ones.
+- When user satisfaction depends on matching query difficulty to answer depth.
+
+---
+
+## Fusion RAG (FRAG)
+
+### Concept
+Fusion RAG retrieves from multiple heterogeneous knowledge sources and combines results before generation. Sources may include vector DB, BM25 index, knowledge graph, SQL database, and web search.
+
+### Multi-Source Fuser
+```python
+class MultiSourceFuser:
+    def __init__(self):
+        self.sources = {}
+
+    def register_source(self, name: str, retriever, weight: float = 1.0):
+        self.sources[name] = {"retriever": retriever, "weight": weight}
+
+    async def retrieve_all(self, query: str, top_k_per_source: int = 10) -> list[dict]:
+        all_results = []
+
+        for name, source in self.sources.items():
+            results = await source["retriever"].retrieve(query, k=top_k_per_source)
+            for r in results:
+                r["_source"] = name
+                r["_weight"] = source["weight"]
+                all_results.append(r)
+
+        return all_results
+
+    async def fusion_rrf(self, query: str, top_k: int = 10, k_rrf: int = 60) -> list[dict]:
+        source_rankings = {}
+        for name in self.sources:
+            source_rankings[name] = await self.sources[name]["retriever"].retrieve(query, k=top_k * 2)
+
+        scores = {}
+        docs = {}
+        for name, results in source_rankings.items():
+            for rank, doc in enumerate(results):
+                doc_id = doc["id"]
+                scores[doc_id] = scores.get(doc_id, 0) + 1 / (k_rrf + rank + 1)
+                if doc_id not in docs:
+                    docs[doc_id] = doc
+
+        sorted_ids = sorted(scores, key=scores.get, reverse=True)[:top_k]
+        return [docs[id] for id in sorted_ids]
+```
+
+### When to Use Fusion RAG
+- Enterprise search across multiple document repositories.
+- Combining internal knowledge base with real-time web data.
+- When different sources cover complementary aspects of the knowledge domain.
+
+---
+
+## Advanced Query Routing
+
+### Intent-Based Routing
+```python
+class IntentRouter:
+    def __init__(self, llm, routers: dict):
+        self.llm = llm
+        self.routers = routers  # intent -> retriever config
+
+    async def route(self, query: str) -> tuple:
+        prompt = f"""Route this query to one of: {list(self.routers.keys())}
+Query: {query}
+Route:"""
+        intent = (await self.llm.ainvoke(prompt)).content.strip()
+        return intent, self.routers.get(intent, self.routers.get("default"))
+```
+
+| Intent | Retriever | Source | Strategy |
+|--------|-----------|--------|----------|
+| factual | BM25 | Internal wiki | Exact match |
+| troubleshooting | Dense + Re-rank | Docs + forum | Semantic similarity |
+| comparison | Multi-query | Multiple sources | Coverage |
+| creative | Dense (low temp) | General corpus | Broad retrieval |
+| recent | Web search | Internet | Freshness |
+
+---
+
+## Pattern Selection Guide
+
+| Pattern | Best For | Latency Impact | Complexity | Quality Gain |
+|---------|----------|---------------|------------|--------------|
+| Naive RAG | Prototypes, simple QA | Low | Low | Baseline |
+| Advanced RAG (rewrite + re-rank) | Production, general | Medium | Medium | +15-25% |
+| Self-RAG | Hallucination-critical | High | High | +5-10% faithfulness |
+| Corrective RAG | Coverage gaps | Medium-High | High | +10-20% robustness |
+| Adaptive RAG | Diverse query types | Medium | Medium-High | +10-15% per-query quality |
+| Fusion RAG | Multi-source knowledge | High | High | +15-30% recall |
+| HyDE | Short/generic queries | Medium | Low | +5-15% recall |
+
+---
+
+## Implementation Considerations for Advanced Patterns
+
+### Self-RAG: Token Efficiency
+- Self-RAG may double or triple token usage per query.
+- Mitigation: cache reflection decisions; batch reflection checks.
+
+### CRAG: Evaluator Calibration
+- Test evaluator on held-out queries with known retrieval quality.
+- Track precision/recall of the evaluator itself (meta-evaluation).
+
+### Adaptive RAG: Classification Accuracy
+- Misclassifying a complex query as simple produces low-quality answers.
+- Use a classifier with confidence threshold: if uncertain, default to expensive path.
+
+### Fusion RAG: Source Freshness
+- Different sources have different update cadences.
+- Tag each result with its source timestamp. Fuse with recency bias.
+
+---
 
 ## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- Advanced patterns address specific failure modes: Self-RAG for hallucination, CRAG for coverage gaps, Adaptive for query diversity, Fusion for multi-source.
+- Every advanced pattern adds latency. Budget accordingly or use async parallelism.
+- Pattern selection depends on query distribution, latency requirements, and failure tolerance.
+- Evaluators and classifiers within advanced patterns need their own evaluation and calibration.
+- Start with Naive RAG, add complexity only when metrics show a clear gap.
+- Document the specific failure mode each pattern addresses and how you validate it's working.
+- Advanced patterns can be combined: Adaptive-CRAG routes queries and handles failures; Fusion with Self-RAG verifies multi-source output.

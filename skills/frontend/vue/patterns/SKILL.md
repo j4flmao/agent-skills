@@ -53,248 +53,503 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ### Max Response Length
 2560 tokens.
 
+## Component Architecture / Decision Trees
+
+### Pattern Decision Tree
+
+```
+What pattern fits this problem?
+├── Reusable logic (no UI) -> Composable (useX)
+├── Shared state across features -> Pinia store
+├── Shared behavior on DOM events -> Custom directive
+├── 3+ levels of prop drilling -> provide/inject
+├── Flexible layout structure -> Named slots (header, footer, default)
+├── Logic-only component with customizable UI -> Renderless component + scoped slots
+└── Async data on page load -> composable + onMounted or route guard
+```
+
+### Composable Decision Tree
+
+```
+Does the composable manage async state?
+├── Yes -> Return { data, isLoading, error, refresh }
+├── Does it manage pagination?
+│    └── Yes -> Accept Ref<T[]>, return { currentPage, totalPages, pageItems, goToPage }
+└── Does it wrap a browser API?
+     └── Yes -> Accept options, provide start/stop/cleanup lifecycle
+```
+
+### State Management Decision Tree
+
+```
+Is the state used by:
+├── One component -> ref()/reactive()
+├── A component tree -> provide/inject
+├── Multiple unrelated components -> Pinia store
+└── Page route params -> useRoute + route query via router
+```
+
+## Component Design Patterns
+
+### Composable for Async Data
+
+```typescript
+export function useAsync<T>(fetcher: () => Promise<T>) {
+  const data = ref<T | null>(null)
+  const isLoading = ref(false)
+  const error = ref<string | null>(null)
+
+  async function execute() {
+    isLoading.value = true
+    error.value = null
+    try {
+      data.value = await fetcher()
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Unknown error'
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  return { data, isLoading, error, execute }
+}
+```
+
+### Composable for Browser APIs
+
+```typescript
+export function useMediaQuery(query: string) {
+  const matches = ref(false)
+
+  let mql: MediaQueryList
+  function onChange(e: MediaQueryListEvent) { matches.value = e.matches }
+
+  onMounted(() => {
+    mql = window.matchMedia(query)
+    matches.value = mql.matches
+    mql.addEventListener('change', onChange)
+  })
+
+  onUnmounted(() => mql?.removeEventListener('change', onChange))
+
+  return { matches }
+}
+```
+
+### Composable with Computed Dependencies
+
+```typescript
+export function useFilteredList<T>(items: Ref<T[]>, filterFn: () => (item: T) => boolean) {
+  const filtered = computed(() => items.value.filter(filterFn()))
+  return { filtered }
+}
+```
+
+### Custom Directive
+
+```typescript
+// directives/clickOutside.ts
+export const vClickOutside = {
+  mounted(el: HTMLElement, binding: DirectiveBinding<() => void>) {
+    el.__clickOutsideHandler = (e: MouseEvent) => {
+      if (!el.contains(e.target as Node)) binding.value()
+    }
+    document.addEventListener('click', el.__clickOutsideHandler)
+  },
+  unmounted(el: HTMLElement) {
+    document.removeEventListener('click', el.__clickOutsideHandler)
+  },
+}
+```
+
+### Renderless Component with Generic
+
+```vue
+<script setup lang="ts" generic="TItem extends { id: string | number }">
+interface Props {
+  items: TItem[]
+  fetchMore: (offset: number) => Promise<TItem[]>
+}
+
+const props = defineProps<Props>()
+const allItems = ref<TItem[]>([...props.items])
+const isLoadingMore = ref(false)
+const hasMore = ref(true)
+
+async function loadMore() {
+  if (isLoadingMore.value || !hasMore.value) return
+  isLoadingMore.value = true
+  const more = await props.fetchMore(allItems.value.length)
+  if (more.length === 0) hasMore.value = false
+  else allItems.value.push(...more)
+  isLoadingMore.value = false
+}
+</script>
+
+<template>
+  <slot v-bind="{ items: allItems, loadMore, isLoadingMore, hasMore }" />
+</template>
+```
+
+### Slot Composition Pattern
+
+```vue
+<!-- components/Panel.vue -->
+<template>
+  <section class="panel">
+    <div v-if="$slots.toolbar" class="panel-toolbar">
+      <slot name="toolbar" />
+    </div>
+    <div class="panel-body">
+      <slot />
+    </div>
+    <div v-if="$slots.footer" class="panel-footer">
+      <slot name="footer" />
+    </div>
+  </section>
+</template>
+```
+
+## State Management Patterns
+
+### Pinia Setup Store with Async Actions
+
+```typescript
+export const useOrderStore = defineStore('orders', () => {
+  const orders = ref<Order[]>([])
+  const activeOrder = ref<Order | null>(null)
+  const isLoading = ref(false)
+
+  const pendingOrders = computed(() => orders.value.filter(o => o.status === 'pending'))
+  const completedOrders = computed(() => orders.value.filter(o => o.status === 'completed'))
+
+  async function fetchOrders() {
+    isLoading.value = true
+    orders.value = await api.getOrders()
+    isLoading.value = false
+  }
+
+  async function createOrder(data: CreateOrderInput) {
+    const newOrder = await api.createOrder(data)
+    orders.value.unshift(newOrder)
+    return newOrder
+  }
+
+  async function updateStatus(id: string, status: OrderStatus) {
+    await api.updateOrderStatus(id, status)
+    const idx = orders.value.findIndex(o => o.id === id)
+    if (idx !== -1) orders.value[idx].status = status
+  }
+
+  return { orders, activeOrder, isLoading, pendingOrders, completedOrders, fetchOrders, createOrder, updateStatus }
+})
+```
+
+### Pinia Persist Pattern
+
+```typescript
+export const usePreferencesStore = defineStore('preferences', () => {
+  const theme = ref<'light' | 'dark'>('light')
+  const sidebarCollapsed = ref(false)
+
+  function $reset() {
+    theme.value = 'light'
+    sidebarCollapsed.value = false
+  }
+
+  // Subscribe to persist on change
+  watch([theme, sidebarCollapsed], ([t, s]) => {
+    localStorage.setItem('preferences', JSON.stringify({ theme: t, sidebarCollapsed: s }))
+  }, { immediate: true })
+
+  // Hydrate from localStorage
+  const saved = localStorage.getItem('preferences')
+  if (saved) {
+    const parsed = JSON.parse(saved)
+    theme.value = parsed.theme ?? 'light'
+    sidebarCollapsed.value = parsed.sidebarCollapsed ?? false
+  }
+
+  return { theme, sidebarCollapsed, $reset }
+})
+```
+
+### provide/inject with Multiple Keys
+
+```typescript
+export const NotificationKey: InjectionKey<{
+  notify: (msg: string, type: 'success' | 'error' | 'info') => void
+}> = Symbol('NotificationKey')
+```
+
+## Performance Optimization
+
+### Reactivity Tuning
+- Use `shallowRef` for large data objects where only the reference changes
+- Use `markRaw` for objects that should never become reactive (e.g., third-party instances)
+- Avoid deeply nested reactive objects — flatten data with normalization
+- Use `v-memo` on long lists with static items
+
+### Render Optimization
+- `v-once` for static content that never updates
+- `v-memo` for lists where only few items change
+- `shallowRef` for arrays that are replaced entirely
+- Component-level `defineAsyncComponent` for heavy views
+- Avoid expensive computed properties in templates — cache them
+
+### Virtual Scrolling
+Use `vue-virtual-scroller` or custom implementation for lists with 1000+ items.
+
+## Build & Bundle Considerations
+
+### Code Splitting
+
+```typescript
+const routes = [
+  {
+    path: '/heavy',
+    component: () => import('@/features/heavy/HeavyPage.vue'),
+  },
+]
+```
+
+### Dynamic Import for Components
+
+```vue
+<script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
+const HeavyChart = defineAsyncComponent(() => import('@/components/HeavyChart.vue'))
+</script>
+```
+
+### Vite Optimization
+
+```ts
+export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['vue', 'vue-router', 'pinia'],
+          charts: ['chart.js', 'vue-chartjs'],
+        },
+      },
+    },
+  },
+})
+```
+
+## Testing Strategies
+
+### Composable Test
+
+```typescript
+import { describe, it, expect } from 'vitest'
+import { usePagination } from './usePagination'
+
+describe('usePagination', () => {
+  const items = ref([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
+  it('chunks items by page size', () => {
+    const { pageItems, currentPage } = usePagination(items, 3)
+    expect(pageItems.value).toEqual([1, 2, 3])
+    currentPage.value = 2
+    expect(pageItems.value).toEqual([4, 5, 6])
+  })
+
+  it('clamps page within bounds', () => {
+    const { goToPage, currentPage } = usePagination(items, 3)
+    goToPage(100)
+    expect(currentPage.value).toBe(4) // 10 items / 3 = 4 pages
+    goToPage(-1)
+    expect(currentPage.value).toBe(1)
+  })
+})
+```
+
+### Pinia Store Test
+
+```typescript
+import { setActivePinia, createPinia } from 'pinia'
+import { useCartStore } from './cart.store'
+
+beforeEach(() => {
+  setActivePinia(createPinia())
+})
+
+it('adds item to cart', () => {
+  const cart = useCartStore()
+  cart.addItem({ id: '1', name: 'T-shirt', price: 20 }, 2)
+  expect(cart.itemCount).toBe(2)
+  expect(cart.subtotal).toBe(40)
+})
+
+it('applies discount code', () => {
+  const cart = useCartStore()
+  cart.addItem({ id: '1', name: 'T-shirt', price: 100 }, 1)
+  cart.applyCoupon('SAVE10')
+  expect(cart.discount).toBe(10)
+  expect(cart.total).toBe(90)
+})
+```
+
+### Navigation Guard Test
+
+```typescript
+it('redirects unauthenticated users', () => {
+  router.push({ name: 'checkout' })
+  expect(router.currentRoute.value.name).toBe('login')
+})
+```
+
+## Migration Patterns
+
+### Options API Mixin to Composable
+
+```typescript
+// Before: Mixin
+const UserMixin = { data: () => ({ user: null }), methods: { async fetchUser(id) { this.user = await api.getUser(id) } } }
+
+// After: Composable
+export function useUser(id: Ref<string>) {
+  const user = ref<User | null>(null)
+  async function fetchUser() { user.value = await api.getUser(id.value) }
+  return { user, fetchUser }
+}
+```
+
+### Vuex Module to Pinia Setup Store
+
+```typescript
+// Before: Vuex
+const store = new Vuex.Store({ state: { count: 0 }, mutations: { inc: s => s.count++ }, actions: { incAsync: ({ commit }) => setTimeout(() => commit('inc'), 1000) } })
+
+// After: Pinia
+export const useCounterStore = defineStore('counter', () => {
+  const count = ref(0)
+  function increment() { count.value++ }
+  async function incrementAsync() { await delay(1000); count.value++ }
+  return { count, increment, incrementAsync }
+})
+```
+
+## Anti-Patterns
+
+### String Injection Keys
+
+```typescript
+// Anti-pattern
+provide('user', user)
+const user = inject('user')
+
+// Correct
+export const UserKey: InjectionKey<User> = Symbol('UserKey')
+provide(UserKey, user)
+const ctx = inject(UserKey)
+```
+
+### Mutating Pinia State Outside Store
+
+```typescript
+// Anti-pattern
+const store = useCartStore()
+store.items.push(newItem) // no validation, no side effects
+
+// Correct
+store.addItem(newItem)
+```
+
+### Overusing provide/inject
+
+provide/inject couples components implicitly. Prefer props + emits for 1-2 levels, provide/inject only for 3+ levels of nesting.
+
+### Heavy Computed in Template
+
+```vue
+<!-- Anti-pattern -->
+<template>
+  <div>{{ items.filter(i => i.active).map(i => i.name).join(', ') }}</div>
+</template>
+
+<!-- Correct -->
+<script setup>const activeNames = computed(() => items.value.filter(i => i.active).map(i => i.name).join(', '))</script>
+<template><div>{{ activeNames }}</div></template>
+```
+
+## Common Pitfalls
+
+1. **Missing .value in script**: `ref()` requires `.value` in `<script setup>`, never in `<template>`.
+2. **Composables with side effects on import**: Composables should be called in setup(), not at module level.
+3. **Unstable refs from composables**: Return the same ref instance (not new ref() each call).
+4. **Missing error states in async composables**: Always return `error` ref.
+5. **Over-nesting provide/inject**: Prefer props drilling for 1-2 levels.
+
+## Compared With
+
+| Pattern | Vue 3 | React |
+|---------|-------|-------|
+| Reusable logic | Composables (useX) | Hooks (useX) |
+| Shared state | Pinia | Zustand, Jotai |
+| Renderless | Scoped slots + generic | Render props |
+| DOM behavior | Custom directives | useRef + useEffect |
+| 3+ level drilling | provide/inject | Context |
+
+## Ecosystem & Tooling
+
+| Package | Purpose |
+|---------|---------|
+| pinia | State management |
+| vue-router | Client routing |
+| @vue/test-utils | Component testing |
+| @vueuse/core | Collection of composables |
+| vue-virtual-scroller | Virtual scrolling for large lists |
+
 ## Workflow
 
 ### Step 1: Composable Design
 ```typescript
-// composables/usePagination.ts
-import { ref, computed } from 'vue'
-
-export function usePagination<T>(items: Ref<T[]>, pageSize: number) {
-  const currentPage = ref(1)
-  const totalPages = computed(() => Math.ceil(items.value.length / pageSize))
-  const pageItems = computed(() => {
-    const start = (currentPage.value - 1) * pageSize
-    return items.value.slice(start, start + pageSize)
-  })
-
-  function goToPage(page: number) {
-    currentPage.value = Math.max(1, Math.min(page, totalPages.value))
-  }
-
-  return { currentPage, totalPages, pageItems, goToPage }
+export function useUsers() {
+  const users = ref<User[]>([])
+  const { isLoading, error, execute } = useAsync(() => api.getUsers())
+  return { users, isLoading, error, refresh: execute }
 }
 ```
-One composable per concern. Accept `Ref<T>` for reactive parameters. Return stable references.
 
-### Step 2: provide/inject with Keys
+### Step 2: Pinia Store
 ```typescript
-// types/injection-keys.ts
-import type { InjectionKey, Ref } from 'vue'
-
-export interface UserContext {
-  user: Ref<User | null>
-  permissions: Ref<string[]>
-  hasPermission: (perm: string) => boolean
-}
-
-export const UserKey: InjectionKey<UserContext> = Symbol('UserKey')
-```
-
-```vue
-<!-- provider component -->
-<script setup lang="ts">
-import { provide, ref } from 'vue'
-import { UserKey, type UserContext } from '@/types/injection-keys'
-
-const user = ref<User | null>(null)
-const permissions = ref<string[]>([])
-
-provide<UserContext>(UserKey, {
-  user,
-  permissions,
-  hasPermission: (perm) => permissions.value.includes(perm),
-})
-</script>
-```
-
-```vue
-<!-- consumer component -->
-<script setup lang="ts">
-import { inject } from 'vue'
-import { UserKey } from '@/types/injection-keys'
-
-const ctx = inject(UserKey)
-if (!ctx) throw new Error('UserKey not provided')
-</script>
-```
-
-### Step 3: Pinia Setup Store
-```typescript
-// stores/cart.store.ts
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-
-export const useCartStore = defineStore('cart', () => {
-  const items = ref<CartItem[]>([])
-  const couponCode = ref<string | null>(null)
-
-  const itemCount = computed(() => items.value.reduce((sum, i) => sum + i.quantity, 0))
-  const subtotal = computed(() => items.value.reduce((sum, i) => sum + i.price * i.quantity, 0))
-  const discount = computed(() => couponCode.value ? subtotal.value * 0.1 : 0)
-  const total = computed(() => subtotal.value - discount.value)
-
-  async function addItem(product: Product, quantity = 1) {
-    const existing = items.value.find(i => i.id === product.id)
-    if (existing) {
-      existing.quantity += quantity
-    } else {
-      items.value.push({ ...product, quantity })
-    }
-  }
-
-  function removeItem(productId: string) {
-    items.value = items.value.filter(i => i.id !== productId)
-  }
-
-  function applyCoupon(code: string) {
-    couponCode.value = code
-  }
-
-  async function checkout() {
-    const res = await api.createOrder({ items: items.value, coupon: couponCode.value })
-    if (res.ok) items.value = []
-    return res
-  }
-
-  return { items, couponCode, itemCount, subtotal, discount, total, addItem, removeItem, applyCoupon, checkout }
+export const useAuthStore = defineStore('auth', () => {
+  const user = ref<User | null>(null)
+  async function login(email: string, password: string) { user.value = await api.login(email, password) }
+  function logout() { user.value = null }
+  return { user, login, logout }
 })
 ```
 
-### Step 4: Router Patterns
+### Step 3: Router
 ```typescript
-// router/index.ts
-import { createRouter, createWebHistory } from 'vue-router'
-
-const router = createRouter({
-  history: createWebHistory(),
-  routes: [
-    {
-      path: '/',
-      name: 'home',
-      component: () => import('@/features/home/HomePage.vue'),
-    },
-    {
-      path: '/products',
-      name: 'products',
-      component: () => import('@/features/products/ProductListPage.vue'),
-      children: [
-        {
-          path: ':id',
-          name: 'product-detail',
-          component: () => import('@/features/products/ProductDetailPage.vue'),
-          props: true,
-        },
-      ],
-    },
-    {
-      path: '/checkout',
-      name: 'checkout',
-      component: () => import('@/features/checkout/CheckoutPage.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/admin',
-      name: 'admin',
-      component: () => import('@/features/admin/AdminLayout.vue'),
-      meta: { requiresAuth: true, requiresRole: 'admin' },
-      children: [
-        { path: '', redirect: { name: 'admin-dashboard' } },
-        {
-          path: 'dashboard',
-          name: 'admin-dashboard',
-          component: () => import('@/features/admin/DashboardPage.vue'),
-        },
-      ],
-    },
-    {
-      path: '/:pathMatch(.*)*',
-      name: 'not-found',
-      component: () => import('@/features/errors/NotFoundPage.vue'),
-    },
-  ],
-})
+const routes = [{ path: '/dashboard', component: () => import('@/features/dashboard/DashboardPage.vue'), meta: { requiresAuth: true } }]
+router.beforeEach((to) => { if (to.meta.requiresAuth && !auth.isAuthenticated) return '/login' })
 ```
 
-### Step 5: Navigation Guards
+### Step 4: provide/inject
 ```typescript
-import { useAuthStore } from '@/stores/auth.store'
-
-router.beforeEach(async (to, from) => {
-  const auth = useAuthStore()
-
-  if (to.meta.requiresAuth && !auth.isAuthenticated) {
-    return { name: 'login', query: { redirect: to.fullPath } }
-  }
-
-  if (to.meta.requiresRole && !auth.hasRole(to.meta.requiresRole as string)) {
-    return { name: 'forbidden' }
-  }
-
-  if (to.meta.requiresAuth && !auth.profileLoaded) {
-    await auth.loadProfile()
-  }
-})
+const NotificationKey: InjectionKey<{ notify: (msg: string) => void }> = Symbol('NotificationKey')
 ```
 
-### Step 6: Renderless Component
-```vue
-<!-- components/RenderlessPagination.vue -->
-<script setup lang="ts" generic="T">
-import { usePagination } from '@/composables/usePagination'
-
-const props = defineProps<{
-  items: T[]
-  pageSize?: number
-}>()
-
-const { currentPage, totalPages, pageItems, goToPage } = usePagination(
-  toRef(props, 'items'),
-  props.pageSize ?? 10,
-)
-</script>
-
-<template>
-  <slot v-bind="{ currentPage, totalPages, pageItems, goToPage }" />
-</template>
+### Step 5: Custom Directive
+```typescript
+export const vFocus = { mounted(el: HTMLElement) { el.focus() } }
 ```
-Usage:
-```vue
-<RenderlessPagination :items="articles" :page-size="5" v-slot="{ pageItems, goToPage, currentPage }">
-  <article v-for="item in pageItems" :key="item.id">
-    <h3>{{ item.title }}</h3>
-  </article>
-  <button @click="goToPage(currentPage - 1)">Prev</button>
-</RenderlessPagination>
-```
-
-### Step 7: Slot Patterns
-```vue
-<!-- components/Card.vue -->
-<template>
-  <div class="card">
-    <header v-if="$slots.header">
-      <slot name="header" />
-    </header>
-    <main>
-      <slot />
-    </main>
-    <footer v-if="$slots.footer">
-      <slot name="footer" />
-    </footer>
-  </div>
-</template>
-```
-Use named slots for optional sections. Use scoped slots (`v-bind`) to expose component state. Use conditional rendering (`v-if="$slots.x"`) to avoid empty wrappers.
 
 ## Rules
-- Composables are single-responsibility: one composable per feature concern, not per file.
+- Composables are single-responsibility: one composable per feature concern.
 - provide/inject typed with InjectionKey — never string keys.
 - Pinia stores use setup store syntax (function form), not options API.
-- All route components are lazy-loaded with dynamic `import()`.
-- Navigation guards are thin — delegate auth and data logic to composables and stores.
+- All route components are lazy-loaded with dynamic import().
+- Navigation guards are thin — delegate auth and data logic to stores.
 - Renderless components expose state via scoped slots, never dictate markup.
 - Named slots for structural sections, default slot for primary content.
+- Custom directives for DOM-only behavior, composables for logic.
 
 ## References
   - references/composition-patterns.md — Vue Composition Patterns
@@ -303,6 +558,7 @@ Use named slots for optional sections. Use scoped slots (`v-bind`) to expose com
   - references/vue-form-patterns.md — Vue Form Patterns
   - references/vue-routing.md — Vue Routing Patterns
   - references/vue-state.md — Vue State Management Patterns
+
 ## Handoff
 No artifact produced.
 Next skill: vue-nuxt if using Nuxt. Or frontend-universal-testing for Vue component tests.

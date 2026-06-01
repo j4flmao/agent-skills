@@ -264,6 +264,455 @@ export const Child = component$(() => {
 })
 ```
 
+### Inline Component Pattern (No $)
+
+For non-interactive wrapper components that don't need lazy loading:
+
+```tsx
+// No component$() — this is an eager, lightweight wrapper
+export function Container(props: { title: string; children?: any }) {
+  return (
+    <section>
+      <h2>{props.title}</h2>
+      {props.children}
+    </section>
+  )
+}
+```
+
+### Slot Pattern with Fallback
+
+```tsx
+export const Card = component$(() => {
+  return (
+    <div class="card">
+      <div class="card-header">
+        <Slot name="header" />
+      </div>
+      <div class="card-body">
+        <Slot />
+      </div>
+    </div>
+  )
+})
+```
+
+### Lazy-Loaded Third-Party Library
+
+```tsx
+export default component$(() => {
+  useVisibleTask$(async () => {
+    const Chart = await import('chart.js')
+    // Chart is only downloaded when this component becomes visible
+    new Chart(ctx, { /* options */ })
+  })
+  return <canvas ref={canvasRef} />
+})
+```
+
+### Infinite Scroll Pattern
+
+```tsx
+export default component$(() => {
+  const items = useSignal<Item[]>([])
+  const page = useSignal(1)
+  const loading = useSignal(false)
+
+  const loadMore = $(async () => {
+    if (loading.value) return
+    loading.value = true
+    const newItems = await fetch(`/api/items?page=${page.value}`).then(r => r.json())
+    items.value = [...items.value, ...newItems]
+    page.value++
+    loading.value = false
+  })
+
+  return (
+    <div>
+      {items.value.map(item => <ItemCard item={item} />)}
+      <button onClick$={loadMore}>
+        {loading.value ? 'Loading...' : 'Load More'}
+      </button>
+    </div>
+  )
+})
+```
+
+### Debounced Search Pattern
+
+```tsx
+export default component$(() => {
+  const query = useSignal('')
+  const results = useSignal<SearchResult[]>([])
+
+  const search = $(async (q: string) => {
+    if (q.length < 2) { results.value = []; return }
+    results.value = await fetch(`/api/search?q=${q}`).then(r => r.json())
+  })
+
+  return (
+    <div>
+      <input
+        onInput$={async (_, el) => {
+          query.value = el.value
+          await search(el.value)
+        }}
+        placeholder="Search..."
+      />
+      <ul>
+        {results.value.map(r => <li key={r.id}>{r.title}</li>)}
+      </ul>
+    </div>
+  )
+})
+```
+
+## State Management Patterns
+
+### useSignal for Primitives
+```tsx
+const count = useSignal(0)          // number
+const name = useSignal('')          // string
+const isActive = useSignal(true)    // boolean
+const items = useSignal<string[]>([])  // array (replaced entirely)
+```
+
+### useStore for Objects
+```tsx
+const user = useStore({
+  id: '',
+  name: '',
+  email: '',
+  preferences: { theme: 'light', language: 'en' },
+  metadata: { createdAt: null as Date | null },
+})
+```
+Qwik tracks property-level reads. Mutations like `user.preferences.theme = 'dark'` trigger targeted re-renders without VDOM diffing.
+
+### Derived State
+```tsx
+const firstName = useSignal('John')
+const lastName = useSignal('Doe')
+
+const fullName = useComputed$(() =>
+  `${firstName.value} ${lastName.value}`
+)
+// fullName.value updates automatically when firstName or lastName changes
+```
+
+### Context-Based Shared State
+```tsx
+// Define context type
+interface AuthState { user: User | null; login: (email: string, password: string) => Promise<void> }
+
+// Create context ID
+export const AuthContext = createContextId<AuthState>('auth')
+
+// Provider in root layout
+export const Root = component$(() => {
+  const authState = useStore<AuthState>({
+    user: null,
+    login: $(async (email, password) => {
+      const user = await loginUser(email, password)
+      authState.user = user
+    }),
+  })
+  useContextProvider(AuthContext, authState)
+  return <Slot />
+})
+
+// Consumer in any child
+export const Profile = component$(() => {
+  const auth = useContext(AuthContext)
+  return <div>{auth.user ? `Welcome ${auth.user.name}` : 'Not logged in'}</div>
+})
+```
+
+### Server State Synchronization
+Use routeLoader$ + routeAction$ for server state. The client can invalidate loaders after an action:
+
+```tsx
+export const usePosts = routeLoader$(async () => {
+  return await db.post.findMany() as Post[]
+})
+
+export const useCreatePost = routeAction$(async (form) => {
+  await db.post.create({ data: { title: form.get('title') } })
+  // Loader automatically re-runs on next request
+})
+
+export default component$(() => {
+  const posts = usePosts()
+  const createPost = useCreatePost()
+  return <Form action={createPost}>...</Form>
+})
+```
+
+### URL as State Source
+
+```tsx
+export default component$(() => {
+  const loc = useLocation()
+  const nav = useNavigate()
+
+  // Read state from URL
+  const currentPage = Number(loc.params.page) || 1
+  const sortBy = loc.url.searchParams.get('sort') || 'date'
+
+  // Update URL
+  return <button onClick$={() => nav(`/list?sort=${sortBy}&page=${currentPage + 1}`)}>Next</button>
+})
+```
+
+## Performance Optimization
+
+1. Initial load: ~10KB JS baseline, zero hydration cost, instant TTI.
+2. Lazy chunks: Each $() is ~200-500 bytes, loaded on interaction only.
+3. Serialized state: HTML size increases by ~2-5KB per page with serialized signals.
+4. Prefetch: PrefetchServiceWorker uses idle time to download route chunks.
+5. Bundle splitting: Automatic at the $ boundary — no manual code splitting.
+6. Memory: Fine-grained signals use less memory than virtual DOM tree.
+7. Time to interactive: Near zero because there is no hydration to wait for.
+
+### Chunk Size Budgets
+- Each $ boundary: 200-500 bytes target
+- Route loader data: < 10KB serialized per page
+- Total initial JS: < 15KB
+- Total per-interaction JS: < 5KB
+
+### Measuring Performance
+```bash
+npx qwik build --analyze  # opens bundle analyzer
+npm run qwik build && node dist/server/entry.mjs  # test SSR perf
+```
+
+## Build & Bundle Considerations
+
+### Entry Strategies
+
+| Strategy | Chunks | Use Case |
+|----------|--------|----------|
+| `smart` | Many small chunks (default) | Most applications — optimal lazy loading |
+| `hoist` | Fewer, larger chunks | Apps with many shared dependencies |
+| `single` | One bundle | Small apps, no lazy benefit needed |
+
+Configure in `vite.config.ts`:
+```ts
+qwikVite({ entryStrategy: { type: 'hoist' } })
+```
+
+### Tree Shaking
+Qwik's optimizer automatically tree-shakes unused exports from `$()` boundaries. Only code reachable from a `$()` boundary is included in the client bundle.
+
+### CSS Bundling
+- CSS imported in components is automatically extracted and split
+- Global CSS in `src/global.css` is inlined in the initial HTML
+- Use CSS Modules for component-scoped styles: `import styles from './component.module.css'`
+
+### Adapter-Specific Builds
+
+```ts
+// Cloudflare Pages
+import cloudflarePages from '@builder.io/qwik-city/adapters/cloudflare-pages/vite'
+// Node.js server
+import nodeServer from '@builder.io/qwik-city/adapters/node-server/vite'
+// Vercel Edge
+import vercelEdge from '@builder.io/qwik-city/adapters/vercel-edge/vite'
+```
+
+Each adapter changes the SSR entry point and output format.
+
+## Testing Strategies
+
+### Component Unit Tests
+
+```tsx
+// __tests__/counter.test.tsx
+import { createDOM } from '@builder.io/qwik/testing'
+import { test, expect } from 'vitest'
+import Counter from '../src/components/counter'
+
+test('should increment', async () => {
+  const { screen, render, userEvent } = await createDOM()
+  await render(<Counter />)
+  expect(screen.querySelector('button')?.innerHTML).toBe('0')
+  await userEvent('button', 'click')
+  expect(screen.querySelector('button')?.innerHTML).toBe('1')
+})
+```
+
+### Signal/Store Logic Tests
+
+```tsx
+// __tests__/state.test.ts
+import { test, expect } from 'vitest'
+import { useSignal, useStore } from '@builder.io/qwik'
+
+test('signal updates reactively', () => {
+  const count = useSignal(0)
+  expect(count.value).toBe(0)
+  count.value = 5
+  expect(count.value).toBe(5)
+})
+
+test('store tracks nested mutations', () => {
+  const state = useStore({ user: { name: 'John' } })
+  expect(state.user.name).toBe('John')
+  state.user.name = 'Jane'
+  expect(state.user.name).toBe('Jane')
+})
+```
+
+### Route Loader Tests
+
+```tsx
+// __tests__/loaders.test.ts
+import { test, expect } from 'vitest'
+import { useProductData } from '../src/routes/product/[id]'
+
+test('loader fetches product by id', async () => {
+  const mockContext = {
+    params: { id: '1' },
+    request: new Request('http://localhost/product/1'),
+    // ... other context properties
+  }
+  const result = await useProductData(mockContext)
+  expect(result).toHaveProperty('name')
+  expect(result).toHaveProperty('price')
+})
+```
+
+### E2E Testing
+
+```tsx
+// e2e/navigation.spec.ts
+import { test, expect } from '@playwright/test'
+
+test('navigates without full page reload', async ({ page }) => {
+  await page.goto('/')
+  await page.click('a[href="/about"]')
+  await expect(page.locator('h1')).toHaveText('About')
+  // Verify client-side navigation (no full page reload)
+})
+
+test('form submission with validation', async ({ page }) => {
+  await page.goto('/dashboard')
+  await page.fill('input[name="name"]', 'A')
+  await page.click('button[type="submit"]')
+  await expect(page.locator('.error')).toContainText('too short')
+})
+```
+
+## Migration Patterns
+
+### React to Qwik Migration Plan
+
+**Phase 1 — Audit existing components:**
+- Identify which components need client interactivity
+- Map React hooks to Qwik equivalents
+- Identify server-side data dependencies
+
+**Phase 2 — Rewrite leaf components:**
+```tsx
+// React
+function Toggle() {
+  const [on, setOn] = useState(false)
+  return <button onClick={() => setOn(!on)}>{on ? 'ON' : 'OFF'}</button>
+}
+
+// Qwik
+export default component$(() => {
+  const on = useSignal(false)
+  return <button onClick$={() => on.value = !on.value}>{on.value ? 'ON' : 'OFF'}</button>
+})
+```
+
+**Phase 3 — Migrate routing and data:**
+- Replace React Router with Qwik City file-based routing
+- Replace React Query/useEffect fetches with routeLoader$
+- Replace API routes with resource routes or server$
+
+**Phase 4 — Enable prefetch and optimize:**
+- Add PrefetchServiceWorker
+- Verify $ boundary coverage with Qwik DevTools
+- Audit chunk sizes with `qwik build --analyze`
+
+### Next.js to Qwik City
+
+| Next.js | Qwik City |
+|---------|-----------|
+| `pages/[slug].tsx` | `src/routes/[slug]/index.tsx` |
+| `getServerSideProps` | `routeLoader$` |
+| `getStaticProps` | `routeLoader$` with SSG |
+| Server Actions | `routeAction$` |
+| `middleware.ts` | `plugin@name.ts` |
+| `layout.tsx` | `layout.tsx` per segment |
+| `next/image` | `qwik-image` or `<img>` with lazy loading |
+
+### Incremental Strategy
+1. **Route-level** — Migrate one route at a time, keeping old and new coexisting
+2. **Component-level** — Embed Qwik widgets in existing pages via web components
+3. **Feature-level** — Build new features in Qwik, leave legacy features in old framework
+
+## Anti-Patterns
+
+### Missing $ Suffix
+```tsx
+// Anti-pattern: onClick without $ — handler is eager, not lazy
+<button onClick={() => doSomething()}>Click</button>
+
+// Correct
+<button onClick$={() => doSomething()}>Click</button>
+```
+
+### State Outside Qwik's Reactivity System
+```tsx
+// Anti-pattern: plain variable — changes won't trigger re-render
+let count = 0
+
+// Correct: useSignal
+const count = useSignal(0)
+```
+
+### Data Fetching in useVisibleTask$
+```tsx
+// Anti-pattern: useVisibleTask$ for data
+useVisibleTask$(async () => {
+  const data = await fetch('/api/data').then(r => r.json())
+  state.value = data
+})
+
+// Correct: routeLoader$
+export const useData = routeLoader$(async () => {
+  return await fetch('/api/data').then(r => r.json())
+})
+```
+
+### Large Serialized State
+```tsx
+// Anti-pattern: serializing entire data set
+const allProducts = useSignal(await fetch('/api/products/10000').then(r => r.json()))
+
+// Correct: lazy load, paginate
+export const useProducts = routeLoader$(async ({ query }) => {
+  const page = Number(query.get('page')) || 1
+  return await db.product.findMany({ skip: (page-1)*20, take: 20 })
+})
+```
+
+### Mixing React and Qwik in Same Component
+Don't import or use React hooks inside a Qwik component. The reactivity systems are incompatible.
+
+### Over-Serialization
+```tsx
+// Anti-pattern: storing non-serializable values in signals
+const chartInstance = useSignal<Chart | null>(null) // Chart is a class instance
+
+// Correct: use NoSerialize wrapper
+import { NoSerialize } from '@builder.io/qwik'
+const chartInstance = useSignal<NoSerialize<Chart>>()
+```
+
 ## Common Pitfalls
 
 1. **Forgetting $ on event handlers**: `onClick` instead of `onClick$` — event never gets lazy loaded.
@@ -296,16 +745,6 @@ export const Child = component$(() => {
 | Serialization | Automatic via QRL | Manual (JSON) | Manual |
 | Server functions | Built-in (server$) | Via Server Actions | Via SolidStart |
 | Bundle size | ~10KB (initial) | ~40KB+ (React runtime) | ~8KB (initial) |
-
-## Performance
-
-1. Initial load: ~10KB JS baseline, zero hydration cost, instant TTI.
-2. Lazy chunks: Each $() is ~200-500 bytes, loaded on interaction only.
-3. Serialized state: HTML size increases by ~2-5KB per page with serialized signals.
-4. Prefetch: PrefetchServiceWorker uses idle time to download route chunks.
-5. Bundle splitting: Automatic at the $ boundary — no manual code splitting.
-6. Memory: Fine-grained signals use less memory than virtual DOM tree.
-7. Time to interactive: Near zero because there is no hydration to wait for.
 
 ## Tooling
 

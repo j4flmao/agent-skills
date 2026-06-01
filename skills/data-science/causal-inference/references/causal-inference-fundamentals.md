@@ -1,213 +1,172 @@
 # Causal Inference Fundamentals
 
 ## Overview
-Causal Inference is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Causal inference is the process of determining whether and to what extent a treatment, intervention, or exposure causes an outcome. Unlike associational statistics, causal inference explicitly models the data-generating process and addresses confounding, selection bias, and measurement error. This reference covers causal frameworks, identification strategies, estimation methods, and practical implementation patterns.
 
-## Core Concepts
+## Core Frameworks
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Causal Inference helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Potential Outcomes (Rubin Causal Model)
+Each unit has two potential outcomes: Y(1) under treatment and Y(0) under control. The unit-level causal effect is Y(1) - Y(0), but only one is ever observed (fundamental problem of causal inference). Average Treatment Effect (ATE) = E[Y(1) - Y(0)], Average Treatment Effect on the Treated (ATT) = E[Y(1) - Y(0) | T=1], Conditional Average Treatment Effect (CATE) = E[Y(1) - Y(0) | X=x].
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Causal Inference solutions. These principles help maintain code quality and reduce technical debt.
+### Causal Graphs (Directed Acyclic Graphs)
+DAGs encode causal assumptions as nodes (variables) and directed edges (causal relationships). A path is blocked by conditioning on a collider or not conditioning on a mediator. d-separation determines conditional independence. The backdoor criterion identifies adjustment sets that block all confounding paths. The front-door criterion uses a mediator to estimate the effect when confounders are unobserved.
 
-### Concept 3: Data Management
-Proper data management is essential for Causal Inference. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Structural Causal Model (SCM)
+SCMs augment DAGs with functional assignments: each variable is a deterministic function of its parents plus exogenous noise. Interventions correspond to modifying these functions (do-operator). The do-calculus provides rules for converting do-expressions into conditional expectations, enabling identification from observational data.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+## Identification Strategies
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Backdoor Adjustment
+Identify all confounders Z (common causes of treatment and outcome) that satisfy the backdoor criterion. Condition on Z via stratification, matching, or regression: E[Y(1) - Y(0)] = E[E[Y | T=1, Z] - E[Y | T=0, Z]]. Valid only if: (1) no unmeasured confounders, (2) positivity (P(T | Z) > 0), (3) consistency (treatment assignment well-defined).
 
-## Architecture Patterns
+### Instrumental Variables
+Use an instrument Z that satisfies: (1) relevance (Z causes T), (2) exclusion (Z affects Y only through T), (3) exchangeability (Z independent of unmeasured confounders). Two-stage least squares: T on Z (stage 1), Y on predicted T (stage 2). LATE (Local ATE) identifies the treatment effect for compliers — units who take treatment when encouraged and not otherwise.
 
-### Pattern 1: Standard Architecture
-The standard architecture for Causal Inference follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+### Difference-in-Differences
+Compare change in outcome for treated group vs change in control group over time. Requires parallel trends assumption: in absence of treatment, the treated group would have followed the same trend as control. Use two-way fixed effects regression: Y = α + β₁×Post + β₂×Treated + β₃×Post×Treated + ε. β₃ estimates DiD effect. Event study plots check parallel pre-trends.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### Regression Discontinuity
+Treatment assigned based on threshold in running variable. Compare outcomes just above vs just below cutoff, assuming continuity of potential outcomes at the threshold. Sharp RDD: treatment is deterministic at cutoff. Fuzzy RDD: probability of treatment changes discontinuously. Bandwidth selection via cross-validation or MSE-optimal methods. Local polynomial regression with triangular kernel.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Propensity Score Methods
+Propensity score e(x) = P(T=1 | X=x). Propensity score matching pairs treated and control units with similar scores. Inverse probability weighting reweights observations: IPTW = T/e(x) + (1-T)/(1-e(x)). Doubly robust methods combine outcome regression and propensity weighting — consistent if either model is correct. Assess overlap via propensity score distribution plots.
 
-## Implementation Guide
+## Core Assumptions
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+| Assumption | Description | Testing |
+|---|---|---|
+| Exchangeability (Unconfoundedness) | No unmeasured confounders given covariates | Sensitivity analysis, placebo tests |
+| Positivity (Overlap) | Every unit has non-zero probability of each treatment | Check propensity score distribution |
+| Consistency | Treatment is well-defined and same for all units | Define treatment precisely |
+| SUTVA | No interference, no hidden treatment variations | Unit-of-treatment analysis |
+| Stable Unit Treatment Value Assumption | Units do not affect each other's outcomes | Cluster-robust SEs |
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+## Estimation Methods
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+### G-Computation (Standardization)
+Fit outcome model E[Y | T, X], predict outcomes setting T=1 and T=0 for all units, average the difference. ATE = (1/n) × Σ(Ŷ(1) - Ŷ(0)). Works with any outcome model (linear, logistic, ML). Requires correct outcome specification. Variance via bootstrap or M-estimation.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+### Augmented IPTW (AIPW)
+Combines outcome regression and propensity score. Consistent if either model is correct (double robustness). Estimator: ATE = (1/n) × Σ[(T×Y)/e(X) - ((1-T)×Y)/(1-e(X))] + correction term. Cross-fitting reduces overfitting bias: split sample, fit models on one fold, predict on the other.
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+### Targeted Maximum Likelihood Estimation (TMLE)
+Two-step estimator: (1) initial outcome model E[Y | T, X], (2) update the model using propensity score as a covariate in a logistic regression fluctuation step. Solves the efficient influence function equation. Asymptotically efficient, doubly robust, and respects bounds on Y. Best for studies with careful nuisance model estimation.
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### Meta-Learners for CATE
+S-learner: single model with treatment as feature. T-learner: separate models for treated and control. X-learner: (1) estimate response surfaces, (2) impute treatment effects for each arm, (3) weight by propensity score. Causal forest: generalized random forest partitioning on treatment effect heterogeneity.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+## Sensitivity Analysis
+
+### E-Value
+Minimum strength of association (on risk ratio scale) an unmeasured confounder would need with both treatment and outcome to explain away the observed effect. E-value = RR + sqrt(RR × (RR - 1)). Large E-values mean robust findings. Report E-value for point estimate and confidence interval bound.
+
+### Rosenbaum Sensitivity Bounds
+For matched studies, assess how much hidden bias (Γ) would need to exist to alter conclusions. Γ = 1 means no hidden bias. Γ = 2 means a unit could be twice as likely to receive treatment due to unmeasured confounders. Report the Γ value at which p > 0.05.
+
+### Placebo and Falsification Tests
+Negative control outcomes (known not to be affected by treatment) test for residual confounding. Positive control exposures (known to cause outcome) test whether the study design can detect effects. Randomization inference provides exact p-values under sharp null.
+
+## Causal Discovery
+
+### Constraint-Based Methods
+PC algorithm: start with fully connected graph, remove edges based on conditional independence tests (Fisher's Z, chi-square, partial correlation). FCI (Fast Causal Inference) handles latent confounders. Stable variants order-independent. For high dimensions, use GS (Grow-Shrink) or IAMB.
+
+### Score-Based Methods
+Greedy Equivalence Search (GES): search over equivalence classes, scoring each graph by BIC or BDeu. Exact search for small graphs (up to ~30 nodes). Continuous optimization (NOTEARS) solves min ||X - XW||² + λ||W||₁ s.t. DAG constraint. NOTEARS scales to hundreds of nodes but assumes linearity.
+
+### Hybrid Methods
+MMHC (Max-Min Hill Climbing): restrict search space using conditional independence tests, then score search over restricted space. CAM (Causal Additive Model) for nonlinear additive models. Apply domain knowledge as blacklist (forbidden edges) and whitelist (required edges) to constrain discovery.
+
+## Software Tooling
+
+| Library | Language | Focus | Features |
+|---|---|---|---|
+| DoWhy | Python | End-to-end causal inference | Graph specification, identification, estimation, refutation |
+| EconML | Python | Heterogeneous treatment effects | CATE with forest, deep IV, DR-learners, S-learners |
+| CausalNex | Python | DAG structure learning | Bayesian networks, NOTEARS, domain knowledge |
+| CausalML | Python/Uber | Uplift modeling and ATE | Meta-learners, Uplift tree, causal forest |
+| Zelig | R | General statistical inference | Multiple causal methods, simulation-based interpretation |
+| DoubleML | Python/R | Double machine learning | PLR, PLIV, IRM with cross-fitting, nuisance ML |
+| CausalImpact | R/Python | Bayesian structural time-series | Synthetic control for single treated unit |
+| GeNIe | Windows GUI | Bayesian network learning | PC, GES, parameter learning, sensitivity analysis |
+
+## Study Design Patterns
+
+### Observational Study
+Analysis of existing data without randomization. Requires careful confounding control. DAG specification before any estimation is critical. Pre-register analysis plan to prevent specification searching. Best for: when RCT is unethical or infeasible.
+
+### Natural Experiment
+Relies on exogenous variation from policy changes, weather, lotteries. DiD, RDD, and IV are natural experiment methods. Defend the identification strategy with placebo tests and robustness checks. Best for: policy evaluation, program impact analysis.
+
+### A/B Test (RCT)
+Gold standard with random assignment. Guarantees exchangeability. Still vulnerable to: attrition bias, spillover effects, non-compliance. Pragmatic RCTs in real-world settings trade some internal validity for generalizability.
 
 ## Best Practices
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+- Draw DAG before any analysis — it documents assumptions and identifies adjustment sets
+- Pre-register analysis plan (Open Science Framework or AsPredicted)
+- Report all specifications in a sensitivity table — don't cherry-pick
+- Use multiple estimation methods — if consistent across methods, confidence increases
+- Report ATE and heterogeneous effects — average effects can mask important variation
+- Always assess overlap — trim if necessary (but document trimming)
+- Conduct placebo tests on pre-treatment outcomes
+- Use robust standard errors clustered at treatment assignment level
+- Validate with negative control outcomes and positive controls
+- Document every modeling decision and its rationale
 
 ## Common Pitfalls
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+### Conditioning on a Collider (Berkson's Paradox)
+Including a collider (common effect of treatment and outcome) in the regression induces selection bias. Classic example: selecting on admission status creates spurious correlation between SAT and GPA. Solution: do not condition on colliders, check with DAG.
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+### Over-Adjustment Bias
+Controlling for mediators on the causal pathway blocks part of the treatment effect. Including post-treatment variables affected by treatment creates bias. Solution: only adjust for pre-treatment confounders.
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+### Mismeasured Confounders
+Partial adjustment for confounders can increase bias if the confounder is mismeasured and another variable is correlated with the true confounder. Multiple indicators or validation subsamples help. Sensitivity analysis is mandatory.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+### Immortal Time Bias
+Time period before treatment during which outcome cannot occur. If immortal time is misclassified as treated, it inflates the apparent benefit. Solution: treat immortal time correctly (as untreated) or use time-varying exposure models.
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+### Selection on Outcome (Truncation)
+If analysis conditions on a post-treatment outcome stage (e.g., survivors only), it introduces collider bias. Use inverse probability of censoring weights or joint models.
 
-## Tooling Ecosystem
+## Performance Considerations
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+| Scale | Sample Size | Variables | Recommended Method | Memory |
+|---|---|---|---|---|
+| Small | <1K | <10 | Exact matching, Bayesian | Low |
+| Medium | 1K-100K | 10-100 | Propensity matching, AIPW | Moderate |
+| Large | 100K-10M | 100-1K | TMLE, Causal forest, X-learner | High |
+| Ultra-large | >10M | <100 | Doubly robust with linear models | Distributed |
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+## Implementation Quick Reference
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+```python
+# DoWhy: end-to-end causal inference
+import dowhy
+model = dowhy.CausalModel(
+    data=df,
+    treatment='treatment',
+    outcome='outcome',
+    graph='digraph {X -> Y; X -> T; T -> Y}'
+)
+identified = model.identify_effect(proceed_when_unidentifiable=False)
+estimate = model.estimate_effect(identified, method_name='backdoor.propensity_score_matching')
+refute = model.refute_estimate(identified, estimate, method_name='placebo_treatment_refuter')
+```
 
-## Integration Patterns
+```python
+# EconML: CATE estimation with causal forest
+from econml.grf import CausalForest
+cf = CausalForest(n_estimators=100, min_samples_leaf=5, max_depth=20)
+cf.fit(Y, T, X=X, W=W)  # X for heterogeneity, W for confounding
+cate = cf.effect(X_test)
+```
 
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
+## Related Topics
 
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Causal Inference concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- Data Science > Experimentation for A/B testing and randomized trials
+- Data Science > Statistical Analysis for hypothesis testing fundamentals
+- Data Engineering > Feature Engineering for constructing causal features
+- Machine Learning > Model Interpretability for feature importance and SHAP values

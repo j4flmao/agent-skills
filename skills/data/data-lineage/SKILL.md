@@ -278,6 +278,184 @@ orders_pipeline (DAG)
         └── → report: daily_sales_report (Tableau)
 ```
 
+### Automated Lineage Collection
+
+#### OpenLineage Integration Patterns
+
+```yaml
+# Airflow integration via OpenLineage plugin
+airflow_openlineage:
+  config:
+    transport:
+      type: http
+      url: http://marquez:5000/api/v1/lineage
+      api_key: "${OPENLINEAGE_API_KEY}"
+      compression: gzip
+    namespace: "production_data_pipelines"
+    job_namespace: "data_engineering"
+  facets:
+    - columnLineage: true
+    - documentation: true
+    - ownership: true
+    - dataSource: true
+
+# dbt integration via dbt-openlineage package
+dbt_openlineage:
+  enabled: true
+  catalog: "production"
+  schema: "analytics"
+  include_sources: true
+  include_tests: true
+  column_level: true
+
+# Spark integration
+spark_openlineage:
+  spark.sql.catalog.spark_catalog: "org.apache.spark.openlineage.catalog.OpenLineageCatalog"
+  spark.openlineage.transport.type: "console"  # Or http, kafka
+  spark.openlineage.namespace: "data_lake_jobs"
+  spark.openlineage.parentJobName: "daily_etl"
+```
+
+#### SQL Parser for Column-Level Lineage
+
+```python
+# Column-level lineage extraction
+from sqllineage.runner import LineageRunner
+from sqlparse import parse
+
+def extract_column_lineage(sql_query, default_schema="public"):
+    runner = LineageRunner(sql_query)
+    lineage = {}
+    
+    for table_col in runner.target_columns:
+        col_name = str(table_col).split(".")[-1]
+        sources = []
+        for source_col in runner.source_columns:
+            sources.append(str(source_col))
+        lineage[col_name] = sources
+    
+    return lineage
+
+# Parser handles: CTEs, subqueries, joins, window functions, UNION, 
+# SELECT *, column aliases, function-wrapped columns
+# Does NOT handle: dynamic SQL, UDFs with internal queries, stored procedures
+```
+
+### Lineage Storage and Query
+
+#### Storage Backend Comparison
+
+| Feature | Marquez | DataHub | OpenMetadata |
+|---|---|---|---|
+| OpenLineage native | Yes | Via plugin | Via plugin |
+| Column-level lineage | SQL parser | SQL parser | SQL parser |
+| Impact analysis UI | Yes | Yes | Yes |
+| API | REST + GraphQL | GraphQL | REST + GraphQL |
+| Search | Basic | Elasticsearch | Elasticsearch |
+| Schema drift detection | No | Yes | Yes |
+| Self-hosted complexity | Low | Medium | High |
+| Governance features | Basic | Strong | Strong |
+
+#### Impact Analysis API
+
+```python
+# Marquez API: find all downstream dependencies
+import requests
+
+def get_downstream_impact(dataset_fqn, depth=3):
+    response = requests.get(
+        f"http://marquez:5000/api/v1/lineage/{dataset_fqn}",
+        params={"depth": depth}
+    )
+    data = response.json()
+    
+    # Graph traversal
+    downstream = set()
+    def traverse(node, remaining_depth):
+        if remaining_depth <= 0:
+            return
+        for edge in node.get("outEdges", []):
+            downstream.add(edge["destination"])
+            traverse(edge["destination"], remaining_depth - 1)
+    
+    traverse(data["graph"], depth)
+    return list(downstream)
+```
+
+### Lineage Visualization
+
+```yaml
+# DataHub lineage visualization configuration
+lineage_ui:
+  graph_layout:
+    type: "dagre"  # Directed graph layout
+    rankdir: "LR"  # Left-to-right flow
+    
+  display_options:
+    show_column_lineage: true
+    collapse_transformations: false
+    max_nodes_expanded: 50
+    max_depth_upstream: 5
+    max_depth_downstream: 5
+    
+  color_scheme:
+    source: "#4CAF50"       # Green — raw data sources
+    staging: "#2196F3"      # Blue — staging area
+    intermediate: "#FF9800" # Orange — transformations
+    mart: "#9C27B0"         # Purple — consumption layer
+    dashboard: "#F44336"    # Red — BI dashboards / reports
+    failed: "#607D8B"       # Gray — failed dependencies
+```
+
+### Root Cause Analysis with Lineage
+
+```yaml
+rca_workflow:
+  trigger: "Dashboard metric shows unexpected value"
+  
+  step_1_identify:
+    - "Select the dashboard and specific metric"
+    - "Trace lineage backward to find the dataset providing the metric"
+    - "Identify the transformation producing that dataset"
+  
+  step_2_trace_upstream:
+    - "Follow lineage from transformation → its input datasets"
+    - "Check each dataset for quality failures (nulls, outliers)"
+    - "Check freshness: was the dataset updated on schedule?"
+    - "Check volume: row count within expected range?"
+  
+  step_3_isolate:
+    - "Narrow to specific column or transformation step"
+    - "Check schema: was a column renamed, removed, or type-changed?"
+    - "Check business logic: was the transformation SQL modified?"
+    - "Review git history for the transformation code"
+  
+  step_4_resolve:
+    - "Fix the root cause (source, transform, or config)"
+    - "Verify fix by re-running impacted transformations"
+    - "Re-run quality checks on downstream datasets"
+    - "Notify consumers when data is verified correct"
+  
+  step_5_prevent:
+    - "Add lineage-based alert: if upstream schema changes, notify"
+    - "Add quality check at the transformation output"
+    - "Document the incident in the lineage metadata"
+```
+
+### Decision Tree
+
+#### Lineage Collection Method
+```
+Data processing tool?
+├── Airflow DAGs → OpenLineage Airflow integration
+├── dbt transformations → dbt-openlineage package
+├── Spark jobs → OpenLineage Spark listener
+├── Flink streaming → OpenLineage Flink integration
+├── Custom Python scripts → Manual OpenLineage events via Python client
+├── SQL transformations → SQL parser (sqllineage, sqlfluff)
+└── Manual / undocumented → Start with manual annotations, automate gradually
+```
+
 ## Rules
 - Every dataset must have a unique fully qualified name (FQN)
 - Lineage is captured at job start and completion, never in-progress
@@ -289,6 +467,12 @@ orders_pipeline (DAG)
 - Failed jobs still record attempted lineage with failure status
 - Lineage is versioned — historical state is queryable
 - All production datasets must have documented consumers
+- Automate lineage collection — manual lineage is always stale
+- Use column-level lineage for precise impact analysis
+- Store lineage in graph-native storage for efficient traversal
+- Color-code lineage visualization by data lifecycle stage
+- Integrate lineage with incident response for faster root cause analysis
+- Re-scrape lineage after schema changes
 
 ## References
   - references/column-lineage.md — Column-Level Lineage Reference

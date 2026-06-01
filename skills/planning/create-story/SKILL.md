@@ -18,6 +18,8 @@ tags: [planning, phase-1, agile, stories]
 ## Purpose
 Generate a single, well-defined implementation story from the PRD backlog, complete with acceptance criteria, technical notes, and complexity estimate. Ready for immediate implementation. A well-crafted story tells a developer exactly what to build, how to verify it, and how it fits into the broader system — while leaving implementation details to the developer's judgment.
 
+Stories are the bridge between product requirements and code. They translate "what the user needs" into "what the developer builds." A great story is small enough to complete quickly, precise enough to avoid ambiguity, and contextual enough to fit the system architecture.
+
 ## Architecture/Decision Trees
 
 ### Story Selection Decision Tree
@@ -33,6 +35,10 @@ Does the selected story have dependencies on incomplete stories?
   |     |-- YES --> Select the dependency story instead
   |     |-- NO  --> Mark as blocked, select next available story
   |-- NO --> Proceed with this story
+
+Is the story estimated at L or XL?
+  |-- YES --> Split into smaller stories before starting
+  |-- NO --> Proceed — story is appropriately sized
 ```
 
 ### Story Splitting Decision
@@ -44,6 +50,28 @@ Can the story be completed in 1-3 days?
         |-- NO --> Does it involve significant research?
               |-- YES --> Create a spike story first, then implementation stories
               |-- NO --> Challenge scope assumptions — is everything truly necessary?
+
+Does the story describe work for multiple user roles?
+  |-- YES --> Split by user role — each role gets its own story
+  |-- NO --> Does the story contain "and" connecting separate actions?
+        |-- YES --> Split into separate stories per action
+        |-- NO --> Story scope is appropriate
+```
+
+### Story Format Selection Tree
+```
+What type of work is this?
+  |-- USER-FACING FEATURE --> Standard user story: "As a {role}, I want to..."
+  |-- TECHNICAL IMPROVEMENT --> Technical story: "As a {developer/system}, I want to..."
+  |-- BUG FIX --> Bug story: "Given {context}, when {action}, {unexpected result} occurs"
+  |-- RESEARCH/SPIKE --> Spike story: "Research {topic} and recommend {decision}"
+  |-- DATA MIGRATION --> Migration story: "Migrate {data} from {source} to {target}"
+
+Is the story for a frontend feature?
+  |-- YES --> Include: component tree, state management, API integration, loading/error/empty states
+  |-- NO --> Is the story for a backend feature?
+        |-- YES --> Include: endpoint contracts, data models, validation, error handling, auth checks
+        |-- NO --> Full-stack: include both frontend and backend sections
 ```
 
 ## Agent Protocol
@@ -53,10 +81,10 @@ Exact user phrases: "create story", "next story", "implement STORY-XXX", "pick u
 
 ### Input Context
 Before activating, verify:
-- docs/prd-{YYYY-MM-DD}.md exists. Read it.
-- docs/stories/ directory exists. Read all existing STORY-*.md files to determine the next NNN and which stories are already defined or in progress.
-- docs/specs/ directory may contain relevant specs. Check for the feature matching the next story.
-- docs/decisions/ directory may contain relevant ADRs. Read any that apply to the story.
+- `docs/prd-{YYYY-MM-DD}.md` exists. Read it.
+- `docs/stories/` directory exists. Read all existing STORY-*.md files to determine the next NNN and which stories are already defined or in progress.
+- `docs/specs/` directory may contain relevant specs. Check for the feature matching the next story.
+- `docs/decisions/` directory may contain relevant ADRs. Read any that apply to the story.
 
 ### Output Artifact
 Writes to `docs/stories/STORY-{NNN}.md`.
@@ -71,7 +99,7 @@ Saved to docs/stories/STORY-{NNN}.md
 Ready for implementation.
 ```
 
-No preamble. No postamble. No explanations. No filler. Compress output.
+No preamble. No postamble. No explanations. No filler.
 
 ### Completion Criteria
 - [ ] PRD read. Next unimplemented story identified from highest-priority epic.
@@ -89,7 +117,19 @@ Confirmation: exactly 5 lines. Do not output the full story content unless the u
 ## Workflow
 
 ### Step 1: Read PRD and Existing Stories
-Read docs/prd.md to understand epics and priority. Read docs/stories/ to see what has been done.
+Read `docs/prd.md` to understand epics and priority. Read `docs/stories/` to see what has been done.
+
+**PRD analysis**:
+- Identify the highest-priority epic with incomplete stories
+- Check which MVP features from the brief are being addressed
+- Note any dependencies between epics
+- Review non-functional requirements that may apply
+
+**Existing stories analysis**:
+- Find the highest NNN for auto-increment
+- Check status of in-progress stories
+- Identify blocked stories and their blockers
+- Look for related stories (same epic, same feature area)
 
 ### Step 2: Select Next Story
 Selection order:
@@ -97,6 +137,13 @@ Selection order:
 2. Highest-priority epic that has incomplete stories.
 3. Stories that have no dependencies on other incomplete stories.
 4. Stories that build on existing infrastructure (database schema, base services).
+
+**Selection heuristics**:
+- Prefer stories that unblock other stories
+- Prefer stories that build foundational infrastructure
+- Prefer stories with clear acceptance criteria over ambiguous ones
+- Avoid selecting stories that depend on incomplete work
+- If the next story is too large (L or XL), split it before generating
 
 ### Step 3: Generate Story File
 ```markdown
@@ -130,6 +177,8 @@ Error cases:
 - {Auth/permissions requirements}
 - {Performance considerations}
 - Relevant ADRs: ADR-{NNN}, ADR-{NNN}
+- {UI component references if frontend}
+- {API contract references if backend}
 
 ## Dependencies
 - STORY-{NNN}: {description of what must be done first}
@@ -147,8 +196,140 @@ Error cases:
 | XL | 1-2 weeks | Needs breakdown into multiple stories |
 ```
 
+**Acceptance criteria patterns by type**:
+- **Form submission**: Given valid/invalid input When user submits Then success/error
+- **Data display**: Given data exists/does not exist When user views page Then data shown/empty state
+- **Authentication**: Given authenticated/unauthenticated user When user accesses resource Then access granted/denied
+- **Search/filter**: Given search term When user searches Then matching/non-matching results
+- **State transition**: Given current state When user performs action Then new state + appropriate feedback
+- **Edge case**: Given boundary condition (empty, max length, concurrent access) When user performs action Then graceful handling
+
 ### Step 4: Save
 Write to `docs/stories/STORY-{NNN}.md`.
+
+**File naming convention**: `STORY-{NNN}.md` with sequential numbering. Use the story title within the file header, not the filename.
+
+## Process Patterns
+
+### Pattern 1: The Vertical Slice Story
+**When**: Feature touches all layers (DB, API, UI)
+**Process**: Write one story that spans all layers. Acceptance criteria cover the end-to-end behavior. Technical notes specify the changes needed at each layer.
+**Benefits**: One story = one complete feature. No integration surprises.
+
+### Pattern 2: The Spike-First Story
+**When**: High uncertainty about implementation approach
+**Process**: Create a spike story first (timeboxed research). The spike output is a recommendation and implementation notes. Follow with implementation stories based on the spike findings.
+**Output**: Spike story + 1-N implementation stories.
+
+### Pattern 3: The Technical Enabler Story
+**When**: Infrastructure or refactoring needed before feature work
+**Process**: Write stories that deliver value to developers rather than end users. "As a developer, I want a consistent error handling middleware so that API errors are predictable." Acceptance criteria define the developer experience.
+**Audience**: Developers, not end users.
+
+### Pattern 4: The Bug Story
+**When**: Defect found in production or testing
+**Process**: Format acceptance criteria as reproduction steps. Include the expected behavior and actual behavior. Reference the environment and data where the bug was observed. Include regression test requirement.
+
+## Anti-Patterns
+
+### Anti-Pattern 1: The Kitchen Sink Story
+A story that tries to do everything at once — multiple user roles, multiple actions, multiple outcomes. Anti-pattern signal: "and" in the story description, > 7 acceptance criteria.
+
+### Anti-Pattern 2: The Prescription Story
+Telling developers HOW to implement rather than WHAT to build. "Build a Redis cache" instead of "Pages load in under 2 seconds." Anti-pattern signal: technology names in the story description.
+
+### Anti-Pattern 3: The Ghost Story
+A story with no acceptance criteria or with vague criteria like "works correctly." No verifiable definition of done means the story is never truly complete. Anti-pattern signal: 0-1 acceptance criteria.
+
+### Anti-Pattern 4: The Happy-Only Story
+Acceptance criteria that only cover success scenarios. No error states, edge cases, or boundary conditions. Anti-pattern signal: all Given/When/Then statements use positive conditions.
+
+### Anti-Pattern 5: The Orphan Story
+A story that cannot be traced to an epic or an MVP feature. It exists in isolation without context. Anti-pattern signal: no epic reference, no link to PRD or brief.
+
+### Anti-Pattern 6: The Endless Story
+Estimated at XL (1-2 weeks) but not split. These stories are impossible to track progress on — "90% done" for 2 weeks. Anti-pattern signal: complexity "XL" without a split note.
+
+### Anti-Pattern 7: The No-Context Story
+Technical notes that say "implement the feature" without referencing files, patterns, ADRs, or existing code. The developer starts from zero every time. Anti-pattern signal: no file references in technical notes.
+
+## Templates
+
+### Standard Story Template
+See Step 3 template above.
+
+### Frontend-Specific Story Template
+```markdown
+# STORY-{NNN}: {Title}
+
+## User Story
+As a {user role}, I want to {action} so that {value}.
+
+## Acceptance Criteria
+- Given {state} When user {interacts} Then {UI response}
+- Given {state} When user {interacts} Then {UI response}
+
+## Component Tree
+```
+{ParentComponent}
+  └── {ChildComponent}
+       └── {ChildComponent}
+```
+
+## State Management
+- {State slice}: {description of what is stored}
+- {State slice}: {description of what is stored}
+
+## API Integration
+- {Endpoint}: {what it returns}
+- {Endpoint}: {what it returns}
+
+## UI States
+- Loading: {what user sees}
+- Empty: {what user sees}
+- Error: {what user sees}
+- Success: {what user sees}
+```
+
+### Backend-Specific Story Template
+```markdown
+# STORY-{NNN}: {Title}
+
+## User Story
+As a {user role}, I want to {action} so that {value}.
+
+## Acceptance Criteria
+- Given {state} When {action} Then {response}
+- Given {state} When {action} Then {response}
+
+## API Contract
+**Endpoint:** {method} {path}
+**Auth required:** {yes/no}
+**Request body:** {schema reference}
+**Response 200:** {schema reference}
+**Error responses:** {status codes and conditions}
+
+## Data Model Changes
+- {Table/collection}: {new fields or modifications}
+- {Table/collection}: {new fields or modifications}
+
+## Validation Rules
+- {Field}: {validation rule}
+- {Field}: {validation rule}
+
+## Audit Logging
+- {Event}: {what to log}
+```
+
+## Success Metrics
+
+| Metric | Target | How to Measure |
+|--------|--------|----------------|
+| Story generation time | < 15 minutes | From trigger to save |
+| Story size compliance | > 80% are S or M | Count stories by size |
+| Acceptance criteria count | > 75% have 3+ criteria | Audit |
+| Rework rate | < 10% require changes after implementation | Post-implementation review |
+| Blocked story rate | < 15% blocked due to missing dependencies | Track weekly |
 
 ## Rules
 - One story = one vertical slice of functionality. A story touches all layers (DB, API, UI) for a single feature.
@@ -156,24 +337,47 @@ Write to `docs/stories/STORY-{NNN}.md`.
 - Every story must have at least 3 acceptance criteria (happy + edge + error).
 - Technical notes must reference specific files, not just "implement the feature."
 - If the story depends on an ADR, include the ADR number in technical notes.
-- Do not create stories for work that is already in progress (Status: "In Progress" in existing stories).
+- Do not create stories for work that is already in progress (Status: "In Progress").
 - Use standard user role names consistently across all stories.
+- Do not prescribe technology or implementation approach in stories.
+- Every story must trace to a specific epic and MVP feature.
+- Stories should be written at most 1 sprint ahead to avoid waste from changing priorities.
 
 ## Best Practices
-- Write stories from the user's perspective, not the system's. "User can export report" not "System generates CSV".
+- Write stories from the user's perspective, not the system's. "User can export report" not "System generates CSV."
 - Include acceptance criteria for non-functional aspects when relevant (performance, accessibility).
 - Reference design files (Figma, Sketch) in technical notes when available.
 - Tag related stories (epic, feature area) for filtering in project management tools.
 - Update story status as it progresses through the workflow.
 - Include edge case criteria that challenge the implementation — not just happy path.
+- Use consistent "Given/When/Then" language across all acceptance criteria.
+- Estimate complexity based on comparable completed stories, not gut feel.
 
 ## Common Pitfalls
-- **Stories that are too large**: A story that takes more than 3 days should be split. If you find yourself writing "and" in the description, it is likely multiple stories.
-- **Missing technical context**: Developers need to know which files to touch, which patterns to follow, and which ADRs apply. Leaving this out causes rework.
-- **Vague acceptance criteria**: "It works" is not testable. Every criterion must be verifiable by a human or automated test.
-- **Technology prescriptions in stories**: "Add a Redis cache" tells the developer HOW, not WHAT. The requirement is "Pages load in under 2 seconds."
-- **No error scenarios**: Stories that only define happy path miss important implementation detail about error handling.
-- **Over-specifying**: Telling developers exactly how to implement (specific libraries, line-by-line instructions) defeats the purpose of a story.
+
+### 1. Stories That Are Too Large
+A story that takes more than 3 days should be split. If you find yourself writing "and" in the description, it is likely multiple stories.
+
+### 2. Missing Technical Context
+Developers need to know which files to touch, which patterns to follow, and which ADRs apply. Leaving this out causes rework.
+
+### 3. Vague Acceptance Criteria
+"It works" is not testable. Every criterion must be verifiable by a human or automated test.
+
+### 4. Technology Prescriptions in Stories
+"Add a Redis cache" tells the developer HOW, not WHAT. The requirement is "Pages load in under 2 seconds."
+
+### 5. No Error Scenarios
+Stories that only define happy path miss important implementation detail about error handling.
+
+### 6. Over-Specifying
+Telling developers exactly how to implement (specific libraries, line-by-line instructions) defeats the purpose of a story.
+
+### 7. Inconsistent Role Names
+Using "Admin" in one story and "Super Admin" in another without defining the difference.
+
+### 8. No Dependencies Documentation
+Starting a story without knowing what it depends on leads to blocked developers and wasted context switching.
 
 ## Compared With
 | Artifact | Purpose | Detail Level | Audience |
@@ -199,15 +403,16 @@ Write to `docs/stories/STORY-{NNN}.md`.
 - **Workflow**: Todo -> In Progress -> Review -> Done (or similar Kanban states).
 
 ## References
+  - references/create-story-fundamentals.md — Story Fundamentals
+  - references/create-story-advanced.md — Story Advanced Topics
   - references/acceptance-criteria.md — Acceptance Criteria Guide
-  - references/create-story-advanced.md — Create Story Advanced Topics
-  - references/create-story-fundamentals.md — Create Story Fundamentals
   - references/story-examples.md — Story Examples
   - references/story-refinement.md — Story Refinement
   - references/story-template.md — Story Template
   - references/user-story-splitting.md — User Story Splitting
   - references/user-story-acceptance-criteria.md — User Story Acceptance Criteria
+
 ## Handoff
 Output: `docs/stories/STORY-{NNN}.md`
-Next skill: stack-specific implementation skill (backend or frontend depending on the story)
+Next skill: stack-specific implementation skill
 Carry forward: story content, acceptance criteria, technical notes, relevant ADRs and specs.

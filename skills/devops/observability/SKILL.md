@@ -58,18 +58,18 @@ This skill is complete when:
 ## Quick Start
 Three pillars: logs (what happened), metrics (how often/how much), traces (where it happened). Use JSON structured logging. OpenTelemetry for traces. Alert on symptoms (user impact), not causes.
 
-## When to Use This Skill
-- Setting up logging for a new service
-- Implementing distributed tracing
-- Defining SLOs and alerts
-- Debugging production issues
-- Reviewing observability gaps
+## Decision Tree: Observability Strategy
+- New microservice, no existing observability → Structured JSON logs + RED metrics + OpenTelemetry traces at 10% sampling
+- Existing service with basic monitoring → Add distributed tracing, define SLOs, implement burn-rate alerts
+- High-traffic service (>10k req/s) → Tail-based sampling, cardinality management, log sampling
+- Compliance-heavy environment (PCI/HIPAA) → Structured logging with PII redaction, audit trails, trace sampling + attribute filtering
+- Serverless/event-driven → Distributed context propagation, structured logs with correlation IDs, metrics on function duration
 
 ## Core Workflow
 
 ### Step 1: Structured Logging
 ```json
-// ✅ GOOD — structured JSON
+// GOOD — structured JSON
 {
   "level": "error",
   "message": "Payment processing failed",
@@ -86,86 +86,260 @@ Three pillars: logs (what happened), metrics (how often/how much), traces (where
   "timestamp": "2026-05-14T10:30:00Z"
 }
 
-// ❌ BAD — unstructured text
-// "Error processing order: something went wrong"
+// BAD — unstructured text: "Error processing order: something went wrong"
 ```
 
 **Required fields**: `level`, `message`, `service`, `timestamp`, `traceId`
 **Context fields**: `userId`, `orderId`, `requestId`, `duration_ms`
 
-### Step 2: Metrics
-| Type | Examples | Collection |
-|------|----------|------------|
-| **Counters** | Request count, error count, user signups | Prometheus Counter |
-| **Gauges** | Active connections, queue depth, memory usage | Prometheus Gauge |
-| **Histograms** | Request latency p50/p95/p99, payload size | Prometheus Histogram |
+### Step 2: Metrics — RED Method (for services)
+| Metric | Type | Example |
+|--------|------|---------|
+| **Rate** | Counter | `http_requests_total{method, path, status}` |
+| **Errors** | Counter | `http_requests_errors_total{method, path, status}` |
+| **Duration** | Histogram | `http_request_duration_seconds{method, path}` |
 
-Key metrics for every service:
-- `http_requests_total{method, path, status}` — request rate
-- `http_request_duration_seconds{method, path}` — latency histogram
-- `errors_total{type}` — error rate by type
-- `service_up` — liveness (1 = healthy)
+### Step 3: Metrics — USE Method (for infrastructure)
+| Metric | Type | Example |
+|--------|------|---------|
+| **Utilization** | Gauge | `cpu_usage_ratio`, `memory_usage_bytes` |
+| **Saturation** | Gauge | `queue_depth`, `disk_io_wait_seconds` |
+| **Errors** | Counter | `disk_io_errors_total`, `network_drops_total` |
 
-### Step 3: Distributed Tracing with OpenTelemetry
+### Step 4: Key Metrics for Every Service
+```prometheus
+# Request rate
+sum(rate(http_requests_total[5m])) by (service, method, path)
+
+# Error rate
+sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+
+# Latency p99
+histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))
+
+# Active requests
+sum(http_requests_active) by (service)
+
+# SLO burn rate
+(
+  sum(rate(http_requests_total{status!~"5.."}[1h]))
+  /
+  sum(rate(http_requests_total[1h]))
+)
+```
+
+### Step 5: Prometheus Recording Rules
+```yaml
+groups:
+- name: service_slos
+  interval: 30s
+  rules:
+  - record: service:error_rate_5m
+    expr: |
+      sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+      /
+      sum(rate(http_requests_total[5m])) by (service)
+
+  - record: service:latency_p99_5m
+    expr: |
+      histogram_quantile(0.99,
+        sum(rate(http_request_duration_seconds_bucket[5m])) by (service, le)
+      )
+
+  - record: service:availability_30d
+    expr: |
+      sum(rate(http_requests_total{status!~"5.."}[30d])) by (service)
+      /
+      sum(rate(http_requests_total[30d])) by (service)
+```
+
+### Step 6: SLO Burn Rate Alerts
+```yaml
+groups:
+- name: slo_alerts
+  rules:
+  - alert: HighErrorRate
+    expr: |
+      (
+        sum(rate(http_requests_total{status=~"5.."}[1h])) by (service)
+        /
+        sum(rate(http_requests_total[1h])) by (service)
+      ) > 0.001  # 99.9% SLO
+    for: 5m
+    labels:
+      severity: page
+      slo: 99.9
+    annotations:
+      summary: "Error rate above SLO budget for {{ $labels.service }}"
+      description: "Error rate {{ $value | humanizePercentage }} exceeds SLO threshold"
+
+  - alert: BurnRateTooFast
+    expr: |
+      (
+        sum(rate(http_requests_total{status!~"5.."}[1h])) by (service)
+        /
+        sum(rate(http_requests_total[1h])) by (service)
+      ) < 0.999
+      and on(service)
+      (
+        sum(rate(http_requests_total{status!~"5.."}[5m])) by (service)
+        /
+        sum(rate(http_requests_total[5m])) by (service)
+      ) < 0.99
+    labels:
+      severity: page
+    annotations:
+      summary: "SLO burn rate too fast for {{ $labels.service }}"
+```
+
+### Step 7: Distributed Tracing with Sampling
+| Strategy | Sampling Rate | Use Case |
+|----------|--------------|----------|
+| Head-based probabilistic | 1-10% | High-traffic services |
+| Tail-based | Keep errors + slow | Production critical paths |
+| Rate limiting | 100 traces/sec | Budget-constrained |
+| Consistent probability | 10% per service | Multi-service trace correlation |
+
 ```typescript
-// Node.js / TypeScript
-import { trace } from '@opentelemetry/api'
-const tracer = trace.getTracer('order-service')
+// OpenTelemetry Node.js SDK with sampling
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
+import { ParentBasedSampler, TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-node';
 
-async function placeOrder(command: PlaceOrderCommand) {
-  return tracer.startActiveSpan('placeOrder', async (span) => {
-    span.setAttribute('orderId', command.orderId)
-    try {
-      const result = await processPayment(command)
-      span.setStatus({ code: SpanStatusCode.OK })
-      return result
-    } catch (error) {
-      span.setStatus({ code: SpanStatusCode.ERROR, message: error.message })
-      span.recordException(error)
-      throw error
-    } finally {
-      span.end()
+const sdk = new NodeSDK({
+  traceExporter: new OTLPTraceExporter({ url: 'http://otel-collector:4317' }),
+  sampler: new ParentBasedSampler({
+    root: new TraceIdRatioBasedSampler(0.1), // 10% sampling
+  }),
+});
+```
+
+### Step 8: Log Aggregation with Loki
+```yaml
+scrape_configs:
+- job_name: kubernetes-pods
+  kubernetes_sd_configs:
+  - role: pod
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_pod_label_app]
+    action: keep
+    regex: myapp
+  - action: labelmap
+    regex: __meta_kubernetes_pod_label_(.+)
+  pipeline_stages:
+  - json:
+      expressions:
+        level: level
+        service: service
+        traceId: traceId
+        duration_ms: duration_ms
+  - labels:
+      level:
+      service:
+  - drop:
+      expression: ".*healthcheck.*"
+```
+
+### Step 9: Grafana Dashboard Variables
+```json
+{
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "query": "label_values(up, service)"
+      },
+      {
+        "name": "environment",
+        "type": "query",
+        "query": "label_values(up{service=\"$service\"}, environment)"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "title": "Request Rate",
+      "type": "timeseries",
+      "targets": [{
+        "expr": "sum(rate(http_requests_total{service=\"$service\"}[5m])) by (status)",
+        "legendFormat": "{{ status }}"
+      }]
+    },
+    {
+      "title": "Latency p99",
+      "type": "timeseries",
+      "targets": [{
+        "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service=\"$service\"}[5m])) by (le))",
+        "legendFormat": "p99"
+      }]
     }
-  })
+  ]
 }
 ```
 
-### Step 4: SLO / SLI / SLA Definitions
-| Term | Definition | Example |
-|------|------------|---------|
-| **SLI** | What you measure | Request latency p95 |
-| **SLO** | Your target | < 200ms p95 over 30 days |
-| **SLA** | Commitment to users | < 500ms p95, 99.9% uptime |
-
-**SLO examples**:
-- **Latency**: 95% of requests complete in < 200ms (rolling 30d window)
-- **Availability**: 99.95% uptime (excluding planned maintenance)
-- **Error rate**: < 0.1% of requests return 5xx
-
-### Step 5: Alert Design
-```
-⚠️ ALERT ON SYMPTOMS (USER IMPACT), NOT CAUSES
-
-❌ Bad alert: "CPU > 80%"
-   — CPU spike doesn't always mean user impact
-   — Causes alert fatigue
-
-✅ Good alert: "p95 latency > 500ms for 5 minutes"
-   — Users are experiencing slowness
-   — Actionable: investigate immediately
-
-✅ Good alert: "Error rate > 1% for 5 minutes"
-   — Users are getting errors
-   — Actionable: rollback or hotfix
+### Step 10: Structured Logging per Language
+```python
+# Python
+import structlog
+structlog.configure(
+    processors=[
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.JSONRenderer()
+    ],
+    context_class=dict,
+    logger_factory=structlog.PrintLoggerFactory(),
+)
+log = structlog.get_logger()
+log.info("order.placed", order_id="ord-123", amount=99.99)
 ```
 
-**Alert severity**:
-| Severity | Response Time | Examples |
-|----------|---------------|----------|
-| P0 | < 15 min | Service down, data loss, security breach |
-| P1 | < 1 hour | Degraded performance, partial outage |
-| P2 | < 1 day | Non-critical feature broken |
-| P3 | Next sprint | Cosmetic, minor issues |
+```go
+// Go with slog
+import "log/slog"
+slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+    Level: slog.LevelInfo,
+})))
+slog.Info("payment processed",
+    "order_id", "ord-123",
+    "amount", 99.99,
+    "trace_id", traceID)
+```
+
+```java
+// Java with Logback + structured layout
+// logback.xml
+<appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+  <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+</appender>
+```
+
+### Step 11: Cardinality Management
+```yaml
+# Prometheus metrics with bounded cardinality
+# BAD: label with unbounded values (user_id, email, request_id)
+http_requests_total{method="GET", path="/api/users/:id", status="200", user_id="user-123"}
+
+# GOOD: label with bounded values (method, path template, status)
+http_requests_total{method="GET", path="/api/users/{id}", status="200"}
+
+# Relabeling in Prometheus
+metric_relabel_configs:
+- source_labels: [path]
+  regex: '/api/users/[^/]+'
+  replacement: '/api/users/{id}'
+  target_label: path
+```
+
+### Step 12: Observability Maturity Model
+| Level | Logs | Metrics | Traces | Alerts |
+|-------|------|---------|--------|--------|
+| 1: Crawl | Unstructured, grep-based | CPU/memory only | None | Basic threshold |
+| 2: Walk | Structured JSON, aggregated | RED method per service | Head-based sampling | Symptom-based |
+| 3: Run | Correlation IDs, PII redacted | USE + RED + business metrics | Tail-based + consistent | SLO burn-rate |
+| 4: Fly | Auto-instrumented, real-time | Custom business metrics | 100% error traces | Predictive ML-based |
 
 ## Rules & Constraints
 - All logs are structured JSON — no plain text or printf-style logging
@@ -174,9 +348,32 @@ async function placeOrder(command: PlaceOrderCommand) {
 - Metrics are cheap, traces are expensive — sample traces at 1-10% for high-traffic services
 - Never log sensitive data (passwords, tokens, PII) — even in error messages
 - SLOs are aspirational targets — don't set them so tight they cause alert fatigue
+- Cardinality: never use unbounded values (user IDs, emails) as metric labels
+- Use recording rules for expensive PromQL queries — don't compute p99 on every dashboard refresh
+- Configure metric_relabel_configs to manage cardinality in Prometheus
 
-## Output Format
-Observability plan: logging format, metrics list, trace sampling strategy, SLOs, alert rules.
+## Production Considerations
+- Set log retention: 7-30 days for standard, 90+ days for audit compliance.
+- Configure log sampling for high-volume services (1:10 or 1:100).
+- Use recording rules to pre-compute expensive PromQL queries.
+- Set up SLO burn-rate alerts (multi-window, multi-burn-rate) for faster detection.
+- Implement log-based metrics for business-level indicators.
+- Use Exemplars to correlate metrics with traces.
+- Monitor observability pipeline itself: collector queue depth, export latency.
+- Set up silent test alerts to verify alert pipeline end-to-end weekly.
+- Use aggregation windows appropriate to pager load: 5m for paging, 15m for dashboards.
+
+## Anti-Patterns
+- Alerting on CPU/memory — these are causes, not symptoms of user impact.
+- Unstructured logging — can't parse, filter, or correlate without regex hacks.
+- No traceId in logs — impossible to correlate logs with traces.
+- Over-sampling traces — unnecessary cost and storage.
+- High cardinality metric labels — Prometheus performance degrades.
+- No SLOs — no target for reliability, no basis for paging decisions.
+- Dashboard per service instead of templated dashboards — maintenance burden.
+- Alert fatigue from flapping alerts — tune for, tolerance before paging.
+- Logging PII — compliance violation, potential data breach.
+- Not testing alert configuration — alert fires but notification fails.
 
 ## References
   - references/alerting-strategies.md — Alerting Strategies

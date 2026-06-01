@@ -1,7 +1,7 @@
 ---
 name: nodejs-prisma
 description: >
-  Use this skill when working with Prisma ORM — schema design, migrations, query optimization, relations, middleware, Prisma Client patterns. This skill enforces: proper relation modeling, migration workflow, eager loading vs lazy, connection pooling, soft deletes via middleware. Do NOT use for: TypeORM, Drizzle ORM, Mongoose, raw SQL-first workflows.
+  Use this skill when working with Prisma ORM — schema modeling, migrations, queries, relations, middleware, and deployment. This skill enforces: data model normalization, relation conventions, Prisma Client best practices, migration safety, and performance optimization. Requires @prisma/client. Do NOT use for: Mongoose, TypeORM, Drizzle ORM, or non-relational databases.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -10,93 +10,114 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [backend, nodejs, database, phase-10]
+tags: [backend, nodejs, prisma, phase-10]
 ---
 
-# Node.js Prisma
+# Prisma ORM
 
 ## Purpose
-Design and optimize database schemas with Prisma ORM — schema modeling, migrations, query performance, and middleware.
+Design database schemas, write performant queries, manage migrations, implement middleware, and optimize Prisma Client for production.
 
 ## Agent Protocol
 
 ### Trigger
-User request includes: `Prisma`, `Prisma ORM`, `database schema`, `migration`, `Prisma Client`, `Prisma Studio`, `schema.prisma`, `prisma migrate`, `prisma generate`, `prisma seed`.
+User request includes: `prisma`, `prisma schema`, `prisma migrate`, `prisma client`, `prisma relation`, `prisma middleware`, `prisma query`, `prisma performance`, `prisma seed`, `prisma studio`.
 
 ### Input Context
-- Database (PostgreSQL, MySQL, SQLite, MongoDB, SQL Server)
-- Existing schema (if any)
-- Relation patterns (one-to-many, many-to-many)
-- Query patterns (read-heavy, write-heavy)
+- Database (PostgreSQL, MySQL, SQLite, SQL Server, MongoDB)
+- Prisma version (5.x, 6.x)
+- Schema complexity (relations, enums, composite keys)
+- Deployment (Node.js, serverless, edge)
 
 ### Output Artifact
-Prisma schema snippets, migration strategy, query patterns, middleware setup.
+Schema definition, query examples, migration setup, middleware patterns, performance optimizations.
 
 ### Response Format
-Produce artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick.
+Produce artifact directly. No preamble, no postamble, no explanations.
 
 ### Completion Criteria
-- Schema models mapped correctly with relations
-- Migration commands provided
-- Query optimized with select/include/where
-- Middleware configured (soft delete, audit)
-- Connection pooling configured
+- Schema defined with proper relations, indexes, constraints
+- Migrations generated and applied
+- Queries use select, include, and where efficiently
+- Middleware (interactive transactions, extensions) configured
+- Connection pooling for serverless or production
 
 ### Max Response Length
 4096 tokens
 
+## Architecture Decision Trees
+
+### Prisma vs Drizzle ORM vs TypeORM vs Knex
+
+| Criterion | Prisma | Drizzle ORM | TypeORM | Knex |
+|-----------|--------|-------------|---------|------|
+| Type safety | Full (generated) | Full (inferred) | Partial | None |
+| Migration system | Prisma Migrate | Drizzle Kit | TypeORM migrations | Knex migrations |
+| Query builder | Declarative (Prisma Client) | SQL-like | Active Record / Data Mapper | SQL builder |
+| Relation handling | Include / select | Joins explicit | relations / find | Manual JOINs |
+| Middleware/hooks | Extensions (v5+) | Middleware | Subscribers | Raw Knex plugins |
+| Performance | Moderate (mapped layer) | High (thin wrapper) | Moderate | High |
+| Bundle size | Large (generated client) | Tiny (tree-shakeable) | Large | Moderate |
+
+Decision: Full type safety + auto-complete → Prisma. Maximum performance + SQL control → Drizzle. Active Record familiarity → TypeORM.
+
+### Schema Design: Prisma vs Raw SQL
+
+| Aspect | Prisma Schema | Raw SQL |
+|--------|--------------|---------|
+| Source of truth | schema.prisma | migrations |
+| Readability | Declarative, concise | Verbose |
+| Index management | @@index decorators | CREATE INDEX |
+| Enum support | Native (enum keyword) | CREATE TYPE |
+| Composite keys | @@id([field1, field2]) | Composite PK |
+
+Decision: Prisma-first project → use schema.prisma as source of truth. Existing DB → introspect with `prisma db pull`.
+
 ## Workflow
 
-### Step 1: Prisma Project Setup
-```bash
-npm install prisma --save-dev
-npm install @prisma/client
+### Step 1: Schema Definition
 
-npx prisma init
-# Creates:
-#   prisma/schema.prisma
-#   .env (with DATABASE_URL)
-```
-
-```typescript
+```prisma
 // prisma/schema.prisma
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch", "referentialIntegrity"]
+  previewFeatures = ["extendedWhereUnique"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-```
 
-```typescript
-// src/config/database.ts
-import { PrismaClient } from '@prisma/client';
+enum UserRole {
+  ADMIN
+  USER
+  MODERATOR
+}
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  log: process.env.NODE_ENV === 'development'
-    ? ['query', 'warn', 'error']
-    : ['warn', 'error'],
-});
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
-```
-
-### Step 2: Schema Modeling
-
-**One-to-Many:**
-```prisma
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
-  name      String?
+  name      String
+  role      UserRole @default(USER)
+  active    Boolean  @default(true)
+  profile   Profile?
   posts     Post[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([email, active])
+  @@map("users")
+}
+
+model Profile {
+  id      String @id @default(uuid())
+  bio     String?
+  avatar  String?
+  userId  String @unique
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
 }
 
 model Post {
@@ -105,278 +126,349 @@ model Post {
   content   String?
   published Boolean  @default(false)
   authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  tags      Tag[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-```
 
-**Many-to-Many (implicit):**
-```prisma
-model Post {
-  id      String   @id @default(uuid())
-  title   String
-  tags    Tag[]
+  @@index([authorId, published])
+  @@map("posts")
 }
 
 model Tag {
   id    String @id @default(uuid())
   name  String @unique
   posts Post[]
+
+  @@map("tags")
+}
+
+model PostTag {
+  postId String
+  tagId  String
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("post_tags")
 }
 ```
 
-**Many-to-Many (explicit with extra fields):**
-```prisma
-model Order {
-  id           String         @id @default(uuid())
-  customerId   String
-  customer     Customer       @relation(fields: [customerId], references: [id])
-  items        OrderItem[]
-  total        Decimal        @db.Decimal(10, 2)
-  status       OrderStatus    @default(PENDING)
-  createdAt    DateTime       @default(now())
+### Step 2: Query Patterns
+
+```typescript
+// src/repositories/user.repository.ts
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+// SELECT with specific fields
+export async function findUserById(id: string) {
+  return prisma.user.findUnique({
+    where: { id },
+    select: { id: true, name: true, email: true, role: true },
+  });
 }
 
-model Product {
-  id       String       @id @default(uuid())
-  name     String
-  price    Decimal      @db.Decimal(10, 2)
-  orders   OrderItem[]
+// Include relations (N+1 safe — Prisma batches)
+export async function findUserWithProfile(id: string) {
+  return prisma.user.findUnique({
+    where: { id },
+    include: {
+      profile: true,
+      posts: {
+        where: { published: true },
+        select: { id: true, title: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      },
+    },
+  });
 }
 
-model OrderItem {
-  orderId   String
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-  quantity  Int
-  price     Decimal @db.Decimal(10, 2)
-
-  @@id([orderId, productId])
+// Paginated list
+export async function findUsers(page: number, limit: number) {
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, name: true, email: true, role: true },
+    }),
+    prisma.user.count(),
+  ]);
+  return { data: users, total, page, totalPages: Math.ceil(total / limit) };
 }
 
-enum OrderStatus {
-  PENDING
-  CONFIRMED
-  SHIPPED
-  DELIVERED
-  CANCELLED
+// Create with nested write
+export async function createUserWithProfile(data: CreateUserDto) {
+  return prisma.user.create({
+    data: {
+      email: data.email,
+      name: data.name,
+      profile: {
+        create: { bio: data.bio },
+      },
+    },
+    include: { profile: true },
+  });
+}
+
+// Batch update
+export async function deactivateInactiveUsers(days: number) {
+  const cutoff = new Date(Date.now() - days * 86400000);
+  return prisma.user.updateMany({
+    where: { lastLoginAt: { lt: cutoff }, active: true },
+    data: { active: false },
+  });
+}
+
+// Delete cascade (defined in schema)
+export async function deleteUser(id: string) {
+  return prisma.user.delete({ where: { id } });
 }
 ```
 
-**Self-relation:**
-```prisma
-model Employee {
-  id          String       @id @default(uuid())
-  name        String
-  managerId   String?
-  manager     Employee?    @relation("ManagerSubordinates", fields: [managerId], references: [id])
-  subordinates Employee[]  @relation("ManagerSubordinates")
-}
+### Step 3: Prisma Client Configuration
+
+```typescript
+// src/lib/prisma.ts
+import { PrismaClient } from '@prisma/client';
+
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({
+  log: process.env.NODE_ENV === 'development'
+    ? ['query', 'info', 'warn', 'error']
+    : ['error'],
+  errorFormat: 'minimal',
+});
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 ```
 
-### Step 3: Migration Workflow
+### Step 4: Migrations
 
 ```bash
-# Create initial migration
-npx prisma migrate dev --name init
+# Create migration from schema changes
+npx prisma migrate dev --name add_user_profile
 
-# Create migration after schema changes
-npx prisma migrate dev --name add-product-table
-
-# Generate Prisma Client after schema changes
-npx prisma generate
-
-# Apply migrations to production
+# Apply to production
 npx prisma migrate deploy
 
-# Reset database (dev only)
+# Reset (dev only — drops data)
 npx prisma migrate reset
 
-# View database
-npx prisma studio
+# Generate client after schema change
+npx prisma generate
+
+# View migration status
+npx prisma migrate status
 ```
 
-### Step 4: Prisma Client Queries
+### Step 5: Middleware / Extensions (Prisma 5+)
 
 ```typescript
-// CRUD operations
-const user = await prisma.user.create({
-  data: { email: 'alice@example.com', name: 'Alice' },
-});
+// src/lib/prisma-extension.ts
+import { PrismaClient } from '@prisma/client';
 
-const users = await prisma.user.findMany({
-  where: { email: { contains: 'alice' } },
-  orderBy: { createdAt: 'desc' },
-  take: 10,
-  skip: 0,
-});
-
-const user = await prisma.user.findUnique({
-  where: { email: 'alice@example.com' },
-  include: { posts: true },
-});
-
-const updated = await prisma.user.update({
-  where: { id: userId },
-  data: { name: 'New Name' },
-});
-
-const deleted = await prisma.user.delete({
-  where: { id: userId },
-});
-```
-
-### Step 5: Eager Loading (Include vs Select)
-
-```typescript
-// include — load entire relation
-const userWithPosts = await prisma.user.findUnique({
-  where: { id: userId },
-  include: {
-    posts: {
-      where: { published: true },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
+export const xprisma = new PrismaClient()
+  .$extends({
+    query: {
+      user: {
+        async create({ args, query }) {
+          // Auto-generate slug or hash password before create
+          return query(args);
+        },
+        async findUnique({ args, query }) {
+          // Soft-delete filter
+          args.where = { ...args.where, deletedAt: null };
+          return query(args);
+        },
+      },
     },
-  },
-});
-
-// select — pick specific fields (more efficient)
-const userSummary = await prisma.user.findUnique({
-  where: { id: userId },
-  select: {
-    id: true,
-    email: true,
-    name: true,
-    posts: {
-      select: { id: true, title: true },
-      where: { published: true },
+    result: {
+      user: {
+        fullName: {
+          needs: { firstName: true, lastName: true },
+          compute(user) {
+            return `${user.firstName} ${user.lastName}`;
+          },
+        },
+      },
     },
-  },
-});
-
-// Nested include
-const order = await prisma.order.findUnique({
-  where: { id: orderId },
-  include: {
-    customer: true,
-    items: {
-      include: { product: true },
+    model: {
+      user: {
+        async findByEmail(email: string) {
+          return prisma.user.findUnique({ where: { email } });
+        },
+      },
     },
-  },
-});
+  });
 ```
 
-### Step 6: Pagination
+### Step 6: Interactive Transactions
 
 ```typescript
-// Offset pagination
-const page = 1;
-const pageSize = 20;
-
-const [items, total] = await Promise.all([
-  prisma.post.findMany({
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-    where: { published: true },
-    orderBy: { createdAt: 'desc' },
-  }),
-  prisma.post.count({ where: { published: true } }),
-]);
-
-// Cursor pagination (preferred for large datasets)
-const cursor = 'some-last-id';
-
-const posts = await prisma.post.findMany({
-  take: 20,
-  skip: 1,         // skip the cursor itself
-  cursor: { id: cursor },
-  where: { published: true },
-  orderBy: { createdAt: 'desc' },
-});
-```
-
-### Step 7: Transactions
-
-```typescript
-// Interactive transaction
-const result = await prisma.$transaction(async (tx) => {
-  const order = await tx.order.create({ data: orderData });
-  for (const item of items) {
-    await tx.inventory.update({
-      where: { productId: item.productId },
-      data: { quantity: { decrement: item.quantity } },
+// Transfer funds with transaction
+export async function transferFunds(fromId: string, toId: string, amount: number) {
+  return prisma.$transaction(async (tx) => {
+    const fromAccount = await tx.account.update({
+      where: { id: fromId },
+      data: { balance: { decrement: amount } },
     });
-  }
-  return order;
-});
 
-// Batch transaction
-const [user, post] = await prisma.$transaction([
-  prisma.user.create({ data: { email: 'bob@test.com' } }),
-  prisma.post.create({ data: { title: 'Hello', authorId: '...' } }),
-]);
+    if (fromAccount.balance < 0) {
+      throw new Error('Insufficient funds');
+    }
+
+    await tx.account.update({
+      where: { id: toId },
+      data: { balance: { increment: amount } },
+    });
+
+    await tx.transaction.create({
+      data: { fromId, toId, amount, type: 'TRANSFER' },
+    });
+  });
+}
 ```
 
-### Step 8: Middleware (Soft Delete)
+### Step 7: Seed Script
 
 ```typescript
-// Soft delete middleware
-prisma.$use(async (params, next) => {
-  // Intercept findMany, findFirst, findUnique
-  if (params.model === 'User') {
-    if (params.action === 'findMany' || params.action === 'findFirst') {
-      params.args.where = { ...params.args.where, deletedAt: null };
+// prisma/seed.ts
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  const user = await prisma.user.create({
+    data: {
+      email: 'admin@test.com',
+      name: 'Admin',
+      role: 'ADMIN',
+      profile: { create: { bio: 'System admin' } },
+      posts: {
+        create: [
+          { title: 'First Post', content: 'Hello world', published: true },
+          { title: 'Draft', content: 'Not yet published' },
+        ],
+      },
+    },
+  });
+  console.log('Seeded user:', user.id);
+}
+
+main()
+  .catch(e => { console.error(e); process.exit(1); })
+  .finally(() => prisma.$disconnect());
+```
+
+## Production Considerations
+
+### Connection Pooling (Serverless)
+
+```typescript
+// Connection pool for serverless (Vercel, Lambda)
+import { PrismaClient } from '@prisma/client';
+import { Pool } from '@neondatabase/serverless';
+import { PrismaNeon } from '@prisma/adapter-neon';
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaNeon(pool);
+const prisma = new PrismaClient({ adapter });
+```
+
+### Query Performance
+- Use `select` over `include` when only specific fields needed
+- Batch relation loading: Prisma already batches via `DATABASE_URL` connection
+- Use raw queries with `$queryRaw` for complex aggregations
+- Add `@@index` on frequently filtered/sorted columns
+- Use `@relation` with `onDelete: Cascade` for referential integrity at DB level
+- Limit relation depth — each `include` adds a JOIN
+
+### Error Handling
+```typescript
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+
+try {
+  await prisma.user.create({ data: { email: 'dupe@test.com' } });
+} catch (error) {
+  if (error instanceof PrismaClientKnownRequestError) {
+    if (error.code === 'P2002') { // Unique constraint violation
+      throw new ConflictError('Email already exists');
     }
-    if (params.action === 'findUnique') {
-      params.action = 'findFirst';
-      params.args.where = { ...params.args.where, deletedAt: null };
+    if (error.code === 'P2025') { // Record not found
+      throw new NotFoundError('User not found');
     }
   }
+  throw error;
+}
+```
 
-  // Intercept delete -> update
-  if (params.action === 'delete' && params.model === 'User') {
-    params.action = 'update';
-    params.args.data = { deletedAt: new Date() };
-  }
+## Anti-Patterns
 
-  return next(params);
-});
+| Anti-Pattern | Why | Fix |
+|-------------|-----|-----|
+| Full object in select | Overfetches data, slower queries | Select only needed fields |
+| Nested create without `createMany` | Multiple round trips | Use `createMany` for batch inserts |
+| Missing `@updatedAt` | No auto-update timestamp | Always add `@updatedAt` on mutable models |
+| No connection pooling for serverless | Cold starts, connection exhaustion | Use Prisma Accelerate or pgBouncer |
+| N+1 via loop queries | Sequential DB calls | Use `include` or batch with `findMany` |
+| Schema drift (manual DB changes) | Out of sync with Prisma schema | Always use Prisma Migrate |
 
-// Audit log middleware
-prisma.$use(async (params, next) => {
-  const result = await next(params);
-  if (['create', 'update', 'delete'].includes(params.action)) {
-    await auditLog.log({
-      model: params.model,
-      action: params.action,
-      args: params.args,
-      timestamp: new Date(),
-    });
-  }
-  return result;
+## Security Considerations
+- Raw queries (`$queryRawUnsafe`) risk SQL injection — use `$queryRaw` with parameterized templates
+- Prisma validates input types, but always validate business rules in application layer
+- Connection string in `.env` — never committed to repo
+- Audit logging via Prisma middleware for sensitive models
+- Field-level `@map` for column obfuscation not needed — use DB-level encryption
+- Use `select` to avoid exposing sensitive fields (password hash, etc.)
+
+## Testing Strategies
+
+```typescript
+import { PrismaClient } from '@prisma/client';
+import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest';
+
+const prisma = new PrismaClient();
+
+describe('User Repository', () => {
+  beforeAll(async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE TABLE users CASCADE');
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  it('should create and find user', async () => {
+    const user = await createUser({ email: 'test@test.com', name: 'Test' });
+    const found = await findUserById(user.id);
+    expect(found?.email).toBe('test@test.com');
+  });
 });
 ```
+
+Use separate test database with test user. Use `prisma migrate deploy` in CI. Use `@prisma/nextjs-monorepo-workaround-plugin` for monorepos.
 
 ## Rules
-- Single PrismaClient instance reused across app — no new PrismaClient() per request.
-- Use implicit many-to-many unless junction table needs extra fields.
-- Cursor pagination for large datasets, offset for small (<1000 rows).
-- Avoid N+1 — always use include/select for related data.
-- Transaction for operations that modify multiple related tables.
-- Soft delete via middleware, never raw delete for user-facing data.
-- Connection pooling with PgBouncer for serverless/edge environments.
-- Field-level selects in production queries — never select *.
-- Prisma migration files committed to git. Never run migrate dev in prod.
+- Schema is the source of truth — `prisma migrate dev` after every schema change.
+- `prisma generate` after every pull/sync — always regenerate client.
+- `select` over `include` for production queries — minimize data transfer.
+- Soft deletes via `deletedAt` + middleware filter — never hard delete user data.
+- `$transaction` for atomic multi-table operations.
+- `$extends` for cross-cutting concerns (soft delete, audit, computed fields).
+- No `prisma.$disconnect()` in serverless handlers — let adapter handle pooling.
+- Index all foreign keys and frequently queried columns.
 
 ## References
   - references/prisma-advanced.md — Prisma Advanced Patterns
-  - references/prisma-deployment.md — Prisma Deployment
-  - references/prisma-middleware.md — Prisma Middleware Reference
-  - references/prisma-relations.md — Prisma Relations Reference
+  - references/prisma-deployment.md — Deployment and Performance
+  - references/prisma-middleware.md — Middleware and Extensions
+  - references/prisma-relations.md — Relation Patterns
   - references/query-optimization.md — Query Optimization
-  - references/schema-migrations.md — Schema & Migrations
+  - references/schema-migrations.md — Schema and Migration Patterns
 ## Handoff
-Hand off to `backend/nodejs/express/SKILL.md` for API layer integration or `backend/universal/api-response/SKILL.md` for response formatting.
+Hand off to `backend/nodejs/drizzle/SKILL.md` for Drizzle ORM patterns or `backend/nodejs/patterns/SKILL.md` for advanced Node patterns.

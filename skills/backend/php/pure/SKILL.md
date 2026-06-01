@@ -1,16 +1,7 @@
 ---
 name: php-pure
 description: >
-  Use this skill when the user says 'PHP', 'plain PHP', 'pure PHP',
-  'PHP without framework', 'vanilla PHP', 'PHP routing', 'PSR-4',
-  'PSR-7', 'PSR-15', 'PHP middleware', 'Composer', 'PHP autoloading',
-  'PHP error handling', 'PHP monolith', 'PHP MVC from scratch',
-  'PHP database', 'PDO', 'PHP template', 'PHP CLI script'.
-  Covers: PHP project structure, PSR standards, Composer autoloading,
-  routing (PSR-7/PSR-15), middleware pipeline, error handling,
-  PDO database access, template rendering, security, testing.
-  Do NOT use this for: Laravel (use php-laravel), Zend/Laminas (use
-  php-zend), or framework-specific PHP questions.
+  Use this skill when building PHP applications without a framework — PSR standards, routing, middleware, database access, error handling, and security. This skill enforces: PSR-4 autoloading, PSR-7 request/response, PSR-15 middleware, PSR-11 container, PSR-3 logging. Requires PHP 8.1+. Do NOT use for: Laravel, Symfony, WordPress, or framework-specific PHP development.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -19,368 +10,582 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [backend, php, pure, phase-7]
+tags: [backend, php, pure, phase-4]
 ---
 
-# PHP (Pure)
+# PHP (Pure/Standard)
 
 ## Purpose
-Build well-structured plain PHP applications without frameworks. Follow PSR standards, Composer autoloading, PSR-7/PSR-15 middleware, clean routing, PDO database access, and proper error handling.
+Build PHP applications without a framework — PSR standards-based architecture, routing, middleware, database access, type-safe with PHP 8.x features, and security-first patterns.
 
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "PHP project", "plain PHP", "vanilla PHP", "PHP without framework", "PSR-4", "PSR-7", "PSR-15", "PHP middleware", "Composer autoload", "PHP routing", "PHP error handler", "PDO", "PHP monolith", "PHP MVC".
+User request includes: `pure PHP`, `PHP without framework`, `PHP PSR`, `PHP routing`, `PHP middleware`, `PHP DI`, `PHP database`, `PHP 8 attributes`, `PHP enum`.
 
 ### Input Context
-- PHP version (8.1+ recommended, 8.3+ current).
-- Web server (Apache mod_php, Nginx FPM, built-in server).
-- Database (MySQL, PostgreSQL, SQLite).
-- Template engine (PHP itself, Twig, Blade standalone).
-- Existing project structure.
+- PHP version (8.1+)
+- PSR implementations (PSR-7, PSR-15, PSR-11, PSR-3)
+- Database (PDO, Doctrine DBAL, MySQLi)
+- Container (PHP-DI, custom)
 
 ### Output Artifact
-PHP files and directory structure. No extraneous explanation.
+Project structure, router class, middleware chain, controller, database repository.
 
 ### Response Format
-PHP code only. No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output.
+Produce artifact directly. No preamble, no postamble, no explanations.
 
 ### Completion Criteria
-- [ ] Project structure follows PSR-4 autoloading.
-- [ ] Front controller pattern with single entry point (`public/index.php`).
-- [ ] Routing implemented (PSR-7/PSR-15 or custom).
-- [ ] Middleware pipeline for auth, logging, CORS, error handling.
-- [ ] Database abstraction via PDO with prepared statements.
-- [ ] Error handling with custom error handler + exception handler.
-- [ ] Security: XSS, CSRF, SQL injection prevention, password hashing.
-- [ ] Environment configuration (.env via vlucas/phpdotenv).
+- PSR-4 autoloading configured
+- PSR-7 request/response handling
+- PSR-15 middleware pipeline
+- PSR-11 container for DI
+- Route matching with attributes or configuration
+- PDO with prepared statements
 
 ### Max Response Length
-Direct file output. No response text.
+4096 tokens
 
-## Project Structure
+## Architecture Decision Trees
+
+### Micro-framework vs Full Framework vs Pure PHP
+
+| Criterion | Pure PHP (PSR stack) | Micro-framework (Slim) | Full Framework (Laravel) |
+|-----------|---------------------|----------------------|--------------------------|
+| Control | Complete | High | Framework conventions |
+| Setup time | High | Low | Very low |
+| Performance | Best | Good | Moderate |
+| Learning curve | Steep | Low | Moderate |
+| Flexibility | Max | High | Constrained by conventions |
+
+Decision: Full control + performance → Pure PHP. Quick REST API → Slim/Fat-Free. Full features → Laravel/Symfony.
+
+### PHP 8 Features for Clean Architecture
+
+| Feature | Use | Benefit |
+|---------|-----|---------|
+| Attributes | Route definitions, validation, middleware | Declarative metadata without annotations |
+| Enums | Status, roles, types | Type-safe constants |
+| Readonly properties | DTOs, value objects | Immutability by default |
+| Named arguments | Constructor DI | Self-documenting dependencies |
+| Match expression | Error mapping, event routing | Exhaustive pattern matching |
+| Union types | Multi-type returns | Type-safe polymorphic returns |
+| Constructor promotion | DTOs, services | Reduces boilerplate |
+
+## Workflow
+
+### Step 1: Project Structure
 
 ```
 project/
-├── public/
-│   └── index.php              # Front controller
-├── src/
-│   ├── Middleware/
-│   │   ├── AuthMiddleware.php
-│   │   ├── CorsMiddleware.php
-│   │   ├── LoggerMiddleware.php
-│   │   └── CsrfMiddleware.php
-│   ├── Controller/
-│   │   ├── UserController.php
-│   │   └── OrderController.php
-│   ├── Service/
-│   │   └── UserService.php
-│   ├── Repository/
-│   │   └── UserRepository.php
-│   ├── Model/
-│   │   ├── User.php
-│   │   └── Order.php
-│   ├── Router.php
-│   ├── Request.php
-│   ├── Response.php
-│   ├── Database.php
-│   └── Exception/
-│       ├── HttpException.php
-│       └── ValidationException.php
-├── config/
-│   ├── app.php
-│   ├── database.php
-│   └── routes.php
-├── templates/
-│   └── user/
-│       ├── index.php
-│       └── show.php
-├── migrations/
-│   └── 001_create_users.php
-├── tests/
-│   └── Unit/
-│       └── UserTest.php
-├── .env
-├── .env.example
-├── composer.json
-└── phpunit.xml
+  public/
+    index.php                 # Entry point
+  src/
+    Controllers/
+      UserController.php
+    Middleware/
+      AuthMiddleware.php
+      CorsMiddleware.php
+      ErrorHandlerMiddleware.php
+    Router/
+      Router.php
+      Route.php
+    Request/
+      Request.php             # PSR-7 implementation
+    Response/
+      Response.php
+    Container/
+      Container.php           # PSR-11 implementation
+    Repository/
+      UserRepository.php
+    Service/
+      UserService.php
+    Exception/
+      NotFoundException.php
+      ValidationException.php
+    Enum/
+      UserRole.php
+  config/
+    routes.php
+    services.php
+  composer.json
 ```
 
-## Front Controller (public/index.php)
+### Step 2: Composer Setup and PSR-4
+
+```json
+{
+  "name": "app/api",
+  "require": {
+    "php": ">=8.1",
+    "psr/http-message": "^1.0",
+    "psr/container": "^2.0",
+    "psr/log": "^3.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  }
+}
+```
+
+### Step 3: Router with PHP 8 Attributes
 
 ```php
 <?php
-declare(strict_types=1);
+// src/Router/Route.php
+namespace App\Router;
 
-require __DIR__ . '/../vendor/autoload.php';
+#[\Attribute(\Attribute::TARGET_METHOD | \Attribute::IS_REPEATABLE)]
+class Route
+{
+    public function __construct(
+        public readonly string $method,
+        public readonly string $path,
+    ) {}
+}
 
-use App\Router;
-use App\Request;
-use App\Middleware\CorsMiddleware;
-use App\Middleware\LoggerMiddleware;
-use App\Middleware\ErrorHandlerMiddleware;
+// src/Router/Router.php
+namespace App\Router;
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
-
-$request = Request::fromGlobals();
-
-$router = require __DIR__ . '/../config/routes.php';
-
-$middleware = new \App\Middleware\Pipeline();
-$middleware->add(new ErrorHandlerMiddleware());
-$middleware->add(new CorsMiddleware());
-$middleware->add(new LoggerMiddleware());
-
-$response = $middleware->handle($request, fn($req) => $router->dispatch($req));
-
-$response->send();
-```
-
-## Routing (PSR-7 / PSR-15)
-
-```php
-<?php
-declare(strict_types=1);
-
-namespace App;
-
+use App\Exception\NotFoundException;
+use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\RequestHandlerInterface;
-use Psr\Http\Message\ResponseInterface;
 
-class Router implements RequestHandlerInterface
+class Router
 {
     private array $routes = [];
 
-    public function get(string $path, callable $handler, array $middleware = []): self
+    public function register(string $class): void
     {
-        $this->routes['GET'][$path] = ['handler' => $handler, 'middleware' => $middleware];
-        return $this;
+        $reflection = new \ReflectionClass($class);
+        foreach ($reflection->getMethods() as $method) {
+            foreach ($method->getAttributes(Route::class) as $attribute) {
+                $route = $attribute->newInstance();
+                $this->routes[] = [
+                    'method' => $route->method,
+                    'path' => $route->path,
+                    'class' => $class,
+                    'handler' => $method->getName(),
+                ];
+            }
+        }
     }
 
-    public function post(string $path, callable $handler, array $middleware = []): self
-    {
-        $this->routes['POST'][$path] = ['handler' => $handler, 'middleware' => $middleware];
-        return $this;
-    }
-
-    public function dispatch(Request $request): Response
+    public function dispatch(ServerRequestInterface $request, ContainerInterface $container): mixed
     {
         $method = $request->getMethod();
-        $uri = parse_url($request->getUri(), PHP_URL_PATH);
-        $uri = rtrim($uri, '/') ?: '/';
+        $uri = $request->getUri()->getPath();
 
-        foreach ($this->routes[$method] ?? [] as $route => $config) {
-            $pattern = preg_replace('/\{(\w+)\}/', '(?P<$1>[^/]+)', $route);
-            $pattern = '#^' . $pattern . '$#';
-
-            if (preg_match($pattern, $uri, $matches)) {
-                $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
-                $request = $request->withParams($params);
-
-                $handler = $config['handler'];
-                foreach (array_reverse($config['middleware']) as $mw) {
-                    $handler = fn($req) => $mw->process($req, new class($handler) implements RequestHandlerInterface {
-                        public function __construct(private $handler) {}
-                        public function handle(ServerRequestInterface $request): ResponseInterface {
-                            return ($this->handler)($request);
-                        }
-                    });
-                }
-
-                return $handler($request);
+        foreach ($this->routes as $route) {
+            $params = $this->match($route['method'], $route['path'], $method, $uri);
+            if ($params !== null) {
+                $controller = $container->get($route['class']);
+                return $controller->{$route['handler']}($request, ...$params);
             }
         }
 
-        throw new HttpException(404, 'Not Found');
+        throw new NotFoundException('Route not found');
+    }
+
+    private function match(string $routeMethod, string $routePath, string $requestMethod, string $requestUri): ?array
+    {
+        if ($routeMethod !== $requestMethod) return null;
+        $pattern = preg_replace('/\{(\w+)\}/', '(?P<$1>[^/]+)', $routePath);
+        $pattern = '#^' . $pattern . '$#';
+        if (preg_match($pattern, $requestUri, $matches)) {
+            return array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
+        }
+        return null;
+    }
+}
+
+// src/Enum/UserRole.php
+namespace App\Enum;
+
+enum UserRole: string
+{
+    case Admin = 'admin';
+    case User = 'user';
+    case Moderator = 'moderator';
+}
+
+// src/Controllers/UserController.php
+namespace App\Controllers;
+
+use App\Router\Route;
+use App\Service\UserService;
+use Psr\Http\Message\ServerRequestInterface;
+
+class UserController
+{
+    public function __construct(
+        private readonly UserService $userService,
+    ) {}
+
+    #[Route('GET', '/users')]
+    public function list(ServerRequestInterface $request): array
+    {
+        $page = (int) ($request->getQueryParams()['page'] ?? 1);
+        return $this->userService->paginate($page);
+    }
+
+    #[Route('GET', '/users/{id}')]
+    public function getById(ServerRequestInterface $request, string $id): ?array
+    {
+        $user = $this->userService->findById($id);
+        if (!$user) throw new NotFoundException('User not found');
+        return $user;
+    }
+
+    #[Route('POST', '/users')]
+    public function create(ServerRequestInterface $request): array
+    {
+        $data = json_decode((string) $request->getBody(), true);
+        return $this->userService->create($data);
+    }
+}
+```
+
+### Step 4: Middleware Pipeline (PSR-15)
+
+```php
+<?php
+// src/Middleware/Pipeline.php
+namespace App\Middleware;
+
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+
+class Pipeline implements RequestHandlerInterface
+{
+    private array $middleware = [];
+    private int $index = 0;
+
+    public function __construct(
+        private readonly RequestHandlerInterface $handler,
+    ) {}
+
+    public function add(MiddlewareInterface $middleware): void
+    {
+        $this->middleware[] = $middleware;
     }
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        return $this->dispatch($request);
-    }
-}
-```
-
-## PDO Database Layer
-
-```php
-<?php
-declare(strict_types=1);
-
-namespace App;
-
-class Database
-{
-    private static ?\PDO $instance = null;
-
-    public static function connect(): \PDO
-    {
-        if (self::$instance === null) {
-            $dsn = sprintf(
-                '%s:host=%s;port=%s;dbname=%s;charset=utf8mb4',
-                $_ENV['DB_DRIVER'],
-                $_ENV['DB_HOST'],
-                $_ENV['DB_PORT'],
-                $_ENV['DB_NAME']
-            );
-            self::$instance = new \PDO($dsn, $_ENV['DB_USER'], $_ENV['DB_PASS'], [
-                \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
-                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
-                \PDO::ATTR_EMULATE_PREPARES   => false,
-            ]);
+        if ($this->index < count($this->middleware)) {
+            $middleware = $this->middleware[$this->index];
+            $this->index++;
+            return $middleware->process($request, $this);
         }
-        return self::$instance;
-    }
-
-    public static function query(string $sql, array $params = []): \PDOStatement
-    {
-        $stmt = self::connect()->prepare($sql);
-        $stmt->execute($params);
-        return $stmt;
-    }
-
-    public static function fetch(string $sql, array $params = []): ?array
-    {
-        $result = self::query($sql, $params);
-        return $result->fetch() ?: null;
-    }
-
-    public static function fetchAll(string $sql, array $params = []): array
-    {
-        return self::query($sql, $params)->fetchAll();
-    }
-
-    public static function insert(string $table, array $data): int
-    {
-        $columns = implode(', ', array_keys($data));
-        $placeholders = implode(', ', array_fill(0, count($data), '?'));
-        self::query("INSERT INTO {$table} ({$columns}) VALUES ({$placeholders})", array_values($data));
-        return (int) self::connect()->lastInsertId();
-    }
-}
-```
-
-## Error Handling
-
-```php
-<?php
-declare(strict_types=1);
-
-namespace App\Exception;
-
-class HttpException extends \RuntimeException
-{
-    public function __construct(
-        public readonly int $statusCode,
-        string $message = '',
-        ?\Throwable $previous = null
-    ) {
-        parent::__construct($message, $statusCode, $previous);
+        return $this->handler->handle($request);
     }
 }
 
-class ValidationException extends HttpException
-{
-    public function __construct(
-        public readonly array $errors,
-        string $message = 'Validation failed'
-    ) {
-        parent::__construct(422, $message);
-    }
-}
-```
-
-```php
-<?php
-declare(strict_types=1);
-
+// src/Middleware/AuthMiddleware.php
 namespace App\Middleware;
 
-use App\Exception\HttpException;
+use Firebase\JWT\JWT;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
-class ErrorHandlerMiddleware
+class AuthMiddleware implements MiddlewareInterface
 {
-    public function process(callable $next): callable
+    public function __construct(
+        private readonly string $jwtSecret,
+    ) {}
+
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        return function ($request) use ($next) {
-            try {
-                return $next($request);
-            } catch (HttpException $e) {
-                return json_response($e->statusCode, [
-                    'error' => ['code' => $e->getCode() ?: 'HTTP_ERROR', 'message' => $e->getMessage()]
-                ]);
-            } catch (\PDOException $e) {
-                error_log('Database: ' . $e->getMessage());
-                return json_response(500, [
-                    'error' => ['code' => 'DB_ERROR', 'message' => 'Database error']
-                ]);
-            } catch (\Throwable $e) {
-                error_log('Unhandled: ' . $e->getMessage());
-                return json_response(500, [
-                    'error' => ['code' => 'INTERNAL_ERROR', 'message' => 'Internal server error']
-                ]);
-            }
-        };
+        $header = $request->getHeaderLine('Authorization');
+        if (!str_starts_with($header, 'Bearer ')) {
+            throw new UnauthorizedException('Missing token');
+        }
+
+        try {
+            $token = substr($header, 7);
+            $payload = JWT::decode($token, new Key($this->jwtSecret, 'HS256'));
+            $request = $request->withAttribute('user_id', $payload->sub);
+            $request = $request->withAttribute('user_role', $payload->role);
+        } catch (\Exception) {
+            throw new UnauthorizedException('Invalid token');
+        }
+
+        return $handler->handle($request);
     }
 }
 ```
 
-## Security
+### Step 5: PDO Database Access
 
 ```php
 <?php
-declare(strict_types=1);
+// src/Repository/UserRepository.php
+namespace App\Repository;
 
-// Password hashing
-public function hashPassword(string $password): string
+use App\Enum\UserRole;
+use PDO;
+
+class UserRepository
 {
-    return password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
-}
+    public function __construct(
+        private readonly PDO $pdo,
+    ) {}
 
-// Verify password
-public function verifyPassword(string $password, string $hash): bool
-{
-    return password_verify($password, $hash);
-}
+    public function findById(string $id): ?array
+    {
+        $stmt = $this->pdo->prepare('SELECT id, name, email, role, is_active, created_at FROM users WHERE id = :id');
+        $stmt->execute([':id' => $id]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $user ?: null;
+    }
 
-// CSRF token
-public function generateCsrfToken(): string
-{
-    return bin2hex(random_bytes(32));
-}
+    public function findByEmail(string $email): ?array
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM users WHERE email = :email');
+        $stmt->execute([':email' => $email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $user ?: null;
+    }
 
-// XSS prevention (output escaping)
-function e(?string $value): string
-{
-    return htmlspecialchars($value ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8');
-}
+    public function create(array $data): array
+    {
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO users (id, name, email, password, role) VALUES (:id, :name, :email, :password, :role) RETURNING *'
+        );
+        $stmt->execute([
+            ':id' => uuid_create(),
+            ':name' => $data['name'],
+            ':email' => $data['email'],
+            ':password' => password_hash($data['password'], PASSWORD_BCRYPT),
+            ':role' => $data['role'] ?? UserRole::User->value,
+        ]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 
-// SQL injection prevention (use PDO prepared statements — never raw concatenation)
-// ✅ Always: $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
-// ❌ Never: $pdo->query("SELECT * FROM users WHERE id = $id");
+    public function paginate(int $page, int $perPage = 20): array
+    {
+        $offset = ($page - 1) * $perPage;
+        $stmt = $this->pdo->prepare(
+            'SELECT id, name, email, role, is_active, created_at FROM users ORDER BY created_at DESC LIMIT :limit OFFSET :offset'
+        );
+        $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
 ```
 
+### Step 6: Entry Point
+
+```php
+<?php
+// public/index.php
+declare(strict_types=1);
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use App\Middleware\CorsMiddleware;
+use App\Middleware\ErrorHandlerMiddleware;
+use App\Middleware\Pipeline;
+use App\Router\Router;
+use App\Container\Container;
+use App\Handler\AppHandler;
+use GuzzleHttp\Psr7\ServerRequest;
+use GuzzleHttp\Psr7\Response;
+
+// Build container (PSR-11)
+$container = new Container(require __DIR__ . '/../config/services.php');
+
+// Build router
+$router = new Router();
+$router->register(\App\Controllers\UserController::class);
+
+// Build middleware pipeline
+$handler = new AppHandler($router, $container);
+$pipeline = new Pipeline($handler);
+$pipeline->add(new ErrorHandlerMiddleware());
+$pipeline->add(new CorsMiddleware(['https://app.example.com']));
+$pipeline->add($container->get(\App\Middleware\AuthMiddleware::class));
+
+// Dispatch
+$request = ServerRequest::fromGlobals();
+$response = $pipeline->handle($request);
+
+// Send response
+http_response_code($response->getStatusCode());
+foreach ($response->getHeaders() as $name => $values) {
+    foreach ($values as $value) {
+        header("$name: $value");
+    }
+}
+echo $response->getBody();
+```
+
+## Implementation Patterns
+
+### Pattern: PSR-11 Container
+
+```php
+<?php
+// src/Container/Container.php
+namespace App\Container;
+
+use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
+use Psr\Container\ContainerExceptionInterface;
+
+class Container implements ContainerInterface
+{
+    private array $instances = [];
+    private array $definitions = [];
+
+    public function __construct(array $definitions = [])
+    {
+        $this->definitions = $definitions;
+    }
+
+    public function get(string $id): mixed
+    {
+        if (isset($this->instances[$id])) {
+            return $this->instances[$id];
+        }
+
+        if (isset($this->definitions[$id])) {
+            $this->instances[$id] = $this->definitions[$id]($this);
+            return $this->instances[$id];
+        }
+
+        if (class_exists($id)) {
+            return $this->autowire($id);
+        }
+
+        throw new class("Service '$id' not found") extends \Exception implements NotFoundExceptionInterface {};
+    }
+
+    public function has(string $id): bool
+    {
+        return isset($this->definitions[$id]) || class_exists($id);
+    }
+
+    private function autowire(string $class): object
+    {
+        $reflection = new \ReflectionClass($class);
+        $constructor = $reflection->getConstructor();
+
+        if (!$constructor) {
+            return $reflection->newInstance();
+        }
+
+        $params = array_map(fn($p) => $this->get($p->getType()->getName()), $constructor->getParameters());
+        return $reflection->newInstanceArgs($params);
+    }
+}
+```
+
+## Production Considerations
+
+### Performance
+- OPcache enabled: `opcache.enable=1`, `opcache.memory_consumption=256`
+- JIT for CPU-bound workloads: `opcache.jit=1255`, `opcache.jit_buffer_size=256M`
+- Database: PDO with persistent connections, connection pooling via pgbouncer
+- Use `readonly` classes for DTOs to reduce memory overhead
+- Enable `zend.exception_ignore_args=1` in production to reduce exception overhead
+
+### Error Handling
+```php
+// Error handler that converts PHP errors to exceptions
+set_error_handler(function (int $severity, string $message, string $file, int $line): void {
+    throw new \ErrorException($message, 0, $severity, $file, $line);
+});
+
+set_exception_handler(function (\Throwable $e): void {
+    $code = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+    http_response_code($code);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => ['code' => 'INTERNAL_ERROR', 'message' => $code >= 500 ? 'Server error' : $e->getMessage()]]);
+});
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why | Fix |
+|-------------|-----|-----|
+| `require`/`include` for dependencies | No autoloading, fragile | PSR-4 autoloader via Composer |
+| `mysqli_*` functions | Deprecated, insecure | PDO with prepared statements |
+| `extract($_POST)` | Variable injection, security risk | Type-safe request objects |
+| Global `$_SESSION` access | Hard to test, coupled to superglobals | Session interface via container |
+| String interpolation in SQL | SQL injection | Prepared statements always |
+| `eval()` or `create_function()` | Code injection | Never use |
+| Mixed HTML and PHP in views | Maintenance nightmare | Template engine (Twig, Plates) |
+
+## Security Considerations
+- PDO prepared statements prevent SQL injection — always use placeholders
+- `password_hash(PASSWORD_BCRYPT)` for passwords — never manual hashing
+- `htmlspecialchars($output, ENT_QUOTES)` for HTML output escaping
+- `strip_tags()` on user input for display, but preserve on DB storage
+- CSRF: generate tokens via `bin2hex(random_bytes(32))`, validate on state changes
+- Set `session.cookie_httponly=1`, `session.cookie_secure=1`, `session.cookie_samesite=Lax`
+- CORS headers on all API responses — restrict origins, methods, headers
+- Rate limiting via IP-based counter in Redis or APCu
+
+## Testing Strategies
+
+```php
+<?php
+// tests/UserRepositoryTest.php
+use PHPUnit\Framework\TestCase;
+use App\Repository\UserRepository;
+
+class UserRepositoryTest extends TestCase
+{
+    private static PDO $pdo;
+
+    public static function setUpBeforeClass(): void
+    {
+        self::$pdo = new PDO('sqlite::memory:');
+        self::$pdo->exec('CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT, email TEXT UNIQUE, password TEXT, role TEXT)');
+    }
+
+    public function test_create_and_find_user(): void
+    {
+        $repo = new UserRepository(self::$pdo);
+        $created = $repo->create([
+            'name' => 'Test',
+            'email' => 'test@test.com',
+            'password' => 'secret123',
+        ]);
+        $found = $repo->findById($created['id']);
+        $this->assertEquals('Test', $found['name']);
+    }
+}
+```
+
+Use PHPUnit 10+ with Pest for BDD-style tests. Use `vfsStream` for filesystem mocking. Use `phpmock` for function mocking in legacy code.
+
 ## Rules
-- Always use `declare(strict_types=1)` in every PHP file.
-- Follow PSR-4 autoloading with Composer.
-- Never concatenate SQL — use PDO prepared statements exclusively.
-- Never output unsanitized user input — use `htmlspecialchars()` with ENT_QUOTES.
-- Always hash passwords with `password_hash(PASSWORD_BCRYPT, ['cost' => 12])`.
-- Use environment variables for all configuration — never hardcode secrets.
-- Log errors, never display them in production (`display_errors=0`).
-- Set `session.cookie_httponly=1`, `session.cookie_secure=1`, `session.cookie_samesite="Lax"`.
-- Use `error_log()` for logging, not `echo`/`var_dump` in production.
+- PSR-4 autoloading via Composer — no manual `require`/`include` for classes.
+- PDO with named parameters for all database queries — never string interpolation.
+- PHP 8 attributes for metadata (routes, validation) — never docblock annotations.
+- Services receive dependencies via constructor injection — no service locator pattern.
+- Middleware pipeline with PSR-15 — each middleware does one thing.
+- Request/Response as PSR-7 objects — never use `$_GET`, `$_POST`, `$_SERVER` directly.
+- Error handling via exceptions → throw vs try/catch at boundary.
+- `declare(strict_types=1)` at the top of every PHP file for type safety.
+- `readonly` properties on DTOs and value objects for immutability.
 
 ## References
-  - references/php-basics.md — PHP Basics
-  - references/php-database.md — Pure PHP Database Patterns
-  - references/php-modern-practices.md — PHP Modern Practices
-  - references/php-routing.md — Pure PHP Routing
+  - references/php-basics.md — PHP Basics Reference
+  - references/php-database.md — Database Access Patterns
+  - references/php-modern-practices.md — Modern PHP Practices
+  - references/php-routing.md — Routing Patterns
   - references/php-security.md — PHP Security
   - references/psr-standards.md — PSR Standards Reference
 ## Handoff
-Next skill: php-laravel — if user wants Laravel framework instead.
-Next skill: php-zend — if user wants Laminas/Zend framework instead.
-Carry forward: PHP version, database driver, project structure.
+Hand off to `backend/php/laravel/SKILL.md` for Laravel-specific patterns or `backend/universal/api-response/SKILL.md` for API response formatting.

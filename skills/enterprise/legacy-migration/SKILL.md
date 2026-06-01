@@ -4,7 +4,7 @@ description: >
   Use this skill when planning or executing legacy system migrations using strangler fig, parallel run, or big bang strategies.
   This skill enforces: anti-corruption layers, dual-write verification, rollback capability.
   Do NOT use for: greenfield development, infrastructure-only migration, database schema changes without strategy.
-version: "2.0.0"
+version: "2.1.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -49,6 +49,39 @@ Phase 6 - Retire: Decommission legacy after validation period. Archive data and 
 | Data Sync Required | Incremental            | Continuous (dual-write)   | One-time ETL          |
 | Business Visibility| Gradual                | Full during run            | Hard cut, visible     |
 | Best For           | Large complex systems  | Critical financial/health | Simple systems, new   |
+
+## Architecture / Decision Trees
+
+### Migration Strategy Decision Tree
+```
+Is the system > 50k lines of code with > 5 integration points?
+├── Yes → Strangler Fig (incremental, safest)
+└── No → Is data loss/financial impact of downtime critical?
+    ├── Yes → Parallel Run (dual validation, slower)
+    └── No → Do you have full regression test coverage?
+        ├── Yes → Big Bang (fastest, cheapest)
+        └── No → Strangler Fig (over-testing with characterization tests)
+```
+
+### Rehost / Replatform / Refactor Decision
+```
+Goal: Minimize changes to application code?
+├── Yes → Is hardware EOL or data center lease ending?
+│   ├── Yes → Rehost (lift-and-shift, minimal code changes)
+│   └── No → Replatform (move to managed services, minor code changes)
+└── No → Is the application difficult to maintain or scale?
+    ├── Yes → Refactor (rewrite/re-architect, full code changes)
+    └── No → Replatform (improve without full rewrite)
+```
+
+### Risk Assessment Matrix
+| Risk Factor | Low | Medium | High |
+|------------|-----|--------|------|
+| Data volume | < 100GB | 100GB-1TB | > 1TB |
+| Integration count | 1-2 | 3-5 | > 5 |
+| Test coverage | > 80% | 50-80% | < 50% |
+| Team familiarity | Built it | Maintained it | Never seen it |
+| Business peak cycles | > 6 months away | 3-6 months | < 3 months |
 
 ## Agent Protocol
 
@@ -249,10 +282,206 @@ Practice 7: Communicate migration progress to stakeholders weekly. Visibility bu
 A financial services company migrated a 15-year-old Java monolith handling 50M daily transactions. Using strangler fig with an API gateway routing layer, they extracted 12 microservices over 18 months. Each extraction began with an anti-corruption layer, followed by dual-write, then cutover. The monolith was decommissioned after 14 months of parallel operation. Zero customer-facing incidents during migration. Performance improved 3x for migrated services.
 
 ### Case Study 2: Healthcare CRM (Parallel Run)
-A healthcare SaaS provider migrated from a legacy on-premises CRM to a cloud-native platform. Using parallel run with real-time comparison, both systems processed identical traffic for 6 weeks. The comparison engine flagged 847 discrepancies in the first week, revealing 3 critical data transformation bugs. After the 6-week validation period, cutover completed in 4 hours with no rollback required. Total project duration: 14 months.
+A healthcare SaaS provider migrated from a legacy on-premises CRM to a cloud-native platform. Using parallel run with real-time comparison, both systems processed identical traffic for 6 weeks. The comparison engine flagged 847 discrepancies in the first week, revealing 3 critical data transformation bugs. After the 6-week validation period, cutover completed in 4 hours with no rollback required.
 
 ### Case Study 3: Retail Data Warehouse (Big Bang)
-A retail chain migrated a 12TB data warehouse over a long holiday weekend. After 8 weeks of rehearsal in staging, the production cutover took 6 hours. The 48-hour rollback window was not triggered. Key success factors: exhaustive rehearsal, frozen schema changes for 2 months prior, dedicated on-call team, and a clear rollback decision tree. The system has processed 99.99% uptime for 18 months post-migration.
+A retail chain migrated a 12TB data warehouse over a long holiday weekend. After 8 weeks of rehearsal in staging, the production cutover took 6 hours. The 48-hour rollback window was not triggered. Key success factors: exhaustive rehearsal, frozen schema changes for 2 months prior, dedicated on-call team, and a clear rollback decision tree.
+
+## Code Examples
+
+### Strangler Fig Routing Proxy (Python)
+```python
+import random
+from flask import Flask, request, jsonify
+import requests
+
+app = Flask(__name__)
+
+class StranglerFigRouter:
+    def __init__(self, legacy_url: str, new_url: str):
+        self.legacy_url = legacy_url
+        self.new_url = new_url
+        self.routes = {}  # path -> percentage to new system
+
+    def add_route(self, path: str, new_pct: float = 0.0):
+        self.routes[path] = new_pct
+
+    def route_request(self, path: str, method: str, headers: dict, body: dict = None):
+        new_pct = self._get_route_pct(path)
+        use_new = random.random() * 100 < new_pct
+        target_url = self.new_url if use_new else self.legacy_url
+
+        try:
+            response = requests.request(method, f"{target_url}{path}",
+                                        headers=headers, json=body, timeout=30)
+            return response.status_code, response.json() if use_new else response.text, use_new
+        except requests.Timeout:
+            return 504, {"error": "timeout"}, use_new
+        except requests.ConnectionError:
+            # Fallback to legacy if new system fails
+            if use_new:
+                fallback = requests.request(method, f"{self.legacy_url}{path}",
+                                            headers=headers, json=body, timeout=30)
+                return fallback.status_code, fallback.text, False
+            raise
+
+    def _get_route_pct(self, path: str) -> float:
+        for route_pat, pct in self.routes.items():
+            if route_pat in path:
+                return pct
+        return 0.0
+
+router = StranglerFigRouter("https://legacy.example.com", "https://new.example.com")
+router.add_route("/api/orders", 10.0)  # 10% to new, 90% to legacy
+router.add_route("/api/users", 50.0)   # 50/50 split
+
+# Request flows through router
+# status, data, used_new = router.route_request("/api/orders", "GET", {})
+```
+
+### Dual-Write Data Comparison (Python)
+```python
+import hashlib, json
+from dataclasses import dataclass
+
+@dataclass
+class ComparisonResult:
+    total_records: int
+    matched: int
+    mismatched: list[dict]
+    missing_in_new: list[str]
+    missing_in_legacy: list[str]
+
+def compute_hash(record: dict) -> str:
+    canonical = json.dumps(record, sort_keys=True)
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+class DualWriteComparator:
+    def __init__(self, key_field: str = "id"):
+        self.key_field = key_field
+        self.results = []
+
+    def compare(self, legacy_records: list[dict], new_records: list[dict]) -> ComparisonResult:
+        legacy_by_key = {r[self.key_field]: r for r in legacy_records}
+        new_by_key = {r[self.key_field]: r for r in new_records}
+
+        all_keys = set(legacy_by_key.keys()) | set(new_by_key.keys())
+        missing_in_new = [k for k in all_keys if k not in new_by_key]
+        missing_in_legacy = [k for k in all_keys if k not in legacy_by_key]
+        common_keys = set(legacy_by_key.keys()) & set(new_by_key.keys())
+
+        mismatched = []
+        matched = 0
+        for key in common_keys:
+            old_hash = compute_hash(legacy_by_key[key])
+            new_hash = compute_hash(new_by_key[key])
+            if old_hash == new_hash:
+                matched += 1
+            else:
+                mismatched.append({
+                    "key": key,
+                    "legacy": legacy_by_key[key],
+                    "new": new_by_key[key],
+                    "legacy_hash": old_hash,
+                    "new_hash": new_hash
+                })
+
+        self.results.append(ComparisonResult(
+            total_records=len(all_keys),
+            matched=matched,
+            mismatched=mismatched,
+            missing_in_new=missing_in_new,
+            missing_in_legacy=missing_in_legacy
+        ))
+        return self.results[-1]
+
+    def report(self) -> str:
+        summary = self.results[-1] if self.results else None
+        if not summary:
+            return "No comparison run"
+        return (
+            f"Total: {summary.total_records}, "
+            f"Matched: {summary.matched}, "
+            f"Mismatched: {len(summary.mismatched)}, "
+            f"Missing in new: {len(summary.missing_in_new)}, "
+            f"Missing in legacy: {len(summary.missing_in_legacy)}, "
+            f"Match rate: {summary.matched/summary.total_records*100:.2f}%"
+        )
+
+comparator = DualWriteComparator()
+# Example: comparator.compare(legacy_data, new_data)
+# print(comparator.report())
+```
+
+### CDC with Debezium (Kafka Connect Configuration)
+```json
+{
+  "name": "legacy-db-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "legacy-db.example.com",
+    "database.port": "5432",
+    "database.user": "cdc_user",
+    "database.password": "${file:/etc/kafka/secrets/db-password}",
+    "database.dbname": "legacy_erp",
+    "database.server.name": "legacy-erp",
+    "table.include.list": "public.orders,public.customers,public.products",
+    "plugin.name": "pgoutput",
+    "slot.name": "migration_slot",
+    "publication.name": "migration_publication",
+    "tombstones.on.delete": "false",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "transforms": "unwrap,router",
+    "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+    "transforms.router.type": "org.apache.kafka.connect.transforms.RegexRouter",
+    "transforms.router.regex": "legacy-erp\\.public\\.(.*)",
+    "transforms.router.replacement": "migration.cdc.$1"
+  }
+}
+```
+
+### Migration Rollback Plan Template (YAML)
+```yaml
+rollback_plan:
+  migration_id: "monolith-to-microservices-v2"
+  trigger_conditions:
+    - error_rate_baseline_pct: 0.5
+    - error_rate_threshold: 2.0  # > 2% error rate triggers rollback
+    - latency_p99_baseline_ms: 200
+    - latency_p99_threshold_ms: 2000
+    - data_mismatch_threshold_pct: 0.01
+
+  rollback_steps:
+    1: { action: "stop_new_system_writes", owner: "platform-team", max_duration: "1m" }
+    2: { action: "enable_legacy_writes", owner: "platform-team", max_duration: "1m" }
+    3: { action: "route_100pct_to_legacy", owner: "gateway-team", max_duration: "5m" }
+    4: { action: "verify_legacy_traffic", owner: "qa-team", max_duration: "10m" }
+    5: { action: "extract_new_system_data_for_debugging", owner: "migration-team", max_duration: "30m" }
+    6: { action: "notify_stakeholders", owner: "comms-lead", max_duration: "5m" }
+
+  post_rollback_validation:
+    - check: "All traffic flowing to legacy"
+    - check: "No data loss in last 15 minutes"
+    - check: "Error rates returned to baseline"
+```
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Big Bang Without Safety Net
+Migrating everything at once with no rollback plan. When something goes wrong (and it will), there is no way to revert. The team is in firefighting mode until 3am. Always have a tested rollback plan. The rollback should be practiced in staging before cutover.
+
+### Anti-Pattern 2: Migrating Bugs
+Replicating known legacy bugs in the new system because "the old system did it that way." Bugs accumulate over years and some consumers may depend on incorrect behavior. Document behavioral quirks explicitly. Fix bugs as part of migration, with clear communication to consumers.
+
+### Anti-Pattern 3: Insufficient Characterization Tests
+Legacy systems rarely have test coverage above 30%. Without characterization tests (capturing current behavior before changes), you cannot tell if the migration changed behavior. Write characterization tests by running the legacy system with known inputs and recording outputs.
+
+### Anti-Pattern 4: Data Migration Without Reconciliation
+Running an ETL to move data to the new system but never verifying completeness. Missing records, corrupted fields, or transformed data errors propagate silently. Always run row-count + checksum + business-rule reconciliation after any data migration.
+
+### Anti-Pattern 5: Cutover During Peak Business
+Scheduling the cutover during end-of-quarter close, Black Friday, or product launch week. Any issue during a peak period multiplies impact by 10x. Migrate during known low-traffic windows. Have a 30-day buffer around known busy periods.
 
 ## Rules
 - Every migration must have a documented rollback plan tested before cutover.
@@ -273,7 +502,8 @@ A retail chain migrated a 12TB data warehouse over a long holiday weekend. After
 - Post-migration performance monitoring must continue for minimum 30 days.
 
 ## References
-  - references/legacy-migration-advanced.md -- Legacy Migration Advanced Topics
+  - references/legacy-migration-advanced.md -- Legacy Migration Advanced
+  - references/strangler-fig-implementation.md -- Strangler Fig Implementation Patterns Topics
   - references/legacy-migration-fundamentals.md -- Legacy Migration Fundamentals
   - references/legacy-migration-patterns.md -- Legacy Migration Patterns
   - references/legacy-migration-strategies.md -- Legacy Migration Strategies Reference

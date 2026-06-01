@@ -17,9 +17,9 @@ description: >
   testing, API versioning, protocol transformation, request/response
   transformation, observability, error handling, resilience, deployment models,
   multi-cloud, service mesh integration.
-  Do NOT use this for: service mesh sidecar proxies (use Istio sidecar), load
+  Do NOT use for: service mesh sidecar proxies (use Istio sidecar), load
   balancer only, application-level auth (use auth-patterns), DNS-level routing.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -68,6 +68,41 @@ Gateway configuration with no preamble. No postamble. No explanations. No filler
 
 ### Max Response Length
 Direct config output. No response text.
+
+## Architecture Decision Trees
+
+### Gateway Provider Selection
+```
+What is the primary deployment platform?
+├── Kubernetes / Cloud-native
+│   ├── Need service mesh integration?
+│   │   ├── Yes → Envoy + Istio
+│   │   └── No → Kong or APISIX (K8s ingress controllers)
+│   └── Need simple edge routing?
+│       └── Traefik (auto-service discovery, Let's Encrypt)
+├── AWS-native
+│   ├── Lambda backends? → AWS API Gateway
+│   ├── ECS/EKS + microservices? → Kong or ALB + API Gateway
+│   └── Enterprise API program? → Apigee
+├── Azure-native
+│   └── Azure API Management
+├── Java/Spring Boot
+│   └── Spring Cloud Gateway
+└── High-throughput edge proxy
+    ├── Extreme performance (L4) → HAProxy
+    └── Custom logic (L7) → NGINX + Lua
+```
+
+### Gateway Architecture Pattern
+```
+Single gateway for all traffic?
+├── Yes → Is the API surface small (<20 endpoints)?
+│   ├── Yes → Single gateway, simple, easy to manage
+│   └── No → Consider splitting into domain gateways
+└── No → Per-client BFF gateways?
+    ├── Yes → Separate BFF per client type (web, mobile, partner)
+    └── No → Per-domain gateways (orders-api, users-api)
+```
 
 ## Gateway Type Selection
 
@@ -181,50 +216,260 @@ Multi-cloud:        active-active gateways across cloud providers
 Hybrid:             on-prem gateway → cloud upstreams
 ```
 
-## Concrete Examples
+## Implementation Patterns
 
-### Kong (Declarative, DB-less)
-```yaml
-_format_version: "3.0"
-services:
-  - name: users
-    url: http://users.internal:8080
-    routes:
-      - name: users-routes
-        paths: ["/api/users"]
-        methods: [GET, POST, PUT, DELETE]
-        plugins:
-          - name: jwt
-          - name: rate-limiting
-            config: { minute: 100, policy: redis }
-          - name: cors
+### Pattern: Custom Auth Plugin (Kong)
+```lua
+-- Kong custom authentication plugin
+local BasePlugin = require "kong.plugins.base_plugin"
+
+local CustomAuthHandler = BasePlugin:extend()
+
+CustomAuthHandler.PRIORITY = 1000
+CustomAuthHandler.VERSION = "1.0.0"
+
+function CustomAuthHandler:new()
+  CustomAuthHandler.super.new(self, "custom-auth")
+end
+
+function CustomAuthHandler:access(conf)
+  CustomAuthHandler.super.access(self)
+
+  local api_key = kong.request.get_header("X-API-Key")
+  if not api_key then
+    return kong.response.exit(401, {
+      error = { code = "UNAUTHORIZED", message = "Missing API key" }
+    })
+  end
+
+  local consumer = kong.client.load_consumer_by_id(api_key)
+  if not consumer then
+    return kong.response.exit(403, {
+      error = { code = "FORBIDDEN", message = "Invalid API key" }
+    })
+  end
+
+  kong.client.authenticate(consumer, nil)
+end
+
+return CustomAuthHandler
 ```
 
-### NGINX (Reverse Proxy)
-```nginx
-location /api/users {
-    auth_request /_auth;
-    proxy_pass http://user-api;
-    limit_req zone=apikey burst=20 nodelay;
+### Pattern: Dynamic Routing (Envoy WASM)
+```typescript
+// Envoy WASM filter for dynamic routing
+import { RootContext, HttpContext, RootContextHelper, HttpContextHelper } from "@envoy/envoy-wasm";
+
+class DynamicRouterHttpContext extends HttpContext {
+  onHttpRequestHeaders(numHeaders: number): number {
+    const path = this.getHttpRequestHeader(":path") || "";
+    const version = this.getHttpRequestHeader("x-api-version") || "v1";
+
+    if (version === "v2" && path.startsWith("/api/users")) {
+      this.addHttpRequestHeader("x-upstream-cluster", "user-service-v2");
+    }
+
+    // Region-based routing
+    const region = this.getHttpRequestHeader("x-region") || "us-east";
+    this.setHttpRequestHeader("x-region-routed", region);
+
+    return 0; // Continue processing
+  }
+}
+
+// StreamLabs context helpers
+class DynamicRouterRootContext extends RootContext {
+  createHttpContext(): HttpContext {
+    return new DynamicRouterHttpContext();
+  }
 }
 ```
 
-### AWS API Gateway (SAM)
-```yaml
-CreateUserFunction:
-  Type: AWS::Serverless::Function
-  Properties:
-    Events:
-      CreateUser:
-        Type: Api
-        Properties:
-          Path: /users
-          Method: POST
-          Auth: { Authorizer: CognitoAuthorizer }
+### Pattern: Rate Limiting Token Bucket (NGINX + Lua)
+```lua
+-- NGINX Lua token bucket rate limiter
+local token_buckets = {}
+
+local function get_bucket(key, rate, burst)
+  local bucket = token_buckets[key]
+  if not bucket then
+    bucket = { tokens = burst, last = ngx.now() }
+    token_buckets[key] = bucket
+  end
+  return bucket
+end
+
+local function check_rate_limit(key, rate, burst)
+  local bucket = get_bucket(key, rate, burst)
+  local now = ngx.now()
+  local elapsed = now - bucket.last
+  bucket.tokens = math.min(burst, bucket.tokens + elapsed * rate)
+  bucket.last = now
+
+  if bucket.tokens >= 1 then
+    bucket.tokens = bucket.tokens - 1
+    return true, bucket.tokens
+  end
+
+  return false, 0
+end
+
+-- Usage in access phase
+local api_key = ngx.var.http_x_api_key or ngx.var.remote_addr
+local allowed, remaining = check_rate_limit(api_key, 10, 20) -- 10 req/s, burst 20
+if not allowed then
+  ngx.status = 429
+  ngx.header["Retry-After"] = 1
+  ngx.header["X-RateLimit-Remaining"] = 0
+  ngx.say('{"error":{"code":"RATE_LIMITED","message":"Rate limit exceeded"}}')
+  ngx.exit(429)
+end
+
+ngx.header["X-RateLimit-Remaining"] = remaining
 ```
 
-### Envoy (xDS/Static)
+### Pattern: Circuit Breaker (Spring Cloud Gateway)
+```java
+@Bean
+public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
+    return builder.routes()
+        .route("user-service", r -> r
+            .path("/api/users/**")
+            .filters(f -> f
+                .circuitBreaker(config -> config
+                    .setName("userServiceCB")
+                    .setFallbackUri("forward:/fallback/users")
+                    .setStatusCode(503))
+                .retry(config -> config
+                    .setRetries(3)
+                    .setStatuses(HttpStatus.SERVICE_UNAVAILABLE)
+                    .setBackoff(Duration.ofMillis(100), Duration.ofSeconds(5), 2, true))
+                .requestRateLimiter(config -> config
+                    .setRateLimiter(redisRateLimiter())
+                    .setKeyResolver(userKeyResolver())))
+            .uri("lb://user-service"))
+        .build();
+}
+```
+
+### Pattern: Request/Response Transformation (APISIX)
 ```yaml
+routes:
+  - uri: /api/orders/*
+    upstream:
+      nodes:
+        "order-service:8080": 1
+    plugins:
+      body-transformer:
+        request:
+          template: |
+            {
+              "order_id": "{{body.id}}",
+              "customer": {
+                "name": "{{body.customer_name}}",
+                "email": "{{body.customer_email}}"
+              }
+            }
+        response:
+          template: |
+            {
+              "id": "{{body.order_id}}",
+              "status": "{{body.order_status}}",
+              "items": {{body.items | json}}
+            }
+```
+
+### Pattern: Canary Release (Traefik)
+```yaml
+http:
+  routers:
+    user-api-canary:
+      rule: "Host(`api.example.com`) && PathPrefix(`/api/users`)"
+      service: user-api-canary
+      weight: 10  # 10% traffic
+
+    user-api-stable:
+      rule: "Host(`api.example.com`) && PathPrefix(`/api/users`)"
+      service: user-api-stable
+      weight: 90  # 90% traffic
+
+  services:
+    user-api-canary:
+      loadBalancer:
+        servers:
+          - url: "http://user-service-v2:8080"
+    user-api-stable:
+      loadBalancer:
+        servers:
+          - url: "http://user-service-v1:8080"
+```
+
+## Advanced Gateway Patterns
+
+### Pattern: Gateway-Side Caching
+```nginx
+# NGINX proxy cache configuration
+proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=api_cache:10m
+                 max_size=1g inactive=60m use_temp_path=off;
+
+server {
+  location /api/ {
+    proxy_cache api_cache;
+    proxy_cache_key "$scheme$request_method$host$request_uri";
+    proxy_cache_valid 200 60s;
+    proxy_cache_valid 404 5s;
+    proxy_cache_use_stale error timeout updating http_500 http_502 http_503;
+    proxy_cache_background_update on;
+    proxy_cache_lock on;
+    proxy_cache_lock_timeout 5s;
+
+    # Bypass cache for authenticated requests
+    proxy_no_cache $http_authorization;
+    proxy_cache_bypass $http_authorization;
+
+    proxy_pass http://backend;
+  }
+}
+```
+
+### Pattern: API Composition (KrakenD)
+```json
+{
+  "endpoint": "/v1/checkout/{cartId}",
+  "method": "GET",
+  "backend": [
+    {
+      "urlPattern": "/carts/{{.Request.cartId}}",
+      "host": ["http://cart-service:8080"],
+      "group": "cart"
+    },
+    {
+      "urlPattern": "/pricing/{{.Request.cartId}}",
+      "host": ["http://pricing-service:8080"],
+      "group": "pricing"
+    },
+    {
+      "urlPattern": "/shipping/options/{{.Request.cartId}}",
+      "host": ["http://shipping-service:8080"],
+      "group": "shipping"
+    }
+  ],
+  "extraConfig": {
+    "mergeStrategy": "parallel"
+  },
+  "outputEncoding": "json",
+  "timeout": "3s"
+}
+```
+
+### Pattern: Gateway Observability Stack
+```yaml
+# Envoy access log configuration
+admin:
+  access_log_path: /dev/stdout
+  address:
+    socket_address: { address: 0.0.0.0, port_value: 9901 }
+
 static_resources:
   listeners:
     - address: { socket_address: { address: 0.0.0.0, port_value: 8080 } }
@@ -233,8 +478,142 @@ static_resources:
             - name: envoy.filters.network.http_connection_manager
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                access_log:
+                  - name: envoy.access_loggers.file
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                      path: /dev/stdout
+                      format:
+                        json_format:
+                          start_time: "%START_TIME%"
+                          method: "%REQ(:METHOD)%"
+                          path: "%REQ(X-ENVOY-ORIGINAL-PATH?)%"
+                          protocol: "%PROTOCOL%"
+                          response_code: "%RESPONSE_CODE%"
+                          duration: "%DURATION%"
+                          bytes_received: "%BYTES_RECEIVED%"
+                          bytes_sent: "%BYTES_SENT%"
+                          upstream_host: "%UPSTREAM_HOST%"
+                          upstream_cluster: "%UPSTREAM_CLUSTER%"
+                          request_id: "%REQ(X-REQUEST-ID)%"
+                          user_agent: "%REQ(USER-AGENT)%"
+                          client_ip: "%DOWNSTREAM_REMOTE_ADDRESS%"
+```
+
+## Production Configuration Examples
+
+### Kong (DB-less Mode)
+```yaml
+_format_version: "3.0"
+services:
+  - name: users
+    url: http://users.internal:8080
+    routes:
+      - name: users-routes
+        hosts: ["api.example.com"]
+        paths: ["/api/users"]
+        methods: [GET, POST, PUT, DELETE, PATCH]
+        strip_path: true
+    plugins:
+      - name: jwt
+        config:
+          claims_to_verify: ["exp", "nbf"]
+          key_claim_name: kid
+          secret_is_base64: false
+          run_on_preflight: true
+      - name: rate-limiting
+        config:
+          minute: 100
+          policy: redis
+          redis_host: redis.internal
+          fault_tolerant: true
+          hide_client_headers: false
+      - name: cors
+        config:
+          origins: ["https://app.example.com"]
+          methods: ["GET", "POST", "PATCH", "DELETE"]
+          headers: ["Authorization", "Content-Type", "Idempotency-Key"]
+          credentials: true
+      - name: request-size-limiting
+        config:
+          allowed_payload_size: 10  # MB
+      - name: prometheus
+```
+
+### AWS API Gateway (OpenAPI + SAM)
+```yaml
+openapi: "3.0.1"
+info:
+  title: Users API
+  version: "1.0"
+x-amazon-apigateway:
+  binaryMediaTypes: ["multipart/form-data"]
+  requestValidator: full
+  gatewayResponses:
+    DEFAULT_4XX:
+      responseTemplates:
+        application/json: >
+          {"error":{"code":"GATEWAY_ERROR","message":"$context.error.message"}}
+    DEFAULT_5XX:
+      responseTemplates:
+        application/json: >
+          {"error":{"code":"INTERNAL_ERROR","message":"Unexpected server error"}}
+
+paths:
+  /users:
+    get:
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:123456:function:listUsers/invocations
+        credentials: arn:aws:iam::123456:role/api-gateway-lambda-role
+      responses:
+        "200":
+          description: Users list
+      security:
+        - CognitoAuthorizer: []
+
+components:
+  securitySchemes:
+    CognitoAuthorizer:
+      type: cognito_user_pools
+      providerARNs:
+        - arn:aws:cognito-idp:us-east-1:123456:userpool/us-east-1_abc123
+```
+
+### Envoy Static Configuration
+```yaml
+static_resources:
+  listeners:
+    - address: { socket_address: { address: 0.0.0.0, port_value: 443 } }
+      listener_filters:
+        - name: envoy.filters.listener.tls_inspector
+      filter_chains:
+        - filter_chain_match:
+            transport_protocol: tls
+          transport_socket:
+            name: envoy.transport_sockets.tls
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+              common_tls_context:
+                tls_certificates:
+                  - certificate_chain: { filename: "/etc/certs/tls.crt" }
+                    private_key: { filename: "/etc/certs/tls.key" }
+                validation_context:
+                  trusted_ca: { filename: "/etc/certs/ca.crt" }
+          filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                 codec_type: AUTO
                 stat_prefix: ingress_http
+                use_remote_address: true
+                common_http_protocol_options:
+                  idle_timeout: 3600s
+                http2_protocol_options:
+                  max_concurrent_streams: 100
+                stream_idle_timeout: 300s
+                request_timeout: 30s
                 route_config:
                   name: local_route
                   virtual_hosts:
@@ -242,86 +621,115 @@ static_resources:
                       domains: ["*"]
                       routes:
                         - match: { prefix: "/api/users" }
-                          route: { cluster: user_service }
+                          route:
+                            cluster: user_service
+                            timeout: 10s
+                            retry_policy:
+                              retry_on: connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes
+                              num_retries: 3
+                              retry_host_predicate:
+                                - name: envoy.retry_host_predicates.previous_hosts
+                              host_selection_retry_max_attempts: 3
+                        - match: { prefix: "/api/orders" }
+                          route:
+                            cluster: order_service
+                            timeout: 30s
+                            retry_policy:
+                              retry_on: connect-failure,refused-stream,unavailable
+                              num_retries: 2
                 http_filters:
+                  - name: envoy.filters.http.jwt_authn
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+                      providers:
+                        my_provider:
+                          issuer: https://auth.example.com
+                          audiences: ["api.example.com"]
+                          from_headers:
+                            - name: Authorization
+                              value_prefix: "Bearer "
+                          local_jwks:
+                            filename: "/etc/jwks/jwks.json"
+                      rules:
+                        - match: { prefix: "/api/" }
+                          requires: { provider_name: "my_provider" }
                   - name: envoy.filters.http.router
-clusters:
-  - name: user_service
-    connect_timeout: 5s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: user_service
-      endpoints:
-        - lb_endpoints:
-            - endpoint:
-                address: { socket_address: { address: users.internal, port_value: 8080 } }
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+  clusters:
+    - name: user_service
+      connect_timeout: 5s
+      type: STRICT_DNS
+      lb_policy: LEAST_REQUEST
+      circuit_breakers:
+        thresholds:
+          - priority: DEFAULT
+            max_connections: 100
+            max_pending_requests: 50
+            max_requests: 200
+            max_retries: 5
+      outlier_detection:
+        consecutive_5xx: 5
+        interval: 30s
+        base_ejection_time: 30s
+        max_ejection_percent: 50
+      load_assignment:
+        cluster_name: user_service
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address: { socket_address: { address: users.internal, port_value: 8080 } }
+              - endpoint:
+                  address: { socket_address: { address: users.internal, port_value: 8081 } }
+
+tracing:
+  http:
+    name: envoy.tracers.opentelemetry
+    typed_config:
+      "@type": type.googleapis.com/envoy.config.trace.v3.OpenTelemetryConfig
+      grpc_service:
+        envoy_grpc:
+          cluster_name: opentelemetry_collector
 ```
 
-### Spring Cloud Gateway (Java)
-```yaml
-spring:
-  cloud:
-    gateway:
-      routes:
-        - id: user-service
-          uri: http://users.internal:8080
-          predicates:
-            - Path=/api/users/**
-          filters:
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 100
-                redis-rate-limiter.burstCapacity: 200
-            - StripPrefix=1
-```
+## Anti-Patterns
 
-### Apache APISIX
-```yaml
-routes:
-  - uri: /api/users/*
-    upstream:
-      nodes:
-        "users.internal:8080": 1
-    plugins:
-      jwt-auth:
-        header: Authorization
-      limit-count:
-        count: 100
-        time_window: 60
-        key: consumer_name
-      cors: ~
-```
+### Anti-Pattern 1: Business Logic in Gateway
+Problem: Putting business rules in gateway transforms it into a monolith
+Fix: Gateway handles cross-cutting concerns only. Business logic stays in services.
 
-### Traefik (Docker/K8s)
-```yaml
-http:
-  routers:
-    api-router:
-      rule: "Host(`api.example.com`) && PathPrefix(`/api/users`)"
-      service: user-service
-      middlewares:
-        - auth@file
-        - ratelimit@file
-  services:
-    user-service:
-      loadBalancer:
-        servers:
-          - url: "http://users.internal:8080"
-```
+### Anti-Pattern 2: Synchronous Chaining
+Problem: Gateway calls A → A calls B → B calls C, latency multiplies
+Fix: Parallel composition, async event-driven for non-critical paths.
 
-### HAProxy
-```haproxy
-frontend api
-    bind *:443 ssl crt /etc/ssl/certs/api.pem
-    default_backend users
+### Anti-Pattern 3: Single Gateway for Everything
+Problem: One gateway handles 100+ services, becomes deployment bottleneck
+Fix: Domain gateways or BFFs. Split by concern.
 
-backend users
-    balance roundrobin
-    server user1 users.internal:8080 check fall 3 rise 2
-    server user2 users.internal:8081 check fall 3 rise 2
-    http-request set-header X-Forwarded-Proto https
-```
+### Anti-Pattern 4: No Circuit Breaker
+Problem: Single failing service cascades to all routes
+Fix: Circuit breaker per upstream. Stale cache fallback.
+
+### Anti-Pattern 5: Over-Validation at Gateway
+Problem: Gateway validates business rules, duplicating service logic
+Fix: Gateway validates format (syntax). Services validate business rules (semantics).
+
+## Performance Considerations
+- TLS termination at gateway: RSA 2048 vs ECDSA P-256 (~3x faster for ECDSA)
+- Connection pooling: 50-100 connections per upstream
+- Header compression with HPACK (HTTP/2) reduces overhead by 80%
+- Response compression: Brotli for JSON, Gzip fallback
+- Cache size: 1GB per gateway instance for response caching
+- Worker processes: 2x CPU cores for NGINX, 1 per core for Envoy
+
+## Security Considerations
+- TLS 1.3 minimum, disable TLS 1.0/1.1 and SSL
+- HSTS header: `Strict-Transport-Security: max-age=31536000`
+- Rate limit per client at gateway (never reach upstream without throttling)
+- Validate Content-Type, Content-Length, request body size at gateway
+- CORS: whitelist origins, never use `Access-Control-Allow-Origin: *`
+- WAF: OWASP CRS rules at gateway for SQLi/XSS prevention
 
 ## Rules
 - Authenticate at the edge. Never forward unauthenticated requests to upstream.
@@ -338,6 +746,7 @@ backend users
 - CORS headers must be configurable per route, not global.
 - Enable access logs in JSON format for log aggregation.
 - Track RED metrics (Rate, Errors, Duration) for every route.
+- No business logic in gateway — cross-cutting concerns only.
 
 ## References
   - references/apache-apisix.md — Apache APISIX Gateway Configuration
@@ -351,6 +760,10 @@ backend users
   - references/kong-config.md — Kong Gateway Configuration
   - references/nginx-config.md — Nginx / OpenResty Gateway Configuration
   - references/spring-cloud-gateway.md — Spring Cloud Gateway
+  - references/api-gateway-fundamentals.md — API Gateway Fundamentals
+  - references/api-gateway-advanced.md — API Gateway Advanced Patterns
+  - references/api-gateway-deployment.md — API Gateway Deployment Patterns
+
 ## Handoff
 No artifact produced unless requested.
 Next skill: backend-rate-limiting — enforce rate limits per client.

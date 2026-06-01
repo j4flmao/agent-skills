@@ -241,42 +241,428 @@ await Keychain.setGenericPassword('token', token);
         <pin-set expiration="2025-12-31">
             <pin digest="SHA-256">base64hash1...</pin>
             <pin digest="SHA-256">base64hash2...</pin>
+            <pin digest="SHA-256">base64hash3...</pin>  <!-- Backup pin -->
         </pin-set>
+        <!-- Trust user CA for debugging only — remove in release -->
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
     </domain-config>
 </network-security-config>
 ```
 
+```xml
+<!-- AndroidManifest.xml — reference config -->
+<application
+    android:networkSecurityConfig="@xml/network_security_config"
+    android:allowBackup="false"
+    android:fullBackupContent="false">
+```
+
 ```swift
-// iOS: URLSession delegate for pinning
-func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
-    guard let serverTrust = challenge.protectionSpace.serverTrust else { return (.cancelAuthenticationChallenge, nil) }
-    // Validate certificate hash
-    return (.useCredential, URLCredential(trust: serverTrust))
+// iOS: URLSessionDelegate — certificate pinning with backup pins
+class PinningDelegate: NSObject, URLSessionDelegate {
+  private let pinnedHashes = [
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",  // Primary
+    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=",  // Backup 1
+    "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC=",  // Backup 2
+  ]
+
+  func urlSession(_ session: URLSession,
+                  didReceive challenge: URLAuthenticationChallenge,
+                  completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+    guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+          let serverTrust = challenge.protectionSpace.serverTrust,
+          let certificate = SecTrustGetCertificateAtIndex(serverTrust, 0) else {
+      completionHandler(.cancelAuthenticationChallenge, nil)
+      return
+    }
+
+    // Get public key hash
+    let publicKey = SecCertificateCopyKey(certificate)
+    let publicKeyData = SecKeyCopyExternalRepresentation(publicKey!, nil)! as Data
+    let hash = sha256(data: publicKeyData)
+
+    if pinnedHashes.contains(hash) {
+      completionHandler(.useCredential, URLCredential(trust: serverTrust))
+    } else {
+      completionHandler(.cancelAuthenticationChallenge, nil)  // MITM detected
+    }
+  }
+
+  private func sha256(data: Data) -> String {
+    var hash = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
+    data.withUnsafeBytes { CC_SHA256($0.baseAddress, CC_LONG(data.count), &hash) }
+    return Data(hash).base64EncodedString()
+  }
 }
+```
+
+### SSL Pinning — Third-Party Libraries
+```kotlin
+// Android: OkHttp CertificatePinner
+val certificatePinner = CertificatePinner.Builder()
+  .add("api.example.com", "sha256/AAAA...")
+  .add("api.example.com", "sha256/BBBB...")
+  .add("api.example.com", "sha256/CCCC...")  // Backup
+  .build()
+
+val client = OkHttpClient.Builder()
+  .certificatePinner(certificatePinner)
+  .build()
+```
+
+### ATS Configuration (iOS)
+```xml
+<!-- Info.plist — App Transport Security -->
+<key>NSAppTransportSecurity</key>
+<dict>
+    <key>NSAllowsArbitraryLoads</key>
+    <false/>
+    <key>NSExceptionDomains</key>
+    <dict>
+        <key>api.example.com</key>
+        <dict>
+            <key>NSIncludesSubdomains</key>
+            <true/>
+            <key>NSExceptionMinimumTLSVersion</key>
+            <string>TLSv1.2</string>
+            <key>NSExceptionRequiresForwardSecrecy</key>
+            <true/>
+        </dict>
+    </dict>
+</dict>
 ```
 
 ## Authentication
 
+### Biometric Authentication
 ```dart
-// Biometric auth
-final available = await LocalAuthentication().canCheckBiometrics;
-if (available) {
-    final authenticated = await LocalAuthentication().authenticate(
-        localizedReason: 'Unlock to view orders',
+// Flutter — local_auth
+import 'package:local_auth/local_auth.dart';
+
+final auth = LocalAuthentication();
+bool authenticated = false;
+
+Future<bool> authenticateWithBiometrics() async {
+  final available = await auth.canCheckBiometrics;
+  if (!available) return false;  // Fall back to PIN
+
+  try {
+    authenticated = await auth.authenticate(
+      localizedReason: 'Authenticate to view your orders',
+      options: AuthenticationOptions(
+        biometricOnly: false,   // Allow PIN/password fallback
+        stickyAuth: true,       // Re-authenticate on resume
+      ),
     );
+  } on PlatformException catch (e) {
+    if (e.code == 'LockedOut' || e.code == 'PermanentlyLockedOut') {
+      // Biometric locked out — redirect to device settings
+      openAppSettings();
+    }
+  }
+  return authenticated;
 }
+```
+
+```swift
+// iOS — LocalAuthentication
+import LocalAuthentication
+
+class BiometricService {
+  let context = LAContext()
+
+  func authenticate(reason: String) async throws -> Bool {
+    var error: NSError?
+    guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+      throw BiometricError.notAvailable
+    }
+
+    return try await context.evaluatePolicy(
+      .deviceOwnerAuthenticationWithBiometrics,
+      localizedReason: reason
+    )
+  }
+
+  var biometryType: LABiometryType {
+    context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
+    return context.biometryType  // .faceID, .touchID, or .none
+  }
+}
+```
+
+```kotlin
+// Android — BiometricPrompt
+class BiometricHelper(private val activity: FragmentActivity) {
+  private val executor = ContextCompat.getMainExecutor(activity)
+
+  fun authenticate(onSuccess: () -> Unit, onError: (String) -> Unit) {
+    val biometricManager = BiometricManager.from(activity)
+    when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)) {
+      BiometricManager.BIOMETRIC_SUCCESS -> {
+        val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
+          override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+            onSuccess()
+          }
+          override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+            onError(errString.toString())
+          }
+        })
+        prompt.authenticate(
+          BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Authenticate")
+            .setSubtitle("Unlock to view orders")
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or
+              BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+            .build()
+        )
+      }
+      BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE,
+      BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE,
+      BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
+        onError("Biometric not available")
+      }
+    }
+  }
+}
+```
+
+### OAuth2 PKCE Flow
+```typescript
+// React Native — OAuth2 with PKCE
+import { authorize } from 'react-native-app-auth';
+
+const config = {
+  issuer: 'https://accounts.example.com',
+  clientId: 'mobile_client',
+  redirectUrl: 'com.example.app://oauth/callback',
+  scopes: ['openid', 'profile', 'orders'],
+  useNonce: true,
+  usePKCE: true,  // PKCE prevents auth code interception
+};
+
+async function login() {
+  try {
+    const result = await authorize(config);
+    // Store tokens in secure storage
+    await Keychain.setGenericPassword('access_token', result.accessToken);
+    await Keychain.setGenericPassword('refresh_token', result.refreshToken);
+    return result;
+  } catch (error) {
+    if ((error as AuthError).code === 'cancelled') {
+      return null;  // User cancelled
+    }
+    throw error;
+  }
+}
+```
+
+### Secure Token Storage
+```swift
+// iOS — Keychain wrapper
+class KeychainManager {
+  static let shared = KeychainManager()
+
+  func save(key: String, value: String) {
+    let data = value.data(using: .utf8)!
+    let query: [String: Any] = [
+      kSecClass: kSecClassGenericPassword,
+      kSecAttrAccount: key,
+      kSecValueData: data,
+      kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+    ]
+    SecItemDelete(query as CFDictionary)  // Delete existing
+    SecItemAdd(query as CFDictionary, nil)
+  }
+
+  func read(key: String) -> String? {
+    let query: [String: Any] = [
+      kSecClass: kSecClassGenericPassword,
+      kSecAttrAccount: key,
+      kSecReturnData: true,
+    ]
+    var result: AnyObject?
+    SecItemCopyMatching(query as CFDictionary, &result)
+    guard let data = result as? Data else { return nil }
+    return String(data: data, encoding: .utf8)
+  }
+
+  func delete(key: String) {
+    let query: [String: Any] = [
+      kSecClass: kSecClassGenericPassword,
+      kSecAttrAccount: key,
+    ]
+    SecItemDelete(query as CFDictionary)
+  }
+}
+```
+
+## Data at Rest — SQLCipher
+```kotlin
+// Android — Encrypted database with SQLCipher
+import net.zetetic.database.sqlcipher.SQLiteDatabase
+import net.zetetic.database.sqlcipher.SupportFactory
+
+val passphrase = SQLiteDatabase.getBytes(masterKey.toCharArray())
+val factory = SupportFactory(passphrase)
+val db = Room.databaseBuilder(context, AppDatabase::class.java, "encrypted.db")
+  .openHelperFactory(factory)
+  .build()
+```
+
+```swift
+// iOS — Core Data with NSFileProtection
+let store = NSPersistentStoreCoordinator()
+let options = [
+  NSPersistentHistoryTrackingKey: true,
+  NSPersistentStoreFileProtectionKey: FileProtectionType.complete,
+]
+try store.addPersistentStore(
+  ofType: NSSQLiteStoreType,
+  configurationName: nil,
+  at: storeURL,
+  options: options
+)
 ```
 
 ## Code Protection
 
+### Android ProGuard / R8
 ```gradle
-// Android: ProGuard / R8
-buildTypes {
+// app/build.gradle.kts
+android {
+  buildTypes {
     release {
-        minifyEnabled true
-        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+      isMinifyEnabled = true
+      isShrinkResources = true
+      proguardFiles(
+        getDefaultProguardFile("proguard-android-optimize.txt"),
+        "proguard-rules.pro"
+      )
     }
+  }
 }
+```
+
+```pro
+# proguard-rules.pro — keep what's needed
+-keep class com.example.app.model.** { *; }  # Keep data models (serialization)
+-keep class com.example.app.api.** { *; }    # Keep API interfaces (Retrofit)
+-keepattributes Signature, *Annotation*
+-dontwarn okhttp3.**
+```
+
+```yaml
+# Flutter: build.gradle android settings
+--obfuscate
+--split-debug-info=build/debug-info
+```
+
+### iOS Code Protection
+```swift
+// iOS — debugger detection
+func isDebuggerAttached() -> Bool {
+  var info = kinfo_proc()
+  var size = MemoryLayout<kinfo_proc>.stride
+  var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
+  let result = sysctl(&mib, u_int(mib.count), &info, &size, nil, 0)
+  return result == 0 && (info.kp_proc.p_flag & P_TRACED) != 0
+}
+```
+
+### App Integrity Verification
+```kotlin
+// Android — Play Integrity API
+class IntegrityVerifier(private val context: Context) {
+  private val integrityManager = IntegrityManagerFactory.create(context)
+
+  suspend fun verifyIntegrity(): IntegrityResult {
+    val tokenResponse = integrityManager.requestIntegrityToken(
+      IntegrityTokenRequest.AccessTokenRequest(
+        cloudProjectNumber = CLOUD_PROJECT_NUMBER,
+        nonce = generateNonce()
+      )
+    )
+
+    val integrityToken = tokenResponse.token()
+    // Send token to server for verification
+    return api.verifyIntegrityToken(integrityToken, nonce)
+  }
+}
+```
+
+```swift
+// iOS — DeviceCheck
+import DeviceCheck
+
+func verifyDeviceIntegrity() async -> Bool {
+  let device = DCDevice.current
+  guard device.isSupported else { return false }
+
+  do {
+    let token = try await device.generateToken()
+    // Send token to server for verification
+    return try await api.verifyDeviceToken(token)
+  } catch {
+    return false
+  }
+}
+```
+
+### Clipboard Security
+```swift
+// iOS — disable pasteboard for sensitive fields
+// SecureField automatically disables copy/paste in iOS
+
+// Prevent screenshots for sensitive screens
+// In the view controller:
+view.clipsToBounds = true
+// Using SecureField for text input disables clipboard access
+
+// UIPasteboard notification
+UIPasteboard.general.changeCount  // Monitor for clipboard changes
+```
+
+```kotlin
+// Android — disable clipboard for sensitive TextFields
+// Disable copy/paste on EditText
+editText.customSelectionActionModeCallback = object : ActionMode.Callback {
+  override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean = true
+  override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean = false
+  override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
+  override fun onDestroyActionMode(mode: ActionMode) {}
+}
+
+// Prevent screenshots
+window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+
+// Clear clipboard after sensitive copy
+val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+clipboard.clearPrimaryClip()
+```
+
+### Backup Exclusion
+```xml
+<!-- Android: disable backup entirely for sensitive apps -->
+<application ...
+    android:allowBackup="false"
+    android:fullBackupContent="false"
+    android:dataExtractionRules="@xml/data_extraction_rules">
+
+<!-- Or exclude only sensitive files -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="secure_prefs.xml"/>
+    <exclude domain="database" path="encrypted.db"/>
+</full-backup-content>
+```
+
+```swift
+// iOS — exclude files from backup
+var url = documentsURL.appendingPathComponent("database.sqlite")
+var resourceValues = URLResourceValues()
+resourceValues.isExcludedFromBackup = true
+try url.setResourceValues(resourceValues)
 ```
 
 ## Common Pitfalls

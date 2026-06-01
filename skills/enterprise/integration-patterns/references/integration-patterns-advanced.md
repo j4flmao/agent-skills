@@ -1,214 +1,114 @@
 # Integration Patterns Advanced Topics
 
 ## Introduction
-Advanced Integration Patterns topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Advanced integration covers event-driven architecture, saga patterns for distributed transactions, API gateway patterns, integration testing strategies, observability, and performance optimization for high-throughput systems.
 
-## Advanced Architecture Patterns
+## Event-Driven Architecture
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+### Event Sourcing
+Store all state changes as an immutable event log. Current state is derived by replaying events. Benefits: complete audit trail, temporal queries, rebuild state from any point, event replay for debugging. Complexities: schema evolution of historical events, event store performance at scale.
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+### CQRS (Command Query Responsibility Segregation)
+Separate read and write models. Commands update state through the event store. Queries read from optimized read models (projections). Benefits: independent scaling of read and write, optimized read models for queries. Complexities: eventual consistency between write and read models.
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+### Event Mesh
+Distributed event infrastructure spanning multiple environments (cloud, on-prem, edge). Events published once, routed to all interested consumers regardless of location. Uses topic-based routing with hierarchical namespaces. AsyncAPI for event contract documentation.
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+## Saga Pattern
+
+### Choreography Saga
+Each service publishes events after local transaction. Other services listen and react. No central coordinator. Simple but hard to trace. Good for simple workflows with few participants.
+
+### Orchestration Saga
+Central orchestrator sends commands to participants. Orchestrator tracks state and handles compensation. More complex but easier to monitor and manage. Good for complex workflows with many participants.
+
+### Compensation Strategies
+| Failure | Compensation |
+|---------|-------------|
+| Order created but payment failed | Cancel order, release inventory |
+| Payment processed but inventory unavailable | Refund payment, notify customer |
+| Shipment created but payment not confirmed | Hold shipment, cancel after timeout |
+| Multiple services succeeded, one failed | Execute compensating transactions for all successful services |
+
+## API Gateway Patterns
+
+### Gateway Responsibilities
+| Function | Implementation |
+|----------|----------------|
+| Request routing | Path-based to backend services |
+| Authentication | Validate tokens before backend |
+| Rate limiting | Per-client, per-endpoint limits |
+| Caching | Cache responses for repeatable requests |
+| Request aggregation | Combine multiple backend responses |
+| Protocol translation | REST -> gRPC, HTTP -> AMQP |
+| Circuit breaking | Stop requests to failing backends |
+
+### Backend for Frontend (BFF)
+Dedicated API gateway per client type (web, mobile, IoT). Each BFF optimized for its client's needs. Prevents over-fetching and under-fetching. Gateway logic stays client-specific.
+
+## Integration Testing
+
+### Contract Testing
+Consumer-driven contract tests (Pact/Spring Cloud Contract). Consumer defines expected response. Provider CI/CD validates against consumer expectations. Catches breaking changes before deployment.
+
+### Integration Test Levels
+| Level | What It Tests | Tooling |
+|-------|---------------|---------|
+| Unit | Single component | xUnit, mocking framework |
+| Contract | API/message contract | Pact, Spring Cloud Contract |
+| Integration | Component interaction | Testcontainers, LocalStack |
+| End-to-end | Full flow | Docker Compose, K3s |
+| Performance | Throughput, latency | k6, Gatling, Locust |
+
+### Resiliency Testing
+Test failure modes: network partition (block specific ports), service timeout (slow responses), resource exhaustion (CPU/memory caps), message corruption (inject bad payloads), dependency failure (stop downstream service).
+
+## Observability for Integrations
+
+### Distributed Tracing
+Propagate trace ID across all integration hops. Span per integration step (HTTP call, message publish, DB query). Measure: latency per hop, error rate per hop, throughput per flow. Tools: OpenTelemetry, Jaeger, Datadog.
+
+### Integration Monitoring Dashboards
+| Dashboard | Metrics |
+|-----------|---------|
+| Flow health | Latency p50/p95/p99, error rate, throughput |
+| DLQ status | Depth, age of oldest message, processing rate |
+| Schema registry | Schema count, version count, compatibility check failures |
+| Circuit breaker | Open/closed/half-open per breaker |
+| Broker health | Queue depth, consumer lag, disk usage |
 
 ## Performance Optimization
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+### High-Throughput Kafka
+| Tuning | Impact |
+|--------|--------|
+| Batch size (64KB-1MB) | Higher throughput, higher latency |
+| Compression (gzip/zstd) | 30-70% less network, higher CPU |
+| Partition count | Parallelism = min(partitions, consumers) |
+| acks=1 | Higher throughput, possible data loss |
+| idempotent=true | Exactly-once semantics, slight overhead |
+| Replication factor 3 | Durability, uses 3x storage |
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+### Consumer Optimization
+Process messages in batches, not one at a time. Use async processing where order doesn't matter. Parallelize within consumer with thread pool. Commit offsets after batch complete, not per message. Monitor consumer lag and alert on growth.
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+### Connection Management
+Use connection pooling for all database and message broker connections. Reuse HTTP connections. Implement backpressure to prevent overwhelming downstream systems. Use circuit breakers to fail fast.
 
-## Security Hardening
+## Integration Security
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+### Message Encryption
+Encrypt sensitive message payloads at the application layer before publishing. Broker does not need access to plaintext. Decrypt only at the consuming application. Use envelope encryption with key rotation.
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+### Access Control
+Service-to-service authentication (mTLS, JWT). Authorize produce/consume per topic/queue. Audit all integration access. Rotate service credentials automatically.
 
 ## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- Event sourcing provides complete audit trail but adds complexity to schema evolution
+- Saga pattern manages distributed transactions with compensation for failures
+- API gateway handles cross-cutting concerns: auth, rate limiting, routing, caching
+- Consumer-driven contract tests prevent breaking API changes
+- Distributed tracing across all integration hops is essential for troubleshooting
+- Kafka performance optimization requires tuning batch size, compression, and partition count
+- Message encryption at application layer protects sensitive data from broker access
+- Resiliency testing should include partial failure modes, not just complete failure

@@ -288,6 +288,218 @@ Data contracts vs data quality: quality tools validate data against expectations
 | DataHub / OpenMetadata | Contract storage and discovery |
 | Apache Avro / Protobuf | Schema definition for contracts with schema registry integration |
 
+### Contract Violation Resolution
+
+```yaml
+violation_resolution:
+  trigger: "Contract check fails in CI/CD or production"
+  
+  severity_levels:
+    critical:
+      description: "Blocking — data schema mismatch or SLA breach"
+      action: "Block deployment, notify all consumers immediately"
+      response_time: "1 hour"
+    warning:
+      description: "Non-breaking change or minor SLA deviation"
+      action: "Log violation, notify producer, continue deployment"
+      response_time: "24 hours"
+    info:
+      description: "Informational — contract drift within acceptable range"
+      action: "Log for quarterly review"
+      response_time: "Next review cycle"
+  
+  resolution_flow:
+    - "Identify: which contract clause was violated (schema, SLA, quality)"
+    - "Notify: consumer and producer stakeholders"
+    - "Assess: is this a producer error or legitimate breaking change?"
+    - "If producer error: rollback change, fix and retry"
+    - "If breaking change needed: coordinate dual-run period"
+    - "Document: violation in contract version history"
+    - "Update: review contract terms if pattern repeats"
+```
+
+### dbt Contract Configuration
+
+```yaml
+# dbt schema.yml with contract enforcement
+version: 2
+models:
+  - name: fct_orders
+    config:
+      contract:
+        enforced: true  # Enforce column names, types, nullability
+    columns:
+      - name: order_id
+        data_type: string
+        constraints:
+          - not_null: true
+          - unique: true
+      - name: total_amount
+        data_type: decimal(18,2)
+        constraints:
+          - not_null: true
+      - name: customer_id
+        data_type: string
+        constraints:
+          - not_null: true
+      - name: status
+        data_type: string
+        constraints:
+          - not_null: true
+      - name: created_at
+        data_type: timestamp
+        constraints:
+          - not_null: true
+
+# dbt contracts require: 
+# - All columns explicitly listed with data_type
+# - No extra columns in the model SQL beyond the contract
+# - Column types match the model output exactly
+# - Constraints enforced at build time (dbt build)
+```
+
+### Multi-Contract Coordination
+
+```yaml
+# Cross-dataset contract relationships
+contract_catalog:
+  source_contracts:
+    - dataset: raw.orders
+      owner: "source-team@org.com"
+      contract_version: "2.1.0"
+  
+  staging_contracts:
+    - dataset: staging.orders
+      owner: "data-eng@org.com"
+      upstream_contract: raw.orders@2.1.0
+      contract_version: "1.0.0"
+      transformations:
+        - "order_id: STRING → STRING (unchanged)"
+        - "total_amount: DECIMAL(10,2) → DECIMAL(18,2) (widened)"
+        - "status: STRING → ENUM (constrained values)"
+  
+  mart_contracts:
+    - dataset: analytics.fct_orders
+      owner: "analytics-eng@org.com"
+      upstream_contract: staging.orders@1.0.0
+      contract_version: "1.0.0"
+      sla:
+        freshness: "1 hour"
+        min_rows: 10000
+        max_rows: 10000000
+
+# Contract propagation: upstream change cascades
+# staging.orders contract update → analytics.fct_orders re-validation
+# Automated notification: "Upstream contract changed, re-validate downstream"
+```
+
+### Contract Migration Patterns
+
+```yaml
+migration_strategy:
+  minor_change:
+    description: "Adding optional field, deprecating field"
+    process:
+      - "Add new column as nullable"
+      - "Update contract version (MINOR bump)"
+      - "Notify consumers of new available field"
+      - "Deprecate old field in contract documentation"
+    consumer_action: "Optional: start using new field"
+    compatibility: BACKWARD
+
+  major_change:
+    description: "Removing field, changing type, renaming column"
+    process:
+      - "Create new contract version (MAJOR bump)"
+      - "Run dual-producer for 14+ days (both old and new schemas)"
+      - "Notify all consumers with migration deadline"
+      - "Track consumer migration progress"
+      - "After deadline: remove old schema, enforce new contract"
+    consumer_action: "Required: migrate before deadline"
+    compatibility: BREAKING
+
+  emergency_change:
+    description: "Security fix, data corruption prevention"
+    process:
+      - "Immediate deployment with new contract"
+      - "Within 24 hours: notify all consumers"
+      - "Within 7 days: formalize contract version"
+    consumer_action: "Fix broken downstream immediately"
+    compatibility: BREAKING (emergency)
+```
+
+### Contract API Integration
+
+```yaml
+# Contract publishing endpoint
+contract_api:
+  endpoints:
+    get_contract:
+      method: GET
+      path: "/contracts/{dataset_fqn}"
+      response: |
+        {
+          "version": "1.2.0",
+          "dataset": "analytics.fct_orders",
+          "schema": [...],
+          "sla": {
+            "freshness": "1 hour",
+            "min_rows": 10000,
+            "max_rows": 10000000,
+            "quality_score": "> 0.95"
+          },
+          "owner": "analytics-eng@org.com",
+          "status": "active"
+        }
+    
+    validate_contract:
+      method: POST
+      path: "/contracts/validate"
+      body: |
+        {
+          "dataset": "analytics.fct_orders",
+          "schema": [...]
+        }
+      response: |
+        {
+          "compatible": true/false,
+          "breaking_changes": [...],
+          "current_version": "1.2.0",
+          "recommended_action": "none | minor | major"
+        }
+```
+
+### Decision Trees
+
+#### Contract Enforcement Level
+```
+Dataset criticality?
+├── Tier 1 (executive dashboards, financial, customer-facing)
+│   ├── dbt contract enforced (build fails on mismatch)
+│   ├── CI/CD schema compatibility check required
+│   └── SLA monitoring with PagerDuty alerts
+├── Tier 2 (operational reports, team analytics)
+│   ├── dbt contract enforced (build warns on mismatch)
+│   ├── CI/CD schema compatibility check recommended
+│   └── SLA monitoring with email alerts
+└── Tier 3 (experimental, ad-hoc)
+    ├── dbt contract documented but not enforced
+    └── No automated contract checks
+```
+
+#### Breaking Change Decision
+```
+Does the change break existing consumers?
+├── Adding a new optional column → COMPATIBLE (MINOR)
+├── Adding a new required column → BREAKING (major migration)
+├── Removing a column → BREAKING (requires dual-run)
+├── Widening a type (INT→BIGINT, STRING→TEXT) → COMPATIBLE
+├── Narrowing a type (BIGINT→INT) → BREAKING
+├── Renaming a column → BREAKING (add alias, deprecate old)
+├── Adding a constraint (NOT NULL) → BREAKING if data has nulls
+└── Removing a constraint (NOT NULL) → COMPATIBLE
+```
+
 ## Rules
 - Every production dataset has a contract with explicit schema, SLA, and owner
 - Schema compatibility checked automatically on every PR
@@ -303,6 +515,12 @@ Data contracts vs data quality: quality tools validate data against expectations
 - Maintain backward compatibility for at least 14 days after breaking change
 - Contracts stored alongside data product definitions
 - Impact analysis required before MAJOR version changes
+- Expose contracts via API for automated consumer integration
+- Propagate upstream contract changes to downstream consumers
+- Define violation severity and resolution workflow per contract
+- Use dbt contracts for build-time column-level enforcement
+- Coordinate multi-contract dependencies for end-to-end data product lineage
+- Document consumer acceptance criteria before breaking changes
 
 ## References
   - references/contract-definition.md — Data Contract Definition

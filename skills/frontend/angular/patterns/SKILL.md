@@ -125,6 +125,9 @@ const count$ = toObservable(this.count)
 ```
 Use Signals in templates and `computed()` for sync derivations. Only use `toObservable()` when integrating with RxJS operators or libraries that expect observables.
 
+### Pitfall 6: Not Using `takeUntilDestroyed`
+Before Angular 16, manual subscriptions caused memory leaks. Use `takeUntilDestroyed()` as the standard pattern. In Angular 16+, it works in any injection context without `DestroyRef`.
+
 ## Compared With
 
 ### Angular vs React
@@ -206,12 +209,6 @@ Signals are lightweight compared to RxJS Subjects:
 - **Taiga UI** — Enterprise UI kit.
 - **ng-zorro-antd** — Ant Design for Angular.
 
-### Community
-- Docs: angular.dev
-- GitHub: github.com/angular/angular
-- Discord: discord.gg/angular
-- Newsletter: angular.dev/newsletter
-
 ## Workflow
 
 ### Step 1: HTTP Interceptor
@@ -238,7 +235,21 @@ export const appConfig: ApplicationConfig = {
 }
 ```
 
-### Step 2: Route Guards
+### Step 2: Functional Interceptors (Angular 15+)
+```typescript
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  const auth = inject(AuthService)
+  const token = auth.token()
+  if (token) {
+    req = req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+  }
+  return next(req)
+}
+
+// providers: [provideHttpClient(withInterceptors([authInterceptor]))]
+```
+
+### Step 3: Route Guards
 ```typescript
 export const authGuard: CanActivateFn = (route, state) => {
   const auth = inject(AuthService)
@@ -255,7 +266,7 @@ export const roleGuard = (requiredRole: string): CanMatchFn => {
 }
 ```
 
-### Step 3: Signals vs RxJS Decision
+### Step 4: Signals vs RxJS Decision
 ```typescript
 @Component({...})
 export class UserSearchComponent {
@@ -278,7 +289,7 @@ export class UserSearchComponent {
 }
 ```
 
-### Step 4: NgRx vs Signal Store Decision
+### Step 5: NgRx vs Signal Store Decision
 ```typescript
 // Signal Store (preferred for most cases)
 @Injectable({ providedIn: 'root' })
@@ -303,7 +314,7 @@ export class UserStore {
 }
 ```
 
-### Step 5: Custom Directive
+### Step 6: Custom Directive
 ```typescript
 @Directive({
   selector: '[appHasPermission]',
@@ -324,7 +335,7 @@ export class HasPermissionDirective {
 }
 ```
 
-### Step 6: Custom Pipe
+### Step 7: Custom Pipe
 ```typescript
 @Pipe({
   name: 'truncate',
@@ -339,7 +350,7 @@ export class TruncatePipe implements PipeTransform {
 }
 ```
 
-### Step 7: Advanced DI Patterns
+### Step 8: Advanced DI Patterns
 ```typescript
 // InjectionToken for configuration
 export const API_CONFIG = new InjectionToken<ApiConfig>('API_CONFIG')
@@ -354,6 +365,52 @@ providers: [
   },
 ]
 ```
+
+## Testing Strategies
+
+### Component Testing
+```typescript
+// With Angular Testing Library
+import { render, screen } from '@testing-library/angular'
+import { UsersComponent } from './users.component'
+
+test('renders user list', async () => {
+  await render(UsersComponent, {
+    imports: [RouterTestingModule],
+    providers: [provideMockStore({ initialState: { users: [] } })],
+  })
+  expect(screen.getByText(/users/i)).toBeInTheDocument()
+})
+```
+
+### Service Testing with Signals
+```typescript
+describe('UserStore', () => {
+  let store: UserStore
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [UserStore] })
+    store = TestBed.inject(UserStore)
+  })
+
+  it('loads users', async () => {
+    await store.loadUsers()
+    expect(store.users().length).toBeGreaterThan(0)
+  })
+})
+```
+
+## Migration: RxJS to Signals
+
+| RxJS Pattern | Signal Equivalent |
+|--------------|-------------------|
+| `BehaviorSubject` | `signal()` with initial value |
+| `Subject` | `signal()` or manual trigger |
+| `combineLatest` | `computed()` |
+| `pipe(map(...))` | `computed()` with transformation |
+| `Subscription` | No subscription needed |
+| `async pipe` | `{{ count() }}` in template |
+| `debounceTime` + Subject | `toObservable(signal).pipe(debounceTime(...))` |
 
 ## Rules
 - Signals for synchronous state. RxJS for asynchronous streams (HTTP, events, WebSocket).

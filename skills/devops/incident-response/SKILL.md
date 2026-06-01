@@ -64,9 +64,9 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ## Components
 
-### Severity Matrix (Detailed)
+### Severity Matrix
 | Severity | Definition | Response Time | Escalation | Page |
-|---|---|---|---|---|
+|----------|------------|---------------|------------|------|
 | SEV1 | Complete outage, data loss, security breach, SLA-impacting | 5 min | Full team + management + exec | PagerDuty high-urgency |
 | SEV2 | Major feature degraded, partial outage, >5% errors | 15 min | Primary + secondary on-call | PagerDuty high-urgency |
 | SEV3 | Minor feature issue, single-user impact, non-critical bug | 1 business hour | Slack + ticket | PagerDuty low-urgency |
@@ -75,16 +75,13 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ### Incident Command Roles
 IC (Incident Commander): owns incident end-to-end, delegates tasks, communicates with stakeholders, does NOT debug. Scribe: real-time timeline documentation — every action, decision, timestamp. SME: technical investigation and mitigation — one per subsystem, reports to IC. Comms: stakeholder status updates, status page updates, external notifications, regulatory reporting if needed. Role transitions: handoff documented in timeline with verbal 2-min summary.
 
-### Runbook Structure
-Symptoms: what alerts fire, what users experience, error messages. Triage: first checks, quick diagnostics, initial investigation commands. Escalation: conditions for escalation, who to contact (primary -> secondary -> manager). Remediation: step-by-step recovery procedures with exact commands and expected outcomes. Runbooks stored in version control alongside application code, reviewed quarterly at minimum.
-
 ### On-Call Scheduling
 Primary on-call: first responder, acknowledges within SLA. Secondary: backup for overflow and deep investigation. Escalation path: primary -> secondary -> engineering manager -> VP. Tools: PagerDuty/OpsGenie for schedules, alert routing, escalation policies, incident tracking. Rotation: weekly shifts, max 7 consecutive days. Follow-the-sun for global teams. Handoff: Friday overlap, written summary of ongoing issues.
 
 ### Incident Metrics
 MTTD (Mean Time to Detect): time from incident start to first alert. Target: SEV1 <5min, SEV2 <15min. MTTR (Mean Time to Resolve): time from detection to resolution. Target: SEV1 <1hr, SEV2 <4hrs. Track weekly trends, set improvement targets. Metrics drive investment in detection tooling, runbook quality, and on-call training.
 
-## Incident Lifecycle in Depth
+## Incident Lifecycle
 
 ### Detection Phase (T+0 to T+5min)
 Detection sources: monitoring alerts (Prometheus AlertManager, Datadog, CloudWatch), synthetic checks (Playwright/Cypress browser tests, uptime monitors), user reports (support tickets via Zendesk/Intercom, social media mentions), security scanning (Snyk, Trivy, WAF alerts), automated rollback triggers (deploy health check failure, error rate threshold). Validate alert is not a false positive before declaring incident.
@@ -104,29 +101,220 @@ Verify metrics return to baseline (p99 latency, error rate, throughput). Run end
 ### Postmortem Phase (T+48h to T+1week)
 Schedule postmortem meeting: SEV1 within 48h, SEV2 within 1 week, SEV3 in next sprint. Write blameless timeline. Conduct 5 Whys root cause analysis. Create action items with single owner and due date. Share postmortem internally — every incident is a learning opportunity. Track action items to completion.
 
-### Step 1: Classify Severity
-SEV1 (Critical): complete service outage, data loss, security breach — response within 5min, page whole team + management. SEV2 (High): major feature degraded, partial outage, performance degradation affecting >5% of users — response within 15min, page primary on-call. SEV3 (Medium): minor feature issue, non-critical bug, single-user impact — response within 1 business hour, create ticket, slack notification. SEV4 (Low): cosmetic issue, documentation bug, enhancement — next sprint planning, normal ticket queue.
+## Runbook Template
+```markdown
+# Runbook: [Service Name]
 
-### Step 2: Establish Incident Command
-IC (Incident Commander): owns the incident end-to-end, delegates tasks, does not debug. Scribe: documents timeline, decisions, and actions in real-time. SME (Subject Matter Expert): technical investigation and mitigation — may be multiple per subsystem. Comms: stakeholder communication, status updates, external notifications, status page updates.
+## Symptoms
+- Alert: [Alert name] firing — [description]
+- User impact: [what users experience]
+- Error messages: [relevant error patterns]
 
-### Step 3: Detect and Triage
-Detection sources: monitoring alerts (Prometheus, Datadog, CloudWatch), synthetic checks (browser tests, API health probes), user reports (support tickets, social media), automated health checks, security scanning (vulnerability alerts, intrusion detection). Validate alert is not a false positive. Classify severity using matrix. Escalate if outside on-call expertise. Open dedicated incident channel.
+## Triage (First 5 Minutes)
+1. Check [dashboard link] for current state
+2. Run: `kubectl get pods -n [namespace] -o wide`
+3. Check logs: `kubectl logs -n [namespace] [pod] --tail=100`
+4. Check metric: [query in Prometheus/Grafana]
 
-### Step 4: Investigate and Mitigate
-Investigate: check dashboards, logs, traces. Identify blast radius (users affected, services impacted). Reproduce if safe. Mitigate: stop bleed first (feature flag, rollback, traffic drain, scale up), permanent fix second. Document every action in timeline via scribe. Communicate ETA to stakeholders.
+## Escalation
+| Condition | Action |
+|-----------|--------|
+| Pods crash-looping | Page secondary on-call |
+| Data inconsistency | Page DBA team |
+| Security concern | Page security team |
 
-### Step 5: Resolve and Learn
-Verify mitigation: confirm metrics return to baseline, test end-to-end. Declare resolved: post to incident channel, update status page. Communicate: summary to stakeholders, initial postmortem findings. Schedule postmortem within SLA (SEV1: 48h, SEV2: 1 week, SEV3: next sprint). Track action items to completion.
+## Remediation
+### Option A: Rollback
+```bash
+kubectl rollout undo deployment/[name] -n [namespace]
+```
 
-### Step 6: Measure Incident Metrics
-MTTD (Mean Time to Detect): time from incident start to detection. MTTR (Mean Time to Resolve): time from detection to resolution. Track weekly trends, set improvement targets. Use metrics to identify gaps in detection coverage, response speed, and tooling.
+### Option B: Scale Up
+```bash
+kubectl scale deployment/[name] --replicas=5 -n [namespace]
+```
 
-### Step 7: On-Call Scheduling
-Primary on-call: first responder, carries phone, acknowledges within SLA. Secondary on-call: backup, handles overflow, covers primary during deep investigation. Escalation path: primary → secondary → engineering manager → VP. Tools: PagerDuty or OpsGenie for scheduling, alert routing, escalation policies, and incident tracking. Rotation: weekly shifts, follow-the-sun for global teams.
+### Option C: Feature Flag
+Disable feature [name] via [flag management tool]
 
-### Step 8: Maintain Runbooks
-Runbook structure per service: symptoms (what alerts fire, what users experience), triage (first checks, quick diagnostics), escalation (when to escalate and to whom), remediation (step-by-step recovery procedures). Runbooks stored in version control, reviewed quarterly, tested during game days.
+## Verification
+- [ ] Error rate < 0.1% (check [dashboard link])
+- [ ] p99 latency < 200ms
+- [ ] All pods Running and Ready
+- [ ] Integration tests passing
+```
+
+## Postmortem Template
+```markdown
+# Postmortem: [Title]
+
+## Incident Summary
+- Date: YYYY-MM-DD
+- Duration: [start] to [end] (X hours)
+- Severity: SEV[X]
+- Services affected: [list]
+
+## Timeline
+| Time (UTC) | Event |
+|------------|-------|
+| T+0 | [Detection] |
+| T+X | [Action taken] |
+| T+Y | [Mitigation applied] |
+| T+Z | [Resolution confirmed] |
+
+## Impact
+- Users affected: [count or percentage]
+- Revenue impact: [amount if measurable]
+- Data loss: [yes/no, extent]
+
+## Root Cause (5 Whys)
+1. Why did it happen? [answer]
+2. Why? [deeper answer]
+3. Why? [deeper answer]
+4. Why? [deeper answer]
+5. Why? [root cause]
+
+## Contributing Factors
+- [Factor 1]: [explanation]
+- [Factor 2]: [explanation]
+
+## Action Items
+| # | Action | Owner | Due Date | Status |
+|---|--------|-------|----------|--------|
+| 1 | [action] | [name] | YYYY-MM-DD | [open/closed] |
+| 2 | [action] | [name] | YYYY-MM-DD | [open/closed] |
+
+## Prevention
+- [System change to prevent recurrence]
+- [Monitoring gap identified and filled]
+- [Runbook updated with new findings]
+
+## Lessons Learned
+- What went well: [1], [2], [3]
+- What went wrong: [1], [2], [3]
+- What to improve: [1], [2], [3]
+```
+
+## PagerDuty Configuration (Terraform)
+```hcl
+resource "pagerduty_service" "critical" {
+  name        = "Production Critical"
+  description = "SEV1/SEV2 production incidents"
+  alert_creation = "create_incidents"
+}
+
+resource "pagerduty_escalation_policy" "primary" {
+  name      = "Primary On-Call"
+  rule {
+    escalation_delay_in_minutes = 10
+    target {
+      type = "schedule_reference"
+      id   = pagerduty_schedule.primary.id
+    }
+  }
+  rule {
+    escalation_delay_in_minutes = 15
+    target {
+      type = "schedule_reference"
+      id   = pagerduty_schedule.secondary.id
+    }
+  }
+  rule {
+    escalation_delay_in_minutes = 5
+    target {
+      type = "user_reference"
+      id   = pagerduty_user.manager.id
+    }
+  }
+}
+
+resource "pagerduty_schedule" "primary" {
+  name      = "Primary Weekday"
+  time_zone = "UTC"
+  layer {
+    name                         = "Weekly Rotation"
+    start                        = "2026-01-05T08:00:00Z"
+    rotation_virtual_start       = "2026-01-05T08:00:00Z"
+    rotation_turn_length_seconds = 604800
+    users                        = [for u in pagerduty_user.oncall : u.id]
+  }
+}
+```
+
+## Incident Channel Template (Slack)
+```
+:rotating_light: *INCIDENT DECLARED* :rotating_light:
+*Incident ID*: INC-{date}-{number}
+*Severity*: SEV{1-4}
+*Service*: {service name}
+*Detected*: {time} via {method}
+*IC*: @{name}
+*Scribe*: @{name}
+*Status*: Investigating / Mitigating / Resolved
+
+*Current Impact*: {description}
+*Timeline*: https://link.to/timeline
+*Runbook*: https://link.to/runbook
+
+Next update: {time}
+```
+
+## War Room Protocol
+1. Open incident channel: `#inc-{date}-{severity}`
+2. IC posts initial incident brief (template above)
+3. SME posts current findings in thread under their service
+4. Scribe maintains timeline in pinned channel message
+5. Comms posts status page updates: initial -> investigating -> ETA -> resolved
+6. IC posts 5-min status check reminder for SEV1, 15-min for SEV2
+7. All decision-making happens in channel — no DMs for incident work
+8. No more than 3 people actively debugging simultaneously (avoid confusion)
+9. IC designates a separate channel for deep investigation: `#inc-{id}-debug`
+10. Post-incident: archive channel, link in postmortem doc
+
+## Tabletop Exercise Template
+```markdown
+# Tabletop Exercise: [Scenario]
+
+## Scenario
+[Description of incident scenario, e.g., "Database primary fails, read replicas are 5 min behind"]
+
+## Participants
+- IC: [name]
+- Scribe: [name]
+- SME: [name]
+- Comms: [name]
+- Observer: [name]
+
+## Timeline (Facilitator)
+| Time | Event | Expected Response |
+|------|-------|-------------------|
+| T+0 | Alert fires: database connection pool exhausted | IC declares incident |
+| T+5 | Pagers fire | On-call acknowledges |
+| T+10 | [New info] | Team investigates |
+| T+20 | [Escalation needed] | IC escalates |
+| T+30 | [Mitigation option] | Team decides action |
+
+## Debrief
+- What went well:
+- Gaps identified:
+- Runbook updates needed:
+- Training needs:
+```
+
+## Status Page Communication Templates
+```markdown
+# Initial
+We are investigating reports of [issue] affecting [service]. Users may experience [symptom]. We will provide updates every [cadence].
+
+# Investigating
+We have identified the issue as [root cause] and are working on mitigation. [Progress update].
+
+# Monitoring
+[Fix] has been deployed. We are monitoring metrics closely for the next [time period].
+
+# Resolved
+The issue has been resolved. [Service] is operating normally. A postmortem will be published within [timeline].
+```
 
 ## Rules
 - IC does not touch the keyboard — IC delegates and coordinates
@@ -140,6 +328,28 @@ Runbook structure per service: symptoms (what alerts fire, what users experience
 - MTTD/MTTR tracked weekly and reviewed in team retro
 - On-call shifts max 7 days to prevent burnout
 - Postmortem action items have single owners and due dates
+
+## Production Considerations
+- Automate incident creation: PagerDuty + Slack integration fires channel creation automatically.
+- Runbook discovery: link runbooks directly in alert payload so on-call finds them immediately.
+- Postmortem tracking: use a project board to track action items to completion.
+- Game days: run quarterly chaos engineering exercises that simulate real incidents.
+- SLA tracking: record time-to-acknowledge and time-to-resolve per incident.
+- Read-only Friday: avoid production changes that could trigger incidents before weekend.
+- Blameless culture: frame postmortems as system improvements, not individual failures.
+- Incident taxonomy: tag incidents by type (deploy, dependency, capacity, security) for trend analysis.
+
+## Anti-Patterns
+- IC also debugging — loses situational awareness, misses escalation triggers.
+- No scribe — timeline reconstructed from memory, inaccurate.
+- Fixing root cause before stopping the bleed — prolonged user impact.
+- Blaming individuals in postmortem — discourages reporting, hides systemic issues.
+- Skipping postmortem because "it was a simple mistake" — misses systemic improvements.
+- Alert fatigue from too many P0 alerts — real incidents lost in noise.
+- On-call shifting without handoff — context lost at shift change.
+- No runbook — on-call wastes time figuring out basic triage steps.
+- Postmortem without action items — same incident repeats.
+- Incident channel goes silent — stakeholders don't know status.
 
 ## References
   - references/incident-lifecycle.md — Incident Lifecycle

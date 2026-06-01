@@ -2,7 +2,7 @@
 name: frontend-security
 description: >
   Use this skill when the user says 'XSS', 'CSP', 'CSRF', 'SRI', 'secure cookies', 'security headers', 'frontend security', 'sanitize input', 'content security policy', 'cross-site scripting', 'cross-site request forgery', or when auditing frontend security. This skill enforces: CSP headers blocking inline scripts by default, SRI on all external resources, HttpOnly/Secure/SameSite cookies, CSRF tokens on state-changing requests, and output encoding to prevent XSS. Works with any frontend framework. Do NOT use for: backend authentication, server-side SQL injection, network security.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -50,6 +50,55 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 4096 tokens.
+
+## Security Architecture / Decision Trees
+
+### CSP Strategy Decision Tree
+```
+Are inline scripts needed?
+  |-- NO (all scripts are separate .js files) -->
+  |     CSP: script-src 'self'
+  |     Simplest, most secure. No nonce or hash needed.
+  |
+  |-- YES (inline event handlers, inline <script> tags) -->
+  |     |-- Can generate nonce per request? -->
+  |     |     YES: script-src 'self' 'nonce-{random}' (nonce-based CSP)
+  |     |     NO: script-src 'self' 'sha256-{hash}' (hash-based CSP, static)
+  |     |
+  |     |-- Use 'strict-dynamic' for modern apps (auto-trusts scripts loaded by trusted scripts)
+  |           CSP: script-src 'self' 'nonce-{random}' 'strict-dynamic'
+```
+
+### Vulnerability Triage Decision Tree
+```
+What type of vulnerability?
+  |-- User input rendered as HTML? -->
+  |     Threat: XSS
+  |     Fix: DOMPurify before dangerouslySetInnerHTML or v-html
+  |     Severity: CRITICAL
+  |
+  |-- External resource loaded (CDN, third-party)? -->
+  |     Threat: Compromised CDN serves malicious code
+  |     Fix: Add SRI integrity hash + crossorigin attribute
+  |     Severity: HIGH
+  |
+  |-- State-changing request (POST/PUT/DELETE)? -->
+  |     Threat: CSRF (cross-site request forgery)
+  |     Fix: CSRF token in header or SameSite=Strict cookie
+  |     Severity: HIGH
+  |
+  |-- Cookie contains session data? -->
+  |     Threat: Session hijacking via XSS
+  |     Fix: HttpOnly + Secure + SameSite=Strict
+  |     Severity: CRITICAL
+  |
+  |-- Third-party script on page (analytics, ads, widgets)? -->
+        Threat: Data exfiltration
+        Fix: CSP restrict-src, SRI on loaded scripts
+        Severity: MEDIUM
+```
+
+---
 
 ## Workflow
 
@@ -126,6 +175,93 @@ function SafeHtml({ html }: { html: string }) {
 | `Strict-Transport-Security` | `max-age=63072000; includeSubDomains` | Enforces HTTPS |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Controls referrer data |
 | `Permissions-Policy` | `geolocation=(), camera=()` | Limits API access |
+
+### Step 7: CSP Violation Reporting
+```typescript
+// Report CSP violations to monitor attacks
+const observer = new ReportingObserver(
+  (reports) => {
+    for (const report of reports) {
+      sendToAnalytics('csp-violation', report)
+    }
+  },
+  { types: ['csp-violation'] }
+)
+
+observer.observe()
+```
+
+### Step 8: Dependency Vulnerability Scanning
+```bash
+# Check for known vulnerabilities in dependencies
+npm audit
+
+# Use Snyk or GitHub Dependabot for automated scanning
+# Review and update vulnerable packages within 7 days of disclosure
+```
+
+## Common Pitfalls
+
+### 1. CSP with 'unsafe-inline' for Scripts
+```html
+<!-- BAD -- allows ANY inline script -->
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'">
+
+<!-- GOOD -- nonce-based, only trusted inline scripts execute -->
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'nonce-{random}' 'strict-dynamic'">
+```
+
+### 2. Forgetting SRI on All External Resources
+Third-party CDNs can be compromised. If the CDN serves malicious JS, SRI ensures the browser rejects it. Every external `<script>` and `<link>` needs `integrity` and `crossorigin="anonymous"`.
+
+### 3. Storing Tokens in localStorage
+```typescript
+// BAD -- accessible by any JS on the page (XSS can steal it)
+localStorage.setItem('auth-token', token)
+
+// BETTER -- httpOnly cookie (inaccessible by JS)
+// Still needs CSRF protection
+document.cookie = `session=${token}; HttpOnly; Secure; SameSite=Strict`
+```
+
+### 4. Trusting Client-Side Validation
+Client validation is for UX, not security. Always validate and sanitize on the server. Client-side validation can be bypassed by disabling JS or sending direct HTTP requests.
+
+### 5. Missing Permissions-Policy
+Without Permissions-Policy, any third-party script on the page can request sensitive APIs (geolocation, camera, microphone). Explicitly disable APIs your app doesn't use.
+
+## Compared With
+
+| Measure | Protection Against | Implementation Difficulty | Performance Impact |
+|---------|-------------------|------------------------|-------------------|
+| CSP | XSS, data injection | Medium | 0 (browser enforces) |
+| SRI | Compromised CDN | Low | 0 (hash check) |
+| HttpOnly cookies | Session hijacking via XSS | Low | 0 |
+| CSRF tokens | Cross-site request forgery | Medium | Negligible |
+| DOMPurify | XSS via user HTML | Low | ~0.1ms per sanitize |
+| Permissions-Policy | API abuse by third-party | Low | 0 |
+| HSTS | SSL stripping | Low | 0 |
+
+## Performance Considerations
+
+- CSP headers add ~200-500 bytes to response headers (insignificant)
+- SRI hashing adds ~50 bytes per external resource
+- DOMPurify sanitization is fast (~0.1ms per typical HTML string)
+- CSP violation reporting is async and non-blocking
+- No performance sacrifice for security — these measures are essentially free
+
+## Accessibility Considerations
+
+- CSP nonces must be generated server-side and injected into scripts — ensure this works with your SSR/injection pipeline
+- Security error messages should not expose technical details to users
+- CAPTCHA or MFA challenges must be accessible (support keyboard, screen readers)
+- Timeout-based security measures (session expiry) should give users warning before logging them out
+
+## Security Considerations
+
+- CSP `'strict-dynamic'` requires all trusted scripts to be loaded by a nonce-trusted script. This breaks scripts injected via innerHTML or DOM APIs — use trusted APIs like `createElement` + `appendChild`
+- Service workers can bypass CSP for their own scope — secure SW registration with `register()` only on HTTPS
+- Third-party scripts loaded via tag managers often bypass CSP — audit what the tag manager loads
 
 ## Rules
 - CSP must use `'strict-dynamic'` for modern apps — no whitelist-based CSP.

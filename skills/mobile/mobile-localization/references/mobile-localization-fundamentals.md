@@ -1,213 +1,124 @@
 # Mobile Localization Fundamentals
 
 ## Overview
-Mobile Localization is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Mobile localization (l10n) adapts an app's content and behavior for different languages, regions, and cultures. It covers string translation, locale-specific formatting (dates, numbers, currencies), right-to-left (RTL) layout support, and pluralization.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Mobile Localization helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Locale Identifier
+BCP 47 language tags: `en-US` (English US), `de-DE` (German Germany), `zh-Hans` (Simplified Chinese), `ar-SA` (Arabic Saudi Arabia). iOS uses `NSLocale` with identifiers like `en_US`. Android uses `Locale` with language and country. Unicode CLDR provides locale data.
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Mobile Localization solutions. These principles help maintain code quality and reduce technical debt.
+### String Resources
+iOS: `Localizable.strings` files per language (`en.lproj`, `de.lproj`). `"key" = "value";` format. Android: `res/values/strings.xml` (default), `res/values-de/strings.xml` (German). `ICULegacy` for ICU message format. Flutter: `.arb` files (App Resource Bundle) in `lib/l10n/`.
 
-### Concept 3: Data Management
-Proper data management is essential for Mobile Localization. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### ICU Message Format
+Standard for complex messages with plurals, gender, and selectors. `{count, plural, one {# item} other {# items}}`. `{gender, select, male {He} female {She} other {They}}`. Supported by Flutter arb, Android ICU, and iOS `String` with format specifiers.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### RTL Support
+Arabic, Hebrew, Persian, and Urdu are right-to-left. Set `layoutDirection` per locale. Use `leading`/`trailing` instead of `left`/`right` for layout constraints. iOS: `UISemanticContentAttribute.forceRightToLeft`. Android: `android:supportsRtl="true"`. Test RTL with every locale addition.
 
 ## Architecture Patterns
 
-### Pattern 1: Standard Architecture
-The standard architecture for Mobile Localization follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+### Translation Management
+Store strings in key-value format (arb, strings.xml, strings). Use translation management system (POEditor, Lokalise, Crowdin, Phrase). Separate translators from developers — translators use web UI, developers commit generated files. Auto-translate for initial pass, human review for quality.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### Pluralization Rules
+Languages have different plural categories: English (1, other), Arabic (6 categories), Russian (4). ICU plural syntax handles all languages. Define plurals in arb with `{count, plural, one {...} other {...}}`. Android uses `<plurals>` with `quantity` attribute.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### String Concatenation
+Never concatenate strings for dynamic content — order varies by language. Use placeholders: `"Your order {count} is ready"`. Positional arguments: `"{0} purchased {1} items"`. Named parameters: `"Hello {name}, you have {count} messages"`. iOS: `String(format:)`. Android: `getString(R.string.key, arg1, arg2)`.
 
-## Implementation Guide
+## Implementation
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Flutter — ARB Localization
+```dart
+// app_en.arb
+{ "@@locale": "en", "orderCount": "{count, plural, one={{count} order} other={{count} orders}}" }
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+// app_de.arb  
+{ "@@locale": "de", "orderCount": "{count, plural, one={{count} Bestellung} other={{count} Bestellungen}}" }
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+// Usage
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+Text(AppLocalizations.of(context)!.orderCount(5));
+```
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+### Android — strings.xml
+```xml
+<!-- res/values/strings.xml -->
+<string name="welcome">Welcome, %s</string>
+<plurals name="order_count">
+    <item quantity="one">%d order</item>
+    <item quantity="other">%d orders</item>
+</plurals>
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+<!-- res/values-de/strings.xml -->
+<string name="welcome">Willkommen, %s</string>
+<plurals name="order_count">
+    <item quantity="one">%d Bestellung</item>
+    <item quantity="other">%d Bestellungen</item>
+</plurals>
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+// Usage
+getString(R.string.welcome, userName)
+resources.getQuantityString(R.plurals.order_count, count, count)
+```
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+### iOS — Localizable.strings
+```swift
+// en.lproj/Localizable.strings
+"welcome" = "Welcome, %@";
+"order_count" = "%d orders";
 
-## Best Practices
+// de.lproj/Localizable.strings
+"welcome" = "Willkommen, %@";
+"order_count.format" = "%d Bestellungen";
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+// Usage
+String(format: NSLocalizedString("welcome", comment: ""), userName)
+String(format: NSLocalizedString("order_count", comment: ""), count)
+```
 
-## Common Pitfalls
+## Date/Number Formatting
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+### Locale-Aware Formatting
+```dart
+// Flutter
+import 'package:intl/intl.dart';
+final format = DateFormat.yMMMMd(Localizations.localeOf(context));
+final formatted = format.format(date);
+```
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+```kotlin
+// Android
+val format = DateFormat.getDateInstance(DateFormat.LONG, Locale.getDefault())
+val formatted = format.format(date)
+```
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+```swift
+// iOS
+let format = DateFormatter()
+format.locale = Locale.current
+format.dateStyle = .long
+let formatted = format.string(from: date)
+```
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+## Testing Localization
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+### Pseudo-Localization
+Prefix each string with a marker (e.g., `[!!` ... `!!]`) to identify untranslated strings. Expand strings by 30-50% to test layout with longer text. Enable pseudo-localization in development mode. iOS: Edit Scheme > Arguments > `-NSShowNonLocalizedStrings YES`.
 
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+### Language Testing
+Test every locale on real device. Check: truncation (German strings are 30% longer), RTL layout mirroring, date/number formatting, plural forms, special characters, text direction in mixed-language content. Use automated screenshot comparison.
 
 ## Key Points
-- Understand core Mobile Localization concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- Use ICU Message Format for plurals and gender
+- Never concatenate strings — use placeholders and positional args
+- Translate via TMS (POEditor, Lokalise, Crowdin)
+- RTL: use leading/trailing instead of left/right
+- Pseudo-localization: expand strings by 30-50% to test layout
+- Date/number formatting via locale-aware libraries
+- Test all locales on real devices for truncation and RTL
+- Generate localized screenshots for App Store / Play Store
+- String keys should be descriptive (not index-based)
+- Review translations in context (not as isolated strings)

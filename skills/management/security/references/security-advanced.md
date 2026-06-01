@@ -1,214 +1,230 @@
 # Security Advanced Topics
 
 ## Introduction
-Advanced Security topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Advanced security covers zero-trust architecture, security operations (SOC), cloud security, container security, supply chain security, security automation, and building a security program.
 
-## Advanced Architecture Patterns
+## Zero Trust Architecture
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+### Principles
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+**Never trust, always verify**: no implicit trust based on network location. Every access request is authenticated, authorized, and encrypted.
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+**Core principles**:
+- Verify explicitly: authenticate and authorize based on all available data (identity, location, device, data sensitivity)
+- Least privilege access: minimum access for minimum time (JIT/JEA)
+- Assume breach: segment access, encrypt all traffic, monitor continuously
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+### Implementation
 
-## Performance Optimization
+**Identity is the new perimeter**: 
+- Strong identity (MFA, conditional access, risk-based policies)
+- Device compliance check before access
+- Continuous access evaluation (not just at login)
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+**Micro-segmentation**: divide network into small, isolated zones. Each zone has its own access policies. Compromise in one zone doesn't spread.
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+**Zero Trust for applications**:
+- All traffic encrypted (internal and external)
+- Application-level authentication and authorization
+- API security (mTLS, API keys, rate limiting)
+- Session management with short-lived tokens
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+## Security Operations (SOC)
 
-## Security Hardening
+### SOC Maturity Model
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+| Level | Characteristics |
+|-------|----------------|
+| Level 1 — Initial | No dedicated SOC, ad-hoc incident response, minimal tooling |
+| Level 2 — Defined | Dedicated SOC team, SIEM deployed, basic runbooks, 8×5 coverage |
+| Level 3 — Managed | 24×7 coverage, SOAR automation, threat intelligence integration, regular tabletop exercises |
+| Level 4 — Optimized | Predictive analytics, automated response, threat hunting, continuous improvement |
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+### SIEM Tuning
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+**Log sources to ingest**:
+- Authentication logs (SSO, VPN, AD)
+- Network logs (firewall, proxy, DNS)
+- Endpoint logs (EDR, AV)
+- Cloud logs (CloudTrail, Audit Logs)
+- Application logs (web server, API gateway)
+- Database logs (access, changes)
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+**Alert tuning process**:
+1. Baseline normal behavior (2-4 weeks of data)
+2. Define detection rules based on known attack patterns
+3. Review alerts weekly for false positives
+4. Tune rules: increase threshold, reduce scope, add conditions
+5. Retire rules that never fire or always false-positive
+6. Repeat quarterly
 
-## Monitoring and Observability
+### Threat Intelligence
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+**Intelligence sources**:
+- Open source: MITRE ATT&CK, CVE feeds, AlienVault OTX
+- Commercial: Recorded Future, Mandiant, CrowdStrike
+- Industry ISACs: sector-specific intelligence sharing
+- Internal: incident data, vulnerability scans, attacker behavior
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+**Operationalizing threat intel**:
+- Map intelligence to MITRE ATT&CK framework
+- Prioritize intelligence relevant to your industry and tech stack
+- Update detection rules based on new intelligence
+- Use intel for proactive threat hunting
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+## Cloud Security
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+### Shared Responsibility Model
 
-## Scalability and Reliability
+Provider manages security OF the cloud. Customer manages security IN the cloud.
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+| Layer | SaaS | PaaS | IaaS | On-prem |
+|-------|------|------|------|---------|
+| Data | Customer | Customer | Customer | Customer |
+| App | Provider | Customer | Customer | Customer |
+| OS | Provider | Provider | Customer | Customer |
+| Network | Provider | Provider | Provider | Customer |
+| Physical | Provider | Provider | Provider | Customer |
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+### Cloud Security Best Practices
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+**Identity and access**:
+- Use cloud-native IAM (AWS IAM, Azure AD, GCP Cloud IAM)
+- Principle of least privilege for all roles
+- No permanent access keys for humans (use SSO + short-term credentials)
+- Service roles for applications, not access keys
 
-## Integration and Interoperability
+**Data protection**:
+- Encrypt all data at rest (S3 SSE, EBS encryption, RDS encryption)
+- Encrypt all data in transit (TLS 1.2+ for all endpoints)
+- Key management with customer-managed keys for sensitive data
+- Automated backup with versioning for ransomware recovery
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+**Network security**:
+- VPC segmentation (public, private, database subnets)
+- Security groups (stateful firewall per resource)
+- Network ACLs (stateless firewall per subnet)
+- WAF for web applications
+- DDoS protection (CloudFront, Shield, Cloud Armor)
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+**Monitoring**:
+- CloudTrail / Cloud Audit Logs for all API calls
+- GuardDuty / Security Center for threat detection
+- Config / Asset Inventory for compliance monitoring
+- Cost anomaly detection for financial security
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+## Container Security
 
-## DevOps and Automation
+### Image Security
 
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
+**Secure image pipeline**:
+1. Use minimal base images (Alpine, distroless)
+2. Scan images for vulnerabilities (Trivy, Clair, Docker Scout)
+3. Sign images with digital signatures (Cosign)
+4. Store in private registry with access control
+5. Re-scan regularly (new CVEs published daily)
 
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
+**Image scanning policy**:
+- Block deployment of images with critical/high vulnerabilities
+- Allow medium/low with documented exceptions
+- Re-scan base images weekly
+- Automatically rebuild images when base image updated
 
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+### Runtime Security
+
+**Pod security**:
+- Run as non-root user
+- Read-only root filesystem
+- Drop all capabilities, add only needed
+- Resource limits (CPU, memory)
+- Seccomp/AppArmor profiles
+
+**Network security**:
+- Network policies (zero trust between pods)
+- Service mesh for mTLS and policy
+- No privileged containers
+- Egress filtering for unexpected connections
+
+**Monitoring**:
+- Runtime anomaly detection (Falco, Sysdig)
+- Container drift detection (unexpected process execution)
+- Resource abuse alerts (container using too much CPU/memory)
+
+## Supply Chain Security
+
+### Software Bill of Materials (SBOM)
+
+A machine-readable inventory of all software components:
+
+**SBOM fields**: component name, version, supplier, dependency relationship, license, vulnerabilities.
+
+**SBOM formats**: SPDX, CycloneDX, SWID.
+
+**Automation**:
+- Generate SBOM during build (Syft, Trivy, CycloneDX plugin)
+- Store SBOM in artifact registry alongside image
+- Query SBOM for vulnerability scanning
+- Share SBOM with customers for transparency
+
+### Dependency Management
+
+**CI/CD pipeline for dependencies**:
+1. Dependency scanning on every PR (Snyk, Dependabot, Renovate)
+2. Block PR if critical vulnerability introduced
+3. Auto-create fix PR for known vulnerabilities
+4. Weekly full dependency audit
+5. Retire unmaintained dependencies
+
+**Vendor risk assessment**:
+- Security questionnaire for new vendors
+- Review vendor security certifications (SOC 2, ISO 27001)
+- Contractual requirements for breach notification, security controls
+- Regular vendor security reviews (annual)
+- Exit plan for vendor-related security issues
+
+## Security Automation
+
+### Automating Compliance
+
+**Infrastructure as Code (IaC) scanning**:
+- Scan Terraform, CloudFormation, Pulumi before apply (Checkov, tfsec, Terrascan)
+- Block deployment of non-compliant infrastructure
+- Generate compliance reports automatically (CIS benchmarks, NIST, SOC 2)
+
+**Policy as Code**:
+- Define security policies in code (OPA, Kyverno)
+- Enforce policies in CI/CD pipeline
+- Automate compliance evidence collection
+- Real-time policy violation alerts
+
+### Automated Incident Response
+
+**Common automation patterns**:
+- Quarantine compromised instance (remove from load balancer, deny traffic)
+- Disable compromised user account
+- Rotate exposed credentials
+- Capture forensic snapshot of compromised system
+- Notify security team via incident management tool
+
+**Playbook framework**:
+```
+Trigger: {alert name}
+Actions:
+  1. Verify alert (auto-check correlation with other sources)
+  2. Isolate affected resource (automated quarantine)
+  3. Collect forensics (snapshot, logs, memory dump)
+  4. Notify team (incident channel, ticket)
+  5. Await human decision for remediation
+```
 
 ## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- Zero trust: never trust, always verify — identity is the new perimeter
+- SOC maturity: initial → defined → managed → optimized
+- Threat intelligence operationalized through MITRE ATT&CK mapping
+- Cloud shared responsibility: customer owns security IN the cloud
+- Container security: minimal base images, scan, sign, enforce at runtime
+- SBOM generates machine-readable inventory of all software components
+- Dependency scanning blocks vulnerable dependencies at PR time
+- IaC scanning prevents insecure infrastructure from being deployed
+- Policy as code enforces security rules automatically in CI/CD
+- Automated incident response: detect → verify → isolate → notify

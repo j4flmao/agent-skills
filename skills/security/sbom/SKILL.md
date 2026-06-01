@@ -203,6 +203,256 @@ Generate SBOM after build, before image push. Store in artifact registry. Verify
 ### Step 7: Distribution & Monitoring
 Push SBOM to Dependency Track or Harbor for continuous monitoring. Configure alerts for new vulnerabilities on deployed components. Weekly re-scan of all active SBOMs. Retention: current + last 3 releases.
 
+## SBOM Generation Examples
+
+### Syft — Container Image SBOM
+```bash
+# Generate CycloneDX JSON SBOM for Docker image
+syft packages registry.example.com/app:v1.2.3 \
+  -o cyclonedx-json > bom.cdx.json
+
+# Generate SPDX JSON SBOM
+syft packages registry.example.com/app:v1.2.3 \
+  -o spdx-json > bom.spdx.json
+
+# Scan local directory for source-level SBOM
+syft packages dir:. \
+  -o cyclonedx-json > bom-source.cdx.json
+```
+
+### CycloneDX CLI — Build-Time SBOM (npm)
+```bash
+# Install CycloneDX plugin for npm
+npm install -g @cyclonedx/cyclonedx-npm
+
+# Generate SBOM during build
+cyclonedx-npm --output-format JSON > bom.cdx.json
+```
+
+### Trivy — Unified SBOM + Vulnerability Scan
+```bash
+# Generate SBOM and scan in one pass
+trivy image --format cyclonedx \
+  --output bom.cdx.json \
+  --severity CRITICAL,HIGH \
+  registry.example.com/app:v1.2.3
+```
+
+### Python — SBOM Validation Script
+```python
+#!/usr/bin/env python3
+"""Validate SBOM before deployment."""
+import json
+import sys
+
+def validate_sbom(path: str) -> bool:
+    with open(path) as f:
+        sbom = json.load(f)
+    
+    components = sbom.get("components", [])
+    for c in components:
+        vulns = c.get("vulnerabilities", [])
+        for v in vulns:
+            if v.get("severity") == "critical":
+                print(f"BLOCKED: {c['name']}@{c['version']} has {v['id']}")
+                return False
+    print(f"SBOM validated: {len(components)} components, 0 critical vulns")
+    return True
+
+if __name__ == "__main__":
+    sys.exit(0 if validate_sbom(sys.argv[1]) else 1)
+```
+
+### GitHub Actions — Full SBOM Pipeline
+```yaml
+name: SBOM Pipeline
+on:
+  push:
+    branches: [main]
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: ./
+          format: cyclonedx-json
+          output-file: bom.cdx.json
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: bom.cdx.json
+      - name: Vulnerability Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: sbom
+          scan-ref: bom.cdx.json
+          severity: CRITICAL,HIGH
+          exit-code: 1
+      - name: Sign SBOM
+        run: |
+          cosign attest --predicate bom.cdx.json \
+            --type cyclonedx \
+            --keyless \
+            registry.example.com/app:${{ github.sha }}
+```
+
+## SBOM Policy-as-Code
+
+### OPA/Rego — SBOM Policy
+```rego
+package sbom.policy
+
+# Block if any component has a critical vulnerability
+default allow = false
+
+allow {
+    count(violations) == 0
+}
+
+violations[component] {
+    component := input.components[_]
+    vuln := component.vulnerabilities[_]
+    vuln.severity == "critical"
+}
+
+# Block copyleft licenses
+license_violations[component] {
+    component := input.components[_]
+    component.licenses[_].id == "GPL-3.0-only"
+}
+```
+
+### Policy Enforcement in CI
+```yaml
+# .github/workflows/sbom-policy.yml
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check SBOM Policy
+        run: |
+          opa eval --data sbom-policy.rego \
+            --input bom.cdx.json \
+            "data.sbom.policy.allow"
+```
+
+## Supply Chain Attack Patterns
+
+### Pattern 1: Dependency Confusion
+Attacker publishes a malicious package to a public registry with the same name as a private/internal package. Package managers without scoping resolve to the public registry. Mitigation: use scoped packages (@org/package), enforce registry allowlisting, verify package provenance.
+
+### Pattern 2: Typosquatting
+Attacker registers packages with names similar to popular packages (e.g., `reqeusts` vs `requests`). Mitigation: use package lockfiles, enable 2FA for package publishing, monitor for lookalike packages.
+
+### Pattern 3: Compromised Maintainer Account
+Attacker takes over a maintainer's account and publishes a malicious update. Mitigation: package signing (Sigstore), multi-party publishing, npm OTP enforcement.
+
+### Pattern 4: Malicious Transitive Dependency
+A legitimate package depends on a compromised indirect dependency. Mitigation: SBOM analysis of full dependency tree, dependency pinning with hash verification, dependency auditing.
+
+### Pattern 5: Tag Confusion
+Attacker pushes a malicious tag to a registry that overrides an existing version. Mitigation: use digest-based references, enable tag immutability, sign releases.
+
+## SBOM Maturity Model
+
+### Level 1: Basic
+- Manual dependency enumeration
+- No SBOM generation
+- No vulnerability correlation
+- No license compliance checks
+- No attestation
+
+### Level 2: Standardized
+- SBOM generated per build (Syft/CycloneDX CLI)
+- Vulnerability scanning with severity gates
+- License allowlist enforced at PR time
+- SBOM stored in artifact registry
+- Weekly dependency updates (Dependabot/Renovate)
+
+### Level 3: Advanced
+- SBOM signed with Sigstore (keyless attestation)
+- Vulnerability correlation with reachability analysis
+- Policy-as-code for deployment gates (OPA)
+- Continuous monitoring with Dependency Track
+- Automated PR creation for vulnerable dependencies
+- SBOM diff tracking for drift detection
+
+### Level 4: Optimized
+- Supply chain levels for software artifacts (SLSA L3+)
+- In-toto attestation framework for build chain integrity
+- Real-time vulnerability alerting with EPSS scoring
+- Automated license compliance with legal workflow
+- SBOM composition analysis (SBOM-of-SBOMs)
+- Cross-org SBOM sharing and verification
+
+## SBOM Operations
+
+### Daily Operations
+- Verify SBOM generation in build pipeline
+- Review new vulnerability alerts from Dependency Track
+- Check attestation signatures for all new artifacts
+
+### Weekly Operations
+- Full dependency audit with SBOM diff
+- Update vulnerability databases
+- Review license policy violations
+- Triage new CVEs affecting deployed components
+
+### Monthly Operations
+- License policy review and updates
+- SBOM retention cleanup (keep current + last 3)
+- Supply chain security metrics report
+- Vendor SBOM verification (third-party software)
+- Penetration test of build pipeline integrity
+
+### Incident Response
+1. Detect: new CVE affecting deployed component, supply chain compromise notification, SBOM attestation verification failure
+2. Assess: affected components, version range, exploitability (EPSS), reachability from application code
+3. Contain: pin to safe version, patch/update, block vulnerable version in policy
+4. Investigate: determine initial compromise vector, check for unauthorized code execution
+5. Remediate: update all affected systems, revoke compromised signing keys if needed, rotate credentials
+6. Notify: downstream consumers with SBOM update, regulatory bodies if applicable
+7. Post-mortem: improve detection rules, update dependency management policy, harden build pipeline
+
+## SBOM Anti-Patterns
+
+### Anti-Pattern: Post-Hoc SBOM
+Generating SBOM after deployment misses the purpose of vulnerability-aware deployment decisions. SBOM must be generated during build, before artifact push, and verified in the deployment pipeline.
+
+### Anti-Pattern: No Vulnerability Correlation
+Generating an SBOM but never scanning it for vulnerabilities defeats the purpose. Always correlate SBOM components against vulnerability databases (OSV, NVD, GHSA) at build time and continuously after deployment.
+
+### Anti-Pattern: Ignoring Transitive Dependencies
+SBOM that only includes direct dependencies misses the majority of the attack surface. Transitive dependencies account for 70-90% of vulnerabilities in modern applications. Include full dependency tree in the SBOM.
+
+### Anti-Pattern: One-Time SBOM
+Generating SBOM once at release and never refreshing it. New vulnerabilities are discovered daily. Deployed components must be continuously monitored against updated vulnerability databases. Weekly re-scan with automated alerting.
+
+### Anti-Pattern: No Attestation
+SBOM without cryptographic attestation can be modified or replaced by an attacker. Anyone could claim an artifact has a clean SBOM. Sign the SBOM with Sigstore/Cosign and verify before deployment.
+
+### Anti-Pattern: Ignoring Build-Time vs Runtime SBOM
+Build-time SBOM includes dev dependencies not present in production. Generate separate production SBOM that excludes dev dependencies. Container image SBOM represents what's actually deployed.
+
+## Tool Comparison Matrix
+
+| Feature | Syft | Trivy | CycloneDX CLI | FOSSA |
+|---|---|---|---|---|
+| SBOM formats | CycloneDX, SPDX | CycloneDX, SPDX | CycloneDX | CycloneDX, SPDX |
+| Input types | Images, filesystems, repos | Images, repos, filesystems | Build plugins | Source repos |
+| Speed | Fast (1-3s) | Medium (5-15s) | Fast (1-5s) | Slow (scan) |
+| Vulnerability scan | Via Grype | Built-in | No | Built-in |
+| License detection | Via Syft metadata | Yes | Yes | Yes |
+| CI integration | GitHub Action, CLI | GitHub Action, CLI | Maven/Gradle/npm | Native CI |
+| Attestation | Via Cosign | Via Cosign | No | No |
+| Cost | Free (Apache 2.0) | Free (Apache 2.0) | Free | Commercial |
+| Best for | Primary SBOM tool | Unified scanning | Build-time accuracy | Enterprise compliance |
+
 ## Rules
 - SBOM generated for every production artifact, every build
 - CycloneDX JSON format as default, SPDX if regulatory

@@ -2,7 +2,7 @@
 name: frontend-browser-caching
 description: >
   Use this skill when the user says 'browser caching', 'cache headers', 'service worker', 'SW', 'stale-while-revalidate', 'SWR', 'cache strategy', 'Cache-Control', 'ETag', 'cache busting', 'offline caching', or when optimizing frontend load performance. This skill enforces: Cache-Control headers with appropriate max-age, service worker caching with stale-while-revalidate pattern, cache-busted asset URLs, and offline fallback. Works with any frontend framework. Do NOT use for: backend response caching, CDN configuration, database query caching.
-version: "1.2.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -69,6 +69,36 @@ Resource type?
   |     |-- User-specific? --> Cache-Control: private, no-cache
   |-- Third-party resource -->
         |-- CDN-hosted? --> Use the CDN's cache headers, add integrity hash
+```
+
+### Cache Location Decision Tree
+
+```
+Where should the response be cached?
+  |-- Browser (private cache) -->
+  |     |-- Static asset: Cache-Control: private, max-age=31536000
+  |     |-- Auth response: Cache-Control: private, no-cache
+  |-- CDN / proxy (shared cache) -->
+  |     |-- Public page: Cache-Control: public, s-maxage=3600, max-age=60
+  |     |-- API response: Cache-Control: public, s-maxage=300
+  |-- Service worker -->
+        |-- Install-time: Precache all versioned assets
+        |-- Runtime: Stale-while-revalidate for API + HTML
+```
+
+### Cache Invalidation Decision Tree
+
+```
+Content changed — how to invalidate?
+  |-- Static asset changed -->
+  |     |-- Content hash in URL? --> New URL = automatic invalidation
+  |     |-- No hash? --> Versioned path (/v2/asset.js) or query string (?v=2)
+  |-- API response changed -->
+  |     |-- Use ETag? --> Conditional request validates freshness
+  |     |-- No ETag? --> Short max-age or no-cache
+  |-- HTML page changed -->
+        |-- Use revalidation? --> no-cache + ETag = instant freshness check
+        |-- Use CDN? --> Purge CDN cache for that path
 ```
 
 ### Service Worker Architecture Options
@@ -213,6 +243,67 @@ self.addEventListener('fetch', (event) => {
 })
 ```
 
+### Step 7: Workbox Configuration
+```javascript
+// workbox-config.js
+module.exports = {
+  globDirectory: 'dist/',
+  globPatterns: ['**/*.{js,css,png,jpg,svg,woff2}'],
+  swDest: 'dist/sw.js',
+  runtimeCaching: [
+    {
+      urlPattern: /\/api\//,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'api-cache',
+        expiration: { maxEntries: 50, maxAgeSeconds: 86400 },
+      },
+    },
+    {
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif)$/,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'image-cache',
+        expiration: { maxEntries: 100, maxAgeSeconds: 30 * 86400 },
+      },
+    },
+  ],
+}
+```
+
+### Step 8: Browser Caching Architecture
+
+```
+[Browser Request]
+     |
+     v
+[Service Worker] --(not registered)--> [HTTP Cache]
+     |                                       |
+     |-- Cache hit? --> Return cached         |-- max-age fresh? --> Return cached
+     |-- No cache? --> Fetch from network     |-- no-cache? --> [Server] (conditional via ETag)
+          |                                       |
+          v                                       v
+     [Network Response]                      [Network Response]
+          |                                       |
+          v                                       v
+     [Cache Update]                          [Cache Update]
+```
+
+### Step 9: Cache Partitioning
+Modern browsers partition HTTP caches by site (top-level origin + frame origin). This means:
+- Cache keys include both the requesting site and the resource origin
+- A resource cached by site-a cannot be read by site-b even if same URL
+- Benefits: privacy (no cross-site cache snooping)
+- Tradeoffs: cache miss rate increases, more network requests
+- Mitigation: use service worker for shared resources (fonts, libraries) across same-origin apps
+
+### Step 10: Memory vs Disk Cache
+- **Memory Cache**: Fastest, cleared on tab close. Holds current page's resources.
+- **Disk Cache**: Persistent across sessions, slower than memory.
+- Browsers automatically decide which cache to use (memory = recently used, disk = everything else).
+- Service worker cache is separate from HTTP cache — always disk-backed.
+- To control: Service Worker Cache API gives full control. HTTP Cache-Control is advisory.
+
 ## Common Pitfalls
 
 ### 1. Missing immutable Directive
@@ -251,6 +342,27 @@ const fetchPromise = fetch(event.request).then((response) => {
   return response
 })
 ```
+
+### 7. Not Handling Opaque Responses
+Cross-origin responses without CORS headers are "opaque" — they return status 0 and cannot be inspected with `.ok`. Cache them anyway for offline support:
+```typescript
+self.addEventListener('fetch', (event) => {
+  if (event.request.url.includes('cdn.example.com')) {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        const fetchPromise = fetch(event.request).then(response => {
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()))
+          return response
+        })
+        return cached || fetchPromise
+      })
+    )
+  }
+})
+```
+
+### 8. Exceeding Storage Quota
+Each origin has limited cache storage (~6% of disk in Chrome). Beyond this, `caches.put()` throws a QuotaExceededError. Always set maximum cache sizes.
 
 ## Compared With
 
@@ -310,6 +422,20 @@ Browsers limit storage per origin:
 
 Use `navigator.storage.estimate()` to check available and used storage.
 
+### Performance Budget Targets
+- Initial load (cold cache): < 2s to interactive
+- Repeat load (warm cache): < 500ms to interactive
+- Cache hit ratio: > 95% for static assets
+- Service worker install: < 3s on 3G
+- Storage used: < 50MB for typical application
+
+## Browser Compatibility
+
+- **Cache-Control immutable**: Chrome, Firefox, Edge. Safari supports since iOS 16/macOS Ventura.
+- **Service Worker**: All modern browsers except IE11. Partial support in Samsung Internet.
+- **Cache-Control stale-while-revalidate**: Chrome, Firefox, Edge. Limited Safari support.
+- **Private Cache-Control**: All modern browsers.
+
 ## Ecosystem & Tooling
 
 ### Service Worker Libraries
@@ -325,6 +451,21 @@ Use `navigator.storage.estimate()` to check available and used storage.
 - **Vercel Edge Network** -- Automatic cache optimization for Next.js.
 - **AWS CloudFront** -- Lambda@Edge for custom caching logic.
 - **Nginx** -- `expires` and `add_header Cache-Control` directives.
+
+### Monitoring
+- Chrome DevTools > Network > Size column shows cache source (memory cache / disk cache / service worker / network)
+- `navigator.storage.estimate()` shows storage usage
+- Workbox generates debug logs in development mode
+- Lighthouse "uses efficient cache policy" audit
+
+## Security Considerations
+
+- Never cache responses with `Set-Cookie` headers in shared caches (CDN, proxy).
+- Use `Cache-Control: private` for authenticated content.
+- Service workers can intercept and modify requests — use SRI hashes on cached scripts to verify integrity.
+- Cache poisoning: validate response status before caching.
+- Opaque responses from CDNs may fail silently — test offline behavior.
+- `Clear-Site-Data` header can clear cache on logout.
 
 ## Rules
 - Static assets: `immutable` + `max-age=1 year` + content hash in filename.

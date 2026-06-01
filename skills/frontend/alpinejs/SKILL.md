@@ -55,6 +55,46 @@ No preamble. No postamble. No explanations. Compress output — why use many tok
 ### Max Response Length
 ~4096 tokens.
 
+## Architecture Decision Trees
+
+### State Management Decision
+```
+How many components need the state?
+  Single component -> x-data with inline object
+  Multiple sibling components -> Alpine.store()
+  Nested components -> x-data on parent with scope inheritance
+
+What type of state?
+  UI toggles (open/close) -> x-data { open: false }
+  Form data -> x-data with x-model binding
+  Data from server -> x-data + fetch() in x-init
+  Computed/derived -> $watch or x-effect for reactions
+```
+
+### Rendering Decision
+```
+Should the element be visible or removed?
+  Frequently toggled -> x-show (CSS display toggle, faster)
+  Rarely toggled or heavy content -> x-if (DOM add/remove)
+  Initial render conditional -> x-init to set state, then x-show
+
+Loop rendering:
+  Array of items -> x-for on template tag
+  Need stable identity -> :key binding (always add this)
+```
+
+### Plugin Selection Guide
+```
+Need:
+  Collapse/expand animation -> @alpinejs/collapse
+  Intersection observer -> @alpinejs/intersect
+  Persist to localStorage -> @alpinejs/persist
+  Focus trap (modals) -> @alpinejs/focus
+  Smooth DOM morphing -> @alpinejs/morph
+  Input masks -> @alpinejs/mask
+  Tooltips -> alpinejs-tooltip
+```
+
 ## Workflow
 
 ### Step 1: Install Alpine.js
@@ -124,7 +164,44 @@ No preamble. No postamble. No explanations. Compress output — why use many tok
 </div>
 ```
 
-### Step 6: Modals and Tabs
+### Step 6: State Management Patterns
+
+**Signal-like pattern with $watch:**
+```html
+<div x-data="{ count: 0, doubled: 0 }" x-init="$watch('count', val => doubled = val * 2)">
+  <button @click="count++">+1</button>
+  <p x-text="`Count: ${count}, Doubled: ${doubled}`"></p>
+</div>
+```
+
+**Composable-like extracted component (magic $data):**
+```html
+<div x-data="counter()">
+  <button @click="increment">+1</button>
+  <span x-text="count"></span>
+</div>
+
+<script>
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('counter', () => ({
+      count: 0,
+      increment() { this.count++ },
+      reset() { this.count = 0 },
+    }))
+  })
+</script>
+```
+
+**Persisted state across page loads:**
+```html
+<div x-data x-init="$store.theme = $persist('light').as('theme')">
+  <button @click="$store.theme = $store.theme === 'light' ? 'dark' : 'light'">
+    Toggle theme
+  </button>
+</div>
+```
+
+### Step 7: Modals and Tabs
 ```html
 <div x-data="{ activeTab: 'info' }">
   <button @click="activeTab = 'info'" :class="{ active: activeTab === 'info' }">Info</button>
@@ -135,7 +212,7 @@ No preamble. No postamble. No explanations. Compress output — why use many tok
 </div>
 ```
 
-### Step 7: Transitions
+### Step 8: Transitions
 ```html
 <div x-data="{ open: false }">
   <button @click="open = !open">Toggle</button>
@@ -148,6 +225,23 @@ No preamble. No postamble. No explanations. Compress output — why use many tok
        x-transition:leave-end="opacity-0 scale-90">
     Animated content
   </div>
+</div>
+```
+
+### Step 9: x-teleport for Portals
+```html
+<div x-data="{ open: false }">
+  <button @click="open = true">Open Modal</button>
+  <template x-teleport="body">
+    <div x-show="open" @click.outside="open = false">
+      <div class="modal-backdrop" @click="open = false"></div>
+      <div class="modal-content">
+        <h2>Modal Title</h2>
+        <p>Portal-rendered content</p>
+        <button @click="open = false">Close</button>
+      </div>
+    </div>
+  </template>
 </div>
 ```
 
@@ -166,6 +260,47 @@ Does the component need:
   Side effects on data change? -> $watch or x-effect
 ```
 
+### Component Patterns
+
+**Alpine.data() reusable components:**
+```html
+<script>
+document.addEventListener('alpine:init', () => {
+  Alpine.data('dropdown', () => ({
+    open: false,
+    toggle() { this.open = !this.open },
+    close() { this.open = false },
+  }))
+})
+</script>
+
+<div x-data="dropdown">
+  <button @click="toggle">Toggle</button>
+  <div x-show="open" @click.outside="close">
+    Dropdown content
+  </div>
+</div>
+```
+
+**Alpine.data() with props via $el:**
+```html
+<div x-data="tooltip({ text: 'Hello World' })">
+  <span @mouseenter="show" @mouseleave="hide">Hover me</span>
+  <div x-show="visible" x-text="text"></div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+  Alpine.data('tooltip', (config) => ({
+    text: config.text,
+    visible: false,
+    show() { this.visible = true },
+    hide() { this.visible = false },
+  }))
+})
+</script>
+```
+
 ## Common Pitfalls
 
 1. **Forgetting x-data on parent**: Child elements can't access state without a parent x-data scope.
@@ -175,6 +310,9 @@ Does the component need:
 5. **Not using :key in x-for**: Without keys, Alpine may reuse DOM elements incorrectly.
 6. **Missing alpine:init for stores**: Alpine stores must be registered before components initialize.
 7. **Async data in x-data constructor**: Use x-init or async methods, not the x-data expression itself.
+8. **Leaking event listeners**: x-on has no built-in cleanup — use @click.window sparingly.
+9. **x-model on non-input elements**: x-model only works on form inputs (input, select, textarea).
+10. **Modifier stacking order**: @click.shift.prevent vs @click.prevent.shift — order matters.
 
 ## Best Practices
 
@@ -186,6 +324,8 @@ Does the component need:
 6. Fetch side effects in x-init or via $nextTick.
 7. Keep x-data expressions simple; extract complex logic into methods.
 8. Use x-transition for smooth enter/leave animations.
+9. Register reusable component logic via Alpine.data().
+10. Debounce expensive operations with x-debounce modifier.
 
 ## Compared With
 
@@ -198,6 +338,12 @@ Does the component need:
 | Learning curve | Low | Medium | High | Very Low |
 | Best for | Server-rendered + interactivity | SPAs | SPAs/complex UIs | Hypermedia apps |
 
+### Alpine.js vs htmx
+Alpine excels at client-side interactivity (modals, tabs, toggles). htmx excels at server-driven HTML replacement. They complement each other well — use htmx for form submissions and navigation, Alpine for UI interactions.
+
+### Alpine.js vs Vue
+Both use similar directive syntax (x- vs v-), but Alpine has no build step, no virtual DOM, and no component system beyond DOM scoping. Vue is appropriate when the entire app is an SPA; Alpine shines when the backend renders most HTML.
+
 ## Performance
 
 1. Alpine.js is ~10KB min+gzip — negligible bundle impact.
@@ -207,6 +353,66 @@ Does the component need:
 5. No build step means no compile time — just load and use.
 6. Fine-grained reactivity — only updates change-dependent DOM parts.
 7. Alpine.store() is persistent across page navigations if page is SPA-like.
+8. x-teleport moves DOM nodes, doesn't clone — minimal overhead.
+9. x-model.lazy defers sync to change event instead of input event.
+10. x-cloak prevents flash of unstyled content before initialization.
+
+## Testing Strategies
+
+### Manual Testing
+Alpine components can be tested by rendering HTML with directives and asserting DOM behavior:
+```html
+<!-- Test component in isolation -->
+<div x-data="{ count: 0 }">
+  <button @click="count++" x-test="increment-btn">+1</button>
+  <span x-text="count" x-test="count-display"></span>
+</div>
+```
+
+### Cypress Testing
+```javascript
+cy.visit('/page-with-alpine')
+cy.get('button').click()
+cy.contains('span', '1').should('exist')
+```
+
+### Playwright Testing
+```javascript
+await page.goto('/page-with-alpine')
+await page.click('button')
+const text = await page.textContent('span')
+expect(text).toBe('1')
+```
+
+### Key Testing Practices
+- Test Alpine components via the DOM, not the JS — Alpine is DOM-driven.
+- Wait for Alpine initialization: `document.addEventListener('alpine:init', ...)` fires before components render.
+- Use `Alpine.deferLoadingAlpine()` for controlling when Alpine boots in tests.
+- Test stores independently by calling `Alpine.store()` methods directly.
+
+## Migration Patterns
+
+### From jQuery to Alpine
+| jQuery Pattern | Alpine Equivalent |
+|----------------|-------------------|
+| `$(el).hide()` | `x-show="false"` |
+| `$(el).text('hi')` | `x-text="'hi'"` |
+| `$(el).on('click', fn)` | `@click="fn"` |
+| `$.ajax()` | `fetch()` in x-init |
+| `$(el).addClass('a')` | `:class="{ a: condition }"` |
+| Global state via vars | Alpine.store() |
+| DOM traversal | x-ref + $refs |
+
+**Migration strategy:** Incrementally replace jQuery DOM manipulation with Alpine directives on the same elements. Alpine and jQuery can coexist temporarily — Alpine manages its own x-data scopes, jQuery manipulates outside them.
+
+### From Vue 2 Options API to Alpine
+If migrating a simple Vue app that doesn't need SPA features:
+- `data()` → `x-data` object
+- `computed` → `$watch` or expression in template
+- `methods` → methods in Alpine.data()
+- `v-model` → `x-model`
+- `v-if` / `v-show` → `x-if` / `x-show`
+- `Vuex` → `Alpine.store()`
 
 ## Tooling
 
@@ -219,6 +425,16 @@ Does the component need:
 7. `@alpinejs/mask` — input mask plugin.
 8. `alpine-ajax` — AJAX helper similar to htmx for Alpine.
 9. `alpinejs-tooltip` — tooltip plugin.
+10. `alpinejs-click-away` — click away utility.
+
+## Build and Bundle Considerations
+
+- Alpine works via CDN — no build step required.
+- For npm installs: `npm install alpinejs` then `import Alpine from 'alpinejs'`.
+- Tree-shaking: Alpine's npm package supports tree-shaking for plugins not imported.
+- When bundled via webpack/Vite, Alpine adds ~10KB gzipped.
+- Plugins each add 1-3KB — only load what you use.
+- No SSR considerations — Alpine is purely client-side.
 
 ## Rules
 - State belongs in x-data, not in external JS files.

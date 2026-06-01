@@ -307,6 +307,269 @@ BUDGET_THRESHOLDS = {
 }
 ```
 
+### BigQuery Slot Management
+
+#### Slot Commitment Strategy
+
+```yaml
+bigquery_slots:
+  commitment_types:
+    - type: "annual"
+      discount: "~40% vs on-demand"
+      commitment: "1 year minimum"
+      best_for: "Stable baseline workload (60-70% of peak)"
+    - type: "monthly"
+      discount: "~20% vs on-demand"
+      commitment: "1 month minimum"
+      best_for: "Seasonal workloads, growth phase"
+    - type: "flex"  # On-demand
+      discount: "0%"
+      commitment: "None"
+      best_for: "Variable spikes, dev/test environments"
+  
+  sizing_formula:
+    baseline: "Average daily slot usage over trailing 30 days"
+    buffer: "1.2x baseline (for unexpected spikes)"
+    growth: "1.3x baseline (for 30% YoY growth)"
+    recommended_commitment: "baseline * buffer * growth"
+  
+  reservation_policies:
+    - "Separate reservations for prod vs non-prod workloads"
+    - "Idle slots from prod can be borrowed by non-prod (flex slots)"
+    - "BI dashboards: dedicated reservation for consistent performance"
+    - "Ad-hoc queries: lower-priority reservation (idle slots only)"
+    - "ELT pipelines: reservation sized for peak load, auto-scale"
+```
+
+```sql
+-- BigQuery slot usage query
+SELECT
+  job_type,
+  ROUND(SUM(total_slot_ms) / (1000 * 60 * 60), 2) AS slot_hours,
+  ROUND(SUM(total_bytes_billed) / POW(1024, 4), 2) AS ti_billed,
+  COUNT(*) AS job_count,
+  ROUND(AVG(IFNULL(SAFE.DIVIDE(total_slot_ms, TIMESTAMP_DIFF(end_time, start_time, MILLISECOND)), 0)), 2) AS avg_slots
+FROM `region-us`.INFORMATION_SCHEMA.JOBS_BY_PROJECT
+WHERE DATE(creation_time) >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+  AND job_type = 'QUERY'
+GROUP BY job_type
+ORDER BY slot_hours DESC;
+```
+
+### Cost Allocation Framework
+
+```yaml
+allocation_method:
+  type: "Activity-based costing"
+  
+  dimensions:
+    - team:
+        description: "Engineering team owning the pipeline"
+        tags: { cost_center: "data-platform", team: "analytics-eng" }
+    - domain:
+        description: "Business domain (finance, marketing, product)"
+        tags: { domain: "marketing" }
+    - environment:
+        description: "Deployment stage"
+        tags: { env: "production" }
+    - dataset:
+        description: "Target dataset / warehouse schema"
+        tags: { dataset: "analytics.fct_orders" }
+    
+  allocation_formulas:
+    compute:
+      # Snowflake: credits by warehouse ÷ queries per dataset
+      allocation: "SUM(credits * (query_duration / total_warehouse_duration))"
+    
+    storage:
+      # S3: bytes by bucket ÷ prefix
+      allocation: "SUM(bytes * (prefix_bytes / total_bucket_bytes))"
+    
+    compute_storage:
+      # Overlap: combined cost
+      allocation: "compute_allocation * 0.7 + storage_allocation * 0.3"
+```
+
+### Query Optimization Patterns
+
+```sql
+-- Before: expensive full scan
+SELECT customer_id, COUNT(*) as order_count
+FROM orders
+WHERE status = 'completed'
+GROUP BY customer_id;
+
+-- After: use materialized view (Snowflake / BigQuery)
+CREATE MATERIALIZED VIEW daily_orders_mv AS
+SELECT order_date, customer_id, status, COUNT(*) as order_count
+FROM orders
+GROUP BY order_date, customer_id, status;
+
+-- Query against MV (scans only relevant partitions)
+SELECT customer_id, SUM(order_count) as total_orders
+FROM daily_orders_mv
+WHERE order_date >= '2026-01-01'
+  AND status = 'completed'
+GROUP BY customer_id;
+
+-- Before: self-join anti-pattern
+SELECT o.*, c.name
+FROM orders o
+JOIN customers c ON o.customer_id = c.customer_id
+WHERE o.order_date >= '2026-01-01';
+
+-- After: clustering on join key
+-- ALTER TABLE orders CLUSTER BY (customer_id);
+-- ALTER TABLE customers CLUSTER BY (customer_id);
+-- Cluster both tables on the join key for Co-located joins
+```
+
+### Reserved Capacity Planning
+
+```yaml
+capacity_planning:
+  snowflake:
+    credits_estimate: "AVG(credits_per_hour) * hours_per_day * 30"
+    example:
+      warehouses: [ prod_wh(XS), reporting_wh(S), etl_wh(M) ]
+      avg_hourly_credits: 4.5
+      monthly: 4.5 * 24 * 30 = 3,240 credits
+      annual: 3,240 * 12 * 0.85(pre-pay discount) = $33,048
+  
+  bigquery:
+    slots_estimate: "AVG(slots_per_query) * concurrent_queries * growth_factor"
+    example:
+      avg_slots_per_query: 200
+      concurrent_queries: 5
+      growth_factor: 1.3
+      recommended_slots: 200 * 5 * 1.3 = 1,300 slots
+      monthly: 1,300 * $0.04 * 24 * 30 = $37,440 (annual commitment)
+  
+  databricks:
+    dbu_estimate: "AVG(DBU_per_hour) * hours_per_day * 30"
+    example:
+      clusters: [ jobs(medium), interactive(large) ]
+      avg_hourly_dbu: 15
+      monthly: 15 * 24 * 30 = 10,800 DBU
+      annual: 10,800 * 12 * $0.55/photon_dbu = $71,280
+```
+
+### FinOps Maturity Model
+
+```yaml
+finops_maturity:
+  level_1_crawl:
+    practices: ["Manual cost tracking", "Monthly review emails"]
+    tools: ["Billing console", "Spreadsheet"]
+    coverage: "50-70% of costs tracked"
+  
+  level_2_walk:
+    practices: [
+      "Tag-based cost allocation",
+      "Weekly cost dashboards",
+      "Budget alerts per team"
+    ]
+    tools: [
+      "Cloud cost management (AWS Cost Explorer, GCP Billing)",
+      "Snowflake ACCOUNT_USAGE views",
+      "Automated budget alerts"
+    ]
+    coverage: "80-95% of costs tracked"
+  
+  level_3_run:
+    practices: [
+      "Per-query cost attribution",
+      "Unit economics (cost per query, cost per report)",
+      "Automated anomaly detection",
+      "Chargeback/showback to teams"
+    ]
+    tools: [
+      "Custom cost attribution pipeline",
+      "Query profiling (Snowflake QUERY_HISTORY, BigQuery INFORMATION_SCHEMA)",
+      "Automated anomaly detection",
+      "FinOps dashboards (Tableau, Power BI)"
+    ]
+    coverage: "95-100% of costs tracked"
+  
+  level_4_optimize:
+    practices: [
+      "Predictive cost modeling",
+      "Automatic resource right-sizing",
+      "Cost-aware query optimization",
+      "Cross-cloud cost optimization"
+    ]
+    tools: [
+      "ML-based cost forecasting",
+      "Auto-scaling policies",
+      "Query rewriting for cost",
+      "Multi-cloud FinOps platform"
+    ]
+    coverage: "Near-real-time cost tracking"
+```
+
+### Snowflake Cost Analysis Queries
+
+```sql
+-- Top 10 most expensive queries (last 7 days)
+SELECT
+  query_id,
+  query_text,
+  warehouse_name,
+  warehouse_size,
+  credits_used as credits,
+  ROUND(credits_used * 4, 2) as estimated_cost_usd,  -- ~$4/credit
+  execution_time / 1000 as duration_seconds,
+  partitions_scanned,
+  partitions_total,
+  ROUND(partitions_scanned / NULLIF(partitions_total, 0) * 100, 1) as scan_efficiency_pct
+FROM TABLE(INFORMATION_SCHEMA.QUERY_HISTORY(
+  DATEADD('days', -7, CURRENT_TIMESTAMP()),
+  CURRENT_TIMESTAMP()
+))
+ORDER BY credits_used DESC
+LIMIT 10;
+
+-- Cost by warehouse (last 30 days)
+SELECT
+  warehouse_name,
+  COUNT(*) as query_count,
+  SUM(credits_used) as total_credits,
+  SUM(credits_used) * 4 as total_cost,
+  AVG(credits_used) as avg_credits_per_query,
+  SUM(execution_time) / 60000 as total_minutes
+FROM TABLE(INFORMATION_SCHEMA.QUERY_HISTORY(
+  DATEADD('days', -30, CURRENT_TIMESTAMP()),
+  CURRENT_TIMESTAMP()
+))
+GROUP BY warehouse_name
+ORDER BY total_cost DESC;
+```
+
+### Decision Trees
+
+#### Storage Tier Selection
+```
+Data access frequency?
+├── Accessed daily → Hot tier (SSD, standard storage class)
+├── Accessed weekly → Warm tier (standard_ia, nearline)
+├── Accessed monthly → Cold tier (glacier, coldline)
+├── Accessed quarterly/yearly → Archive tier (deep archive)
+├── Unknown → Intelligent tiering (auto-moves between hot/warm)
+└── Compliance hold only → Archive with Object Lock (WORM)
+```
+
+#### Compute Optimization Strategy
+```
+Query performance issue?
+├── Long-running full scan → Add partitioning on filter column
+├── Join-heavy query → Cluster both tables on join key
+├── Repeated expensive aggregation → Materialized view
+├── Small query but slow → Check warehouse auto-scaling
+├── Many concurrent queries → Increase max_cluster_count
+├── Ad-hoc query costly → Use warehouse with lower priority
+└── Data not updated frequently → Use result caching (Snowflake)
+```
+
 ## Rules
 - Right-size warehouses: use XSMALL for dev, MEDIUM max for prod
 - Auto-suspend idle warehouses within 60 seconds
@@ -318,6 +581,11 @@ BUDGET_THRESHOLDS = {
 - Tag all resources with cost_center, team, and environment
 - Review top 10 most expensive queries weekly
 - Set budget alerts at 50%, 80%, 90%, and 100% of monthly budget
+- Use annual commitments for baseline workloads, flex for spikes
+- Allocate costs by team/domain for accountability
+- Track slot hours and credits per query for unit economics
+- Progress through FinOps maturity levels systematically
+- Profile queries for scan efficiency — high scan ratio = waste
 
 ## References
   - references/data-cost-budgeting.md — Data Cost Budgeting

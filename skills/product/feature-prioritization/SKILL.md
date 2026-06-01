@@ -113,6 +113,21 @@ What is the primary decision context?
 | P2 | Valuable but not urgent | Future consideration | Next 20-30% |
 | P3 | Will not do | Explicit deprioritization | Bottom 20-40% |
 
+### Priority Bucket Governance
+Maintain priority integrity through explicit governance rules. P0 items require documented rationale signed off by product lead and engineering lead. P3 items are explicitly deprioritized, not ignored — document why each item is P3 and revisit quarterly. Any stakeholder can request re-prioritization but must submit updated scoring data. Capacity-based limits: P0 ≤ 50% of team capacity, P0+P1 ≤ 80%. Track P0 delivery rate: if <80% of P0 items ship on time, reduce P0 count next cycle.
+
+### Cost of Delay and WSJF
+Cost of Delay quantifies the economic value of delivering a feature sooner vs later. Use Weighted Shortest Job First (WSJF) for prioritization when features have time sensitivity:
+
+**WSJF = Cost of Delay / Job Duration**
+
+Cost of Delay has three components:
+- **User-business value:** Revenue impact, customer satisfaction, market share
+- **Time criticality:** Is there a deadline? Does value decay over time?
+- **Risk reduction / opportunity enablement:** Does this unlock other work? Does it reduce risk?
+
+Score each component 1-13 (Fibonacci or modified Fibonacci). Sum for total Cost of Delay. Divide by job duration (effort estimate in weeks) for WSJF score. Sort by WSJF descending — highest WSJF is highest priority.
+
 ### Prioritization Anti-Patterns
 
 | Anti-Pattern | Description | Fix |

@@ -312,6 +312,115 @@ SELECT add_continuous_aggregate_policy('hourly_avg', start_offset => INTERVAL '3
 ### Apache Druid
 Druid is a real-time analytical database for high-concurrency OLAP on streaming/batch data. Uses segment-centric architecture: data into time-bound segments, bitmap indexes for fast filtering, columnar format. Ingests from Kafka (real-time) and batch files. Key features: time-aligned segment granularity, ingestion-time rollup for pre-aggregation, sketch-based algorithms (HyperLogLog, Theta sketches) for fast distinct counts, sub-second latency at petabyte scale. Use for real-time analytics dashboards, user-facing embedded analytics, and ad-hoc OLAP on streaming event data.
 
+### Warehouse Selection Criteria
+
+```yaml
+warehouse_selection:
+  snowflake:
+    strengths: ["Fully managed", "Separation of compute/storage", "Zero-copy cloning", "Time travel", "Data sharing"]
+    weaknesses: ["Cost at scale ($/credit)", "No materialized views in standard edition", "Limited semi-structured (VARIANT)"]
+    best_for: "Enterprise multi-cloud, data sharing, concurrency-heavy workloads"
+    pricing: "Per-second billing, $2-4/credit"
+  
+  bigquery:
+    strengths: ["Serverless (no cluster management)", "BigLake for lake integration", "ML in SQL", "Real-time with streaming inserts"]
+    weaknesses: ["Slot contention with no reservation", "Expensive storage", "No index tuning"]
+    best_for: "Serverless analytics, Google Cloud-native, ML on warehouse"
+    pricing: "Per-byte scanned or flat-rate slots"
+  
+  redshift:
+    strengths: ["Fast on SSDs", "RA3 managed storage", "AQUA for S3 acceleration", "Low cost"]
+    weaknesses: ["VACUUM/SORT maintenance", "Concurrency scaling cost", "Smaller ecosystem"]
+    best_for: "AWS-native OLAP, cost-sensitive large-scale analytics"
+    pricing: "Per-node hourly (DC2/RA3)"
+  
+  databricks_sql:
+    strengths: ["Lakehouse (Delta Lake)", "Unity Catalog", "ML integration", "Auto-scaling SQL warehouses"]
+    weaknesses: ["Serverless concurrency limits", "DBU cost at scale", "Phoenix (serverless) still maturing"]
+    best_for: "Lakehouse architecture, unified batch/ML/BI workloads"
+    pricing: "Per-DBU (photon: $0.55/DBU, serverless: $1.10/DBU)"
+  
+  clickhouse:
+    strengths: ["Fastest columnar engine", "Real-time ingestion", "Compression (5-10x)", "Materialized views on ingestion"]
+    weaknesses: ["No UPDATE/DELETE (mutations)", "No transactions", "Limited JOIN support"]
+    best_for: "Real-time analytics, high-ingestion event data, sub-second OLAP"
+    pricing: "Self-hosted or ClickHouse Cloud"
+```
+
+### Optimization by Warehouse
+
+#### Snowflake Optimization
+```sql
+-- Clustering: improve partition pruning for large tables
+ALTER TABLE fct_orders CLUSTER BY (order_date, customer_id);
+
+-- Materialized views for expensive aggregations (Enterprise Edition+)
+CREATE MATERIALIZED VIEW daily_revenue AS
+SELECT order_date, SUM(amount) as revenue
+FROM fct_orders GROUP BY order_date;
+
+-- Search optimization for point lookups (Enterprise Edition+)
+ALTER TABLE customers ADD SEARCH OPTIMIZATION;
+
+-- Automatic clustering (recommended for most tables)
+ALTER TABLE fct_orders SET clustering_key = (order_date, customer_id);
+```
+
+#### BigQuery Optimization
+```sql
+-- Partition by date for cost control
+CREATE TABLE fct_orders (
+  order_id STRING, customer_id STRING, amount FLOAT64, order_date DATE
+) PARTITION BY order_date
+  CLUSTER BY customer_id;
+
+-- BI Engine for sub-second dashboard queries
+-- (Reservation-based in-memory acceleration)
+
+-- Slot-based workload management
+ALTER RESERVATION `prod` SET OPTIONS (slot_capacity = 1000);
+
+-- Materialized views (Enterprise Edition+)
+CREATE MATERIALIZED VIEW daily_revenue AS
+SELECT order_date, SUM(amount) as revenue
+FROM fct_orders GROUP BY order_date;
+```
+
+#### Redshift Optimization
+```sql
+-- Sort key for efficient range scans
+CREATE TABLE fct_orders (
+  order_id BIGINT DISTKEY, customer_id BIGINT, amount DECIMAL(18,2), order_date DATE
+) SORTKEY(order_date);
+
+-- Distribution style
+-- DISTKEY: collocated join (distribute on join key)
+-- EVEN: uniform distribution (default)
+-- ALL: small dimension tables replicated to all nodes
+CREATE TABLE dim_customers DISTSTYLE ALL SORTKEY(customer_id) AS SELECT * FROM customers;
+
+-- Compression encodings (auto via ANALYZE COMPRESSION or manual)
+CREATE TABLE fct_orders (
+  order_id BIGINT ENCODE ZSTD,
+  customer_id BIGINT ENCODE ZSTD,
+  amount DECIMAL(18,2) ENCODE DELTA32K,
+  order_date DATE ENCODE RAW
+) SORTKEY(order_date);
+```
+
+### Decision Tree
+
+#### Warehouse Selection
+```
+Primary workload characteristics?
+├── Multi-cloud, high concurrency, data sharing → Snowflake
+├── Serverless preferred, Google Cloud → BigQuery
+├── Cost-sensitive large-scale, AWS-native → Redshift
+├── Lakehouse with ML, Databricks ecosystem → Databricks SQL
+├── Real-time sub-second on event data → ClickHouse
+└── Hybrid transaction/analytical → SingleStore or MySQL HeatWave
+```
+
 ## Rules
 - Star schema as default, snowflake for deep hierarchies
 - Fact tables at most granular level
@@ -323,6 +432,9 @@ Druid is a real-time analytical database for high-concurrency OLAP on streaming/
 - Cost allocation by tag/label per team or use case
 - Implement partition retention for all fact tables
 - Document grain explicitly in every fact table definition
+- Set clustering/sort keys on filter and join columns
+- Use warehouse-native optimizations for your platform
+- Choose warehouse based on workload, not just familiarity
 
 ## References
   - references/clickhouse-analytics.md — ClickHouse for Real-Time Analytics

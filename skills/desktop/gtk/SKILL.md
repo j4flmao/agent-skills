@@ -1,8 +1,8 @@
 ---
-name: gtk
+name: desktop-gtk
 description: >
-  Use this skill when building cross-platform desktop apps with GTK — C toolkit, Python (PyGObject), or Rust (gtk-rs). GNOME/Adwaita design, GObject type system, signal-based communication. Do NOT use for: Qt-specific projects, Windows-only apps, web-only UIs.
-version: "1.0.0"
+  Use when the user asks about GTK (GTK3, GTK4) application development, GtkWidget, GtkBuilder UI files, CSS styling for GTK, or cross-platform GTK development. Do NOT use for: GNOME-specific patterns (desktop-gnome), or KDE/Qt (desktop-kde, desktop-qt).
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -10,201 +10,110 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [desktop, cross-platform, gtk, gnome, c, python, phase-4]
+tags: [desktop, gtk, linux, cross-platform]
 ---
 
 # GTK
 
 ## Purpose
-Build cross-platform desktop applications using GTK 4 toolkit with C, Python (PyGObject), or Rust (gtk-rs), following GNOME HIG and Adwaita design language.
+Build applications using GTK (GIMP Toolkit) — the primary widget toolkit for GNOME and a cross-platform toolkit supporting Linux, Windows, and macOS. GTK4 provides a modern rendering model with CSS styling, hardware-accelerated rendering via Vulkan/OpenGL, and a robust widget hierarchy.
 
 ## Agent Protocol
 
 ### Trigger
-User request includes: `gtk`, `gtk4`, `gtk-rs`, `pygobject`, `gtkmm`, `glib`, `gobject`, `adwaita`, `gnome app`, `linux desktop`.
+Exact user phrases: "GTK", "GTK3", "GTK4", "GtkWidget", "GtkBuilder", "Gtk CSS", "gtk-rs", "PyGObject", "GTK application", "GtkWindow", "GtkBox", "GtkListView".
 
 ### Input Context
-- GTK version (GTK 3, GTK 4)
-- Language (C, Python, Rust, C++)
-- UI builder (GtkBuilder UI files, code-only)
-- Project type (simple dialog, complex app, GNOME extension)
-- Target environment (GNOME, cross-platform)
+- GTK version (3.x or 4.x — 4.x preferred for new projects)
+- Language (C, Rust via gtk4-rs, Python via PyGObject, Vala, JS via GJS)
+- Display backend (Wayland, X11, Windows GDK, macOS Quartz)
+- CSS styling approach (Adwaita theme, custom CSS, libadwaita)
+- Performance needs (heavy rendering via GtkGLArea, large data via GtkListView)
+- Platform target (Linux native, cross-platform)
 
 ### Output Artifact
-A markdown document containing:
-- Project scaffold and build system
-- Main window and application class
-- Widget hierarchy
-- Signal connections
-- CSS styling
-- Resource management
-- GtkBuilder UI file (if using .ui)
-
-### Response Format
-Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick.
+GTK application architecture with widget tree, signal flow, data binding, and styling strategy.
 
 ### Completion Criteria
-- GtkApplication class defined with activate signal
-- Widget tree created via code or GtkBuilder
-- Signal handlers connected for user interaction
-- CSS styling applied via style context or CSS provider
-- Resources compiled via blueprint or gresource
-- Application runs and responds to user input
+- [ ] Widget hierarchy designed (container types, layout management)
+- [ ] UI definition format chosen (GtkBuilder XML vs programmatic)
+- [ ] Signal and callback architecture established
+- [ ] Data display strategy (GtkListView/ColumnView vs GtkTreeView)
+- [ ] CSS styling approach defined (Adwaita + custom CSS)
+- [ ] GtkApplication startup flow configured
+- [ ] Keyboard navigation and mnemonics enabled
+- [ ] Accessibility (ATK/AT-SPI) integrated
+- [ ] Internationalization via gettext configured
+- [ ] Window geometry and state persistence implemented
 
 ### Max Response Length
-4096 tokens
+250 lines.
+
+## Framework/Methodology
+
+### GTK Version Decision
+
+| Feature | GTK3 | GTK4 |
+|---------|------|------|
+| Widget hierarchy | GtkBox, GtkGrid, GtkPaned | Same + GtkListView, GtkColumnView |
+| Event handling | signal_connect per event | Event controllers (GtkEventControllerKey) |
+| Rendering | Cairo (CPU) | Vulkan/OpenGL (GPU, ngl subsystem) |
+| CSS animation | Limited | Full CSS transitions + animations |
+| Accessibility | ATK | AT-SPI directly integrated |
+| List widgets | GtkTreeView (complex, outdated) | GtkListView, GtkColumnView (modern, flexible) |
+| OpenGL | GtkGLArea | GtkGLArea + GtkMediaFile |
+| File chooser | GtkFileChooser | GtkFileDialog (portal-based, async) |
+| Lifecycle | Manual dispose | GObject ref-counted, easier memory management |
+
+**Recommendation**: GTK4 for all new projects. GTK3 only for legacy maintenance.
+
+### GTK App Architecture
+```
+GtkApplication
+  ├── activate() → create windows
+  ├── GActionMap (menus, shortcuts)
+  ├── GMenuModel (app menu)
+  └── GSimpleAction (actions)
+      ↓
+GtkApplicationWindow
+  ├── Title bar (CSD or SSD)
+  ├── GtkBox layout
+  │   ├── GtkHeaderBar / GtkMenuBar
+  │   ├── Content area (GtkListView, GtkBox, GtkNotebook)
+  │   └── GtkStatusBar / Footer
+  ├── GtkOverlay (popovers, tooltips)
+  └── GtkShortcutsWindow
+```
 
 ## Workflow
 
-### Step 1: Project Setup (Python)
-```python
-# main.py
-import gi
-gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, GLib, Gio
+### Step 1: Set Up GtkApplication
 
-class MyApp(Gtk.Application):
-    def __init__(self):
-        super().__init__(application_id='com.example.myapp',
-                         flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
-
-    def do_activate(self):
-        window = Gtk.ApplicationWindow(application=self,
-                                        title='My App',
-                                        default_width=800,
-                                        default_height=600)
-        window.set_child(self.build_ui())
-        window.present()
-
-    def build_ui(self):
-        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
-        vbox.set_margin_top(16)
-        vbox.set_margin_bottom(16)
-        vbox.set_margin_start(16)
-        vbox.set_margin_end(16)
-
-        label = Gtk.Label(label='Hello, GTK!')
-        button = Gtk.Button(label='Click me')
-        button.connect('clicked', self.on_button_clicked)
-
-        vbox.append(label)
-        vbox.append(button)
-        return vbox
-
-    def on_button_clicked(self, button):
-        button.set_label('Clicked!')
-
-if __name__ == '__main__':
-    app = MyApp()
-    app.run(None)
-```
-
-### Step 2: GtkBuilder UI File
-```xml
-<!-- ui/window.ui -->
-<interface>
-  <template class="MyWindow" parent="GtkApplicationWindow">
-    <property name="title">My App</property>
-    <property name="default-width">800</property>
-    <property name="default-height">600</property>
-    <child>
-      <object class="GtkBox">
-        <property name="orientation">vertical</property>
-        <property name="spacing">16</property>
-        <property name="margin-top">16</property>
-        <child>
-          <object class="GtkEntry" id="entry">
-            <property name="placeholder-text">Enter text...</property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkButton" id="submit_btn">
-            <property name="label">Submit</property>
-            <signal name="clicked" handler="on_submit_clicked"/>
-          </object>
-        </child>
-      </object>
-    </child>
-  </template>
-</interface>
-```
-
-```python
-# Using GtkBuilder
-from gi.repository import Gtk
-
-builder = Gtk.Builder.new_from_file('ui/window.ui')
-window = builder.get_object('MyWindow')
-entry = builder.get_object('entry')
-submit_btn = builder.get_object('submit_btn')
-submit_btn.connect('clicked', on_submit_clicked)
-```
-
-### Step 3: CSS Styling
-```css
-/* style.css */
-window {
-    background-color: #f5f5f5;
-}
-
-button {
-    background-color: #3584e4;
-    color: white;
-    border-radius: 8px;
-    padding: 8px 16px;
-    font-weight: bold;
-}
-
-button:hover {
-    background-color: #4a90e4;
-}
-
-entry {
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    padding: 8px;
-}
-```
-
-```python
-css_provider = Gtk.CssProvider()
-css_provider.load_from_path('style.css')
-Gtk.StyleContext.add_provider_for_display(
-    Gdk.Display.get_default(),
-    css_provider,
-    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-)
-```
-
-### Step 4: gtk-rs (Rust)
 ```rust
-// Cargo.toml
-// [dependencies]
-// gtk4 = "0.8"
-// adw = { version = "0.6", features = ["v1_5"] }
-
-use gtk4::prelude::*;
-use gtk4::{Application, ApplicationWindow, Button, Label, Box};
+// Rust with gtk4-rs
+use gtk::prelude::*;
+use gtk::{Application, ApplicationWindow, Button, Box, Orientation};
 
 fn main() {
     let app = Application::builder()
-        .application_id("com.example.myapp")
+        .application_id("com.example.app")
         .build();
 
     app.connect_activate(|app| {
         let window = ApplicationWindow::builder()
             .application(app)
-            .title("My App")
-            .default_width(800)
-            .default_height(600)
+            .title("My GTK App")
+            .default_width(600)
+            .default_height(400)
             .build();
 
-        let vbox = Box::new(gtk4::Orientation::Vertical, 16);
-        let label = Label::new(Some("Hello, GTK!"));
-        let button = Button::with_label("Click me");
-
-        vbox.append(&label);
+        let vbox = Box::new(Orientation::Vertical, 8);
+        let button = Button::with_label("Click Me");
+        button.connect_clicked(|_| {
+            println!("Clicked!");
+        });
         vbox.append(&button);
+
         window.set_child(Some(&vbox));
         window.present();
     });
@@ -213,21 +122,273 @@ fn main() {
 }
 ```
 
-## Rules
-- GtkApplication used instead of direct GtkWindow creation for proper lifecycle.
-- Signals connected after widget creation, never before.
-- Thread safety — never call GTK functions from non-main thread.
-- CSS used for visual styling, not widget API calls.
-- Resources bundled via GResource for deployment.
-- `gi.require_version` called before any other import.
-- GTK 4 preferred — GTK 3 for legacy projects only.
+```python
+# Python with PyGObject
+import gi
+gi.require_version('Gtk', '4.0')
+from gi.repository import Gtk, GLib, Gio
+
+class MyApp(Gtk.Application):
+    def __init__(self):
+        super().__init__(application_id='com.example.app')
+    def do_activate(self):
+        window = Gtk.ApplicationWindow(application=self)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        button = Gtk.Button(label='Click Me')
+        button.connect('clicked', lambda b: print('Clicked!'))
+        box.append(button)
+        window.set_child(box)
+        window.present()
+
+app = MyApp()
+app.run(None)
+```
+
+### Step 2: Build UI with GtkBuilder XML
+
+```xml
+<!-- interface.ui -->
+<interface>
+  <template class="MyAppWindow" parent="GtkApplicationWindow">
+    <property name="title">My GTK App</property>
+    <property name="default-width">600</property>
+    <property name="default-height">400</property>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">8</property>
+        <property name="margin-top">12</property>
+        <property name="margin-bottom">12</property>
+        <property name="margin-start">12</property>
+        <property name="margin-end">12</property>
+        <child>
+          <object class="GtkLabel" id="main_label">
+            <property name="label">Hello, World!</property>
+            <property name="xalign">0.0</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="action_button">
+            <property name="label">_Click Me</property>
+            <property name="use-underline">True</property>
+            <signal name="clicked" handler="on_button_clicked"/>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>
+```
+
+```rust
+// Load UI from builder
+let builder = gtk::Builder::from_resource("/com/example/app/ui/interface.ui");
+let window: ApplicationWindow = builder.object("my_app_window").expect("Window not found");
+window.set_application(Some(&app));
+window.present();
+```
+
+### Step 3: Modern Lists with GtkListView
+
+```rust
+// GTK4's GtkListView replaces GtkTreeView
+// 1. Create model
+let model = gio::ListStore::new::<MyItem>();
+
+// Add items
+model.append(&MyItem::new("Item 1", "Description 1"));
+model.append(&MyItem::new("Item 2", "Description 2"));
+
+// 2. Create factory for item widgets
+let factory = gtk::SignalListItemFactory::new();
+factory.connect_setup(|_, list_item| {
+    let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let label = gtk::Label::new(Some(""));
+    label.set_xalign(0.0);
+    label.set_hexpand(true);
+    hbox.append(&label);
+    list_item.set_child(Some(&hbox));
+});
+factory.connect_bind(|_, list_item| {
+    let item = list_item.item().unwrap().downcast::<MyItem>().unwrap();
+    let child = list_item.child().unwrap();
+    let label = child.first_child().unwrap().downcast::<gtk::Label>().unwrap();
+    label.set_text(&item.name());
+});
+
+// 3. Create view
+let list_view = gtk::ListView::new(Some(gtk::SingleSelection::new(Some(model))), Some(factory));
+```
+
+### Step 4: Event Controllers (GTK4)
+
+```rust
+// GTK4 uses event controllers instead of direct signal connections
+// Key controller
+let key_controller = gtk::EventControllerKey::new();
+key_controller.connect_key_pressed(|_, keyval, _code, _state| {
+    if keyval == gdk::Key::Escape {
+        // Handle escape
+        return glib::Propagation::Stop;
+    }
+    glib::Propagation::Proceed
+});
+window.add_controller(&key_controller);
+
+// Click controller (replaces button-press-event)
+let click_controller = gtk::GestureClick::new();
+click_controller.connect_pressed(|_, _n_press, x, y| {
+    println!("Clicked at {}, {}", x, y);
+});
+widget.add_controller(&click_controller);
+
+// Scroll controller
+let scroll_controller = gtk::EventControllerScroll::new();
+scroll_controller.set_flags(gtk::EventControllerScrollFlags::BOTH_AXES);
+scroll_controller.connect_scroll(|_, _dx, dy| {
+    println!("Scrolled {}", dy);
+    glib::Propagation::Stop
+});
+widget.add_controller(&scroll_controller);
+```
+
+### Step 5: CSS Styling in GTK4
+
+```css
+/* style.css */
+window {
+    background-color: @theme_bg_color;
+}
+
+.important-label {
+    font-weight: bold;
+    font-size: 18px;
+    color: @theme_fg_color;
+}
+
+.card-style {
+    background-color: @theme_base_color;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+button.suggested-action {
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+    border-radius: 6px;
+}
+
+button.suggested-action:hover {
+    background-color: shade(@accent_bg_color, 1.2);
+}
+```
+
+```rust
+// Load CSS
+let provider = gtk::CssProvider::new();
+provider.load_from_resource("/com/example/app/css/style.css");
+
+gtk::style_context_add_provider_for_display(
+    &gdk::Display::default().unwrap(),
+    &provider,
+    gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+);
+```
+
+### Step 6: GTK Actions and Menus
+
+```xml
+<!-- menus.ui -->
+<interface>
+  <menu id="app-menu">
+    <section>
+      <item>
+        <attribute name="label">_Preferences</attribute>
+        <attribute name="action">app.preferences</attribute>
+      </item>
+      <item>
+        <attribute name="label">_About</attribute>
+        <attribute name="action">app.about</attribute>
+      </item>
+    </section>
+  </menu>
+</interface>
+```
+
+```rust
+// Register actions
+let action = gio::SimpleAction::new("preferences", None);
+action.connect_activate(|_, _| {
+    // Show preferences
+});
+app.add_action(&action);
+
+let action = gio::SimpleAction::new("about", None);
+action.connect_activate(|_, _| {
+    // Show about dialog
+});
+app.add_action(&action);
+
+// Set accelerators
+app.set_accels_for_action("app.preferences", &["<Ctrl>comma"]);
+app.set_accels_for_action("app.quit", &["<Ctrl>q"]);
+```
+
+## Common Pitfalls
+
+| Pitfall | Description | Prevention |
+|---------|-------------|------------|
+| GTK3 patterns in GTK4 | Old signal connections, GtkTreeView | Use GTK4 APIs: event controllers, GtkListView |
+| Main loop blocking | Synchronous I/O freezes UI | Use GIO async, spawn async tasks |
+| CSS class name conflicts | Names too generic, leaking styles | Namespace: .myapp-main-box, .myapp-highlight-btn |
+| GtkTreeView complexity | Too much boilerplate for simple lists | Use GtkListView (GTK4) which is simpler |
+| Missing CSS provider | Widgets unstyled across themes | Use theme variables: @theme_bg_color, @accent_bg_color |
+| No keyboard navigation | App not usable without mouse | Mnemonics, focus chains, keyboard shortcuts |
+| Ignoring RTL | Layout broken in right-to-left locales | Use GtkAlign.START/END, not left/right |
+| Direct X11 usage | App broken on Wayland | Use GDK abstractions, test on both |
+| Memory leaks | Ref cycles with closures | Use weak references in signal callbacks |
+
+## Best Practices
+
+| Practice | Rationale |
+|----------|-----------|
+| GTK4 for new projects | Modern APIs, GPU rendering, better performance |
+| GtkBuilder XML for UI layout | Separates structure from logic, easier maintenance |
+| CSS for styling, not widget attributes | Theme support, easier customization |
+| GAction for user-initiated actions | Keyboard shortcuts, menu integration, disabled state |
+| Project structure: src/, data/, po/ | Standard Meson/GTK project layout |
+| GResource for embedded assets | Single binary, no file dependencies |
+| GtkListView over GtkTreeView | Simpler API, better performance, type-safe |
+| GIO async for I/O operations | Non-blocking, cancellable | 
+| Test with both light and dark themes | Adwaita default and HighContrast |
+| Use gettext from day one | Wrapping strings later is disruptive |
+
+## Architecture Patterns
+
+### Responsive Layout with GtkStack
+```rust
+let stack = gtk::Stack::new();
+let sidebar_page = create_sidebar_page();
+let detail_page = create_detail_page();
+stack.add_titled(&sidebar_page, Some("sidebar"), "Sidebar");
+stack.add_titled(&detail_page, Some("detail"), "Detail");
+
+// Use GtkStackSwitcher or GtkStackSidebar for navigation
+```
+
+### GtkScrolledWindow + Viewport
+```rust
+let scrolled = gtk::ScrolledWindow::new();
+scrolled.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
+scrolled.set_child(Some(&content_widget));
+// GTK4 handles viewport automatically for scrollable widgets
+```
 
 ## References
-  - references/gtk-advanced.md — Gtk Advanced Topics
-  - references/gtk-architecture.md — GTK Architecture Reference
-  - references/gtk-builder-guide.md — GTK Builder Guide Reference
-  - references/gtk-deployment.md — GTK Deployment Reference
-  - references/gtk-fundamentals.md — Gtk Fundamentals
-  - references/gtk-setup.md — GTK Setup Reference
+  - references/gtk-advanced.md — GTK Advanced Topics
+  - references/gtk-css-styling.md — GTK CSS Styling Reference
+  - references/gtk-fundamentals.md — GTK Fundamentals
+  - references/gtk-migration.md — GTK3 to GTK4 Migration Reference
 ## Handoff
-Hand off to `desktop/gnome/SKILL.md` when building GNOME-specific apps with libadwaita or Shell extensions. Hand off to `desktop/qt/SKILL.md` when Qt ecosystem preferred.
+Hand off to `desktop-gnome` for GNOME platform specifics (libadwaita, GSettings). Hand off to `design-accessibility` for AT-SPI compliance testing.

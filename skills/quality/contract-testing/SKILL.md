@@ -197,6 +197,219 @@ Provider Service Development
 | 4: Measured | Multi-service contracts | All services covered, webhook alerts, trend reports |
 | 5: Optimized | Cross-team contract governance | Contract review board, automated compatibility gates, SLA dashboards |
 
+## Contract Testing Examples
+
+### TypeScript — Consumer Test with Pact
+```typescript
+// consumer/order-service/src/__tests__/payment-client.pact.test.ts
+import { PactV3, MatchersV3 } from "@pact-foundation/pact";
+import { PaymentClient } from "../payment-client";
+
+const provider = new PactV3({
+  consumer: "order-service",
+  provider: "payment-service",
+});
+
+describe("Payment Service Pact", () => {
+  it("returns payment status for existing payment", async () => {
+    provider
+      .given("a payment exists")
+      .uponReceiving("a request for payment status")
+      .withRequest({
+        method: "GET",
+        path: "/payments/123",
+        headers: { Accept: "application/json" },
+      })
+      .willRespondWith({
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+        body: {
+          id: MatchersV3.string("123"),
+          status: MatchersV3.term({
+            generate: "confirmed",
+            matcher: "^(confirmed|pending|failed)$",
+          }),
+          amount: MatchersV3.decimal(49.99),
+        },
+      });
+
+    await provider.executeTest(async (mockServer) => {
+      const client = new PaymentClient(mockServer.url);
+      const response = await client.getPaymentStatus("123");
+      expect(response.status).toBe("confirmed");
+      expect(response.amount).toBe(49.99);
+    });
+  });
+
+  it("returns 404 for non-existent payment", async () => {
+    provider
+      .given("a payment does not exist")
+      .uponReceiving("a request for non-existent payment")
+      .withRequest({
+        method: "GET",
+        path: "/payments/999",
+        headers: { Accept: "application/json" },
+      })
+      .willRespondWith({
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+        body: { error: "Payment not found" },
+      });
+
+    await provider.executeTest(async (mockServer) => {
+      const client = new PaymentClient(mockServer.url);
+      await expect(client.getPaymentStatus("999")).rejects.toThrow("Payment not found");
+    });
+  });
+});
+```
+
+### Python — Consumer Test with Pact
+```python
+# tests/contract/test_payment_client.py
+import atexit
+import pytest
+from pact import Consumer, Provider
+
+pact = Consumer("order-service").has_pact_with(
+    Provider("payment-service"),
+    pact_dir="./pacts",
+    host_name="localhost",
+    port=1234,
+)
+pact.start_service()
+atexit.register(pact.stop_service)
+
+class TestPaymentClient:
+    def test_get_payment_status(self):
+        expected = {
+            "id": "123",
+            "status": "confirmed",
+            "amount": 49.99,
+        }
+        (pact
+         .given("a payment exists")
+         .upon_receiving("a request for payment status")
+         .with_request(method="GET", path="/payments/123")
+         .will_respond_with(200, body=expected))
+
+        with pact:
+            client = PaymentClient(f"http://localhost:{pact.port}")
+            result = client.get_payment_status("123")
+            assert result == expected
+
+    def test_payment_not_found(self):
+        (pact
+         .given("a payment does not exist")
+         .upon_receiving("a request for non-existent payment")
+         .with_request(method="GET", path="/payments/999")
+         .will_respond_with(404, body={"error": "not found"}))
+
+        with pact:
+            client = PaymentClient(f"http://localhost:{pact.port}")
+            with pytest.raises(PaymentNotFound):
+                client.get_payment_status("999")
+```
+
+### CI Pipeline Integration
+
+```yaml
+# Consumer CI — order-service
+name: Order Service Contract Tests
+on: pull_request
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - name: Consumer contract tests
+        run: npx jest --testPathPattern="\.pact\.test\.ts$"
+      - name: Pact Publish
+        run: |
+          npx pact-broker publish ./pacts \
+            --consumer-app-version ${{ github.sha }} \
+            --tag ${{ github.head_ref || 'main' }} \
+            --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
+            --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
+
+# Provider CI — payment-service
+name: Payment Service Contract Verification
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - name: Start provider
+        run: npm start & npx wait-on http://localhost:3001
+      - name: Verify contracts
+        run: |
+          npx pact-broker can-i-deploy \
+            --pacticipant payment-service \
+            --version ${{ github.sha }} \
+            --to-environment production \
+            --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
+            --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
+      - name: Run provider verification
+        run: npx jest --testPathPattern="verification"
+        env:
+          PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
+          PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
+      - name: Publish verification results
+        if: always()
+        run: |
+          npx pact-broker publish-provider-contracts \
+            --provider payment-service \
+            --provider-app-version ${{ github.sha }} \
+            --branch ${{ github.head_ref || 'main' }} \
+            --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
+            --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
+```
+
+## Contract Testing Anti-Patterns
+
+### Anti-Pattern: No Pact Broker
+Sharing contract files via email, shared drives, or Git submodules instead of using a Pact Broker. Without a broker, there's no central source of truth, no verification matrix, and no can-i-deploy capability. Deploy the Pact Broker (OSS Docker Compose) or use PactFlow SaaS.
+
+### Anti-Pattern: Testing Everything with Contracts
+Writing Pact tests for every single API endpoint creates maintenance overhead without proportional benefit. Use contracts for inter-service boundaries where changes in one service could break another. Monolith internal modules and third-party APIs with stable contracts don't need Pact.
+
+### Anti-Pattern: No Provider State Setup
+Provider verification without setting up the correct state produces false positives or false negatives. If a consumer expects "a payment exists," the provider must seed that data before verification. Define provider states with API calls or database seeding.
+
+### Anti-Pattern: Ignoring can-i-deploy
+Deploying a provider without running `can-i-deploy` against the Pact Broker means you're deploying blind. The provider might have broken one or more consumer contracts. `can-i-deploy` must gate all provider deployments.
+
+### Anti-Pattern: Contract Changes Without Consumer Coordination
+Modifying a provider endpoint (changing response shape, removing fields) without coordinating with consumers. The consumer contracts define what consumers expect. Breaking changes must be communicated, coordinated, and deployed in a compatible order.
+
+### Anti-Pattern: No Webhook Notifications
+When a provider verification fails, the affected consumer team must be notified immediately. Without webhooks, failures are discovered when the consumer tries to deploy and can-i-deploy fails. Configure Pact Broker webhooks to notify on verification failures.
+
+## Contract Testing Maturity Model
+
+| Level | Characteristics | Practices |
+|---|---|---|
+| 1: Initial | No contract testing | Brittle integration tests, manual API coordination, frequent breaking changes in production |
+| 2: Defined | Basic consumer contracts | Single consumer-provider pair, Pact tests for critical endpoints, no broker, manual verification |
+| 3: Managed | Broker with CI gates | Pact Broker deployed, consumer contracts published in CI, provider verification in CI, can-i-deploy gating deployments |
+| 4: Measured | Multi-service contract coverage | All inter-service boundaries covered, webhook alerts on failures, version compatibility matrix tracked, canary release supported |
+| 5: Optimized | Contract-driven architecture | Contracts defined before implementation (contract-first), automated compatibility gates across environments, cross-team contract review board, SLA dashboards |
+
+## Performance Considerations
+
+- Contract test execution: consumer tests complete in < 1s per interaction (mock provider). Provider verification takes 1-5s per contract.
+- Pact Broker operations: publish (< 500ms), verify CAN-I-DEPLOY (< 200ms), fetch contracts (< 200ms).
+- Pact Broker storage: contracts are JSON files 2-50KB each. 1000 contracts = 50MB.
+- CI pipeline impact: consumer contract tests add < 2 minutes. Provider verification adds < 5 minutes.
+- Pact Broker deployment: Docker Compose with PostgreSQL backend. Minimum 1GB RAM, 2 CPU cores.
+
 ## Rules
 - Every consumer-provider pair has its own Pact contract file
 - Contracts are published on every consumer CI run
@@ -208,6 +421,10 @@ Provider Service Development
 - Pact contract = executable documentation
 - Providers verify contracts before deploying to staging
 - Consumer contracts define what the provider must support
+- Provider states must be documented and implemented before verification
+- Contracts must include both happy path and error response scenarios
+- can-i-deploy checks must run before any production deployment
+- Contract changes follow API versioning policy — no breaking changes without migration
 
 ## References
   - references/contract-testing-advanced.md — Contract Testing Advanced Topics

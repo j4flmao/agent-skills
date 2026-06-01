@@ -4,7 +4,7 @@ description: >
   Use this skill when forecasting time series data, modeling trend/seasonality, applying ARIMA/SARIMA/Prophet/LSTM/TFT, or performing temporal cross-validation.
   This skill enforces: decomposition analysis (trend/seasonality/residual), stationarity testing, model selection by data characteristics, temporal cross-validation, forecast evaluation with MASE/sMAPE.
   Do NOT use for: generic regression on non-temporal data, anomaly detection in time series (use ml-anomaly-detection), causal inference with time series, or real-time streaming (use data-streaming skill).
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -20,10 +20,72 @@ tags: [ml, time-series, forecasting, phase-11]
 ## Purpose
 Design time series forecasting architectures with appropriate model selection, feature design, temporal cross-validation, and evaluation protocols.
 
+## Architecture/Decision Trees
+
+### Model Selection Decision Tree
+```
+Series characteristics
+  ├── No strong seasonality, <1000 obs
+  │   └── ARIMA (identified from ACF/PACF)
+  ├── Clear seasonality, >= 2 full cycles
+  │   ├── Single seasonality → SARIMA
+  │   └── Multiple seasonalities → Prophet or TBATS
+  ├── Rich exogenous features, multiple series
+  │   ├── Tabular features → LightGBM/XGBoost with lags and windows
+  │   ├── Interpretability needed → TFT (Temporal Fusion Transformer)
+  │   └── Static metadata per series → Gradient boosting with entity encoding
+  ├── Long sequences (>10K steps), complex non-linear
+  │   ├── LSTM/GRU (needs >10K steps, careful feature engineering)
+  │   ├── PatchTST (transformer for time series, SOTA)
+  │   └── TFT (attention + interpretable)
+  └── Baseline (always compute first)
+      ├── Naive: y_{t+1} = y_t (random walk)
+      ├── Seasonal naive: y_{t+1} = y_{t+1-season}
+      └── Mean: y_{t+1} = mean of historical values
+```
+
+### Forecast Horizon Decision Tree
+```
+How far ahead do you need to forecast?
+  ├── Short-term (1-3 steps)
+  │   ├── ARIMA/SARIMA (simple, interpretable, good short-term)
+  │   └── LSTM (if complex patterns, sufficient data)
+  ├── Medium-term (4-24 steps)
+  │   ├── Prophet (handles holidays, changepoints, missing data)
+  │   ├── LightGBM with features (best with rich exogenous data)
+  │   └── TFT (when interpretability needed)
+  └── Long-term (>24 steps)
+      ├── Direct multi-step (train separate model per horizon)
+      ├── Recursive (iteratively feed predictions as inputs)
+      ├── Seq2Seq LSTM (encoder-decoder for multi-step)
+      └── TFT (native multi-horizon with quantiles)
+```
+
+### Temporal CV Strategy
+```
+Series length
+  ├── <500 observations → Expanding window (maximize training data)
+  │   Train size increases, test size fixed. 5-8 folds.
+  ├── 500-5000 observations → Expanding or sliding
+  │   Sliding window when old data is irrelevant. Gap=0 to 7.
+  └── >5000 observations → Sliding window (fixed train size)
+      Window size = 2-3x seasonal period. 5-10 folds.
+```
+
+### Frequency-Specific Guidance
+```
+Data frequency → key considerations
+  ├── Hourly → 24-hour + 168-hour (weekly) seasonality, Fourier terms
+  ├── Daily → 7-day + 365-day seasonality, holiday effects
+  ├── Weekly → 52-week seasonality, look at monthly patterns
+  ├── Monthly → 12-month seasonality, quarterly effects
+  └── Quarterly → 4-quarter seasonality, annual cycle
+```
+
 ## Agent Protocol
 
 ### Trigger
-User request includes: time series, forecasting, Prophet, ARIMA, SARIMA, LSTM, TFT, Temporal Fusion Transformer, seasonality, trend, stationarity, differencing, autocorrelation, ACF, PACF, forecast horizon, backtesting, walk-forward validation.
+User request includes: time series, forecasting, Prophet, ARIMA, SARIMA, LSTM, TFT, Temporal Fusion Transformer, seasonality, trend, stationarity, differencing, autocorrelation, forecast horizon, backtesting.
 
 ### Input Context
 Before activating, verify:
@@ -41,135 +103,306 @@ Time series forecasting architecture with model selection, feature design, evalu
 ```
 ## Forecasting Framework
 ### Series Characteristics
-Frequency: {hourly/daily/weekly/monthly/quarterly}
-Length: {N} | Seasonality: {daily/weekly/yearly}
+Frequency: {hourly/daily/weekly/monthly} | Seasonality: {daily/weekly/yearly}
 Trend: {linear/nonlinear/none} | Stationary: {true/false}
 
 ### Model Selection
 Primary: {ARIMA/SARIMA/Prophet/LSTM/TFT/Ensemble}
-Parameters: {p,d,q,P,D,Q,s} or {config}
 Baseline: {naive/seasonal_naive/mean}
 
 ### Feature Engineering
 Lags: [{1, 7, 14, 28}] | Window: [{7, 30}]
 Calendar: {day_of_week/month/quarter/holiday}
-Exogenous: [{regressor1, regressor2}]
 
 ### Evaluation
-CV: {expanding/sliding} | Gap: {N}
-Metrics: {MASE / sMAPE / RMSE / Pinball Loss}
-
-### Forecast
-Horizon: {N steps} | Interval: {80% / 95%}
-Output: {point / quantile / distributional}
+CV: {expanding/sliding} | Metrics: {MASE / sMAPE / RMSE}
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble. No postamble. No explanations. No filler. Compress output.
 
 ### Completion Criteria
-- [ ] Time series characteristics documented: frequency, length, seasonality, trend.
+- [ ] Time series characteristics documented.
 - [ ] Stationarity test performed (ADF + KPSS) and differencing applied if needed.
 - [ ] Model selected based on data characteristics and forecast horizon.
 - [ ] Features engineered including lags, windows, and calendar features.
-- [ ] Temporal cross-validation configured respecting time order with gap.
-- [ ] Baseline model established for comparison (naive, seasonal naive).
+- [ ] Temporal cross-validation configured with gap.
+- [ ] Baseline model established for comparison.
 - [ ] Forecast generated with prediction intervals.
 - [ ] Residuals validated (white noise, no autocorrelation).
-
-### Max Response Length
-200 lines of configuration and code.
 
 ## Workflow
 
 ### Step 1: Exploratory Analysis
-Plot the series: identify level, trend, seasonal pattern, cyclical behavior, and residuals. Use STL decomposition (robust = True for outlier-resistant) to separate components. Check for missing values — handle via interpolation (linear for short gaps) or forward fill. Detect outliers and decide whether to treat (cap, winsorize) or leave for model to handle. Analyze autocorrelation (ACF): identify MA terms (cutoff point) and seasonality (spikes at seasonal lags). Analyze partial autocorrelation (PACF): identify AR terms (cutoff point). Test stationarity with Augmented Dickey-Fuller test: H0 = non-stationary. If p > 0.05, series is non-stationary → apply differencing. Complement with KPSS test: H0 = stationary. Both tests together confirm: one stationary, both non-stationary, trend-stationary, or difference stationary.
+Plot the series: identify level, trend, seasonal pattern. STL decomposition (robust=True). Check missing values (interpolate or forward fill). Analyze ACF (MA terms, seasonality) and PACF (AR terms). Stationarity: ADF test (H0=non-stationary) + KPSS test (H0=stationary).
 
-### Step 2: Model Selection
-ARIMA: for univariate series without strong seasonality, 100-1000 observations. Parameters identified from ACF/PACF patterns. SARIMA: for series with clear seasonal pattern, minimum 2 full seasonal cycles needed. Prophet: for series with multiple seasonalities (daily + weekly + yearly), holiday effects, trend changepoints, missing data. Robust to outliers and missing dates. No stationarity requirement. LSTM: for long sequences (>10000 steps) with complex non-linear patterns. Requires sufficient data. Feature engineering critical. TFT: for interpretable deep learning with attention, variable selection, quantile outputs. Best for multi-series forecasting with exogenous features. Gradient boosting (LightGBM/XGBoost): best for tabular time series with rich features, static metadata, and multiple series. Create features from lags, windows, calendar. Ensembles: average of classical + ML models often beats any single model. Use simple average or stack with meta-learner.
+```python
+import pandas as pd
+import numpy as np
+from statsmodels.tsa.stattools import adfuller, kpss
+from statsmodels.tsa.seasonal import STL
+
+def analyze_time_series(y):
+    """Comprehensive time series analysis."""
+    results = {}
+
+    # Stationarity tests
+    adf_stat, adf_pval, *_ = adfuller(y.dropna())
+    kpss_stat, kpss_pval, *_ = kpss(y.dropna())
+
+    results["adf_pvalue"] = adf_pval
+    results["kpss_pvalue"] = kpss_pval
+    results["is_stationary"] = adf_pval < 0.05 and kpss_pval > 0.05
+
+    if adf_pval < 0.05 and kpss_pval < 0.05:
+        results["interpretation"] = "Difference stationary (needs differencing)"
+    elif adf_pval > 0.05 and kpss_pval > 0.05:
+        results["interpretation"] = "Not enough data to conclude"
+    elif adf_pval > 0.05 and kpss_pval < 0.05:
+        results["interpretation"] = "Non-stationary (needs differencing)"
+    else:
+        results["interpretation"] = "Stationary"
+
+    # STL Decomposition
+    stl = STL(y.dropna(), robust=True)
+    result = stl.fit()
+    results["trend"] = result.trend
+    results["seasonal"] = result.seasonal
+    results["residual"] = result.resid
+
+    return results
+
+def detect_seasonality(y, freq):
+    """Detect strong seasonal periods using ACF."""
+    from statsmodels.graphics.tsaplots import plot_acf
+    from statsmodels.tsa.stattools import acf
+    acf_values = acf(y.dropna(), nlags=min(2*freq, len(y)//2))
+    seasonal_lags = [freq, 2*freq, 3*freq]
+    peak = max(abs(acf_values[l]) for l in seasonal_lags if l < len(acf_values))
+    return peak > 0.3  # strong seasonality if ACF at seasonal lag > 0.3
+```
+
+### Step 2: Model Selection and Implementation
+ARIMA: univariate, no strong seasonality, 100-1000 obs. SARIMA: clear seasonal pattern, ≥2 cycles. Prophet: multiple seasonalities, holidays, missing data, outliers. LSTM: long sequences (>10K), complex patterns. TFT: interpretable deep learning with attention. Gradient boosting (LightGBM): tabular time series with rich features.
+
+```python
+# ARIMA auto-selection
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+import pmdarima as pm
+
+def auto_arima(y, seasonal=True, m=12):
+    """Auto-select ARIMA/SARIMA parameters."""
+    model = pm.auto_arima(
+        y, seasonal=seasonal, m=m,
+        start_p=0, max_p=5,
+        start_q=0, max_q=5,
+        start_P=0, max_P=2,
+        start_Q=0, max_Q=2,
+        information_criterion="aic",
+        stepwise=True,
+        trace=False,
+        error_action="ignore",
+        suppress_warnings=True,
+        random_state=42,
+    )
+    return model
+
+# Prophet
+from prophet import Prophet
+
+def prophet_forecast(df, periods=30, changepoint_prior_scale=0.05):
+    model = Prophet(
+        yearly_seasonality=True,
+        weekly_seasonality=True,
+        daily_seasonality=False,
+        changepoint_prior_scale=changepoint_prior_scale,
+        seasonality_prior_scale=10.0,
+    )
+    model.add_country_holidays(country_name="US")
+    model.fit(df)
+    future = model.make_future_dataframe(periods=periods)
+    forecast = model.predict(future)
+    return forecast, model
+
+# LightGBM with features
+import lightgbm as lgb
+
+def train_ts_gbdt(train_df, val_df, feature_cols, target_col):
+    train_data = lgb.Dataset(train_df[feature_cols], label=train_df[target_col])
+    val_data = lgb.Dataset(val_df[feature_cols], label=val_df[target_col], reference=train_data)
+
+    params = {
+        "objective": "regression",
+        "metric": "mae",
+        "boosting_type": "gbdt",
+        "num_leaves": 31,
+        "learning_rate": 0.05,
+        "feature_fraction": 0.8,
+    }
+
+    model = lgb.train(
+        params, train_data,
+        valid_sets=[val_data],
+        num_boost_round=500,
+        callbacks=[lgb.early_stopping(50)],
+    )
+    return model
+```
 
 ### Step 3: Feature Engineering
-Lags: y_{t-1}, y_{t-2}, ..., y_{t-season} for autoregressive behavior. Include critical seasonal lags (t-7 for daily data, t-12 for monthly). Rolling statistics: mean, std, min, max, slope, and quantiles over windows of various sizes (7, 14, 30, 90). Calendar features: day of week (0-6), month (1-12), quarter (1-4), day of year, week of year, weekend flag, hour of day. Holiday indicators: binary flags for known holidays plus N days before/after for pre/post effects. Fourier terms: sin/cos pairs at seasonal periods for capturing smooth seasonality. Order 1-3 for weekly, 3-10 for yearly. Exogenous regressors: promotions, pricing, weather, economic indicators, web traffic. Target encoding: mean encoding of target by category for categorical features. Time since event: days since last promotion, last holiday, last changepoint. Difference features: y_t - y_{t-1} (momentum), y_t - y_{t-season} (year-over-year change).
+Lags: y_{t-1}, y_{t-2}, y_{t-season} for autoregressive behavior. Rolling statistics: mean, std, min, max, slope over windows. Calendar: dayofweek, month, quarter, holiday, hour. Fourier terms: sin/cos at seasonal periods. Exogenous regressors: promotions, pricing, weather.
+
+```python
+def create_ts_features(df, date_col, target_col, freq="D"):
+    """Create comprehensive time series features."""
+    features = df.copy()
+    dates = pd.to_datetime(df[date_col])
+
+    # Calendar features
+    features["dayofweek"] = dates.dt.dayofweek
+    features["month"] = dates.dt.month
+    features["quarter"] = dates.dt.quarter
+    features["dayofyear"] = dates.dt.dayofyear
+    features["weekofyear"] = dates.dt.isocalendar().week.astype(int)
+    features["is_weekend"] = (dates.dt.dayofweek >= 5).astype(int)
+
+    # Cyclical encoding
+    features["month_sin"] = np.sin(2 * np.pi * features["month"] / 12)
+    features["month_cos"] = np.cos(2 * np.pi * features["month"] / 12)
+
+    # Lag features
+    seasonal_lag = 7 if freq == "D" else 12 if freq == "M" else 4
+    for lag in [1, 2, seasonal_lag, 2*seasonal_lag]:
+        features[f"lag_{lag}"] = features[target_col].shift(lag)
+
+    # Rolling statistics
+    for window in [7, 14, 30]:
+        if freq == "D":
+            features[f"rolling_mean_{window}"] = features[target_col].rolling(window).mean()
+            features[f"rolling_std_{window}"] = features[target_col].rolling(window).std()
+
+    # Difference features
+    features["diff_1"] = features[target_col].diff(1)
+    features[f"diff_{seasonal_lag}"] = features[target_col].diff(seasonal_lag)
+
+    # Fourier terms for seasonality
+    for order in range(1, 4):
+        features[f"fourier_sin_{order}_{seasonal_lag}"] = np.sin(
+            2 * np.pi * order * np.arange(len(features)) / seasonal_lag
+        )
+        features[f"fourier_cos_{order}_{seasonal_lag}"] = np.cos(
+            2 * np.pi * order * np.arange(len(features)) / seasonal_lag
+        )
+
+    return features.dropna()
+```
 
 ### Step 4: Temporal Cross-Validation
-Expanding window: train on all past data, test on next block. Increasing training size, constant test size. Best for short series. Sliding window: fixed training window size, slides forward. Best for long series where old data may be irrelevant. Gap: introduce gap between train and test to prevent autocorrelation leakage from recent observations. Minimum gap = 0 for daily, 7 for weekly data. Number of folds: 5-10 depending on series length. Minimum training size: at least 2x seasonal period. Purge: remove overlapping observations between train and test sets for clean evaluation.
+Expanding window: train on past, test on next block. Sliding window: fixed train size, slides forward. Gap between train and test to prevent autocorrelation leakage.
+
+```python
+from sklearn.model_selection import TimeSeriesSplit
+
+def temporal_cv(X, y, n_splits=5, gap=0, test_size=None):
+    """Custom temporal cross-validation."""
+    tscv = TimeSeriesSplit(n_splits=n_splits, gap=gap, test_size=test_size)
+    cv_scores = []
+
+    for train_idx, val_idx in tscv.split(X):
+        X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
+        y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+
+        model = lgb.train(params, lgb.Dataset(X_train, label=y_train))
+        y_pred = model.predict(X_val)
+        cv_scores.append(mean_absolute_error(y_val, y_pred))
+
+    return {
+        "scores": cv_scores,
+        "mean": np.mean(cv_scores),
+        "std": np.std(cv_scores),
+    }
+```
 
 ### Step 5: Evaluation Metrics
-MASE (Mean Absolute Scaled Error): scale-independent, compares to naive forecast (random walk). MASE < 1 means model beats naive. Best for comparing across different time series. sMAPE (symmetric MAPE): relative error, bounded [0%, 200%]. Easier to interpret than MAPE. Undefined when actual = 0 but handles by adding epsilon. RMSE: same-scale metric, sensitive to large errors. Good for financial applications where large errors have quadratic cost. Pinball loss: asymmetric loss for quantile forecasts. Higher penalty on one side depending on quantile. CRPS (Continuous Ranked Probability Score): evaluates full predictive distribution. Proper scoring rule — cannot be cheated. Compare against naive, seasonal naive, and historical mean baselines. If model doesn't beat naive, it is not useful.
+MASE: scale-independent, compares to naive forecast. MASE < 1 means model beats naive. sMAPE: symmetric relative error. RMSE: sensitive to large errors. CRPS: full distribution evaluation.
+
+```python
+def mase(y_true, y_pred, y_train, seasonality=1):
+    """Mean Absolute Scaled Error."""
+    naive_error = np.mean(np.abs(np.diff(y_train, n=seasonality)))
+    if naive_error == 0:
+        return np.nan
+    return np.mean(np.abs(y_true - y_pred)) / naive_error
+
+def smape(y_true, y_pred):
+    """Symmetric Mean Absolute Percentage Error."""
+    denominator = np.abs(y_true) + np.abs(y_pred)
+    return 200 * np.mean(np.abs(y_true - y_pred) / (denominator + 1e-10))
+```
 
 ### Step 6: Prediction Intervals
-ARIMA/SARIMA: built-in normal-based confidence intervals. Assumes normally distributed residuals — check residual normality. Prophet: uncertainty from trend (future changepoints) and seasonality (seasonal uncertainty via MCMC sampling). Wider intervals for longer horizons. LSTM: quantile regression with pinball loss for each percentile. Train separate model per quantile or use simultaneous quantile output. TFT: built-in quantile output — no extra work. Conformal prediction: distribution-free prediction intervals with finite-sample coverage guarantee. Works with any model, any forecast. Ensembles: variance across ensemble members as uncertainty proxy. Bayesian methods: Monte Carlo dropout for NNs, Gaussian processes for non-parametric uncertainty.
+ARIMA/SARIMA: built-in normal-based CI. Prophet: uncertainty from MCMC. LSTM: quantile regression with pinball loss. TFT: built-in quantile output. Conformal prediction: distribution-free intervals.
 
-### Integration with Forecasting Pipeline
-Integrate forecasting with feature store for real-time feature computation.
-Schedule model retraining on cadence matching data frequency (daily for daily data, weekly for weekly data).
-Monitor forecast accuracy drift over time — if MASE increases >20%, trigger retraining.
-Store forecast results with prediction intervals for downstream consumption.
-Implement backtesting pipeline that replays historical predictions against actuals.
-Combine point forecasts with uncertainty for decision-support systems.
-Automate model selection: run auto-ARIMA + Prophet + LightGBM, pick best based on validation MASE.
+```python
+def conformal_prediction(model, X_train, y_train, X_test, alpha=0.1):
+    """Conformal prediction for distribution-free intervals."""
+    y_train_pred = model.predict(X_train)
+    residuals = np.abs(y_train - y_train_pred)
+    n = len(residuals)
+    q = np.quantile(residuals, (n + 1) * (1 - alpha) / n)
 
-### Step 7: Residual Diagnostics
-Check residuals: they should be white noise (no autocorrelation, zero mean, constant variance). Ljung-Box test: H0 = residuals are independently distributed. p > 0.05 = good (no remaining autocorrelation). ACF of residuals: no significant spikes at any lag (especially seasonal lags). If spikes remain → model is missing structure. Residual distribution: should be approximately normal (check Q-Q plot, histogram). Non-normal residuals mean prediction intervals may be inaccurate. Residual vs fitted plot: no pattern (funnel, curve) indicates good fit. If pattern exists → model is misspecified. Deseasonalize residuals: check if seasonal pattern remains — indicates missing seasonal terms.
+    y_test_pred = model.predict(X_test)
+    lower = y_test_pred - q
+    upper = y_test_pred + q
+    return y_test_pred, lower, upper
+```
 
-### Common Pitfalls
-Using standard k-fold CV on time series — always use temporal CV with expanding or sliding window.
-Failing to test stationarity before fitting ARIMA — non-stationary data invalidates ARIMA assumptions.
-Over-differencing — applying too many differences removes signal, adds noise.
-Including future information in lag features — data leakage inflates performance metrics.
-Setting minimum training size too small — need at least 2x the seasonal period.
-Ignoring multiple seasonalities — daily data has both weekly and yearly patterns.
-Using RMSE alone without scale-independent metrics like MASE — can't compare across series.
-Not evaluating on multiple forecast horizons — model good at 1-step but poor at 12-step.
+## Anti-Patterns
+
+- **Standard k-fold CV on time series**: Always use temporal CV.
+- **Failing to test stationarity**: Non-stationary data invalidates ARIMA assumptions.
+- **Over-differencing**: Too many differences removes signal, adds noise.
+- **Future information in features**: Data leakage inflates performance.
+- **Minimum training size too small**: Need at least 2x seasonal period.
+- **Ignoring multiple seasonalities**: Daily data has weekly AND yearly patterns.
+- **RMSE alone**: Need MASE for scale-independent comparison.
+- **One-step evaluation only**: Good at 1-step but poor at 12-step.
+
+## Production Considerations
+
+### Monitoring
+- Track MASE/sMAPE over time, alert if >20% increase.
+- Monitor residual autocorrelation (Ljung-Box test).
+- Track prediction interval coverage.
+- Detect concept drift in residual distribution.
+- Monitor forecast bias (systematic over/under-prediction).
+
+### Deployment
+- Set minimum training size: ≥2x full seasonal cycle.
+- Validate against naive/seasonal naive baselines.
+- Store model parameters and training end date.
+- Implement backtesting pipeline.
+- Version training data by date range.
+- Pin random seed for reproducibility.
 
 ## Rules
-- Never use standard k-fold CV on time series — always use temporal CV.
-- Always test stationarity (ADF + KPSS) before fitting ARIMA/SARIMA.
-- ACF tailing off + PACF cutting off at lag p AR(p). ACF cutting off at lag q + PACF tailing MA(q).
-- MASE is the preferred metric for comparing across different time series.
+- Never use standard k-fold CV on time series.
+- Always test stationarity (ADF + KPSS) before ARIMA/SARIMA.
+- ACF tailing + PACF cutoff → AR(p). ACF cutoff + PACF tailing → MA(q).
+- MASE preferred for comparing across series.
 - Prophet handles missing dates and outliers better than SARIMA.
-- Feature engineering matters more than model choice for time series — invest in features first.
-- Never include future information in training features (data leakage).
-- Set minimum training size >= 2x seasonal period for reliable estimation.
-- Backtest against a naive baseline — if you can't beat naive, the model is useless.
-- Evaluate on multiple forecast horizons, not just the first step ahead.
-- Always plot residuals after fitting — statistical tests can miss patterns the eye sees.
-- Feature lag order should match seasonality: lags 1, 7, 14 for daily data; 1, 12 for monthly.
-- For hierarchical time series, use reconciliation methods (bottom-up, top-down, optimal).
-
-### Production Monitoring
-Track forecast error (MASE, sMAPE) over time — alert if error increases beyond acceptable threshold.
-Monitor residual autocorrelation — if Ljung-Box test becomes significant, model is missing structure.
-Track prediction interval coverage — if actuals fall outside intervals more than expected, recalibrate.
-Detect concept drift in time series — distribution of residuals should remain stable over time.
-Monitor forecast bias — systematic over- or under-prediction indicates model degradation.
-Set up retraining triggers: error threshold breach, residual autocorrelation, seasonal pattern changes.
-Log forecast metadata: model parameters, feature values, prediction intervals, actuals when available.
-
-### Troubleshooting Guide
-Model consistently underpredicting → check for trend changes, add changepoint detection, retrain with recent data.
-Residuals show autocorrelation at seasonal lags → add missing seasonal component, increase Fourier order.
-Prophet forecast too flat → increase changepoint_prior_scale, check for missing changepoints.
-LSTM training loss not decreasing → reduce learning rate, check sequence length, normalize features.
-Forecast errors increase at longer horizons → expected but if excessive, model may be overfitted to short horizon.
-SARIMA fitting taking too long → reduce p,d,q,P,D,Q ranges, use stepwise auto-ARIMA, speed up with approximation.
-Multiple seasonalities not captured → use Prophet or add Fourier features for each seasonal period.
-Missing dates causing model errors → Prophet handles missing dates natively; for SARIMA interpolate first.
-
-### Deployment Checklist
-Set minimum training size: at least 2x full seasonal cycle for SARIMA, 10K steps for LSTM.
-Validate against naive and seasonal naive baselines before deployment.
-Store model parameters and training end date for traceability.
-Implement backtesting pipeline that replays historical performance before each deploy.
-Set prediction interval confidence level based on business risk tolerance.
-Document forecast horizon assumptions and expected accuracy degradation over time.
-Pin random seed for reproducibility of forecasting runs.
-Version the training data by date range to enable exact reproduction.
+- Feature engineering matters more than model choice.
+- Never include future information in features.
+- Minimum training size ≥2x seasonal period.
+- Backtest against naive baseline.
+- Evaluate on multiple forecast horizons.
+- Always plot residuals after fitting.
 
 ## References
   - references/classical-forecasting.md — Classical Forecasting
   - references/deep-learning-ts.md — Deep Learning for Time Series
   - references/feature-engineering.md — Time Series Feature Engineering
-  - references/forecast-deep-learning.md — Deep Learning for Time Series Forecasting
+  - references/forecast-deep-learning.md — Deep Learning Forecasting
   - references/forecasting-methods.md — Time Series Forecasting
   - references/time-series-advanced.md — Time Series Advanced Topics
   - references/time-series-feature-store.md — Time Series Feature Store

@@ -1,213 +1,571 @@
-# Mcp Patterns Fundamentals
+# MCP Pattern Fundamentals: Transport, Tools, Resources, Prompts
 
 ## Overview
-Mcp Patterns is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Model Context Protocol (MCP) is a JSON-RPC 2.0-based protocol for communication between LLM applications and external tools, resources, and prompt templates. This reference covers the fundamental building blocks of MCP server and client design.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Mcp Patterns helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### JSON-RPC 2.0 Message Format
+Every MCP message follows JSON-RPC 2.0 structure:
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Mcp Patterns solutions. These principles help maintain code quality and reduce technical debt.
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {}
+}
+```
 
-### Concept 3: Data Management
-Proper data management is essential for Mcp Patterns. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [...]
+  }
+}
+```
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+Error response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32603,
+    "message": "Internal error",
+    "data": {...}
+  }
+}
+```
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Protocol Lifecycle
 
-## Architecture Patterns
+**Server Lifecycle:**
+1. **Initialize**: Create server instance, register capabilities
+2. **Transport Start**: Open transport (stdio process, SSE listener, WebSocket)
+3. **Handle Requests**: Listen for and respond to client requests
+4. **Notifications**: Optionally send resource/tool change notifications
+5. **Shutdown**: Clean up resources, close transport
 
-### Pattern 1: Standard Architecture
-The standard architecture for Mcp Patterns follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+**Client Lifecycle:**
+1. **Connect**: Establish transport, send `initialize` with protocol version and capabilities
+2. **Discover**: Call `tools/list`, `resources/list`, `prompts/list` to discover server capabilities
+3. **Cache**: Store discovered capabilities locally with TTL
+4. **Invoke**: Call tools, read resources, get prompts as needed
+5. **Reconnect**: On disconnect, retry with exponential backoff
+6. **Shutdown**: Send graceful disconnect, clean up
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### Capabilities
+Servers advertise capabilities during initialization:
+- `tools`: Server exposes callable tools
+- `resources`: Server exposes readable resources
+- `prompts`: Server exposes prompt templates
+- `notifications`: Server supports change notifications
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+## Transport Layer
 
-## Implementation Guide
+### stdio Transport
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+**Architecture:**
+```
+Host App (Client) ←stdout── MCP Server (child process)
+                 ──stdin──→
+```
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+**Characteristics:**
+- Fastest transport (process-level IPC, no network overhead)
+- Most secure (no network exposure, OS-level isolation)
+- Single client per server process
+- Local machine only
+- No authentication needed
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+**Server (Python/FastMCP):**
+```python
+from mcp.server.fastmcp import FastMCP
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+server = FastMCP("my-server", transport="stdio")
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+@server.tool()
+def my_tool(query: str) -> str:
+    return process_query(query)
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+if __name__ == "__main__":
+    server.run()
+```
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+**Server (Python/Low-Level SDK):**
+```python
+from mcp.server import Server
+import mcp.server.stdio
+from mcp.types import Tool, TextContent
 
-## Best Practices
+server = Server("my-server")
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+@server.list_tools()
+async def handle_list_tools() -> list[Tool]:
+    return [Tool(
+        name="my_tool",
+        description="Process a query",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Query to process"}
+            },
+            "required": ["query"]
+        }
+    )]
 
-## Common Pitfalls
+@server.call_tool()
+async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
+    if name == "my_tool":
+        result = process_query(arguments["query"])
+        return [TextContent(type="text", text=result)]
+    raise ValueError(f"Unknown tool: {name}")
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+async def main():
+    async with mcp.server.stdio.stdio_server() as (read, write):
+        await server.run(read, write)
+```
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+**Server (TypeScript/Node.js):**
+```typescript
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  ListToolsRequestSchema,
+  CallToolRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+const server = new Server(
+  { name: "my-server", version: "1.0.0" },
+  { capabilities: { tools: {} } }
+);
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [{
+    name: "my_tool",
+    description: "Process a query",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Query to process" }
+      },
+      required: ["query"]
+    }
+  }]
+}));
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  if (request.params.name === "my_tool") {
+    const result = processQuery(request.params.arguments?.query);
+    return { content: [{ type: "text", text: result }] };
+  }
+  throw new Error(`Unknown tool: ${request.params.name}`);
+});
 
-## Tooling Ecosystem
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+**Client:**
+```python
+from mcp import Client, StdioServerParameters
+from mcp.client.stdio import stdio_client
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+params = StdioServerParameters(
+    command="python",
+    args=["server.py"],
+)
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+async with stdio_client(params) as (read, write):
+    client = Client()
+    session = await client.connect(read, write)
 
-## Integration Patterns
+    tools = await session.list_tools()
+    result = await session.call_tool("my_tool", {"query": "hello"})
+```
 
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
+### SSE Transport
 
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
+**Architecture:**
+```
+Client ──POST /message──→ MCP Server (HTTP)
+       ←───SSE /sse──────
+```
 
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
+**Characteristics:**
+- Remote access over HTTP
+- Multiple concurrent clients
+- Server-to-client push via SSE
+- Client-to-server via HTTP POST
+- Requires authentication in production
 
-## Performance Optimization
+**Server:**
+```python
+from mcp.server.fastmcp import FastMCP
+import uvicorn
 
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
+server = FastMCP("my-server", transport="sse", host="0.0.0.0", port=8000)
 
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
+@server.tool()
+def search(query: str) -> str:
+    return perform_search(query)
 
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+if __name__ == "__main__":
+    uvicorn.run(server.create_app(), host="0.0.0.0", port=8000)
+```
+
+**Client:**
+```python
+from mcp.client.sse import sse_client
+
+async with sse_client(url="http://localhost:8000/sse") as (read, write):
+    client = Client()
+    session = await client.connect(read, write)
+    tools = await session.list_tools()
+    result = await session.call_tool("search", {"query": "test"})
+```
+
+### WebSocket Transport
+
+**Architecture:**
+```
+Client ←──WebSocket──→ MCP Server
+       bidirectional
+```
+
+**Characteristics:**
+- Full bidirectional streaming
+- Lower latency than SSE
+- Persistent connection
+- Good for real-time notifications
+- Requires custom implementation (not in SDK natively)
+
+### Transport Selection Matrix
+
+| Criteria | stdio | SSE | WebSocket |
+|----------|-------|-----|-----------|
+| Latency | Lowest | Low-Medium | Low |
+| Security | Highest (no network) | Medium (needs auth) | Medium (needs auth) |
+| Concurrent clients | 1 | Many | Many |
+| Network required | No | Yes | Yes |
+| Bidirectional | No (request-response) | Partial (SSE + POST) | Yes (full duplex) |
+| Reconnection | Process restart | SSE built-in | Custom |
+| Proxy-friendly | N/A | Yes (HTTP) | Sometimes blocked |
+| SDK support | Native | Native | Custom |
+| Best for | Local tools, CLI, IDE | Web apps, remote APIs | Real-time streaming |
+
+## Tool Design Fundamentals
+
+### Tool Registration
+
+**FastMCP decorator pattern:**
+```python
+@server.tool(description="Search documents by query text")
+def search_documents(
+    query: str,
+    max_results: int = 10,
+    category: str | None = None
+) -> str:
+    """Search the indexed document collection.
+
+    Args:
+        query: Natural language search phrase
+        max_results: Number of results to return (1-50)
+        category: Optional filter category
+
+    Returns:
+        Formatted search results with relevance scores
+    """
+    results = vectorstore.similarity_search(query, k=max_results)
+    return format_results(results)
+```
+
+**Low-level registration pattern:**
+```python
+TOOL_DEFINITIONS = {
+    "search_documents": {
+        "name": "search_documents",
+        "description": "Search documents by query text",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Natural language search phrase"
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Number of results (1-50)",
+                    "default": 10,
+                    "minimum": 1,
+                    "maximum": 50
+                }
+            },
+            "required": ["query"]
+        }
+    }
+}
+
+async def handle_call_tool(name: str, arguments: dict):
+    handler = TOOL_HANDLERS.get(name)
+    if not handler:
+        return [TextContent(type="text", text=json.dumps({
+            "error": f"Unknown tool: {name}",
+            "code": "NOT_FOUND"
+        }))]
+    try:
+        result = await handler(**arguments)
+        return [TextContent(type="text", text=result)]
+    except Exception as e:
+        return [TextContent(type="text", text=json.dumps({
+            "error": str(e),
+            "code": "EXECUTION_ERROR"
+        }))]
+```
+
+### Tool Schema Requirements
+Every tool definition must include:
+1. **name**: snake_case, unique within server, descriptive of function
+2. **description**: 1-2 sentences. Critical — LLMs use this to decide when to call the tool
+3. **inputSchema**: JSON Schema object with typed, validated properties
+4. **output**: Return structured content (JSON string recommended for complex data)
+
+### Parameter Design Rules
+- 1-2 required parameters. Add optional params with defaults.
+- Use `description` on every parameter — LLMs read them.
+- Use `enum` for constrained string values.
+- Use `minimum`/`maximum` for numeric bounds.
+- Use `pattern` for string format validation.
+- Use `default` for optional parameters.
+- Never use sensitive data (passwords, tokens) as tool parameters.
+
+### Error Handling Fundamentals
+
+Always return structured errors — never throw raw exceptions:
+
+```python
+@server.tool()
+def divide(dividend: float, divisor: float) -> str:
+    """Divide two numbers."""
+    if divisor == 0:
+        return json.dumps({
+            "success": False,
+            "error": "Cannot divide by zero",
+            "code": "DIVISION_BY_ZERO"
+        })
+    return json.dumps({
+        "success": True,
+        "result": dividend / divisor
+    })
+```
+
+Standard error codes:
+| Code | Meaning | When |
+|------|---------|------|
+| `MISSING_PARAMETER` | Required arg not provided | Before execution |
+| `VALIDATION_ERROR` | Arg fails constraints | Before execution |
+| `PERMISSION_DENIED` | Client not authorized | Before execution |
+| `RATE_LIMITED` | Too many requests | Before execution |
+| `NOT_FOUND` | Tool/resource not found | During lookup |
+| `EXECUTION_ERROR` | Operation failed | During execution |
+| `TIMEOUT` | Operation timed out | During execution |
+| `INTERNAL_ERROR` | Unexpected server failure | During execution |
+
+## Resource Design Fundamentals
+
+### URI Scheme Convention
+```
+{scheme}://{authority}/{path}
+```
+
+Standard schemes: `file://`, `db://`, `api://`, `config://`, `docs://`, `data://`, `log://`, `metrics://`
+
+### Static Resources
+Content is fixed — same value every time it's read:
+```python
+@server.resource("config://app/settings")
+def get_settings() -> str:
+    return json.dumps(read_config_file())
+```
+
+### Dynamic Resources
+Content depends on URI parameters:
+```python
+@server.resource("docs://{path}")
+def get_document(path: str) -> str:
+    safe_path = os.path.normpath(os.path.join(BASE_DIR, path))
+    if not safe_path.startswith(BASE_DIR):
+        return "Error: Invalid path"
+    if not os.path.exists(safe_path):
+        return "Error: Document not found"
+    return read_file(safe_path)
+```
+
+### Resource Templates
+URI templates with multiple parameters:
+```python
+@server.resource("api://{version}/{resource}/{id}")
+def get_api_resource(version: str, resource: str, id: str) -> str:
+    data = fetch_from_api(version, resource, id)
+    return json.dumps(data)
+```
+
+### MIME Types
+Always specify the MIME type for content negotiation:
+```python
+@server.resource("data://report/{id}")
+def get_report(id: str) -> str:
+    return json.dumps(generate_report(id))
+
+# MIME type defaults:
+# - .json → application/json
+# - .md → text/markdown
+# - .txt → text/plain
+# - .html → text/html
+# - .csv → text/csv
+```
+
+## Prompt Template Fundamentals
+
+### Template Structure
+Prompts are server-side templates that produce messages for the LLM:
+
+```python
+@server.prompt()
+def qa_template(context: str, question: str) -> str:
+    """QA prompt with context injection.
+
+    Args:
+        context: Background information
+        question: The question to answer
+
+    Returns:
+        Formatted prompt string
+    """
+    return f"""Using the following context, answer the question.
+
+Context:
+{context}
+
+Question:
+{question}
+
+Instructions:
+- Answer based only on the provided context
+- If the context doesn't contain the answer, say so
+- Be concise and specific
+
+Answer:"""
+```
+
+### Multi-Message Prompt Pattern
+Return a list of message dicts for structured conversations:
+```python
+@server.prompt()
+def review_prompt(code: str, language: str) -> list[dict]:
+    """Code review prompt with system and user messages."""
+    return [
+        {
+            "role": "system",
+            "content": f"You are an expert {language} code reviewer. "
+                        "Focus on bugs, security, and best practices."
+        },
+        {
+            "role": "user",
+            "content": f"Review this {language} code:\n\n```{language}\n{code}\n```"
+        }
+    ]
+```
+
+### Argument Definition Pattern
+Arguments are defined by name, type, required flag, and description:
+```python
+@server.prompt()
+def summarize(content: str, max_length: int = 200, format: str = "paragraph") -> str:
+    """Summarization prompt.
+
+    Args:
+        content: Text to summarize (required)
+        max_length: Maximum summary length in words (optional, default 200)
+        format: Output format: paragraph, bullet_points, or json (optional)
+    """
+    format_instructions = {
+        "paragraph": "Write a coherent paragraph.",
+        "bullet_points": "Use bullet points.",
+        "json": "Return a JSON object with 'summary' and 'key_points' fields.",
+    }
+    return f"""Summarize the following text in at most {max_length} words.
+
+{format_instructions.get(format, format_instructions["paragraph"])}
+
+Text:
+{content}
+
+Summary:"""
+```
+
+## Response Content Types
+
+### Text Content
+```python
+from mcp.types import TextContent
+
+return [TextContent(type="text", text="Plain text result")]
+```
+
+### Resource Content
+Embed another resource in the response:
+```python
+from mcp.types import EmbeddedResource
+
+return [EmbeddedResource(
+    type="resource",
+    resource={
+        "uri": "file://result.txt",
+        "mimeType": "text/plain",
+        "text": "Resource content"
+    }
+)]
+```
+
+### Combined Content
+Return multiple content items:
+```python
+@server.tool()
+def analyze(text: str) -> list:
+    """Analyze text and return both analysis and reference."""
+    return [
+        TextContent(type="text", text=json.dumps(analyze_text(text))),
+        EmbeddedResource(type="resource", resource={
+            "uri": "docs://analysis-guide",
+            "mimeType": "text/markdown",
+            "text": "# Analysis Guide\n..."})
+    ]
+```
+
+## Notification Fundamentals
+
+Servers can send unsolicited notifications to clients:
+- `notifications/resources/list_changed` — Resource list updated
+- `notifications/tools/list_changed` — Tool list updated  
+- `notifications/prompts/list_changed` — Prompt list updated
+
+Use cases:
+- Resource content changes (re-fetch on notification)
+- Tool availability changes
+- Server state transitions
 
 ## Key Points
-- Understand core Mcp Patterns concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- MCP uses JSON-RPC 2.0 for all message exchange
+- Transport selection determines security, latency, and concurrency profile
+- Always include descriptions on every tool, parameter, resource, and prompt
+- Return structured errors with codes — never raw exceptions
+- Resources use URI schemes with consistent naming and MIME types
+- Prompts are server-side templates that produce LLM messages
+- Cache discovered capabilities client-side to reduce round trips
+- Validate all inputs before execution
+- Handle transport disconnections with reconnection logic

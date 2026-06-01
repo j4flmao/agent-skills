@@ -1,8 +1,8 @@
 ---
 name: design-design-systems
 description: >
-  Use this skill when designing design systems, design tokens, component libraries, Figma-to-code workflows, Storybook integration, or theming strategies. This skill enforces: token architecture with Style Dictionary, atomic component hierarchy, Figma-to-code synchronization, Storybook documentation, and systematic theming. Do NOT use for: single-component design, CSS-in-JS styling only, or brand identity / visual design decisions.
-version: "1.2.0"
+  Use when the user asks about design systems, component libraries, design tokens, pattern libraries, design system governance, or component architecture. Do NOT use for: visual design (design-visual-design), brand identity (design-brand-identity), or prototyping (design-prototyping).
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -10,212 +10,353 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [design, frontend, phase-10]
+tags: [design, design-systems, phase-3]
 ---
 
-# Design Design Systems
+# Design Systems
 
 ## Purpose
-Architect a scalable design system with token-driven styling, component composition, and cross-platform tooling. Supports web, iOS, Android, and design tool synchronization.
+Design, build, and maintain a scalable design system — a single source of truth for design tokens, components, patterns, and guidelines that enables consistent, rapid product development across teams. A design system is a product serving other products.
 
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "design system", "design tokens", "component library", "Figma", "Storybook", "style dictionary", "themed", "consistent UI", "design system architecture", "token specification", "component hierarchy".
+Exact user phrases: "design system", "component library", "design tokens", "pattern library", "UI library", "design system governance", "component architecture", "design system documentation".
 
 ### Input Context
-Before activating, verify:
-- Target platform(s) -- web, mobile, or both
-- Existing design tooling (Figma, Sketch, Adobe XD)
-- CSS framework or styling approach in use (Tailwind, styled-components, plain CSS)
-- Whether a token system already exists
+- Scale (single team, multiple teams, entire organization)
+- Tech stack (React, Vue, Angular, Flutter, SwiftUI, .NET MAUI)
+- Design tool (Figma, Sketch, Adobe XD)
+- Existing design assets or component libraries
+- Number of products/teams consuming the system
+- Current pain points (inconsistency, slow delivery, accessibility gaps)
 
 ### Output Artifact
-Design system architecture with token specification, component hierarchy, and tooling configuration.
-
-### Response Format
-```yaml
-# Token categories and naming convention
-# Component tree with composition rules
-```
-```typescript
-// Style Dictionary configuration
-// Theming setup
-```
-
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output.
+Design system architecture plan with token structure, component hierarchy, documentation strategy, and governance model.
 
 ### Completion Criteria
-- [ ] Token categories defined (color, typography, spacing, elevation, motion)
-- [ ] Token naming convention documented (category-concept-variant)
-- [ ] Style Dictionary configuration for platform output
-- [ ] Component hierarchy with atomic composition (atoms to molecules to organisms)
-- [ ] Figma-to-code sync approach selected
-- [ ] Theming strategy defined (light/dark, brand variants)
-- [ ] Storybook setup with addons for documentation, controls, a11y
+- [ ] Design token taxonomy defined (color, typography, spacing, shadow, motion)
+- [ ] Component audit completed with gap analysis
+- [ ] Component hierarchy established (atoms → molecules → organisms → templates)
+- [ ] Naming conventions documented (BEM, utility-first, component-name)
+- [ ] Documentation platform selected and structured
+- [ ] Contribution model defined (centralized, federated, hybrid)
+- [ ] Versioning strategy documented (semver for design tokens + components)
+- [ ] Accessibility baseline established (WCAG AA minimum)
+- [ ] Testing strategy documented (visual regression, accessibility, unit tests)
+- [ ] Adoption and migration plan outlined
 
 ### Max Response Length
-200 lines of specification and configuration.
+250 lines of architecture, patterns, and implementation guidance.
 
-## Component Architecture / Decision Trees
+## Framework/Methodology
 
-### Token Architecture Decision Tree
-
+### Design System Decision Tree
 ```
-Single brand or multi-brand?
-  |-- Single brand -->
-  |     |-- One platform? --> Flat token file, CSS custom properties
-  |     |-- Multi-platform? --> Style Dictionary with platform transforms
-  |-- Multi-brand -->
-        |-- Shared primitives, brand-specific semantic tokens
-        |-- Style Dictionary with brand as a build parameter
-```
-
-### Component Hierarchy Decision
-
-```
-Design-to-code workflow:
-  |-- Design-first (Figma components -> code components)
-  |     Tokens Studio + Style Dictionary + auto-generation
-  |-- Code-first (Code components -> Figma library)
-  |     Storybook + Figma plugin for code-to-design sync
-  |-- Parallel (Both evolve together)
-        Design tokens as single source of truth
+What is the team's current state?
+├── No existing system → Start small with tokens
+│   → Token audit → Token system → 3-5 core components → Documentation → Expand
+├── Siloed components exist → Unify and standardize
+│   → Component audit → Naming unification → API standardization → Shared package
+├── Existing system needs maturity → Add governance + tooling
+│   → Gap analysis → Accessibility audit → Testing → CI/CD → Contribution model
+└── Multi-product ecosystem → Federate with governance
+    → Core system → Product extensions → Versioning → Cross-team review
 ```
 
-### Tooling Stack Decision
+### Atomic Design Hierarchy
+```
+Atoms (tokens + basic elements)
+├── Color (primary, secondary, neutral, semantic, gradient)
+├── Typography (typeface, size, weight, line-height, letter-spacing)
+├── Spacing (4px/8px base scale)
+├── Iconography (size, color treatment, stroke weight)
+└── Animation (duration, easing curve, motion presets)
+    ↓
+Molecules (compound components)
+├── Button (icon + label + loading state)
+├── Input (label + field + error message + helper text)
+├── Card (image + title + description + action)
+├── Form group (label + input + validation)
+└── Navigation item (icon + label + badge + active state)
+    ↓
+Organisms (complex sections)
+├── Header (logo + navigation + search + user menu)
+├── Data table (toolbar + table + pagination + empty state)
+├── Modal (overlay + container + header + content + footer + close)
+└── Form (sections + inputs + validation + submit)
+    ↓
+Templates (page-level layout)
+├── Dashboard layout
+├── Detail page layout
+├── Settings page layout
+└── Landing page layout
+    ↓
+Pages (specific instances with real content)
+```
 
-```
-Team size & maturity:
-  |-- Small team (< 5) --> Figma Tokens + Style Dictionary + Storybook
-  |-- Medium team (5-20) --> Add Design System management tool (Specify/Supernova)
-  |-- Large team (20+) --> Full DesignOps with dedicated DS platform
-```
+### Design System Governance Models
+
+| Model | Description | Best For | Pros | Cons |
+|-------|-------------|----------|------|------|
+| Centralized | Single team builds/maintains everything | Small org, 1-2 products | Consistency, quality | Bottleneck, slow |
+| Federated | Each team contributes, core team curates | Large org, many products | Scale, ownership | Coordination overhead |
+| Hybrid | Core components centralized, domain-specific federated | Medium-large org | Balance of consistency + flexibility | Complex governance |
+| Solitary | Single team builds, no external contributions | Agency, consulting | Control | Doesn't scale |
 
 ## Workflow
 
-### Step 1: Token Architecture
-Define tokens by category: `color` (primary, neutral, semantic, gradient), `typography` (family, size, weight, lineHeight, letterSpacing), `spacing` (0-4 rem scale, 4px base unit), `elevation` (shadow levels 1-5), `motion` (duration, easing presets). Naming: `category-concept-variant` e.g. `color-primary-500`, `spacing-md`, `elevation-card`. Never use presentation values (e.g., `color-blue`) -- use semantic names (`color-primary`).
+### Step 1: Conduct Design Audit
 
-### Step 2: Style Dictionary Configuration
+Audit Process:
+1. Inventory all existing components across products and design files
+2. Categorize: unique, duplicated (same function, different code), similar (different, but should be same)
+3. Score each: usage frequency, variation count, accessibility compliance, code quality
+4. Identify: what to adopt as-is, what to refactor, what to deprecate, what's missing
+
+```yaml
+component_audit:
+  button:
+    variants_across_products: 14
+    accessibility_compliance: 6/14 pass WCAG AA
+    usage_count: 847 (all products)
+    recommendation: "Refactor to single Button component with variant prop"
+  card:
+    variants: 9
+    recommendation: "Standardize to 3 variants (default, interactive, compact)"
+  date_picker:
+    variants: 3
+    recommendation: "Adopt most-used variant, deprecate others"
+```
+
+### Step 2: Define Token Architecture
+
+Token Types:
+- **Global tokens**: Raw values (`blue-500: #0052CC`, `space-4: 16px`)
+- **Alias tokens**: Semantic mappings (`color-primary: blue-500`, `spacing-large: space-4`)
+- **Component tokens**: Component-specific (`button-bg: color-primary`)
+
+```css
+/* Global tokens */
+:root {
+  --blue-500: #0052CC;
+  --red-500: #FF5630;
+  --green-500: #36B37E;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-4: 16px;
+  --font-sans: 'Inter', sans-serif;
+}
+
+/* Alias tokens */
+:root {
+  --color-primary: var(--blue-500);
+  --color-error: var(--red-500);
+  --color-success: var(--green-500);
+  --spacing-xs: var(--space-1);
+  --spacing-sm: var(--space-2);
+  --spacing-md: var(--space-4);
+  --font-family-body: var(--font-sans);
+}
+
+/* Component tokens */
+:root {
+  --button-primary-bg: var(--color-primary);
+  --button-primary-text: var(--color-white);
+  --button-primary-radius: var(--radius-sm);
+}
+```
+
+Token Platform Distribution:
 ```json
 {
-  "source": ["tokens/**/*.json"],
-  "platforms": {
-    "css": { "transformGroup": "css", "buildPath": "dist/css/" },
-    "js": { "transformGroup": "js", "buildPath": "dist/js/" },
-    "ios": { "transformGroup": "ios", "buildPath": "dist/ios/" },
-    "android": { "transformGroup": "android", "buildPath": "dist/android/" }
+  "tokens": {
+    "color": { "primary": "#0052CC" },
+    "spacing": { "md": "16px" },
+    "typography": { "body-size": "16px" }
   }
 }
 ```
-Platform-specific transforms: px to rem for web, camelCase for JS, platform conventions for native.
+Output formats: CSS custom properties, JSON for React/Vue, Compose/Kotlin for Android, Swift for iOS, XML for Android, .NET MAUI resources.
 
-### Step 3: Component Hierarchy
-Atoms: button, input, label, icon, avatar. Molecules: card, form-field, search-bar, pagination. Organisms: header, sidebar, data-table, modal. Composition rules: atoms never import molecules; molecules compose atoms; organisms compose molecules and atoms. Every component exposes a `size`, `variant`, and `disabled` prop where applicable.
+### Step 3: Build Component Architecture
 
-### Step 4: Theming Strategy
-Define theme variants as token overrides. Light theme = base tokens. Dark theme overrides `color-background`, `color-surface`, `color-text`, `color-border`. Brand themes override `color-primary`, `color-secondary`, `font-family`. Theme switching via CSS custom properties or React context. Each theme is a separate Style Dictionary source file.
+Component Design Principles:
+- **Composable**: Components work together, don't fight each other
+- **Accessible**: WCAG AA by default, AAA where possible
+- **Responsive**: Work at all breakpoints without breakpoint-specific variants
+- **Themeable**: Dark mode, high contrast, brand theming through token overrides
+- **Performant**: Minimal re-renders, tree-shakeable, code-split ready
+- **Testable**: Unit, visual regression, and accessibility tests built in
 
-### Step 5: Storybook Integration
-Configure Storybook with addons: controls (live prop editing), a11y (contrast checks), docs (auto-generated MDX), viewports (responsive breakpoints), themes (theme switcher toolbar). Each story covers: default, variants, states (hover, active, disabled, error, loading), responsive behavior.
+Component API Design:
+```typescript
+// Bad: Too many props, mixing concerns
+<Button
+  primary={true}
+  large={true}
+  icon="arrow-right"
+  isLoading={false}
+  isDisabled={false}
+  handleClick={onClick}
+/>
 
-### Step 6: Figma-to-Code Workflow
-Options ranked by maturity: 1) Design Token plugin (Tokens Studio) to JSON to Style Dictionary. 2) Figma API export to manual mapping. 3) Design system management tool (Specify, Supernova). Preferred: Tokens Studio for Figma + GitHub sync + Style Dictionary build pipeline.
+// Good: Semantic variant, composable, forwardRef
+<Button variant="primary" size="large" onClick={onClick}>
+  <Icon name="arrow-right" />
+  Save
+</Button>
+```
 
-### Step 7: Component Documentation Standard
-Each component must document: purpose, props table with types and defaults, variants with visual examples, states (hover, active, disabled, focus, error, loading), accessibility features, usage guidelines, and code examples for basic and advanced usage.
+Component States (every component needs these):
+- **Default**: Normal resting state
+- **Hover**: Mouse over (desktop only)
+- **Active/Pressed**: Mouse down
+- **Focus**: Keyboard focus ring (never outline: none without replacement)
+- **Disabled**: Not interactive, reduced opacity
+- **Loading**: Processing state, skeleton or spinner
+- **Error**: Validation failure
+- **Empty**: No content to display
+- **Selected/Active**: Toggle or selection state
 
-### Step 8: Versioning and Releases
-Use semantic versioning: major for breaking changes (token removals, component API changes), minor for additions (new tokens, new components), patch for fixes. Maintain a CHANGELOG. Tag releases in both Figma and code repository.
+### Step 4: Document the System
+
+Documentation Content (per component):
+1. Component name and description
+2. When to use / When not to use
+3. Live interactive example (code sandbox)
+4. Props/API reference
+5. Accessibility notes (ARIA roles, keyboard navigation, focus management)
+6. Theming and customization
+7. Usage guidelines and best practices
+8. Related components and patterns
+
+Tool Recommendations:
+- **Storybook**: Industry standard component dev + docs (React, Vue, Angular, Svelte, Web Components)
+- **Zeroheight**: Design system documentation platform (no-code)
+- **Supernova**: Design token + component sync from Figma to code
+- **Style Dictionary**: Transform design tokens into platform-specific formats
+- **Token Studio**: Figma plugin for token management
+
+### Step 5: Establish Contribution Model
+
+Federated Contribution Workflow:
+1. **Proposal**: Team identifies need, writes brief with usage evidence
+2. **Review**: Design system core team reviews for consistency + quality
+3. **Build**: Contributing team builds in their context, core team provides guidance
+4. **Review**: Core team reviews code, accessibility, documentation
+5. **Release**: Component published as alpha → beta → stable
+6. **Adopt**: Contributing team migrates, documentation updated
+7. **Maintain**: Core team takes ownership after stabilization period
+
+Versioning Strategy (semver):
+- **Major**: Breaking changes (redesigned component, removed prop)
+- **Minor**: New features (new component, new variant, new prop)
+- **Patch**: Bug fixes, accessibility improvements, dependency updates
+- **Pre-release**: alpha, beta, rc for testing
 
 ## Common Pitfalls
 
-### 1. Presentation-Named Tokens
-Naming tokens by appearance (`color-blue-500`) instead of purpose (`color-primary`) means a rebrand requires renaming tokens throughout the system. Use semantic naming from day one.
+| Pitfall | Description | Prevention |
+|---------|-------------|------------|
+| Big bang rewrite | Building entire system before any adoption | Start with 5 components, prove value, iterate |
+| Over-engineering | Solving for every edge case on day one | Build for 80% use case, extend when needed |
+| Token omission | Not enough tokens so teams hardcode values | Audit all hardcoded values, create tokens for every dimension |
+| Documentation neglect | Components without usage guidance | Every component needs "when to use / when not to use" |
+| Accessibility afterthought | Adding a11y later is 10x harder | Build accessible from the start (keyboard, ARIA, contrast) |
+| No governance | Everyone can add anything, system becomes inconsistent | Clear contribution model and review process |
+| Design-code gap | Figma components don't match code | Token-driven design, component sync, regular audits |
+| Ignoring migration | Teams keep using old components for years | Deprecation policy, migration guides, automated codemods |
 
-### 2. No Single Source of Truth
-When design tokens exist in Figma, CSS, AND JS with manual synchronization, they inevitably diverge. Use a build pipeline (Style Dictionary) with Figma as the source or a JSON file as the source.
+## Best Practices
 
-### 3. Over-Engineering the Token System
-A design system with 7 deep abstraction layers (alias tokens, composite tokens, recursive tokens) is hard to maintain and harder for new team members to understand. Keep it simple: primitives, semantics, components.
+| Practice | Rationale |
+|----------|-----------|
+| Start with tokens | Tokens are low-risk, high-impact — the foundation of everything |
+| One source of truth | Design tokens in code are source; Figma imports from code |
+| Version everything | Tokens, components, documentation — all versioned together |
+| Test visually | Visual regression tests catch unintended changes automatically |
+| Write migration guides | Breaking changes are painful; guides reduce adoption friction |
+| Measure adoption | Track usage %, component versions in use, deprecated component usage |
+| Document rationale | "Why" is more important than "what" — enables good decisions |
+| Keep it accessible | WCAG AA is table stakes, not a differentiator |
+| Invest in DX | Good developer experience drives adoption and contribution |
+| Plan for sunset | Deprecate components explicitly with timeline and migration path |
 
-### 4. Missing Component States
-Shipping components without hover, active, disabled, focus, error, and loading states means developers will implement them inconsistently. Every component must define its state coverage.
+## Templates & Tools
 
-### 5. No Governance Process
-Without a design system governance process, anyone can add tokens or components, leading to bloat and inconsistency. Establish a review process for token and component additions.
+### Component Audit Template
+```yaml
+component: "Button"
+current_state:
+  variants_across_products: 14
+  colors_used: 8 different blues, 3 greens, 2 reds
+  sizes: 5 (small, medium, large, xl, xxl)
+  states_implemented: ["default", "hover", "disabled"]
+  states_missing: ["focus", "active", "loading"]
+  accessibility: "No focus indicators, no aria-disabled"
+  code_frameworks: ["React", "Vue", "Angular", "jQuery"]
+  documentation: "None"
+recommendation:
+  action: "Standardize"
+  target_variants: ["primary", "secondary", "tertiary", "ghost", "danger"]
+  target_sizes: ["sm", "md", "lg"]
+  priority: "High"
+```
 
-### 6. Figma-Code Drift
-When designers update components in Figma but the code is not updated (or vice versa), the design system loses trust. Use Figma API or Tokens Studio plugins to alert when tokens or component specs diverge.
+### Component Checklist
+- [ ] All states defined (default, hover, active, focus, disabled, loading, error)
+- [ ] Keyboard navigable (Tab, Shift+Tab, Enter, Escape, Arrow keys)
+- [ ] ARIA attributes correct (role, aria-label, aria-expanded, aria-selected, aria-disabled)
+- [ ] Focus visible (custom focus ring, not browser default, never outline:none)
+- [ ] Responsive (works in mobile, tablet, desktop)
+- [ ] Dark mode supported
+- [ ] RTL ready (logical properties: margin-inline-start, padding-inline)
+- [ ] Unit tests written (render, state changes, callbacks)
+- [ ] Visual regression tests added
+- [ ] Storybook stories written (default, variants, states, edge cases)
+- [ ] Documentation complete (when to use, props, guidelines, related)
+- [ ] Bundle size impact assessed
 
-## Compared With
+## Case Studies
 
-| Approach | Token Management | Component Documentation | Design Sync | Platform Support |
-|----------|-----------------|----------------------|-------------|-----------------|
-| Style Dictionary + Storybook | Build-time JSON | Storybook MDX | Tokens Studio | Web, iOS, Android |
-| Theme UI / Stitches | JS theme object | Storybook | Manual | Web |
-| Tailwind + CVA | Config + @theme | Storybook | Figma Tokens plugin | Web |
-| Material Design | Theme object | Storybook | Manual sync | Web, Android, iOS |
-| Radix + Stitches | Unstyled + theme | Storybook | Manual | Web |
-| Specify / Supernova | Platform-managed | Auto-generated | Bidirectional | All |
+### Case Study 1: Token-Driven Redesign Reduces Design Time 50%
+A SaaS company with 4 product teams and 12,000 design inconsistencies across products implemented a token-based design system. By centralizing color (43 → 8 tokens), typography (22 → 6 values), and spacing (37 → 9 values), they eliminated all trivial design decisions. Result: design-to-development handoff time reduced 50%, redesign velocity increased 3x, and accessibility compliance went from 34% to 89% in 6 months.
 
-## Performance Considerations
+Method: Token audit → Style Dictionary → cross-platform token distribution → Figma sync
+Key insight: Constraint (fewer choices) enables speed, not limits it
+Impact: Design time -50%, redesign velocity +3x, a11y compliance 34% → 89%
 
-### Token Resolution Performance
-CSS custom properties used by design tokens resolve at computed-value time. Switching themes (redefining 100+ custom properties in a `[data-theme]` selector) can cause a style recalculation cascade. Test theme switching performance with the Performance panel -- it should be under 5ms.
+### Case Study 2: Governance Model Prevents Design System Collapse
+A large enterprise design system had 47 contributors and no governance — components had been added with conflicting patterns, inconsistent APIs, and 90% of components didn't meet WCAG AA. A federated governance model was implemented: core team (3 people) curates 40 "core" components, product teams contribute domain-specific components following strict guidelines. Within one year, component quality score went from 4.2/10 to 8.7/10, and adoption grew from 3 to 12 product teams.
 
-### Component Library Bundle Size
-Each component adds 1-5KB to the bundle. A library of 50 components = 50-250KB. Tree-shaking via ES module imports ensures consumers only pay for what they use.
-
-### Style Dictionary Build Time
-For small token sets (< 500 tokens), Style Dictionary builds in < 1s. For large sets (> 2000 tokens) with multiple platforms, expect 2-5s build time.
-
-## Ecosystem & Tooling
-
-### Design Token Management
-- **Tokens Studio for Figma** -- Industry standard Figma plugin. Syncs tokens to GitHub via JSON.
-- **Style Dictionary** -- Amazon's build-time token transformer. Converts JSON to any platform format.
-- **Specify** -- Design token management platform. Integrates Figma, GitHub, and multiple code outputs.
-- **Supernova** -- Full design system management. Parser, documentation generator, code exporter.
-- **Theo** -- Salesforce's token transformer (predecessor to Style Dictionary, less maintained).
-
-### Component Documentation
-- **Storybook** -- Industry standard. Controls, a11y addon, docs/auto-generated documentation, viewport addon.
-- **Docusaurus** -- Documentation site generator. Good for token documentation guides.
-- **Zeroheight** -- Design system documentation platform. No-code, designer-friendly.
-
-### Figma Plugins for Design Systems
-- **Tokens Studio** -- Design token editing and sync
-- **Anima** -- Figma to React/Vue code export
-- **Stark** -- Accessibility checking (contrast, colorblind simulation)
-- **Design Lint** -- Design system compliance checking
-- **Variants Parser** -- Export Figma component variants
+Method: Audit → triage → governance model → contribution workflow → automated quality gates
+Key insight: Centralized control limits adoption; federated control requires quality gates
+Impact: Component quality 4.2 → 8.7/10, adoption 3 → 12 teams
 
 ## Rules
-- Tokens are semantic, not presentation -- `color-primary` not `color-blue`
-- One source of truth: tokens drive design AND code
-- Every component has documented states (hover, active, disabled, focus, error)
-- No component exceeds 4 levels of composition depth
-- Theme variants are token overrides, never separate components
-- Style Dictionary transforms handle platform differences -- not custom CSS
-- Storybook stories cover every component variant + state
-- Version everything: tokens, components, documentation
-- Token additions require design review and PR approval
-- Figma and code must reference the same token source
+- Start small: 3-5 components, prove value before expanding
+- Design tokens are the foundation — no tokens, no system
+- Every component must have all interaction states
+- Every component must meet WCAG AA minimum
+- Component APIs must be consistent across the system
+- Name things semantically, not visually (variant="primary", not variant="blue")
+- Version with semver: major for breaking, minor for new, patch for fixes
+- Document every component with usage guidelines
+- Deprecate, don't delete — provide migration path for old components
+- Regular audits: token usage, component variants, accessibility, performance
+- Design system is a product — it needs roadmap, backlog, and user research
+- Contribution model must be defined before accepting external contributions
+- Measure what matters: adoption %, deprecated usage %, time-to-implement, accessibility score
+- Don't solve for every edge case — build for 80%, extend for the rest
+- The best design system is the one teams actually use
 
 ## References
-
-- `references/component-library.md` -- Component Library
-- `references/design-system-tokens.md` -- Design System Tokens
-- `references/design-system-workflow.md` -- Design System Workflow
-- `references/design-systems-advanced.md` -- Design Systems Advanced Topics
-- `references/design-systems-fundamentals.md` -- Design Systems Fundamentals
-- `references/design-tokens.md` -- Design Tokens
-- `references/design-system-governance.md` -- Design System Governance
-- `references/design-system-accessibility.md` -- Design System Accessibility
-
+  - references/component-api-design.md — Component API Design Patterns Reference
+  - references/design-system-advanced.md — Design Systems Advanced Topics
+  - references/design-system-fundamentals.md — Design Systems Fundamentals
+  - references/design-tokens.md — Design Token Architecture Reference
+  - references/governance-model.md — Design System Governance Reference
+  - references/testing-strategy.md — Design System Testing Strategy Reference
 ## Handoff
-`design-accessibility` for a11y audit of the component library.
-`design-prototyping` for interaction specs on component states.
-Carry forward: token spec, component inventory, Storybook config.
+Hand off to `design-visual-design` for visual token creation. Hand off to `design-brand-identity` for brand-aligned color/type decisions. Hand off to `design-accessibility` for WCAG compliance audit.

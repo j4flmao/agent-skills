@@ -8,7 +8,7 @@ compatibility:
   codex: true
   windsurf: true
 tags: [frontend, data-fetching, phase-7, universal]
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 ---
@@ -62,6 +62,52 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ### Max Response Length
 4096 tokens
 
+## Data Fetching Decision Trees
+
+### Library Selection Decision Tree
+```
+Project type?
+  |-- Complex app with mutations, pagination, optimistic updates?
+  |     |-- YES --> TanStack Query v5
+  |     |-- NO  --> Read-heavy, minimal mutations?
+  |           |-- YES --> SWR
+  |           |-- NO  --> Using Redux already? --> RTK Query
+  |-- GraphQL API?
+        |-- YES --> Apollo Client or urql
+        |-- NO  --> tRPC available? --> tRPC client
+
+Consider: bundle size (~13KB TanStack vs ~4KB SWR), framework support,
+          devtools quality, cache persistence requirements.
+```
+
+### Caching Strategy Decision Tree
+```
+Data volatility?
+  |-- Real-time (chat, notifications) -->
+  |     |-- Polling: refetchInterval: 5000
+  |     |-- WebSocket: integrate with queryClient.setQueryData
+  |-- Frequently changing (dashboard, feed) -->
+  |     |-- staleTime: 30s, refetchOnWindowFocus: true
+  |-- Rarely changing (config, reference data) -->
+  |     |-- staleTime: 5min, gcTime: 30min
+  |-- Never changes (static content) -->
+        |-- staleTime: Infinity (fetch once, never refetch)
+```
+
+### Error Handling Decision Tree
+```
+Query error received?
+  |-- Network error (no response) -->
+  |     |-- Show stale data if available
+  |     |-- Show offline message if no stale data
+  |-- 4xx (client error) -->
+  |     |-- Do NOT retry (client mistake)
+  |     |-- Show validation error or permission denied
+  |-- 5xx (server error) -->
+        |-- Retry with exponential backoff (default 3 times)
+        |-- Show error state after all retries exhausted
+```
+
 ## Workflow
 
 ### 1. Library Selection
@@ -76,17 +122,109 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 - Polling for real-time data via `refetchInterval`.
 - Dependent queries: enable second query only when first has data.
 
+```typescript
+// TanStack Query v5 — basic setup
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,           // 30s before considered stale
+      gcTime: 5 * 60_000,          // 5min unused data stays in cache
+      retry: 3,                    // retry 3 times with backoff
+      refetchOnWindowFocus: true,  // refetch when user returns
+      refetchOnReconnect: true,    // refetch on network recovery
+    },
+  },
+})
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppContent />
+    </QueryClientProvider>
+  )
+}
+```
+
 ### 3. Mutations
 - Optimistic updates: apply new data immediately, rollback on error.
 - Invalidate related queries after mutation success.
 - Mutation side effects via callbacks: `onMutate`, `onError`, `onSettled`.
 - Show optimistic UI state during mutation.
 
+```typescript
+// Optimistic update pattern
+function useAddTodo() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (newTodo: Todo) => api.post('/todos', newTodo),
+    onMutate: async (newTodo) => {
+      // Cancel outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['todos'] })
+
+      // Snapshot previous value for rollback
+      const previousTodos = queryClient.getQueryData<Todo[]>(['todos'])
+
+      // Optimistically update cache
+      queryClient.setQueryData<Todo[]>(['todos'], (old = []) => [...old, newTodo])
+
+      return { previousTodos }
+    },
+    onError: (err, newTodo, context) => {
+      // Rollback on error
+      queryClient.setQueryData(['todos'], context?.previousTodos)
+      showToast('Failed to add todo', 'error')
+    },
+    onSettled: () => {
+      // Always refetch to ensure server consistency
+      queryClient.invalidateQueries({ queryKey: ['todos'] })
+    },
+  })
+}
+```
+
 ### 4. Pagination
 - Offset-based: `useQuery` with page param, prefetch next page.
 - Cursor-based: `useInfiniteQuery` with `getNextPageParam`.
 - Infinite scroll: IntersectionObserver triggers `fetchNextPage`.
 - Loading states: `isFetchingNextPage` vs `isLoading`.
+
+```typescript
+// Infinite scroll with cursor pagination
+function useInfiniteProducts() {
+  return useInfiniteQuery({
+    queryKey: ['products'],
+    queryFn: ({ pageParam }) => api.getProducts({ cursor: pageParam }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,
+  })
+}
+
+function ProductList() {
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteProducts()
+  const observerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!observerRef.current) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage) fetchNextPage()
+      },
+      { threshold: 0.5 }
+    )
+    observer.observe(observerRef.current)
+    return () => observer.disconnect()
+  }, [hasNextPage, fetchNextPage])
+
+  return (
+    <div>
+      {data?.pages.map(page => page.items.map(item => <ProductCard key={item.id} item={item} />))}
+      {isFetchingNextPage && <Spinner />}
+      <div ref={observerRef} />
+    </div>
+  )
+}
+```
 
 ### 5. Error Handling
 - Global error handler via `QueryCache.onError` / `MutationCache.onError`.
@@ -95,11 +233,48 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 - Display stale data when refetch fails — never show blank screen.
 - Refetch on reconnect via `refetchOnReconnect: true`.
 
+```typescript
+// Global error handling
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      if (error instanceof AuthenticationError) {
+        // Redirect to login
+        window.location.href = '/login'
+      }
+      console.error(`Query ${query.queryKey} failed:`, error)
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      showToast(error.message, 'error')
+    },
+  }),
+})
+```
+
 ### 6. Caching Strategy
 - `staleTime`: how long data is considered fresh (default 0). Set per query based on update frequency.
 - `gcTime` (v5) / `cacheTime` (v4): how long unused data stays in cache (default 5 min).
 - Cache key uniquely identifies data — include all params.
 - Persist cache to localStorage for offline resilience.
+
+```typescript
+// Per-query staleTime configuration
+const useUser = (id: string) => useQuery({
+  queryKey: ['users', id],
+  queryFn: () => api.getUser(id),
+  staleTime: 5 * 60_000,     // user data fresh for 5min
+  gcTime: 30 * 60_000,       // keep in cache for 30min after unmount
+})
+
+const useStockPrice = (symbol: string) => useQuery({
+  queryKey: ['stocks', symbol],
+  queryFn: () => api.getStockPrice(symbol),
+  staleTime: 10_000,          // 10 seconds
+  refetchInterval: 30_000,    // poll every 30s
+})
+```
 
 ### 7. Query Key Design
 ```typescript
@@ -109,6 +284,59 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ['todos', { status: 'done' }]     // Filtered todos
 ['todos', todoId, 'comments']       // Comments on a todo
 ['users', userId, 'posts', postFilters]  // Nested resources
+```
+
+### 8. Prefetching for Instant UX
+```typescript
+// Prefetch on hover
+function ProductLink({ id }: { id: string }) {
+  const queryClient = useQueryClient()
+
+  const prefetch = () => {
+    queryClient.prefetchQuery({
+      queryKey: ['products', id],
+      queryFn: () => api.getProduct(id),
+      staleTime: 60_000,
+    })
+  }
+
+  return (
+    <Link to={`/products/${id}`} onMouseEnter={prefetch} onFocus={prefetch}>
+      View Product
+    </Link>
+  )
+}
+
+// Prefetch next page
+useEffect(() => {
+  if (hasNextPage) {
+    queryClient.prefetchInfiniteQuery({
+      queryKey: ['products'],
+      pages: 1,
+    })
+  }
+}, [hasNextPage, queryClient])
+```
+
+### 9. Cache Persistence (Offline Support)
+```typescript
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
+import { persistQueryClient } from '@tanstack/react-query-persist-client'
+
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+  maxAge: 24 * 60 * 60 * 1000, // 24 hours
+})
+
+persistQueryClient({
+  queryClient,
+  persister,
+  dehydrateOptions: {
+    shouldDehydrateQuery: (query) => {
+      return query.queryKey[0] !== 'sensitive-data' // Don't persist sensitive data
+    },
+  },
+})
 ```
 
 ## Component Architecture
@@ -141,6 +369,7 @@ Does the data need to update in real-time?
 5. **Infinite queries without getNextPageParam**: Without it, fetchNextPage has no cursor to paginate with.
 6. **Retrying on 4xx errors**: Only retry 5xx and network errors; 4xx means client error.
 7. **Not canceling query on unmount**: In-flight requests may update state on unmounted component.
+8. **Over-fetching with refetchOnWindowFocus**: Consider disabling for reference data that rarely changes.
 
 ## Best Practices
 

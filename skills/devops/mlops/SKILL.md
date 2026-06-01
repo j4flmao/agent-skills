@@ -110,28 +110,356 @@ Strategy: {revert to previous prod version / shadow traffic}
 
 ## Workflow
 
-### Step 1: CI Pipeline
-Define stages: data validation (schema, statistics, missing values), feature engineering, model training, evaluation (against baseline and threshold), model registration. Run in parallel where possible.
+### Step 1: CI Pipeline with GitHub Actions
+```yaml
+name: ML Pipeline
+on:
+  push:
+    branches: [main]
+    paths: ['models/**', 'features/**']
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly retrain
 
-### Step 2: Model Registry
-Use MLflow stages: None -> Staging -> Production -> Archived. Register model only on CI success. Promote to Staging on merge to staging branch. Promote to Production on merge to main or manual approval. Archive old versions.
+jobs:
+  data-validation:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Validate data schema
+      run: |
+        great_expectations checkpoint run data_validation
+    - name: Check for data drift
+      run: |
+        python -m mlops.monitoring.drift_detection \
+          --reference data/train.parquet \
+          --current data/latest.parquet
 
-### Step 3: Deployment Strategy
-- **Canary**: Route N% traffic to new model. Observe for X hours. Auto-rollback if metric drops.
-- **Blue-green**: Full swap with complete cutover. Fast rollback by swapping back.
-- **Rolling**: Gradual pod replacement. Best for stateless serving.
+  train-and-evaluate:
+    needs: data-validation
+    runs-on: [self-hosted, gpu]
+    steps:
+    - name: Train model
+      run: python models/classifier/train.py
+    - name: Evaluate against thresholds
+      run: |
+        python -m mlops.evaluate \
+          --model models/classifier/output/model.pkl \
+          --threshold accuracy=0.85 \
+          --threshold f1=0.80
+    - name: Register model (staging)
+      run: |
+        mlflow models register \
+          --model-name classifier \
+          --version ${{ github.run_number }} \
+          --stage Staging
+```
 
-### Step 4: A/B Testing
-Route traffic by user_id hash or experiment flag. Log predictions with treatment arm. Compare metrics: CTR, conversion, latency. Statistical significance test before full rollout.
+### Step 2: Model Registry — MLflow Configuration
+```python
+import mlflow
+from mlflow.tracking import MlflowClient
 
-### Step 5: Model Monitoring
-Data drift: KL divergence, JS divergence, PSI on feature distributions. Concept drift: accuracy decay, prediction distribution shift. Performance monitor: schedule periodic evaluation against labeled data.
+mlflow.set_tracking_uri("http://mlflow:5000")
+mlflow.set_experiment("classifier")
 
-### Step 6: Rollback
-Automatic: trigger by drift alert, error rate spike, latency increase. Manual: via registry version revert. Shadow rollback: route copy of traffic to previous version, compare.
+with mlflow.start_run() as run:
+    # Log params, metrics, and model
+    mlflow.log_param("learning_rate", 0.01)
+    mlflow.log_param("max_depth", 7)
+    mlflow.log_metric("accuracy", 0.91)
+    mlflow.log_metric("f1_score", 0.88)
+    mlflow.log_artifact("confusion_matrix.png")
+    mlflow.sklearn.log_model(model, "model")
 
-### Step 7: Feature Pipeline CI/CD
-Separate from model pipeline. Validate feature transformations produce expected distributions. Test feature consistency between training and serving. Version feature definitions alongside model.
+    # Register model
+    client = MlflowClient()
+    result = mlflow.register_model(
+        f"runs:/{run.info.run_id}/model",
+        "classifier"
+    )
+    client.transition_model_version_stage(
+        name="classifier",
+        version=result.version,
+        stage="Staging"
+    )
+```
+
+### Step 3: KServe InferenceService
+```yaml
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: classifier
+spec:
+  predictor:
+    canary:
+      trafficPercent: 10
+    model:
+      modelFormat:
+        name: sklearn
+      storageUri: s3://mlflow-models/classifier/3/model
+    minReplicas: 2
+    maxReplicas: 10
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2
+        memory: 4Gi
+  transformer:
+    containers:
+    - name: transformer
+      image: registry/feature-transformer:latest
+      env:
+      - name: FEATURE_STORE_URL
+        value: http://feast:6565
+```
+
+### Step 4: Seldon Core Deployment with Canary
+```yaml
+apiVersion: machinelearning.seldon.io/v1
+kind: SeldonDeployment
+metadata:
+  name: classifier
+spec:
+  name: classifier
+  predictors:
+  - name: default
+    traffic: 90
+    componentSpecs:
+    - spec:
+        containers:
+        - name: classifier
+          image: registry/model:1
+          env:
+          - name: MODEL_VERSION
+            value: "1"
+  - name: canary
+    traffic: 10
+    componentSpecs:
+    - spec:
+        containers:
+        - name: classifier
+          image: registry/model:2
+          env:
+          - name: MODEL_VERSION
+            value: "2"
+```
+
+### Step 5: A/B Testing Infrastructure
+```python
+import hashlib
+import random
+
+def get_treatment(user_id: str, experiment: str) -> str:
+    """Consistent hashing-based treatment assignment."""
+    hash_val = int(hashlib.md5(
+        f"{user_id}:{experiment}".encode()
+    ).hexdigest(), 16) % 100
+
+    if hash_val < 10:
+        return "treatment"  # 10% of users
+    return "control"
+
+# Log prediction with experiment context
+def predict(user_id: str, features: dict):
+    treatment = get_treatment(user_id, "model_v2_test")
+    model_version = "v2" if treatment == "treatment" else "v1"
+    prediction = model_service.predict(features, version=model_version)
+    log_prediction({
+        "user_id": user_id,
+        "treatment": treatment,
+        "model_version": model_version,
+        "prediction": prediction,
+        "timestamp": datetime.utcnow().isoformat()
+    })
+    return prediction
+```
+
+### Step 6: Drift Monitoring with Evidently AI
+```python
+from evidently.report import Report
+from evidently.metric_preset import DataDriftPreset, RegressionPreset
+from evidently.ui.workspace import Workspace
+
+workspace = Workspace("http://evidently:8080")
+
+report = Report(metrics=[
+    DataDriftPreset(),
+    RegressionPreset(),
+])
+report.run(
+    reference_data=train_df,
+    current_data=current_batch,
+    column_mapping=column_mapping
+)
+
+# Check drift thresholds
+drift_score = report.as_dict()["metrics"][0]["result"]["drift_score"]
+if drift_score > 0.15:  # PSI > 0.15 triggers alert
+    alert_service.send_drift_alert(
+        model_name="classifier",
+        drift_score=drift_score,
+        drifted_features=report.as_dict()["metrics"][0]["result"]["drifted_features"]
+    )
+
+# Save report
+workspace.add_report(report)
+report.save_html("monitoring_reports/drift_report.html")
+```
+
+### Step 7: Feature Store with Feast
+```yaml
+# feature_store.yaml
+project: mlops
+registry: gs://feature-registry/registry.db
+provider: gcp
+
+online_store:
+  type: redis
+  connection_string: redis://redis:6379
+
+offline_store:
+  type: bigquery
+  dataset: feature_store
+```
+
+```python
+from feast import FeatureStore
+
+store = FeatureStore(repo_path="./feature_repo")
+
+# Feature retrieval for training
+training_df = store.get_historical_features(
+    entity_df=entity_df,
+    features=[
+        "user_features:age",
+        "user_features:signup_days",
+        "transaction_features:avg_amount_7d",
+        "transaction_features:tx_count_30d",
+    ]
+).to_df()
+
+# Feature retrieval for inference
+feature_vector = store.get_online_features(
+    features=[
+        "user_features:age",
+        "user_features:signup_days",
+    ],
+    entity_rows=[{"user_id": user_id}]
+).to_dict()
+```
+
+### Step 8: Automated Retraining Pipeline
+```python
+# scheduler: Airflow DAG for weekly retraining
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+
+dag = DAG(
+    "model_retraining",
+    schedule_interval="@weekly",
+    catchup=False,
+)
+
+def retrain_if_drift_detected():
+    drift_score = check_data_drift()
+    if drift_score > 0.15:
+        train_new_model()
+        evaluate_and_promote()
+    else:
+        logger.info("No significant drift — skipping retrain")
+
+retrain = PythonOperator(
+    task_id="retrain_if_drift",
+    python_callable=retrain_if_drift_detected,
+    dag=dag,
+)
+```
+
+### Step 9: Model Card Template
+```markdown
+# Model Card: classifier
+
+## Model Details
+- **Version**: 3
+- **Type**: Gradient Boosted Decision Tree (XGBoost)
+- **Date**: 2026-05-14
+- **Training dataset**: user_transactions_2026-04 (2.1M rows, 45 features)
+
+## Intended Use
+- Fraud detection for payment transactions
+- Not for: Credit scoring, loan approval
+
+## Performance
+| Metric | Value |
+|--------|-------|
+| Accuracy | 0.91 |
+| Precision | 0.88 |
+| Recall | 0.85 |
+| F1 | 0.86 |
+
+## Fairness Evaluation
+| Segment | Sample Size | Accuracy |
+|---------|-------------|----------|
+| Overall | 500K | 0.91 |
+| Segment A | 50K | 0.90 |
+| Segment B | 50K | 0.91 |
+
+## Limitations
+- Degrades when transaction patterns shift (seasonal events)
+- Requires retraining every 30 days minimum
+- Not calibrated for out-of-distribution inputs
+
+## Monitoring
+- Data drift: PSI on 10 key features, alert at >0.15
+- Concept drift: weekly accuracy eval on labeled data
+- Performance: hourly latency p99, throughput, error rate
+```
+
+### Step 10: Training-Serving Skew Prevention
+```python
+# Feature transformation must be identical
+
+# BAD: different logic in training vs serving
+def transform_training(df):
+    df["amount_log"] = np.log1p(df["amount"].clip(lower=0))
+
+def transform_serving(row):
+    return {"amount_log": math.log1p(max(row["amount"], 0))}
+
+# GOOD: shared transformation function
+def transform_amount(amount):
+    return np.log1p(max(amount, 0))
+
+def transform_for_training(df):
+    df["amount_log"] = df["amount"].apply(transform_amount)
+
+def transform_for_serving(row):
+    return {"amount_log": transform_amount(row["amount"])}
+```
+
+### Step 11: Model Explainability (SHAP) in Pipeline
+```python
+import shap
+import pickle
+
+# Generate explanations as part of CI pipeline
+explainer = shap.TreeExplainer(model)
+shap_values = explainer.shap_values(X_test)
+
+# Save explanation artifacts
+with open("artifacts/shap_values.pkl", "wb") as f:
+    pickle.dump(shap_values, f)
+
+# Log feature importance plot
+shap.summary_plot(shap_values, X_test, show=False)
+plt.savefig("artifacts/shap_summary.png")
+
+mlflow.log_artifact("artifacts/shap_summary.png")
+mlflow.log_artifact("artifacts/shap_values.pkl")
+```
 
 ## Rules
 - Never promote to production without passing evaluation thresholds.
@@ -150,16 +478,16 @@ Separate from model pipeline. Validate feature transformations produce expected 
 - Implement model explainability (SHAP, LIME) in evaluation pipeline.
 - Monitor infrastructure metrics (GPU utilization, memory, latency) alongside model metrics.
 - Run model evaluation against a holdout test set that is never used in training.
-- Document model cards (intended use, performance, limitations) for every registered model.
+- Document model cards for every registered model.
 
 ## Common Pitfalls
 - **Training-serving skew**: Feature transformations differ between training and inference pipelines. Use a feature store to guarantee consistency.
-- **Silent model degradation**: Model accuracy decays gradually and escapes notice without automated monitoring. Schedule periodic evaluation.
-- **Canary blindness**: Insufficient traffic routed to canary means metrics never reach statistical significance. Ensure minimum traffic percentage.
-- **Rollback that breaks backward compatibility**: New model changes the prediction schema; rolling back means clients receive incompatible format. Version the prediction schema.
+- **Silent model degradation**: Model accuracy decays gradually without automated monitoring. Schedule periodic evaluation.
+- **Canary blindness**: Insufficient traffic routed to canary means metrics never reach statistical significance. Ensure minimum 5-10% traffic.
+- **Rollback breaks backward compatibility**: New model changes prediction schema; rolling back means clients receive incompatible format. Version the prediction schema.
 - **Data drift threshold tuning**: Too sensitive causes false alarms; too insensitive misses real drift. Tune on historical data.
 
-## Compared With
+## Comparison: Traditional DevOps vs MLOps
 | Aspect | Traditional DevOps | MLOps |
 |--------|-------------------|-------|
 | Artifact versioning | Code only | Code + Data + Model |
@@ -170,17 +498,18 @@ Separate from model pipeline. Validate feature transformations produce expected 
 | Rollback | Code revert | Model version revert + Data version revert |
 
 ## Performance
-- Model evaluation latency: 1-10 minutes for typical tabular models, 10-60 minutes for deep learning.
+- Model evaluation latency: 1-10 minutes for tabular models, 10-60 minutes for deep learning.
 - Canary observation period: 24-72 hours minimum for business cycle coverage.
-- Drift detection latency: near real-time for data drift, 1-7 days for concept drift (needs labels).
+- Drift detection latency: near real-time for data drift, 1-7 days for concept drift.
 - Model registry operations: sub-second for version lookup, seconds for artifact download.
 
-## Tooling/Methodology
+## Tooling
 - **ML platforms**: MLflow, Kubeflow, SageMaker, Vertex AI, Azure ML.
 - **Orchestration**: Airflow, Prefect, Dagster, Argo Workflows, Kubeflow Pipelines.
 - **Deployment**: KServe, Seldon Core, BentoML, TF Serving, TorchServe.
 - **Monitoring**: Evidently AI, WhyLabs, Arize AI, NannyML, Alibi Detect.
 - **Registry**: MLflow Model Registry, DVC, Hugging Face Hub.
+- **Feature store**: Feast, Tecton, SageMaker Feature Store.
 
 ## References
   - references/ml-cicd-pipeline.md — ML CI/CD Pipeline

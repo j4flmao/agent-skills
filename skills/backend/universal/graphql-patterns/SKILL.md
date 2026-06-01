@@ -2,7 +2,7 @@
 name: backend-graphql-patterns
 description: >
   Use this skill when designing GraphQL schemas, resolvers, or data loading strategies. This skill enforces: schema-first design, N+1 prevention via DataLoader, directive-based auth, cursor-based pagination, and structured error handling. Applies to any backend stack with GraphQL. Do NOT use for: REST API design, gRPC service definition, or internal-only RPC endpoints.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -60,6 +60,42 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ### Max Response Length
 300 lines of schema + resolver code, 50 lines of configuration.
 
+## Decision Tree
+
+### When to Use GraphQL?
+
+```
+What is the primary API consumer?
+  ├── Multiple client types (web, mobile, third-party), different data needs
+  │   └── GraphQL — clients control data shape, reduces over/under-fetching
+  ├── Single client, well-defined views
+  │   └── REST — simpler, cacheable, tooling maturity
+  ├── Internal service-to-service communication
+  │   └── gRPC — typed contracts, streaming, higher performance
+  └── Public API for third-party developers
+      └── REST with OpenAPI — industry standard, broad tooling support
+```
+
+### Schema Federation vs Single Schema?
+
+```
+How many teams/service own the graph?
+  ├── One team, one service → Single schema (Apollo Server, Yoga)
+  ├── Multiple teams, each owns domain → Federation (Apollo Federation)
+  ├── Multiple services, no shared graph → Schema stitching (legacy) or Federation
+  └── One team but multiple data sources → Single schema with resolvers delegating to services
+```
+
+### DataLoader vs Direct Query?
+
+```
+How is the related data accessed?
+  ├── Same database → DataLoader batch function queries with WHERE ... IN (...)
+  ├── Different database/service → DataLoader batch function calls each service
+  ├── Always accessed together → Eager loading via SQL JOIN (more efficient than DataLoader)
+  └── Rarely accessed → DataLoader with individual fetches (cache hit rate matters)
+```
+
 ## Schema Design
 
 ### Naming Conventions
@@ -84,6 +120,22 @@ Each resolver is a function that returns data for a specific field. Resolvers ca
 
 ### DataLoader Batching
 Create one DataLoader per data source per request lifecycle. The batch function receives an array of keys and returns an array of values in the same order. Cache per request — never across requests. Use the `dataloader` library (JS/TS) or equivalent in other languages. Place DataLoader instantiation in the request context factory so it is available to all resolvers. Handle partial failures by mapping null for missing keys in the correct position.
+
+```typescript
+// DataLoader setup — per request
+function createLoaders(db: Database) {
+  return {
+    userLoader: new DataLoader<string, User>(async (ids) => {
+      const users = await db.user.findMany({ where: { id: { in: ids } } });
+      return ids.map(id => users.find(u => u.id === id) ?? null);
+    }),
+    orderLoader: new DataLoader<string, Order[]>(async (userIds) => {
+      const orders = await db.order.findMany({ where: { userId: { in: userIds } } });
+      return userIds.map(id => orders.filter(o => o.userId === id));
+    }),
+  };
+}
+```
 
 ### Caching Strategy
 DataLoader provides per-request caching automatically. For cross-request caching, use a distributed cache (Redis, Memcached) in the DataLoader batch function. Cache keys include the entity type and ID. Set appropriate TTLs based on data volatility. Invalidate cache entries when mutations modify data. Use cache tags for group invalidation.
@@ -275,11 +327,47 @@ Batch multiple DataLoader loads into a single database query. When a resolver ne
 ### Query Complexity Budgeting
 Allocate complexity points per field based on data source access cost. Fields resolved from the same database call cost 1 point. Fields resolved from external API calls cost 5+ points. List fields cost `1 + childCost * expectedPageSize`. Set a per-query budget of 1000 points and reject queries that exceed it.
 
+```typescript
+// Apollo Server — query complexity plugin
+const complexityPlugin = {
+  async requestDidStart() {
+    return {
+      async responseForOperation(ctx) {
+        const complexity = estimateComplexity({
+          schema: ctx.schema,
+          query: ctx.request.query,
+          variables: ctx.request.variables,
+        });
+        if (complexity > 1000) {
+          return { errors: [{ message: 'Query too complex', extensions: { code: 'COMPLEXITY_LIMIT', complexity } }] };
+        }
+      },
+    };
+  },
+};
+```
+
 ### Response Caching
 Use Apollo cache hints to set cache policies per type and field. `@cacheControl(maxAge: 60, scope: PUBLIC)` on types enables CDN caching. Per-request DataLoader caching prevents duplicate data fetches within the same query. For cross-request caching, use Redis in the DataLoader batch function.
 
 ### Persisted Queries
 Register common queries by hash to reduce request size and prevent arbitrary query execution. The client sends a hash instead of the full query string. The server looks up the query by hash. Persisted queries are whitelisted through CI/CD and cannot contain arbitrary operations.
+
+```typescript
+// Persisted queries setup (Apollo)
+const persistedQueries = new Map([
+  ['hash1', 'query GetUser($id: ID!) { user(id: $id) { name email } }'],
+  ['hash2', 'query GetOrders { orders { id total status } }'],
+]);
+
+app.use('/graphql', (req, res, next) => {
+  if (req.body.extensions?.persistedQuery) {
+    const { sha256Hash } = req.body.extensions.persistedQuery;
+    req.body.query = persistedQueries.get(sha256Hash) || req.body.query;
+  }
+  next();
+});
+```
 
 ## Rules
 - Schema is the contract — version it, never break clients
@@ -292,6 +380,9 @@ Register common queries by hash to reduce request size and prevent arbitrary que
 - Complexity budget: max 1000 points per query
 - Depth limit: max 7 levels of nesting
 - Rate limit: 1000 reads/min/user, 100 writes/min/user
+- Always use DataLoader for relation fields to prevent N+1
+- Never expose internal DB fields directly in the schema
+- All nullable fields should return null instead of throwing for missing data
 
 ## References
   - references/federation-subscriptions.md — Federation and Subscriptions

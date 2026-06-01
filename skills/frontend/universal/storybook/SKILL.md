@@ -2,14 +2,14 @@
 name: frontend-storybook
 description: >
   Use this skill when the user says 'storybook', 'component documentation', 'visual testing', 'storybook addon', 'CSF', 'component story'. This skill enforces CSF (Component Story Format) 3.x standards, accessible stories, interaction testing, and addon integration. Applies to any frontend stack.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
   claude-code: true
   cursor: true
   codex: true
-  windsure: true
+  windsurf: true
 tags: [frontend, storybook, phase-3, universal]
 ---
 
@@ -54,6 +54,55 @@ No file output unless requested.
 
 ### Max Response Length
 120 lines per component story set.
+
+## Storybook Architecture / Decision Trees
+
+### Story Organization Decision Tree
+```
+How many components?
+  |-- 1-10 components -->
+  |     Simple structure: Components/Button, Components/Card
+  |     Co-locate stories with components (Button.stories.tsx next to Button.tsx)
+  |
+  |-- 10-50 components -->
+  |     Feature-based grouping: Feature/Orders/OrderList, Feature/Orders/OrderCard
+  |     Group by domain, not by type
+  |
+  |-- 50+ components (design system) -->
+        Nested structure: DesignSystem/Buttons/Primary, DesignSystem/Buttons/Secondary
+        Each variant gets its own story
+        Atomic structure: Atoms, Molecules, Organisms
+```
+
+### Story Coverage Decision Tree
+```
+What states does the component have?
+  |-- Default / empty state -->
+  |     STORY REQUIRED: shows component with no data
+  |     Example: empty list, empty card, placeholder text
+  |
+  |-- Loading state -->
+  |     STORY REQUIRED: skeleton or spinner
+  |     Example: SkeletonList, LoadingButton
+  |
+  |-- Error state -->
+  |     STORY REQUIRED: error message, retry action
+  |     Example: ErrorCard, ErrorForm
+  |
+  |-- Edge cases -->
+  |     STORY REQUIRED: long text, missing props, zero data, overflow
+  |     Example: VeryLongText, MissingImage, SingleItem
+  |
+  |-- Interactive behavior -->
+  |     STORY REQUIRED if component has user input
+  |     Use play() function to simulate clicks, typing, hover
+  |
+  |-- Responsive variants -->
+        STORY REQUIRED: mobile (375px), tablet (768px), desktop (1280px)
+        Use parameters.viewport
+```
+
+---
 
 ## Workflow
 
@@ -147,26 +196,80 @@ import { Meta, Story, Canvas, Controls } from '@storybook/blocks';
 <Controls of={ButtonStories.Primary} />
 ```
 
-## Best Practices
+### Step 8: MSW Integration for Data Stories
+```tsx
+import { http, HttpResponse } from 'msw'
+import { initialize, mswLoader } from 'msw-storybook-addon'
 
-| Practice | Why |
-|----------|-----|
-| Co-locate stories with components | Easy discovery, stays in sync |
-| Use `satisfies Meta<C>` | Full type safety without double declaration |
-| Cover all states (loading, empty, error, edge cases) | Prevents untested UI states |
-| Use `fn()` for callbacks in play functions | Spy assertions without mock boilerplate |
-| Set `tags: ['autodocs']` per component | Incremental docs adoption |
-| Group stories by `title: 'Components/X'` | Consistent sidebar organization |
+initialize()
 
-## Pitfalls to Avoid
+const meta = {
+  component: OrderList,
+  loaders: [mswLoader],
+} satisfies Meta<typeof OrderList>
 
-- **CSF 2.x `storiesOf` API**: Always use CSF 3.x. Never use `storiesOf` — removed in Storybook 8.
-- **Direct addon imports in stories**: Use `parameters` or `decorators` in meta — never `import from '@storybook/addon-*'`.
-- **Missing `autodocs` tag**: Without `tags: ['autodocs']` or global enable, docs tab won't generate.
-- **Real API calls in stories**: Always mock data/services. Use MSW or static fixtures.
-- **`any` type for props**: Derive from component's props type. Use `StoryObj<typeof meta>`.
-- **Hardcoded viewport sizes**: Use `parameters.viewport` with named viewports from config.
-- **Skipping a11y**: Run aXe on every component — catch contrast, label, and ARIA issues early.
+export const WithOrders: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/orders', () => {
+          return HttpResponse.json([{ id: '1', name: 'Order 1', total: 100 }])
+        }),
+      ],
+    },
+  },
+}
+
+export const Empty: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/orders', () => {
+          return HttpResponse.json([])
+        }),
+      ],
+    },
+  },
+}
+```
+
+## Common Pitfalls
+
+1. **CSF 2.x `storiesOf` API**: Always use CSF 3.x. Never use `storiesOf` — removed in Storybook 8.
+2. **Direct addon imports in stories**: Use `parameters` or `decorators` in meta — never `import from '@storybook/addon-*'`.
+3. **Missing `autodocs` tag**: Without `tags: ['autodocs']` or global enable, docs tab won't generate.
+4. **Real API calls in stories**: Always mock data/services. Use MSW or static fixtures.
+5. **`any` type for props**: Derive from component's props type. Use `StoryObj<typeof meta>`.
+6. **Hardcoded viewport sizes**: Use `parameters.viewport` with named viewports from config.
+7. **Skipping a11y**: Run aXe on every component — catch contrast, label, and ARIA issues early.
+
+## Compared With
+
+| Feature | Storybook | Ladle | Histoire | Catalog |
+|---------|----------|-------|----------|---------|
+| Framework support | React, Vue, Angular, Svelte, Web Components | React only | Vue only | Any (static) |
+| CSF 3.x | Yes | Yes | No | N/A |
+| Interaction testing | Built-in | Limited | Limited | No |
+| A11y addon | Yes | No | No | No |
+| Visual testing (Chromatic) | Built-in | Third-party | Third-party | No |
+| Bundle size (SB) | Large | Small | Small | Minimal |
+| MSW integration | Yes | Yes | No | No |
+
+## Performance Considerations
+
+- Storybook dev server can be slow for large component libraries (500+ stories). Use `storyStoreV7: true` for lazy compilation
+- Chromatic snapshots run on CI — limit to changed stories per PR to reduce snapshot time
+- MSW handlers intercept API calls in stories — no real network requests during testing
+- Bundle size of Storybook itself is irrelevant to production (dev-only tool)
+- `@storybook/test` package is small (~3KB) and only used in story files
+
+## Accessibility Considerations
+
+- `@storybook/addon-a11y` runs aXe on every story automatically — fix violations before merging
+- Test with keyboard navigation in the Stories panel (Tab, Enter, Escape)
+- Ensure color contrast passes WCAG AA (4.5:1) for all stories
+- Test focus management in interactive stories (play functions)
+- Verify ARIA labels and roles in the Accessibility panel
 
 ## Rules
 - Always use CSF 3.x syntax — never CSF 2.x `storiesOf` API

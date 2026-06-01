@@ -345,6 +345,117 @@ Scalability: DVC works well for teams of 5-20 data scientists. LakeFS and Nessie
 | dvcx | DVC experiment management extensions |
 | lakeFS Spark Connector | Spark integration for branch-based data access |
 
+### LakeFS Branching Strategy
+
+```yaml
+branching_strategy:
+  main:
+    description: "Production data — serving dashboards, ML models, reports"
+    access: "Read-only for most users, write via PR merge"
+    retention: "Indefinite"
+    
+  dev:
+    description: "Development branches for pipeline code changes"
+    pattern: "dev/<engineer-name>/<feature-description>"
+    TTL: "90 days"
+    from: "main"
+    merge: "PR with data diff review"
+    
+  experiment:
+    description: "ML experiment branches for model training and evaluation"
+    pattern: "exp/<experiment-name>/<run-id>"
+    TTL: "30 days"
+    from: "main or dev"
+    merge: "Not merged — used for experimentation only"
+    
+  staging:
+    description: "Pre-production validation branch"
+    pattern: "staging/<release-version>"
+    TTL: "Until validated"
+    from: "dev"
+    merge: "To main after validation + data diff approval"
+    
+  release:
+    description: "Tagged production releases"
+    pattern: "release/v<semver>"
+    TTL: "1 year (for rollback capability)"
+    from: "main"
+    tag: true
+    changelog: true
+
+# Example workflow:
+# 1. lakefs branch create dev/alice/new-feature
+# 2. Run pipeline on dev branch → produces new dataset version
+# 3. lakefs diff main dev/alice/new-feature (review data changes)
+# 4. Merge to staging, run CI/CD validation
+# 5. Merge to main, tag as release/v1.3.0
+```
+
+### DVC Pipeline Example
+
+```yaml
+# dvc.yaml — reproducible data pipeline
+stages:
+  extract:
+    cmd: python src/extract.py
+    deps:
+      - src/extract.py
+      - config/extract_config.yaml
+    outs:
+      - data/raw/orders.parquet
+    params:
+      - extract.start_date
+      - extract.end_date
+  
+  transform:
+    cmd: python src/transform.py
+    deps:
+      - src/transform.py
+      - data/raw/orders.parquet
+    outs:
+      - data/processed/orders_clean.parquet
+    params:
+      - transform.min_order_amount
+  
+  aggregate:
+    cmd: python src/aggregate.py
+    deps:
+      - src/aggregate.py
+      - data/processed/orders_clean.parquet
+    outs:
+      - data/features/order_features.parquet
+    
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+      - src/evaluate.py
+      - data/features/order_features.parquet
+    metrics:
+      - metrics/model_metrics.json:
+          cache: false
+    plots:
+      - reports/feature_importance.png:
+          cache: false
+```
+
+### Decision Tree
+
+#### Versioning Tool Selection
+```
+Scale and workflow?
+├── Small team, ML experiments, Git-based workflow
+│   └── DVC (versions data/metadata in Git, stores in S3)
+├── Large team, data lake, Git-like branching on data
+│   └── LakeFS (branch/merge/rollback for data on S3)
+├── Multi-table ACID lakehouse, time travel needed
+│   ├── Delta Lake format → Delta time travel (built-in)
+│   └── Iceberg format → Nessie (Git for Iceberg catalogs)
+├── Experiment tracking with code + data + model
+│   └── MLflow (model registry) + DVC (data versioning)
+└── Compliance-driven data archiving
+    └── LakeFS (retention policies, GC, audit trails)
+```
+
 ## Rules
 - Every data pipeline versioned with DVC or LakeFS
 - main branch is production, all changes go through PR
@@ -361,6 +472,7 @@ Scalability: DVC works well for teams of 5-20 data scientists. LakeFS and Nessie
 - Test rollback procedures quarterly
 - Monitor storage growth from branching activity
 - Use deterministic pipelines for reproducible experiments
+- Define branching strategy (main/dev/exp) before adopting versioning tool
 
 ## References
   - references/data-versioning-branching.md — Data Versioning Branching

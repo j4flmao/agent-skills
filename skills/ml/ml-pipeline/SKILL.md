@@ -4,7 +4,7 @@ description: >
   Use this skill when building ML pipelines: Kubeflow Pipelines, TFX, SageMaker Pipelines, Vertex AI Pipelines, ML CI/CD, model training pipeline, data validation, model validation, pipeline orchestration.
   This skill enforces: pipeline component decomposition, data validation gates, model validation thresholds, CI/CD integration, artifact tracking, pipeline versioning.
   Do NOT use for: model training hyperparameter tuning, feature store configuration, model serving deployment.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -20,10 +20,77 @@ tags: [ml, pipeline, mlops, phase-11]
 ## Purpose
 Design production ML pipelines with component decomposition, validation gates, artifact tracking, and CI/CD integration for reliable model training and deployment.
 
+## Architecture/Decision Trees
+
+### Pipeline Orchestrator Selection
+```
+Infrastructure and scale
+  ├── Kubernetes available
+  │   ├── Google Cloud → Vertex AI Pipelines (managed Kubeflow)
+  │   ├── AWS → SageMaker Pipelines (native integration)
+  │   ├── Open-source K8s → Kubeflow Pipelines (self-managed)
+  │   └── Multi-cloud → Argo Workflows + ML metadata
+  ├── No Kubernetes
+  │   ├── Python-native → Prefect / Airflow (DAG-based)
+  │   ├── Lightweight → Flyte (K8s optional, Python SDK)
+  │   └── Simple → GitHub Actions / GitLab CI (for basic pipelines)
+  └── Cloud-managed
+      ├── GCP → Vertex AI Pipelines (serverless)
+      ├── AWS → SageMaker Pipelines (serverless)
+      └── Azure → Azure ML Pipelines (serverless)
+```
+
+### Component Decomposition
+```
+Standard ML Pipeline Components
+  ├── Data Ingestion
+  │   ├── Extract from source (S3/BQ/Kafka/API)
+  │   ├── Partition strategy (date, region)
+  │   └── Validate schema
+  ├── Data Validation
+  │   ├── Schema compliance (TFDV / Great Expectations)
+  │   ├── Data quality (null %, distribution shift)
+  │   └── Anomaly detection (data drift)
+  ├── Data Transformation
+  │   ├── Feature engineering
+  │   ├── Scaling / encoding / imputation
+  │   └── Train/val/test split
+  ├── Model Training
+  │   ├── Hyperparameter tuning (Optuna/Ray Tune)
+  │   ├── Experiment tracking (MLflow)
+  │   └── Model checkpointing
+  ├── Model Evaluation
+  │   ├── Metrics computation
+  │   ├── Baseline comparison
+  │   ├── Fairness audit
+  │   └── Threshold enforcement
+  └── Model Deployment
+      ├── Push to model registry
+      ├── Deploy to staging
+      └── Promote to production
+```
+
+### Validation Gates
+```
+Gate placement and actions
+  ├── Gate 1: Data Validation
+  │   Check: Schema compliance, data quality, distribution shift
+  │   Action on FAIL: Block pipeline, alert data team
+  ├── Gate 2: Model Validation
+  │   Check: Metric thresholds, fairness constraints, latency budget
+  │   Action on FAIL: Block deployment, auto-rollback
+  ├── Gate 3: Staging Validation
+  │   Check: Shadow traffic metrics, canary health
+  │   Action on FAIL: Halt promotion, roll back to previous
+  └── Gate 4: Production Monitoring
+      Check: Real-time metric degradation, data drift
+      Action on FAIL: Auto-rollback, trigger retraining
+```
+
 ## Agent Protocol
 
 ### Trigger
-User request includes: ML pipeline, Kubeflow, TFX, SageMaker Pipelines, Vertex AI Pipelines, ML CI/CD, model training pipeline, data validation, model validation, pipeline orchestration, pipeline component.
+User request includes: ML pipeline, Kubeflow, TFX, SageMaker Pipelines, Vertex AI Pipelines, ML CI/CD, model training pipeline, data validation, model validation, pipeline orchestration.
 
 ### Protocol
 1. Clarify ML task type, data source, training frequency, and deployment target.
@@ -33,7 +100,7 @@ User request includes: ML pipeline, Kubeflow, TFX, SageMaker Pipelines, Vertex A
 5. Design CI/CD integration with staged promotion and rollback.
 6. Specify artifact tracking and pipeline versioning strategy.
 
-## Output
+### Output
 ML pipeline architecture with component design, validation gates, CI/CD integration.
 
 ### Response Format
@@ -42,27 +109,21 @@ ML pipeline architecture with component design, validation gates, CI/CD integrat
 ### Components
 - Data Ingestion: {source} | {schedule} | {partition strategy}
 - Data Validation: {framework} | {schema source} | {anomaly threshold}
-- Data Transformation: {framework} | {features in/out} | {stats computed}
+- Data Transformation: {framework} | {features in/out}
 - Model Training: {framework} | {algorithm} | {hyperparameter source}
-- Model Evaluation: {metrics} | {thresholds} | {fairness constraints}
+- Model Evaluation: {metrics} | {thresholds}
 - Model Deployment: {target} | {strategy} | {rollback condition}
 
 ### Validation Gates
 | Gate | Check | Action on Fail |
-|---|---|---|
-| Data schema | {schema compliance %} | {block/skip/alert} |
-| Data quality | {null ratio, distribution shift} | {block/skip/alert} |
-| Model accuracy | {metric >= threshold} | {block/rollback} |
-| Model fairness | {demographic parity, equal opportunity} | {block/warn} |
 
 ### CI/CD Pipeline
 - Trigger: {commit / schedule / manual}
 - Staging: {dev → staging → prod}
 - Promotion Gate: {validation + approval}
-- Rollback: {automatic on metric degradation}
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble. No postamble. No explanations. No filler. Compress output.
 
 ### Completion Criteria
 - [ ] Pipeline decomposed into discrete components with single responsibility.
@@ -75,25 +136,59 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ## Workflow
 
 ### Step 1: Pipeline Decomposition
-Break ML workflow into components:
-- **Data Ingestion**: Poll data sources, partition strategy, incremental vs full load.
-- **Data Validation**: Schema enforcement, null check, distribution comparison.
-- **Data Transformation**: Feature engineering, scaling, encoding, imputation.
-- **Model Training**: Algorithm selection, hyperparameter tuning, experiment tracking.
-- **Model Evaluation**: Metric computation, baseline comparison, fairness audit.
-- **Model Deployment**: Push to registry, deploy to staging, promote to production.
+Break ML workflow into components: Data Ingestion (poll sources, partition), Data Validation (schema, null check, distribution), Data Transformation (feature engineering, scaling), Model Training (algorithm, tuning), Model Evaluation (metrics, baseline, fairness), Model Deployment (registry, staging, production).
+
+```python
+# Kubeflow Pipeline definition
+from kfp import dsl
+
+@dsl.component(base_image="python:3.10")
+def validate_data(input_data: str) -> str:
+    """Validate data schema and quality."""
+    import tensorflow_data_validation as tfdv
+    stats = tfdv.generate_statistics_from_csv(input_data)
+    schema = tfdv.infer_schema(stats)
+    anomalies = tfdv.validate_statistics(stats, schema)
+    assert len(anomalies.anomaly_info) == 0, f"Anomalies: {anomalies}"
+    return input_data
+
+@dsl.component(base_image="python:3.10")
+def transform_data(input_data: str) -> str:
+    """Feature engineering and transformation."""
+    import pandas as pd
+    df = pd.read_csv(input_data)
+    # Feature engineering steps
+    df.to_parquet("/data/transformed.parquet")
+    return "/data/transformed.parquet"
+
+@dsl.component(base_image="python:3.10")
+def train_model(data_path: str, hp_path: str) -> str:
+    """Model training with tracked hyperparameters."""
+    import mlflow
+    with mlflow.start_run():
+        model = train(data_path, hp_path)
+        mlflow.sklearn.log_model(model, "model")
+        return mlflow.active_run().info.run_id
+
+@dsl.pipeline(name="training-pipeline")
+def ml_pipeline(data_url: str):
+    validate = validate_data(input_data=data_url)
+    transform = transform_data(input_data=validate.output)
+    train = train_model(
+        data_path=transform.output,
+        hp_path="/hps/best_params.json",
+    )
+```
 
 ### Step 2: Configure Data Validation
 Use TensorFlow Data Validation or Great Expectations:
 ```python
-# TFDV example
 import tensorflow_data_validation as tfdv
 
 stats = tfdv.generate_statistics_from_csv(data_location='train.csv')
 schema = tfdv.infer_schema(statistics=stats)
 tfdv.display_schema(schema=schema)
 
-# Validate new data
 new_stats = tfdv.generate_statistics_from_csv(data_location='new_data.csv')
 anomalies = tfdv.validate_statistics(statistics=new_stats, schema=schema)
 tfdv.display_anomalies(anomalies=anomalies)
@@ -101,7 +196,6 @@ tfdv.display_anomalies(anomalies=anomalies)
 
 ### Step 3: Configure Model Validation
 ```python
-# Model evaluation with threshold enforcement
 evaluation_config = {
     'accuracy': {'min_threshold': 0.85},
     'precision': {'min_threshold': 0.80},
@@ -109,21 +203,21 @@ evaluation_config = {
     'f1_score': {'min_threshold': 0.82},
     'fairness': {
         'demographic_parity': {'max_diff': 0.05},
-        'equal_opportunity': {'max_diff': 0.05}
-    }
+        'equal_opportunity': {'max_diff': 0.05},
+    },
+    'latency': {'p99_ms': 100},
 }
 ```
 
 ### Step 4: Design CI/CD Pipeline
 ```yaml
-# .github/workflows/ml-pipeline.yml
 name: ML Pipeline
 on:
   push:
     branches: [main]
     paths: ['pipelines/**', 'components/**']
   schedule:
-    - cron: '0 6 * * 1'  # weekly retrain
+    - cron: '0 6 * * 1'
 
 jobs:
   validate-data:
@@ -149,7 +243,6 @@ jobs:
 
 ### Step 5: Artifact Tracking
 ```python
-# MLflow tracking
 import mlflow
 
 mlflow.set_experiment('ml-pipeline')
@@ -160,45 +253,98 @@ with mlflow.start_run():
     mlflow.register_model('runs:/<run_id>/model', 'production-model')
 ```
 
-### Step 6: Pipeline Orchestration
+### Step 6: Pipeline Orchestration (TFX)
 ```python
-# Kubeflow Pipeline component
-from kfp import dsl
+import tfx.v1 as tfx
 
-@dsl.component
-def validate_data_op(input_data: str) -> str:
-    """Validate data schema and quality."""
-    stats = tfdv.generate_statistics_from_csv(input_data)
-    schema = tfdv.infer_schema(stats)
-    tfdv.validate_statistics(stats, schema)
-    return input_data
-
-@dsl.pipeline
-def training_pipeline(data_url: str):
-    validate = validate_data_op(data=data_url)
-    transform = transform_op(data=validate.output)
-    train = train_op(data=transform.output)
-    evaluate = evaluate_op(model=train.output, data=transform.output)
+pipeline = tfx.dag_runner.Pipeline(
+    pipeline_name="churn-prediction",
+    pipeline_root="gs://ml-pipeline-artifacts/",
+    components=[
+        tfx.components.CsvExampleGen(input_base="gs://data/churn/"),
+        tfx.components.StatisticsGen(examples=example_gen.outputs['examples']),
+        tfx.components.SchemaGen(statistics=statistics_gen.outputs['statistics']),
+        tfx.components.ExampleValidator(
+            statistics=statistics_gen.outputs['statistics'],
+            schema=schema_gen.outputs['schema'],
+        ),
+        tfx.components.Transform(
+            examples=example_gen.outputs['examples'],
+            schema=schema_gen.outputs['schema'],
+            module_file="transform.py",
+        ),
+        tfx.components.Trainer(
+            module_file="trainer.py",
+            examples=transform.outputs['transformed_examples'],
+            schema=schema_gen.outputs['schema'],
+        ),
+        tfx.components.Evaluator(
+            examples=transform.outputs['transformed_examples'],
+            model=trainer.outputs['model'],
+        ),
+        tfx.components.Pusher(
+            model=trainer.outputs['model'],
+            push_destination=tfx.proto.PushDestination(
+                filesystem=tfx.proto.PushDestination.Filesystem(
+                    base_directory="gs://models/churn/"
+                )
+            ),
+        ),
+    ],
+)
 ```
 
+## Anti-Patterns
+
+- **Monolithic pipeline component**: Single component does everything → hard to debug, cannot retry individual steps.
+- **No data validation gate**: Training on corrupted data → wasted GPU hours, bad model.
+- **Tuning hyperparameters on test set**: Leaks test data into training decisions.
+- **No model validation gate**: Deploying models below minimum quality threshold.
+- **Manual promotion without CI/CD**: Human error in deployment process.
+- **No artifact tracking**: Cannot reproduce any pipeline run.
+- **No rollback plan**: Stuck with bad model in production.
+- **Training pipeline coupled to serving code**: Changes to training break serving.
+- **Not containerizing components**: Inconsistent environments across runs.
+
+## Production Considerations
+
+### Monitoring
+- Track pipeline execution time per component.
+- Monitor data quality metrics over time.
+- Alert on data drift or schema violations.
+- Track model performance degradation.
+- Monitor resource utilization per component.
+
+### Scaling
+- Parallel component execution where dependencies allow.
+- GPU for training, CPU for validation/transformation.
+- Distributed training for large models (DDP/FSDP).
+- Preemptible instances for non-critical components.
+
+### Cost Optimization
+- Use spot instances for training.
+- Cache intermediate artifacts.
+- Skip re-running unchanged components.
+- Right-size compute per component type.
+
 ## Rules
-- Every pipeline component has single responsibility and explicit inputs/outputs.
-- Data validation runs before transformation — never train on unvalidated data.
+- Every pipeline component has single responsibility and explicit I/O.
+- Data validation runs before transformation.
 - Model validation gates block deployment if thresholds not met.
-- All pipeline artifacts versioned and tracked with run metadata.
-- CI/CD pipeline includes data validation, training, evaluation, and promotion stages.
-- Staged promotion (dev → staging → prod) with automatic rollback on metric degradation.
-- Pipeline metadata stored in MLflow or similar experiment tracker.
+- All pipeline artifacts versioned and tracked.
+- CI/CD includes validation, training, evaluation, promotion.
+- Staged promotion (dev → staging → prod) with auto-rollback.
+- Pipeline metadata stored in experiment tracker.
 - Data drift detection triggers pipeline re-execution.
-- Pipeline components are containerized and versioned.
-- Rollback restores previous model version and triggers retraining.
+- Components are containerized and versioned.
+- Rollback restores previous model version.
 
 ## References
   - references/kubeflow-tfx.md — Kubeflow Pipelines & TFX
   - references/ml-cicd.md — CI/CD for ML Pipelines
-  - references/ml-pipeline-advanced.md — Ml Pipeline Advanced Topics
-  - references/ml-pipeline-fundamentals.md — Ml Pipeline Fundamentals
+  - references/ml-pipeline-advanced.md — ML Pipeline Advanced Topics
+  - references/ml-pipeline-fundamentals.md — ML Pipeline Fundamentals
   - references/pipeline-monitoring.md — ML Pipeline Monitoring
   - references/pipeline-orchestration.md — ML Pipeline Orchestration
 ## Handoff
-For model serving deployment, hand off to `ml-model-serving`. For feature store configuration, hand off to `ml-feature-store`. For experiment tracking setup, hand off to `ai-model-training`.
+For model serving deployment, hand off to `ml-model-serving`. For feature store configuration, hand off to `ml-feature-store`.

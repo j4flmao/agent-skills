@@ -1,154 +1,708 @@
 ---
-name: devops-backup-dr
-description: |
-  Trigger: "backup", "disaster recovery", "DR plan", "backup strategy",
-  "RTO", "RPO", "data restore", "backup retention", "cross-region replication",
-  "disaster recovery testing", "business continuity", "failover",
-  "backup verification"
-  Exclusion: Not for general storage configuration — use cloud-specific skills.
-version: 1.0.0
-author: j4flmao
-license: MIT
+name: backup-dr
+description: >
+  Use this skill when the user says 'backup', 'disaster recovery', 'DR',
+  'RPO', 'RTO', 'backup strategy', '3-2-1 rule', 'business continuity',
+  'disaster recovery plan', 'failover', 'failback', 'replication',
+  'snapshot', 'backup automation', 'backup validation', 'offsite backup',
+  'immutable backup', 'ransomware protection'.
+  Covers: backup strategies (3-2-1 rule), disaster recovery planning,
+  RPO/RTO definition, backup automation, replication, failover testing,
+  cloud DR (pilot light, warm standby, multi-region), backup validation,
+  compliance (SOC 2, HIPAA, PCI), ransomware recovery.
+  Do NOT use for: database-specific replication (use database-migration),
+  storage architecture design (use storage-infrastructure).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
 compatibility:
-  cli: true
-  core: true
-  editor: true
-  api: true
-tags: [devops, backup, disaster-recovery, phase-7]
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [devops, backup, disaster-recovery, business-continuity, phase-5]
 ---
 
-# devops-backup-dr
+# Backup and Disaster Recovery
 
 ## Purpose
-Design and implement backup and disaster recovery strategies — define RTO/RPO per system tier, select backup tools, enforce retention policies, and validate recoverability through regular testing.
+Design and implement backup strategies and disaster recovery plans with defined RPO/RTO, the 3-2-1 rule, automation, validation, and cloud DR patterns.
 
 ## Agent Protocol
 
 ### Trigger
-Any user message referencing backup, DR, RTO, RPO, data restore, retention, cross-region replication, failover, Velero, or business continuity.
+Exact user phrases: "backup", "disaster recovery", "DR", "RPO", "RTO", "backup strategy", "3-2-1 rule", "business continuity", "failover", "failback", "snapshot", "backup automation".
 
 ### Input Context
-System inventory, criticality tiers, compliance retention requirements, cloud provider(s), K8s clusters, databases, file storage volumes.
+Before activating, verify:
+- Infrastructure type (on-prem VMs, cloud instances, Kubernetes, databases, files).
+- Current RPO/RTO targets (recovery point/time objectives).
+- Compliance requirements (HIPAA, PCI, SOC 2, GDPR — determines retention).
+- Budget for backup storage and DR infrastructure.
+- Criticality tier: Tier 1 (minutes RPO), Tier 2 (hours), Tier 3 (days).
+- Existing backup tools (Veeam, Rubrik, Commvault, cloud-native).
 
 ### Output Artifact
-Backup strategy document, DR runbook, Velero configuration, retention policy, failover procedures, testing schedule.
+Writes to backup automation scripts (Python/Bash/PowerShell), Terraform for DR infra, runbooks, and CI/CD pipeline for backup validation.
 
 ### Response Format
-Configuration YAML, CLI commands, procedural checklists. Tables for RTO/RPO and retention tiers.
+Configuration files, scripts, and runbook templates with no extraneous explanation.
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble. No postamble. No explanations. No filler/hedging/transitions.
 
 ### Completion Criteria
-Backup schedule running, restore verified, DR runbook documented, failover test passed, RTO/RPO targets met.
+- [ ] RPO and RTO defined per workload tier.
+- [ ] 3-2-1 backup strategy implemented (3 copies, 2 media, 1 offsite).
+- [ ] Backup automation configured with alerting.
+- [ ] DR plan documented with failover/failback procedures.
+- [ ] Backup validation testing scheduled (automated restore test).
+- [ ] Immutable backups configured for ransomware protection.
 
 ### Max Response Length
-8000 tokens.
+Direct file write. No response text.
 
-## Components
+## Architecture Decision Trees
 
-### Backup Types (Detailed)
-Full backup: complete copy of all data — weekly cadence, higher storage cost, fastest restore for full recovery. Incremental backup: changes since last backup of any type — daily cadence, lowest storage cost, slower restore (must replay all incrementals). Differential backup: changes since last full backup — daily cadence, moderate storage, faster restore than incremental. Snapshot: point-in-time copy of storage volume — almost instant, cloud provider managed (EBS, PD, managed disk), limited to platform. WAL archive: continuous write-ahead log archiving for PostgreSQL — enables second-level RPO, stored in S3/GCS/Blob. Dump: logical backup via pg_dump/mysqldump — portable across versions, slower backup/restore, good for migrations.
-
-### 3-2-1 Rule and Variants
-3-2-1: 3 copies of data, 2 different storage types (e.g., S3 + tape, or local disk + cloud), 1 copy offsite (different region). 3-2-1-1-0: adds 1 immutable/air-gapped copy (for ransomware protection) and 0 errors after restore verification. 4-3-2: 4 copies, 3 media types, 2 offsite (for ultra-critical systems). Apply at each system tier: Tier 1 uses 3-2-1-1-0, Tier 2 uses 3-2-1, Tier 3 uses simple replication.
-
-### DR Strategy Comparison
-| Strategy | RTO | RPO | Cost | Complexity | Use Case |
+### Backup Strategy by Workload Tier
+| Tier | RPO | RTO | Backup Frequency | Storage | Cost |
 |---|---|---|---|---|---|
-| Backup-Restore | Hours | Minutes | $ | Low | Tier 3, dev/test |
-| Pilot Light | <1hr | <5min | $$ | Medium | Tier 2 migration path |
-| Warm Standby | <30min | <5min | $$$ | High | Tier 1 cost-conscious |
-| Active-Active | Near-zero | Near-zero | $$$$ | Very High | Mission-critical Tier 1 |
+| Tier 1 (Critical) | <15 min | <1 hour | Continuous / 5 min | SSD + offsite replica | $$$ |
+| Tier 2 (Important) | <1 hour | <4 hours | Hourly | HDD + offsite | $$ |
+| Tier 3 (Standard) | <24 hours | <24 hours | Daily | HDD + cold archive | $ |
+| Tier 4 (Archive) | N/A | <7 days | Weekly/Monthly | Cold/Glacier | $ |
 
-### Database Backup Comparison
-Snapshot: fast (seconds), simple (cloud API), limited to cloud provider, cannot restore to different DB version. PITR: second-level granularity, requires WAL/transaction log archiving, restore to any point within retention window. WAL Archiving: continuous, low storage overhead (WAL files are small), enables PITR, requires periodic archive cleanup. Dump: portable across versions, can restore to different DB engine, slower (hours for large DB), locks during backup without --no-lock flag.
-RPO — acceptable data loss measured in time (seconds, minutes, hours). RTO — acceptable downtime to restore service. System criticality tiers: Tier 1 (critical — RPO <5min, RTO <1hr, payment, auth), Tier 2 (important — RPO <1hr, RTO <4hr, order management, reporting), Tier 3 (non-critical — RPO <24hr, RTO <24hr, logs, analytics), Tier 4 (best effort — no RPO/RTO, dev/test). Compliance requirements determine minimum retention periods (SOC2: 1yr, PCI-DSS: 1yr, HIPAA: 6yr, GDPR: deletion on request).
+### Backup Target: On-Prem vs Cloud vs Hybrid
+| Strategy | Recovery Speed | Cost | Complexity | Security |
+|---|---|---|---|---|
+| On-prem only (tape/NAS) | Fast (local) | High (CAPEX) | Low | Physical security |
+| Cloud only (S3/Blob) | Depends on network | Pay-per-use | Low | Encryption built-in |
+| Hybrid (local + cloud) | Fast local, cloud DR | Medium | Medium | Best of both |
+| Multi-cloud backup | DR flexibility | High | High | Complex compliance |
 
-### 2. Backup Strategies
-Full backup: complete copy of all data, weekly cadence. Incremental backup: changes since last backup of any type, daily cadence. Differential backup: changes since last full backup, daily cadence. 3-2-1 rule: 3 copies of data, 2 different storage media/types, 1 copy offsite (different region/account). Database backup: full daily + WAL archive every 5min (PITR capability). K8s backup: Velero for cluster state + PV snapshots. File backup: cross-region replication for blob storage. Application config: IaC snapshotted every change (Terraform state, K8s manifests).
+### Cloud DR Patterns
+| Pattern | RTO | RPO | Cost | Use Case |
+|---|---|---|---|---|
+| Backup & Restore | Hours | 24 hours | Low | Non-critical |
+| Pilot Light (core only) | Minutes | ~1 hour | Medium | Critical but budget-constrained |
+| Warm Standby (scaled-down) | Minutes | ~15 min | Medium-High | Always-on failover |
+| Multi-site Active-Active | Real-time | Real-time | Very High | Zero downtime required |
 
-### 3. Disaster Recovery Tiers
-RPO/RTO definitions per tier: Tier 1 (RPO <5min, RTO <1hr), Tier 2 (RPO <1hr, RTO <4hr), Tier 3 (RPO <24hr, RTO <24hr), Tier 4 (no requirement). Recovery objectives drive architecture decisions: tighter RPO requires synchronous replication, tighter RTO requires pre-provisioned standby infrastructure.
+### Cloud Provider DR Services
+| AWS | Azure | GCP | Purpose |
+|---|---|---|---|
+| AWS Backup | Azure Backup | Backup and DR | Managed backup service |
+| S3 Cross-Region Replication | Azure Site Recovery | Cloud Storage DR | Storage replication |
+| RDS Multi-AZ / Cross-Region | Azure SQL Geo-Replication | Cloud SQL HA | Database DR |
+| DRS (Elastic Disaster Recovery) | Azure Site Recovery | Migrate for Compute | VM-level replication |
+| CloudEndure | Azure Site Recovery | Migrate for Compute | Continuous block-level |
 
-### 4. DR Strategies
-Backup-Restore: cheapest, slowest recovery (RTO hours, RPO minutes). Pilot Light: core services running in DR at minimum scale, scale up on failover (RTO <1hr, RPO <5min). Warm Standby: full DR environment running at reduced capacity, scale up on failover (RTO <30min, RPO <5min). Multi-Region Active-Active: traffic distributed across regions, near-zero RTO/RPO, most expensive. Strategy selection based on system tier and budget.
+### Ransomware Protection Methods
+| Protection | How It Works | Immutable | Recovery Speed |
+|---|---|---|---|
+| Immutable S3 (Object Lock) | WORM policy on S3 buckets | Yes (compliance mode) | Fast |
+| Air-gapped backup | Physically disconnected backup storage | Yes | Slow (needs connection) |
+| Write-Once tape | Physical WORM tape | Yes | Very slow |
+| Cloud object lock (Blob/Azure) | Immutable blobs with legal hold | Yes | Fast |
+| Backup copy with retention lock | Veeam/Commvault immutable copy | Yes (vendor) | Fast |
 
-### 5. Tools by Platform
-K8s: Velero for cluster state backup, PV snapshots, namespace-level restore, scheduled backups, cross-cloud migration. Veeam: enterprise backup for VMs, databases, and applications, with instant recovery and replication. AWS Backup: centralized backup service for RDS, EBS, S3, EFS, DynamoDB with lifecycle policies. Azure Backup: centralized backup for VMs, SQL, SAP HANA, file shares. GCP Backup and DR: managed backup/disaster recovery for Compute Engine, Cloud SQL, GKE.
+## Quick Start
+Identify workload tiers → Set RPO/RTO → Implement 3-2-1 backup → Automate with scripts/CI → Configure alerts → Test restore → Document DR plan → Schedule recurring validation.
 
-### 6. Database Backup
-Snapshot: cloud provider automated snapshots (RDS, Cloud SQL, Azure SQL) — fast, simple, limited to platform. PITR (Point-in-Time Recovery): restore to any point within retention window using WAL/transaction log archiving. WAL Archiving: continuous archive of write-ahead logs for PostgreSQL, enables second-level RPO. Dump: logical backup via pg_dump/mysqldump — portable, slower, good for migration or selective restore.
+## Core Workflow
 
-### 7. Testing Drills
-Schedule: Tier 1 failover test quarterly, Tier 2 semi-annually, Tier 3 annually. Backup restore test monthly — restore to isolated environment, verify data integrity. Tabletop exercises to validate RTO assumptions with stakeholders. Recovery runbook documented, version-controlled, and reviewed after each test. Non-disruptive tests first (verify backups without failover), then full failover exercises.
+### Step 1: Backup Policy Definition
+```yaml
+# backup-policies.yaml
+workloads:
+  - name: production-database
+    tier: 1
+    type: postgresql
+    rpo: 15m
+    rto: 1h
+    backup_frequency: continuous_wal
+    full_backup: daily
+    retention:
+      daily: 30
+      weekly: 12
+      monthly: 12
+      yearly: 7
+    storage:
+      primary: ssd_gp3
+      offsite: s3_standard
+      archive: glacier_deep_archive
+    replication:
+      type: cross_region
+      target_region: us-west-2
+    encryption:
+      at_rest: aes256
+      in_transit: tls12
+    monitoring:
+      backup_success_sli: 99.9
+      restore_test_frequency: monthly
 
-### 8. Compliance and Governance
-Retention policies aligned with compliance requirements (SOC2, PCI-DSS, HIPAA, GDPR). Immutable backups (WORM/Object Lock) to prevent ransomware deletion. Backup monitoring with alerts on failure or missed schedule. Audit trail of backup operations, restore tests, and DR drills. Encryption in transit (TLS) and at rest (AES-256, KMS). Backup storage isolated from production account/region.
+  - name: application-files
+    tier: 2
+    type: file_server
+    rpo: 1h
+    rto: 4h
+    backup_frequency: hourly
+    retention:
+      hourly: 24
+      daily: 30
+      weekly: 8
+      monthly: 6
+    storage:
+      primary: hdd_sc1
+      offsite: s3_standard_ia
 
-## Automation and Tooling
+  - name: development-servers
+    tier: 3
+    type: ec2_instances
+    rpo: 24h
+    rto: 24h
+    backup_frequency: daily
+    retention:
+      daily: 7
+      weekly: 4
+    storage:
+      primary: s3_standard
+      offsite: s3_glacier_instant
+```
 
-### Automated Backup Scheduling
-Database: cloud provider automated backup (RDS Automated, Cloud SQL Backup) scheduled daily during low-traffic window. Full backup: weekly on Sunday 02:00 UTC, retained 4 weeks. Transaction log: every 5 minutes, retained 7 days for PITR. Kubernetes: Velero schedule for daily cluster state backup, weekly PV snapshot. File storage: automated lifecycle policy transitions to lower tiers. Terraform state: Cloud Storage with object versioning, no explicit backup needed.
+### Step 2: AWS Backup Automation
+```terraform
+# backup/aws-backup.tf
+resource "aws_backup_vault" "primary" {
+  name        = "primary-backup-vault"
+  kms_key_arn = aws_kms_key.backup.arn
+}
 
-### Backup Monitoring and Alerting
-Alert conditions: missed backup (no backup created within schedule window), failed backup (backup job exited with error), corrupted backup (restore validation failure), low storage (backup target near capacity). Monitoring tools: Velero built-in Prometheus metrics, cloud provider backup status via CloudWatch/Monitoring, custom Grafana dashboard showing backup age, size, and status. Notification channels: PagerDuty for failed backups, Slack for warning conditions, email digest for weekly backup status report.
+resource "aws_backup_vault" "dr" {
+  name        = "dr-backup-vault"
+  kms_key_arn = aws_kms_key.backup_dr.arn
+}
 
-### Restore Testing Automation
-Monthly restore test: Velero restore to isolated namespace/RDS restore to new instance, validate data integrity (row counts, checksum), verify application health, cleanup test resources. Automated restore test script: trigger restore from latest backup -> wait for completion -> run validation queries -> report pass/fail -> cleanup. Restore test report: backup age, restore duration, data integrity check results, test pass/fail, recommendations.
+resource "aws_backup_vault_lock_configuration" "primary" {
+  backup_vault_name   = aws_backup_vault.primary.name
+  min_retention_days  = 7
+  max_retention_days  = 3650
+  changeable_for_days = 3
+}
 
-### Ransomware Protection Strategy
-Immutable backups: WORM storage (S3 Object Lock, GCS retention policy, Azure Blob immutability) prevents backup deletion/modification during retention period. Air-gapped backup: separate AWS account or GCP project for backups with no IAM cross-account access from production. Alert on bulk delete: monitor for unusual delete operations on backup storage, page security team. Recovery plan: isolate affected systems, identify last clean backup, restore to clean infrastructure, verify no persistence, resume operations. Frequency: immutable backup versioning with 7-year retention for critical systems.
+resource "aws_backup_plan" "production" {
+  name = "production-backup-plan"
 
-## Rules
-1. 3-2-1 backup rule: 3 copies, 2 different media types, 1 offsite.
-2. RTO/RPO defined per system tier and reviewed quarterly.
-3. Backups encrypted in transit (TLS) and at rest (AES-256).
-4. Backup restore tested monthly — untested backup is not a backup.
-5. DR runbook tested quarterly with full failover.
-6. Cross-region replication for all Tier 1 and Tier 2 systems.
-7. Immutable backups to prevent ransomware deletion.
-8. Backup monitoring with alerts on failure or missed schedule.
-9. Retention policies aligned with compliance requirements.
-10. Full + incremental backup strategy for cost-effective coverage.
-11. Air-gapped backup account with no IAM trust from production.
-12. Restore test automation in CI — human forgets, automation does not.
-13. WORM/immutable storage for all production backups.
-14. Backup failure alerts paged within 5 minutes of missed schedule.
-15. DR runbook includes fallback procedure for when primary failover fails.
-16. Compliance retention policy overrides cost optimization for backup storage.
-17. Backup encryption keys stored separately from backup data (KMS/HSM).
-18. Backup integrity verified by checksum validation after every backup job.
-19. DR test simulates real failure conditions — not just button-click validation.
-20. Backup storage costs tracked separately per system tier for chargeback and optimization.
+  rule {
+    rule_name           = "daily-full-backup"
+    target_vault_name   = aws_backup_vault.primary.name
+    schedule            = "cron(0 2 * * ? *)"
+    start_window        = 60
+    completion_window   = 180
+    lifecycle {
+      delete_after = 90
+    }
+    recovery_point_tags = {
+      Environment = "production"
+      Type        = "daily"
+    }
+  }
 
-## DR Scenario Playbooks
+  rule {
+    rule_name           = "hourly-log-backup"
+    target_vault_name   = aws_backup_vault.primary.name
+    schedule            = "cron(0 * * * ? *)"
+    start_window        = 15
+    completion_window   = 30
+    lifecycle {
+      delete_after = 7
+    }
+  }
 
-### Scenario: Regional Outage (Primary Region Down)
-Tier 1 systems trigger automated failover: health check fails in primary region, Route53/CloudDNS shifts traffic to DR region, Cloud SQL Read Replica promoted to primary, Velero backup restored in DR region if needed. Tier 2 systems: manual failover begins 15 minutes after Tier 1. Tier 3 systems: backup-restore mode, provision infrastructure from Terraform, restore from backup, update DNS. Post-failover: validate all systems in DR region, monitor for 30 minutes, communicate status to stakeholders.
+  rule {
+    rule_name         = "cross-region-copy"
+    target_vault_name = aws_backup_vault.dr.name
+    lifecycle {
+      delete_after = 365
+    }
+    copy_action {
+      lifecycle {
+        delete_after = 365
+      }
+      destination_vault_arn = aws_backup_vault.dr.arn
+    }
+  }
 
-### Scenario: Database Corruption
-Detect: data integrity check fails, application error rate spikes, users report incorrect data. Contain: isolate affected database, block write traffic, switch read traffic to read replica. Recover: identify last clean backup before corruption timestamp, restore database to isolated instance, validate data integrity, cut over to restored database. Learn: investigate root cause (bug, migration error, operator error), add data integrity checks, improve backup validation, review database access controls.
+  advanced_backup_setting {
+    backup_options = {
+      WindowsVSS = "enabled"
+    }
+    resource_type = "EC2"
+  }
+}
 
-### Scenario: Ransomware Attack
-Detect: unusual encryption pattern on files, ransom note discovered. Contain: isolate affected systems from network, block storage write access, preserve forensic evidence. Assess: determine blast radius — which systems, what data, backup status. Recover: restore from immutable backup in air-gapped account, rebuild infrastructure from IaC, verify no attacker persistence. Learn: improve immutable backup strategy, test restores, review IAM policies, implement backup air-gapping, review incident response plan.
+resource "aws_backup_selection" "production_resources" {
+  name         = "production-backup-selection"
+  plan_id      = aws_backup_plan.production.id
+  resources = [
+    aws_rds_cluster.production.arn,
+    aws_ec2_instance.app.arn,
+    aws_efs_file_system.data.arn,
+    aws_dynamodb_table.orders.arn,
+  ]
+  selection_tag {
+    type  = "STRING_EQUAL"
+    key   = "BackupPlan"
+    value = "production"
+  }
+}
 
-## Compliance and Audit
-Regulatory requirements by framework: SOC2 — backup retention 1 year, annual DR test. PCI-DSS — backup retention 1 year, quarterly restore test, encrypted backups, access logging. HIPAA — backup retention 6 years, annual DR test, BAA with backup provider, encryption at rest and in transit. GDPR — right to erasure extends to backups (deletion within 30 days of request), data inventory mapping to backup sets. Compliance mapping: each backup strategy document includes compliance framework references, retention policy derived from strictest applicable regulation, audit evidence collected automatically via backup tool logs and restore test reports.
+resource "aws_backup_global_settings" "org_settings" {
+  global_settings = {
+    "crossAccountBackupEnabled" = "true"
+  }
+}
+```
 
-## Integration with Incident Response
-Backup/DR incidents declared through incident management process (SEV classification). Backup failure: missed schedule for 24+ hours escalates as SEV3, 48+ hours as SEV2. Restore failure: restore test fails for Tier 1 data escalates as SEV2. DR test failure: failover test fails for Tier 1 escalates as SEV1. Incident runbook includes: check backup status, verify backup integrity, initiate restore from last known good backup, escalate to backup admin if needed, communicate timeline to stakeholders.
+### Step 3: Database Backup Automation (PostgreSQL)
+```python
+#!/usr/bin/env python3
+# backup/db_backup.py
+"""Automated PostgreSQL backup with WAL archiving and offsite replication."""
 
-## Business Continuity Planning
-BCP defines organizational response beyond technical DR: alternate work locations, communication tree for stakeholders, customer notification templates, regulatory reporting requirements, insurance claim procedures. BCP linked to DR runbooks: when to declare business continuity event (vs technical incident), who makes the call (CEO/CISO for BCP, on-call engineer for technical incident), how long before BCP is enacted (typically 4-8 hours of downtime). BCP testing: annual tabletop exercise with business stakeholders, quarterly update of contact lists and templates.
+import os
+import sys
+import json
+import boto3
+import logging
+import subprocess
+from datetime import datetime, timedelta
+from pathlib import Path
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Configuration
+DB_NAME = os.environ.get("DB_NAME", "production")
+DB_HOST = os.environ.get("DB_HOST", "localhost")
+DB_PORT = os.environ.get("DB_PORT", "5432")
+DB_USER = os.environ.get("DB_USER", "backup_user")
+S3_BUCKET = os.environ.get("S3_BUCKET", "myapp-backups")
+BACKUP_DIR = Path("/backup")
+RETENTION_DAYS = 90
+WAL_RETENTION_HOURS = 24
+
+def create_full_backup():
+    """Create a full database backup using pg_dump with parallel compression."""
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    backup_file = BACKUP_DIR / f"{DB_NAME}_full_{timestamp}.dump.gz"
+
+    logger.info(f"Starting full backup: {backup_file}")
+
+    # Use pg_dump with custom format for parallel restore support
+    cmd = [
+        "pg_dump",
+        f"--dbname=postgresql://{DB_USER}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
+        "--format=custom",      # Custom format for pg_restore
+        "--compress=9",         # Max compression
+        "--verbose",
+        "--no-owner",           # Portable
+        "--no-acl",             # Portable
+        f"--file={backup_file}",
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        logger.error(f"Backup failed: {result.stderr}")
+        raise RuntimeError(f"pg_dump failed: {result.stderr}")
+
+    logger.info(f"Full backup completed: {backup_file} ({backup_file.stat().st_size / 1024 / 1024:.2f} MB)")
+    return backup_file
+
+def upload_to_s3(file_path, storage_class="STANDARD_IA"):
+    """Upload backup file to S3 with server-side encryption."""
+    s3_key = f"db-backups/{DB_NAME}/{file_path.name}"
+
+    s3_client = boto3.client("s3")
+    s3_client.upload_file(
+        Filename=str(file_path),
+        Bucket=S3_BUCKET,
+        Key=s3_key,
+        ExtraArgs={
+            "StorageClass": storage_class,
+            "ServerSideEncryption": "aws:kms",
+            "SSEKMSKeyId": os.environ.get("KMS_KEY_ID"),
+            "Metadata": {
+                "database": DB_NAME,
+                "timestamp": datetime.utcnow().isoformat(),
+                "type": "full",
+            }
+        }
+    )
+
+    # Verify upload
+    response = s3_client.head_object(Bucket=S3_BUCKET, Key=s3_key)
+    assert response["ContentLength"] == file_path.stat().st_size
+    logger.info(f"Uploaded to s3://{S3_BUCKET}/{s3_key} ({response['ContentLength'] / 1024 / 1024:.2f} MB)")
+    return s3_key
+
+def cleanup_old_backups():
+    """Remove local backup files older than retention period."""
+    cutoff = datetime.utcnow() - timedelta(days=RETENTION_DAYS)
+    for f in BACKUP_DIR.glob(f"{DB_NAME}_full_*.dump.gz"):
+        mtime = datetime.fromtimestamp(f.stat().st_mtime)
+        if mtime < cutoff:
+            f.unlink()
+            logger.info(f"Cleaned up old backup: {f}")
+
+def verify_backup_integrity(backup_file):
+    """Verify backup file integrity using pg_restore --list."""
+    cmd = ["pg_restore", "--list", str(backup_file)]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        logger.error(f"Backup integrity check failed: {result.stderr}")
+        raise RuntimeError("Backup file corrupted")
+    logger.info(f"Backup integrity verified: {backup_file}")
+    return True
+
+def backup_wal():
+    """Archive WAL segments for point-in-time recovery."""
+    wal_dir = Path("/var/lib/postgresql/16/main/pg_wal")
+    s3_client = boto3.client("s3")
+    cutoff = datetime.utcnow() - timedelta(hours=WAL_RETENTION_HOURS)
+
+    for wal_file in wal_dir.glob("0*"):
+        mtime = datetime.fromtimestamp(wal_file.stat().st_mtime)
+        s3_key = f"db-backups/{DB_NAME}/wal/{wal_file.name}"
+
+        if mtime < cutoff:
+            continue  # already archived
+
+        try:
+            s3_client.head_object(Bucket=S3_BUCKET, Key=s3_key)
+        except boto3.exceptions.ClientError:
+            s3_client.upload_file(
+                Filename=str(wal_file),
+                Bucket=S3_BUCKET,
+                Key=s3_key,
+                ExtraArgs={"StorageClass": "STANDARD_IA"}
+            )
+            logger.debug(f"Archived WAL: {wal_file.name}")
+
+def main():
+    """Main backup orchestration."""
+    try:
+        backup_file = create_full_backup()
+        verify_backup_integrity(backup_file)
+        upload_to_s3(backup_file)
+        backup_wal()
+        cleanup_old_backups()
+        logger.info("Backup cycle completed successfully")
+        return 0
+    except Exception as e:
+        logger.error(f"Backup cycle failed: {e}")
+        # Alert via SNS
+        sns = boto3.client("sns")
+        sns.publish(
+            TopicArn=os.environ["SNS_TOPIC_ARN"],
+            Subject=f"[ALERT] Database backup failed - {DB_NAME}",
+            Message=str(e),
+        )
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+### Step 4: Disaster Recovery Runbook
+```markdown
+# Disaster Recovery Runbook — Production Environment
+# Version: 2.1
+# Last tested: 2025-05-15
+
+## 1. Incident Classification
+| Severity | Description | Response Time |
+|---|---|---|
+| SEV1 | Complete outage, data loss | 15 min |
+| SEV2 | Partial outage, degraded | 30 min |
+| SEV3 | Minor, non-critical | 2 hours |
+
+## 2. Activation Criteria
+- Primary region unreachable for > 5 minutes (health check timeout)
+- Data corruption detected (checksum mismatch > 0.1%)
+- Ransomware detected in production environment
+- > 10% of production instances unhealthy
+
+## 3. Pre-Flight Checks (run before failover)
+- [ ] Verify DR infrastructure is operational (DR region resources)
+- [ ] Confirm DNS TTL set to 60 seconds (or lower)
+- [ ] Check network connectivity between DR region and dependencies
+- [ ] Verify backup consistency (latest restore test passed)
+- [ ] Notify stakeholders (incident channel, on-call, management)
+- [ ] Scale up DR environment to production capacity
+
+## 4. Failover Procedure (estimated: 30-60 min)
+
+### Phase 1: Database Failover (15 min)
+```bash
+# Promote read replica to primary in DR region
+aws rds promote-read-replica \
+  --db-instance-identifier production-dr \
+  --region us-west-2
+
+# Update application config to point to new primary
+aws rds describe-db-instances \
+  --db-instance-identifier production-dr \
+  --query 'DBInstances[0].Endpoint.Address' \
+  --region us-west-2
+
+# Verify database is accepting writes
+psql -h $DR_ENDPOINT -U app_user -d production -c "SELECT NOW();"
+```
+
+### Phase 2: Compute Failover (15 min)
+```bash
+# Update Route53 DNS to point to DR load balancer
+aws route53 change-resource-record-sets \
+  --hosted-zone-id ZONE_ID \
+  --change-batch '{
+    "Changes": [
+      {
+        "Action": "UPSERT",
+        "ResourceRecordSet": {
+          "Name": "app.example.com",
+          "Type": "A",
+          "AliasTarget": {
+            "HostedZoneId": "DR_ALB_ZONE_ID",
+            "DNSName": "dr-alb-123456.us-west-2.elb.amazonaws.com",
+            "EvaluateTargetHealth": true
+          }
+        }
+      }
+    ]
+  }'
+
+# Scale up DR application fleet
+aws autoscaling update-auto-scaling-group \
+  --auto-scaling-group-name dr-app-asg \
+  --min-size 3 \
+  --max-size 20 \
+  --desired-capacity 5
+```
+
+### Phase 3: Validation (15 min)
+```bash
+# Health check
+curl -f https://app.example.com/health
+
+# Database connectivity
+curl -f https://app.example.com/api/health/db
+
+# Data integrity - compare row counts
+psql -h $DR_ENDPOINT -d production \
+  -c "SELECT count(*) FROM orders WHERE created_at > NOW() - INTERVAL '1 hour';"
+
+# Verify cache is warm
+curl -f http://redis-metrics:9121/metrics | grep redis_keyspace_hits
+```
+
+### Phase 4: Verification Checklist
+- [ ] All services responding with 200 OK
+- [ ] Database read/write operational
+- [ ] Background jobs processing
+- [ ] Monitoring alerts firing correctly (DR baseline)
+- [ ] Team notified of successful failover
+- [ ] Incident ticket updated
+
+## 5. Failback Procedure (when primary is restored)
+1. Reverse database replication (promote original primary)
+2. Point DNS back to primary region
+3. Update monitoring to primary region baseline
+4. Run data consistency check
+5. Scale down DR resources
+6. Document lessons learned
+
+## 6. Contact Information
+| Role | Name | Phone | Email |
+|---|---|---|---|
+| Incident Commander | On-call SRE | N/A | sre@company.com |
+| Database Admin | On-call DBA | N/A | dba@company.com |
+| Network Engineer | On-call NetOps | N/A | netops@company.com |
+| Management | VP Engineering | N/A | vp-eng@company.com |
+
+## 7. Post-Incident
+- Conduct post-mortem within 48 hours
+- Update RPO/RTO targets if needed
+- Improve automation for failover steps
+- Schedule next DR test
+```
+
+### Step 5: Backup Validation Pipeline
+```yaml
+# .github/workflows/backup-validation.yml
+name: Backup Validation
+on:
+  schedule:
+    - cron: '0 4 * * 0'  # Every Sunday at 4 AM
+  workflow_dispatch:
+
+jobs:
+  validate-backups:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install boto3 pg8000
+
+      - name: Restore database backup to validation instance
+        run: |
+          # Spin up temporary RDS instance
+          aws rds create-db-instance \
+            --db-instance-identifier backup-validation \
+            --db-instance-class db.t3.small \
+            --engine postgres \
+            --master-username validator \
+            --master-user-password ${{ secrets.DB_PASSWORD }} \
+            --no-multi-az \
+            --allocated-storage 20
+
+          # Wait for instance to be ready
+          aws rds wait db-instance-available \
+            --db-instance-identifier backup-validation
+
+          # Restore from latest backup
+          latest_backup=$(aws s3 ls s3://myapp-backups/db-backups/production/ \
+            | sort | tail -1 | awk '{print $4}')
+          aws s3 cp s3://myapp-backups/db-backups/production/$latest_backup ./restore.dump
+          pg_restore -h ${{ secrets.DB_VALIDATION_HOST }} \
+            -U validator -d production \
+            --jobs=4 \
+            --verbose \
+            ./restore.dump
+
+      - name: Validate data integrity
+        run: |
+          # Check row counts match expected ranges
+          pytest tests/test_backup_integrity.py \
+            --db-host ${{ secrets.DB_VALIDATION_HOST }} \
+            --db-password ${{ secrets.DB_PASSWORD }}
+
+      - name: Cleanup validation instance
+        if: always()
+        run: |
+          aws rds delete-db-instance \
+            --db-instance-identifier backup-validation \
+            --skip-final-snapshot
+
+      - name: Report results
+        if: always()
+        run: |
+          # Send results to monitoring
+          METRIC_VALUE=$([ "${{ job.status }}" == "success" ] && echo 1 || echo 0)
+          aws cloudwatch put-metric-data \
+            --namespace "BackupValidation" \
+            --metric-data "MetricName=RestoreSuccess,MetricValue=$METRIC_VALUE,Unit=Count"
+```
+
+## Tool Comparison: Backup Solutions
+
+| Feature | AWS Backup | Veeam | Rubrik | Commvault | Velero (K8s) |
+|---|---|---|---|---|---|
+| Cloud-native | Excellent | Good | Good | Good | Limited |
+| On-prem support | Limited | Excellent | Excellent | Excellent | Limited |
+| K8s backup | Limited | Via plugin | Good | Via plugin | Native |
+| Immutable backup | S3 Object Lock | S3 Object Lock / hardened repo | Native (immutable fs) | Native | Bucket-level |
+| Ransomware detection | GuardDuty | Built-in | ML-based | AI-based | Manual |
+| Backup validation | Manual | SureBackup | Automated | Automated | Manual |
+| Cost | Pay-per-use | License + infra | License + infra | License + infra | Free (OSS) |
+| Cross-region | Built-in | Via copy | Via replication | Via copy | Manual |
+| Linux agent | SSM-based | Agent | Agent | Agent | K8s-native |
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Backup Without Restore Testing
+Creating backups but never testing restores. A backup that can't be restored is worthless. Schedule automated restore tests monthly.
+
+### Anti-Pattern 2: Single Copy of Backup
+Storing all backups in one location. Violates the 3-2-1 rule: 3 copies, 2 media types, 1 offsite.
+
+### Anti-Pattern 3: No Immutable Backups
+Storing backups that can be modified or deleted by attackers. Use object lock / WORM to prevent ransomware from encrypting backups.
+
+### Anti-Pattern 4: Ignoring RPO for WAL-based Systems
+Full backups only without WAL archiving for databases. RPO is the time between full backups (could be 24h). Implement continuous WAL archiving for 15-min RPO.
+
+### Anti-Pattern 5: Testing DR Once Per Year
+Annual DR tests are insufficient for Tier 1 workloads. Test quarterly at minimum, and automate partial failover testing monthly.
+
+### Anti-Pattern 6: No Backup Monitoring
+Silent backup failures going undetected for weeks. Monitor backup success rates, completion time, and storage usage with alerts.
+
+## Production Considerations
+
+### Security
+- Enable S3 Object Lock (Compliance mode) for immutable backups.
+- Encrypt backups at rest (AES-256) and in transit (TLS 1.2+).
+- Use separate AWS account for backup storage with restricted access.
+- Enable MFA delete on S3 backup buckets.
+- Rotate backup encryption keys annually.
+- Audit backup access logs quarterly (CloudTrail + Athena).
+
+### Cost Optimization
+- Use tiered backup storage: hot (7d), warm (30d), cold (90d), archive (365d+).
+- Deduplicate backup data at source when possible.
+- Use incremental backups after initial full backup.
+- Compress backup data before transfer.
+- Delete expired recovery points automatically.
+- Right-size backup frequency — don't back up every 5 min if RPO is 1 hour.
+
+### Compliance
+- HIPAA: require encryption, access logging, backup retention >= 6 years.
+- PCI DSS: require backups of cardholder data, annual restore testing, audit trails.
+- SOC 2: backup availability controls, change management for backup config.
+- GDPR: right to erasure includes backup copies. Implement purge procedures.
+
+## Troubleshooting Guide
+
+| Issue | Likely Cause | Solution |
+|---|---|---|
+| Backup fails mid-way | Storage full or network timeout | Check disk space; increase timeout |
+| Restore slow | No parallelism in restore tool | Use --jobs=N with pg_restore |
+| Cross-region copy fails | IAM role missing permissions | Check vault policy and KMS key permissions |
+| Snapshot deletion blocked | Lock policy or retention lock | Check backup vault lock and retention settings |
+| Backup size unexpectedly large | No deduplication or compression | Enable compression; check for log bloat |
+| Validation test fails | Data corruption during backup | Create fresh full backup; check storage integrity |
+
+## Rules & Constraints
+- All backups must follow 3-2-1 rule: 3 copies, 2 media, 1 offsite.
+- Immutable backups for all Tier 1 workloads — no exceptions.
+- Automated restore test every 30 days minimum.
+- Backup monitoring with alerts on failure — never rely on manual checks.
+- Encryption at rest (AES-256) and in transit (TLS 1.2+) for all backup data.
+- RPO/RTO defined per workload tier and documented in runbook.
+- DR plan tested quarterly for Tier 1, annually for Tier 2-3.
+- Backup retention minimum: 90 days for production, 7 years for compliance.
+- MFA required for backup deletion operations.
+- Backup logs exported to SIEM for analysis.
+
+## Output Format
+Backup automation scripts (Python/Bash), Terraform for backup infrastructure, runbook markdown, CI/CD validation pipeline.
 
 ## References
-  - references/backup-3-2-1.md — Backup 3-2-1 Rule
-  - references/backup-automation.md — Backup Automation
-  - references/backup-disaster-recovery.md — Backup and Disaster Recovery
-  - references/backup-dr-advanced.md — Backup Dr Advanced Topics
-  - references/backup-dr-fundamentals.md — Backup Dr Fundamentals
-  - references/backup-strategies.md — Backup Strategies
-  - references/disaster-recovery.md — Disaster Recovery
-  - references/dr-recovery.md — Disaster Recovery Patterns
+  - references/backup-3-2-1.md
+  - references/backup-automation.md
+  - references/backup-disaster-recovery.md
+  - references/backup-dr-advanced.md
+  - references/backup-dr-fundamentals.md
+  - references/backup-strategies.md
+  - references/disaster-recovery.md
+  - references/dr-recovery.md
+  - references/ransomware-protection-guide.md
+
 ## Handoff
-Hand off to backup-dr for backup strategy and DR planning. Hand off to cloud-specific skills (aws/azure/gcp) for cloud storage and replication. Hand off to kubernetes-patterns for Velero setup. Hand off to monitoring for backup health alerts. Hand off to incident-response when DR failover triggers incident response process. Hand off to security for ransomware protection and backup encryption key management. Hand off to finops for backup storage cost optimization and lifecycle management.
+After completing this skill:
+- Next skill: **storage-infrastructure** — storage architecture for backup targets
+- Pass context: workload tiers, RPO/RTO, backup schedule, DR runbook location

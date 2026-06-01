@@ -2,7 +2,7 @@
 name: backend-scheduling-cron
 description: >
   Use this skill when the user says 'cron', 'schedule', 'scheduled task', 'cron job', 'job scheduling', 'distributed cron', 'cron expression', 'timezone', 'scheduler', 'background job', 'periodic task', 'interval', 'cron trigger'. This skill implements distributed cron and job scheduling with timezone-aware triggers and leader election. Applies to any backend stack. Do NOT use for: message queue consumers, event-driven processing, or workflow orchestration.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -16,7 +16,7 @@ tags: [backend, universal, scheduling, cron, jobs, distributed-cron]
 # Backend Scheduling and Cron
 
 ## Purpose
-Implement distributed cron jobs and scheduled tasks with timezone awareness, leader election, and failure recovery so periodic work runs exactly-once across the cluster.
+Implement distributed cron jobs and scheduled tasks with timezone awareness, leader election, and failure recovery so periodic work runs exactly-once across the cluster. Without distributed coordination, cron jobs on multiple instances cause duplicate execution, data corruption, and resource waste.
 
 ## Agent Protocol
 
@@ -36,7 +36,7 @@ Cron job configuration or scheduler code. No file unless requested.
 Job: {name}
 Schedule: {cron expression}
 Timezone: {IANA timezone}
-Provider: {built-in|distributed- scheduler|external}
+Provider: {built-in|distributed-scheduler|external}
 ```
 
 ### Completion Criteria
@@ -49,51 +49,331 @@ Provider: {built-in|distributed- scheduler|external}
 ### Max Response Length
 3 lines per job. 15 lines for full setup.
 
+## Architecture Decision Tree
+
+### Which Scheduling Approach?
+
+```
+How many instances run the scheduler?
+  ├── Single instance → Use built-in cron (OS-level or in-process)
+  │   └── Risk: Single point of failure, no failover
+  └── Multiple instances → Distributed scheduling required
+      ├── Is the job is critical and must always run?
+      │   ├── Yes → Use leader election + distributed lock
+      │   └── No → Use low-priority scheduler with best-effort
+      └── Do you need complex workflows or dependencies?
+          ├── Yes → Use dedicated scheduler (Temporal, Airflow, Quartz)
+          └── No → Simple distributed cron is sufficient
+```
+
+### Distributed Lock Strategy
+
+```
+What infrastructure is available?
+  ├── Redis → SET NX with TTL for lock, Lua for atomic operations
+  │   ├── PRO: Fast, built-in TTL, simple
+  │   └── CON: Lock expiration on Redis failover
+  ├── PostgreSQL → Advisory locks or row-level locks
+  │   ├── PRO: Same DB as data, no extra infra
+  │   └── CON: Lock contention impacts DB performance
+  ├── ZooKeeper/etcd → Ephemeral znodes for leader election
+  │   ├── PRO: Strong consistency, automatic lease renewal
+  │   └── CON: Operational complexity, extra infra
+  └── Kubernetes → CronJob resource (native)
+      ├── PRO: No code needed, self-healing
+      └── CON: No intra-job coordination, at-most-once
+```
+
+### Cron Expression Complexity
+
+```
+What schedule do you need?
+  ├── Simple interval (every N minutes/hours) → Use "every" syntax
+  │   └── @every 5m, @hourly, @daily
+  ├── Fixed time (daily at 2am) → Standard cron expression
+  │   └── 0 2 * * *
+  ├── Complex schedule (weekdays at 8am and 5pm) → Multi-expression
+  │   └── 0 8 * * 1-5 / 0 17 * * 1-5
+  └── Calendar-aware (last day of month, first weekday) → Use cron extensions
+      └── 0 8 L * * (Last day of month)
+```
+
 ## Workflow
 
 ### Step 1: Define Job
 ```javascript
-const job = {
-  name: 'invoice-dunning',
-  schedule: '0 8 * * 1-5',   // Weekdays at 8:00
-  timezone: 'America/New_York',
-  handler: async () => { await sendInvoiceReminders(); },
-};
+const jobs = [
+  {
+    name: 'invoice-dunning',
+    schedule: '0 8 * * 1-5',   // Weekdays at 8:00
+    timezone: 'America/New_York',
+    handler: async () => { await sendInvoiceReminders(); },
+    timeout: '5m',
+    retry: { maxAttempts: 3, backoff: 'exponential' },
+  },
+  {
+    name: 'db-cleanup',
+    schedule: '@daily',
+    timezone: 'UTC',
+    handler: async () => { await cleanupOldRecords(); },
+    timeout: '30m',
+    retry: { maxAttempts: 1 },
+  },
+];
 ```
 
 ### Step 2: Ensure Exactly-Once Execution (Distributed)
-Use distributed locking or leader election:
-```javascript
+```typescript
 // Option A: Distributed lock (Redis)
-const lock = await redlock.acquire(['cron:invoice-dunning'], 60000);
-try { await job.handler(); } finally { await lock.release(); }
+class DistributedCron {
+  constructor(private redis: Redis, private lockTTL: number = 60000) {}
 
-// Option B: Database lease (PostgreSQL)
-SELECT pg_advisory_xact_lock(hashtext('cron:invoice-dunning'));
+  async execute(job: Job): Promise<void> {
+    const lockKey = `cron:lock:${job.name}`;
+    const lockToken = crypto.randomUUID();
+    const acquired = await this.redis.set(lockKey, lockToken, {
+      NX: true,
+      PX: this.lockTTL,
+    });
+    if (!acquired) {
+      logger.info(`Job ${job.name} already running on another instance`);
+      return;
+    }
+    try {
+      const startTime = Date.now();
+      logger.info(`Job ${job.name} started`);
+      await job.handler();
+      logger.info(`Job ${job.name} completed in ${Date.now() - startTime}ms`);
+    } catch (error) {
+      logger.error(`Job ${job.name} failed`, { error });
+      throw error;
+    } finally {
+      // Only release if we still hold the lock
+      const lua = `if redis.call("get",KEYS[1]) == ARGV[1] then return redis.call("del",KEYS[1]) else return 0 end`;
+      await this.redis.eval(lua, 1, lockKey, lockToken);
+    }
+  }
+}
+
+// Option B: PostgreSQL advisory lock
+async function executeWithPgLock(job: Job): Promise<void> {
+  const lockId = hashString(`cron:${job.name}`);
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+  const client = await pool.connect();
+  try {
+    // Session-level advisory lock — auto-released on disconnect
+    await client.query('SELECT pg_advisory_lock($1)', [lockId]);
+    logger.info(`Job ${job.name} started`);
+    await job.handler();
+  } finally {
+    await client.query('SELECT pg_advisory_unlock($1)', [lockId]);
+    client.release();
+  }
+}
+
+// Option C: Kubernetes CronJob
+// apiVersion: batch/v1
+// kind: CronJob
+// spec:
+//   schedule: "0 8 * * 1-5"
+//   jobTemplate:
+//     spec:
+//       template:
+//         spec:
+//           containers:
+//           - name: invoice-dunning
+//             image: myapp:latest
+//             command: ["node", "dist/jobs/invoice-dunning.js"]
+//           restartPolicy: OnFailure
 ```
 
 ### Step 3: Handle Timezones and DST
-```javascript
-const { DateTime } = require('luxon');
-const now = DateTime.now().setZone('America/New_York');
-// Cron library with timezone support: cron-parser + moment-timezone
+```typescript
+import { DateTime } from 'luxon';
+
+function isDue(job: Job, lastRun: Date | null): boolean {
+  const now = DateTime.now().setZone(job.timezone);
+  const cronParts = job.schedule.split(' ');
+  const [minute, hour, dayOfMonth, month, dayOfWeek] = cronParts;
+
+  // Check if current time matches cron expression
+  if (minute !== '*' && parseInt(minute) !== now.minute) return false;
+  if (hour !== '*' && parseInt(hour) !== now.hour) return false;
+  if (dayOfMonth !== '*' && parseInt(dayOfMonth) !== now.day) return false;
+  if (month !== '*' && parseInt(month) !== now.month) return false;
+  if (dayOfWeek !== '*') {
+    const dow = now.weekday === 7 ? 0 : now.weekday;
+    if (!dayOfWeek.split(',').map(Number).includes(dow)) return false;
+  }
+
+  // DST safety: check if we already ran during this minute
+  if (lastRun) {
+    const lastRunInTz = DateTime.fromJSDate(lastRun).setZone(job.timezone);
+    if (lastRunInTz.toMillis() >= now.toMillis() - 60000) return false;
+  }
+  return true;
+}
+
+// DST transition handling
+// Spring forward: 2am becomes 3am — job at 2:30am is skipped
+// Fall back: 1am happens twice — job at 1:30am runs once
+function handleDSTTransition(job: Job): boolean {
+  const now = DateTime.now().setZone(job.timezone);
+  // Detect if this is a DST repeat hour (fall back)
+  if (now.hour === now.hour && now.offset !== now.offset) {
+    // Only run once during the repeated hour
+    return false;
+  }
+  return true;
+}
 ```
 
 ### Step 4: Retry Failed Jobs
-```javascript
-async function executeWithRetry(job, maxAttempts = 3) {
-  for (let i = 0; i < maxAttempts; i++) {
-    try { return await job.handler(); } catch (err) {
-      logger.error({ job: job.name, attempt: i }, 'Job failed');
-      if (i < maxAttempts - 1) await delay(5000 * Math.pow(2, i));
+```typescript
+class JobRunner {
+  async executeWithRetry(job: Job): Promise<void> {
+    for (let attempt = 1; attempt <= (job.retry?.maxAttempts ?? 1); attempt++) {
+      try {
+        const result = await withTimeout(job.handler(), job.timeout ?? '5m');
+        logger.info({ job: job.name, attempt }, 'Job completed');
+        return;
+      } catch (error) {
+        logger.error({ job: job.name, attempt, error }, 'Job attempt failed');
+        if (attempt < (job.retry?.maxAttempts ?? 1)) {
+          const delay = Math.pow(2, attempt) * 5000; // 10s, 20s, 40s, ...
+          await sleep(delay);
+        }
+      }
     }
+    await this.alertOncall({ job: job.name, error: `Failed after ${job.retry?.maxAttempts} attempts` });
   }
-  await alertOncall({ job: job.name, error: 'Max retries exceeded' });
 }
 ```
 
 ### Step 5: Monitor Jobs
-Expose metrics: `job.duration`, `job.success`, `job.failure`, `job.last-run-timestamp`. Alert on: no run in expected window.
+```typescript
+// Expose metrics for every job
+interface JobMetrics {
+  duration: number;        // Execution time in ms
+  success: boolean;        // Did it complete successfully?
+  lastRun: number;         // Timestamp of last execution
+  nextRun: number;         // Timestamp of next scheduled execution
+  missCount: number;       // How many times was it missed?
+}
+
+// Alert rules
+// - No completion in expected window + 5min → PAGER
+// - Failure rate > 10% over 24h → TICKET
+// - Job duration > 2x average → WARN
+// - Missed executions > 0 → WARN
+```
+
+## Implementation Patterns
+
+### Dynamic Job Registration
+```typescript
+class JobRegistry {
+  private jobs = new Map<string, Job>();
+  private scheduler: DistributedScheduler;
+
+  register(job: Job): void {
+    this.jobs.set(job.name, job);
+    logger.info(`Registered job: ${job.name} [${job.schedule}]`);
+  }
+
+  registerFromModule(modulePath: string): void {
+    const module = require(modulePath);
+    if (module.jobs) {
+      module.jobs.forEach((job: Job) => this.register(job));
+    }
+  }
+
+  async start(): Promise<void> {
+    for (const job of this.jobs.values()) {
+      await this.scheduler.schedule(job);
+    }
+  }
+}
+```
+
+### Cron Expression Reference
+```
+┌───────────── minute (0-59)
+│ ┌───────────── hour (0-23)
+│ │ ┌───────────── day of month (1-31)
+│ │ │ ┌───────────── month (1-12)
+│ │ │ │ ┌───────────── day of week (0-6, 0=Sun)
+│ │ │ │ │
+* * * * *
+
+Common expressions:
+  */5 * * * *    → Every 5 minutes
+  0 * * * *      → Every hour at :00
+  0 8 * * *      → Daily at 8:00 AM
+  0 8 * * 1-5    → Weekdays at 8:00 AM
+  0 0 1 * *      → 1st of every month
+  0 */2 * * *    → Every 2 hours
+  30 6 * * 0     → Sundays at 6:30 AM
+  0 0 * * 0       → Every Sunday at midnight
+  @reboot        → On startup (once)
+  @yearly        → 0 0 1 1 *
+  @daily         → 0 0 * * *
+  @hourly        → 0 * * * *
+```
+
+## Production Considerations
+
+### Scheduler Platform Comparison
+| Platform | Approach | HA | Exactness | Best For |
+|----------|----------|----|-----------|----------|
+| Linux cron | OS-level | Single node | Minute | Simple, single-node |
+| Kubernetes CronJob | K8s-native | Multi-node | At-least-once | K8s workloads |
+| Quartz (Java) | DB-backed | Multi-node | Exactly-once | Java ecosystem |
+| Temporal | Workflow engine | Multi-node | Exactly-once | Complex workflows |
+| Airflow | DAG scheduler | Multi-node | At-least-once | Data pipelines |
+| Bull (Node.js) | Redis-backed | Multi-node | At-least-once | Node.js apps |
+
+### Failure Modes
+| Failure | Effect | Mitigation |
+|---------|--------|------------|
+| Lock holder crashes | Job not executed | Lock TTL triggers failover |
+| Clock skew | Early/late execution | NTP + tolerance window |
+| DST transition | Double run or skip | Idempotent job design |
+| Node overload | Delayed execution | Priority queues |
+| DB contention | Lock wait timeout | Reduce lock scope |
+
+### Graceful Degradation
+- If lock acquisition fails: log, skip execution, alert if consecutive misses > threshold
+- If job handler throws: retry according to policy, then alert
+- If scheduler process restarts: check last execution time, catch up missed runs
+- If all nodes restart simultaneously: verify at most one runs the missed job
+
+## Anti-Patterns
+
+1. **Non-idempotent jobs**: If a job runs twice due to a failure, it must produce the same result. Always design jobs to be idempotent.
+2. **No timeout**: A job that hangs forever blocks the scheduler. Always set execution timeout.
+3. **Server-local timezone**: Relying on the server timezone for scheduling causes DST bugs. Always specify timezone explicitly.
+4. **Single-instance cron**: Running cron on a single instance creates a SPOF. Use distributed locking.
+5. **Missing monitoring**: A job that silently fails is worse than no job at all. Monitor every execution.
+6. **Tight coupling**: Embedding business logic directly in a cron handler makes testing hard. Cron should call service methods.
+7. **Overlapping executions**: If a long-running job overlaps with its next schedule, both run concurrently. Prevent with lock timeout > max expected duration.
+
+## Performance
+
+### Execution Overhead
+| Component | Latency | Notes |
+|-----------|---------|-------|
+| Cron expression parsing | <1ms | Cached after first parse |
+| Lock acquisition (Redis) | ~1-5ms | Network round-trip |
+| Lock acquisition (PostgreSQL) | ~1ms | In-DB advisory lock |
+| Job handler | Varies | Business logic |
+| Metric recording | <1ms | In-process counter |
+
+### Scheduler Throughput
+- Single scheduler process: 1000+ jobs per second (schedule evaluation)
+- Distributed lock overhead: ~5ms per job execution
+- PostgreSQL advisory lock: ~2ms per lock/unlock cycle
 
 ## Rules
 - Always specify timezone explicitly — never rely on server timezone.
@@ -103,6 +383,8 @@ Expose metrics: `job.duration`, `job.success`, `job.failure`, `job.last-run-time
 - Set a deadline/execution timeout for every job.
 - Missed executions should alert, not silently fail.
 - Jobs must be idempotent — they can be retried at any time.
+- Monitor job duration, success rate, and last-execution timestamp.
+- Always specify explicit timezone for every job definition.
 
 ## References
   - references/cron-expression-guide.md — Cron Expression Guide

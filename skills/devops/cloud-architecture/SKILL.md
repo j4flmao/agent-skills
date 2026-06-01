@@ -1,9 +1,16 @@
 ---
 name: cloud-architecture
 description: >
-  Design cloud architecture, landing zones, multi-cloud strategy, well-architected frameworks, and cloud migration patterns.
-  Use when the user asks about cloud architecture, landing zone, well-architected, cloud migration, or multi-cloud strategy.
-version: "1.0.0"
+  Use this skill when the user says 'cloud architecture', 'Well-Architected',
+  'landing zone', 'multi-cloud', 'hybrid cloud', 'cloud design',
+  'cloud patterns', 'microservices', 'event-driven architecture',
+  'resilience patterns', 'cloud migration strategy', 'cloud governance',
+  'cloud security architecture', 'cost-aware architecture'.
+  Covers: Well-Architected Framework (AWS/Azure/GCP), landing zone design,
+  multi-cloud strategy, resilience patterns (circuit breaker, bulkhead, etc.),
+  migration patterns, governance, cloud-native architecture patterns.
+  Do NOT use for: specific cloud provider implementation (use aws/azure/gcp skills).
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -11,171 +18,276 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [devops, cloud, phase-5]
+tags: [devops, cloud-architecture, well-architected, phase-5]
 ---
 
 # Cloud Architecture
 
 ## Purpose
-Design cloud infrastructure architecture including landing zones, well-architected framework evaluation, cloud migration strategy, and multi-cloud architecture.
+Design cloud architectures following the Well-Architected Framework, landing zone patterns, multi-cloud strategies, and resilience patterns for production workloads.
 
-## Agent Protocol
+## Architecture Decision Trees
 
-### Trigger
-- "cloud architecture", "cloud design", "cloud infrastructure"
-- "landing zone", "cloud foundation", "cloud platform"
-- "well-architected", "pillar review", "cloud framework"
-- "cloud migration", "lift and shift", "replatform", "refactor to cloud"
-- "multi-cloud", "hybrid cloud", "cloud strategy", "cloud provider comparison"
-- "AWS architecture", "Azure architecture", "GCP architecture", "cloud region"
-- "VPC design", "cloud networking", "cloud security architecture"
-- "cloud governance", "cloud policy", "cloud compliance"
+### Deployment Model Decision
+| Model | Best For | Complexity | Cost | Security |
+|---|---|---|---|---|
+| Single cloud | Startups, single-region apps | Low | Lowest (volume discounts) | Simple |
+| Multi-cloud | Avoiding vendor lock-in, compliance | High | Higher (no volume discounts) | Complex |
+| Hybrid cloud | On-prem + cloud, latency-sensitive | Very High | Highest | Very Complex |
+| Cloud-native (PaaS) | Speed to market, less ops | Low | Medium | Platform-managed |
 
-### Input Context
-- If cloud provider, workload type, and compliance requirements are not provided, ask.
+### Architecture Style Selection
+| Style | Use Case | Scalability | Maintainability |
+|---|---|---|---|
+| Monolithic (lift-shift) | Legacy apps, fast migration | Vertical only | Low |
+| Layered (3-tier) | Traditional web apps | Medium | Medium |
+| Microservices | Complex apps, independent scaling | Excellent | High (upfront cost) |
+| Event-driven | Async processing, real-time | Excellent | Medium |
+| Serverless | Event-driven, variable load | Infinite (function level) | High |
+| Containerized | Portable, consistent envs | Excellent | Medium |
 
-### Output Artifact
-- Architecture diagrams, landing zone designs, well-architected review reports, migration plans
-
-### Response Format
+### Compute Pattern Decision Tree
 ```
-## Architecture
-{Cloud components, topology, data flow}
-
-## Considerations
-{Security, cost, performance, reliability, operational excellence}
-
-## Implementation
-{Step-by-step implementation plan}
+Is workload stateful?
+├── Yes → Is latency < 5ms?
+│   ├── Yes → Bare metal or dedicated instance
+│   └── No → Managed service (RDS, ElastiCache, etc.)
+└── No → Is workload bursty?
+    ├── Yes → Serverless (Lambda, Cloud Functions)
+    └── No → Does it run in containers?
+        ├── Yes → ECS/EKS/GKE/AKS
+        └── No → Is it a simple web app?
+            ├── Yes → PaaS (App Runner, Cloud Run, App Service)
+            └── No → EC2/Compute Engine/VMs
 ```
 
-### Completion Criteria
-- [ ] Cloud architecture designed with all components
-- [ ] Well-architected pillars addressed
-- [ ] Migration strategy defined (if applicable)
-- [ ] Cost and security considerations documented
-- [ ] Provider selection justified with trade-off analysis
-- [ ] Landing zone design aligned to organizational maturity
+### Resilience Pattern Selection
+| Pattern | Problem Solved | Complexity | Cost Overhead |
+|---|---|---|---|
+| Retry with backoff | Transient failures | Low | Minimal |
+| Circuit breaker | Cascading failures | Medium | Minimal |
+| Bulkhead | Resource exhaustion | Medium | Resource reservation |
+| Timeout | Slow dependencies | Low | Minimal |
+| Health check | Unhealthy instances | Low | Minimal |
+| Throttling | Overload protection | Medium | Request queue |
+| Saga | Distributed transaction | High | Compensating logic |
+| CQRS | Read/write separation | High | Event store + separate DB |
+| Event sourcing | Audit trail | Very High | Event store |
 
-### Provider Comparison Framework
+### Multi-Cloud Strategy
+| Strategy | Primary | Secondary | Data Sync |
+|---|---|---|---|
+| Active-Passive (DR) | AWS | GCP | Async replication |
+| Active-Active | Azure | AWS | Synchronous/eventual |
+| Workload-specific | Compute: AWS | Data: GCP | Per application |
+| Cloud-agnostic (K8s) | Any | Any | GitOps control plane |
 
+## Quick Start
+Identify workload characteristics → Select architecture style → Apply Well-Architected pillars → Design landing zone → Implement resilience patterns → Define governance → Document design decisions.
+
+## Core Patterns
+
+### Well-Architected Pillars
+```
+AWS Well-Architected     Azure Well-Architected      GCP Architecture
+────────────────────────────────────────────────────────────────────
+1. Operational Excellence  1. Reliability            Architecture Framework
+2. Security                2. Security                1. System Design
+3. Reliability             3. Cost Optimization      2. Operational Excellence
+4. Performance Efficiency  4. Operational Excellence 3. Security
+5. Cost Optimization       5. Performance Efficiency 4. Reliability
+6. Sustainability          6. Sustainability         5. Cost Optimization
+```
+
+### Landing Zone Design
+```hcl
+# Conceptual landing zone structure
+# ┌─────────────────────────────────┐
+# │  Management Group Hierarchy     │
+# │  ├── Platform          (mgmt)   │
+# │  ├── Landing Zones     (apps)   │
+# │  │   ├── Production             │
+# │  │   ├── Non-Production         │
+# │  │   └── Development            │
+# │  └── Sandbox           (exp)    │
+# └─────────────────────────────────┘
+# ┌─────────────────────────────────┐
+# │  Shared Services                │
+# │  ├── Log Archive (central logs) │
+# │  ├── Security (audit, IAM)      │
+# │  └── Network (shared VPC/VNet)  │
+# └─────────────────────────────────┘
+```
+
+### Circuit Breaker Pattern
+```python
+import time
+import threading
+from enum import Enum
+
+class CircuitState(Enum):
+    CLOSED = "closed"       # Normal operation
+    OPEN = "open"           # Failing, reject requests
+    HALF_OPEN = "half_open"  # Testing recovery
+
+class CircuitBreaker:
+    def __init__(self, failure_threshold=5, recovery_timeout=30, half_open_max=3):
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.half_open_max = half_open_max
+        self.state = CircuitState.CLOSED
+        self.failure_count = 0
+        self.half_open_attempts = 0
+        self.last_failure_time = 0
+        self._lock = threading.Lock()
+
+    def call(self, func, fallback=None):
+        with self._lock:
+            if self.state == CircuitState.OPEN:
+                if time.time() - self.last_failure_time >= self.recovery_timeout:
+                    self.state = CircuitState.HALF_OPEN
+                    self.half_open_attempts = 0
+                else:
+                    return fallback() if fallback else None
+
+        try:
+            result = func()
+            with self._lock:
+                if self.state == CircuitState.HALF_OPEN:
+                    self.half_open_attempts += 1
+                    if self.half_open_attempts >= self.half_open_max:
+                        self.state = CircuitState.CLOSED
+                        self.failure_count = 0
+                else:
+                    self.failure_count = 0
+            return result
+        except Exception as e:
+            with self._lock:
+                self.failure_count += 1
+                self.last_failure_time = time.time()
+                if self.failure_count >= self.failure_threshold:
+                    self.state = CircuitState.OPEN
+                    self.failure_count = 0
+            return fallback() if fallback else None
+```
+
+### Bulkhead Pattern with Thread Pools
+```python
+from concurrent.futures import ThreadPoolExecutor
+
+# Bulkhead: isolated thread pools per service
+class BulkheadPool:
+    def __init__(self):
+        self.pools = {
+            "critical": ThreadPoolExecutor(max_workers=20),
+            "non-critical": ThreadPoolExecutor(max_workers=5),
+            "batch": ThreadPoolExecutor(max_workers=2),
+        }
+
+    def submit(self, tier, fn, *args, **kwargs):
+        pool = self.pools.get(tier, self.pools["non-critical"])
+        return pool.submit(fn, *args, **kwargs)
+
+# Usage
+bulkhead = BulkheadPool()
+future = bulkhead.submit("critical", payment_service.process, order)
+```
+
+### Event-Driven Architecture with Message Brokers
 ```yaml
-provider_comparison:
-  compute:
-    aws: "EC2, Lambda, ECS/EKS, Fargate"
-    azure: "VM, Azure Functions, AKS, Container Apps"
-    gcp: "Compute Engine, Cloud Functions, GKE, Cloud Run"
-    selection_criteria: ["Container vs VM preference", "Serverless maturity", "GPU availability"]
-    
-  database:
-    relational:
-      aws: "RDS (Aurora), DynamoDB (NoSQL)"
-      azure: "Azure SQL, Cosmos DB"
-      gcp: "Cloud SQL, Spanner, Firestore"
-    selection_criteria: ["Managed vs self-managed", "Multi-region needs", "Compatibility requirements"]
-    
-  networking:
-    aws: "VPC, CloudFront, Route 53, Direct Connect"
-    azure: "VNet, Front Door, Azure DNS, ExpressRoute"
-    gcp: "VPC, Cloud CDN, Cloud DNS, Cloud Interconnect"
-    selection_criteria: ["Global reach", "Hybrid connectivity", "CDN requirements"]
-    
-  security:
-    aws: "IAM, KMS, WAF, Shield, GuardDuty"
-    azure: "Entra ID, Key Vault, Application Gateway, Defender"
-    gcp: "IAM, Cloud KMS, Cloud Armor, Security Command Center"
-    selection_criteria: ["Compliance certifications", "SIEM integration", "IAM maturity"]
+# Architecture flow:
+# [Order Service] → (order.created) → [Payment Service] → (payment.completed)
+#                                      → [Inventory Service] → (inventory.updated)
+#                                      → [Notification Service]
 
-  decision_factors:
-    primary:
-      - "Organizational cloud maturity and existing investment"
-      - "Team expertise and hiring market"
-      - "Compliance and data residency requirements"
-      - "Cost model (committed use discounts, savings plans)"
-    secondary:
-      - "Service availability in target regions"
-      - "Integration with existing tools (monitoring, CI/CD)"
-      - "Open source vs proprietary lock-in"
-      - "Exit costs and portability"
+# Using AWS services:
+# Order Service → EventBridge → Payment Service (SQS)
+#                             → Inventory Service (SQS)
+#                             → Notification Service (SQS with DLQ)
+
+# Using Kafka:
+# Order Service → Topic: orders (key: order_id)
+# Payment Service → Consumer group: payment-processors
+# Inventory Service → Consumer group: inventory-trackers
 ```
 
-### Well-Architected Framework Deep-Dive
-
+### Strangler Fig Migration Pattern
 ```yaml
-well_architected:
-  operational_excellence:
-    principles:
-      - "Infrastructure as Code — all changes through IaC, no manual configuration"
-      - "Small, reversible changes — deploy frequently, roll back quickly"
-      - "Runbooks and playbooks — resolve without heroics"
-      - "Learning from failures — blameless post-mortems, improvement backlog"
-    questions:
-      - "How do you understand the health of your workload?"
-      - "How do you manage changes without impacting users?"
-      - "How do you respond to operational events?"
-      
-  security:
-    principles:
-      - "Strong identity foundation — least privilege, centralize identity"
-      - "Traceability — log all actions, monitor for anomalies"
-      - "Apply security at all layers — network, application, data, access"
-      - "Automate security best practices — policy as code"
-    questions:
-      - "How do you manage credentials and secrets?"
-      - "How do you protect data at rest and in transit?"
-      - "How do you detect and respond to security events?"
-      
-  reliability:
-    principles:
-      - "Automatically recover from failure — health checks, auto-scaling, self-healing"
-      - "Test recovery procedures — game days, chaos engineering"
-      - "Scale horizontally — distribute load across multiple resources"
-      - "Stop guessing capacity — auto-scaling and serverless"
-    questions:
-      - "How do you design for availability and fault tolerance?"
-      - "How do you back up data and test recovery?"
-      - "How do you adapt to changes in demand?"
-      
-  performance_efficiency:
-    principles:
-      - "Democratize advanced technologies — managed services over custom"
-      - "Go global in minutes — CDN, edge caching, multi-region"
-      - "Use serverless architectures — reduce idle capacity"
-      - "Experiment more often — load testing, perf testing in CI"
-    questions:
-      - "How do you select the right compute and storage options?"
-      - "How do you monitor and improve performance?"
-      - "How do you optimize resource utilization?"
-      
-  cost_optimization:
-    principles:
-      - "Adopt a consumption model — pay only for what you use"
-      - "Measure overall efficiency — cost per transaction, per user"
-      - "Stop spending money on undifferentiated heavy lifting — managed services"
-      - "Analyze and attribute expenditure — tagging, cost allocation"
-    questions:
-      - "How do you manage cost allocation and governance?"
-      - "How do you evaluate and optimize resource usage?"
-      - "How do you plan for growth while controlling costs?"
-      
-  sustainability:
-    principles:
-      - "Understand your impact — measure carbon footprint"
-      - "Establish sustainability goals — reduce per-transaction energy"
-      - "Maximize utilization — right-size resources, eliminate waste"
-      - "Adopt efficient hardware and architectures — Graviton, ARM, serverless"
-    questions:
-      - "How do you select regions for minimum environmental impact?"
-      - "How do you optimize workloads for energy efficiency?"
-      - "How do you reduce the environmental impact of data storage and networking?"
+# Migration approach: slowly replace monolith with microservices
+# Phase 1: Route /api/new/* to new services → monolith for old
+# Phase 2: Route /api/orders/* to order-service
+# Phase 3: Route /api/payments/* to payment-service
+# Phase 4: Route /api/users/* to user-service
+# Phase 5: Decommission monolith
+
+# Reverse proxy config (nginx)
+location /api/orders {
+    proxy_pass http://order-service:8080;
+}
+location /api/payments {
+    proxy_pass http://payment-service:8080;
+}
+location / {
+    proxy_pass http://monolith:3000;  # Getting smaller
+}
 ```
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Over-Engineering
+Designing for millions of users when starting from zero. Start simple (monolith/PaaS), evaluate scaling needs as traffic grows.
+
+### Anti-Pattern 2: No Cost Governance
+Building without cost guardrails. Set budgets, use tagging, implement auto-shutdown for non-production.
+
+### Anti-Pattern 3: Single Points of Failure
+Running one instance, one AZ, one region. Critical workloads require multi-AZ at minimum, multi-region for DR.
+
+### Anti-Pattern 4: Deep Coupling
+Services calling each other synchronously in chains. Use async messaging (queues, events) for non-critical dependencies.
+
+### Anti-Pattern 5: No Data Strategy
+Choosing database before understanding access patterns. Consider access patterns, consistency requirements, and scale before picking DB.
+
+## Production Considerations
+
+### Governance
+- Implement tagging strategy for cost allocation and automation.
+- Use policy-as-code (OPA, Azure Policy, AWS SCPs) for compliance.
+- Define deployment environments (dev/staging/prod) with clear boundaries.
+- Implement change management with approval gates.
+
+### Observability Requirements
+- Unified logging (structured JSON → central store).
+- Distributed tracing (OpenTelemetry) across services.
+- Metrics (RED: Rate, Errors, Duration per service).
+- Centralized dashboard with SLO tracking.
+- Alerting on burn rate, not static thresholds.
+
+### Cost Optimization
+- Use serverless / scale-to-zero for variable workloads.
+- Right-size instances based on actual utilization.
+- Use reserved instances for baseline capacity.
+- Implement auto-scaling for variable demand.
+- Delete unused resources (load balancers, EIPs, volumes).
+
+## Rules & Constraints
+- Every service must have at least 2 replicas across 2 AZs.
+- All services must have health check endpoints.
+- Inter-service communication must have timeouts and retries.
+- Define RPO/RTO before designing DR strategy.
+- Document all architecture decisions (ADRs).
 
 ## References
-  - references/cloud-architecture-advanced.md — Cloud Architecture Advanced Topics
-  - references/cloud-architecture-fundamentals.md — Cloud Architecture Fundamentals
-  - references/cloud-migration.md — Cloud Migration
-  - references/landing-zone.md — Cloud Landing Zone Patterns
-  - references/multi-cloud-strategy.md — Multi-Cloud Strategy
-  - references/well-architected.md — Well-Architected Framework
+  - references/cloud-architecture-advanced.md
+  - references/cloud-architecture-fundamentals.md
+  - references/cloud-cost-optimization.md
+  - references/cloud-migration.md
+  - references/cloud-resilience-patterns.md
+  - references/landing-zone.md
+  - references/multi-cloud-strategy.md
+  - references/well-architected.md
+  - references/adr-template.md
+
 ## Handoff
-Architecture implemented via devops-terraform (IaC) and devops-aws/azure/gcp. Security validated via security-* skills.
+Next: **landing-zone** — detailed landing zone implementation.

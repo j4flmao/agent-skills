@@ -1,8 +1,8 @@
 ---
-name: tauri
+name: desktop-tauri
 description: >
-  Use this skill when building lightweight cross-platform desktop apps with Tauri — Rust backend, web frontend, security-first architecture. Covers Tauri v2 setup, Rust commands, capabilities system, window management, and bundling. Do NOT use for: web-only apps, Electron projects, mobile development.
-version: "1.0.0"
+  Use when the user asks about Tauri desktop app development, Rust backend, WebView frontend, Tauri commands, Tauri plugins, or Tauri packaging. Do NOT use for: Electron (desktop-electron), or web-only frontend development.
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -10,103 +10,271 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [desktop, cross-platform, tauri, rust, phase-4]
+tags: [desktop, tauri, rust, cross-platform]
 ---
 
 # Tauri
 
 ## Purpose
-Build secure, performant desktop applications using Tauri with Rust backend and web frontend, leveraging OS-native WebView instead of bundled Chromium.
+Build secure, performant, lightweight desktop applications using Tauri — combining a Rust backend with a WebView frontend (HTML/CSS/JS/TypeScript). Tauri produces significantly smaller binaries than Electron (often 3-50 MB vs 150+ MB), uses less memory, and enforces security through capability-based permissions.
 
 ## Agent Protocol
 
 ### Trigger
-User request includes: `tauri`, `tauri app`, `rust desktop`, `tauri command`, `invoke`, `webview`, `small binary`, `lightweight desktop`.
+Exact user phrases: "Tauri", "Tauri app", "Tauri v2", "Rust backend", "Tauri commands", "Tauri plugin", "Tauri IPC", "Tauri packaging", "Tauri bundle", "Tauri CLI", "create-tauri-app".
 
 ### Input Context
-- Frontend framework (React, Vue, Svelte, Solid)
-- Rust version and toolchain
-- Tauri v1 or v2
-- OS targets
-- Plugin requirements (fs, shell, dialog, etc.)
+- Tauri version (v1 vs v2 — v2 for new projects)
+- Frontend framework (React, Vue, Svelte, Solid, vanilla)
+- Build tool (Vite, webpack)
+- Rust backend requirements (file system, shell, database, serial)
+- Desktop targets (Windows, macOS, Linux, mobile)
+- Security requirements (capability-based permissions, CSP)
+- Bundle format (MSI, DMG, AppImage, deb)
 
 ### Output Artifact
-A markdown document containing:
-- Tauri project scaffold command
-- Rust command definitions with types
-- Frontend invoke patterns
-- Capabilities/permissions config
-- Window configuration
-- Plugin setup
-- Build and bundling config
-- CI configuration
-
-### Response Format
-Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick.
+Tauri application architecture with Rust backend structure, IPC command definitions, frontend setup, and bundling configuration.
 
 ### Completion Criteria
-- Tauri project scaffolded with correct frontend binding
-- Rust commands defined with proper type annotations
-- Invoke calls handled in frontend with error boundaries
-- Capabilities/permissions configured per plugin need
-- Window configuration set (title, size, decorations)
-- App bundles produce expected output per platform
+- [ ] Tauri v2 project scaffolded (create-tauri-app or manual)
+- [ ] Cargo.toml with tauri dependencies and plugins
+- [ ] Rust backend with #[tauri::command] functions
+- [ ] IPC commands registered in .invoke_handler()
+- [ ] Frontend with Tauri JS API calls (@tauri-apps/api)
+- [ ] Tauri configuration (tauri.conf.json) with windows, permissions, bundle
+- [ ] Capabilities defined (permissions for commands, plugins, and features)
+- [ ] Platform-specific configuration (macOS entitlements, Windows sign)
+- [ ] Plugins for needed capabilities (fs, shell, dialog, notification)
+- [ ] Bundling configuration (icons, installer, updater)
 
 ### Max Response Length
-4096 tokens
+250 lines.
+
+## Framework/Methodology
+
+### Tauri vs Electron Decision Tree
+```
+Why choose Tauri over Electron?
+├── Binary size matters → Tauri (3-50 MB vs 150+ MB)
+├── Memory consumption → Tauri (uses system WebView, not Chromium)
+├── Security first → Tauri (capability model, no Node in renderer)
+├── Rust codebase → Tauri (native Rust backend)
+├── Need Chromium DevTools → Electron (Tauri uses system WebView)
+├── Need Node.js ecosystem → Electron (Tauri uses Rust crates)
+└── Need sandboxing → Both (Tauri capabilities, Electron contextBridge)
+```
+
+### Tauri Architecture
+```
+Frontend (WebView)
+├── HTML/CSS/JS (React, Vue, Svelte, Solid)
+├── @tauri-apps/api (JS bindings)
+├── invoke() → IPC to Rust backend
+└── listen() → Events from Rust backend
+        ↕ IPC (JSON serialization)
+Rust Backend (Core)
+├── #[tauri::command] functions
+├── Plugins (fs, shell, dialog, notification, sql, http)
+├── State management (tauri::State<T>)
+├── Event emission (AppHandle::emit)
+└── File system, OS APIs, native code
+```
 
 ## Workflow
 
 ### Step 1: Scaffold Project
+
 ```bash
-npm create tauri-app@latest my-app -- --template react-ts
+# Using create-tauri-app (recommended)
+npm create tauri-app@latest my-app -- --template react-ts --manager npm
+
+# Or manual setup
+npm create vite@latest my-app -- --template react-ts
 cd my-app
+npm install
+npm install -D @tauri-apps/cli@latest
+npm install @tauri-apps/api@latest
+npx tauri init
 ```
 
-### Step 2: Define Rust Commands
-```rust
-// src-tauri/src/lib.rs
-use tauri::Manager;
+### Step 2: Define Tauri Configuration
 
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}!", name)
+```json
+// src-tauri/tauri.conf.json
+{
+  "$schema": "https://raw.githubusercontent.com/nicedoc/schemas/refs/heads/main/schema.json",
+  "productName": "My App",
+  "version": "0.1.0",
+  "identifier": "com.example.myapp",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "My App",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "minWidth": 600,
+        "minHeight": 400
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost data:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "wix": null,
+      "nsis": null
+    },
+    "macOS": {
+      "minimumSystemVersion": "12.0",
+      "entitlements": "entitlements.plist"
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    }
+  }
+}
+```
+
+### Step 3: Implement Rust Backend Commands
+
+```rust
+// src-tauri/src/main.rs (or lib.rs)
+use tauri::State;
+use std::sync::Mutex;
+
+// Shared state
+struct AppState {
+    count: Mutex<i32>,
+    db: Mutex<rusqlite::Connection>,
 }
 
 #[tauri::command]
-fn read_config(path: String) -> Result<String, String> {
-    std::fs::read_to_string(&path).map_err(|e| e.to_string())
+fn greet(name: &str) -> String {
+    format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+#[tauri::command]
+fn increment(state: State<AppState>) -> Result<i32, String> {
+    let mut count = state.count.lock().map_err(|e| e.to_string())?;
+    *count += 1;
+    Ok(*count)
+}
+
+#[tauri::command]
+fn read_file(path: &str) -> Result<String, String> {
+    std::fs::read_to_string(path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn list_directory(path: &str) -> Result<Vec<String>, String> {
+    let entries = std::fs::read_dir(path)
+        .map_err(|e| e.to_string())?
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.file_name().to_string_lossy().to_string())
+        .collect();
+    Ok(entries)
 }
 
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, read_config])
+        .manage(AppState {
+            count: Mutex::new(0),
+            db: Mutex::new(rusqlite::Connection::open_in_memory().unwrap()),
+        })
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            increment,
+            read_file,
+            list_directory,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
 ```
 
-### Step 3: Frontend Invoke
+### Step 4: Frontend IPC Calls
+
 ```typescript
 // src/App.tsx
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+import { open } from '@tauri-apps/plugin-dialog';
+import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
+import { useEffect, useState } from 'react';
 
-async function handleGreet() {
-  try {
-    const message = await invoke<string>('greet', { name: 'World' });
-    console.log(message);
-  } catch (err) {
-    console.error('Command failed:', err);
-  }
+function App() {
+  const [greeting, setGreeting] = useState('');
+  const [count, setCount] = useState(0);
+
+  // Invoke commands (request-response)
+  const handleGreet = async () => {
+    const result = await invoke<string>('greet', { name: 'World' });
+    setGreeting(result);
+  };
+
+  const handleIncrement = async () => {
+    const newCount = await invoke<number>('increment');
+    setCount(newCount);
+  };
+
+  // React to events from Rust backend
+  useEffect(() => {
+    const unlisten = listen<string>('backend-event', (event) => {
+      console.log('Event from Rust:', event.payload);
+    });
+    return () => { unlisten.then(fn => fn()); };
+  }, []);
+
+  // Use Tauri plugins
+  const handleOpenFile = async () => {
+    const file = await open({
+      multiple: false,
+      filters: [{ name: 'Documents', extensions: ['txt', 'md'] }]
+    });
+    if (file) {
+      const content = await readTextFile(file);
+      console.log('File content:', content);
+    }
+  };
+
+  return (
+    <div>
+      <button onClick={handleGreet}>Greet</button>
+      <p>{greeting}</p>
+      <button onClick={handleIncrement}>Count: {count}</button>
+      <button onClick={handleOpenFile}>Open File</button>
+    </div>
+  );
 }
 ```
 
-### Step 4: Configure Capabilities
+### Step 5: Capability-Based Permissions (Tauri v2)
+
 ```json
 // src-tauri/capabilities/default.json
 {
   "identifier": "default",
-  "description": "Default capability set",
+  "description": "Default capabilities for the main window",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -114,56 +282,137 @@ async function handleGreet() {
     "core:window:allow-close",
     "core:window:allow-set-size",
     "dialog:default",
-    "fs:allow-read-text-file",
-    "shell:default"
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "fs:default",
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [{ "path": "$HOME/Documents/**" }]
+    },
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [{ "path": "$HOME/Documents/**" }]
+    }
   ]
 }
 ```
 
-### Step 5: Window Configuration
-```json
-// src-tauri/tauri.conf.json (snippet)
-{
-  "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "My App",
-        "width": 1200,
-        "height": 800,
-        "resizable": true,
-        "fullscreen": false,
-        "decorations": true
-      }
-    ],
-    "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost; style-src 'self' 'unsafe-inline'"
-    }
-  },
-  "bundle": {
-    "active": true,
-    "targets": ["nsis", "dmg", "appimage"],
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.ico"]
-  }
+### Step 6: Install and Configure Plugins
+
+```bash
+# CLI
+cargo add tauri-plugin-dialog tauri-plugin-fs tauri-plugin-shell tauri-plugin-sql
+npm install @tauri-apps/plugin-dialog @tauri-apps/plugin-fs @tauri-apps/plugin-shell
+```
+
+```rust
+// src-tauri/src/lib.rs
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_shell::init())
+        .invoke_handler(tauri::generate_handler![...])
+        .run(tauri::generate_context!())
 }
 ```
 
-## Rules
-- Rust commands accept only serializable types — no complex objects without serde.
-- Error handling uses Result<T, String> — never unwrap in command handlers.
-- Capabilities follow principle of least privilege — grant only needed permissions.
-- CSP headers set in tauri.conf.json — never use 'unsafe-inline' unless necessary.
-- Frontend invoke calls wrapped in try/catch.
-- Plugin permissions explicitly declared in capabilities.
-- Bundle targets match CI runner OS.
-- Dev mode uses `tauri dev` for hot-reload.
+### Step 7: Build and Bundle
+
+```bash
+# Development
+npm run tauri dev
+
+# Build for production
+npm run tauri build
+
+# Build for specific target
+npm run tauri build -- --target universal-apple-darwin
+
+# Output: src-tauri/target/release/bundle/
+# ├── dmg/AppName.dmg (macOS)
+# ├── msi/AppName.msi (Windows)
+# └── deb/appname.deb (Linux)
+```
+
+## Common Pitfalls
+
+| Pitfall | Description | Prevention |
+|---------|-------------|------------|
+| Unnecessary large Rust binary | Debug symbols, unused crates | Build --release, opt-level=3, strip symbols |
+| Missing capabilities | Frontend calls fail silently | Define all required permissions in capabilities |
+| Blocking main thread | Sync I/O in commands freezes UI | Use tokio async, #[tauri::command] with async |
+| No CSP | XSS vulnerabilities | Always set Content-Security-Policy |
+| Hardcoded paths | App breaks on different platforms | Use app_dir, home_dir, resolve_path API |
+| Old v1 patterns | tauri::command without async | Use Tauri v2 conventions |
+| Not handling errors | Panics in Rust crash the app | Return Result<T, String> from all commands |
+| Ignoring entitlements | macOS notarization fails | Set hardened runtime entitlements |
+| No icon set | Default icons, CI fails | Generate icons for all platforms |
+| Mobile not configured | Can't test on mobile | Add mobile targets in tauri config |
+
+## Best Practices
+
+| Practice | Rationale |
+|----------|-----------|
+| TypeScript frontend | Type safety for IPC invoke calls |
+| Async commands for I/O | Non-blocking, responsive UI |
+| Capability-based permissions | Granular security, auditable |
+| Custom protocols over port | Use Tauri's IPC, not localhost server |
+| Plugin ecosystem | Official plugins for common needs |
+| State management with Mutex/RwLock | Thread-safe shared state in Rust |
+| Webview DevTools for debugging | But disable for production builds |
+| Error handling with anyhow | Idiomatic Rust error propagation |
+| Small binary via LTO | lto = true in Cargo.toml |
+| CI with cargo test | Rust tests alongside frontend tests |
+
+## Architecture Patterns
+
+### State Management
+```rust
+use tauri::Manager;
+
+#[tauri::command]
+async fn greet(state: State<'_, AppState>) -> Result<String, String> {
+    let count = state.count.lock().map_err(|e| e.to_string())?;
+    *count += 1;
+    Ok(format!("Hello! Count: {}", *count))
+}
+```
+
+### Event Emission
+```rust
+// Rust: emit event to frontend
+fn emit_event(app: &tauri::AppHandle, message: &str) {
+    app.emit("backend-event", message).unwrap();
+}
+
+// Frontend: listen
+import { listen } from '@tauri-apps/api/event';
+listen('backend-event', (event) => {
+  console.log(event.payload);
+});
+```
+
+### Plugin Creation
+```rust
+// Custom plugin structure
+pub struct MyPlugin;
+impl tauri::plugin::Plugin for MyPlugin {
+    fn name(&self) -> &'static str {
+        "my-plugin"
+    }
+
+    fn initialize(&self, app: &tauri::AppHandle, config: serde_json::Value) -> tauri::plugin::Result<()> {
+        // Plugin initialization
+        Ok(())
+    }
+}
+```
 
 ## References
   - references/tauri-advanced.md — Tauri Advanced Topics
-  - references/tauri-architecture.md — Tauri Architecture Reference
-  - references/tauri-deployment.md — Tauri Deployment Reference
   - references/tauri-fundamentals.md — Tauri Fundamentals
-  - references/tauri-setup.md — Tauri Setup Reference
-  - references/tauri-vs-electron.md — Tauri vs Electron Reference
+  - references/tauri-plugins.md — Tauri Plugin Reference
+  - references/tauri-security.md — Tauri Security Reference
 ## Handoff
-Hand off to `desktop/electron/SKILL.md` when Chromium DevTools or extensive npm-native ecosystem required. Hand off to `backend/rust/core/SKILL.md` for complex Rust backend logic beyond Tauri commands.
+Hand off to `dev-loop-code-review` for security audit of Rust backend. Hand off to `desktop-electron` if web ecosystem dependencies are needed.

@@ -1,213 +1,71 @@
 # Kotlin Multiplatform Fundamentals
 
 ## Overview
-Kotlin Multiplatform is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Kotlin Multiplatform (KMP) allows sharing business logic between Android, iOS, web, and desktop using Kotlin. Common code compiles to JVM bytecode (Android), native binaries (iOS), and JavaScript/Wasm (web). JetBrains actively maintains KMP with growing ecosystem support.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Kotlin Multiplatform helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### expect/actual Declarations
+Platform-specific implementations declared with `expect` in commonMain and `actual` in platform source sets. Use for platform APIs, system services, and hardware access. Compiler ensures every expect has a matching actual. Minimize expect/actual surface area.
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Kotlin Multiplatform solutions. These principles help maintain code quality and reduce technical debt.
+### Source Sets
+`commonMain` for shared code. `androidMain` for Android-specific implementations. `iosMain` for iOS-specific (Kotlin/Native). Gradle plugin configures source sets automatically. `appleMain` for shared iOS/macOS/watchOS code. `nativeMain` for all native targets.
 
-### Concept 3: Data Management
-Proper data management is essential for Kotlin Multiplatform. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Kotlin/Native
+Compiles Kotlin to native binaries via LLVM. No JVM/ART required — runs directly on iOS. Memory management via automatic reference counting (like Swift). Interop with Objective-C/Swift via @ObjCName and C interop via cinterop.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Kotlin Multiplatform Mobile (KMM)
+The mobile-focused subset of KMP sharing code between Android and iOS. Share domain models, network layer, data validation, and business logic. UI remains platform-native (Jetpack Compose on Android, SwiftUI on iOS).
 
 ## Architecture Patterns
 
-### Pattern 1: Standard Architecture
-The standard architecture for Kotlin Multiplatform follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+### Shared Business Logic
+Domain layer in commonMain: entities, use cases, repository interfaces, validation. No platform dependencies. Use cases orchestrate business operations. Repository interfaces define data contracts. Models use `@Serializable` for multiplatform serialization.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### Data Layer
+`commonMain` defines repository interfaces and data models. `androidMain` implements with Room/Retrofit. `iosMain` implements with CoreData/URLSession. Ktor client for cross-platform networking. SQLDelight for shared SQLite database.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Presentation Layer
+Platform-specific: Jetpack Compose (Android), SwiftUI (iOS). ViewModel in commonMain for shared state using kotlinx-coroutines Flow. Platform observes Flow and renders UI. Compose Multiplatform for shared UI (experimental, production-ready for selected use cases).
 
-## Implementation Guide
+## Data Management
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### SQLDelight
+Cross-platform SQLite from commonMain. Type-safe SQL in `.sq` files. Generates Kotlin drivers for Android (AndroidSqliteDriver) and iOS (NativeSqliteDriver). Schema migrations in `.sqm` files. Reactive queries via `.asFlow().mapToList()`.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Ktor Client
+Multiplatform HTTP client. Engines: OkHttp (Android), Darwin (iOS), CIO (desktop). Configure interceptors, serialization (kotlinx.serialization), and logging in commonMain. Plugin architecture for content negotiation, auth, and WebSockets.
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+### kotlinx.serialization
+Multiplatform serialization library. `@Serializable` annotation on data classes. Supports JSON, CBOR, ProtoBuf, and custom formats. `Json { ignoreUnknownKeys = true }` for flexible parsing. Use sealed classes for polymorphic serialization.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+## Security Fundamentals
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+### Expect/Actual for Secure Storage
+Declare `expect` secure storage interface in commonMain. `actual` implementations: EncryptedSharedPreferences (Android), Keychain (iOS). Share only the interface — platform handles encryption. Store tokens, API keys, and credentials.
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### Kotlin/Native Cryptography
+`kotlinx.coroutines` for secure randomness. Platform crypto via expect/actual or platform-specific SDKs. Apple's Security framework (iOS) vs AndroidKeyStore. Avoid implementing custom crypto — use platform primitives.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+## Build & Dependency Management
 
-## Best Practices
+### Gradle Multiplatform Plugin
+`org.jetbrains.kotlin.multiplatform` plugin configures targets. `androidTarget` for Android. `iosX64`, `iosArm64`, `iosSimulatorArm64` for iOS. `listOf(iosX64(), iosArm64(), iosSimulatorArm64())` for all iOS variants. Framework configuration for iOS integration.
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+### CocoaPods Integration
+KMP can produce iOS framework consumed via CocoaPods. `cocoapods {}` block in Gradle. `pod install` integrates the framework. Xcode workspace includes both KMP framework and app target. Kotlin/Native framework exposed as Objective-C compatible API.
 
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+### Testing
+`commonTest` for shared tests. `kotlin.test` framework (JUnit-style). Expect/actual for platform test dependencies. `Turbine` for Flow testing. MockK for multiplatform mocking (experimental in commonTest). Run with `./gradlew allTests`.
 
 ## Key Points
-- Understand core Kotlin Multiplatform concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- expect/actual for platform-specific implementations (minimize surface area)
+- SQLDelight for shared cross-platform SQLite
+- Ktor for multiplatform HTTP client
+- kotlinx.serialization for shared serialization
+- Source sets: commonMain, androidMain, iosMain
+- Kotlin/Native compiles to native binaries on iOS
+- CocoaPods or SPM for iOS framework integration
+- Coroutines + Flow for shared async/reactive code
+- Compose Multiplatform for shared UI (experimental)
+- Gradle plugin manages targets, source sets, and dependencies

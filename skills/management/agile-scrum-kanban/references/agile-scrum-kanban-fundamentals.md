@@ -1,213 +1,228 @@
 # Agile Scrum Kanban Fundamentals
 
 ## Overview
-Agile Scrum Kanban is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Agile, Scrum, and Kanban are frameworks for delivering value iteratively. This reference covers foundational concepts, roles, ceremonies, artifacts, and when to use each approach.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Agile Scrum Kanban helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Concept 1: Agile Manifesto
+Four value statements guiding all agile frameworks:
+- Individuals and interactions over processes and tools
+- Working software over comprehensive documentation
+- Customer collaboration over contract negotiation
+- Responding to change over following a plan
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Agile Scrum Kanban solutions. These principles help maintain code quality and reduce technical debt.
+The 12 Principles behind the Agile Manifesto include: satisfy customer through early delivery, welcome changing requirements, deliver frequently, business and dev work together daily, build around motivated individuals, face-to-face conversation, working software as progress measure, sustainable pace, technical excellence, simplicity, self-organizing teams, and regular reflection.
 
-### Concept 3: Data Management
-Proper data management is essential for Agile Scrum Kanban. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Concept 2: Scrum Fundamentals
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+Scrum is a lightweight framework for complex product delivery:
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+**Three Pillars (Empiricism)**:
+- Transparency: all aspects visible to those responsible
+- Inspection: frequent inspection of artifacts and progress
+- Adaptation: adjust process when deviations detected
 
-## Architecture Patterns
+**Five Values**: Commitment, Courage, Focus, Openness, Respect
 
-### Pattern 1: Standard Architecture
-The standard architecture for Agile Scrum Kanban follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+**Three Roles**:
+- Product Owner: maximizes product value, manages backlog, sole decision-maker on priority
+- Scrum Master: facilitates process, removes impediments, coaches the team
+- Developers: self-organizing, cross-functional, owns sprint delivery
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+**Five Events**:
+- Sprint: timeboxed iteration (1-4 weeks, commonly 2)
+- Sprint Planning: what can be delivered and how
+- Daily Scrum: 15-min plan for next 24 hours
+- Sprint Review: inspect increment and adapt backlog
+- Sprint Retrospective: inspect and adapt the process
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+**Three Artifacts**:
+- Product Backlog: ordered list of everything needed
+- Sprint Backlog: selected items plus plan for delivery
+- Increment: usable product at end of each sprint
 
-## Implementation Guide
+### Concept 3: Kanban Fundamentals
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+Kanban is a flow-based method for managing work:
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+**Six Practices**:
+1. Visualize the workflow (board with columns)
+2. Limit Work in Progress (WIP limits)
+3. Manage flow (measure and optimize cycle time)
+4. Make policies explicit (definition of done per stage)
+5. Implement feedback loops (service delivery review, operations review)
+6. Improve collaboratively (evolve using data)
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+**Key Metrics**:
+- Cycle Time: time from start to finish
+- Lead Time: time from request to delivery
+- Throughput: items delivered per time unit
+- WIP: work items currently in progress
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+**WIP Limits**: cap on items in each column. When column is full, no new items enter until something finishes. This reveals bottlenecks and reduces context switching.
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+### Concept 4: Scrum vs Kanban Decision
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+```
+Decision factor                          | Scrum       | Kanban
+-----------------------------------------|-------------|---------------
+Delivery cadence                         | Fixed sprint| Continuous
+Role requirements                        | 3 roles     | Existing roles
+Work item size                           | Sized per sprint | Size varies
+Process change tolerance                 | Sprint boundary | Anytime
+Predictability need                      | High        | Moderate
+Team structure                           | Stable team | Stable or fluid
+Incident/ops work                        | Can disrupt | Built-in
+```
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+Use Scrum when: team is stable, work is project-based, predictability is important, sprint boundaries provide useful rhythm.
+
+Use Kanban when: work is unpredictable (support, ops), continuous delivery, team maturity is low (start with board), existing process works but needs visualization.
+
+Use Hybrid (Scrumban) when: sprint-based delivery with ops interruptions, team transitioning from Scrum to Kanban, project has both planned and unplanned work.
+
+### Concept 5: User Stories
+
+Standard format: "As a [role], I want [goal] so that [benefit]."
+
+**INVEST Criteria**:
+- Independent: minimal dependencies on other stories
+- Negotiable: details emerge through conversation
+- Valuable: delivers value to stakeholder or user
+- Estimable: team can estimate size
+- Small: fits within one sprint
+- Testable: clear acceptance criteria
+
+**Epic**: large story that spans multiple sprints, broken down into stories.
+**Theme**: collection of related epics or stories.
+
+### Concept 6: Estimation Techniques
+
+| Technique | How It Works | Best For |
+|-----------|-------------|----------|
+| Planning Poker | Team votes with cards, discuss outliers | New teams, consensus building |
+| T-shirt Sizing | S/M/L/XL relative sizing | High-level, early-stage |
+| Story Points | Abstract effort unit accounting for complexity, uncertainty | Established teams |
+| Ideal Days | Calendar days with no interruptions | External stakeholders |
+| Affinity Mapping | Group stories by size simultaneously | Large backlogs |
+| #NoEstimates | Historical throughput data replaces estimation | Mature teams with stable flow |
+
+### Concept 7: Definition of Done (DoD)
+
+Shared understanding of what "done" means:
+```
+[ ] Code written and reviewed
+[ ] Tests pass (unit + integration)
+[ ] Documentation updated
+[ ] Deployed to staging
+[ ] Acceptance criteria met
+[ ] Product Owner accepts
+[ ] No known P0/P1 bugs
+```
+
+Team owns DoD. Strengthen over time. Every story meets DoD before counting as complete.
+
+### Concept 8: Definition of Ready (DoR)
+
+Story is ready for sprint when:
+```
+[ ] Acceptance criteria defined
+[ ] Dependencies identified
+[ ] Feasibility confirmed (technical)
+[ ] Sized/estimated
+[ ] Value clear (why this over anything else)
+[ ] UX/design complete if needed
+```
+
+DoR prevents unfinished work entering sprints. Not all items need DoR — only those pulled into sprint planning.
+
+## Framework Comparison
+
+### Scrum
+
+Strengths: clear roles, prescribed rhythm, built-in inspect/adapt cycles, strong accountability.
+
+Weaknesses: rigid boundaries, overhead of ceremonies, assumes stable team, can feel bureaucratic.
+
+Best for: product development, new teams needing structure, projects with clear goals.
+
+### Kanban
+
+Strengths: flexible, low ceremony, works with existing process, flow visibility, handles interruptions.
+
+Weaknesses: no prescribed roles, less predictability, requires discipline for WIP limits, can lack urgency.
+
+Best for: support/maintenance teams, ops, continuous delivery, unpredictable work.
+
+### Scrumban (Hybrid)
+
+Mix of Scrum ceremonies with Kanban flow. Sprint boundaries with continuous delivery. WIP limits applied within sprint.
+
+Best for: teams transitioning from Scrum to Kanban, product teams with support rotation, mature teams wanting flexibility without losing rhythm.
 
 ## Best Practices
 
 | Practice | Description | Priority |
 |----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+| Timebox Ceremonies | Strict timeboxes prevent meeting bloat | High |
+| Visualize Work | Board must be up-to-date and visible | High |
+| Limit WIP | WIP limits reveal bottlenecks | High |
+| Refine Backlog | Regular backlog grooming (10% of sprint) | High |
+| Retro After Every Sprint | Continuous improvement engine | High |
+| Daily Standup | 15 min, no problem-solving | Medium |
+| Sprint Goal | Single focus for the sprint | Medium |
+| Team First | Stable teams outperform fluid teams | High |
 
 ## Common Pitfalls
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+### Pitfall 1: Scrum But
+Doing Scrum "but" changing essential elements. "We do daily standup but skip planning." "We have sprints but scope changes mid-sprint."
+Fix: follow framework as-prescribed before customizing. Understand why rules exist.
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+### Pitfall 2: Waterfall in Sprint
+Front-loading analysis, then design, then coding within a sprint. Creates mini-waterfall with late feedback.
+Fix: stories should be sliced vertically (end-to-end), not horizontally (by layer).
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+### Pitfall 3: No WIP Limit Enforcement
+WIP limits defined but ignored. Board shows but doesn't control flow.
+Fix: enforce WIP limits as hard caps. New work starts only when slot opens. Swarm on blocked items.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+### Pitfall 4: Retro Without Change
+Same retro format every sprint, same action items, no follow-through. Retro becomes venting session.
+Fix: max 3 action items per sprint. Review previous items first. Track closure rate. Rotate retro formats.
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+### Pitfall 5: Estimation as Commitment
+Story points treated as deadlines. Team punished for estimates being wrong.
+Fix: estimates are forecasts, not promises. Velocity varies. Use ranges, not single numbers.
+
+### Pitfall 6: Backlog as Dumpster
+Product backlog full of unrefined, outdated, duplicate items. No one grooms it.
+Fix: regular refinement sessions. Archive items untouched for 3+ sprints. Max backlog size.
 
 ## Tooling Ecosystem
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+### Board Tools
+- Jira: full-featured, configurable, enterprise
+- Linear: fast, developer-friendly, modern
+- Trello: simple, visual, small teams
+- GitHub Projects: co-located with code
+- Notion: flexible, documentation integrated
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+### Estimation Tools
+- Planning poker apps (Scrum Poker, PlanITPoker)
+- Spreadsheet templates for T-shirt sizing
+- Velocity tracking in board tool
+- Cycle time analytics for Kanban
 
 ## Key Points
-- Understand core Agile Scrum Kanban concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- Scrum is not the only agile framework — choose based on context
+- WIP limits are the most powerful Kanban practice
+- Retro is the engine of continuous improvement
+- DoD and DoR prevent ambiguity in what's expected
+- Estimates are forecasts, not commitments
+- Sprint boundaries provide rhythm, not rigidity
+- Flow metrics matter more than velocity for improvement
+- Stable teams outperform fluid teams
+- Ceremonies serve the team, not the other way around
+- Inspect and adapt applies to the process itself

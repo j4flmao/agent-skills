@@ -313,6 +313,180 @@ export default defineConfig(({ mode }) => {
 });
 ```
 
+## Advanced Optimizations
+
+### Dynamic Import Code Splitting
+```typescript
+// Automatic route-based splitting with React Router
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Settings = React.lazy(() => import('./pages/Settings'));
+const Analytics = React.lazy(() => import('./pages/Analytics'));
+
+// Each page becomes a separate chunk automatically
+// Vite/Rollup handles the chunking without extra config
+```
+
+### Manual Chunk Optimization Strategy
+```typescript
+build: {
+  rollupOptions: {
+    output: {
+      manualChunks(id) {
+        // Group React ecosystem separately
+        if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+          return 'vendor-react';
+        }
+        // Group UI libraries
+        if (id.includes('node_modules/@mui') || id.includes('node_modules/antd')) {
+          return 'vendor-ui';
+        }
+        // Group utilities
+        if (id.includes('node_modules/lodash') || id.includes('node_modules/date-fns')) {
+          return 'vendor-utils';
+        }
+        // Group remaining vendors by package
+        if (id.includes('node_modules')) {
+          const match = id.match(/node_modules\/(@[^/]+\/[^/]+|[^/]+)/);
+          if (match) return `vendor-${match[1].replace(/[^a-z0-9]/g, '-')}`;
+        }
+      },
+    },
+  },
+}
+```
+
+### Module Preload Polyfill
+```typescript
+export default defineConfig({
+  build: {
+    modulePreload: {
+      polyfill: true,  // Adds polyfill for older browsers
+      resolveDependencies: (filename, deps, { hostId, hostType }) => {
+        // Customize preload order
+        return deps.filter((dep) => !dep.includes('lazy'));
+      },
+    },
+  },
+});
+```
+
+## CSS Optimization Patterns
+
+### Critical CSS Extraction
+```typescript
+import critical from 'vite-plugin-critical';
+
+export default defineConfig({
+  plugins: [
+    critical({
+      criticalUrl: '/',
+      criticalBase: 'dist',
+      criticalPages: [
+        { uri: '/', template: 'index.html' },
+        { uri: '/about', template: 'about.html' },
+      ],
+      extract: true,
+      inline: true,
+    }),
+  ],
+});
+```
+
+### PostCSS Optimization
+```javascript
+// postcss.config.js
+export default {
+  plugins: {
+    'postcss-import': {},
+    'tailwindcss/nesting': {},
+    tailwindcss: {},
+    autoprefixer: {
+      flexbox: 'no-2009',
+      grid: 'autoplace',
+    },
+    cssnano: {
+      preset: [
+        'advanced',
+        {
+          discardComments: { removeAll: true },
+          normalizeWhitespace: true,
+          reduceIdents: false,
+          zindex: false,
+        },
+      ],
+    },
+  },
+};
+```
+
+## Environment-Based Build Variants
+
+### Staging vs Production Builds
+```typescript
+// vite.config.ts
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+
+  return {
+    define: {
+      __APP_ENV__: JSON.stringify(mode),
+      __API_URL__: JSON.stringify(env.API_URL),
+    },
+    build: {
+      minify: mode === 'production' ? 'esbuild' : false,
+      sourcemap: mode !== 'production',
+      rollupOptions: {
+        output: {
+          entryFileNames: mode === 'production'
+            ? 'assets/[name].[hash].js'
+            : 'assets/[name].js',
+        },
+      },
+      // Staging-specific settings
+      ...(mode === 'staging' && {
+        sourcemap: 'hidden',  // Source maps for debugging but not visible
+      }),
+    },
+  };
+});
+```
+
+## Build Analysis Patterns
+
+### Comprehensive Bundle Analysis
+```typescript
+import { visualizer } from 'rollup-plugin-visualizer';
+import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
+
+export default defineConfig({
+  plugins: [
+    visualizer({
+      filename: 'dist/stats.html',
+      open: process.env.CI ? false : true,
+      gzipSize: true,
+      brotliSize: true,
+      template: 'treemap',  // 'treemap', 'sunburst', 'network'
+    }),
+    // Compare bundles over time
+    process.env.ANALYZE_HISTORY && historyAnalyzer({
+      historyFile: '.bundle-history.json',
+    }),
+  ],
+});
+```
+
+## Key Anti-Patterns
+- **No code splitting**: Single large bundle hurts initial load
+- **Oversplitting**: Too many tiny chunks increases HTTP requests overhead
+- **Committing dist/**: Add to .gitignore
+- **Not caching assets**: Set proper Cache-Control headers for hashed assets
+- **Missing dynamic imports for routes**: Every route should be lazy-loaded
+- **No image optimization**: Large images kill performance
+- **Inline everything**: 4KB inline limit is good default; don't inline large assets
+- **Using terser instead of esbuild**: esbuild is 10-100x faster for minification
+- **No source maps in production**: Use `sourcemap: 'hidden'` for error tracking
+- **Not setting modulePreload**: Delays loading of critical dependencies
+
 ## Key Points
 - outDir controls build output location
 - target defines browser compatibility level
@@ -339,3 +513,7 @@ export default defineConfig(({ mode }) => {
 - Rollup options for advanced bundling configuration
 - Environment variables define build-time constants
 - Brotli compression for smaller asset sizes on supported servers
+- Dynamic imports are automatically code-split by Vite
+- Use `import.meta.glob` for file-system-based routing imports
+- CSS modules generate scoped class names with hashes
+- Worker bundling with `new Worker(new URL('./worker.ts', import.meta.url))`

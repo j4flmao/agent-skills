@@ -1,213 +1,80 @@
-# Create Brief Fundamentals
+# Brief Fundamentals
 
-## Overview
-Create Brief is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+## What is a Product Brief?
+A Product Brief is a one-page document that captures the core of what you are building, who you are building it for, and why it matters. It is the first artifact in the planning chain — everything else (PRD, stories, roadmap, architecture) depends on it.
 
-## Core Concepts
+## Purpose
+The brief aligns the team around a shared understanding of scope before any design or engineering work begins. It surfaces assumptions, defines boundaries, and sets success criteria. A well-written brief prevents weeks of misalignment downstream.
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Create Brief helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+## Core Components
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Create Brief solutions. These principles help maintain code quality and reduce technical debt.
+### Problem Statement
+Who has the problem, why is it painful, and why do existing solutions fail. This must be specific to a concrete scenario, not a generic description of a market category.
 
-### Concept 3: Data Management
-Proper data management is essential for Create Brief. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Target Users
+A specific persona with a role, technical level, and context of use. "Small business owners managing inventory across 3+ locations" is a target user. "Everyone" is not.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+### Core Value Proposition
+A single sentence that captures what the product does, for whom, and how it is different. Use the format: "A {type} that helps {target user} {achieve outcome} by {mechanism}."
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Key Features (MVP)
+3-5 features that deliver the core value. Each feature describes WHAT the user can do, not HOW the system implements it. No technologies, no architecture.
 
-## Architecture Patterns
+### Out of Scope
+What explicitly will NOT be in the MVP. This is as important as what is in scope. Every feature not listed will be assumed included.
 
-### Pattern 1: Standard Architecture
-The standard architecture for Create Brief follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+### Success Metrics
+Measurable criteria that define whether the product is successful. Each metric must have a target number and a measurement method. Avoid vanity metrics like total users.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### Technical Constraints
+Platform requirements, budget, compliance needs, performance baselines, and systems to integrate with.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Timeline
+At least a month-level estimate for MVP launch.
 
-## Implementation Guide
+## The 5 Questions
+Every brief answers 5 essential questions:
+1. Who is the target user?
+2. What specific problem does this solve?
+3. What makes it different from existing solutions?
+4. How many users in the first 6 months?
+5. When does the MVP need to be ready?
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+## Rules
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Ask One Question at a Time
+Never list all 5 questions in a single message. Each question consumes cognitive bandwidth. Ask, wait for the answer, then ask the next.
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+### Keep It One Page
+The brief must fit a single page when rendered. If it spills to page 2, it is too detailed for this phase. Defer specifics to the PRD.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+### No Technical Details
+The brief describes WHAT and WHY, not HOW. No technologies, frameworks, or architecture decisions belong in the brief. Those come later.
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+### No Competitive Analysis
+The brief captures the user's vision, not a market analysis. Competitive positioning will be developed during the PRD and market analysis phases.
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### Iterate Up to 3 Rounds
+Allow up to 3 rounds of changes. After round 3, the brief is approved and refinements move to the PRD phase.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+## Essential Practices
 
-## Best Practices
+**Push for specificity**: "Everyone" is not a target user. "Fixes everything" is not a problem statement. Push until you get concrete answers.
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+**Preserve user language**: Use the user's words for features and problems. Your job is to structure, not rewrite.
 
-## Common Pitfalls
+**Flag conflicts**: If the user says "B2B app for consumers," that is a contradiction. Flag it before proceeding.
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+**Start with scope, not solution**: The brief constrains everything that follows. Get it right — too tight is better than too loose.
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+**Add buffer to timelines**: User estimates assume everything goes perfectly. Add 30% buffer.
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+## Common Mistakes
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+**Skipping out of scope**: Without explicit exclusions, scope creep is guaranteed. Every feature not listed is assumed in scope.
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+**Accepting "I don't know"**: Defaulting to generic assumptions creates misalignment. Provide 2-3 concrete options for the user to choose from.
 
-## Tooling Ecosystem
+**Including implementation**: "User authentication via OAuth2" is implementation. "Sign in with email or Google" is a feature description.
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Create Brief concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+**Vanity metrics**: Total users and downloads measure volume, not value. Activation rate, retention, and conversion measure success.

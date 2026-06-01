@@ -1,213 +1,182 @@
-# Ai Safety Fundamentals
+# AI Safety Fundamentals
 
-## Overview
-Ai Safety is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+## What Is AI Safety
 
-## Core Concepts
+AI safety is the discipline of ensuring AI systems operate reliably, predictably, and ethically within defined boundaries. For LLMs, this means preventing harmful outputs (toxicity, misinformation), resisting adversarial inputs (prompt injection, jailbreaks), avoiding biased or discriminatory behavior, protecting user privacy, and maintaining alignment with human intent. Safety is not a single feature but a system property that must be designed, measured, and maintained across the entire model lifecycle.
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Ai Safety helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+## Key Concepts
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Ai Safety solutions. These principles help maintain code quality and reduce technical debt.
+### Alignment
+Alignment ensures the model's goals and behaviors match what humans intend. An unaligned model might complete a task competently but in a way that causes harm (e.g., writing convincing but false information, or executing instructions literally without considering consequences). Alignment techniques include RLHF (reward model trained on human preferences then used to fine-tune the policy via PPO), DPO (direct preference optimization without a separate reward model), Constitutional AI (self-critique and revision against written principles), and KTO (optimization from binary feedback). Alignment is not binary — it exists on a spectrum and requires continuous validation.
 
-### Concept 3: Data Management
-Proper data management is essential for Ai Safety. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Guardrails
+Guardrails are runtime safety checks that filter, block, or modify inputs to and outputs from an LLM. Input guardrails prevent harmful or adversarial content from reaching the model (topic restrictions, jailbreak detection, PII redaction, rate limiting). Output guardrails prevent the model from generating harmful content (toxicity filters, factuality checks, format validation, PII leakage prevention). Guardrails form the last line of defense when alignment fails and should be implemented as a multi-layer pipeline. Common frameworks: NeMo Guardrails (Colang DSL), Guardrails AI (Python validators), Lakera Guard (API-based).
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+### Red-Teaming
+Red-teaming is systematic adversarial testing that probes a model for vulnerabilities. It simulates real-world attacks to discover weaknesses before malicious actors do. Red-teaming covers: prompt injection (breaking instruction boundaries), jailbreaks (forcing the model into unfiltered personas), toxicity generation (hate speech, harassment), data leakage (extracting training data or system prompts), bias exploitation (eliciting stereotypical outputs), and tool misuse (manipulating function calls). Red-teaming should be automated (garak, promptfoo) and manual, run continuously, and feed findings back into guardrails and alignment.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Content Moderation
+Content moderation classifies and filters content for policy violations. It operates on both inputs (blocking malicious user requests) and outputs (preventing harmful model responses). Moderation services: OpenAI Moderation API (categories: hate, harassment, violence, self-harm, sexual), Perspective API (toxicity, identity attack, threat, profanity, sexually explicit), Azure Content Safety (severity-based scoring for hate, sexual, self-harm, violence). Effective moderation uses category-specific thresholds, multi-layer pipelines, and human review for borderline and high-severity cases.
 
-## Architecture Patterns
+### Bias Detection
+Bias detection measures whether a model treats demographic groups unfairly. Standard benchmarks: WinoBias (gender pronoun resolution), BBQ (Bias Benchmark for QA, covering race, gender, religion, age, nationality), StereoSet (stereotype consistency), Toxicity bias (unequal false positive rates across groups). Key metrics: demographic parity, equal opportunity, refusal parity. Actionable threshold: maximum disparity < 5% across any demographic group. Bias detection must run on every model version and after every alignment update.
 
-### Pattern 1: Standard Architecture
-The standard architecture for Ai Safety follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+## Safety Taxonomies
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### Threat Taxonomy
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+```
+Threat Categories:
+├── Input-Level Threats
+│   ├── Prompt injection: direct, indirect (via tool outputs), recursive
+│   ├── Jailbreak: role-play, hypothetical, encoding, many-shot
+│   ├── Data extraction: system prompt theft, training data extraction
+│   └── Denial of service: many-shot attacks, infinite context loops
+│
+├── Output-Level Threats
+│   ├── Harmful content: hate speech, violence, self-harm, sexual
+│   ├── Misinformation: factual errors, conspiracy theories, hallucinations
+│   ├── Bias and stereotyping: demographic, cultural, political
+│   └── Privacy violations: PII leakage, confidential data exposure
+│
+└── System-Level Threats
+    ├── Tool misuse: calling tools with malicious parameters
+    ├── Privilege escalation: accessing restricted functionality
+    ├── Resource abuse: excessive compute or API calls
+    └── Supply chain: compromised models, poisoned training data
+```
 
-## Implementation Guide
+### Severity Taxonomy
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+```
+Severity Levels:
+├── CRITICAL (CVSS 9.0-10.0)
+│   ├── Real-world harm possible (weapon instructions, suicide methods)
+│   ├── SLA: < 1 hour to respond
+│   └── Action: immediate block, escalate to security team
+│
+├── HIGH (CVSS 7.0-8.9)
+│   ├── Policy violation (hate speech, harassment, illegal content)
+│   ├── SLA: < 24 hours to respond
+│   └── Action: block output, log with full context, investigate
+│
+├── MEDIUM (CVSS 4.0-6.9)
+│   ├── Inconsistent safety behavior (refusal bypass, partial compliance)
+│   ├── SLA: < 1 week to respond
+│   └── Action: flag for review, update guardrails
+│
+├── LOW (CVSS 1.0-3.9)
+│   ├── Minor edge case (verbosity in refusal, unclear boundaries)
+│   ├── SLA: < 1 month to respond
+│   └── Action: log, include in next red team cycle
+│
+└── PASS (CVSS 0.0)
+    ├── Model refuses appropriately and redirects
+    └── Action: no action needed, log for baseline
+```
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Attack Vector Taxonomy
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+```
+Attack Vectors:
+├── Evasion: encoding (base64, hex, leetspeak), token manipulation,
+│              context smuggling, multi-language, adversarial suffixes
+│
+├── Extraction: system prompt extraction, training data extraction,
+│               tool schema probing, knowledge boundary testing
+│
+├── Goal Hijacking: side-stepping instructions, role-playing,
+│                   hypothetical framing, authority invocation
+│
+├── Multi-Turn: trust-building then attack, gradual escalation,
+│               context poisoning, split-payload across messages
+│
+├── Tool-Based: tool misuse, output injection (via tool returns),
+│               schema probing, resource exhaustion
+│
+└── Supply Chain: model poisoning, training data contamination,
+│                 dependency vulnerabilities, model theft via distillation
+```
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+## Basic Risk Assessment
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+### Risk Assessment Process
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+```
+Step 1: Identify Assets
+├── What is the model used for?
+├── What data does it access?
+├── What actions can it take?
+└── Who are the users?
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+Step 2: Identify Threats
+├── Use threat taxonomy above
+├── Review OWASP LLM Top 10
+├── Check known attack patterns for your model type
+└── Consult industry incident databases
 
-## Best Practices
+Step 3: Assess Likelihood
+├── How easily can the threat be executed?
+├── Are there existing controls?
+├── What is the attacker's motivation?
+└── Have similar attacks succeeded elsewhere?
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+Step 4: Assess Impact
+├── What is the worst-case outcome?
+├── How many users are affected?
+├── What is the financial/reputational cost?
+└── Are there regulatory consequences?
 
-## Common Pitfalls
+Step 5: Determine Risk Level
+└── Risk = Likelihood x Impact
+    ├── Low: accept or monitor
+    ├── Medium: implement controls
+    ├── High: prioritize remediation
+    └── Critical: immediate action required
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+Step 6: Define Mitigations
+├── Technical: guardrails, alignment, monitoring
+├── Procedural: human review, incident response
+└── Governance: policies, audits, compliance
+```
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+### Risk Matrix
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+```
+                Impact
+            Low   Med   High  Critical
+Likelihood ┌─────┬─────┬─────┬─────┐
+Low         │ Low │ Low │ Med │ Med │
+            ├─────┼─────┼─────┼─────┤
+Medium      │ Low │ Med │ Med │ High│
+            ├─────┼─────┼─────┼─────┤
+High        │ Med │ Med │ High│ Crit│
+            ├─────┼─────┼─────┼─────┤
+Critical    │ Med │ High│ Crit│ Crit│
+            └─────┴─────┴─────┴─────┘
+```
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+### Minimum Viable Safety Checklist
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+```
+For any LLM deployment:
+[ ] Threat model documented (at least 3 threat scenarios)
+[ ] Input guardrails active (minimum: toxicity filter + rate limit)
+[ ] Output guardrails active (minimum: toxicity filter)
+[ ] Red teaming performed (minimum: automated scan with garak)
+[ ] Bias check run (minimum: one benchmark on gender and race)
+[ ] Monitoring in place (minimum: log blocked requests)
+[ ] Incident response procedure documented
+[ ] Human review channel established (minimum: email alias)
+[ ] Compliance requirements identified
+[ ] Safety metrics defined and baseline measured
+```
 
 ## Key Points
-- Understand core Ai Safety concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- AI safety is a system property, not a single feature — design it from the start
+- Alignment, guardrails, red-teaming, moderation, and bias detection form the core pillars
+- Use threat, severity, and attack vector taxonomies to structure safety work
+- Risk = Likelihood x Impact — prioritize mitigations accordingly
+- Every deployment needs a minimum viable safety baseline
+- Re-assess risk when model, prompt, data, or deployment context changes
+- Document all safety decisions, thresholds, and rationales for audit

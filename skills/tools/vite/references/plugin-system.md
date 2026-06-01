@@ -313,6 +313,189 @@ export default function orderedPlugin(): Plugin[] {
 }
 ```
 
+## Advanced Plugin Patterns
+
+### Plugin with Configuration
+```typescript
+interface PluginOptions {
+  prefix?: string;
+  include?: string[];
+  exclude?: string[];
+  transform?: (code: string, id: string) => string | null;
+}
+
+function myPlugin(options: PluginOptions = {}): Plugin {
+  const { prefix = '__', include = ['**/*.ts'], exclude = [] } = options;
+
+  return {
+    name: 'my-plugin',
+    enforce: 'post',
+
+    // Validate options
+    configResolved(config) {
+      if (options.transform && typeof options.transform !== 'function') {
+        throw new Error('my-plugin: transform must be a function');
+      }
+    },
+
+    transform(code, id) {
+      // Check include/exclude patterns
+      if (exclude.some((p) => minimatch(id, p))) return null;
+      if (!include.some((p) => minimatch(id, p))) return null;
+
+      // Apply custom transform
+      if (options.transform) {
+        const result = options.transform(code, id);
+        if (result !== null) {
+          return { code: result, map: null };
+        }
+      }
+
+      // Default transform
+      const transformed = code.replace(
+        new RegExp(`${prefix}(\\w+)`, 'g'),
+        (match, name) => process.env[name] || match
+      );
+      return { code: transformed, map: null };
+    },
+  };
+}
+```
+
+### Plugin with File Emission
+```typescript
+function manifestPlugin(): Plugin {
+  let config: ResolvedConfig;
+
+  return {
+    name: 'manifest',
+    configResolved(c) { config = c; },
+
+    generateBundle(_, bundle) {
+      const manifest: Record<string, any> = {};
+
+      for (const [fileName, chunk] of Object.entries(bundle)) {
+        if (chunk.type === 'chunk') {
+          manifest[chunk.name] = {
+            file: fileName,
+            src: chunk.facadeModuleId,
+            isEntry: chunk.isEntry,
+            css: chunk.css,
+            imports: chunk.imports,
+            dynamicImports: chunk.dynamicImports,
+            size: chunk.code.length,
+          };
+        }
+      }
+
+      // Emit custom file into output
+      this.emitFile({
+        type: 'asset',
+        fileName: 'manifest.json',
+        source: JSON.stringify(manifest, null, 2),
+      });
+    },
+  };
+}
+```
+
+### HMR with Custom Events
+```typescript
+function hmrNotifierPlugin(): Plugin {
+  return {
+    name: 'hmr-notifier',
+    apply: 'serve',  // Only in dev mode
+
+    handleHotUpdate({ file, server }) {
+      // Notify browser of style updates via custom event
+      if (file.endsWith('.css')) {
+        server.ws.send({
+          type: 'custom',
+          event: 'style-updated',
+          data: { file, timestamp: Date.now() },
+        });
+        return [];  // Prevent default HMR
+      }
+
+      // For GraphQL files, invalidate dependent modules
+      if (file.endsWith('.graphql')) {
+        const modules = server.moduleGraph.getModulesByFile(file);
+        if (modules) {
+          modules.forEach((mod) => {
+            server.moduleGraph.invalidateModule(mod);
+          });
+          return [...modules];
+        }
+      }
+
+      // Default HMR behavior
+      return undefined;
+    },
+
+    configureServer(server) {
+      // Listen for client messages
+      server.ws.on('connection', (socket) => {
+        socket.on('message', (data) => {
+          const msg = JSON.parse(data.toString());
+          if (msg.type === 'custom-error') {
+            console.error('Client error:', msg.error);
+          }
+        });
+      });
+    },
+  };
+}
+```
+
+### Conditional Plugin Application
+```typescript
+function envAwarePlugin(): Plugin {
+  return {
+    name: 'env-aware',
+    // Only apply during build (not dev)
+    apply: 'build',
+
+    // Or: apply based on command
+    apply: (config, { command }) => command === 'serve',
+
+    // Or: apply based on mode
+    apply: (config, { mode }) => mode === 'production',
+  };
+}
+```
+
+## Plugin Hook Execution Order
+```
+1. config          [all plugins, pre then normal then post]
+2. configResolved  [same order]
+3. buildStart      [same order]
+4. resolveId       [pre => normal => post, first non-null wins]
+5. load            [pre => normal => post, first non-null wins]
+6. transform       [pre => normal => post, all run]
+7. moduleParsed    [after transform]
+8. buildEnd        [same order]
+9. generateBundle  [same order]
+10. writeBundle    [same order]
+11. closeBundle    [same order]
+```
+
+### Plugin Option: `enforce`
+- `'pre'`: Run before core Vite plugins (aliases, path resolution)
+- `undefined` (default): Run alongside core
+- `'post'`: Run after core (transform output, final cleanup)
+
+## Key Anti-Patterns
+- **Blocking transforms synchronously**: Use async/await for I/O in transform
+- **No null returns**: Always return `null` from resolveId/load when not handling
+- **Modifying the `config` object directly**: Return a new config object
+- **Not cleaning up in `closeBundle`**: Server connections, file watchers, temp files
+- **Heavy transforms without include/exclude**: Only transform files that need it
+- **Overriding Vite's built-in behavior**: Use enforce wisely
+- **No error handling in plugin hooks**: Use try/catch around risky operations
+- **Forgetting the null byte prefix for virtual modules**: \0 prefix prevents re-resolution
+- **Not handling watch mode**: `watchChange` and `closeWatcher` for file watching
+- **Plugin name conflicts**: Use unique, descriptive names
+
 ## Key Points
 - Vite plugins use Rollup-compatible interface with Vite-specific hooks
 - name property identifies the plugin in error messages
@@ -336,3 +519,12 @@ export default function orderedPlugin(): Plugin[] {
 - Chunk customization in generateBundle hook
 - watchChange and closeWatcher for file watching
 - Plugin ordering matters for correct transformation pipeline
+- Plugin hooks can be async (return Promise)
+- this.meta can be used to share data between hooks
+- Rollup hooks like `renderChunk`, `augmentChunkHash` available for advanced use
+- `transformIndexHtml` modifies HTML during dev and build
+- `server.ssrLoadModule` enables SSR module loading
+- `this.error()` and `this.warn()` for plugin-specific messages
+- `this.parse()` for code parsing within plugin
+- `this.addWatchFile()` for custom file watching
+- Parallel transforms improve build performance

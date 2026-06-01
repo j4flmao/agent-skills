@@ -1,214 +1,101 @@
 # Identity Provider Advanced Topics
 
 ## Introduction
-Advanced Identity Provider topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Advanced identity covers federation topologies, zero-trust architecture, identity governance, privileged access management, passkeys, and IdP migration strategies.
 
-## Advanced Architecture Patterns
+## Federation Topologies
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+### Star Topology
+Single IdP (hub) federates with multiple service providers (spokes). Simple configuration, single source of truth, single point of failure. Best for most organizations: one IdP, all apps connected to it.
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+### Hub-and-Spoke Federation
+Central IdP + satellite IdPs for acquisitions or multi-org scenarios. Central IdP federates with satellite IdPs. Users authenticate at their home IdP. Central IdP provides cross-org access policies.
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+### Federation Trust Configuration
+SAML metadata exchange: SP and IdP exchange metadata XML containing certificates, endpoints, and binding configurations. Metadata is signed for integrity. Verify metadata signatures before importing.
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+OIDC federation: Use `.well-known/openid-configuration` discovery URL. Trust is established through client registration and JWKS URI verification.
 
-## Performance Optimization
+## Zero-Trust Identity Architecture
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+### BeyondCorp / Zero Trust Principles
+Never trust, always verify. Access decisions based on: user identity, device health, location, data sensitivity, and risk score. No implicit trust based on network location.
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+### Continuous Authentication
+Not just login-time verification. Monitor session risk indicators: impossible travel (login from NYC then Tokyo in 30min), device posture change, anomalous resource access pattern. Step-up authentication when risk increases.
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+### Conditional Access Policies
+| Policy | Criteria | Action |
+|--------|----------|--------|
+| Geo-fencing | Login from restricted country | Block |
+| Device compliance | Non-compliant device | Require device remediation |
+| Trusted network | Corporate IP range | Allow with reduced MFA |
+| Risky sign-in | Anomalous pattern detected | Require step-up auth |
+| Sensitive app | Admin console access | Require hardware key MFA |
 
-## Security Hardening
+## Identity Governance and Administration (IGA)
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+### Access Certification
+Quarterly campaigns: data owner reviews list of users with access to their application. Owner certifies (approve) or revokes each user. Automatic revocation for uncertified access after deadline. Log all certifications for audit.
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+### Entitlement Management
+Define roles with specific permissions. Map roles to directory groups. Provision group membership via SCIM. Role mining: analyze existing access patterns to define optimal role structure.
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+### Privileged Access Management (PAM)
+Just-in-time (JIT) privilege escalation: approve temporary admin access, auto-revoke after task completion. Privileged session recording. Credential vaulting with automatic rotation. Break-glass emergency access with multi-person approval.
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+## Passkeys and Passwordless
 
-## Monitoring and Observability
+### FIDO2/WebAuthn
+Passkeys are FIDO2 credentials backed by platform authenticators (Apple iCloud Keychain, Google Password Manager, Windows Hello). Benefits: phishing resistant, no shared secrets, cross-device sync, better UX than passwords.
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+### Passkey Deployment
+Registration: prompt user to create passkey on login, store credential ID in IdP, associate with user account. Authentication: user selects passkey, device performs biometric/PIN verification, signed assertion sent to IdP, IdP verifies assertion signature.
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+### Migration Path
+1. Add passkey as optional MFA method alongside TOTP
+2. Make passkey the primary MFA for privileged users
+3. Enforce passkey-only for admin accounts
+4. Gradually phase out SMS/TOTP for all users
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+## Service Account Security
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+### Machine Identity Challenges
+Service accounts bypass MFA, cannot use passkeys, often have static credentials, frequently over-provisioned. They are the weakest link in identity security.
 
-## Scalability and Reliability
+### Best Practices
+- One service account per service — no shared credentials
+- Short-lived tokens (1 hour max, use token exchange for long-running jobs)
+- Managed identities (Azure) or IAM roles (AWS) instead of static credentials
+- Regular access review for all service accounts
+- Automated credential rotation (90 days max)
+- Monitor for anomalous service account usage
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+## IdP Migration Strategy
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+### Parallel Run Migration
+Run old and new IdP simultaneously. Federation between old and new: old IdP federates new IdP as an identity provider. Users authenticate via old IdP, which can route to new IdP for migrated apps.
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
+### App-by-App Migration
+Migrate applications one at a time. For each app: configure new IdP as identity source, validate SSO flow works, migrate user base to new IdP, monitor error rates for 48 hours, move to next app.
 
 ### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
+User profiles and group memberships exported from old IdP, imported to new IdP via SCIM or bulk API. Password hashes may not be exportable — users may need to reset passwords on first login to new IdP.
 
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
+## Operations
 
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
+### IdP Monitoring
+Monitor: authentication success rate, MFA enrollment rate, SCIM sync health (last sync time, error count), federation metadata expiry, certificate expiration dates, token signing key rotation schedule.
 
-## API Design and Management
+### DR for IdP
+Self-hosted: multi-region active-passive with DNS failover, external database with cross-region replication, regular failover testing. Managed: configure secondary IdP as identity provider, document failover procedure, test quarterly.
 
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+## Key Points
+- Federation topology should be simple (star) unless acquisition or multi-org requirements dictate otherwise
+- Zero trust means continuous verification, not just login-time auth
+- IGA automates access certification and entitlement management
+- Passkeys are the future of phishing-resistant authentication — deploy them now
+- Service accounts need security controls as stringent as user accounts
+- IdP migration requires parallel run and app-by-app approach
+- Monitor IdP health metrics and rotate signing keys regularly
+- DR for IdP must be tested — IdP failure blocks all application access

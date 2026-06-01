@@ -245,16 +245,232 @@ de_identification:
       use_case: "Data that needs to be re-identified for legitimate business purpose"
 ```
 
+## Data Security Implementation Examples
+
+### PostgreSQL Column-Level Encryption
+```sql
+-- Enable pgcrypto extension
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Encrypted column storage
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT NOT NULL,
+    ssn BYTEA,  -- encrypted at rest
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Encrypt on insert
+INSERT INTO users (email, ssn)
+VALUES (
+    'user@example.com',
+    pgp_sym_encrypt('123-45-6789', current_setting('app.encryption_key'))
+);
+
+-- Decrypt with access check function
+CREATE OR REPLACE FUNCTION decrypt_ssn(user_id UUID)
+RETURNS TEXT AS $$
+BEGIN
+    IF current_setting('app.user_role') = 'admin' THEN
+        RETURN (
+            SELECT pgp_sym_decrypt(ssn, current_setting('app.encryption_key'))
+            FROM users WHERE id = user_id
+        );
+    END IF;
+    RAISE EXCEPTION 'Unauthorized';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+### PostgreSQL Row-Level Security
+```sql
+-- Enable RLS on table
+ALTER TABLE customer_records ENABLE ROW LEVEL SECURITY;
+
+-- Policy: users can only see their own records
+CREATE POLICY user_isolation ON customer_records
+    FOR ALL
+    USING (user_id = current_setting('app.user_id')::UUID);
+
+-- Policy: admins can see all records
+CREATE POLICY admin_access ON customer_records
+    FOR ALL
+    USING (current_setting('app.user_role') = 'admin');
+```
+
+### AWS KMS Envelope Encryption (Python)
+```python
+import boto3
+from cryptography.fernet import Fernet
+import base64
+
+kms = boto3.client('kms', region_name='us-east-1')
+
+def encrypt_data(plaintext: bytes) -> dict:
+    # Generate a data key (envelope encryption)
+    response = kms.generate_data_key(
+        KeyId='alias/my-key',
+        KeySpec='AES_256'
+    )
+    ciphertext_blob = response['CiphertextBlob']
+    plaintext_key = response['Plaintext']
+    
+    # Encrypt data with data key
+    f = Fernet(base64.urlsafe_b64encode(plaintext_key))
+    encrypted = f.encrypt(plaintext)
+    
+    return {
+        'encrypted_data': encrypted,
+        'encrypted_key': ciphertext_blob
+    }
+
+def decrypt_data(encrypted_data: bytes, encrypted_key: bytes) -> bytes:
+    # Decrypt data key with KMS
+    response = kms.decrypt(CiphertextBlob=encrypted_key)
+    plaintext_key = response['Plaintext']
+    
+    # Decrypt data
+    f = Fernet(base64.urlsafe_b64encode(plaintext_key))
+    return f.decrypt(encrypted_data)
+```
+
+### Dynamic Data Masking (Snowflake)
+```sql
+-- Create masking policy
+CREATE MASKING POLICY email_mask AS (val STRING) RETURNS STRING ->
+  CASE
+    WHEN CURRENT_ROLE() IN ('ADMIN', 'COMPLIANCE') THEN val
+    ELSE CONCAT(SUBSTR(val, 1, 2), '****@', SUBSTR(val, POSITION('@', val) + 1))
+  END;
+
+-- Apply masking policy to column
+ALTER TABLE users MODIFY COLUMN email SET MASKING POLICY email_mask;
+```
+
+### Differential Privacy Example
+```python
+import numpy as np
+
+def laplace_mechanism(true_value: float, epsilon: float, sensitivity: float = 1.0) -> float:
+    """Add Laplace noise for differential privacy."""
+    scale = sensitivity / epsilon
+    noise = np.random.laplace(0, scale)
+    return true_value + noise
+
+# Query: count of users over 30
+true_count = 1450
+epsilon = 1.0  # lower = more privacy
+private_count = laplace_mechanism(true_count, epsilon)
+print(f"Private count: {private_count}")  # e.g., 1448.3
+```
+
+## Data Security Anti-Patterns
+
+### Anti-Pattern: Encryption as Silver Bullet
+Encrypting data at rest without controlling access to decryption keys provides false security. If an application has the key and is compromised, the attacker can decrypt all data. Defense in depth: encrypt + access control + audit + anomaly detection.
+
+### Anti-Pattern: Ignoring In-Use Encryption
+Encrypting at rest and in transit but processing data in plaintext in memory. Cold boot attacks, memory dumps, and compromised hosts can extract in-memory data. Use confidential computing (SGX, SEV, Nitro Enclaves) for sensitive processing. Minimize data in memory windows.
+
+### Anti-Pattern: Same Encryption Key for Everything
+Using a single key for all data means compromising one key compromises everything. Use separate keys per data classification level, per environment, and per tenant where applicable. Envelope encryption with KMS provides key hierarchy.
+
+### Anti-Pattern: Static Masking Without Refresh
+Creating masked copies of production data once but never refreshing them as production data changes. De-identified copies become stale and useless for testing. Refresh masked datasets on a schedule aligned with development cycles.
+
+### Anti-Pattern: Tokenization Without Vault Security
+Token vaults that are less secure than the original data store. Token vault must have stronger security than the systems it protects: HSM-backed encryption, strict network isolation, dedicated access policies, and comprehensive audit logging.
+
+### Anti-Pattern: Anonymization Without Re-identification Testing
+Applying k-anonymity or differential privacy without testing against known attack vectors (linkage attacks, homogeneity attacks, differencing attacks). Validate anonymization with the same techniques an adversary would use. Re-test when new data is added.
+
+## Data Security Maturity Model
+
+### Level 1: Basic
+- Encryption at rest on databases (default cloud provider encryption)
+- TLS for data in transit
+- Basic firewall rules for data stores
+- Manual data classification (spreadsheets)
+
+### Level 2: Standardized
+- Customer-managed encryption keys (CMK/KMS)
+- Data classification levels defined and tagged
+- Static data masking for non-production environments
+- Column-level access control (RLS, views)
+- Automated discovery of sensitive data
+
+### Level 3: Advanced
+- Envelope encryption with key hierarchy
+- Dynamic data masking at query time
+- Tokenization for PCI/HIPAA data
+- Differential privacy for analytics exports
+- Automated data classification and tagging
+- Privacy-by-design in SDLC
+- Automated retention and deletion policies
+
+### Level 4: Optimized
+- Confidential computing for sensitive workloads (SGX/SEV)
+- Homomorphic encryption for cross-org computation
+- Data security posture management (DSPM)
+- Real-time data loss prevention (DLP) at scale
+- Self-service data security with policy-as-code
+- Automated breach notification systems
+
+## Data Security Operations
+
+### Daily Operations
+- Monitor data access logs for anomalies
+- Check encryption key status and rotation
+- Verify DLP rules are active
+- Review data classification alerts
+
+### Weekly Operations
+- Analyze data egress patterns
+- Review access to restricted data
+- Tune DLP rules for false positives
+- Validate masking policies work correctly
+
+### Monthly Operations
+- Key rotation for high-value data
+- Data classification re-certification
+- Access review for privileged data roles
+- Anonymization re-validation
+- Privacy impact assessment updates
+
+### Incident Response
+1. Detect: DLP alert, anomalous data access, unauthorized data egress, encryption key compromise
+2. Assess: what data was exposed, classification level, affected users, regulatory implications
+3. Contain: revoke access, rotate keys, isolate affected data stores, block egress paths
+4. Investigate: audit logs, access patterns, data flow analysis
+5. Remediate: patch vulnerabilities, update policies, revoke credentials
+6. Notify: regulatory bodies (GDPR 72h), affected users, data protection authority
+7. Post-mortem: root cause analysis, policy updates, detection improvements
+
+## Compliance Controls Mapping
+
+| Control | GDPR | CCPA | PCI DSS | HIPAA | SOC 2 |
+|---|---|---|---|---|---|
+| Encryption at rest | Art. 32 | §1798.81.5 | Req 3.4 | §164.312(a)(1) | CC6.1 |
+| Encryption in transit | Art. 32 | — | Req 4.1 | §164.312(e)(1) | CC6.1 |
+| Access controls | Art. 25 | — | Req 7 | §164.312(a)(1) | CC6.2 |
+| Data classification | Art. 30 | — | — | §164.514 | — |
+| Data masking | Art. 25 | — | Req 3.4 | §164.514(b) | — |
+| Anonymization | Recital 26 | §1798.140 | — | §164.514(a) | — |
+| Breach notification | Art. 33 | §1798.29 | Req 12.10 | §164.404 | — |
+| Retention limits | Art. 5(1)(e) | — | Req 3.1 | §164.316(b)(2)(i) | — |
+| Right to deletion | Art. 17 | §1798.105 | — | — | — |
+| Audit logging | Art. 30 | — | Req 10 | §164.312(b) | CC7.2 |
+
 ## Rules
-- Encryption at rest is mandatory for all data containing PII.
-- TLS 1.0 and 1.1 are prohibited — enforce TLS 1.2 minimum.
-- Keys must be rotated at least annually.
-- Production data must never be used in non-production unmasked.
-- Column-level access must be enforced at database level — not just application.
-- Data classification must be applied before any security control.
-- Anonymization must be validated against re-identification risk.
-- Automate data classification discovery — manual classification doesn't scale.
-- Privacy-by-design must be integrated from system design phase, not retrofitted.
+- Encryption at rest is mandatory for all data containing PII
+- TLS 1.0 and 1.1 are prohibited — enforce TLS 1.2 minimum
+- Keys must be rotated at least annually
+- Production data must never be used in non-production unmasked
+- Column-level access must be enforced at database level — not just application
+- Data classification must be applied before any security control
+- Anonymization must be validated against re-identification risk
+- Automate data classification discovery — manual classification doesn't scale
+- Privacy-by-design must be integrated from system design phase, not retrofitted
 
 ## References
   - references/data-loss-prevention.md — Data Loss Prevention (DLP)

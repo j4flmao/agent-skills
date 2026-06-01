@@ -1,14 +1,8 @@
 ---
-name: performance-profiler
+name: dev-loop-performance-profiler
 description: >
-  Use this skill when the user says 'performance issue', 'slow API', 'high memory',
-  'CPU spike', 'latency', 'profiling', 'optimize', 'response time', 'throughput',
-  'bottleneck', or when analyzing performance problems. Covers: measurement-first
-  approach, bottleneck identification (DB, network, CPU, memory), fix prioritization
-  by impact (Amdahl's law), and before/after measurement validation. Works with
-  any backend stack. Do NOT use this for: frontend performance (use
-  frontend-performance), general code review, or database schema optimization.
-version: "1.0.0"
+  Use when the user asks about performance profiling, application performance, profiling tools, performance optimization, bottleneck analysis, or performance testing. Do NOT use for: debugging bugs (dev-loop-debugging-strategy), or code review (dev-loop-code-review).
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -16,142 +10,331 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [dev-loop, performance, phase-4]
+tags: [dev-loop, performance, profiling, optimization]
 ---
 
 # Performance Profiler
 
 ## Purpose
-Identify and fix performance bottlenecks using a measurement-first, data-driven approach. No optimization without data.
-
-## Profiling Types
-
-### CPU Profiling
-Measures time spent in each function. Two modes: sampling (periodically sample the call stack — low overhead, statistical) and instrumentation (instrument every function entry/exit — high overhead, exact). Use sampling for production, instrumentation for dev. Output: flat profile (total time per function) and call graph (caller-callee relationships). Tools: perf, PerfView, dotTrace, Py-Spy, pprof, Chrome DevTools Performance tab.
-
-Sampling profilers work by recording the current call stack at a fixed frequency (e.g., 100 Hz). The number of samples in each function is proportional to the time spent there. Statistical noise decreases with more samples: at 100 Hz for 60 seconds, you get 6000 samples, enough for 1% precision on hot paths. Instrumentation profilers add entry/exit hooks to every function — exact counts but 10-100x overhead.
-
-### Memory Profiling
-Measures allocation rate, object lifetime, GC pressure, and heap composition. Key metrics: allocation rate (MB/s), GC pause duration, GC frequency, heap size after GC, large object heap size, object retention depth. Memory leaks appear as: heap growing monotonically, Gen 2 objects that should be ephemeral, increasing thread-local storage, unbounded collections in static fields. Tools: dotMemory, Valgrind memcheck, Chrome DevTools Memory tab, Py-Spy, pprof.
-
-Heap analysis workflow: take snapshot, force GC, take post-GC snapshot. Objects remaining after GC that should have been collected are the leak candidates. For each candidate, trace the retention path to find what holds the reference.
-
-### I/O Profiling
-Measures blocking time on disk, network, and IPC operations. Key metrics: iowait (blocked on storage), read/write latency, IOPS, queue depth, connection pool utilization, socket buffer occupancy. I/O bottlenecks appear as: high iowait % in `top`, thread pool starvation (all threads blocked on I/O), high variance in response latency under load, connection timeouts and socket exhaustion.
-
-I/O profiling is often overlooked because the CPU is idle during I/O waits. If CPU utilization is low but latency is high, the bottleneck is I/O. Use async profilers that record thread state (running vs blocked) to measure I/O wait accurately.
-
-### Network Profiling
-Measures time spent transmitting and receiving data. Key metrics: bandwidth utilization, packet loss, round-trip time, TLS handshake time, serialization/deserialization time, payload size per request, number of round trips. Network bottlenecks appear as: waterfall chart with many sequential requests, large payload sizes, slow TLS negotiation, high retransmission rate, chunky HTTP headers.
-
-### Async Profiling
-Measures time spent in asynchronous operations: task continuations, promise chains, event loop latency, callback queues. Key metrics: event loop lag (Node.js, Python asyncio), task queue depth, continuation scheduling delay, I/O completion port utilization. Async bottlenecks appear as: growing event loop lag under load, scheduled callbacks taking longer to execute than the operation itself, high variance in callback execution order causing unexpected state.
-
-### Database Query Profiling
-Measures time spent in database operations. Key metrics: query execution time, rows examined, rows returned, temporary tables created, filesort operations, lock wait time, buffer pool hit ratio. Use `EXPLAIN ANALYZE` for individual queries, `pg_stat_statements` for aggregated query statistics, `slow_query_log` for identifying problematic queries. Database profiling often reveals N+1 queries, missing indexes, or inefficient joins as the root cause of application latency.
+Identify, analyze, and resolve performance bottlenecks in applications — CPU profiling, memory profiling, I/O analysis, database query optimization, and frontend rendering performance — using systematic measurement and optimization.
 
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "performance issue", "slow API", "high memory", "CPU spike", "latency", "profiling", "optimize", "response time", "throughput", "bottleneck".
+Exact user phrases: "performance profiling", "profiling", "slow application", "performance bottleneck", "CPU profiler", "memory leak", "heap dump", "database slow query", "performance optimization", "flame graph", "page speed", "LCP", "FID", "CLS".
 
 ### Input Context
-Before activating, verify:
-- The measured metrics or profiling data is provided (no optimization without data).
-- The system's current performance baseline is known.
-- The bottleneck type is identifiable from available data.
+- Performance symptom (slow response, high CPU, memory growth, network latency, UI jank)
+- Application type (web frontend, API server, database, desktop, mobile)
+- Environment (local development, staging, production, specific user)
+- Scale (single user, concurrent, burst traffic, sustained load)
+- Recent changes (deployment, dependency update, config change, migration)
+- Available tools (built-in profiler, APM, browser DevTools, database tools)
 
 ### Output Artifact
-No file output. This skill produces a performance report.
+Performance analysis report with measured metrics, bottleneck identification, and optimized code.
 
-### Response Format
-Answer exactly:
+### Completion Criteria
+- [ ] Baseline performance metrics established
+- [ ] Profiling tool selected and configured
+- [ ] CPU/memory/IO hot spots identified
+- [ ] Root cause of bottleneck documented
+- [ ] Optimization implemented and measured
+- [ ] Improvement verified with before/after metrics
+- [ ] Regression benchmark added
+- [ ] Monitoring alert configured (if in production)
+
+### Max Response Length
+200 lines.
+
+## Framework/Methodology
+
+### Performance Analysis Decision Tree
 ```
-## Performance Report
-### Baseline
-- p50: {value} | p95: {value} | p99: {value}
-- Throughput: {value} req/s
-- Bottleneck: {identified component}
-### Fix Applied
-- Change: {what was changed}
-- Rationale: {why this fix addresses the bottleneck}
-### Result
-- p50: {value} | p95: {value} | p99: {value}
-- Improvement: {x-factor}
+What is the performance symptom?
+├── Slow API response time → Server-side profiling
+│   → APM (DataDog, New Relic) → flame graph → database query analysis
+│   → Cache strategy → N+1 query → index → pagination
+├── High CPU usage → CPU profiling
+│   → Sampling profiler → hot functions → algorithm optimization
+│   → Worker threads → microservices → resource limits
+├── Memory growth / leak → Memory profiling
+│   → Heap dump → retained size → leak suspect → fix
+│   → Event listener cleanup → cache size → object pooling
+├── Slow page load (frontend) → Browser DevTools
+│   → Lighthouse → Largest Contentful Paint → bundle analysis
+│   → Code splitting → image optimization → lazy loading
+├── Slow database queries → Query profiling
+│   → EXPLAIN ANALYZE → missing index → full table scan
+│   → Query rewrite → denormalization → read replica
+└── Network latency → Request waterfall
+    → Waterfall chart → CDN → compression → HTTP/2 → prefetch
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+### Performance Optimization Process
+```
+1. MEASURE  → Establish baseline (not assumptions!)
+2. IDENTIFY → Find the bottleneck (not everything is slow)
+3. ANALYZE  → Understand WHY it's slow
+4. OPTIMIZE → Make targeted change (one change at a time)
+5. MEASURE  → Verify improvement (same conditions as baseline)
+6. REPEAT   → Find next bottleneck
+```
 
-## Flame Graphs
+### Amdahl's Law
+```
+Speedup = 1 / ((1 - P) + (P/S))
 
-Flame graphs are the primary visualization for CPU profiling data. Each horizontal segment represents a function call stack at a point in time. Segment width is proportional to total time spent in that function and its descendants. Color indicates the function or library.
+Where P = proportion of execution time improved
+      S = speedup of that portion
 
-Reading: find the widest segment at the top of the graph — that is the hottest code path (most cumulative time). Then trace downward to see the call chain leading to it. The widest segment in your own application code (not library/framework) is your primary optimization target.
-
-Generating: capture stack samples with `perf record`, `DTrace`, or language-specific profiler. Fold stacks with `stackcollapse-*.pl` scripts. Render SVG with `flamegraph.pl`. For Linux: `perf record -F 99 -a -g -- sleep 30 && perf script | stackcollapse-perf.pl | flamegraph.pl > out.svg`.
-
-Variants: icicle graph (inverted, root at bottom), differential flame graph (red = slower, blue = faster, compare two profiles), heat graph (color-coded by metric other than time).
+Key insight: Optimize what matters most. A 10x improvement on 5% of execution
+time only yields 4.7% overall speedup.
+```
 
 ## Workflow
 
-### GC Analysis Special Topic
+### Step 1: Profile CPU (Server-Side)
 
-Garbage collection is a common hidden bottleneck. Key aspects to analyze: GC frequency (how often collections occur), GC duration (pause time per collection), generation sizing (Gen 0/1/2 collection counts), allocation rate (MB/s), large object heap fragmentation, and pinning (pinned objects prevent heap compacting).
+```bash
+# Node.js: built-in profiler
+node --prof app.js
+node --prof-process isolate-*.log > processed.txt
 
-GC tuning knobs by runtime: .NET (Server GC vs Workstation GC, latency mode, GCHeapCount, gcAllowVeryLargeObjects), JVM (GC algorithm choice: G1, ZGC, Shenandoah, Parallel, CMS — each with different pause time vs throughput tradeoffs), V8 (Node.js: --max-old-space-size, --optimize-for-size).
+# Node.js: clinic.js (flame graphs)
+npx clinic doctor -- node app.js
+npx clinic flame -- node app.js
 
-Symptoms of GC problems: sawtooth memory usage pattern, frequent STW (stop-the-world) pauses, high "% Time in GC" metric, allocation rate exceeding 100 MB/s in managed runtimes. Fix strategies: reduce allocation rate (object pooling, value types), reduce survivor promotions (tune generation sizes), switch GC algorithm (latency-sensitive apps should prefer low-pause collectors like ZGC or Shenandoah).
+# Python: cProfile
+python -m cProfile -o output.prof app.py
+python -m pstats output.prof  # Interactive analysis
+# Or use snakeviz for visualization: snakeviz output.prof
 
-### Step 1: Establish Baseline
-Measure current performance using profiling tools. Record p50/p95/p99 latency, throughput (req/s), error rate, resource utilization (CPU, memory, I/O, network). Without a baseline you cannot measure improvement. Profile under realistic load — idle systems hide bottlenecks. Use the same workload for before and after measurements.
+# Rust: perf + flamegraph
+perf record --call-graph dwarf target/release/myapp
+perf script | inferno-collapse-perf > stacks.folded
+inferno-flamegraph stacks.folded > flamegraph.svg
 
-### Step 2: Identify Bottleneck
-Analyze profiling data to pinpoint the bottleneck. Common categories: database (N+1 queries, missing indexes, slow joins, lock contention), network (chatty API calls, serialization overhead, TLS handshake, bandwidth limits), CPU (tight loops, regex backtracking, serialization, compression), memory (leaks, GC pressure, cache bloat, excessive allocation), I/O (synchronous blocking, connection pool exhaustion, disk saturation).
+# C# / .NET: dotnet-counters + dotnet-trace
+dotnet-counters monitor --process-id <pid>
+dotnet-trace collect --process-id <pid> --providers Microsoft-DotNETCore-SampleProfiler
+```
 
-### Step 3: Formulate Hypothesis
-State what change you expect to improve which metric and by how much. Use Amdahl's law to estimate maximum speedup from optimizing the identified bottleneck (speedup = 1 / ((1 - P) + P/S), where P is the fraction of time spent in the parallelizable portion and S is the speedup of that portion). Document expected before/after.
+### Step 2: Profile Memory
 
-### Step 4: Apply Fix
-One change at a time. Implement with minimal scope. No speculative optimizations. If fix is complex, break into independently measurable sub-fixes. Measure after each sub-fix.
+```typescript
+// Node.js: heap snapshot
+import * as v8 from 'v8';
+import * as fs from 'fs';
 
-### Step 5: Verify & Document
-Re-measure same metrics under same conditions. Record before/after. If improvement matches hypothesis, move to next bottleneck. If not, roll back and retry next hypothesis. Never skip verification.
+// Take heap snapshot programmatically
+const snapshot = v8.getHeapSnapshot();
+snapshot.pipe(fs.createWriteStream('heap.heapsnapshot'));
+// Open in Chrome DevTools → Memory → Load
 
-## Benchmark Methodology
+// Track memory over time
+setInterval(() => {
+  const usage = process.memoryUsage();
+  console.log({
+    rss: `${(usage.rss / 1024 / 1024).toFixed(1)} MB`,    // Resident Set Size
+    heapTotal: `${(usage.heapTotal / 1024 / 1024).toFixed(1)} MB`,
+    heapUsed: `${(usage.heapUsed / 1024 / 1024).toFixed(1)} MB`,
+    external: `${(usage.external / 1024 / 1024).toFixed(1)} MB`,
+  });
+}, 5000);
+```
 
-### Scientific Benchmarking
-- Warm-up: discard initial measurements (JIT compilation, cache warm-up, connection pool filling). Typically 1000 iterations or 10 seconds.
-- Steady state: measure after warm-up when metrics stabilize (variance <5% between consecutive measurements).
-- Measurement window: minimum 30 seconds, minimum 1000 samples for latency percentiles.
-- Isolation: run benchmarks in isolation (no other user processes, no background services). In cloud environments, run multiple times on different instances.
-- Statistical significance: run at least 5 trials, report mean and standard deviation. Use Cohen's d to determine if a difference is practically significant, not just statistically significant.
+```python
+# Python: memory profiler
+from memory_profiler import profile
 
-### Pitfalls
-- Compiler optimizations: benchmark code is often dead-code eliminated. Verify the compiler did not optimize away the work you intend to measure.
-- GC interference: garbage collection pauses introduce outliers in latency measurements. Report GC pause frequency and duration separately.
-- Measurement overhead: the act of measuring changes performance. Use sampling profilers for low overhead, calibrate instrumentation overhead.
-- Coordinated omission: if you stop measuring when the system is overloaded (dropping requests), you undercount high-latency events. Always report tail latency at the offered load rate, not the completed request rate.
+@profile
+def my_function():
+    # ... heavy operation
+```
 
-## Rules
+```bash
+# Java: jmap heap dump
+jmap -dump:live,format=b,file=heap.hprof <pid>
+# Analyze with Eclipse MAT, JProfiler, or YourKit
 
-- Never optimize without measurement — intuition about what is slow is wrong >50% of the time.
-- One change at a time — measure before and measure after.
-- Fix the biggest bottleneck first — optimizing a minor contributor gives negligible gains.
-- Cache invalidation is harder than caching — always have a clear eviction strategy.
-- Profile in production-like environment or production under low traffic — dev is not representative.
-- Document every optimization with before/after metrics — so you know what worked.
-- Measure in percentiles, not averages — averages hide high-tail-latency problems.
-- Set a performance budget before optimizing — know what "good enough" looks like.
-- CPU, memory, I/O, and network interact — optimizing one can expose another as the new bottleneck.
-- Regression test every optimization — performance fixes should not break correctness.
+# .NET: dotnet-gcdump
+dotnet-gcdump collect -p <pid> -o heap.gcdump
+```
+
+### Step 3: Profile Database Queries
+
+```sql
+-- PostgreSQL: slow query log
+-- In postgresql.conf:
+log_min_duration_statement = 200  -- Log queries taking >200ms
+log_connections = on
+log_disconnections = on
+
+-- EXPLAIN ANALYZE (actual execution)
+EXPLAIN ANALYZE
+SELECT u.*, COUNT(o.id) as order_count
+FROM users u
+LEFT JOIN orders o ON o.user_id = u.id
+WHERE u.created_at > '2026-01-01'
+GROUP BY u.id
+ORDER BY order_count DESC;
+
+-- Look for: Seq Scan (full table scan), high cost, large actual rows
+-- Solutions: missing index → CREATE INDEX CONCURRENTLY
+
+-- Slow query identification
+SELECT query, calls, total_time, mean_time, rows
+FROM pg_stat_statements
+ORDER BY total_time DESC
+LIMIT 10;
+
+-- Index usage analysis
+SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read
+FROM pg_stat_user_indexes
+ORDER BY idx_scan ASC
+LIMIT 10;  -- Unused indexes
+```
+
+```bash
+# MongoDB: slow query profiler
+db.setProfilingLevel(1, { slowms: 100 })
+db.system.profile.find({ millis: { $gt: 200 } }).sort({ ts: -1 }).limit(10)
+
+# Redis: slow log
+SLOWLOG GET 10
+SLOWLOG RESET
+```
+
+### Step 4: Profile Frontend (Browser)
+
+```javascript
+// Performance API (User Timing)
+performance.mark('start-load');
+await loadData();
+performance.mark('end-load');
+performance.measure('data-loading', 'start-load', 'end-load');
+console.log(performance.getEntriesByType('measure'));
+
+// Web Vitals (Core Web Vitals)
+import { onCLS, onFCP, onLCP, onTTFB } from 'web-vitals';
+
+onCLS(console.log);     // Cumulative Layout Shift
+onFCP(console.log);     // First Contentful Paint
+onLCP(console.log);     // Largest Contentful Paint
+onTTFB(console.log);    // Time to First Byte
+
+// Performance Observer
+const observer = new PerformanceObserver((list) => {
+  for (const entry of list.getEntries()) {
+    console.log(entry.name, entry.duration);
+  }
+});
+observer.observe({ entryTypes: ['resource', 'longtask', 'layout-shift'] });
+```
+
+### Step 5: Load Testing
+
+```yaml
+# k6 load test script
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+import { Rate, Trend } from 'k6/metrics';
+
+const errorRate = new Rate('errors');
+const responseTime = new Trend('response_time');
+
+export const options = {
+  stages: [
+    { duration: '2m', target: 100 },  // Ramp up
+    { duration: '5m', target: 100 },  // Steady state
+    { duration: '2m', target: 0 },    // Ramp down
+  ],
+  thresholds: {
+    http_req_duration: ['p(95)<500'],  // 95% of requests under 500ms
+    errors: ['rate<0.05'],              // Error rate under 5%
+  },
+};
+
+export default function () {
+  const res = http.get('https://api.example.com/items');
+  check(res, { 'status is 200': (r) => r.status === 200 });
+  responseTime.add(res.timings.duration);
+  errorRate.add(res.status !== 200);
+  sleep(1);
+}
+```
+
+### Step 6: Common Optimizations
+
+```yaml
+optimizations:
+  database:
+    - "Add missing indexes (query WHERE, JOIN, ORDER BY columns)"
+    - "N+1 query detection → eager loading (JOIN, IN, includes)"
+    - "Pagination with cursor-based (not OFFSET) for large datasets"
+    - "Connection pooling (pgBouncer, HikariCP)"
+    - "Read replicas for reporting queries"
+    - "Materialized views for expensive aggregations"
+
+  caching:
+    - "HTTP caching headers (Cache-Control, ETag)"
+    - "CDN for static assets"
+    - "Redis/Memcached for API response cache"
+    - "Client-side SWR/stale-while-revalidate"
+    - "Database query cache (redis cache-aside pattern)"
+
+  code:
+    - "Avoid N+1 in ORM queries (use eager loading)"
+    - "Lazy loading for heavy resources (code splitting, dynamic import)"
+    - "Memoization for expensive function calls"
+    - "Debounce/throttle for frequent events (scroll, resize)"
+    - "Web Workers for CPU-heavy computation (browser)"
+    - "Worker threads for CPU tasks (Node.js)"
+    - "Stream large responses (don't buffer in memory)"
+
+  frontend:
+    - "Bundle analysis → code splitting → tree shaking"
+    - "Image optimization (WebP, AVIF, responsive srcset)"
+    - "Font subsetting and preloading"
+    - "Preconnect to third-party origins"
+    - "Virtual scrolling for long lists"
+    - "Avoid layout thrashing (batch DOM reads/writes)"
+```
+
+## Common Pitfalls
+
+| Pitfall | Description | Prevention |
+|---------|-------------|------------|
+| Optimizing without measuring | "Fixing" what might not be the bottleneck | Always profile first, measure before and after |
+| Premature optimization | Complicated code for unproven bottlenecks | Make it work, then make it fast |
+| Ignoring P95/P99 latencies | Average hides the tail latency | Track percentiles, not just averages |
+| One-size cache | Caching everything without strategy | Cache the right data with appropriate TTL |
+| Not testing with production data | Benchmarks with toy data miss real patterns | Use production data or realistic scale |
+| Optimizing cold start | Improving startup but not steady state | Measure both warm and cold performance |
+| Ignoring GC pauses | Memory freed but app pauses | Use real-time GC logs, measure pause times |
+| Over-optimizing SQL | Complex query with marginal gain | Profile shows what to optimize |
+| No performance regression testing | Reverting gains with future changes | CI performance benchmarks |
+
+## Best Practices
+
+| Practice | Rationale |
+|----------|-----------|
+| Measure before optimizing | Assumptions about bottlenecks are often wrong |
+| Use percentile metrics | P50, P95, P99 tell the real story |
+| Profile in production-like environment | Dev and staging behavior differs from production |
+| One optimization at a time | Multiple changes = unknown what worked |
+| Add benchmarks to CI | Prevent performance regression |
+| Monitor continuously | Performance changes over time |
+| Set performance budgets | Enforce limits on bundle size, response time |
+| Profile with realistic data | Small datasets hide performance issues |
+| Use flame graphs for CPU | Visualize where time is actually spent |
+| Check GC logs for memory issues | Allocation rate = GC frequency |
 
 ## References
-  - references/bottleneck-analysis.md — Bottleneck Analysis Reference
-  - references/bottleneck-patterns.md — Bottleneck Patterns Reference
   - references/performance-profiler-advanced.md — Performance Profiler Advanced Topics
+  - references/performance-profiler-database.md — Database Profiling Reference
+  - references/performance-profiler-frontend.md — Frontend Profiling Reference
   - references/performance-profiler-fundamentals.md — Performance Profiler Fundamentals
-  - references/profiling-tools-comparison.md — Profiling Tools Comparison
-  - references/profiling-tools.md — Profiling Tools Reference
 ## Handoff
-Next skill: devops-observability for distributed tracing setup.
-Carry forward: profile results, bottleneck list, fix priorities.
+Hand off to `dev-loop-debugging-strategy` if profiling reveals a bug. Hand off to `dev-loop-code-review` for code-level optimization review.

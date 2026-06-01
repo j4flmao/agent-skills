@@ -324,6 +324,159 @@ kafka.connect:type=connect-metrics,client-id=...
   Connector count, task count, offset commit metrics
 ```
 
+### CDC Failure Modes and Recovery
+
+```yaml
+failure_modes:
+  schema_change:
+    description: "Source table schema changed (column added/removed)"
+    impact: "Connector fails on deserialization"
+    detection: "Schema registry compatibility error in connector logs"
+    recovery:
+      - "Register new schema version in schema registry"
+      - "Verify compatibility mode (BACKWARD)"
+      - "Restart connector — resumes from committed offset"
+      - "Retroactively process events through new schema"
+    prevention: "Automated schema drift detection + CI/CD schema validation"
+  
+  source_outage:
+    description: "Source database unavailable or restarted"
+    impact: "Connector loses connection, fails to stream"
+    detection: "Connector status = FAILED, source connectivity check"
+    recovery:
+      - "Connector auto-retry (configure max.retries)"
+      - "Verify source database is back online"
+      - "Resume connector — Debezium resumes from last committed offset"
+      - "If outage > binlog retention: re-snapshot needed"
+    prevention: "Source HA (replication, failover), binlog retention 24h+"
+  
+  binlog_expiration:
+    description: "Binlog/transaction log rotated before connector consumed it"
+    impact: "Cannot resume from last offset, data loss for gap"
+    detection: "Connector error: 'Binlog file X not found' or offset out of range"
+    recovery:
+      - "Perform new snapshot (initial mode)"
+      - "Snapshot will capture current state — misses transactions in gap"
+      - "Cross-check with source for missed transactions if critical"
+    prevention: "Set binlog retention (MySQL: expire_logs_days = 7, PostgreSQL: wal_keep_segments)"
+  
+  consumer_lag:
+    description: "Consumers cannot keep up with CDC event rate"
+    impact: "Accumulating lag, eventually OOM or source binlog retention breach"
+    detection: "Consumer group lag > threshold, connector queue size growing"
+    recovery:
+      - "Increase consumer partitions (increase parallelism)"
+      - "Add consumer instances to consumer group"
+      - "Optimize consumer processing (batch operations, async writes)"
+      - "If severe: pause non-critical connectors temporarily"
+    prevention: "Auto-scale consumers, rate limit if needed, monitor lag trends"
+  
+  dead_letter:
+    description: "Record fails deserialization or processing"
+    impact: "One bad record blocks the connector (in fail-on-error mode)"
+    detection: "Record in dead-letter topic, connector error log"
+    recovery:
+      - "Inspect failed record in dead-letter topic"
+      - "Fix schema (if schema evolution issue) or fix consumer logic"
+      - "Reprocess from dead-letter topic"
+    prevention: "Always configure dead-letter topic + skip mode for transient errors"
+```
+
+### CDC Monitoring Dashboard
+
+```yaml
+monitoring_dashboard:
+  sections:
+    connector_health:
+      - "Connector status (RUNNING/FAILED/PAUSED) per connector"
+      - "Task status per connector"
+      - "Restart count (last 24h)"
+    
+    lag_metrics:
+      - "MilliSecondsBehindSource (Debezium streaming)"
+      - "Consumer group lag per topic partition"
+      - "Queue remaining capacity per connector"
+      - "Event age (source_ts - current_ts) latency histogram"
+    
+    throughput:
+      - "Events per second (total + per connector)"
+      - "Bytes per second ingested"
+      - "Batch size distribution"
+      - "Peak throughput vs sustained throughput"
+    
+    errors:
+      - "Dead-letter topic count (last 1h/24h)"
+      - "Deserialization errors"
+      - "Schema compatibility failures"
+      - "Connector restart count"
+    
+    source_status:
+      - "Source database connectivity"
+      - "Binlog retention remaining (hours)"
+      - "Source disk space"
+      - "Source replication lag (if replica used)"
+```
+
+### CDC Consumer Patterns
+
+```python
+# Idempotent CDC consumer with deduplication
+def process_cdc_event(event, target_table, dedup_window_days=7):
+    """
+    Process CDC event with idempotency.
+    Each event has _hoodie_commit_time (Hudi) or debezium source fields.
+    """
+    # Check for deduplication
+    event_id = f"{event['source']['connector']}_{event['source']['ts_ms']}_{event['after'].get('id')}"
+    
+    # Upsert based on primary key
+    if event['op'] == 'c':  # Create
+        insert_record(target_table, event['after'])
+    elif event['op'] == 'u':  # Update
+        update_record(target_table, event['after'], key=event['after']['id'])
+    elif event['op'] == 'd':  # Delete
+        soft_delete(target_table, event['before']['id'])
+    elif event['op'] == 'r':  # Snapshot read
+        upsert_record(target_table, event['after'])
+    
+    # Store event ID for dedup (prevent double processing on restart)
+    store_processed_id(event_id, ttl_days=dedup_window_days)
+
+# Batch consumer with micro-batching
+def batch_consumer(events_batch, target_table):
+    """Process CDC events in micro-batches for throughput."""
+    creates, updates, deletes = [], [], []
+    for event in events_batch:
+        if event['op'] == 'c': creates.append(event['after'])
+        elif event['op'] == 'u': updates.append(event['after'])
+        elif event['op'] == 'd': deletes.append(event['before']['id'])
+    
+    # Batch insert/update/delete
+    if creates:
+        target_table.insert_many(creates)
+    if updates:
+        target_table.update_many(updates, key='id')
+    if deletes:
+        target_table.delete_many(ids=deletes)
+```
+
+### Decision Tree
+
+#### CDC Method Selection
+```
+Source database type?
+├── MySQL → Debezium MySQL connector (log-based, GTID-aware)
+├── PostgreSQL → Debezium PostgreSQL (pgoutput logical replication plugin)
+├── SQL Server → Debezium SQL Server (CDC enabled tables)
+├── Oracle → Debezium Oracle (LogMiner or XStream)
+├── MongoDB → Debezium MongoDB (oplog change stream)
+├── No CDC capability
+│   ├── Has timestamp/updated_at column → Timestamp-based incremental
+│   ├── Has version number → Version-based incremental
+│   └── Neither → Trigger-based or full table comparison
+└── Need low-latency < 1s → Kafka Connect + Debezium (sub-second)
+```
+
 ## Rules
 - Log-based CDC preferred over trigger/timestamp for all production databases
 - Use AVRO + Schema Registry for schema evolution (BACKWARD compatibility)
@@ -333,6 +486,11 @@ kafka.connect:type=connect-metrics,client-id=...
 - Never drop columns from source — deprecate, then remove from consumers
 - Dead-letter topic for failed records (schema mismatch, deserialization errors)
 - Monitor lag: alert if CDC lag > 5min for latency-critical pipelines
+- Set binlog retention to at least 24h to prevent connector offset loss
+- Implement idempotent consumers — CDC events may be replayed
+- Use micro-batching for throughput-optimized consumer processing
+- Build a CDC monitoring dashboard for connector health + lag + errors
+- Plan for schema evolution — automate compatibility checks in CI/CD
 
 ## References
   - references/cdc-methods.md — CDC Methods Reference

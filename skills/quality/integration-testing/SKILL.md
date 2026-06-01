@@ -145,8 +145,235 @@ Does CI support Docker?
 - CI resources: Docker-in-Docker requires privileged mode or dedicated runners. Plan resource allocation
 - Network: Container-to-container communication is fast (< 1ms). External service calls add latency
 
-## Rules
+## Integration Test Examples
 
+### Python + TestContainers — Database Integration Test
+```python
+import pytest
+from testcontainers.postgres import PostgresContainer
+from sqlalchemy import create_engine, text
+
+@pytest.fixture(scope="module")
+def postgres_container():
+    with PostgresContainer("postgres:16-alpine") as pg:
+        engine = create_engine(pg.get_connection_url())
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE users (
+                    id SERIAL PRIMARY KEY,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    name VARCHAR(100) NOT NULL
+                )
+            """))
+        yield pg
+
+@pytest.fixture
+def db(postgres_container):
+    engine = create_engine(postgres_container.get_connection_url())
+    yield engine
+    with engine.begin() as conn:
+        conn.execute(text("TRUNCATE TABLE users RESTART IDENTITY CASCADE"))
+
+class TestUserRepository:
+    def test_create_user(self, db):
+        with db.begin() as conn:
+            result = conn.execute(
+                text("INSERT INTO users (email, name) VALUES (:email, :name) RETURNING id"),
+                {"email": "test@example.com", "name": "Test User"},
+            )
+            user_id = result.scalar()
+        assert user_id is not None
+
+    def test_find_user_by_email(self, db):
+        with db.begin() as conn:
+            conn.execute(
+                text("INSERT INTO users (email, name) VALUES (:email, :name)"),
+                {"email": "find@example.com", "name": "Find Me"},
+            )
+        with db.begin() as conn:
+            result = conn.execute(
+                text("SELECT * FROM users WHERE email = :email"),
+                {"email": "find@example.com"},
+            )
+            user = result.fetchone()
+        assert user is not None
+        assert user.name == "Find Me"
+
+    def test_email_uniqueness(self, db):
+        with db.begin() as conn:
+            conn.execute(
+                text("INSERT INTO users (email, name) VALUES (:email, :name)"),
+                {"email": "dup@example.com", "name": "First"},
+            )
+        with pytest.raises(Exception):
+            with db.begin() as conn:
+                conn.execute(
+                    text("INSERT INTO users (email, name) VALUES (:email, :name)"),
+                    {"email": "dup@example.com", "name": "Second"},
+                )
+```
+
+### Java + TestContainers + WireMock — Service Integration Test
+```java
+@SpringBootTest
+@Testcontainers
+class OrderServiceIntegrationTest {
+
+    @Container
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+
+    @Container
+    static WireMockContainer wiremock = new WireMockContainer("wiremock/wiremock:3.5.4");
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("payment.service.url", () -> "http://" + wiremock.getHost() + ":" + wiremock.getMappedPort(8080));
+    }
+
+    @Autowired
+    private OrderService orderService;
+
+    @Test
+    void shouldCreateOrderWhenPaymentSucceeds() {
+        stubFor(post(urlEqualTo("/api/payments"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(""{"id": "pay_123", "status": "confirmed"}"")));
+
+        Order order = orderService.placeOrder(customerId, cartItems);
+        assertThat(order.getStatus()).isEqualTo("CONFIRMED");
+        assertThat(order.getPaymentId()).isEqualTo("pay_123");
+    }
+}
+```
+
+### TypeScript + TestContainers — Message Queue Integration Test
+```typescript
+import { GenericContainer } from "testcontainers";
+import { Kafka } from "kafkajs";
+
+describe("Order Event Publisher", () => {
+  let kafkaContainer: StartedTestContainer;
+  let kafka: Kafka;
+
+  beforeAll(async () => {
+    kafkaContainer = await new GenericContainer("confluentinc/cp-kafka:7.6.0")
+      .withExposedPorts(9093)
+      .withEnvironment({
+        KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9093",
+      })
+      .start();
+    kafka = new Kafka({
+      clientId: "test",
+      brokers: [`localhost:${kafkaContainer.getMappedPort(9093)}`],
+    });
+  }, 120000);
+
+  afterAll(async () => {
+    await kafkaContainer.stop();
+  });
+
+  it("should publish order created event", async () => {
+    const producer = kafka.producer();
+    const consumer = kafka.consumer({ groupId: "test" });
+    await producer.connect();
+    await consumer.connect();
+    await consumer.subscribe({ topic: "order-events" });
+
+    const messages: any[] = [];
+    await consumer.run({
+      eachMessage: async ({ message }) => {
+        messages.push(JSON.parse(message.value!.toString()));
+      },
+    });
+
+    await publisher.publishOrderCreated({ orderId: "ord_123" });
+    await new Promise((r) => setTimeout(r, 1000));
+
+    expect(messages.length).toBe(1);
+    expect(messages[0].orderId).toBe("ord_123");
+  });
+});
+```
+
+## CI Integration for Integration Tests
+
+```yaml
+name: Integration Tests
+on: pull_request
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Pre-pull container images
+        run: |
+          docker pull postgres:16-alpine
+          docker pull confluentinc/cp-kafka:7.6.0
+          docker pull wiremock/wiremock:3.5.4
+      - name: Run integration tests
+        run: npx vitest run --config vitest.integration.config.ts --shard=${{ matrix.shard }}/2
+        env:
+          CI: true
+          TESTCONTAINERS_RYUK_DISABLED: true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: integration-logs-${{ matrix.shard }}
+          path: logs/
+```
+
+## Integration Testing Anti-Patterns
+
+### Anti-Pattern: In-Memory Database Substitutes
+Using H2 for PostgreSQL or SQLite for MySQL. In-memory substitutes have different SQL dialects, constraint behaviors, and transaction semantics. Tests pass with H2 but fail with PostgreSQL in production. Always use the real database in a container.
+
+### Anti-Pattern: No Wait Strategy
+Accessing containers before they're ready produces non-deterministic failures. Never use fixed `Thread.sleep()`. Use predicate-based wait strategies: wait for log message ("database system is ready to accept connections"), HTTP health check, or port listening.
+
+### Anti-Pattern: Shared Database State
+Tests that leave data behind cause failures in subsequent tests. Use truncation between tests (`TRUNCATE ... CASCADE`). For fully isolated tests, use a fresh container per test class. Never rely on test ordering.
+
+### Anti-Pattern: Over-Mocking External Services
+Mocking at the HTTP client level (axios mocks, fetch mocks) instead of the network level. WireMock operates at the HTTP protocol level and validates real request/response contracts. HTTP client mocks are brittle and miss protocol-level issues.
+
+### Anti-Pattern: No Error Path Tests
+Testing only the happy path (successful database write, successful API response) misses the majority of integration issues. Every happy path must have a corresponding error path: network timeout, HTTP 500, database constraint violation, authentication failure.
+
+### Anti-Pattern: Hardcoded Connection Parameters
+Hardcoded ports, hosts, or credentials prevent parallel test execution. Use `withExposedPorts` for dynamic port mapping. Use `@DynamicPropertySource` (Spring) or environment variables to inject connection parameters.
+
+## Integration Testing Maturity Model
+
+| Level | Characteristics | Practices |
+|---|---|---|
+| 1: Initial | No integration tests | Unit tests only or manual integration testing, no containerized infrastructure |
+| 2: Defined | Basic integration tests | TestContainers for database, basic WireMock stubs, sequential execution, some error path testing |
+| 3: Managed | Structured integration suite | Containerized databases + message queues + caches, WireMock for all external services, parallel execution, CI integration with pre-pulled images |
+| 4: Measured | Comprehensive integration coverage | Error path parity with happy path, migration testing (forward + rollback), performance-sensitive assertions, < 5% flakiness rate |
+| 5: Optimized | Integration as release gates | All integration paths covered, chaos-resilient tests (network partition, resource exhaustion), automatic container layer caching, self-healing connection handling |
+
+## Performance Considerations
+
+- Container startup: 30-60s per container. Start in parallel for multi-service tests.
+- Database migration: 5-30s per suite. Run once per suite (beforeAll), not per test.
+- Data cleanup: truncation (50-200ms) vs fresh container (30s). Choose based on isolation needs.
+- Test execution: target < 15 minutes per suite. Parallel workers each get isolated database.
+- CI resources: Docker-in-Docker requires privileged mode or dedicated runners. Use `TESTCONTAINERS_RYUK_DISABLED: true` in CI.
+- Container image caching: pre-pull all images in CI to avoid network timeouts. Use `docker pull` in a setup step.
+- WireMock startup: < 3s per instance. Reuse across tests within a suite.
+
+## Rules
 1. Every integration test must use real (containerized) databases — no H2, SQLite, or in-memory substitutes
 2. External services must be simulated using WireMock or MockServer, never mocked at the HTTP client level
 3. Database state must be cleaned between tests. Use truncation, delete-by-run-id, or rollback — never rely on test ordering
@@ -163,6 +390,8 @@ Does CI support Docker?
 14. Flaky integration tests (non-deterministic) must be quarantined within 24 hours
 15. Migration tests must verify both forward and rollback scenarios
 16. Performance-sensitive integration tests must include timing assertions with 2x safety margins
+17. Parallel database isolation: each worker gets a separate database schema or container
+18. WireMock stubs must be verified (at least one request matched) in afterEach
 
 ## References
 - references/api-testing.md — API Integration Testing Patterns

@@ -1,154 +1,631 @@
 ---
-name: devops-argo-cd
-description: |
-  Trigger: "ArgoCD", "Argo CD", "GitOps", "GitOps deployment", "ArgoCD app",
-  "ArgoCD project", "sync policy", "auto-sync", "ArgoCD application set",
-  "ArgoCD rollback", "declarative GitOps"
-  Exclusion: Not for general Kubernetes manifests — use kubernetes-patterns.
-version: 1.0.0
-author: j4flmao
-license: MIT
+name: argo-cd
+description: >
+  Use this skill when the user says 'ArgoCD', 'Argo CD', 'GitOps',
+  'ApplicationSet', 'Sync Policy', 'Sync Wave', 'Application Controller',
+  'argocd CLI', 'Declarative GitOps', 'Progressive Delivery', 'Rollback',
+  'Multi-cluster ArgoCD', 'ArgoCD RBAC', 'ArgoCD SSO', 'ArgoCD Project'.
+  Covers: application deployment, sync strategies, application sets,
+  multi-cluster management, RBAC, SSO integration, monitoring, rollback,
+  disaster recovery, CLI usage, declarative setup.
+  Do NOT use for: Flux (use gitops skill), generic GitOps concepts,
+  Kubernetes cluster setup, CI/CD pipeline design.
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
 compatibility:
-  cli: true
-  core: true
-  editor: true
-  api: true
-tags: [devops, gitops, argocd, kubernetes, phase-7]
+  claude-code: true
+  cursor: true
+  codex: true
+  windsurf: true
+tags: [devops, gitops, argocd, kubernetes, phase-5]
 ---
 
-# devops-argo-cd
+# Argo CD
 
 ## Purpose
-Manage GitOps workflows using ArgoCD — declarative Kubernetes deployments with auto-sync, ApplicationSets, multi-cluster, RBAC, SSO, and progressive delivery patterns.
+Implement GitOps workflows using Argo CD for Kubernetes deployments with sync strategies, application sets, multi-cluster management, and security best practices.
 
 ## Agent Protocol
 
 ### Trigger
-Any user message referencing ArgoCD, GitOps, sync policies, ApplicationSets, rollback, or multi-cluster GitOps deployments.
+Exact user phrases: "ArgoCD", "Argo CD", "GitOps", "ApplicationSet", "Sync Policy", "Sync Wave", "argocd CLI", "Declarative GitOps", "Progressive Delivery", "Rollback".
 
 ### Input Context
-Desired ArgoCD operation: application definition, sync strategy, project scoping, ApplicationSet generator type, or multi-cluster registration.
+Before activating, verify:
+- Argo CD version (2.4+ for ApplicationSets, 2.8+ for complex features).
+- Number of clusters (single vs multi-cluster management).
+- Git provider (GitHub, GitLab, Bitbucket — affects webhook config).
+- Authentication method (local admin, SSO with OIDC, Dex).
+- Environment structure (dev/staging/prod per cluster or namespace).
+- Monitoring tools (Prometheus operator for Argo CD metrics).
 
 ### Output Artifact
-ArgoCD Application/AppProject/ApplicationSet manifests as YAML, plus sync policy, RBAC configuration, and cluster registration commands.
+Writes to Argo CD Application YAML, ApplicationSet YAML, Argo CD project config, RBAC config, and notification templates.
 
 ### Response Format
-YAML manifests with inline explanations. Usage examples and CLI commands where applicable.
+YAML for Application, ApplicationSet, Project, and RBAC resources. CLI commands for setup and operations.
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble. No postamble. No explanations. No filler/hedging/transitions.
 
 ### Completion Criteria
-Application synced, health check passing. RBAC and project scoping applied. Multi-cluster registration verified.
+- [ ] Application(s) defined and synced to target cluster.
+- [ ] Sync policy configured (manual/automated with prune).
+- [ ] Health checks and resource customization configured.
+- [ ] RBAC roles assigned for team access.
+- [ ] Notifications configured for sync events.
+- [ ] Rollback procedure documented.
 
 ### Max Response Length
-8000 tokens.
+Direct file write. No response text.
 
-## Components
+## Architecture Decision Trees
 
-### Architecture in Depth
-API server: exposes gRPC and REST API, handles authentication via SSO/OIDC/local users, enforces RBAC, serves web UI. Deployed as Deployment with 2+ replicas in HA mode. Repo server: caches Git repos locally, generates manifests by running Kustomize/Helm/Jsonnet, supports 3+ simultaneous connections per repo. Stateless — can scale horizontally. Application controller: runs reconciliation loop every 3 minutes, compares desired state (from Git) vs live state (from cluster), computes diff, applies sync when out of sync. Stateful — uses Redis for deduplication. Redis: in-memory cache for dedup, memoization, and UI state. HA uses Redis sentinel for failover. Dex/OIDC: delegates authentication to external identity providers (Azure AD, Google, GitHub, GitLab, LDAP, SAML).
+### Application Structure: Single App vs ApplicationSet vs Multi-Source
+| Pattern | Use Case | Complexity |
+|---|---|---|
+| Single Application | One service, one environment | Low |
+| ApplicationSet (list generator) | Same app across multiple clusters | Medium |
+| ApplicationSet (git generator) | One app per directory in repo | Medium |
+| ApplicationSet (SCM generator) | One app per GitHub repo in org | High |
+| Multi-source Application | App config + overlay config separately | Medium |
+| App of Apps pattern | Deploying multiple related applications | High |
 
-### CRD Reference
-Application: source repo URL, target revision, path, destination cluster/namespace, sync policy (automated/manual), sync options (CreateNamespace, PruneLast, ApplyOutOfSyncOnly, RespectIgnoreDifferences), health checks. AppProject: source repo allowlist, destination cluster/namespace allowlist, resource allowlist, role definitions with JWT tokens for CI systems. ApplicationSet: generator (list, git, cluster, SCM, pull request, matrix), template (Application spec with template variables), sync policy (preserve resources on delete).
+### Sync Strategy: Automated vs Manual vs Phased
+| Strategy | When to Use | Risk Level |
+|---|---|---|
+| Automated (Auto-Sync) | Dev/staging, non-critical services | Low (fast) |
+| Automated with Self-Heal | All environments (recovers drift) | Low |
+| Manual Sync | Production, strict change control | High (controlled) |
+| Phased (Sync Waves) | Stateful apps, DB migrations | Medium |
+| Blue-Green via Argo Rollouts | Zero-downtime production deploys | Medium (complex) |
 
-### Sync Wave and Hook Patterns
-Wave -5 to -3: CRDs, Namespaces, PriorityClasses. Wave -2 to -1: Secrets (SealedSecrets/External Secrets), ServiceAccounts, RBAC. Wave 0: ConfigMaps, Services, PVCs (dependencies). Wave 1-3: Deployments, StatefulSets, DaemonSets (workloads). Wave 4: HPA, VPA, PDB (autoscaling). Wave 5: Ingress, Gateway, ServiceMonitor (exposure). Wave 10: cleanup jobs. Within same wave: resources apply in parallel. Sync hooks: PreSync (blocking — runs before wave 0), Sync (alongside resources), PostSync (after all waves succeed), SyncFail (on failure). Jobs must complete successfully for sync to proceed.
-ArgoCD comprises five components: API server (UI + API endpoints, RBAC enforcement), repo server (caches Git repos, generates manifests via Kustomize/Helm/Jsonnet), application controller (reconciles desired vs live state, 3-minute reconciliation loop), Redis cache (for dedup and memoization), and Dex/ OIDC integration for SSO. All components run in the argocd namespace. HA mode deploys redundant replicas for API server, repo server, and application controller.
+### Generator Selection for ApplicationSets
+| Generator | Best For | Example |
+|---|---|---|
+| List | Simple list of clusters/values | Dev, staging, prod clusters |
+| Git | One directory per environment | apps/prod/*, apps/staging/* |
+| Cluster | All registered clusters | Deploy to every cluster |
+| SCM (GitHub) | All repos in an org | One Application per microservice |
+| Pull Request | Preview environments per PR | Ephemeral review apps |
+| Matrix | Combining multiple generators | Cluster × Environment |
 
-### 2. CRDs: Application, AppProject, ApplicationSet
-Application: defines source repo, destination cluster, sync policy, sync options, health checks. AppProject: scopes Applications to teams, restricts source repos, destination clusters/namespaces, and allowed resources, includes role-based access for CI systems. ApplicationSet: generates Applications dynamically from generators (list, git, cluster, SCM, pull request, matrix) — each generator item produces one Application manifest from a template.
+### Authentication Method
+| Method | Pros | Cons |
+|---|---|---|
+| Local admin | Simple, no dependencies | No MFA, shared credentials |
+| OIDC (Google, Okta, Azure AD) | SSO, MFA, group sync | OIDC provider required |
+| Dex | Multi-provider, LDAP | Additional component to manage |
+| GitHub OAuth | Simple for small teams | Only GitHub users |
 
-### 3. Sync Strategies
-Manual sync: controlled rollout, apply-out-of-sync-only option for selective syncing, requires explicit sync button or CLI command. Automated sync with prune: ArgoCD auto-syncs when Git changes, deletes resources not in Git, best for standard deployments. Automated sync without prune: syncs changes but does not delete resources, safer for stateful workloads. Self-heal: automatically reverts manual cluster changes to match Git. Sync options: CreateNamespace=true, PruneLast=true, SkipDryRunOnMissingResource, RespectIgnoreDifferences, ApplyOutOfSyncOnly.
+## Quick Start
+Install Argo CD → Register target cluster → Define Application YAML → Sync → Configure RBAC → Set up webhook → Add notifications.
 
-### 4. Sync Waves
-Annotation `argocd.argoproj.io/sync-wave` controls ordering: lower waves execute first. Wave -5 to -1: infrastructure setup (namespaces, secrets, CRDs). Wave 0: core services (configmaps, service accounts). Wave 1-5: application workloads. Wave 10+: cleanup jobs. Resources in same wave apply in parallel. Wave ordering critical for dependency management.
+## Core Workflow
 
-### 5. Sync Hooks
-PreSync: runs before sync — database migrations, pre-deployment validation. Sync: runs during sync — standard resources. PostSync: runs after successful sync — smoke tests, notifications, cache invalidation. SyncFail: runs on sync failure — cleanup, rollback, notification. Skip: runs only on first sync. Hook delete policies: HookSucceeded, HookFailed, BeforeHookCreation. Hook Jobs must complete successfully for sync to proceed (PreSync blocks sync until complete).
+### Step 1: Argo CD Installation
+```yaml
+# install/argocd-install.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+data:
+  # SSO configuration (OIDC example)
+  url: https://argocd.example.com
+  oidc.config: |
+    name: Okta
+    issuer: https://dev-123456.okta.com
+    clientID: $ARGOCD_OIDC_CLIENT_ID
+    clientSecret: $ARGOCD_OIDC_CLIENT_SECRET
+    requestedScopes: ["openid", "profile", "email", "groups"]
+    requestedIDTokenClaims: {"groups": {"essential": true}}
+  # Repository configuration
+  repositories: |
+    - url: https://github.com/myorg/gitops-config
+      passwordSecret:
+        name: github-token
+        key: token
+  # Resource customization
+  resource.customizations: |
+    admissionregistration.k8s.io/MutatingWebhookConfiguration:
+      health.lua: |
+        hs = {}
+        hs.status = "Healthy"
+        return hs
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+data:
+  policy.default: role:readonly
+  policy.csv: |
+    p, role:org-admin, applications, *, */*, allow
+    p, role:team-lead, applications, sync, */*, allow
+    p, role:team-lead, applications, get, */*, allow
+    p, role:team-lead, applications, update, */*, allow
+    p, role:dev, applications, get, team-*/*, allow
+    p, role:dev, applications, sync, team-*/*, allow
+    p, role:dev, exec, create, team-*/*, allow
+    g, myorg/team-leads, role:team-lead
+    g, myorg/dev-team, role:dev
 
-### 6. Multi-Cluster Management
-Register external clusters via `argocd cluster add <context>` or declarative cluster secrets. Cluster generator in ApplicationSet iterates all registered clusters automatically. Hub-and-spoke model: single ArgoCD control plane manages multiple workload clusters. Cluster-specific config via config overlays in ApplicationSet template. In-cluster deployment for single-cluster setups, hub-spoke for multi-cluster. Cluster labels enable targeted ApplicationSet generation.
+# Install with:
+# kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+# kubectl apply -n argocd -f argocd-cm.yaml
+# kubectl apply -n argocd -f argocd-rbac-cm.yaml
+```
 
-### 7. RBAC and SSO
-RBAC policies in argocd-rbac-cm ConfigMap: map OIDC groups/roles to API/UI permissions (readonly, admin, custom). SSO via Dex (OIDC, SAML, LDAP, GitHub, GitLab, Microsoft, Google) or built-in OIDC. Project roles for CI system access with JWT tokens — scoped to specific applications. Policy format: p, role, resource, action, object, effect.
+### Step 2: Basic Application Definition
+```yaml
+# apps/payment-service.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: payment-service
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io  # Cascade delete
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/myorg/payment-service.git
+    targetRevision: main
+    path: kubernetes/overlays/production
+    helm:
+      valueFiles:
+        - values-prod.yaml
+      parameters:
+        - name: replicaCount
+          value: "3"
+    kustomize:
+      namePrefix: prod-
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: payment-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true  # Prune resources after sync
+      - ApplyOutOfSyncOnly=true
+      - RespectIgnoreDifferences=true
+      - ServerSideApply=true  # Use SSA for CRDs
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas  # Ignore replica count drift from HPA
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+      jsonPointers:
+        - /spec/metrics  # HPA may have different metrics
+  info:
+    - name: Slack Channel
+      value: "#team-payments"
+    - name: Runbook
+      value: "https://runbook.example.com/payment-service"
+```
 
-### 8. Rollback
-View deployment history: `argocd app get myapp-prod`. Rollback to revision: `argocd app rollback myapp-prod --prune <REVISION_ID>`. Rollback with sync policy override: `argocd app rollback myapp-prod --sync-policy=manual <REVISION_ID>`. ArgoCD deletes the diff between current and target revision and reapplies the target. Revision history limit configured via `spec.revisionHistoryLimit`.
+### Step 3: ApplicationSet with Git Generator
+```yaml
+# appsets/cluster-apps.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cluster-apps
+  namespace: argocd
+spec:
+  generators:
+    # Git generator — one Application per directory in apps/
+    - git:
+        repoURL: https://github.com/myorg/gitops-config.git
+        revision: HEAD
+        directories:
+          - path: apps/production/*
+          - path: apps/staging/*
+  template:
+    metadata:
+      name: '{{path.basename}}'
+      labels:
+        environment: '{{path[1]}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/myorg/{{path.basename}}.git
+        targetRevision: main
+        path: kubernetes/overlays/{{path[1]}}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{path.basename}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+  syncPolicy:
+    preserveResourcesOnDeletion: false
+```
 
-### 9. Kustomize/Helm Integration
-Kustomize: ArgoCD natively renders Kustomize overlays by pointing source path to the overlay directory. Helm: supports `helm repo add`, values files from same repo or external, `--set` parameters via spec.source.helm.parameters. Jsonnet and plain YAML also supported. Configuration management tool auto-detected from repo contents.
+### Step 4: ApplicationSet with Matrix Generator (Cluster × Environment)
+```yaml
+# appsets/multi-cluster-apps.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: multi-cluster-apps
+  namespace: argocd
+spec:
+  generators:
+    - matrix:
+        generators:
+          # List of clusters
+          - clusters:
+              selector:
+                matchLabels:
+                  environment: production
+          # List of apps
+          - list:
+              elements:
+                - app: payment-service
+                  path: payment-service
+                - app: notification-service
+                  path: notification-service
+  template:
+    metadata:
+      name: '{{app}}-{{name}}'
+      labels:
+        app: '{{app}}'
+        cluster: '{{name}}'
+        environment: '{{metadata.labels.environment}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/myorg/{{app}}.git
+        targetRevision: main
+        path: kubernetes/overlays/{{metadata.labels.environment}}
+      destination:
+        server: '{{server}}'
+        namespace: '{{app}}'
+      syncPolicy:
+        automated:
+          prune: true
+```
 
-### 10. Pull vs Push Deployment
-Push model (traditional CI/CD): CI pipeline runs kubectl/helm to deploy. Pull model (GitOps): CI pipeline only builds and pushes images, ArgoCD detects drift from Git and pulls into cluster. Pull model advantages: no cluster credentials in CI, Git remains single source of truth, drift detection runs continuously. Hybrid: CI updates Git with new image tag, ArgoCD pulls the change.
+### Step 5: Sync Waves and Phased Deployment
+```yaml
+# Example: Database migration before app rollout
+---
+# Wave -10: CRDs first
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+...
+---
+# Wave -5: Namespace and RBAC
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+...
+---
+# Wave 0: ConfigMaps and Secrets (app config)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+...
+---
+# Wave 1: Database migration Job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/hook: Sync  # Run on every sync
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migration
+          image: myapp/migration:latest
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: url
+---
+# Wave 2: Application Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  replicas: 3
+...
+---
+# Wave 3: Service and Ingress
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+...
+```
 
-## Advanced Patterns
+### Step 6: Argo Rollouts for Progressive Delivery
+```yaml
+# rollouts/payment-service-rollout.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: payment-service
+  namespace: payment-system
+spec:
+  replicas: 10
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+        - name: app
+          image: myapp/payment-service:latest
+          ports:
+            - containerPort: 8080
+  strategy:
+    canary:
+      maxSurge: "25%"
+      maxUnavailable: 0
+      steps:
+        - setWeight: 5
+        - pause: {duration: 2m}
+        - setWeight: 25
+        - pause: {duration: 5m}
+        - setWeight: 50
+        - pause: {duration: 10m}
+        - setWeight: 75
+        - pause: {duration: 10m}
+        - setWeight: 100
+      analysis:
+        templates:
+          - templateName: success-rate
+        args:
+          - name: service-name
+            value: payment-service
+      trafficRouting:
+        nginx:
+          stableIngress: payment-service-ingress
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: success-rate
+  namespace: payment-system
+spec:
+  args:
+    - name: service-name
+  metrics:
+    - name: success-rate
+      interval: 1m
+      count: 5
+      successCondition: result >= 95
+      provider:
+        prometheus:
+          query: |
+            sum(rate(http_requests_total{
+              service="{{args.service-name}}",
+              status!~"5.."
+            }[1m]))
+            /
+            sum(rate(http_requests_total{
+              service="{{args.service-name}}"
+            }[1m])) * 100
+```
 
-### Pull vs Push Deployment Model
-Push model (traditional): CI pipeline runs kubectl/helm to deploy directly to cluster, CI has cluster admin credentials stored as secrets, no drift detection, manual reconciliation when cluster is out of sync. Pull model (GitOps): CI pipeline only builds and pushes images to registry and updates Git with new image tag, ArgoCD detects drift from Git and pulls into cluster, no cluster credentials in CI environment, Git remains single source of truth, continuous drift detection every 3 minutes. Hybrid: CI updates Git repo with new manifest (image tag, config change), ArgoCD auto-syncs the change. Never: CI deploys directly to cluster AND updates Git — dual-source-of-truth causes sync conflicts.
+### Step 7: Notifications
+```yaml
+# argocd-notifications-cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  context: |
+    region: us-east-1
+    environment: production
+    grafana_url: https://grafana.example.com
 
-### Multi-Cluster Architecture Patterns
-Hub-and-spoke: single ArgoCD control plane manages multiple workload clusters. Cluster generator in ApplicationSet iterates all registered clusters. Benefits: single UI/API, consistent policy, centralized audit. Drawbacks: control plane is single point of failure, network latency to remote clusters. Regional hub: ArgoCD control plane per region, manages clusters within that region. Benefits: lower latency, regional autonomy, fault isolation. Drawbacks: duplicated configuration, inconsistent policy risk. Federated: each cluster has its own ArgoCD, ApplicationSets across clusters via Git. Benefits: full autonomy, simplest failure isolation. Drawbacks: duplicated effort, no centralized view.
+  template.app-sync-succeeded: |
+    message: |
+      Application {{.app.metadata.name}} sync succeeded.
+      Sync status: {{.app.status.sync.status}}
+      Health: {{.app.status.health.status}}
+      Revision: {{.app.status.sync.revision | substr 0 8}}
 
-### Disaster Recovery for ArgoCD
-Backup ArgoCD config: export all Applications, AppProjects, and argocd-cm/argocd-rbac-cm configmaps. Backup Redis: Redis data is ephemeral — ArgoCD will re-sync from Git on restart. Restore: apply backed-up configmaps -> ArgoCD reconnects to clusters -> re-syncs all applications. Cluster recovery: register new cluster, ArgoCD applies all Applications from Git. Multi-cluster ArgoCD: deploy ArgoCD in 2+ regions, each manages its region's clusters. Git is the source of truth — ArgoCD itself is replaceable.
+  template.app-sync-failed: |
+    message: |
+      ❌ Application {{.app.metadata.name}} sync FAILED.
+      Sync status: {{.app.status.sync.status}}
+      Health: {{.app.status.health.status}}
+      Revision: {{.app.status.sync.revision | substr 0 8}}
+      Error: {{.app.status.operationState.syncResult.revision}}
 
-## Rules
-1. Git is single source of truth — manual cluster changes overwritten on sync.
-2. ApplicationSets for multi-env / multi-cluster deployments.
-3. Sync waves for dependency ordering across resources.
-4. Health checks every 3 minutes default; customize via lua for custom CRDs.
-5. Auto-sync with prune enabled by default for standard apps.
-6. AppProject restricts source repos, dest clusters, and namespaces per team.
-7. Sync hooks for pre/post sync tasks (db migrations, smoke tests).
-8. Never commit encrypted secrets to Git — use SealedSecrets or External Secrets.
-9. Pull model over push model — cluster credentials never in CI.
-10. Revision history limit set to at least 10 for rollback capability.
-11. Rollback is a deployment, not a revert — understand the diff before rolling back.
-12. ArgoCD itself is disposable — Git is the source of truth, not ArgoCD's Redis.
-13. Cluster secrets stored in argocd namespace with strict RBAC, never in Git.
-14. ApplicationSet prune on delete: false for critical apps to prevent accidental deletion.
-15. Repository secrets stored as k8s.io/basic-auth or k8s.io/ssh-auth secrets in argocd namespace.
-16. ArgoCD notifications configured for sync failures, sync successes, and health changes.
-17. Resource exclusions in argocd-cm prevent ArgoCD from managing cluster-internal resources.
+  trigger.on-sync-succeeded: |
+    - description: Application sync succeeded
+      send: [app-sync-succeeded]
+      when: app.status.sync.status == 'Synced'
 
-## Config Management Plugins
-Extend ArgoCD with custom configuration management tools via CMP (Config Management Plugin). Use cases: custom templating engine, SOPS-encrypted secrets decryption, custom resource generation, internal tool integrations. CMP setup: define plugin in argocd-cm ConfigMap under `configManagementPlugins`, specify command and arguments. Example: SOPS plugin runs `sops -d` on encrypted files before applying. CMP runs in repo server sidecar for isolation. Benefits: extends ArgoCD beyond Kustomize/Helm without modifying ArgoCD itself.
+  trigger.on-sync-failed: |
+    - description: Application sync failed
+      send: [app-sync-failed]
+      when: app.status.operationState.phase in ['Error', 'Failed']
 
-## Webhook Integration
-Configure webhooks in Git provider (GitHub, GitLab, Bitbucket) for faster sync triggers. Without webhook: ArgoCD polls Git every 3 minutes — up to 3-minute delay before sync starts. With webhook: ArgoCD receives webhook notification within seconds of commit, starts sync immediately. Setup: configure webhook URL to ArgoCD API server endpoint `https://argocd.example.com/api/webhook`, optionally verify webhook secret. Benefits: near-instant sync, faster feedback loop for developers, reduced reconciliation latency for critical applications.
+  trigger.on-health-degraded: |
+    - description: Application health degraded
+      send: [app-health-degraded]
+      when: app.status.health.status == 'Degraded'
 
-## Scenario Playbooks
+  service.slack: |
+    token: $slack-token
+    username: ArgoCD Bot
+    icon: https://argo-cd.readthedocs.io/en/stable/assets/logo.png
+```
 
-### Onboarding a New Microservice
-1. Create application directory in gitops repo: `apps/myapp/` with Kustomize overlay or Helm values
-2. Add Kubernetes manifests: Deployment, Service, ConfigMap, HPA, PDB, ServiceMonitor
-3. Create ArgoCD Application YAML: source path, destination namespace, sync policy with auto-sync
-4. Option 1 — standalone Application: add to team's AppProject, commit and push, ArgoCD auto-discovers
-5. Option 2 — ApplicationSet: if using git generator, new directory is auto-discovered
-6. Verify sync: ArgoCD UI shows healthy status, pods running, ingress configured
-7. Configure sync hooks: PreSync for DB migration, PostSync for smoke test
-8. Set up monitoring: ServiceMonitor for Prometheus, Grafana dashboard, alert rules
+### Step 8: Cluster Registration
+```bash
+# Add a remote cluster to Argo CD
+# On the remote cluster:
+SERVICE_ACCOUNT_NAME=argocd-manager
+NAMESPACE=kube-system
 
-### Migrating from CI Push to GitOps Pull
-1. Phase 1 — Disable CI push: CI stops running kubectl/helm deploy, CI only builds images and pushes to registry
-2. Phase 2 — CI updates Git: CI updates K8s manifest with new image tag in gitops repo (commit or PR)
-3. Phase 3 — ArgoCD syncs: ArgoCD detects Git change (3-minute reconciliation loop), applies to cluster
-4. Phase 4 — Validation: verify application health, rollback by reverting Git commit
-5. Phase 5 — Cleanup: remove cluster credentials from CI, remove old deploy scripts, set up self-heal
-6. Rollback plan: revert Git commit, ArgoCD auto-syncs previous state, no manual cluster intervention
+kubectl create sa $SERVICE_ACCOUNT_NAME -n $NAMESPACE
+kubectl create clusterrolebinding $SERVICE_ACCOUNT_NAME \
+  --clusterrole=cluster-admin \
+  --serviceaccount=$NAMESPACE:$SERVICE_ACCOUNT_NAME
 
-### Handling Sync Failure
-Symptoms: Application status shows "OutOfSync" with "Error" health status, sync hangs on hook. Diagnosis: check app details in ArgoCD UI, verify Git repo access, check repo server logs, verify destination cluster connectivity. Resolution: for sync error — fix manifest issue in Git, commit fix, auto-sync retries. For hook failure — check hook Job logs, fix migration/test, commit fix, ArgoCD retries on next sync. For cluster connectivity — verify kubeconfig, check cluster API health, re-register cluster if needed. Prevention: CI validation of manifests before commit, pre-sync hook smoke tests, canary deployments with auto-rollback.
+# Get the secret token
+SECRET=$(kubectl get sa $SERVICE_ACCOUNT_NAME -n $NAMESPACE -o jsonpath='{.secrets[0].name}')
+TOKEN=$(kubectl get secret $SECRET -n $NAMESPACE -o jsonpath='{.data.token}' | base64 -d)
+APISERVER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+
+# On Argo CD control node:
+argocd cluster add <context-name> \
+  --name=production-us-east-1 \
+  --label=environment=production \
+  --label=region=us-east-1
+```
+
+## Tool Comparison: Argo CD vs Flux
+
+| Feature | Argo CD | Flux v2 |
+|---|---|---|
+| Architecture | Controller + CLI + API | Controller-only |
+| UI | Built-in Web UI | No native UI (use Weave GitOps) |
+| ApplicationSets | Built-in (powerful generators) | Not built-in (use Kustomize) |
+| Sync mechanism | Git → desired state → apply | Git → reconcile loop |
+| Health assessment | Built-in LUA scripts | Kubernetes status |
+| SSO/SAML | OIDC, Dex, SAML | OIDC via CLI |
+| Multi-cluster | Via cluster registration | Via Kustomization targeting |
+| Argo Rollouts | Native integration | Separate Flagger |
+| Notifications | Built-in | Via Flux notification controllers |
+| Learning curve | Medium | Medium-High |
+| RBAC | Fine-grained policy | Kubernetes RBAC |
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Auto-Sync with No Prune Protection
+Enabling `automated.prune: true` without PR review process. Prune can delete resources in bulk. Always review sync diff before production.
+
+### Anti-Pattern 2: Direct Cluster Edits
+Engineers editing resources directly with kubectl in namespaces managed by Argo CD. Argo CD treats this as drift and will self-heal (or fail if self-heal is off).
+
+### Anti-Pattern 3: Single Monolithic Repository
+Putting all environments and apps in one repo without structure. Use separate repos per service or well-organized directories with ApplicationSet.
+
+### Anti-Pattern 4: No Resource Customization
+Not handling CRD health checks. Argo CD can't determine health of custom resources without LUA health scripts in resource.customizations.
+
+### Anti-Pattern 5: Ignoring Sync Waves
+All resources synced simultaneously. Database migrations running at the same time as application deployments cause failures.
+
+### Anti-Pattern 6: Overprivileged RBAC
+Using `role:admin` for all users. Create least-privilege roles (readonly, sync-only, admin per project).
+
+## Production Considerations
+
+### Security
+- Enable SSO with OIDC and MFA — never use shared admin password.
+- Restrict cluster access: only Argo CD control plane needs `cluster-admin`.
+- Use webhook secrets to validate git provider requests.
+- Disable `argocd admin` initial password; rotate immediately.
+- Enable audit logging for all Argo CD operations.
+- Use network policies to restrict Argo CD component communication.
+
+### High Availability
+- Deploy Argo CD with multiple replicas (argocd-server, argocd-repo-server).
+- Use Redis HA for argocd-server session storage.
+- Configure argocd-repo-server parallelism for large repos.
+- Monitor Argo CD itself (metrics on port 8083/metrics).
+
+### Disaster Recovery
+- Backup Argo CD configuration (Applications, Projects, RBAC) to Git.
+- Maintain bootstrap Argo CD manifests in a separate repo.
+- Document cluster re-registration procedure.
+- Test DR by recreating Argo CD from scratch using only Git sources.
+
+### Performance
+- Set repo-server parallelism based on number of applications.
+- Use repository caching to speed up sync.
+- Disable detailed diff for large applications.
+- Set `statusBadgeEnabled: false` if not using badges.
+
+## Troubleshooting Guide
+
+| Issue | Likely Cause | Solution |
+|---|---|---|
+| OutOfSync (drift) | Manual kubectl edit | Revert manual changes; enable self-heal |
+| Sync stuck | CRD not installed | Verify CRDs; install missing ones |
+| Connection refused | Cluster API not accessible | Check cluster endpoint; network policies |
+| Application not found | Namespace mismatch | Verify destination namespace exists |
+| Health unknown | CRD health check missing | Add resource.customizations LUA |
+| Webhook not triggering | Secret mismatch | Verify webhook secret between Argo CD and Git |
+| Repo cloning failed | Git credentials wrong | Update repository credentials in argocd-cm |
+
+## Rules & Constraints
+- All Application manifests must be in Git — never create via CLI for production.
+- Every Application must have `syncPolicy.automated.prune: true` only after review.
+- Use ApplicationSets for multi-environment or multi-cluster deployments.
+- Every sync must be testable with `argocd app diff` before applying.
+- Never edit Argo CD managed resources directly with kubectl.
+- Enable self-healing only when automated sync is enabled.
+- Configure webhook triggers for faster sync — don't rely on polling.
+- Pin targetRevision to specific branches or tags, never `HEAD` for production.
+- Define Projects to isolate teams and clusters.
+- Log all sync failures to external monitoring.
+
+## Output Format
+Argo CD Application/ApplicationSet YAML, Project YAML, RBAC config, notification templates.
 
 ## References
-  - references/argo-cd-advanced.md — Argo Cd Advanced Topics
-  - references/argo-cd-application-sets.md — Argo CD Application Sets
-  - references/argo-cd-fundamentals.md — Argo Cd Fundamentals
-  - references/argo-cd-sync-strategies.md — Argo CD Sync Strategies
-  - references/argocd-advanced.md — ArgoCD Advanced
-  - references/argocd-operations.md — ArgoCD Operations
-  - references/argocd-patterns.md — ArgoCD Patterns
-  - references/argocd-setup.md — ArgoCD Setup
+  - references/argo-cd-advanced.md
+  - references/argo-cd-application-sets.md
+  - references/argo-cd-fundamentals.md
+  - references/argo-cd-sync-strategies.md
+  - references/argocd-operations.md
+  - references/argocd-patterns.md
+  - references/argocd-setup.md
+  - references/argocd-rollouts-guide.md
+
 ## Handoff
-Hand off to ArgoCD when Application manifests or sync policies are needed. Hand off to kubernetes-patterns for general workload manifests. Hand off to helm-patterns for Helm chart-specific concerns. Hand off to observability for monitoring ArgoCD itself. Hand off to cicd-pipeline for ArgoCD integration with CI systems. Hand off to security for SSO configuration and RBAC policy design. Hand off to service-mesh for progressive delivery patterns with Argo Rollouts and Istio integration.
+After completing this skill:
+- Next skill: **gitops** — GitOps principles, Flux comparison
+- Pass context: cluster list, Application names, sync strategy, notification config

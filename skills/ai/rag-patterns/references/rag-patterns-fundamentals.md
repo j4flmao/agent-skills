@@ -1,213 +1,240 @@
-# Rag Patterns Fundamentals
+# RAG Fundamentals
 
 ## Overview
-Rag Patterns is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Retrieval-Augmented Generation (RAG) combines a retrieval step with a generation step: given a user query, relevant documents are retrieved from a knowledge base and provided as context to an LLM. This grounds generation in external knowledge, reducing hallucination and enabling up-to-date, domain-specific answers.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Rag Patterns helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Concept 1: The RAG Triad
+RAG systems comprise three interconnected components:
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Rag Patterns solutions. These principles help maintain code quality and reduce technical debt.
+| Component | Role | Example |
+|-----------|------|---------|
+| Indexing | Ingest documents, chunk, embed, store | Ingestion pipeline → Vector DB |
+| Retrieval | Find relevant chunks for a query | Embed query → ANN search → Top-K |
+| Generation | Produce answer grounded in retrieved context | LLM + context → final answer |
 
-### Concept 3: Data Management
-Proper data management is essential for Rag Patterns. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+**Key insight**: The weakest link determines overall quality. Poor indexing caps retrieval; poor retrieval caps generation.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+### Concept 2: Embedding
+Embeddings are dense vector representations of text. Semantically similar texts have vectors close together in embedding space.
+- Query embedding: encode user question into a vector.
+- Document embedding (pre-computed): encode each chunk and store in vector DB.
+- Distance metrics: cosine similarity (most common), dot product, Euclidean.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Concept 3: Relevance Scoring
+Retrieval ranks chunks by relevance to the query.
+- **Dense similarity**: cosine(query_embedding, chunk_embedding)
+- **Sparse similarity**: BM25 term overlap score
+- **Hybrid fusion**: weighted combination of both scores
+- **Re-ranker score**: cross-encoder produces a precise relevance score for each query-chunk pair
 
-## Architecture Patterns
+### Concept 4: Context Window Management
+LLMs have finite context. Retrieved chunks compete for this budget with the query, system prompt, and conversation history.
+- Rule: context chunks must not exceed 50% of the LLM's total context window.
+- Prioritize highest-scoring chunks when budget is tight.
+- Track token counts per chunk to enable precise budgeting.
 
-### Pattern 1: Standard Architecture
-The standard architecture for Rag Patterns follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+### Concept 5: Grounding and Faithfulness
+The central promise of RAG: the LLM's answer should be grounded in the retrieved context.
+- **Faithfulness**: every claim in the answer is supported by the context.
+- **Citation**: each claim links to its source chunk (doc ID, chunk index, source URL).
+- **Hallucination risk**: when context is irrelevant or missing, the LLM may fabricate.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+## Architecture Building Blocks
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Query Processing
+```
+Raw Query
+  └── Normalize (lowercase, strip whitespace)
+  └── Expand (abbreviations, acronyms) [optional]
+  └── Rewrite for retrieval [optional]
+  └── Embed (or pass to BM25 tokenizer)
+```
 
-## Implementation Guide
+### Retrieval
+```
+Query Vector
+  └── ANN Search in Vector DB → Top-K dense results
+  └── [Optional] BM25 Search → Top-K sparse results
+  └── Hybrid Fusion (RRF or weighted sum)
+  └── [Optional] Re-ranking (cross-encoder)
+  └── Top-N final results
+```
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Context Assembly
+```
+Retrieved Chunks
+  └── Format with source metadata
+  └── Sort by score (descending)
+  └── Truncate at token budget
+  └── Insert into prompt template
+```
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Generation
+```
+System Prompt + Context + Query
+  └── LLM generates answer
+  └── [Optional] LLM cites sources
+  └── Return answer + sources to user
+```
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+## Basic RAG Pipeline Implementation
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+### Minimal RAG
+```python
+import numpy as np
+from typing import List, Dict
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+class MinimalRAG:
+    def __init__(self, embedder, vector_db, llm):
+        self.embedder = embedder
+        self.db = vector_db
+        self.llm = llm
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+    def query(self, question: str, top_k: int = 5) -> Dict:
+        query_vec = self.embedder.encode(question)
+        results = self.db.search(query_vec, k=top_k)
+        context = "\n\n".join(r["text"] for r in results)
+        prompt = f"""Answer using only the context below.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+Context:
+{context}
 
-## Best Practices
+Question: {question}
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+Answer:"""
+        answer = self.llm.generate(prompt)
+        return {
+            "answer": answer,
+            "sources": [
+                {"id": r["id"], "source": r["metadata"].get("source")}
+                for r in results
+            ],
+        }
+```
 
-## Common Pitfalls
+### With Hybrid Search
+```python
+class HybridRAG:
+    def __init__(self, embedder, vector_db, bm25_index, llm):
+        self.embedder = embedder
+        self.vector_db = vector_db
+        self.bm25 = bm25_index
+        self.llm = llm
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+    def hybrid_search(self, query: str, top_k: int = 10, alpha: float = 0.5) -> List[Dict]:
+        query_vec = self.embedder.encode(query)
+        dense_results = self.vector_db.search(query_vec, k=top_k * 2)
+        sparse_results = self.bm25.search(query, k=top_k * 2)
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+        dense_map = {r["id"]: r for r in dense_results}
+        sparse_map = {r["id"]: r for r in sparse_results}
+        all_ids = set(list(dense_map.keys()) + list(sparse_map.keys()))
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+        dense_scores = {id: r["score"] for id, r in dense_map.items()}
+        sparse_scores = {id: r["score"] for id, r in sparse_map.items()}
+        self._normalize(dense_scores)
+        self._normalize(sparse_scores)
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+        combined = []
+        for id in all_ids:
+            score = alpha * dense_scores.get(id, 0) + (1 - alpha) * sparse_scores.get(id, 0)
+            doc = dense_map.get(id) or sparse_map.get(id)
+            combined.append({**doc, "score": score})
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+        combined.sort(key=lambda x: x["score"], reverse=True)
+        return combined[:top_k]
 
-## Tooling Ecosystem
+    def _normalize(self, scores: Dict[str, float]):
+        values = list(scores.values())
+        if not values:
+            return
+        min_v, max_v = min(values), max(values)
+        if max_v - min_v > 1e-8:
+            for k in scores:
+                scores[k] = (scores[k] - min_v) / (max_v - min_v)
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+    def query(self, question: str) -> Dict:
+        results = self.hybrid_search(question)
+        context = "\n\n".join(
+            f"[{r['metadata'].get('source', '?')}] {r['text']}"
+            for r in results[:5]
+        )
+        prompt = f"""Context:\n{context}\n\nQuestion: {question}\n\nAnswer:"""
+        answer = self.llm.generate(prompt)
+        return {"answer": answer, "sources": [r["metadata"] for r in results[:5]]}
+```
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+### With Re-Ranking
+```python
+class RerankedRAG:
+    def __init__(self, retriever, reranker, llm):
+        self.retriever = retriever
+        self.reranker = reranker
+        self.llm = llm
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+    def query(self, question: str) -> Dict:
+        candidates = self.retriever.retrieve(question, k=50)
+        reranked = self.reranker.rerank(question, candidates, top_n=5)
+        context = "\n\n".join(r["text"] for r in reranked)
+        prompt = f"""Context:\n{context}\n\nQuestion: {question}\n\nAnswer:"""
+        answer = self.llm.generate(prompt)
+        return {"answer": answer, "sources": [r["metadata"] for r in reranked]}
+```
 
-## Integration Patterns
+## Metadata for Traceability
+Every retrieved chunk must carry provenance metadata. Without it, debugging retrieval failures is impossible.
 
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
+```json
+{
+  "id": "chunk_uuid",
+  "doc_id": "parent_doc_uuid",
+  "chunk_index": 5,
+  "text": "...",
+  "token_count": 320,
+  "source": "https://docs.example.com/page",
+  "title": "Installation Guide",
+  "section": "Configuration",
+  "page": 12,
+  "embedded_at": "2026-05-31T10:00:00Z"
+}
+```
 
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
+## Common Evaluation Metrics for Beginners
 
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
+| Metric | What It Measures | Target | How to Compute |
+|--------|-----------------|--------|----------------|
+| Recall@K | Fraction of relevant docs in top-K | > 0.9 | Count relevant in top-K / total relevant |
+| Precision@K | Fraction of top-K that are relevant | > 0.8 | Count relevant in top-K / K |
+| MRR | How early the first relevant doc appears | > 0.8 | 1 / rank of first relevant (avg over queries) |
+| Faithfulness | % of answer claims supported by context | > 95% | LLM judge scores each claim |
+| Answer Relevancy | How directly the answer addresses the query | > 4/5 | LLM judge or human rating |
 
-## Performance Optimization
+## Glossary
 
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+| Term | Definition |
+|------|------------|
+| ANN | Approximate Nearest Neighbor — fast approximate vector search |
+| Chunk | A unit of text retrieved and fed to the LLM |
+| Cosine Similarity | Dot product of normalized vectors; range [-1, 1] |
+| Cross-Encoder | Model that scores a (query, doc) pair jointly (slow, accurate) |
+| Dense Retrieval | Search by semantic embedding similarity |
+| HNSW | Hierarchical Navigable Small World — popular ANN index |
+| HyDE | Hypothetical Document Embeddings — generate a fake doc and use its embedding |
+| MMR | Maximum Marginal Relevance — diversify results by penalizing similarity |
+| RRF | Reciprocal Rank Fusion — combine rankings without score normalization |
+| Sparse Retrieval | Search by keyword/term overlap (BM25) |
+| Top-K | Number of results retrieved per query |
 
 ## Key Points
-- Understand core Rag Patterns concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- RAG = Retrieval + Generation. Both must be optimized.
+- Embedding quality caps retrieval quality. Retrieval quality caps generation quality.
+- Chunk size must respect the embedding model's token limit (typically 512 tokens).
+- Always store metadata with every chunk: doc ID, source, section, page.
+- Use hybrid search (dense + sparse) for production — it beats either alone.
+- Context must not exceed 50% of the LLM's total context window.
+- Evaluate retrieval separately from generation. Fix retrieval first.
+- Faithfulness is the single most important quality metric for RAG output.
+- Re-ranking improves precision but adds latency: use only when needed.
+- Cache embeddings for frequent queries to reduce latency.

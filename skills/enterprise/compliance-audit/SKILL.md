@@ -4,7 +4,7 @@ description: >
   Use this skill when performing compliance audits (SOC2, ISO 27001, GDPR, HIPAA, PCI).
   This skill enforces: control mapping, evidence collection, audit readiness, continuous monitoring.
   Do NOT use for: internal security reviews, vulnerability scans, pen test execution.
-version: "2.0.0"
+version: "2.1.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -54,6 +54,37 @@ Vulnerability Management (SOC2, ISO 27001, PCI, HIPAA): Regular vulnerability sc
 Data Protection (GDPR, HIPAA, PCI): Data classification, data inventory, data retention and deletion, data processing agreements, data portability, right to erasure.
 
 Business Continuity (SOC2, ISO 27001, PCI): BCP/DR plans, tested annually, RPO/RTO defined, backup verification.
+
+## Architecture / Decision Trees
+
+### Framework Selection Decision Tree
+```
+Which industry/regulation applies?
+├── Healthcare → HIPAA + SOC2
+├── Financial services → PCI-DSS + SOX + SOC2
+├── SaaS (enterprise customers) → SOC2
+├── EU operations → GDPR + ISO 27001
+├── Global → ISO 27001 + SOC2
+└── Multi-regulated → Unified control framework with overlays
+```
+
+### Evidence Collection Automation Decision Tree
+| Control Type | Automation Level | Tooling |
+|-------------|-----------------|---------|
+| Infrastructure config | Fully automatable | IaC state files, CSPM |
+| Access reviews | Semi-automated | IdP + ticketing system |
+| Training records | Fully automatable | LMS API → Evidence store |
+| Penetration tests | Manual | Test report upload |
+| Policy documents | Manual | Signed PDFs with versions |
+
+### Compliance Maturity Model
+| Level | Characteristics | Audit Experience |
+|-------|----------------|-----------------|
+| 1 - Reactive | No formal controls, ad-hoc evidence | Painful, many findings |
+| 2 - Documented | Controls documented, manual evidence | Manageable, repeat findings |
+| 3 - Automated | Automated evidence collection, continuous monitoring | Smooth, few findings |
+| 4 - Integrated | Compliance built into DevSecOps, real-time dashboards | Effortless, proactive |
+| 5 - Predictive | Risk-based controls, automated remediation | Audit in hours, not weeks |
 
 ## Agent Protocol
 
@@ -215,6 +246,18 @@ Practice 5: Train teams on compliance responsibilities. Developers should unders
 
 Practice 6: Conduct periodic tabletop audits. Walk through an audit scenario with the team. Practice answering auditor questions, accessing evidence, and demonstrating controls.
 
+## Standards Alignment
+
+| Compliance Aspect | SOC2 | ISO 27001:2022 | GDPR | HIPAA | PCI DSS v4.0 |
+|------------------|------|---------------|------|-------|-------------|
+| Access Control | CC6.1 | A.9 | Art. 32 | 164.312(a)(1) | Req. 7 |
+| Encryption | CC6.7 | A.8 | Art. 32 | 164.312(a)(2)(iv) | Req. 4 |
+| Audit Logging | CC4.1 | A.12.4 | Art. 33 | 164.312(b) | Req. 10 |
+| Change Management | CC8.1 | A.12.1 | — | 164.310(a)(2) | Req. 6.4 |
+| Incident Response | CC7.3 | A.5.24 | Art. 33 | 164.308(a)(6) | Req. 12.10 |
+| Vulnerability Mgmt | CC7.1 | A.8.8 | Art. 32 | 164.308(a)(1)(ii) | Req. 6.3 |
+| Business Continuity | CC7.5 | A.5.29 | — | 164.308(a)(7)(i) | Req. 12.3 |
+
 ## Templates & Tools
 
 ### Audit Readiness Checklist
@@ -257,6 +300,124 @@ Practice 6: Conduct periodic tabletop audits. Walk through an audit scenario wit
 - Okta / Azure AD for access control evidence
 - Splunk / ELK for log management and audit trails
 
+### Automated Compliance Testing Patterns
+```python
+# Compliance-as-Code: automated control testing
+import subprocess, json, datetime
+
+class ComplianceTest:
+    def __init__(self, control_id, framework, description):
+        self.control_id = control_id
+        self.framework = framework
+        self.description = description
+        self.results = []
+
+    def run_test(self, test_fn):
+        start = datetime.datetime.utcnow()
+        try:
+            passed, evidence = test_fn()
+            result = {
+                "control_id": self.control_id,
+                "timestamp": start.isoformat(),
+                "duration_s": (datetime.datetime.utcnow() - start).total_seconds(),
+                "passed": passed,
+                "evidence": evidence
+            }
+        except Exception as e:
+            result = {
+                "control_id": self.control_id,
+                "timestamp": start.isoformat(),
+                "passed": False,
+                "error": str(e)
+            }
+        self.results.append(result)
+        return result
+
+# Example control tests
+def test_mfa_enforced():
+    # Example: check if MFA is enforced for all users
+    config = json.loads(subprocess.run(["cmd", "/c", "echo", '{"mfa":true}'], capture_output=True).stdout)
+    return config["mfa"], {"mfa_config": config}
+
+def test_encryption_at_rest():
+    # Example: check if storage is encrypted
+    config = {"encryption": "AES-256", "enabled": True}
+    return config["enabled"], config
+
+def test_access_reviews_current():
+    # Example: check if access reviews completed within 90 days
+    reviews = {"last_review": "2026-05-15", "completed": True}
+    from datetime import datetime, timedelta
+    last = datetime.fromisoformat(reviews["last_review"])
+    current = last > (datetime.utcnow() - timedelta(days=90))
+    return current, reviews
+
+compliance_tests = [
+    ComplianceTest("AC-1", "SOC2", "MFA enforced for all users"),
+    ComplianceTest("ENC-1", "SOC2", "Encryption at rest enabled"),
+    ComplianceTest("AC-2", "SOC2", "Access reviews within 90 days"),
+]
+```
+
+### Security Control Mapping (YAML)
+```yaml
+# Unified control framework with framework overlays
+unified_controls:
+  access_control:
+    uc-ac-1:
+      description: Unique user identification and authentication
+      soc2: CC6.1
+      iso27001: A.9.4.2
+      hipaa: "164.312(a)(1)"
+      pci: "Req 8.3"
+      gdpr: "Art. 32(1)(b)"
+      evidence_source: idp_audit_log
+      automation_level: fully_automated
+      test_frequency: daily
+
+    uc-ac-2:
+      description: Role-based access control
+      soc2: CC6.3
+      iso27001: A.9.1.2
+      hipaa: "164.312(a)(1)"
+      pci: "Req 7.1"
+      evidence_source: iam_role_assignment
+      automation_level: fully_automated
+      test_frequency: continuous
+
+    uc-ac-3:
+      description: Quarterly access reviews
+      soc2: CC6.2
+      iso27001: A.9.2.5
+      hipaa: "164.308(a)(4)"
+      pci: "Req 7.2"
+      evidence_source: access_review_tool
+      automation_level: semi_automated
+      test_frequency: quarterly
+
+  encryption:
+    uc-enc-1:
+      description: Data at rest encryption (AES-256)
+      soc2: CC6.7
+      iso27001: A.10.1.1
+      hipaa: "164.312(a)(2)(iv)"
+      pci: "Req 4.1"
+      gdpr: "Art. 32(1)(a)"
+      evidence_source: config_management_tool
+      automation_level: fully_automated
+      test_frequency: daily
+
+    uc-enc-2:
+      description: TLS for data in transit
+      soc2: CC6.7
+      iso27001: A.13.2.1
+      hipaa: "164.312(e)(1)"
+      pci: "Req 4.2"
+      evidence_source: tls_scanner
+      automation_level: fully_automated
+      test_frequency: continuous
+```
+
 ### Common Framework Requirements Matrix
 | Control Area           | SOC2 | ISO 27001 | GDPR | HIPAA | PCI-DSS |
 |------------------------|------|-----------|------|-------|---------|
@@ -269,6 +430,98 @@ Practice 6: Conduct periodic tabletop audits. Walk through an audit scenario wit
 | Business Continuity    | Yes  | A.17      | -    | 164.308| Req 12 |
 | Data Protection        | -    | A.8       | Art 5 | 164.514| Req 3  |
 
+## Code Examples
+
+### Control Mapping Automation (Python/YAML)
+```yaml
+controls:
+  access-control:
+    ac-1: { framework: soc2, ref: CC6.1, description: "Unique user IDs", evidence: idp_report }
+    ac-2: { framework: soc2, ref: CC6.2, description: "Access reviews", evidence: access_review_log }
+    ac-3: { framework: hipaa, ref: "164.312(a)(1)", description: "Unique user identification", evidence: idp_audit_log }
+    ac-4: { framework: pci, ref: "Req 7", description: "Need-to-know access", evidence: access_control_list }
+
+  encryption:
+    enc-1: { framework: soc2, ref: CC6.7, description: "Encryption at rest", evidence: config_scan }
+    enc-2: { framework: gdpr, ref: "Art 32", description: "Data protection measures", evidence: encryption_policy }
+```
+
+```python
+# Automated evidence collector
+import hashlib, json, datetime
+
+class EvidenceCollector:
+    def __init__(self, control_id, evidence_type):
+        self.control_id = control_id
+        self.evidence_type = evidence_type
+        self.collected = []
+
+    def snapshot_infra(self, config):
+        evidence = {
+            "control_id": self.control_id,
+            "type": self.evidence_type,
+            "timestamp": datetime.datetime.utcnow().isoformat(),
+            "data": config,
+            "hash": hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()
+        }
+        self.collected.append(evidence)
+        return evidence
+
+    def log_export(self, log_entries, log_type="access"):
+        evidence = {
+            "control_id": self.control_id,
+            "type": f"log_{log_type}",
+            "timestamp": datetime.datetime.utcnow().isoformat(),
+            "entries": len(log_entries),
+            "first_entry": log_entries[0]["timestamp"] if log_entries else None,
+            "last_entry": log_entries[-1]["timestamp"] if log_entries else None,
+            "hash": hashlib.sha256(str(log_entries).encode()).hexdigest()
+        }
+        self.collected.append(evidence)
+        return evidence
+
+collector = EvidenceCollector("ac-1", "infra_config")
+infra_state = {"iam_roles": 12, "mfa_enforced": True, "users": 145}
+print(collector.snapshot_infra(infra_state))
+```
+
+### Gap Analysis Reporter (Markdown Template)
+```markdown
+# Compliance Gap Analysis - {Date}
+## Framework: {SOC2/ISO27001/GDPR/HIPAA/PCI}
+
+| Control ID | Description | Status | Gap | Severity | Owner | Remediation |
+|------------|-------------|--------|-----|----------|-------|-------------|
+| CC6.1      | Unique IDs  | ✅     | -   | -        | -     | -           |
+| CC6.2      | Access Rev  | ⚠️     | No quarterly reviews | High | IAM Team | Implement auto-certification |
+| CC7.1      | Vuln Mgmt   | ❌     | No automated scanning | Critical | Sec Team | Deploy CSPM |
+
+### Risk Scoring
+- Critical gaps (remediation < 30 days): {count}
+- High gaps (remediation < 60 days): {count}
+- Medium gaps (remediation < 90 days): {count}
+- Low gaps (before audit): {count}
+
+### Readiness Score: {85/100}
+```
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Compliance Theater
+Implementing controls that look good in documentation but have no operational reality. Examples: writing an access control policy without enforcing MFA, having a password policy that allows `Password123!`, maintaining a runbook that no one follows. Auditors increasingly test operating effectiveness, not just design.
+
+### Anti-Pattern 2: Point-in-Time Audit Prep
+Scrambling for 6 weeks before the audit to collect evidence. This is stressful, error-prone, and creates a "cleanup" culture. Real compliance is 365-day continuous evidence collection with automated tooling.
+
+### Anti-Pattern 3: Framework Proliferation
+Adopting every framework the business touches leads to hundreds of overlapping controls without consolidation. Teams become overwhelmed and compliance fatigue sets in. Use a unified control framework with framework-specific overlays.
+
+### Anti-Pattern 4: Ignoring the Shared Responsibility Model
+Assuming the cloud provider's SOC2 certification covers your entire compliance scope. The provider is certified for the security OF the cloud, not security IN the cloud. Customer-configurable controls (access, encryption, logging) remain your responsibility.
+
+### Anti-Pattern 5: Evidence Without Integrity
+Screenshots and PDFs without timestamps or hashes can be challenged by auditors. Every evidence artifact should be timestamped, hashed, and stored immutably. Automated collection from source systems is more credible than manual exports.
+
 ## Case Studies
 
 ### Case Study 1: SOC2 Type II in 6 Months
@@ -278,7 +531,7 @@ A SaaS startup needed SOC2 Type II for an enterprise customer within 6 months. U
 A healthcare SaaS company needed SOC2 + HIPAA + GDPR compliance simultaneously. By defining a unified control framework (270 controls total) with framework-specific overlays, they eliminated duplicate evidence collection. Each control had a primary framework mapping and cross-reference to other frameworks. The combined audit program cost 30% less than three separate programs. Audit burden reduced from 6 weeks to 3 weeks.
 
 ### Case Study 3: Failed Audit Recovery
-A fintech company failed their SOC2 Type II audit due to insufficient access control evidence. Gap analysis showed access reviews were conducted but not documented with sign-offs, and termination procedures were not consistently followed. The remediation program implemented automated access review workflows, termination verification, and quarterly reporting. The re-audit passed with one low-severity finding. Lessons learned: evidence of control operation is as important as the control itself.
+A fintech company failed their SOC2 Type II audit due to insufficient access control evidence. Gap analysis showed access reviews were conducted but not documented with sign-offs, and termination procedures were not consistently followed. The remediation program implemented automated access review workflows, termination verification, and quarterly reporting. The re-audit passed with one low-severity finding.
 
 ## Rules
 - Evidence is immutable and timestamped with cryptographic hashes.
@@ -305,5 +558,6 @@ A fintech company failed their SOC2 Type II audit due to insufficient access con
   - references/compliance-automation-tools.md -- Compliance Automation Tools Reference
   - references/compliance-audit-fundamentals.md -- Compliance Audit Fundamentals
   - references/compliance-frameworks.md -- Compliance Frameworks Reference
+  - references/compliance-incident-response.md -- Compliance Incident Response and Breach Notification
 ## Handoff
 For remediation implementation, hand off to `enterprise-sla-management` for tracking remediation SLAs, or `enterprise-cost-governance` for budgeting remediation costs.

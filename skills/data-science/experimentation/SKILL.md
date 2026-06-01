@@ -1,7 +1,7 @@
 ---
 name: data-science-experimentation
 description: >
-  Use this skill when asked about experiment design, A/B testing, randomized controlled trials, sample size calculation, power analysis, randomization, stratification, blocking, factorial designs, A/A tests, sequential testing, multiple testing correction, metric selection, north star metrics, guardrail metrics, experimentation platforms, feature flagging, traffic allocation, statistical engines, or self-serve experimentation. This skill enforces: experiment design (randomization, control groups, sample size, stratification, blocking, factorial, A/A), statistical methods (frequentist vs Bayesian, sequential testing, multiple testing correction, delta method), metric selection (north star, guardrail, proxy, success, diagnostic, ratio metrics), and platform architecture (feature flags, traffic allocation, metric computation, statistical engine, results delivery). Do NOT use for: general statistical analysis (use statistical-analysis skill), causal inference (use causal-inference skill), or ML model evaluation.
+  Use this skill when designing experiments, A/B tests, multi-armed bandits, randomized controlled trials, statistical hypothesis tests, sample size calculations, experiment design, power analysis, or causal inference for product changes. This skill enforces: rigorous experiment design with pre-registered hypotheses, proper sample size calculations, statistical significance testing, multiple comparison corrections, guardrail metrics, and result interpretation. Do NOT use for: observational causal inference (see causal-inference skill), general statistical analysis (see statistical-analysis), or ML model evaluation.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -10,246 +10,426 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [data-science, experimentation, ab-testing, phase-7]
+tags: [data-science, experimentation, stats, phase-7]
 ---
 
 # Experimentation
 
 ## Purpose
-Design, analyze, and operationalize experiments (A/B tests) with rigorous statistical methodology: experiment design (randomization units, control groups, sample size calculation, stratification, blocking, factorial designs, A/A tests), statistical methods (frequentist vs Bayesian frameworks, sequential testing, multiple testing correction with Bonferroni and FDR, delta method for ratio metrics), metric selection (north star, guardrail, proxy, success and diagnostic metrics, metric sensitivity, ratio metrics), and experimentation platform architecture (feature flagging, traffic allocation, metric computation pipelines, statistical engines, results delivery, self-serve experimentation).
+Design and analyze rigorous A/B tests and experiments. Enforce proper sample size planning, pre-registration, statistical methods, guardrail monitoring, and decision frameworks.
 
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "experiment design", "A/B test", "AB test", "randomized trial", "sample size calculation", "power analysis", "stratification", "blocking", "factorial design", "A/A test", "sequential testing", "multiple testing correction", "Bonferroni", "FDR", "delta method", "metric selection", "north star metric", "guardrail metric", "proxy metric", "ratio metric", "experimentation platform", "feature flag", "traffic allocation", "statistical engine", "self-serve experiment", "experiment results", "treatment effect", "lift calculation".
+Exact user phrases: "A/B test", "experiment", "randomized trial", "sample size", "power analysis", "hypothesis test", "p-value", "multiple testing", "guardrail metric", "experiment design", "treatment effect", "H0", "alternative hypothesis", "statistical significance", "practical significance", "MDE", "minimum detectable effect".
 
 ### Input Context
-Before activating, verify:
-- Experiment type (A/B, multivariate, factorial, bandit)
-- Randomization unit (user, session, event, device)
-- Metric taxonomy (success, guardrail, diagnostic, proxy)
-- Traffic volume and expected effect size
-- Platform infrastructure (feature flag system, data pipeline, stats engine)
-- Duration constraints and ramp schedule
-- Regulatory/compliance considerations (GDPR, HIPAA)
+- Experiment type (A/B, multivariate, MAB, switchback)
+- Primary metric(s) and their baseline values
+- Minimum detectable effect (MDE) in absolute or relative terms
+- Traffic volume and expected experiment duration
+- Unit of randomization (user, session, cluster)
+- Guardrail metrics and acceptable thresholds
+- Regulatory and ethical considerations
+- Existing experiment platform and tooling
 
 ### Output Artifact
-Experiment design document with randomization scheme, sample size justification, metric definitions, statistical analysis plan, and platform configuration.
+Experiment design with sample size calculation, analysis plan, and decision criteria.
 
 ### Response Format
-```python
-# Analysis code, power calculation, metric computation
 ```
-```yaml
-# Experiment configuration, feature flag setup, metric definitions
-```
-```text
-# Results: lift, confidence interval, p-value, decision
-```
+## Experiment Design
+Hypothesis: {H0 and H1}
+Primary Metric: {name, baseline, MDE}
+Sample Size: {N per variant, total N}
+Duration: {days} at {traffic allocation}
+Analysis: {test type, corrections, covariates}
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+## Analysis Results
+Treatment Effect: {estimate, CI, p-value}
+Practical Significance: {effect size, decision}
+Guardrails: {√ or ✗ per metric}
+```
 
 ### Completion Criteria
-- [ ] Experiment design with randomization unit and method specified
-- [ ] Sample size calculation with power, significance, and MDE
-- [ ] Metric selection with success, guardrail, and diagnostic metrics
-- [ ] Statistical analysis plan (frequentist or Bayesian, corrections)
-- [ ] Platform configuration (feature flags, traffic allocation, ramp plan)
-- [ ] A/A test validation before launch
-- [ ] Results analysis with correct statistical method
-- [ ] Decision framework (launch, iterate, kill) documented
-
-### Max Response Length
-400 lines of code and configuration.
+- [ ] Pre-registered hypothesis with H0 and H1
+- [ ] Sample size calculated for desired power (80%+)
+- [ ] Randomization method selected (simple, stratified, cluster)
+- [ ] Primary metric defined with baseline and MDE
+- [ ] Guardrail metrics defined with thresholds
+- [ ] Statistical test selected (t-test, chi-square, etc.)
+- [ ] Multiple testing correction applied
+- [ ] Decision criteria: ship, iterate, or kill
 
 ## Workflow
 
-### Step 1: Experiment Design
-Randomization unit most common: user_id or cookie_id.
+### Step 1: Hypothesis Development
+Formulate clear, falsifiable hypotheses. H0 (null): no effect. H1 (alternative): effect exists in specified direction. A good hypothesis: "Changing the checkout button color from blue to green will increase purchase conversion rate by at least 0.5 percentage points." Pre-register on experiment platform or in documentation before launch. Include rationale, prior evidence, and expected mechanism of action.
 
-```python
-def assign_treatment(user_id, experiment_id, traffic_pct=0.5, strata=None):
-    import hashlib
-    key = f"{experiment_id}:{user_id}"
-    hash_val = int(hashlib.md5(key.encode()).hexdigest(), 16) / 2**128
-    return "treatment" if hash_val < traffic_pct else "control"
+### Step 2: Metric Selection
+
+#### Primary Metric (OEC)
+Define one overall evaluation criterion. Must be: sensitive to the change, reliable (low measurement variance), timely (can be measured during experiment window), and directional (higher or lower is clearly better). Examples: purchase conversion rate, revenue per user, retention rate (day 7), task completion rate.
+
+#### Secondary Metrics
+Related success indicators that might be affected. Examples: average order value, session duration, pages per session. Secondary metrics are reported but not used for the go/no-go decision.
+
+#### Guardrail Metrics
+Metrics that MUST NOT degrade even if primary metric improves. Examples: page load time, error rate, unsubscribes, support ticket volume, latency p99. Set acceptable thresholds upfront. A treatment that improves the primary metric but degrades a guardrail is usually not shipped.
+
+#### Metric Standardization
+Define metrics once in a central repository (SQL or Python). Store: metric name, SQL definition, owner, expected range, seasonality, guardrail assignment. Version control definitions. Consistent definitions across experiments enable comparability.
+
+### Step 3: Sample Size Calculation
+
+#### Input Parameters
+Baseline conversion rate (p0): current value of the metric. Minimum detectable effect (MDE): smallest effect worth detecting. Significance level (α): probability of false positive, typically 0.05. Statistical power (1-β): probability of detecting true effect, target ≥ 0.80. Allocation ratio: 1:1 (most efficient).
+
+#### Formula for Proportions
+n = (Z_(α/2) + Z_β)² × (p1(1-p1) + p2(1-p2)) / (p1 - p2)²
+
+For continuous metrics: n = 2 × (Z_(α/2) + Z_β)² × σ² / δ²
+
+#### Practical Examples
+| Baseline | MDE (relative) | α | Power | N per variant |
+|---|---|---|---|---|
+| 5% | 10% (0.5pp) | 0.05 | 0.80 | ~13,500 |
+| 5% | 20% (1.0pp) | 0.05 | 0.80 | ~3,600 |
+| 10% | 10% (1.0pp) | 0.05 | 0.80 | ~3,400 |
+| 10% | 5% (0.5pp) | 0.05 | 0.80 | ~13,800 |
+| 20% | 10% (2.0pp) | 0.05 | 0.80 | ~2,500 |
+
+### Step 4: Randomization
+
+#### Randomization Methods
+Simple: each unit assigned independently. Stratified: block by important covariates (country, platform, segment) to reduce variance. Cluster: group-level randomization when network effects exist (markets, regions). Re-randomization: reject unbalanced allocations (if used, must adjust inference).
+
+#### Sample Ratio Mismatch (SRM)
+Monitor daily: chi-square test on observed vs expected allocation ratio. p < 0.05 indicates SRM. Common causes: assignment code bug, caching layers, bot filtering, ad blockers. SRM found → experiment is invalid. Do not analyze primary metric. Fix root cause, re-launch.
+
+### Step 5: Statistical Analysis
+
+#### Frequentist Analysis
+Two-sample t-test for continuous metrics. Chi-square test for proportions. Report: point estimate, confidence interval, p-value, effect size (Cohen's d or lift %). Pre-specified analysis plan prevents p-hacking.
+
+#### Bayesian Analysis
+Beta-Binomial for proportions (Beta prior + Binomial data → Beta posterior). Normal-Normal for continuous outcomes. Report: posterior mean, credible interval (HDI), probability of direction P(effect > 0), probability of practical significance P(effect > MDE).
+
+#### Multiple Testing Correction
+FWER (Bonferroni, Holm): use when false positive is catastrophic. FDR (Benjamini-Hochberg): use when discovering true effects is important. Pre-register which corrections apply. Report all tests performed, not just significant ones.
+
+### Step 6: Heterogeneity Analysis
+Pre-specified subgroups only (region, platform, user segment). Test via interaction model: Y = β0 + β1×T + β2×S + β3×T×S. Post-hoc discovery uses causal forest or BART but acknowledge inflated false discovery rate.
+
+### Step 7: Experiment Governance
+
+#### Phases of an Experiment
+1. Design: hypothesis, metrics, sample size, randomization plan
+2. Launch: traffic allocation, AA test validation
+3. Monitor: daily dashboard, SRM checks, guardrail alerts
+4. Analyze: after power reached, run pre-registered analysis
+5. Decide: ship, iterate, or kill — based on primary metric + guardrails
+6. Document: results, learnings, follow-up experiments
+
+#### Experiment Calendar
+Coordinate overlapping experiments. Namespace via MD5 hash partitions. Maximum simultaneous experiments per user: 5-10. Conflict resolution: last-writer-wins or explicit priority assignment.
+
+## Decision Trees
+
+### Metric Selection
+```
+What question are we answering?
+├── Did conversion increase?
+│   └── Primary: conversion rate (proportion)
+├── Did revenue increase?
+│   └── Primary: revenue per user (continuous)
+├── Did retention improve?
+│   └── Primary: D7 retention rate (proportion)
+└── Did user engagement change?
+    └── Primary: sessions per user (count)
 ```
 
-Sample size calculation:
-```python
-from scipy import stats
+### Statistical Test Selection
+```
+Data type?
+├── Binary (conversion, click)
+│   ├── Two groups → Chi-square or z-test
+│   ├── Multiple groups → Chi-square or logistic regression
+│   └── Paired → McNemar's test
+├── Continuous (revenue, time)
+│   ├── Normal, two groups → t-test
+│   ├── Normal, multiple groups → ANOVA
+│   ├── Non-normal, two groups → Mann-Whitney U
+│   └── Non-normal, multiple groups → Kruskal-Wallis
+├── Count (sessions, clicks)
+│   ├── Low variance → Poisson test
+│   └── Overdispersed → Negative binomial
+└── Ordinal (rating, tier)
+    └── Mann-Whitney U or ordered logit
+```
 
-def sample_size_per_variant(baseline_rate, mde, alpha=0.05, power=0.8):
-    """Minimum sample size per variant for proportion metric."""
-    z_alpha = stats.norm.ppf(1 - alpha / 2)
+### CUPED (Controlled Experiment Using Pre-Experiment Data)
+
+#### Variance Reduction with Pre-Experiment Covariates
+CUPED uses pre-experiment data to explain metric variance, reducing required sample size. Formula: Y_cv = Y - θ × (X - μ_X). θ = Cov(Y, X) / Var(X). Variance reduction = Corr(Y, X)². Typical reduction: 20-50% for metrics with strong pre-experiment correlation.
+
+```python
+def cuped_adjust(treatment_metric, control_metric, pre_treatment, pre_control):
+    # Pool pre-experiment data (both variants before treatment)
+    pre_pooled = np.concatenate([pre_treatment, pre_control])
+    post_pooled = np.concatenate([treatment_metric, control_metric])
+    
+    # Calculate theta
+    theta = np.cov(pre_pooled, post_pooled)[0, 1] / np.var(pre_pooled)
+    
+    # Adjust metrics, variance_reduction = corr(pre, post)^2
+    mu_x = np.mean(pre_pooled)
+    treatment_adjusted = treatment_metric - theta * (pre_treatment - mu_x)
+    control_adjusted = control_metric - theta * (pre_control - mu_x)
+    
+    return treatment_adjusted, control_adjusted
+
+# CUPED with multiple covariates
+# Y_cv = Y - Σ(θ_i × (X_i - μ_i))
+# Use pre-period metric, user-level features, segment indicators
+```
+
+#### When CUPED Works Best
+High correlation between pre/post metric (r > 0.5). Stable user behavior (don't use for completely new features). Metric measured at same unit level (user-level metric → user-level covariate). Less effective for: rare events (conversion < 1%), metrics with high individual volatility.
+
+### Sequential Testing (Always Valid Inference)
+
+#### Mixture of Sequential Probability Ratio Test (mSPRT)
+Allows continuous monitoring without inflating false positive rate. Uses a mixing distribution over effect sizes. Decision boundary widens over time, maintaining valid type I error at any stopping time.
+
+```python
+# mSPRT for normal data (continuous metrics)
+def msprt_normal(treatment_data, control_data, variance=None):
+    n = len(treatment_data)
+    m = len(control_data)
+    theta_hat = np.mean(treatment_data) - np.mean(control_data)
+    se = np.sqrt(np.var(treatment_data)/n + np.var(control_data)/m) if variance is None else variance
+    
+    # Log-likelihood ratio integrated over normal prior N(0, tau²)
+    tau = 0.2 * se  # Mixing variance (tune based on MDE)
+    z = theta_hat / se
+    lrt = (tau**2 / (se**2 + tau**2)) * np.exp(
+        (z**2 * tau**2) / (2 * (se**2 + tau**2))
+    )
+    
+    # Reject H0 when LRT crosses threshold (typically 1/e ≈ 0.368)
+    return lrt > np.exp(-1)
+```
+
+#### Implementation in Practice
+Use sequential testing for: long-running experiments, high-traffic products, safety-critical changes. Configure: expected effect size, alpha spending function, maximum sample size. Tools: Google's CORE, Optimizely Sequential, custom mSPRT implementation.
+
+### Python Power Calculation
+
+```python
+def sample_size_proportion(p0, mde_relative, alpha=0.05, power=0.80, ratio=1.0):
+    p1 = p0 * (1 + mde_relative)
+    z_alpha = stats.norm.ppf(1 - alpha/2)
     z_beta = stats.norm.ppf(power)
-    p_pooled = baseline_rate + baseline_rate * (1 + mde) / 2
-    var = 2 * p_pooled * (1 - p_pooled)
-    effect = (baseline_rate * mde) ** 2
-    n = int(np.ceil(var * (z_alpha + z_beta) ** 2 / effect))
-    return n
+    p_bar = (p0 + p1 * ratio) / (1 + ratio)
+    n = ((z_alpha * np.sqrt(p_bar * (1 - p_bar) * (1 + 1/ratio))
+          + z_beta * np.sqrt(p0 * (1 - p0) / ratio + p1 * (1 - p1)))**2
+         / (p1 - p0)**2)
+    return int(np.ceil(n))
+
+def sample_size_continuous(mu, sigma, mde_absolute, alpha=0.05, power=0.80):
+    z_alpha = stats.norm.ppf(1 - alpha/2)
+    z_beta = stats.norm.ppf(power)
+    n = 2 * (z_alpha + z_beta)**2 * sigma**2 / mde_absolute**2
+    return int(np.ceil(n))
+
+# Example: baseline 10%, MDE 5% relative (0.5pp), α=0.05, power=0.80
+# sample_size_proportion(0.10, 0.05) → ~13,800 per variant
 ```
 
-### Step 2: A/A Validation
-Run A/A test to validate statistical properties:
-- Type I error rate at nominal alpha
-- No systematic bias between two control groups
-- Metric variance matches expectation
+### Ratio Metrics and the Delta Method
+
+#### Delta Method for Variance
+Ratio metrics (revenue per user, CTR = clicks/impressions) need special variance estimation. Delta method: Var(R) ≈ (μ_y/μ_x)² × (Var(y)/μ_y² + Var(x)/μ_x² - 2Cov(x,y)/(μ_x·μ_y))
 
 ```python
-def aa_test_validation(control_a, control_b, alpha=0.05, n_simulations=1000):
-    false_positives = 0
-    for _ in range(n_simulations):
-        sample_a = np.random.choice(control_a, size=len(control_a), replace=True)
-        sample_b = np.random.choice(control_b, size=len(control_b), replace=True)
-        _, p = stats.ttest_ind(sample_a, sample_b)
-        if p < alpha:
-            false_positives += 1
-    fpr = false_positives / n_simulations
-    return {"fpr": fpr, "nominal_alpha": alpha, "valid": abs(fpr - alpha) < 0.01}
+def delta_method_variance(a, b):
+    # For ratio metric R = a / b (e.g., revenue per session)
+    mu_a, mu_b = np.mean(a), np.mean(b)
+    n = len(a)
+    var_a = np.var(a, ddof=1)
+    var_b = np.var(b, ddof=1)
+    cov_ab = np.cov(a, b, ddof=1)[0, 1]
+    
+    r = mu_a / mu_b
+    var_r = (r**2) * (var_a/mu_a**2 + var_b/mu_b**2 - 2*cov_ab/(mu_a*mu_b))
+    se_r = np.sqrt(var_r / n)
+    
+    ci_lower = r - 1.96 * se_r
+    ci_upper = r + 1.96 * se_r
+    return r, se_r, ci_lower, ci_upper
 ```
 
-### Step 3: Two-Sample Test
+#### Bootstrap for Ratio Metrics
+When delta method assumptions fail (small samples, skewed distributions): resample (user, sessions, revenue) units with replacement, compute ratio per resample, use percentile CI. Minimum 1000 bootstrap replicates for stable CI.
+
+### Multi-Armed Bandit (MAB)
+
+#### When to Use MAB
+Explore/exploit when: opportunity cost of exploration is real (revenue per impression), many variants (>5), metric is immediate (clicks, not retention). Don't use MAB: small sample sizes, delayed metrics, need hypothesis testing.
+
+#### Thompson Sampling
 ```python
-def experiment_analysis(treatment, control, metric_type="proportion"):
-    if metric_type == "proportion":
-        n_t, n_c = len(treatment), len(control)
-        p_t, p_c = np.mean(treatment), np.mean(control)
-        p_pool = (p_t * n_t + p_c * n_c) / (n_t + n_c)
-        se = np.sqrt(p_pool * (1 - p_pool) * (1/n_t + 1/n_c))
-        z = (p_t - p_c) / se
-        p_value = 2 * (1 - stats.norm.cdf(abs(z)))
-        lift = (p_t - p_c) / p_c if p_c > 0 else 0
-        ci = (p_t - p_c) - 1.96 * se, (p_t - p_c) + 1.96 * se
-    elif metric_type == "continuous":
-        n_t, n_c = len(treatment), len(control)
-        m_t, m_c = np.mean(treatment), np.mean(control)
-        v_t, v_c = np.var(treatment, ddof=1), np.var(control, ddof=1)
-        se = np.sqrt(v_t/n_t + v_c/n_c)
-        z = (m_t - m_c) / se
-        p_value = 2 * (1 - stats.norm.cdf(abs(z)))
-        lift = (m_t - m_c) / m_c if m_c > 0 else 0
-        ci = (m_t - m_c) - 1.96 * se, (m_t - m_c) + 1.96 * se
-    return {"lift_pct": lift * 100, "p_value": p_value, "ci": ci, "significant": p_value < 0.05}
+def thompson_sample(clicks, impressions, n_samples=1000):
+    # Beta-Binomial: prior Beta(1,1), posterior Beta(1+clicks, 1+impressions-clicks)
+    posteriors = [stats.beta(1+c, 1+i-c).rvs(n_samples)
+                  for c, i in zip(clicks, impressions)]
+    # Choose variant with highest sampled value
+    return np.argmax(np.mean(posteriors, axis=1))
 ```
 
-### Step 4: Sequential Testing
-```python
-def sequential_test(treatment, control, alpha=0.05, beta=0.2, delta=0.01):
-    """Group sequential design with O'Brien-Fleming boundary."""
-    from scipy.stats import norm
-    n_total = len(treatment) + len(control)
-    looks = min(5, n_total // 1000)
-    boundaries = [norm.ppf(1 - alpha / (2 * looks)) for _ in range(looks)]
-    for look in range(1, looks + 1):
-        split = n_total * look // looks // 2
-        t_slice = treatment[:split]
-        c_slice = control[:split]
-        z = (np.mean(t_slice) - np.mean(c_slice)) / \
-            np.sqrt(np.var(t_slice, ddof=1)/len(t_slice) + np.var(c_slice, ddof=1)/len(c_slice))
-        if abs(z) > boundaries[look - 1]:
-            return {"decision": "stop_early", "look": look, "z": z, "boundary": boundaries[look-1]}
-    return {"decision": "no_effect", "looks": looks}
-```
+### Experiment Platform Architecture
 
-### Step 5: Multiple Testing Correction
-```python
-def bonferroni_correction(p_values, alpha=0.05):
-    n = len(p_values)
-    adjusted = [min(p * n, 1.0) for p in p_values]
-    significant = [a < alpha for a in adjusted]
-    return {"adjusted_p": adjusted, "significant": significant}
-
-def fdr_bh(p_values, alpha=0.05):
-    n = len(p_values)
-    sorted_idx = np.argsort(p_values)
-    sorted_p = np.array(p_values)[sorted_idx]
-    ranks = np.arange(1, n + 1)
-    thresholds = ranks / n * alpha
-    max_k = np.max(np.where(sorted_p <= thresholds)[0]) + 1 if np.any(sorted_p <= thresholds) else 0
-    significant = np.zeros(n, dtype=bool)
-    significant[sorted_idx[:max_k]] = True
-    return {"significant": significant.tolist(), "rejected_count": max_k}
-```
-
-### Step 6: Delta Method for Ratio Metrics
-```python
-def delta_method_ci(numerator_t, denominator_t, numerator_c, denominator_c, alpha=0.05):
-    n_t, n_c = len(numerator_t), len(denominator_t)
-    mu_nt, mu_nc = np.mean(numerator_t), np.mean(numerator_c)
-    mu_dt, mu_dc = np.mean(denominator_t), np.mean(denominator_c)
-    ratio_t = mu_nt / mu_dt if mu_dt != 0 else 0
-    ratio_c = mu_nc / mu_dc if mu_dc != 0 else 0
-    # Covariance estimation
-    cov_t = np.cov(numerator_t, denominator_t)
-    var_ratio_t = (1/mu_dt**2) * cov_t[0,0] + (mu_nt**2/mu_dt**4) * cov_t[1,1] - 2*(mu_nt/mu_dt**3)*cov_t[0,1]
-    cov_c = np.cov(numerator_c, denominator_c)
-    var_ratio_c = (1/mu_dc**2) * cov_c[0,0] + (mu_nc**2/mu_dc**4) * cov_c[1,1] - 2*(mu_nc/mu_dc**3)*cov_c[0,1]
-    se = np.sqrt(var_ratio_t/n_t + var_ratio_c/n_c)
-    diff = ratio_t - ratio_c
-    ci = (diff - 1.96*se, diff + 1.96*se)
-    return {"ratio_treatment": ratio_t, "ratio_control": ratio_c, "lift": diff/ratio_c*100, "ci": ci}
-```
-
-### Step 7: Experimentation Platform Config
 ```yaml
-# statsig / evi / launchdarkly-style experiment config
-experiment:
-  name: signup_flow_v2
-  randomization_unit: user_id
-  traffic_allocation: 0.10  # 10% of users
-  variants:
-    control: { weight: 0.50 }
-    treatment: { weight: 0.50 }
-  metrics:
-    primary:
-      - name: conversion_rate
-        type: proportion
-        direction: increase
-    secondary:
-      - name: revenue_per_user
-        type: continuous
-        direction: increase
-    guardrails:
-      - name: p50_latency_ms
-        type: continuous
-        direction: <= control
-      - name: error_rate
-        type: proportion
-        direction: <= control
-  statistical:
-    engine: frequentist
-    correction: bonferroni
-    sequential: false
-    alpha: 0.05
-    power: 0.80
-  ramp:
-    initial: 0.01
-    steps: [0.01, 0.05, 0.10]
-    cooldown_hours: 24
-  duration_days: 14
+experiment_platform:
+  components:
+    - assignment_service:
+        description: "Deterministic variant assignment via consistent hashing"
+        implementation: "MD5(user_id + experiment_id) % 1000 → variant"
+        features:
+          - "Sticky assignment across sessions"
+          - "Stratified randomization by segments"
+          - "Exclusion/inclusion rules"
+    
+    - event_pipeline:
+        description: "Capture and process experiment events"
+        components:
+          - "Client-side SDK (web, mobile, server)"
+          - "Event ingestion (Kafka/Kinesis)"
+          - "Stream processing (Flink/Spark) for real-time metrics"
+          - "Batch processing (daily/hourly) for final metrics"
+    
+    - metric_calculation:
+        description: "Compute experiment metrics from raw events"
+        requirements:
+          - "Standardize metric definitions in SQL"
+          - "Compute per-user metric deltas"
+          - "CUPED adjustment layer"
+          - "Ratio metric calculation with delta method"
+    
+    - analysis_service:
+        description: "Statistical analysis and reporting"
+        features:
+          - "Frequentist + Bayesian analysis"
+          - "Sequential testing (mSPRT)"
+          - "SRM detection (chi-square)"
+          - "Multiple testing correction"
+          - "Heterogeneity analysis (CATE estimation)"
+    
+    - results_dashboard:
+        description: "Self-serve experiment results"
+        features:
+          - "Primary metric: point estimate + CI + p-value"
+          - "Guardrail metrics: pass/warn/fail status"
+          - "Sample size tracker: actual vs target"
+          - "Experiment timeline and decision log"
+          - "Signals: SRM alerts, guardrail breaches"
+```
+
+### Experiment Logging and Data Warehouse
+
+```yaml
+experiment_events_schema:
+  # Core experiment assignment table
+  experiment_assignments:
+    columns:
+      - experiment_id: STRING
+      - variant_id: STRING
+      - user_id: STRING
+      - assignment_timestamp: TIMESTAMP
+      - stratification_factors: MAP<STRING, STRING>
+      - is_control: BOOLEAN
+    partition: "(event_date)"
+    clustering: "(experiment_id)"
+  
+  # Metric events joined with assignments
+  experiment_metrics:
+    columns:
+      - event_id: STRING
+      - user_id: STRING
+      - experiment_id: STRING
+      - variant_id: STRING
+      - metric_name: STRING
+      - metric_value: FLOAT
+      - metric_timestamp: TIMESTAMP
+    partition: "(event_date)"
+    clustering: "(experiment_id, metric_name)"
+
+  # Analysis results table
+  experiment_results:
+    columns:
+      - experiment_id: STRING
+      - run_timestamp: TIMESTAMP
+      - metric_name: STRING
+      - variant_id: STRING
+      - treatment_effect: FLOAT
+      - confidence_interval: STRUCT<lower FLOAT, upper FLOAT>
+      - p_value: FLOAT
+      - effect_size: FLOAT
+      - sample_size: INT
+      - is_guardrail: BOOLEAN
+      - guardrail_passed: BOOLEAN
+      - srm_p_value: FLOAT
+```
+
+### Decision Trees (continued)
+
+#### Variance Reduction Method
+```
+Metric variability too high to detect MDE?
+├── Pre-experiment data available for same metric
+│   └── CUPED (reduces variance by correlation^2)
+├── Pre-experiment data available for covariates
+│   └── CUPED with multiple covariates
+├── Stratification feasible (country, platform, segment)
+│   └── Stratified randomization + stratified analysis
+├── ML model predicting the metric available
+│   └── CUPED with model predictions as covariates
+└── Sequential monitoring needed
+    └── mSPRT (always valid inference at any stopping time)
+```
+
+#### Experiment Duration Decision
+```
+When can we stop the experiment?
+├── Sample size reached AND minimum duration elapsed
+│   └── If using fixed-horizon test → run full analysis
+├── Sequential test boundary crossed
+│   └── Stop early — result is valid (mSPRT)
+├── Bayesian probability of success > 95%
+│   └── Consider stopping if opportunity cost is high
+├── Guardrail metric breached
+│   └── Stop experiment — roll back treatment
+└── SRM detected
+    └── Stop experiment — invalid data, investigate root cause
 ```
 
 ## Rules
-- Randomization unit must be at or above the unit of analysis
-- Always run A/A test to validate experiment infrastructure
-- Pre-compute sample size and duration; never peek without correction
-- Guardrail metrics must be monitored for negative impact
-- Use delta method for ratio metrics (revenue per user, CTR)
-- Correct for multiple comparisons across all metrics
-- Sequential testing requires pre-registered stopping boundaries
-- Ramp traffic gradually with cooldown between increments
-- Launch decisions require statistical significance AND practical significance
-- Document preriod: exclude first N hours for novelty/primacy effects
+- Pre-register hypothesis, primary metric, and analysis plan before launch
+- Calculate sample size for 80% power, specify MDE upfront
+- Use one primary metric, multiple secondary metrics with clear hierarchy
+- Always include guardrail metrics with pre-specified thresholds
+- Monitor SRM daily — invalid experiments are not analyzed
+- Use stratified randomization or CUPED for variance reduction
+- Apply FDR correction for secondary metrics, FWER for primary
+- Never peek at results without sequential testing boundaries
+- Report effect size + CI, not just p-value
+- Document all experiment decisions with rationale in experiment log
+- Use delta method or bootstrap for ratio metric variance estimation
+- Apply CUPED when pre-experiment metric correlation > 0.5
+- Prefer sequential testing (mSPRT) for long-running or high-traffic experiments
+- Log experiment assignments and metrics to data warehouse for meta-analysis
 
 ## References
-  - references/experiment-design.md — Experiment Design Reference
-  - references/experimentation-advanced.md — Experimentation Advanced Topics
   - references/experimentation-fundamentals.md — Experimentation Fundamentals
-  - references/experimentation-platform.md — Experimentation Platform Architecture Reference
-  - references/metric-selection.md — Metric Selection Reference
-  - references/statistical-methods.md — Statistical Methods for Experimentation Reference
-## Handoff
-`data-science-statistical-analysis` for foundational statistical methods
-`data-science-causal-inference` for causal effect estimation in observational settings
-`data-science-analytics-engineering` for metric pipeline and data modeling
+  - references/experimentation-advanced.md — Experimentation Advanced Topics

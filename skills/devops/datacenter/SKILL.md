@@ -1,278 +1,358 @@
 ---
-name: devops-datacenter
+name: datacenter
 description: >
-  Use this skill when planning or operating datacenter facilities: rack and U planning, A+B power feeds,
-  N+1 / 2N cooling, Uptime Institute tier classification (Tier I-IV), DCIM, structured cabling, fire
-  suppression, environmental monitoring, and physical security. Applies to building a private cage in
-  a colo (Equinix, Digital Realty, Coresite) or operating an owned facility. This skill enforces: power
-  budget per rack, BTU + airflow math, redundancy by tier, cable hygiene, and remote-hands runbook.
-  Do NOT use for: server provisioning (see devops-bare-metal), network switch config (see
-  devops-network-infrastructure), or cloud region selection (see devops-cloud-architecture).
-version: "1.0.0"
+  Use this skill when the user says 'datacenter', 'data center', 'DC',
+  'rack', 'power', 'cooling', 'PDU', 'UPS', 'Tier classification',
+  'N+1 redundancy', '2N redundancy', 'cabling', 'fiber', 'copper',
+  'hot aisle', 'cold aisle', 'rack density', 'kW per rack',
+  'DCIM', 'data center operations', 'colocation'.
+  Covers: datacenter tier classification (Tier I-IV), power and cooling design,
+  rack layout, cabling standards, DCIM tools, capacity planning,
+  redundancy models, environmental monitoring, colocation selection.
+  Do NOT use for: cloud infrastructure (use cloud-specific skills),
+  server provisioning (use bare-metal skill).
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
   claude-code: true
   cursor: true
   codex: true
-  windsuf: true
-tags: [devops, datacenter, colo, on-prem, infrastructure, phase-2]
+  windsurf: true
+tags: [devops, datacenter, infrastructure, hardware, phase-5]
 ---
 
-# DevOps Datacenter
+# Datacenter Operations
 
 ## Purpose
-Design and operate datacenter space (private cage in a colo, or owned DC) with the right tier of
-power/cooling redundancy for the workload, accurate rack U/power/weight planning, structured cabling,
-DCIM tracking, and remote-hands operational discipline.
+Design, operate, and manage physical datacenter infrastructure including tier classification, power/cooling, rack layout, cabling, DCIM, and capacity planning.
 
-## Framework and Methodology
+## Architecture Decision Trees
 
-### Datacenter Architecture
-Every datacenter decision follows a layered model:
+### Datacenter Tier Classification
+| Tier | Availability | Redundancy | Annual Downtime | Cost Premium |
+|---|---|---|---|---|
+| Tier I (Basic) | 99.671% | None (N) | 28.8 hours | 1x (baseline) |
+| Tier II (Redundant) | 99.741% | N+1 (power/cooling) | 22.7 hours | 1.2-1.5x |
+| Tier III (Concurrently Maintainable) | 99.982% | N+1 (all components) | 1.6 hours | 1.8-2.5x |
+| Tier IV (Fault Tolerant) | 99.995% | 2N (fully redundant) | 26.3 minutes | 3-5x |
 
+### Power Redundancy Models
+| Model | Description | UPS Config | Generator | Cost vs N |
+|---|---|---|---|---|
+| N | Single path | 1 UPS | 1 generator | 1x |
+| N+1 | Redundant component | 2 UPS (N+1) | 2 generators (N+1) | 1.3x |
+| 2N | Two independent paths | 2 UPS (each N) | 2 generators (each N) | 2x |
+| 2N+1 | Two paths + redundant | 3 UPS (2N+1) | 3 generators | 2.3x |
+
+### Cooling Architecture Comparison
+| Type | PUE Impact | Capacity (kW/rack) | Cost | Best For |
+|---|---|---|---|---|
+| Room-based (CRAC) | 1.4-1.8 | <10 | Low | Legacy DCs, low density |
+| Row-based (in-row) | 1.2-1.4 | 10-25 | Medium | Standard deployments |
+| Rack-based (rear door) | 1.1-1.3 | 15-40 | Medium-High | High-density (GPU/HPC) |
+| Liquid (direct-to-chip) | 1.05-1.1 | 40-100+ | High | HPC, AI/ML clusters |
+| Immersion | 1.02-1.05 | 100+ | Very High | Extreme density |
+
+### Colocation Selection Criteria
+| Factor | Retail Colo | Wholesale Colo | Hyperscaler Edge |
+|---|---|---|---|
+| Space | Per rack | Per cage/suite | Per cabinet |
+| Contract | 1-3 years | 3-10 years | Flexible |
+| Management | Hands-on support | Self-managed | Remote hands |
+| Connectivity | Shared meet-me room | Dedicated cross-connects | Provider-specific |
+| Cost/rack/month | $1,000-3,000 | $500-1,500 | Varies |
+| Power included | Often (up to limit) | Separate billing | Per circuit |
+
+## Core Workflow
+
+### Step 1: Rack Layout Design
 ```
-Layer 1: Site Selection
-  - Geographic location, latency, natural disaster risk.
-  - Carrier diversity, power grid reliability.
-  - Tax incentives, talent availability.
+Standard 42U Rack Layout (Front View)
+┌──────────────────────┐
+│  [1U] Patch Panel    │ U 1
+│  [1U] Patch Panel    │ U 2
+│──────────────────────│
+│  [2U] Core Switch 1  │ U 3-4
+│  [2U] Core Switch 2  │ U 5-6
+│──────────────────────│
+│  [1U] PDU A (3-phase)│ U 7
+│  [1U] PDU B (3-phase)│ U 8
+│──────────────────────│
+│  [1U] Server 1       │ U 9
+│  [1U] Server 2       │ U 10
+│  [1U] Server 3       │ U 11
+│  [1U] Server 4       │ U 12
+│──────────────────────│
+│  [2U] Storage Array  │ U 13-14
+│──────────────────────│
+│  [1U] Server 5       │ U 15
+│  [1U] Server 6       │ U 16
+│  [1U] Server 7       │ U 17
+│  [1U] Server 8       │ U 18
+│──────────────────────│
+│  [2U] UPS (per rack) │ U 19-20
+│──────────────────────│
+│  [1U] empty          │ U 21
+│  [1U] empty          │ U 22
+│  ...                 │ ...
+│──────────────────────│
+│  [4U] GPU Server     │ U 38-41
+│  [1U] BMC Switch     │ U 42
+└──────────────────────┘
 
-Layer 2: Facility Design
-  - Tier classification (I-IV) determines redundancy.
-  - Power distribution: utility -> UPS -> PDU -> rack.
-  - Cooling: CRAC/CRAH, containment, in-row.
+Power Distribution:
+  Feed A: PDU A (A-phase) → Server PSU A
+  Feed B: PDU B (B-phase) → Server PSU B
+  Each PSU: 120V/208V/240V based on equipment
 
-Layer 3: Rack Layout
-  - Rack type, U capacity, weight limits.
-  - Power budget per rack, A+B distribution.
-  - Cable management: overhead, underfloor, structured.
-
-Layer 4: Infrastructure Management
-  - DCIM for asset tracking.
-  - Environmental monitoring: temp, humidity, power.
-  - Remote hands operations.
-```
-
-### Uptime Institute Tier Classification
-
-```
-Tier I (Basic): 99.671% uptime (28.8 hr/yr downtime).
-  Single path for power and cooling.
-  No redundancy -- any planned or unplanned event causes downtime.
-  Best for: dev/test, non-critical workloads.
-
-Tier II (Redundant Components): 99.741% uptime (22 hr/yr).
-  Single path with redundant critical components (N+1 UPS, generator).
-  Planned maintenance causes downtime.
-  Best for: internal tools, low-priority production.
-
-Tier III (Concurrently Maintainable): 99.982% uptime (1.6 hr/yr).
-  Multiple power/cooling paths, one active.
-  Any component can be taken offline without downtime.
-  Best for: production workloads, most enterprise apps.
-
-Tier IV (Fault Tolerant): 99.995% uptime (26 min/yr).
-  Multiple active paths, 2N+1 redundancy.
-  Any single failure (including UPS or generator) does not cause downtime.
-  Best for: mission-critical, financial trading, life safety.
-```
-
-### Power and Cooling Math
-
-```
-Power basics:
-  Watts = Volts x Amps (DC)
-  VA = Volts x Amps (AC, apparent power)
-  Power Factor = Watts / VA (typical: 0.9-0.95)
-
-  Single phase: Watts = V x A x PF
-  Three phase: Watts = V x A x PF x 1.732
-
-Cooling conversions:
-  BTU/hr = Watts x 3.412
-  Tons = BTU/hr / 12,000
-  kW to tons: kW / 3.517
-
-Example: 100 racks x 10 kW = 1 MW
-  1 MW = 3,412,000 BTU/hr = 284 tons cooling
-  At N+1: need 5 x 70-ton CRAC units (4 active + 1 spare)
-```
-
-## Agent Protocol
-
-### Trigger
-Exact user phrases: "datacenter", "colo", "colocation", "Equinix", "Digital Realty",
-"Coresite", "DCIM", "rack U", "power budget", "PDU", "ATS", "UPS", "generator",
-"BTU", "CRAC", "CRAH", "hot aisle", "cold aisle", "Uptime Institute", "Tier III",
-"Tier IV", "redundancy", "structured cabling", "rack elevation", "remote hands",
-"physical security".
-
-### Input Context
-- Workload (compute / GPU / storage / network-heavy)
-- Total kW required + projected growth
-- Tier target (I, II, III, III+, IV) driven by HA tier
-- Geographic constraints (latency, data residency, talent availability)
-- Carrier diversity required (1 / 2 / 3+ ISPs)
-- Existing physical infrastructure (owned DC, colo cage, edge POP)
-- Budget model (capex DC build vs opex colo)
-
-### Output Artifact
-DC plan with rack elevations, power/cooling budget, tier compliance check,
-cable plan, DCIM schema, remote-hands runbook.
-
-### Response Format
-```
-Tier: {I | II | III | III+ | IV}
-Capacity: {racks x kW each, total kW, total RU}
-Power: {A+B feeds, PDU model, UPS runtime, generator runtime}
-Cooling: {N+1 CRAC/CRAH, hot/cold aisle, containment}
-Network: {2+ carriers, cross-connect plan, MMR}
-Cabling: {fiber types, patch panels, label scheme}
-Security: {man-trap, badge, biometric, camera retention}
-```
-No preamble. No postamble. No explanations.
-
-### Completion Criteria
-- [ ] Tier selected matching workload HA tier
-- [ ] Rack elevation with U + weight + amp + airflow per device
-- [ ] Power budget per rack with A+B feed allocation
-- [ ] Cooling capacity >= heat load + N+1 redundancy
-- [ ] Structured cabling plan (MMR to cage)
-- [ ] DCIM populated (Netbox / Sunbird / Nlyte)
-- [ ] Carrier diversity >= 2
-- [ ] Physical security controls verified
-- [ ] Remote-hands runbook with photos + diagrams
-
-### Max Response Length
-350 lines
-
-## Workflow
-
-### Step 1: Pick Tier (Uptime Institute)
-Match workload HA to facility tier. Tier >= workload requirement.
-
-### Step 2: Rack Planning
-Standard 42U/48U rack. Budget power per rack based on density.
-Leave room for PDUs and cable management (38-40 usable U).
-
-### Step 3: Power Budget + Redundancy
-A+B feeds to every rack. PSU1 on A, PSU2 on B.
-PDU sizing: 2x per rack, never load > 80% of breaker.
-
-### Step 4: Cooling Math
-Heat load = power draw in watts (1:1 ratio).
-Convert to BTU/hr, size CRAC/CRAH units for N+1.
-Hot/cold aisle containment above 8 kW/rack.
-
-### Step 5: Structured Cabling
-OM4 for short-reach intra-row, OS2 for inter-row and long distance.
-Label both ends, color code by purpose. No zip ties on fiber.
-
-### Step 6: DCIM
-Netbox (open source) or Sunbird (enterprise).
-Track: site -> rack -> device -> interface -> cable.
-
-### Step 7: Physical Security
-Perimeter to cage: fence, mantrap, badge + biometric, audit log.
-
-### Step 8: Remote Hands
-Document common tasks, pricing, and ticket template.
-Include photos and diagrams.
-
-## Common Pitfalls
-
-1. **Underestimating power density**: 5 kW/rack becomes 15 kW/rack over 3 years. Plan for growth.
-2. **Skipping blanking panels**: Missing blanks create hot spots, reduce cooling efficiency 15-30%.
-3. **No cable management**: Rats nest makes troubleshooting impossible and restricts airflow.
-4. **Single carrier**: One fiber cut takes entire DC offline. Minimum 2 carriers from different MMRs.
-5. **PDU overloaded**: Loading PDU > 80% trips breaker. NEC code limits continuous load to 80%.
-6. **Weight distribution**: Heavy devices at bottom, light at top. Overloaded raised floor can collapse.
-7. **Forgotten UPS runtime**: 5-minute UPS runtime is insufficient for generator startup. Minimum 15 minutes.
-8. **No environmental monitoring**: Temperature spike kills equipment silently. Monitor every row.
-9. **Cheating on cable bend radius**: Tight bends in fiber cause attenuation and signal loss.
-10. **Spreadsheet DCIM**: Excel is not a source of truth. Use proper DCIM tool.
-
-## Best Practices
-
-- Label everything: cables, ports, devices. Use barcode labels for asset tracking.
-- Color code cables: blue = management, yellow = production, red = storage.
-- Plan for 30% power headroom per rack from day one.
-- Test generator under load quarterly (not just no-load start).
-- Document everything in DCIM -- no paper records.
-- Keep remote-hands runbook with photos, updated after every change.
-- Perform power path analysis: trace from utility to device PSU.
-- Use in-row cooling for high-density racks (> 15 kW).
-- Implement liquid detection under raised floor.
-- Conduct annual fire suppression system test.
-
-## Compared With
-
-| Approach | Strengths | Weaknesses |
-|---|---|---|
-| Colocation (this skill) | Shared facility cost, carrier diversity | Limited customization |
-| Owned datacenter | Full control, amortized over time | High CAPEX, operational complexity |
-| Edge datacenter | Low latency, distributed | Scaling complexity |
-| Cloud only | Elastic, no facility management | Variable cost, data sovereignty |
-| Hybrid colo+cloud | Flexibility, burst capacity | Network complexity |
-| Modular/Prefab DC | Faster deployment, scalable | Less proven, integration risk |
-
-## Templates and Tools
-
-### Rack Elevation Template
-```
-U42: ToR Switch 1  | 150W | 10 lb | airflow: front-to-back
-U41: ToR Switch 2  | 150W | 10 lb |
-U40: Patch Panel   | 0W   | 5 lb  |
-U39: Cable Mgmt 1U | 0W   | 2 lb  |
-U38-U35: Servers (4x 1U) | 400W ea | 25 lb ea |
-U34-U03: Servers (32x 1U) | 400W ea | 25 lb ea |
-U02: PDU A | 0W | 10 lb |
-U01: PDU B | 0W | 10 lb |
-Total: 38 devices, 14.1 kW, 912 lb
+Cabling:
+  Fiber: Patch panel U1 → ToR Switch
+  Copper: Patch panel U2 → Server NICs
+  Management: BMC ports → BMC switch (U42)
 ```
 
-### Power Budget Template
-```
-Rack: R-042
-A Feed: PDU-A, Breaker 30A 208V, Load 22A (73%)
-B Feed: PDU-B, Breaker 30A 208V, Load 20A (67%)
-Total: 42A -> 8.7 kW
-Headroom: 27%
+### Step 2: Power Capacity Planning
+```python
+# capacity/power_planning.py
+"""Datacenter power capacity planning tool."""
+
+RACK_POWER_MAP = {
+    "standard_rack": {
+        "servers": 16,          # 1U servers
+        "gpu_servers": 1,       # 4U GPU servers
+        "switches": 2,          # ToR switches, 2U each
+        "storage": 1,           # Storage array, 2U
+    },
+    "high_density_rack": {
+        "servers": 8,
+        "gpu_servers": 4,
+        "switches": 2,
+        "storage": 2,
+    },
+}
+
+POWER_PER_COMPONENT = {
+    "1u_server": {"idle_w": 80, "max_w": 250},
+    "gpu_server": {"idle_w": 500, "max_w": 2500},
+    "tor_switch": {"idle_w": 150, "max_w": 400},
+    "storage_array": {"idle_w": 200, "max_w": 600},
+}
+
+def calculate_rack_power(rack_type="standard_rack"):
+    """Calculate total power per rack."""
+    config = RACK_POWER_MAP[rack_type]
+    total_idle = 0
+    total_max = 0
+
+    total_idle += config["servers"] * POWER_PER_COMPONENT["1u_server"]["idle_w"]
+    total_max += config["servers"] * POWER_PER_COMPONENT["1u_server"]["max_w"]
+    total_idle += config["gpu_servers"] * POWER_PER_COMPONENT["gpu_server"]["idle_w"]
+    total_max += config["gpu_servers"] * POWER_PER_COMPONENT["gpu_server"]["max_w"]
+    total_idle += config["switches"] * POWER_PER_COMPONENT["tor_switch"]["idle_w"]
+    total_max += config["switches"] * POWER_PER_COMPONENT["tor_switch"]["max_w"]
+    total_idle += config["storage"] * POWER_PER_COMPONENT["storage_array"]["idle_w"]
+    total_max += config["storage"] * POWER_PER_COMPONENT["storage_array"]["max_w"]
+
+    return {"idle_kw": total_idle / 1000, "max_kw": total_max / 1000}
+
+def calculate_power_for_room(num_racks, rack_type="standard_rack", redundancy="N"):
+    """Calculate total power infrastructure needed."""
+    rack_power = calculate_rack_power(rack_type)
+    total_it_load = rack_power["max_kw"] * num_racks
+
+    # Cooling overhead
+    cooling_factor = 1.3  # Typical PUE for row-cooled DC
+    total_facility = total_it_load * cooling_factor
+
+    # Redundancy factor
+    redundancy_factors = {
+        "N": 1.0,
+        "N+1": 1.3,
+        "2N": 2.0,
+        "2N+1": 2.3,
+    }
+    total_redundant = total_facility * redundancy_factors[redundancy]
+
+    # UPS capacity
+    ups_capacity = total_redundant * 1.2  # 20% headroom
+
+    return {
+        "it_load_kw": total_it_load,
+        "facility_load_kw": total_facility,
+        "redundant_load_kw": total_redundant,
+        "ups_capacity_kw": ups_capacity,
+        "ups_runtime_min": 15,  # Typical battery runtime
+        "generator_kw": total_redundant * 1.1,
+    }
+
+# Example: 20 racks, standard density, N+1 redundancy
+power = calculate_power_for_room(20, "standard_rack", "N+1")
+for k, v in power.items():
+    if "kw" in k:
+        print(f"{k}: {v:.1f} kW")
+    else:
+        print(f"{k}: {v}")
 ```
 
-## Rules
-- Tier of facility >= Tier required by highest-HA workload it hosts.
-- Every rack on A+B feeds; dual-PSU devices each on different feed.
-- No PDU loaded > 80% of breaker rating (NEC code + safety margin).
-- Cooling capacity >= peak power x 1.0 + N+1 redundant unit.
-- Hot/cold aisle containment for >= 8 kW/rack density.
-- All cables labeled both ends, color-coded by purpose.
-- DCIM single-source-of-truth; no spreadsheet shadow inventory.
-- 2+ carriers for any Tier-1 workload; cross-connects from different MMR rooms.
-- Remote-hands tickets reference cage/rack/U position with photo.
-- Generator tested under load at least quarterly.
-- UPS runtime >= 15 minutes at full load.
-- Environmental monitoring probes at top, middle, bottom of each row.
-- Blanking panels in all unused U positions.
-- Weight distribution: heaviest devices at bottom 1/3 of rack.
-- All copper cabling Cat6a minimum; single-mode fiber for new runs.
-- Physical access audited monthly with badge log review.
-- Remote-hands runbook reviewed and tested annually.
-- Fire suppression pre-action system for computer room.
+### Step 3: Cabling Standards
+```yaml
+# cabling/cabling-standards.yaml
+structured_cabling:
+  copper:
+    cat6a:  # 10Gbps, 100m max
+      use: "Server to ToR, management"
+      max_length_m: 100
+      termination: "RJ45 (T568B)"
+    cat8:  # 25/40Gbps, 30m max
+      use: "Switch to switch, high-speed links"
+      max_length_m: 30
+
+  fiber:
+    om3_multimode:  # 10G-100G, 300m
+      use: "ToR to EoR, storage networks"
+      max_length_m: 300
+      connector: "LC duplex"
+    om4_multimode:
+      use: "High-speed storage (32G FC)"
+      max_length_m: 400
+    os2_singlemode:  # 100G-400G+, >10km
+      use: "Inter-rack, cross-connect, WAN"
+      max_length_m: 40000
+      connector: "LC (polished)"
+
+  labeling:
+    standard: "TIA-606-B"
+    format: "RACK-PANEL-PORT"  # e.g., A01-P01-001
+    labels_required:
+      - "Both ends of every cable"
+      - "Patch panel ports"
+      - "Outlet faceplates"
+      - "Breakout points"
+```
+
+### Step 4: DCIM Integration Script
+```python
+# dcim/rack_monitor.py
+"""Monitor rack-level power, temperature, and humidity via DCIM API."""
+
+import requests
+import time
+import json
+from datetime import datetime
+
+class DCIMClient:
+    def __init__(self, base_url, api_token):
+        self.base_url = base_url.rstrip('/')
+        self.session = requests.Session()
+        self.session.headers.update({'Authorization': f'Bearer {api_token}'})
+
+    def get_rack_sensors(self, rack_id):
+        resp = self.session.get(f"{self.base_url}/api/racks/{rack_id}/sensors")
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_pdu_load(self, pdu_id):
+        resp = self.session.get(f"{self.base_url}/api/pdus/{pdu_id}/load")
+        resp.raise_for_status()
+        resp_data = resp.json()
+        return {
+            "total_load_w": resp_data["totalPower"],
+            "load_percent": resp_data["loadPercent"],
+            "phase_loads": resp_data.get("phases", []),
+        }
+
+    def check_environmental_limits(self, rack_id):
+        sensors = self.get_rack_sensors(rack_id)
+        alarms = []
+        for sensor in sensors:
+            if sensor["type"] == "temperature":
+                if sensor["value"] > 27:  # ASHRAE max recommended
+                    alarms.append(f"High temp: {sensor['value']}°C at {sensor['location']}")
+            elif sensor["type"] == "humidity":
+                if sensor["value"] > 80:
+                    alarms.append(f"High humidity: {sensor['value']}% at {sensor['location']}")
+                elif sensor["value"] < 20:
+                    alarms.append(f"Low humidity: {sensor['value']}% at {sensor['location']}")
+        return alarms
+
+    def monitor_all_racks(self, rack_ids, interval_s=60):
+        """Continuous monitoring loop."""
+        while True:
+            for rack_id in rack_ids:
+                alarms = self.check_environmental_limits(rack_id)
+                for alarm in alarms:
+                    print(f"[{datetime.utcnow().isoformat()}] ALERT: {alarm}")
+            time.sleep(interval_s)
+```
+
+### Step 5: Environmental Monitoring Configuration
+```yaml
+# monitoring/datacenter-monitoring.yaml
+sensor_thresholds:
+  temperature:
+    warning_c: 27    # ASHRAE recommended max inlet temp
+    critical_c: 32   # ASHRAE allowable max inlet temp
+    min_c: 18        # Prevent condensation
+  humidity:
+    warning_percent: 60
+    critical_percent: 80
+    min_percent: 20
+  airflow:
+    min_cfm_per_kw: 160
+  differential_pressure:
+    min_pa: 5        # Underfloor positive pressure
+
+alert_escalation:
+  temp_warning:
+    - notify: "Datacenter Team (Slack)"
+    - wait: 5m
+    - notify: "Facilities Manager (PagerDuty)"
+  temp_critical:
+    - notify: "Datacenter Team (PagerDuty)"
+    - notify: "Facilities Manager (Phone)"
+    - action: "Initiate emergency cooling procedures"
+  power_anomaly:
+    - notify: "Electrical Team (PagerDuty)"
+    - action: "Check UPS status, initiate generator test"
+```
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Hot/Cold Aisle Mismanagement
+Blocking hot aisle containment or mixing hot and cold air. Proper containment can reduce cooling costs by 20-40%.
+
+### Anti-Pattern 2: Over-Subscribing Power Circuits
+Plugging more equipment into a PDU than its rated capacity (e.g., 24A on a 20A circuit). Always leave 20% headroom.
+
+### Anti-Pattern 3: Ignoring Rack Weight Limits
+Filling racks with heavy UPS/gpu servers without checking floor load rating. Server racks can weigh > 1000kg fully loaded.
+
+### Anti-Pattern 4: Poor Cable Management
+Running cables haphazardly without horizontal/vertical management. Blocks airflow, makes troubleshooting impossible, increases cooling costs.
+
+### Anti-Pattern 5: No DCIM
+Managing datacenter capacity without DCIM tools. Leads to stranded capacity and inefficiencies.
+
+## Rules & Constraints
+- Maintain hot aisle / cold aisle configuration at all times.
+- Leave 20% headroom on all power circuits.
+- All cabling must be labeled per TIA-606-B.
+- Environmental monitoring (temp/humidity/power) on every rack.
+- PUE should be < 1.6 for air-cooled DCs.
+- Test generator and UPS monthly under load.
+- Maintain cable management to preserve airflow.
 
 ## References
-  - references/cabling.md -- Structured Cabling
-  - references/datacenter-advanced.md -- Datacenter Advanced Topics
-  - references/datacenter-fundamentals.md -- Datacenter Fundamentals
-  - references/dcim.md -- DCIM Reference
-  - references/rack-power-cooling.md -- Rack, Power, Cooling
-  - references/tier-classification.md -- Uptime Institute Tiers
-  - references/datacenter-networking-storage.md -- Networking and Storage
-  - references/datacenter-capacity-planning.md -- Capacity Planning
+  - references/cabling.md
+  - references/datacenter-advanced.md
+  - references/datacenter-capacity-planning.md
+  - references/datacenter-fundamentals.md
+  - references/datacenter-networking-storage.md
+  - references/dcim.md
+  - references/rack-power-cooling.md
+  - references/tier-classification.md
+  - references/ashrae-guidelines.md
 
 ## Handoff
-- `devops-bare-metal` for what goes in the racks.
-- `devops-network-infrastructure` for switching/routing inside the DC.
-- `devops-storage-infrastructure` for storage cluster topology.
-- `enterprise-business-continuity` for facility loss scenario planning.
-- `enterprise-capacity-planning` for forecasted DC space + power growth.
+Next: **network-infrastructure** — datacenter network architecture.

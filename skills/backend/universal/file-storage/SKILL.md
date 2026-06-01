@@ -2,7 +2,7 @@
 name: backend-file-storage
 description: >
   Use this skill when designing file upload, storage, CDN delivery, or file processing systems. This skill enforces: direct-to-storage uploads via presigned URLs, flat key design with no sensitive data, server-side validation, CDN caching with version hashes. Applies to S3, Azure Blob, GCS, or any S3-compatible storage. Do NOT use for: database blob storage, application server file handling, or ephemeral temporary files.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -57,6 +57,54 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 250 lines of configuration and code.
+
+## Decision Tree
+
+### Storage Provider
+
+```
+What are your requirements?
+  ├── General purpose, CDN origin → S3 (default)
+  ├── Zero egress fees, high bandwidth → Cloudflare R2
+  ├── On-premises / air-gapped → MinIO
+  ├── Microsoft ecosystem → Azure Blob
+  ├── Analytics / ML pipelines → GCS
+  └── Compliance (HIPAA, PCI, FedRAMP) → verify provider certification
+```
+
+### Upload Flow
+
+```
+Who uploads the file?
+  ├── End user (avatar, document, photo)
+  │   └── Direct-to-storage via presigned URL (no app server in path)
+  ├── Internal tool (admin upload, batch import)
+  │   └── Presigned URL or direct server upload for small files (<10MB)
+  ├── Server-side generation (report, export)
+  │   └── Server writes directly to storage, then notifies user
+  └── Large file (>100MB, video, dataset)
+      └── Multipart upload / S3 Transfer Acceleration / resumable upload
+```
+
+### Processing Strategy
+
+```
+File type and processing needs?
+  ├── Image (JPEG, PNG, WebP)
+  │   ├── Thumbnail generation (150×150, 300×300, 1024×1024)
+  │   ├── Format conversion (to WebP/AVIF)
+  │   └── EXIF stripping
+  ├── Video (MP4, MOV, AVI)
+  │   ├── Transcoding (to HLS/DASH)
+  │   ├── Thumbnail extraction
+  │   └── Compression
+  ├── Document (PDF, DOCX, XLSX)
+  │   ├── Text extraction / OCR
+  │   ├── Page preview generation
+  │   └── PDF/A conversion
+  └── Archive (ZIP, TAR, GZ)
+      └── Extract and scan individual files (dangerous — prefer flat uploads)
+```
 
 ## Workflow
 
@@ -131,6 +179,25 @@ async function getUploadUrl(params: { tenant: string; type: string; filename: st
 }
 ```
 
+Server-side validation:
+```typescript
+async function requestUploadUrl(params: { type: string; filename: string; size: number; contentType: string }, user: User) {
+  const rules: Record<string, { maxSize: number; mimeTypes: string[] }> = {
+    avatar: { maxSize: 5 * 1024 * 1024, mimeTypes: ['image/jpeg', 'image/png', 'image/webp'] },
+    document: { maxSize: 50 * 1024 * 1024, mimeTypes: ['application/pdf'] },
+    video: { maxSize: 2 * 1024 * 1024 * 1024, mimeTypes: ['video/mp4', 'video/quicktime'] },
+  };
+
+  const rule = rules[params.type];
+  if (!rule) throw new Error('Invalid file type');
+  if (!rule.mimeTypes.includes(params.contentType)) throw new Error('Invalid MIME type');
+  if (params.size > rule.maxSize) throw new Error('File too large');
+  if (params.size < 100) throw new Error('File too small');
+
+  return getUploadUrl(params);
+}
+```
+
 ### Step 5: File Processing Pipeline
 Trigger: S3 PUT event → SQS queue → worker (Lambda or container). Process: virus scan (ClamAV), thumbnail generation (150x150, 300x300, 1024x1024), format conversion (WebP/AVIF for images, HLS for video), content moderation (NSFW detection, OCR text extraction). Processing result stored as metadata on the object. Failed processing moves to quarantine bucket for manual review.
 
@@ -157,6 +224,40 @@ CloudFront: S3 origin with OAC (Origin Access Control). Cache strategy: versione
 ### Step 7: Security Controls
 Block public access at account/bucket level. IAM roles for applications (never IAM users). Presigned URL expiry: 5-15 minutes for uploads, 1 hour for viewing, 24 hours for downloads. CORS: restrict to application domain origins. Encryption: SSE-S3 for standard, SSE-KMS for compliance (HIPAA, PCI). Object Lock for WORM compliance. VPC endpoints for S3 (no internet exposure).
 
+### Step 8: Multipart Upload for Large Files
+For files >100MB, use multipart upload for resilience and parallelism.
+
+```typescript
+import { CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand } from '@aws-sdk/client-s3';
+
+async function multipartUpload(params: { bucket: string; key: string; filePath: string; partSize?: number }) {
+  const partSize = params.partSize || 10 * 1024 * 1024;  // 10MB parts
+  const create = await s3.send(new CreateMultipartUploadCommand({
+    Bucket: params.bucket, Key: params.key,
+  }));
+  const uploadId = create.UploadId!;
+  const parts: { PartNumber: number; ETag: string }[] = [];
+  const fileSize = fs.statSync(params.filePath).size;
+  let partNumber = 1;
+
+  for (let start = 0; start < fileSize; start += partSize) {
+    const end = Math.min(start + partSize, fileSize);
+    const body = fs.createReadStream(params.filePath, { start, end });
+    const upload = await s3.send(new UploadPartCommand({
+      Bucket: params.bucket, Key: params.key, UploadId: uploadId,
+      PartNumber: partNumber, Body: body,
+    }));
+    parts.push({ PartNumber: partNumber, ETag: upload.ETag! });
+    partNumber++;
+  }
+
+  await s3.send(new CompleteMultipartUploadCommand({
+    Bucket: params.bucket, Key: params.key, UploadId: uploadId,
+    MultipartUpload: { Parts: parts },
+  }));
+}
+```
+
 ## Configuration Reference
 
 ```yaml
@@ -175,6 +276,41 @@ processing:
   moderation: true
 ```
 
+## Production Considerations
+
+| Concern | Practice |
+|---------|----------|
+| Upload rate at scale | Presigned URL generation is cheap (no I/O). Processing scales with queue workers |
+| File size limits | Enforce server-side (client-side can be bypassed). Use multipart for large files |
+| Storage costs | Lifecycle policies: hot → IA → Glacier → delete. Monitor bucket size per prefix |
+| Thundering herd | Thumbnail generation after popular upload (e.g., viral image) → use SQS for buffering |
+| Data residency | Choose bucket region based on compliance. Use bucket policies to restrict to region |
+| Disaster recovery | Cross-region replication for critical buckets. Versioning protects against accidental deletion |
+
+## Security
+
+| Risk | Mitigation |
+|------|-----------|
+| Unauthorized uploads | Presigned URLs with IAM auth, short TTL (15 min) |
+| Malicious file upload | Server-side MIME validation + virus scan (ClamAV) |
+| Path traversal in key | Sanitize filename: remove `../`, null bytes, semicolons |
+| Exposed bucket data | Block public access at account + bucket level. OAC for CDN |
+| Exfiltration via upload | S3 bucket policy restricts PutObject to presigned URLs only |
+| CORS abuse | Restrict to known origins. Never use wildcard for credentialed requests |
+| Large file DoS | Enforce max size server-side. Multipart for large reduces memory per request |
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It's Bad | Fix |
+|-------------|-------------|-----|
+| Uploading through app server | Wastes server CPU/memory/bandwidth, single point of failure | Direct-to-storage via presigned URL |
+| Sensitive data in file keys | PII leak in S3 logs, URLs, CDN caches | Use UUIDs, not emails, in keys |
+| Serving files from app server | Slow, expensive, not scalable | CDN with S3 origin |
+| No lifecycle policies | Ever-growing storage costs | Define lifecycle: hot → IA → Glacier → delete |
+| Client-side validation only | Easily bypassed via curl/Postman | Always validate server-side |
+| Long-lived presigned URLs | Security risk if URL is leaked | 5-15 min for upload, 1h max for download |
+| Processing in upload handler | Increases latency, couples upload to processing | Async processing via SQS queue |
+
 ## Rules
 - Never accept files on application server — direct-to-storage from client
 - Every upload validated server-side (type, size, virus scan)
@@ -183,6 +319,9 @@ processing:
 - CDN cache bust via version hash in filename
 - Replication for production data across regions
 - Block public access by default at account and bucket level
+- Never trust Content-Type from client — verify via file signature (magic bytes)
+- Always use async processing pipelines — never process files in the upload request
+- Set lifecycle policies from day one — retroactive cleanup is expensive
 
 ## References
   - references/cdn-origin.md — CDN and Origin Storage Reference

@@ -2,7 +2,7 @@
 name: backend-transactional-outbox
 description: >
   Use this skill when the user says 'outbox', 'transactional outbox', 'outbox pattern', 'reliable event publishing', 'dual write', 'CDC outbox', 'message relay', 'publish events reliably', 'exactly-once publish', 'debezium outbox'. This skill enforces: event publication in the same DB transaction as business data, separate message relay process, at-least-once delivery guarantee, deduplication in consumers, idempotent consumption. Applies to any backend stack. Do NOT use for: in-process events, fire-and-forget messaging, or already-reliable message broker setups.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -52,6 +52,29 @@ Consumer dedup: {key and storage}
 
 ### Max Response Length
 15 lines for design. 8 lines for table schema.
+
+## Decision Tree
+
+### Relay Strategy
+
+```
+What throughput do you need?
+  ├── Low to moderate (<1000 events/sec), want simplicity
+  │   └── Polling relay — periodic SQL query for unprocessed rows
+  ├── High throughput (>1000 events/sec), need near real-time
+  │   └── CDC relay (Debezium) — tail the WAL, no polling overhead
+  └── Moderate throughput, want logical replication, no extra infra
+      └── PostgreSQL LISTEN/NOTIFY + polling as fallback
+```
+
+### When to Use Outbox Pattern
+
+```
+Do you write to DB and send a message in the same operation?
+  ├── Yes → Use outbox pattern. Without it, dual-write can fail halfway
+  ├── No, only DB → No outbox needed
+  └── No, only message → No outbox needed
+```
 
 ## Workflow
 
@@ -160,6 +183,29 @@ Application -> PostgreSQL WAL -> Debezium connector -> Kafka -> Consumer
 
 CDC advantages: no polling overhead, near real-time, no impact on application database.
 
+Debezium outbox configuration:
+```json
+{
+  "name": "order-service-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "debezium",
+    "database.password": "***",
+    "database.dbname": "orders",
+    "table.include.list": "public.outbox_messages",
+    "tombstones.on.delete": "false",
+    "transforms": "outbox",
+    "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+    "transforms.outbox.table.field.event.type": "event_type",
+    "transforms.outbox.table.field.event.id": "id",
+    "transforms.outbox.table.field.event.key": "aggregate_id",
+    "transforms.outbox.table.field.event.timestamp": "created_at"
+  }
+}
+```
+
 ### Step 5: Consumer Idempotency
 
 ```typescript
@@ -173,6 +219,106 @@ async function handleOrderPlaced(event: OutboxEvent): Promise<void> {
 }
 ```
 
+### Step 6: Batched Processing
+
+For higher throughput with polling relay:
+
+```typescript
+class BatchedOutboxRelay {
+  async poll(): Promise<void> {
+    const messages = await this.db.outbox.findUnprocessed(100);
+    if (messages.length === 0) return;
+
+    const batches = this.groupByTopic(messages);
+
+    for (const [topic, batch] of batches) {
+      try {
+        await this.messageBus.publishBatch(topic, batch.map(msg => ({
+          eventId: msg.id,
+          eventType: msg.eventType,
+          aggregateId: msg.aggregateId,
+          data: msg.eventData,
+        })));
+
+        await this.db.outbox.markProcessedBatch(batch.map(m => m.id));
+      } catch (err) {
+        // Fall back to individual processing for this batch
+        await this.processIndividually(batch);
+      }
+    }
+  }
+}
+```
+
+### Step 7: Monitoring and Alerting
+
+| Metric | What It Tells | Alert Threshold |
+|--------|--------------|-----------------|
+| Outbox backlog count | Unprocessed messages | > 1000 for > 5 min |
+| Outbox relay latency | Time between insert and publish | > 60s |
+| Retry count distribution | Messages failing repeatedly | Retry > 5 |
+| Dead letter count | Permanently failed messages | > 0 |
+| Relay processing rate | Throughput | Sudden drop > 50% |
+
+```sql
+-- Monitoring queries
+-- Backlog count
+SELECT COUNT(*) FROM outbox_messages WHERE processed_at IS NULL;
+
+-- Stuck messages (>5 min old)
+SELECT COUNT(*) FROM outbox_messages
+  WHERE processed_at IS NULL
+  AND created_at < NOW() - INTERVAL '5 minutes';
+
+-- Failed messages
+SELECT COUNT(*) FROM outbox_messages
+  WHERE processed_at IS NULL AND retry_count > 5;
+```
+
+### Step 8: Cleanup Strategy
+
+```sql
+-- Archive processed messages after 7 days
+DELETE FROM outbox_messages
+  WHERE processed_at IS NOT NULL
+  AND processed_at < NOW() - INTERVAL '7 days';
+
+-- Archive dead-letter messages after 30 days (after manual review)
+DELETE FROM outbox_messages
+  WHERE retry_count >= 10
+  AND created_at < NOW() - INTERVAL '30 days';
+```
+
+## Production Considerations
+
+| Concern | Practice |
+|---------|----------|
+| DB load from polling | Poll every 1-5s, batch size 50-100. For >1000 events/s, use CDC |
+| Ordering | Outbox table has no ordering guarantee. Use created_at + batch processing |
+| Idempotency key storage | Use Redis with TTL matching broker retention, or a dedicated DB table |
+| Large payloads | Store event_data as JSONB. For >10KB, store reference (S3 URL) in event_data |
+| Transaction size | Multiple outbox rows in one tx is fine. Avoid 1000+ rows per single business operation |
+| Relay failures | Alert on retry_count > 5. Manual intervention for dead-letter messages |
+
+## Security
+
+| Risk | Mitigation |
+|------|-----------|
+| Event data exposure | Encrypt sensitive fields in event_data before storing |
+| Relay as vector | Outbox relay should only have write access to broker, not read access to other tables |
+| Injection in event_data | event_data is JSONB — use parameterized queries for all outbox table operations |
+| Unauthorized event generation | Outbox insert only through application business logic, never direct |
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It's Bad | Fix |
+|-------------|-------------|-----|
+| Publishing directly from request handler | If broker is down, event is lost. DB tx fails, but user already got response | Use outbox: write to DB first, relay separately |
+| Same transaction, different DB | Outbox in PostgreSQL, business data in MySQL — no atomicity | Keep outbox in same DB as business data |
+| No dedup in consumer | At-least-once delivery causes duplicate processing | Check idempotency key before processing |
+| Long-running relay blocking | Single relay thread blocks if one message fails to publish | Individual message retry, skip failures, process batch |
+| Deleting outbox immediately after publish | Lose audit trail, cannot replay | Archive after 7 days, keep for replay capability |
+
 ## Rules
 - Business operation and outbox insert MUST be in the same database transaction. If either fails, both roll back.
 - The message relay is a separate process. Do NOT publish events directly from the application request handler.
@@ -181,6 +327,9 @@ async function handleOrderPlaced(event: OutboxEvent): Promise<void> {
 - Outbox records are never deleted immediately. Archive or purge after 7 days.
 - Monitor outbox backlog as a health metric. Backlog > 1000 unprocessed messages triggers an alert.
 - Consumers always check for duplicate event processing before acting.
+- The outbox table must be in the same database as the business data (same ACID guarantees).
+- Always include correlationId in metadata for distributed tracing.
+- Never skip the outbox pattern for "simple" cases — dual-write always has failure scenarios.
 
 ## References
   - references/deduplication-idempotency.md — Deduplication & Idempotency

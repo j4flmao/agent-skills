@@ -249,6 +249,77 @@ Support:
 - {Support level} — {response time SLA}
 ```
 
+### Pricing Psychology Principles
+
+**Anchoring:** The first price a customer sees becomes their reference point. Display enterprise tier first (highest price) to anchor perceptions. The middle tier then feels reasonable by comparison.
+
+**Decoy effect:** Adding a third option that is clearly worse value than one of the other two makes that option more attractive. Enterprise tier at $199 makes Pro at $29 look like a bargain.
+
+**Left-digit effect:** $29.00 is perceived as significantly less than $30.00. Use $99 not $100. $29 not $30. The leftmost digit has disproportionate psychological impact.
+
+**Loss aversion:** Customers feel losses 2x more than equivalent gains. Frame annual billing as "save $120/year" not "pay $240 upfront." Frame feature limits as "what you'll lose" at lower tiers.
+
+**Fairness perception:** Customers need to feel pricing is fair. Usage-based pricing must have caps and alerts to prevent bill shock. Price increases must be accompanied by value narrative. Grandfathering protects fairness perception during changes.
+
+### Emotional pricing levers:
+- **Scarcity:** "Limited-time offer" with real deadline
+- **Social proof:** "Join 10,000+ teams on Pro"
+- **Risk reversal:** "30-day money-back guarantee"
+- **Effort reduction:** "Set up in 5 minutes. No credit card required."
+- **Identity:** "For serious professionals" (tier naming matters)
+
+### Economic Model Template
+Build a spreadsheet model with these inputs to validate pricing viability:
+
+```
+Inputs:
+  Target segments: [{segment}, {segment}]
+  Estimated users per segment: {N}
+  Willingness to pay (P50): ${amount}/month
+  COGS per user: ${amount}/month (infrastructure, support, payment processing)
+  CAC by channel: {channel}: ${amount}
+
+Outputs:
+  Revenue per tier: {tier}: ${amount}/mo/user × {users}
+  Gross margin per tier: ({price} - {COGS}) / {price}
+  Payback period: CAC / (price - COGS)
+  LTV: (price - COGS) / monthly_churn_rate
+  LTV/CAC ratio: LTV / CAC
+
+Scenario analysis:
+  Base case: {assumptions} → Revenue: ${amount}, LTV/CAC: {ratio}
+  Optimistic: {assumptions} → Revenue: ${amount}, LTV/CAC: {ratio}
+  Pessimistic: {assumptions} → Revenue: ${amount}, LTV/CAC: {ratio}
+
+Breakeven: {months to recover pricing change costs}
+```
+
+Sensitivity: test how revenue changes with ±20% price, ±20% conversion, ±20% churn. The economic model must show viable unit economics in the base case before committing to a pricing structure.
+
+### Pricing Page Optimization Playbook
+
+**Above the fold (must have):**
+- Headline with customer value, not features ("Start shipping faster" not "3 plans")
+- Three tiers with enterprise anchor
+- Most popular tier visually highlighted
+- Annual/monthly toggle with savings callout
+- Key differentiators between tiers as comparison table
+
+**Below the fold:**
+- Feature comparison matrix with checkmarks and limits
+- FAQ section addressing objections (what happens when I hit limits? can I downgrade?)
+- Social proof (logos of customers on each tier)
+- Risk reversal (money-back guarantee, free trial, easy cancellation)
+- CTA that matches user intent ("Start free trial" not "Buy now")
+
+**Conversion optimization checklist:**
+- Test single-column vs multi-column layout
+- Test annual price prominence (show annual first or highlight savings)
+- Test feature comparison order (most impactful features first)
+- Test social proof placement (near CTA or near feature comparison)
+- Test FAQ position (before or after pricing table)
+- Test CTA copy (action-oriented vs value-oriented)
+
 ### Pricing Page Conversion Metrics
 
 | Metric | Definition | Benchmark |

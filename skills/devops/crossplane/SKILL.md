@@ -1,11 +1,17 @@
 ---
-name: devops-crossplane
+name: crossplane
 description: >
-  Crossplane control plane for platform engineering teams.
-  Covers: Crossplane providers, managed resources, composite resources (XRs), compositions, claims,
-  packages, Composition Functions, multi-cluster abstractions, GitOps integration.
-  Do NOT use for: Terraform, Pulumi, or other IaC tools without a control plane model.
-version: "1.0.0"
+  Use this skill when the user says 'Crossplane', 'control plane',
+  'managed resources', 'composite resources', 'XRDs', 'Composition',
+  'provider', 'provider-aws', 'provider-kubernetes', 'crossplane CLI',
+  'composition functions', 'claim', 'composite resource',
+  'platform engineering', 'infrastructure as code', 'control plane'.
+  Covers: Crossplane installation, XRD (CompositeResourceDefinition) design,
+  Composition patterns, providers (AWS, GCP, Azure, K8s), claims,
+  composition functions (inline and standalone), package management,
+  enterprise patterns, multi-cloud abstraction.
+  Do NOT use for: Terraform (use terraform skill), Pulumi (use pulumi skill).
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -13,167 +19,81 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [devops, crossplane, platform-engineering, kubernetes, phase-5]
+tags: [devops, crossplane, iac, platform-engineering, phase-5]
 ---
 
 # Crossplane
 
 ## Purpose
-Build a Kubernetes-native control plane that enables platform teams to offer standardized, self-service infrastructure abstractions to application teams.
+Provision and manage cloud infrastructure using Crossplane control plane with custom composite resources (XRDs), compositions, providers, and claims for platform engineering.
 
-## Agent Protocol
+## Architecture Decision Trees
 
-### Trigger
-Exact user phrases: "Crossplane", "XRD", "composition", "composite resource", "claim", "managed resource", "provider", "Crossplane function", "configuration package", "platform engineering".
+### Crossplane vs Terraform vs Pulumi
+| Feature | Crossplane | Terraform | Pulumi |
+|---|---|---|---|
+| Architecture | K8s-native control plane | CLI-based | CLI/SDK-based |
+| State management | K8s etcd (in-cluster) | Remote state (S3, etc.) | Service/self-managed |
+| Drift detection | Continuous reconciliation | Manual (plan/apply) | Manual (refresh) |
+| Multi-cloud | Single control plane | Per-provider state | Single state |
+| GitOps integration | Native (K8s YAML) | ArgoCD/Terraform Controller | Automation API |
+| Language | YAML/Composition | HCL | TypeScript/Python/Go |
+| Learning curve | High (XRDs + Composition) | Medium | Medium |
+| Best for | Platform teams, K8s shops | General IaC | Developer-familiar IaC |
 
-### Input Context
-Before activating, verify:
-- Existing Crossplane version and installed providers.
-- Provider credential method (Upbound Universal Crossplane, native provider, secret).
-- Composite Resource Definition (XRD) status — existing or new.
-- Composition strategy: patches, transforms, functions.
-- Target cloud providers (AWS, Azure, GCP).
+### Provider Selection
+| Provider | Resources | Stability | Notes |
+|---|---|---|---|
+| provider-aws | 1000+ (EC2, S3, RDS, IAM, etc.) | GA | Most complete |
+| provider-azure | 500+ | GA | Azure-native |
+| provider-gcp | 400+ | GA | GCP-native |
+| provider-helm | Chart installs | GA | K8s add-ons |
+| provider-kubernetes | Raw K8s resources | GA | In-cluster resources |
+| provider-sql | Postgres, MySQL | Alpha | Database users/DBs |
 
-### Output Artifact
-Writes to YAML files: `XRD.yaml`, `Composition.yaml`, `Claim.yaml`, `ProviderConfig.yaml`, `Package.yaml`.
-
-### Response Format
-YAML manifests with Crossplane API versions, ready for `kubectl apply`.
-
-### Completion Criteria
-This skill is complete when:
-- [ ] XRD defines the desired composite resource schema.
-- [ ] Composition maps XRD fields to provider managed resources.
-- [ ] Claim enables application team self-service.
-- [ ] Package artifacts are structured for registry publishing.
-- [ ] `kubectl get composite` shows the provisioned resources.
-
-### Max Response Length
-Direct file write. No response text.
+### Composite Resource Pattern
+```
+Claim (mydb.example.com/v1alpha1)
+  └── namespace: team-a    ← User creates this (self-service)
+        └── Composite Resource (XPostgreSQLInstance)
+              └── managed resources (Composition)
+                    ├── RDSInstance (provider-aws)
+                    ├── SecurityGroup (provider-aws)
+                    └── DatabaseSecret (provider-kubernetes)
+```
 
 ## Quick Start
-Define XRD with required/optional fields → Author Composition with patches → Apply ProviderConfig → Create Claim → Validate managed resources created → Package as Configuration for registry → Add Composition Functions for complex logic.
-
-## When to Use This Skill
-- Standardizing cloud resource provisioning across teams
-- Enforcing organizational policies on infrastructure
-- Building platform engineering abstractions on Kubernetes
-- Multi-cloud abstraction with uniform APIs
-- GitOps-driven infrastructure delivery
+Install Crossplane → Install provider (provider-aws) → Define XRD → Write Composition → Create Claim → Verify resources.
 
 ## Core Workflow
 
-### Step 1: Define Composite Resource Definition
+### Step 1: Install Crossplane and Provider
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1
-kind: CompositeResourceDefinition
+# install/crossplane.yaml
+apiVersion: v1
+kind: Namespace
 metadata:
-  name: xpostgresqlinstances.database.example.org
-spec:
-  group: database.example.org
-  names:
-    kind: XPostgreSQLInstance
-    plural: xpostgresqlinstances
-  claimNames:
-    kind: PostgreSQLInstance
-    plural: postgresqlinstances
-  versions:
-  - name: v1alpha1
-    served: true
-    referenceable: true
-    schema:
-      openAPIV3Schema:
-        type: object
-        properties:
-          spec:
-            type: object
-            properties:
-              parameters:
-                type: object
-                properties:
-                  storageGB:
-                    type: integer
-                    default: 20
-                  region:
-                    type: string
-                    enum: ["us-east-1", "eu-west-1"]
-                    default: "us-east-1"
-                  engineVersion:
-                    type: string
-                    default: "14"
-```
-
-### Step 2: Author Composition
-```yaml
-apiVersion: apiextensions.crossplane.io/v1
-kind: Composition
+  name: crossplane-system
+---
+apiVersion: helm.crossplane.io/v1beta1
+kind: ProviderConfig
 metadata:
-  name: xpostgresqlinstances.aws.database.example.org
+  name: helm-config
 spec:
-  compositeTypeRef:
-    apiVersion: database.example.org/v1alpha1
-    kind: XPostgreSQLInstance
-  resources:
-  - name: rds-instance
-    base:
-      apiVersion: rds.aws.upbound.io/v1beta1
-      kind: Instance
-      spec:
-        forProvider:
-          engine: postgres
-          engineVersion: "14"
-          dbInstanceClass: db.t3.medium
-          allocatedStorage: 20
-          publiclyAccessible: false
-          skipFinalSnapshot: true
-    patches:
-    - fromFieldPath: spec.parameters.storageGB
-      toFieldPath: spec.forProvider.allocatedStorage
-    - fromFieldPath: spec.parameters.region
-      toFieldPath: spec.forProvider.region
-    - fromFieldPath: spec.parameters.engineVersion
-      toFieldPath: spec.forProvider.engineVersion
-  - name: security-group
-    base:
-      apiVersion: ec2.aws.upbound.io/v1beta1
-      kind: SecurityGroup
-      spec:
-        forProvider:
-          ingress:
-          - fromPort: 5432
-            toPort: 5432
-            protocol: tcp
-            cidrBlocks:
-            - 10.0.0.0/8
-    patches:
-    - fromFieldPath: spec.parameters.region
-      toFieldPath: spec.forProvider.region
-```
-
-### Step 3: Application Claim
-```yaml
-apiVersion: database.example.org/v1alpha1
-kind: PostgreSQLInstance
+  credentials:
+    source: InjectedIdentity
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
 metadata:
-  name: my-app-db
-  namespace: team-alpha
+  name: provider-aws
 spec:
-  parameters:
-    storageGB: 50
-    region: us-east-1
-    engineVersion: "15"
-  compositionRef:
-    name: xpostgresqlinstances.aws.database.example.org
-  writeConnectionSecretToRef:
-    name: db-conn
-```
-
-### Step 4: Provider Configuration
-```yaml
+  package: xpkg.upbound.io/crossplane-contrib/provider-aws:v1.1.0
+---
 apiVersion: aws.upbound.io/v1beta1
 kind: ProviderConfig
 metadata:
-  name: aws-provider
+  name: default
 spec:
   credentials:
     source: Secret
@@ -183,24 +103,308 @@ spec:
       key: creds
 ```
 
+### Step 2: XRD (Composite Resource Definition)
+```yaml
+# xrds/x-postgres-instance.yaml
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xpostgresqlinstances.database.example.com
+spec:
+  group: database.example.com
+  names:
+    kind: XPostgreSQLInstance
+    plural: xpostgresqlinstances
+  claimNames:
+    kind: PostgreSQLInstance
+    plural: postgresqlinstances
+  connectionSecretKeys:
+    - host
+    - port
+    - username
+    - password
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  properties:
+                    storageGB:
+                      type: integer
+                      default: 20
+                      minimum: 10
+                      maximum: 1000
+                    instanceClass:
+                      type: string
+                      enum: [db.t3.small, db.t3.medium, db.r5.large]
+                      default: db.t3.small
+                    engine:
+                      type: string
+                      enum: [postgres, mysql]
+                      default: postgres
+                    engineVersion:
+                      type: string
+                      default: "15"
+                    autoMinorVersionUpgrade:
+                      type: boolean
+                      default: true
+                    multiAZ:
+                      type: boolean
+                      default: false
+                    subnetGroupName:
+                      type: string
+                      default: "default"
+                  required:
+                    - storageGB
+              required:
+                - parameters
+```
+
+### Step 3: Composition
+```yaml
+# compositions/xpostgresql-instance-v1alpha1.yaml
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xpostgresqlinstances.database.example.com
+  labels:
+    provider: aws
+spec:
+  compositeTypeRef:
+    apiVersion: database.example.com/v1alpha1
+    kind: XPostgreSQLInstance
+
+  resources:
+    - name: security-group
+      base:
+        apiVersion: ec2.aws.upbound.io/v1beta1
+        kind: SecurityGroup
+        spec:
+          forProvider:
+            description: "Crossplane managed PostgreSQL SG"
+            ingress:
+              - fromPort: 5432
+                toPort: 5432
+                protocol: tcp
+                cidrBlocks:
+                  - "10.0.0.0/8"
+              - fromPort: 5432
+                toPort: 5432
+                protocol: tcp
+                cidrBlocks:
+                  - "172.16.0.0/12"
+            egress:
+              - fromPort: 0
+                toPort: 0
+                protocol: "-1"
+                cidrBlocks:
+                  - "0.0.0.0/0"
+            tags:
+              Name: "crossplane-postgresql"
+        providerConfigRef:
+          name: default
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.claimRef.namespace
+          toFieldPath: spec.forProvider.tags.CrossplaneClaimNamespace
+
+    - name: db-subnet-group
+      base:
+        apiVersion: rds.aws.upbound.io/v1beta1
+        kind: SubnetGroup
+        spec:
+          forProvider:
+            subnetIds: []
+            tags:
+              Name: "crossplane-postgresql"
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.subnetGroupName
+          toFieldPath: spec.forProvider.subnetIds
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-subnet-ids"
+
+    - name: rds-instance
+      base:
+        apiVersion: rds.aws.upbound.io/v1beta1
+        kind: Instance
+        spec:
+          forProvider:
+            engine: postgres
+            engineVersion: "15"
+            autoMinorVersionUpgrade: true
+            publiclyAccessible: false
+            backupRetentionPeriod: 7
+            backupWindow: "04:00-04:30"
+            maintenanceWindow: "sun:05:00-sun:05:30"
+            skipFinalSnapshot: false
+            finalSnapshotIdentifier: ""
+            storageType: gp3
+            storageEncrypted: true
+            monitoringInterval: 60
+            monitoringRoleArn: ""
+            performanceInsightsEnabled: true
+            performanceInsightsRetentionPeriod: 7
+            enabledCloudwatchLogsExports: ["postgresql"]
+            deleteAutomatedBackups: false
+            deletionProtection: true
+            tags:
+              Name: "crossplane-postgresql"
+              ManagedBy: "crossplane"
+          writeConnectionSecretToRef:
+            namespace: crossplane-system
+            name: postgresql-connection
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.storageGB
+          toFieldPath: spec.forProvider.allocatedStorage
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.instanceClass
+          toFieldPath: spec.forProvider.dbInstanceClass
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.engine
+          toFieldPath: spec.forProvider.engine
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.engineVersion
+          toFieldPath: spec.forProvider.engineVersion
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.multiAZ
+          toFieldPath: spec.forProvider.multiAz
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.autoMinorVersionUpgrade
+          toFieldPath: spec.forProvider.autoMinorVersionUpgrade
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.arn
+          toFieldPath: status.instanceARN
+      connectionDetails:
+        - fromConnectionSecretKey: username
+        - fromConnectionSecretKey: password
+        - fromConnectionSecretKey: host
+        - fromConnectionSecretKey: port
+```
+
+### Step 4: Claim (User-facing)
+```yaml
+# claims/team-a-db.yaml
+apiVersion: database.example.com/v1alpha1
+kind: PostgreSQLInstance
+metadata:
+  name: team-a-production-db
+  namespace: team-a
+spec:
+  parameters:
+    storageGB: 100
+    instanceClass: db.r5.large
+    engine: postgres
+    engineVersion: "15"
+    multiAZ: true
+  writeConnectionSecretToRef:
+    name: db-connection
+```
+
+### Step 5: Composition Functions (Inline)
+```yaml
+# compositions/with-functions.yaml
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: with-functions
+spec:
+  compositeTypeRef:
+    apiVersion: example.com/v1alpha1
+    kind: XExampleResource
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: crossplane-contrib-function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          - name: my-resource
+            base:
+              apiVersion: s3.aws.upbound.io/v1beta1
+              kind: Bucket
+              spec:
+                forProvider:
+                  acl: private
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.name
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+```
+
+### Step 6: Package Management
+```yaml
+# package/configuration.yaml
+apiVersion: pkg.crossplane.io/v1
+kind: Configuration
+metadata:
+  name: my-platform-config
+spec:
+  package: myregistry/my-platform-config:v1.0.0
+  packagePullPolicy: Always
+  revisionActivationPolicy: Automatic
+  revisionHistoryLimit: 3
+---
+# Build with:
+# crossplane xpkg build --name my-platform-config.xpkg
+# crossplane xpkg push myregistry/my-platform-config:v1.0.0 my-platform-config.xpkg
+```
+
+## Anti-Patterns
+
+### Anti-Pattern 1: XRDs Too Similar to Provider Resources
+Creating XRDs that are 1:1 wrappers around single provider resources. XRDs should provide meaningful abstraction — combine related resources and simplify configuration.
+
+### Anti-Pattern 2: No Validation in XRD
+Not using OpenAPI schema validation in XRDs. User errors propagate to provider resource failures. Define `minimum`, `maximum`, `enum`, `pattern` constraints.
+
+### Anti-Pattern 3: Ignoring Composition Patches
+Not using patches to propagate composite field values to managed resources. Use `FromCompositeFieldPath`, `ToCompositeFieldPath`, and transforms to wire up resources.
+
+### Anti-Pattern 4: Direct Provider Resource Creation
+Users creating provider resources directly instead of through claims. Claims are the self-service interface — enforce creation through claims only.
+
+### Anti-Pattern 5: No ProviderConfig Management
+Using a single ProviderConfig for all environments. Create separate ProviderConfig per environment/account for isolation.
+
+## Production Considerations
+- Use Composition Functions (Pipeline mode) for complex logic beyond YAML.
+- Version XRDs to manage breaking changes (v1alpha1 → v1beta1 → v1).
+- Restrict provider resource creation to crossplane-system only.
+- Enable crossplane monitoring (metrics on port 8080).
+- Use external name for importing existing resources.
+- Pin provider versions and test before upgrading.
+
 ## Rules & Constraints
-- Never allow claims to bypass composition — all resource creation must route through compositions.
-- Always version XRDs and Compositions with `referenceable: true`.
-- Use patch sets for repeated patch logic across multiple resources.
-- Never embed raw provider credentials in provider configs — use IRSA or Workload Identity.
-- Always set `writeConnectionSecretToRef` for database and credential resources.
-- Use Composition Functions for complex transformation logic, not string manipulation in patches.
-- Package configurations for registry publishing with semantic versioning.
+- XRDs must define meaningful abstraction (not 1:1 wrappers).
+- Claims are the only self-service interface for users.
+- Use Composition patches for field mapping.
+- Validate inputs in XRD OpenAPI schema.
+- Pin provider and configuration package versions.
+- Use Kubernetes network policies to isolate Crossplane components.
 
 ## References
-  - references/composition-functions.md — Crossplane Composition Functions
-  - references/composition-patterns.md — Crossplane Composition Patterns
-  - references/crossplane-advanced.md — Crossplane Advanced Topics
-  - references/crossplane-fundamentals.md — Crossplane Fundamentals
-  - references/enterprise-patterns.md — Crossplane Enterprise Patterns
-  - references/package-management.md — Crossplane Package Management
-  - references/provider-architecture.md — Crossplane Provider Architecture
+  - references/composition-functions.md
+  - references/composition-patterns.md
+  - references/crossplane-advanced.md
+  - references/crossplane-fundamentals.md
+  - references/enterprise-patterns.md
+  - references/package-management.md
+  - references/provider-architecture.md
+  - references/xrd-design-guide.md
+
 ## Handoff
-After completing this skill:
-- Next skill: **devops-gitlab-ci** — CI/CD pipelines for Crossplane configuration packages
-- Pass context: Provider version, XRD names, Composition labels, claim namespace convention
+Next: **terraform** — Terraform vs Crossplane comparison for IaC.

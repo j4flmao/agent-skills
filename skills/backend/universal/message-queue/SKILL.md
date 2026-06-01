@@ -2,7 +2,7 @@
 name: backend-message-queue
 description: >
   Use this skill when the user says 'message queue', 'Kafka', 'RabbitMQ', 'SQS', 'pub-sub', 'event bus', 'consumer group', 'topic', 'queue', 'at-least-once', 'exactly-once', 'idempotent consumer', 'event sourcing', 'dead letter queue', 'DLQ', 'message broker', 'producer', 'consumer', 'event-driven', 'async processing', or when designing asynchronous messaging. This skill enforces consistent messaging patterns: broker selection, topic/queue topology, message schema, consumer groups, retry, DLQ, and idempotency. Applies to any backend stack. Do NOT use for: gRPC streaming, WebSocket real-time, REST API design, or database CDC.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -66,6 +66,38 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 Per topic/queue: 8 lines. Per message type: 6 lines.
+
+## Decision Tree
+
+### Which Broker?
+
+```
+What are your requirements?
+  ├── High throughput (>100K msg/s), replay, log compaction, analytics
+  │   └── Apache Kafka — partitioning, consumer groups, long retention
+  ├── Flexible routing (topic/direct/fanout), per-message ack, task queues
+  │   └── RabbitMQ — exchanges, bindings, TTL, dead-lettering
+  ├── Fully managed, no ops, Lambda triggers, simple
+  │   └── AWS SQS — auto-scale, limited features, 256KB max
+  ├── High throughput, low latency, JVM-free
+  │   └── Pulsar — geo-replication, multi-tenancy, segment-based storage
+  └── Pub/sub with push delivery, mobile/web integration
+      └── Google Pub/Sub — managed, exactly-once, push subscriptions
+```
+
+### Which Delivery Guarantee?
+
+```
+What happens if a message is lost?
+  ├── Data loss is acceptable (metrics, non-critical logs)
+  │   └── At-most-once — fire and forget, lowest overhead
+  ├── Duplicates are OK, data loss is not
+  │   └── At-least-once — retry on failure, idempotent consumer required
+  ├── Neither loss nor duplicates allowed (financial, inventory)
+  │   └── Exactly-once — transactional producer + dedup consumer + idempotent processing
+  └── I don't know
+      └── Default to at-least-once — safest choice for most use cases
+```
 
 ## Workflow
 
@@ -141,6 +173,22 @@ Idempotency key = message.id or business_key + event_type
 Processed set TTL: match broker retention period
 ```
 
+```typescript
+class IdempotentConsumer {
+  private processed = new Set<string>();
+
+  async process<T>(message: Message<T>, handler: (data: T) => Promise<void>): Promise<void> {
+    if (this.processed.has(message.id)) {
+      logger.info('Duplicate message skipped', { id: message.id });
+      return;
+    }
+    await handler(message.data);
+    this.processed.add(message.id);
+    // For persistence: store in Redis with TTL
+  }
+}
+```
+
 ### Step 6: Retry and Dead-Letter Queue
 ```
 Kafka:
@@ -159,6 +207,155 @@ SQS:
   - Lambda DLQ destinations for async invocation failures
 ```
 
+```typescript
+// Kafka consumer with retry (Node.js)
+class RetryableConsumer {
+  private maxRetries = 3;
+  private retryTopics: Record<string, string> = {};
+
+  async consume(topic: string, handler: (msg: Message) => Promise<void>) {
+    const consumer = this.kafka.consumer({ groupId: 'order-service' });
+    await consumer.subscribe({ topic });
+
+    await consumer.run({
+      eachMessage: async ({ topic: originTopic, partition, message }) => {
+        const parsed = JSON.parse(message.value!.toString());
+        const retryCount = parsed._metadata?.retryCount ?? 0;
+
+        try {
+          await handler(parsed);
+          await consumer.commitOffsets([{ topic: originTopic, partition, offset: message.offset }]);
+        } catch (err) {
+          if (retryCount >= this.maxRetries) {
+            await this.sendToDLQ(parsed);
+            logger.error('Message sent to DLQ after max retries', { id: parsed.id, error: err });
+          } else {
+            const delayTopic = `${topic}.retry-${retryCount + 1}`;
+            await this.producer.send({
+              topic: delayTopic,
+              messages: [{
+                value: JSON.stringify({
+                  ...parsed,
+                  _metadata: { retryCount: retryCount + 1, lastError: (err as Error).message },
+                }),
+              }],
+            });
+          }
+        }
+      },
+    });
+  }
+}
+```
+
+### Step 7: Consumer Group Scaling
+```
+Kafka partitions vs consumers:
+  Partitions = 6, Consumers = 6  → Each consumer gets 1 partition (ideal)
+  Partitions = 6, Consumers = 3  → Each consumer gets 2 partitions (balanced)
+  Partitions = 6, Consumers = 10 → 4 consumers idle (waste)
+  
+  Rule: consumer count <= partition count
+```
+
+```typescript
+// Graceful shutdown for consumer
+async function shutdownGracefully(consumer: Consumer) {
+  process.on('SIGTERM', async () => {
+    logger.info('Shutting down consumer...');
+    await consumer.disconnect();
+    process.exit(0);
+  });
+}
+```
+
+### Step 8: Producer Patterns
+
+```typescript
+// Kafka producer with idempotency
+const producer = kafka.producer({
+  idempotent: true,                   // exactly-once production
+  maxInFlightRequests: 5,             // limit concurrency
+  retries: 3,
+});
+
+async function publishEvent(event: DomainEvent) {
+  await producer.send({
+    topic: event.type.replace(/([a-z])([A-Z])/g, '$1.$2').toLowerCase() + '.v1',
+    messages: [{
+      key: event.aggregateId,         // ordering by aggregate
+      value: JSON.stringify({
+        id: uuidv4(),
+        type: event.constructor.name,
+        version: 1,
+        timestamp: new Date().toISOString(),
+        producer: serviceName,
+        key: event.aggregateId,
+        data: event,
+      }),
+      headers: { 'event-type': event.constructor.name },
+    }],
+  });
+}
+```
+
+### Step 9: Monitoring and Observability
+
+| Metric | What It Tells | Alert Threshold |
+|--------|--------------|-----------------|
+| Consumer lag | How far behind consumers are | Lag > 1000 for > 5 min |
+| Messages in DLQ | Permanent failures | > 0, alert immediately |
+| Processing time | Consumer health | p99 > 10s |
+| Throughput (msg/s) | System load | Compare to baseline |
+| Failed deliveries | Broker connectivity | > 1% for > 1 min |
+| Queue depth (SQS/Rabbit) | Backlog | Depth > 10000 |
+
+```typescript
+// Kafka lag monitoring
+async function checkConsumerLag(admin: Admin, groupId: string): Promise<void> {
+  const lag = await admin.fetchOffsets({ groupId });
+  for (const partition of lag) {
+    const topicLag = partition.offset ?? 0;
+    if (topicLag > 1000) {
+      logger.warn('High consumer lag', { groupId, partition: partition.partition, lag: topicLag });
+    }
+  }
+}
+```
+
+## Production Considerations
+
+| Concern | Practice |
+|---------|----------|
+| Message ordering | Use key-based partitioning. Same key = same partition = ordered |
+| Schema evolution | Add fields only (backward compat). Version in envelope. Never mutate existing fields |
+| Large messages | >1MB: store reference (S3 URL) in message, not the payload itself |
+| Rebalancing (Kafka) | Static group membership to reduce rebalance frequency |
+| Connection security | TLS for all brokers. SASL/SCRAM or mTLS for auth |
+| Geo-distribution | Kafka MirrorMaker for cross-region replication. Pulsar has native geo-replication |
+
+## Security
+
+| Risk | Mitigation |
+|------|-----------|
+| Unauthorized produce/consume | ACLs per topic (Kafka), IAM policies (SQS), Vhost permissions (RabbitMQ) |
+| Message tampering | TLS in transit. Optional: message-level HMAC or encryption |
+| Sensitive data in messages | Encrypt payload at application level before producing |
+| DoS via large messages | Enforce max message size at broker level |
+| Credential exposure | Use IAM roles (AWS), service accounts, or vault, never hardcoded creds |
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It's Bad | Fix |
+|-------------|-------------|-----|
+| Using MQ as a database | Storage grows unbounded, no query capability | Define retention limits, use DB for persistence |
+| Infinite retention | Storage explosion, slow rebalances | Set retention by time and size |
+| No DLQ monitoring | Silent data loss | Alert on DLQ message production |
+| Committing offset before processing | Lost messages on crash | Commit after processing (at-least-once) |
+| Too many partitions | Rebalance overhead, connection overhead | Partitions = consumers × 2-3 max |
+| Synchronous producing | Increases latency, reduces throughput | Batch or async produce |
+| Single consumer on partitioned topic | N-1 idle partitions | Match consumer count to partitions |
+
 ## Rules
 - Never consume from production topics without a consumer group id.
 - Always set a retention limit (time or size). Never use infinite retention.
@@ -168,6 +365,9 @@ SQS:
 - DLQ must have monitoring and alerting. Unattended DLQ = silent data loss.
 - Consumer lag must be monitored. Set alerts for lag > threshold.
 - Never commit offsets before processing is complete (at-least-once).
+- Max message size: 1MB for Kafka, 256KB for SQS, unlimited for RabbitMQ (practical: 10MB).
+- Never produce to a topic that doesn't exist — create topics with proper config first.
+- Use idempotent producers for Kafka (exactly-once semantics to broker).
 
 ## References
   - references/broker-comparison.md — Message Broker Comparison

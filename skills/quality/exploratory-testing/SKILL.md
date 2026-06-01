@@ -153,6 +153,214 @@ After a series of sessions, map coverage against the feature area. Use a simple 
 +-------------------------------------------------+
 ```
 
+## Exploratory Testing Session Templates
+
+### Session Report Template
+```yaml
+session:
+  id: "EX-S12-03"
+  date: "2026-06-15"
+  tester: "Priya K."
+  charter: "Explore checkout flow with discount coupons"
+  mission: "Find issues in coupon application at checkout"
+  scope:
+    in:
+      - "Logged-in user checkout"
+      - "All coupon types (percentage, fixed, free shipping)"
+      - "Desktop and mobile viewports"
+    out:
+      - "Guest checkout"
+      - "Payment gateway errors"
+      - "International currencies"
+  timebox: 75 minutes
+  actual_duration: 72 minutes
+  heuristics_applied:
+    - "CRUD (create/apply/remove/reapply coupon)"
+    - "Boundary (minimum order amount, max discount cap)"
+    - "Timing (apply coupon before/after shipping selection)"
+    - "FEW HICCUPS (format issues, edge cases)"
+  areas_covered:
+    - "Coupon validation at checkout"
+    - "Multiple coupon application"
+    - "Coupon removal and re-application"
+    - "Coupon with minimum order amount"
+    - "Expired coupon behavior"
+  bugs_found:
+    - id: "BUG-421"
+      severity: "High"
+      summary: "Coupon SAVE20 applies to already-discounted items"
+      steps: "1. Add sale item to cart (30% off) 2. Apply coupon SAVE20 3. Both discounts applied to base price"
+      expected: "Coupon should apply to sale price (post-discount), not base price"
+    - id: "BUG-422"
+      severity: "Low"
+      summary: "Coupon code input accepts spaces"
+      steps: "1. Enter ' SAVE10 ' (with spaces) 2. Submit coupon"
+      expected: "Spaces should be trimmed or rejected"
+  observations:
+    - "Coupon application is fast (< 200ms response time)"
+    - "Error messages are clear and user-friendly"
+    - "Coupon removal restores original price correctly"
+  test_ideas:
+    - "Session: expired coupon edge cases"
+    - "Session: coupon stacking limits"
+    - "Session: coupon with cart modifications after application"
+  coverage_assessment: "Good coverage of coupon lifecycle. Need deeper testing of edge cases and concurrent coupon operations."
+```
+
+### Charter Backlog Template
+```yaml
+charter_backlog:
+  prioritized:
+    - id: "CH-042"
+      mission: "Explore checkout with international shipping addresses"
+      priority: "High"
+      risk: "New feature — address validation for non-US formats"
+    - id: "CH-041"
+      mission: "Explore checkout with multiple currency conversion"
+      priority: "High"
+      risk: "Currency rounding and display issues"
+    - id: "CH-040"
+      mission: "Explore checkout with payment method switching"
+      priority: "Medium"
+      risk: "State consistency across payment methods"
+    - id: "CH-039"
+      mission: "Explore checkout on slow network (throttled 3G)"
+      priority: "Medium"
+      risk: "Timeout handling, loading states"
+    - id: "CH-038"
+      mission: "Explore checkout with screen reader (accessibility)"
+      priority: "Low"
+      risk: "Compliance requirement, user-reported issues"
+```
+
+## Heuristic Deep Dives
+
+### FEW HICCUPS Heuristics
+```
+F — Format: How does the system handle different input formats? (dates, phone numbers, currency)
+E — Extreme: What happens at min/max boundaries? (empty, very long, very large)
+W — Whether: Does the system handle edge cases? (null, undefined, empty string)
+H — How: How does the system behave under different conditions? (loaded state, empty state, error state)
+I — Interruption: What happens when an operation is interrupted? (cancel, refresh, back button)
+C — Crowded: What happens with many items, users, or simultaneous operations?
+C — Consistency: Is behavior consistent across different paths to the same destination?
+U — Uniqueness: What happens with duplicate submissions, parallel requests?
+P — Performance: Is the system responsive under different conditions?
+S — Security: Are there any security concerns? (permission bypass, data leakage)
+```
+
+### SFDPOT Heuristic (Navigation)
+```
+S — Starting state: Where does the user start?
+F — Flow: What is the expected flow from start to end?
+D — Data: What data is carried through the flow?
+P — Persistence: Is data preserved across steps?
+O — Options: What alternate paths exist?
+T — Termination: What happens at the end of the flow?
+```
+
+### CRUD Heuristic (Data Operations)
+```
+C — Create: Can the user create a new entity?
+R — Read: Can the user view the entity?
+U — Update: Can the user modify the entity?
+D — Delete: Can the user remove the entity?
+Additional:
+  - List: Can the user see all entities?
+  - Search: Can the user find specific entities?
+  - Export: Can the user export entity data?
+  - Import: Can the user batch-import entities?
+```
+
+## Exploratory Testing Anti-Patterns (Additional)
+
+### Anti-Pattern: Confirmation Bias
+Testing only what you expect to work — entering valid data, following happy paths, assuming the system behaves correctly. Actively try to break the feature: enter invalid data, skip required steps, interrupt in-progress operations, use maximum-length inputs, submit empty forms.
+
+### Anti-Pattern: Over-Documentation
+Taking excessive notes during the session at the expense of testing time. The goal is to find bugs, not to produce documentation. Take enough notes to reproduce findings and remember what was tested. Full test case documentation happens post-session.
+
+### Anti-Pattern: Single-Device Focus
+Testing on only one browser, one screen size, or one operating system. Different devices reveal different bugs: layout issues on different screen sizes, touch interaction issues on mobile, performance issues on slower devices. Rotate devices across sessions.
+
+### Anti-Pattern: Same Heuristic Every Session
+Using the same heuristic approach every session creates blind spots. Each heuristic highlights different defect types. FEW HICCUPS finds input validation bugs, SFDPOT finds navigation bugs, CRUD finds data consistency bugs. Vary heuristics across sessions.
+
+### Anti-Pattern: Bug Filing After Session
+Bugs found during exploration but filed after the session lose critical context: reproduction steps become less precise, screenshots may not have been captured, the environment state may have changed. File bugs immediately during the session.
+
+## Exploratory Testing Maturity Model
+
+| Level | Characteristics | Practices |
+|---|---|---|
+| 1: Initial | Ad-hoc exploration | No charters, no session management, no notes, findings rarely documented |
+| 2: Defined | Basic SBTM | Charter-based sessions, timeboxing, session notes, bug tracking |
+| 3: Managed | Structured exploration | Heuristic-driven charters, debrief process, charter backlog management, coverage mapping |
+| 4: Measured | Data-driven exploration | Coverage metrics, bug find rate tracking, heuristic effectiveness analysis, cross-tester rotation |
+| 5: Optimized | AI-assisted exploration | Automated charter generation from risk analysis, adaptive heuristic recommendation, session data mining for pattern discovery |
+
+## Tooling (Extended)
+
+| Tool | Category | Use Case |
+|------|----------|----------|
+| Session Tester (Chrome) | Session management | Timer, notes, charter tracking |
+| TestRail | Test management | Charter backlog, session reports |
+| Trello / Notion | Charter board | Visual charter backlog management |
+| Xray / Zephyr | Jira integration | Exploratory session tracking in Jira |
+| qTest | Test management | Enterprise exploratory testing |
+| Rapid Reporter | Note-taking | Lightweight session note capture |
+| Bug Magnet | Test data | Common bug-triggering input values |
+| Charles Proxy / mitmproxy | Network testing | Inject network errors, modify responses |
+| BrowserStack / Sauce Labs | Device access | Real device testing across platforms |
+| DevTools / Safari Web Inspector | Debugging | Inspect state, console errors, network |
+| Screen recording (QuickTime, OBS) | Session recording | Record sessions for later review |
+| TestHeuristic Cheat Sheet | Reference | Quick heuristic lookup during sessions |
+| BugBug | Test automation | Convert exploratory findings to automated checks |
+| TestPad | Session management | Lightweight charter-based session tracking |
+| SessionBox | Session management | Multi-session management across applications |
+| qTest Exploratory Testing | Enterprise session mgmt | Jira-integrated enterprise exploratory testing |
+
+## Performance
+
+- Session effectiveness: experienced testers find 5-15 bugs per 90-minute session in a complex feature area
+- Bug find rate: exploratory testing finds 2-5x more bugs per hour than scripted manual testing for the same feature
+- Coverage breadth: a single 90-minute session can cover 30-50% of a feature's functional surface
+- Cost per bug: $50-150 for exploratory vs $200-500 for scripted testing (industry estimates)
+- Optimal session length: 60-90 minutes — sessions shorter than 45 minutes lack depth, sessions longer than 120 minutes suffer from tester fatigue
+- Session frequency: 2-3 sessions per week per tester maintains momentum without burnout
+- Team rotation: rotating charters among 3-4 testers increases total bug discovery by 40-60% compared to the same testers always testing the same features
+- Debrief overhead: 5 minutes per 60-minute session (8% overhead) — high return on investment for the structured reflection
+
+## Exploratory Testing Metrics
+
+```yaml
+exploratory_metrics:
+  session_effectiveness:
+    avg_bugs_per_session: 8.2
+    avg_bugs_per_hour: 6.5
+    bug_find_rate_vs_scripted: "3.2x higher"
+  coverage:
+    functional_coverage_per_session: "35%"
+    cumulative_coverage_after_5_sessions: "78%"
+    cumulative_coverage_after_10_sessions: "92%"
+  heuristic_effectiveness:
+    FEW_HICCUPS: "32% of bugs found"
+    SFDPOT: "18% of bugs found"
+    CRUD: "15% of bugs found"
+    Error_Guessing: "22% of bugs found"
+    Timing: "8% of bugs found"
+    Other: "5% of bugs found"
+  team:
+    testers_active: 4
+    sessions_per_week: 8
+    charters_in_backlog: 14
+    avg_charter_age: "6.3 days"
+  quality_impact:
+    production_bugs_prevented_per_release: "3.5 (estimated)"
+    regression_test_ideas_generated: "2.1 per session"
+    acceptance_criteria_gaps_found: "0.8 per session"
+```
+
 ## Rules
 1. Always set a clear charter before starting — no unbounded exploration
 2. Respect the time-box strictly — unfinished charters roll to next session
@@ -169,6 +377,11 @@ After a series of sessions, map coverage against the feature area. Use a simple 
 13. Rotate charters among team members — different testers find different bugs with different heuristics
 14. Map coverage after every 5 sessions — identify gaps before they become production issues
 15. A session without bug findings is not a wasted session — documented correct behavior and coverage confirmation are valuable outputs
+16. Bug severity classification: P0 (blocks release), P1 (must fix), P2 (should fix), P3 (nice to have)
+17. Maximum 2 sessions per day per tester to maintain focus quality
+18. Share session findings in team debrief at end of testing cycle
+19. Track heuristic effectiveness: which heuristics find the most bugs per session
+20. Session notes must include environment details (device, OS, browser, network)
 
 ## Common Pitfalls
 
@@ -192,34 +405,6 @@ After a series of sessions, map coverage against the feature area. Use a simple 
 | Crowd testing | Medium-High | Medium | Low | Diverse devices, real-world conditions |
 | Bug bashes | Very High (short-term) | Low | High (team collaboration) | Pre-release crunch, specific risk areas |
 | Session-based + automated | High | Medium | High (both skills) | Comprehensive quality strategy |
-
-## Performance
-
-- Session effectiveness: experienced testers find 5-15 bugs per 90-minute session in a complex feature area
-- Bug find rate: exploratory testing finds 2-5x more bugs per hour than scripted manual testing for the same feature
-- Coverage breadth: a single 90-minute session can cover 30-50% of a feature's functional surface
-- Cost per bug: $50-150 for exploratory vs $200-500 for scripted testing (industry estimates)
-- Optimal session length: 60-90 minutes — sessions shorter than 45 minutes lack depth, sessions longer than 120 minutes suffer from tester fatigue
-- Session frequency: 2-3 sessions per week per tester maintains momentum without burnout
-- Team rotation: rotating charters among 3-4 testers increases total bug discovery by 40-60% compared to the same testers always testing the same features
-- Debrief overhead: 5 minutes per 60-minute session (8% overhead) — high return on investment for the structured reflection
-
-## Tooling
-
-| Tool | Category | Use Case |
-|------|----------|----------|
-| Session Tester (Chrome) | Session management | Timer, notes, charter tracking |
-| TestRail | Test management | Charter backlog, session reports |
-| Trello / Notion | Charter board | Visual charter backlog management |
-| Xray / Zephyr | Jira integration | Exploratory session tracking in Jira |
-| qTest | Test management | Enterprise exploratory testing |
-| Rapid Reporter | Note-taking | Lightweight session note capture |
-| Bug Magnet | Test data | Common bug-triggering input values |
-| Charles Proxy / mitmproxy | Network testing | Inject network errors, modify responses |
-| BrowserStack / Sauce Labs | Device access | Real device testing across platforms |
-| DevTools / Safari Web Inspector | Debugging | Inspect state, console errors, network |
-| Screen recording (QuickTime, OBS) | Session recording | Record sessions for later review |
-| TestHeuristic Cheat Sheet | Reference | Quick heuristic lookup during sessions |
 
 ## References
   - references/charter-design.md — Charter Design

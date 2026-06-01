@@ -54,134 +54,245 @@ No preamble. No postamble. No explanations. Compress output — why use many tok
 ### Max Response Length
 ~4096 tokens.
 
-## Workflow
+## Component Architecture / Decision Trees
 
-### Step 1: Include htmx
-```html
-<script src="https://cdn.jsdelivr.net/npm/htmx.org@2/dist/htmx.min.js"></script>
+### Architecture Options
+
+| Approach | Trade-off | When to Use |
+|----------|-----------|-------------|
+| hx-get fragment swap | Simple data fetch, GET semantics | Read operations, lazy load |
+| hx-post form with validation | Form submission, 422 errors | Mutations with validation |
+| hx-boost on links/forms | Full-page SPA-like navigation | Enhancing existing HTML |
+| hx-trigger="every 10s" | Polling for updates | Real-time-ish dashboards |
+| hx-trigger="revealed" | Lazy load below fold | Performance optimization |
+| hx-trigger="intersect" | Viewport-based loading | Infinite scroll |
+| Server-Sent Events (hx-sse) | Server push | Real-time notifications |
+| WebSockets (hx-ws) | Bidirectional stream | Chat, collaborative editing |
+
+### Decision Tree: Request Trigger
+
+```
+What triggers the AJAX request?
+  Button/link click -> hx-trigger="click" (default for buttons, links, forms)
+  Page load -> hx-trigger="load"
+  Element scrolled into view -> hx-trigger="revealed"
+  Input change -> hx-trigger="change, keyup delay:300ms" (search-as-you-type)
+  Time interval -> hx-trigger="every 5s" (polling)
+  Intersection observer -> hx-trigger="intersect threshold:0.5"
+  Custom JS event -> hx-trigger="custom-event from:body"
+  Focus loss -> hx-trigger="focusOut delay:200ms"
 ```
 
-### Step 2: Basic AJAX
-```html
-<button hx-get="/contacts" hx-target="#contact-list" hx-swap="innerHTML">
-  Load Contacts
-</button>
-<div id="contact-list"></div>
+### Decision Tree: Swap Strategy
 
-<form hx-post="/contacts" hx-target="#contact-list" hx-swap="beforeend">
-  <input name="name" required>
-  <button type="submit">Add</button>
+```
+What should happen with the response?
+  Replace target's children -> hx-swap="innerHTML" (default)
+  Replace the whole target -> hx-swap="outerHTML"
+  Insert before the target -> hx-swap="beforebegin"
+  Insert after the target -> hx-swap="afterend"
+  Append inside target -> hx-swap="beforeend"
+  Prepend inside target -> hx-swap="afterbegin"
+  Execute response JS only -> hx-swap="none"
+  Remove the target -> hx-swap="delete"
+```
+
+### Hypermedia Architecture Decision
+
+```
+How much of the page does this interaction affect?
+  Small widget update -> Return fragment, swap innerHTML on container
+  Form submission with errors -> Return updated form HTML with 422 status
+  Section replacement (tab) -> Return section HTML, swap outerHTML on section
+  Full page navigation -> Use hx-boost on links for seamless navigation
+  Modal/dialog -> Return dialog HTML, swap innerHTML on modal container
+  Infinite scroll -> Return next page items, swap beforeend on list
+```
+
+## Component Design Patterns
+
+### Button with Loading State
+
+```html
+<button hx-get="/api/refresh" hx-target="#data" hx-indicator="#spinner">
+  Refresh
+  <img id="spinner" class="htmx-indicator" src="/spinner.gif" />
+</button>
+```
+
+### Form with Validation
+
+```html
+<form hx-post="/contacts" hx-target="#form-area" hx-swap="outerHTML">
+  <input type="text" name="email" hx-get="/contacts/check-email"
+         hx-trigger="change" hx-target="#email-error">
+  <div id="email-error"></div>
+  <button type="submit">Submit</button>
 </form>
 ```
 
-### Step 3: Lazy Loading
+Server returns updated form HTML with class "error" on invalid fields and HTTP 422 status.
+
+### Infinite Scroll
+
 ```html
-<div hx-get="/graphs/revenue" hx-trigger="load" hx-swap="innerHTML">
-  <img class="htmx-indicator" src="/spinner.gif">
+<div hx-get="/posts?page=2" hx-trigger="revealed" hx-swap="beforeend" hx-target="#posts">
+</div>
+<div id="posts">
+  <!-- Existing posts rendered by server -->
 </div>
 ```
 
-### Step 4: Infinite Scroll
+### Tabs via Fragment Swap
+
 ```html
-<div hx-get="/posts?page=2" hx-trigger="revealed" hx-target="this" hx-swap="afterend">
+<div hx-target="#tab-content" hx-swap="innerHTML">
+  <a hx-get="/tabs/info">Info</a>
+  <a hx-get="/tabs/settings">Settings</a>
+</div>
+<div id="tab-content">
+  <!-- Server-rendered tab content -->
 </div>
 ```
 
-### Step 5: Optimistic UI and Error Handling
+### Inline Edit
+
 ```html
-<button hx-post="/items"
-        hx-target="#items"
-        hx-swap="beforeend"
-        hx-on:htmx:before-request="this.classList.add('disabled')"
-        hx-on:htmx:after-request="this.classList.remove('disabled')"
-        hx-indicator="#spinner">
-  Add Item
-</button>
+<div hx-get="/contacts/1/edit" hx-trigger="dblclick" hx-target="this" hx-swap="outerHTML">
+  <span>{{ contact.name }}</span>
+</div>
 ```
 
-### Step 6: Server-Side HATEOAS
+Server returns `<form>` with input filled in and hx-put to cancel/submit.
+
+## State Management Patterns
+
+### Server-Driven State (Primary)
+
+State lives on the server. Client is a stateless HTML viewer. The server:
+- Renders current state as HTML
+- Returns fragments representing new state after mutations
+- Sends links for available actions (HATEOAS)
+
+### URL State via hx-push-url
+
+```html
+<div hx-get="/products?page=2" hx-push-url="true" hx-target="#products">
+  Next Page
+</div>
+```
+
+### Client State via Alpine.js (Companion)
+
+For client-only UI state (modals, toggles, theme), pair htmx with Alpine.js:
+
+```html
+<div x-data="{ modalOpen: false }">
+  <button hx-get="/api/data" hx-target="#result" @click.prevent>Load</button>
+  <div x-show="modalOpen">Modal content</div>
+</div>
+```
+
+## Performance Optimization
+
+1. htmx is ~14KB min+gzip — negligible bundle cost.
+2. Requests return HTML fragments (smaller than full page, larger than JSON).
+3. Server rendering time adds latency vs client rendering.
+4. Partial swaps reduce DOM diffing to target elements only.
+5. hx-trigger="load" defers rendering to after initial paint (improves LCP).
+6. Caching: traditional HTTP caching works (ETags, Last-Modified).
+7. Boosting enables view-transitions for smooth navigation.
+8. hx-trigger="every 30s" for polling — balance freshness vs server load.
+9. Debounce inputs with `delay:300ms` to avoid excess requests.
+10. hx-preserve keeps elements untouched across swaps (useful for video players, audio).
+
+## Build & Bundle Considerations
+
+- htmx works via CDN — no build step required.
+- npm install: `npm install htmx.org`, then `import 'htmx.org'`.
+- Extensions (`hx-ext`) each add 2-5KB — only load what you need.
+- htmx 2.x is available both as ESM and UMD bundles.
+- No tree-shaking concerns — the entire library is ~14KB.
+- Compatible with any backend build pipeline (webpack, esbuild, Vite, no bundler).
+- Alpine.js + htmx together is ~24KB total — still smaller than most UI frameworks alone.
+
+## Testing Strategies
+
+### Server-Side Focused Testing
+
+Since htmx is primarily server-driven, testing focuses on the backend:
+
 ```python
-# views.py
-def contact_list(request):
-    contacts = Contact.objects.all()
-    return render(request, 'contacts/_list.html', {'contacts': contacts})
-
-def create_contact(request):
-    form = ContactForm(request.POST)
-    if form.is_valid():
-        contact = form.save()
-        return render(request, 'contacts/_row.html', {'contact': contact})
-    return render(request, 'contacts/_form.html', {'form': form}, status=422)
-
-def delete_contact(request, pk):
-    contact = get_object_or_404(Contact, pk=pk)
-    contact.delete()
-    return HttpResponse("")
+# pytest example for Django + htmx
+def test_contact_list_htmx(client):
+    response = client.get('/contacts', HTTP_HX_REQUEST='true')
+    assert response.status_code == 200
+    assert 'partials/_contact_list.html' in response.templates
+    assert 'hx-get' in response.content.decode()
 ```
 
-### Step 7: Boost All Links and Forms
-```html
-<body hx-boost="true">
-  <!-- All links and forms use AJAX automatically -->
-  <a href="/about">About</a>
-  <form action="/search" method="get">
-    <input name="q">
-    <button type="submit">Search</button>
-  </form>
-</body>
+### Browser Testing with Playwright
+
+```javascript
+test('infinite scroll loads more items', async ({ page }) => {
+  await page.goto('/posts')
+  const initialCount = await page.locator('.post').count()
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await page.waitForResponse(resp => resp.url().includes('/posts?page=2'))
+  const newCount = await page.locator('.post').count()
+  expect(newCount).toBeGreaterThan(initialCount)
+})
 ```
 
-### Step 8: Confirmation Dialogs
-```html
-<button hx-delete="/contact/1" hx-confirm="Are you sure you want to delete?">
-  Delete
-</button>
-```
+### Key Testing Practices
+- Test server endpoints with htmx headers — assert HTML fragment correctness.
+- Test swap behavior by asserting DOM structure after hx-trigger.
+- Use hx-on:htmx:beforeRequest for instrumentation in E2E tests.
+- Test error scenarios: 422 for form errors, 404 for missing resources.
 
-## Component Architecture
+## Migration Patterns
 
-### htmx Request Pattern Decision
-```
-What triggers the request?
-├── User clicks -> hx-trigger="click" (default for buttons/links)
-├── Form submit -> hx-trigger="submit" (default for forms)
-├── Page load -> hx-trigger="load"
-├── Element visible -> hx-trigger="revealed"
-├── Input change -> hx-trigger="change, keyup delay:300ms"
-├── Polling -> hx-trigger="every 5s"
-├── Intersection -> hx-trigger="intersect threshold:0.5"
-└── Custom event -> hx-trigger="custom-event from:window"
+### From jQuery AJAX to htmx
 
-Where to swap the response?
-├── Replace the target's content -> hx-swap="innerHTML"
-├── Replace the target itself -> hx-swap="outerHTML"
-├── Insert before target -> hx-swap="beforebegin"
-├── Insert after target -> hx-swap="afterend"
-├── Append inside target -> hx-swap="beforeend"
-├── Prepend inside target -> hx-swap="afterbegin"
-├── No swap (just execute) -> hx-swap="none"
-└── Delete the target -> hx-swap="delete"
-```
+| jQuery Pattern | htmx Equivalent |
+|----------------|-----------------|
+| `$.get('/url', fn)` | `<button hx-get="/url" hx-target="#result">` |
+| `$.post('/url', data, fn)` | `<form hx-post="/url" hx-target="#result">` |
+| `$.ajax({error: fn})` | Server returns error HTML, CSS on .htmx-request errors |
+| Manual loading spinner | `hx-indicator="#spinner"` |
+| `$(el).html(html)` | `hx-swap="innerHTML"` |
+| `$(el).replaceWith(html)` | `hx-swap="outerHTML"` |
 
-## Common Pitfalls
+**Migration strategy**: Wrap each AJAX interaction with htmx attributes. Remove jQuery AJAX calls as you go.
+
+### From React to htmx
+
+Fundamental architecture change (client to server rendering). Best for content-heavy apps:
+- Replace useState/xhr with server state rendered as HTML.
+- Replace React Router with hx-boost for navigation.
+- Replace form libraries with hx-post + server validation (422).
+- Keep Alpine.js for client-only UI state (modals, toggles).
+
+## Anti-Patterns
 
 1. **Returning JSON instead of HTML**: htmx expects HTML fragments. JSON responses are not processed.
 2. **Full page reloads**: If server returns a full page instead of fragment, content doubles.
-3. **Missing hx-target**: Requests default to swapping the triggering element, not the container.
+3. **Missing hx-target**: Defaults to swapping the triggering element, not the container.
 4. **Forgetting 422 for validation errors**: Form validation errors must return 422 status.
-5. **Not handling swap strategy**: innerHTML vs outerHTML selection changes behavior significantly.
-6. **Overusing hx-boost**: Not all links should be boosted — some need full page loads (downloads, external).
+5. **Not handling swap strategy**: innerHTML vs outerHTML selection changes behavior.
+6. **Overusing hx-boost**: Some links need full page loads (downloads, external).
 7. **No loading indicators**: Without hx-indicator or CSS on .htmx-request, users see no feedback.
+8. **Missing CSRF tokens**: Add hx-headers for Django/Laravel.
+9. **Multiple hx-trigger on one element**: Use a parent wrapper for multiple triggers.
+10. **Not handling request errors**: Use hx-on:htmx:responseError for error handling.
 
-## Best Practices
+## Common Pitfalls
 
-1. Return HTML fragments, never JSON (unless explicitly for client-side templates).
-2. Use HATEOAS — server responses include links/forms for next actions.
-3. Choose hx-swap strategy carefully: innerHTML (default), outerHTML, beforeend, afterend.
-4. Form validation errors return 422 with updated form HTML.
-5. Use hx-indicator to show loading states — CSS class htmx-request is added automatically.
-6. Use hx-boost on body to enhance all links and forms with AJAX.
-7. Keep server endpoints idempotent when possible.
+1. Returning JSON instead of HTML — htmx processes HTML fragments only.
+2. Full page reloads — server should return fragments, not full pages.
+3. Missing hx-target — defaults to triggering element, not container.
+4. Forgetting 422 for validation errors — forms need 422 for error state.
+5. No loading indicators — use hx-indicator.
 
 ## Compared With
 
@@ -193,28 +304,64 @@ Where to swap the response?
 | Learning curve | Hours | Weeks | Days |
 | Bundle size | ~14KB | ~120KB (min) | ~10KB |
 | SEO | Full HTML | Needs SSR | HTML baseline |
-| Offline support | Limited | Via service worker | Via SW |
 
-## Performance
+## Server Integration Patterns
 
-1. htmx is ~14KB min+gzip — negligible bundle cost.
-2. Requests return HTML fragments (smaller than full page, larger than JSON).
-3. Server rendering time adds latency vs client rendering.
-4. Partial swaps reduce DOM diffing to target elements only.
-5. hx-trigger="load" defers rendering to after initial paint (improves LCP).
-6. Caching: traditional HTTP caching works (ETags, Last-Modified).
-7. Boosting enables view-transitions for smooth navigation.
+### Django
+```python
+def contact_list(request):
+    if request.htmx:
+        return render(request, 'contacts/_list.html', {'contacts': Contact.objects.all()})
+    return render(request, 'contacts/index.html', {'contacts': Contact.objects.all()})
+```
+
+### Laravel
+```php
+Route::get('/contacts', function () {
+    if (request()->header('HX-Request')) {
+        return view('contacts/_list', ['contacts' => Contact::all()]);
+    }
+    return view('contacts/index', ['contacts' => Contact::all()]);
+});
+```
+
+### Node/Express
+```javascript
+app.get('/contacts', (req, res) => {
+  if (req.headers['hx-request']) {
+    return res.render('contacts/_list', { contacts })
+  }
+  res.render('contacts/index', { contacts })
+})
+```
+
+## Advanced Patterns
+
+### Active Search
+```html
+<input type="search" name="q" hx-post="/search" hx-trigger="input changed delay:500ms, search" hx-target="#search-results" hx-indicator="#spinner">
+```
+
+### Lazy Loading with Placeholder
+```html
+<div hx-get="/graphs/revenue" hx-trigger="load"><img class="htmx-indicator" src="/spinner.gif"></div>
+```
+
+### Delete with Confirmation
+```html
+<button hx-delete="/contacts/1" hx-confirm="Delete contact?" hx-target="closest tr">Delete</button>
+```
 
 ## Tooling
 
-1. htmx browser DevTools extension — inspect htmx requests and responses.
-2. `hyperscript` — companion language for event handling (optional).
-3. `alpinejs` — complementary for client-side interactivity (tabs, modals).
-4. `django-htmx` — Django middleware and decorators.
-5. `flask-htmx` — Flask extension for htmx request detection.
-6. `laravel-htmx` — Laravel package with helpers.
-7. `go-htmx` — Go middleware for htmx headers.
-8. `spring-htmx` — Spring Boot integration.
+1. htmx DevTools browser extension
+2. `hyperscript` — companion language (optional)
+3. `alpinejs` — complementary for client interactivity
+4. `django-htmx` — Django middleware
+5. `flask-htmx` — Flask extension
+6. `laravel-htmx` — Laravel package
+7. `go-htmx` — Go middleware
+8. `spring-htmx` — Spring Boot integration
 
 ## Rules
 - Server returns HTML fragments, never JSON (unless explicitly for client-side templates).
@@ -222,9 +369,8 @@ Where to swap the response?
 - Choose the correct hx-swap strategy: innerHTML (default), outerHTML, beforeend (append), afterend.
 - Use hx-trigger for custom events: click, change, submit, load, revealed, intersect, every.
 - Form validation errors return 422 status with updated form HTML.
-- Use hx-indicator to show loading states — CSS class htmx-request is added automatically.
-- Use hx-boost on body to enhance all links and forms with AJAX.
-- Keep server endpoints idempotent when possible (GET for reads, POST for mutations).
+- Use hx-indicator to show loading states.
+- Keep server endpoints idempotent when possible.
 
 ## References
   - references/htmx-advanced.md — htmx Advanced Patterns

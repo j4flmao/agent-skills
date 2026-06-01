@@ -2,7 +2,7 @@
 name: blockchain-cryptography
 description: >
   Use this skill when asked about cryptographic primitives in blockchain, elliptic curve cryptography, hash functions, Merkle trees, digital signatures, zero-knowledge proofs, key derivation, BIP standards, and blockchain-specific crypto implementations. Languages: C++, Rust, Go, Python. Covers secp256k1, BN254, BLS12-381, Ed25519, SHA-256, Keccak-256, BLAKE2, Poseidon, Merkle trees (binary, Patricia, sparse, Verkle), ECDSA, Schnorr, BLS, threshold signatures (FROST, GG20), zk-SNARKs/STARKs/Bulletproofs, HD wallets (BIP-32/39/44), PSBT (BIP-174), and signature aggregation. Do NOT use for: general blockchain protocols (use blockchain-core), smart contract development (use blockchain-application), or standard web security cryptography outside blockchain.
-version: "1.1.0"
+version: "1.2.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -21,7 +21,7 @@ Guide the selection, implementation, and optimization of cryptographic primitive
 ## Agent Protocol
 
 ### Trigger
-"blockchain cryptography", "elliptic curve", "secp256k1", "BN254", "BLS", "Ed25519", "hash function blockchain", "Keccak-256", "SHA-256 blockchain", "Poseidon hash", "Merkle tree", "Merkle Patricia Trie", "Sparse Merkle Tree", "Verkle Trie", "ECDSA", "Schnorr signature", "BLS signature", "threshold signature", "FROST", "multi-sig", "aggregate signature", "zero-knowledge", "zk-SNARK", "zk-STARK", "Bulletproof", "circom", "Halo2", "BIP-32", "BIP-39", "BIP-44", "BIP-340", "PSBT", "BIP-174", "HD wallet", "key derivation", "cryptographic primitive", "signature scheme", "pairing-based cryptography", "post-quantum"
+"blockchain cryptography", "elliptic curve", "secp256k1", "BN254", "BLS", "Ed25519", "hash function blockchain", "Keccak-256", "SHA-256 blockchain", "Poseidon hash", "Merkle tree", "Merkle Patricia Trie", "Sparse Merkle Tree", "Verkle Trie", "ECDSA", "Schnorr signature", "BLS signature", "threshold signature", "FROST", "multi-sig", "aggregate signature", "zero-knowledge", "zk-SNARK", "zk-STARK", "Bulletproof", "circom", "Halo2", "BIP-32", "BIP-39", "BIP-44", "BIP-340", "PSBT", "BIP-174", "HD wallet", "key derivation", "cryptographic primitive", "signature scheme", "pairing-based cryptography", "post-quantum", "ecrecover", "EIP-712", "EIP-191", "RFC 6979", "KAT", "known-answer test", "nonce reuse", "signature malleability", "MuSig2", "threshold signing", "DKLs", "CGGMP", "aggregate signature", "hash-to-curve", "ICP", "Internet Computer"
 
 ### Input Context
 - Cryptographic operation (signing, verification, hashing, proof generation)
@@ -29,6 +29,7 @@ Guide the selection, implementation, and optimization of cryptographic primitive
 - Security level requirement (128-bit / 192-bit / 256-bit)
 - Performance constraints (verification throughput, gas budget)
 - Key management model (single key, HD wallet, multi-sig, threshold)
+- Threat model (passive/active, quantum-resistant needed?)
 
 ### Output Artifact
 Cryptographic architecture specification including:
@@ -95,6 +96,9 @@ Cryptographic architecture specification including:
 | BN254 | 254-bit | ~100-bit | EVM zk precompile, Zcash sprout | Pairing |
 | P-256 (secp256r1) | 256-bit | ~128-bit | WebAuthn, Apple/Google passes | ECDSA |
 | Curve25519 | 255-bit | ~128-bit | X25519 key exchange, Signal protocol | Diffie-Hellman |
+| secq256k1 | 256-bit | ~125-bit | ZK-friendly secp256k1 (EVM proofs) | ECDSA/SNARK |
+| Pallas/Vesta | 255-bit | ~128-bit | Mina, halo2 (Pasta curves) | PLONKish |
+| BLS48 | 576-bit | ~256-bit | High-security BLS (rare) | BLS |
 
 ### Signature Scheme Decision Tree
 
@@ -104,7 +108,8 @@ Decide: Signature Scheme for Blockchain Protocol
 │   ├── YES → ECDSA over secp256k1
 │   │   ├── Individual signing only
 │   │   ├── Library: libsecp256k1 (Bitcoin Core)
-│   │   └── Gas cost: 21,000 base + ~2,000 per ecrecover
+│   │   ├── Gas cost: 21,000 base + ~2,000 per ecrecover
+│   │   └── Nonce: RFC 6979 deterministic (prevents reuse)
 │   └── YES + aggregation → BLS over BN254 (precompile)
 │       └── Gas cost: ~25,000 per pairing check
 ├── Need high throughput + small keys?
@@ -123,7 +128,7 @@ Decide: Signature Scheme for Blockchain Protocol
 │   └── Threshold only → FROST over Ed25519 or BLS
 │       └── Library: frost-lib (Rust)
 └── Need zero-knowledge compatibility?
-    ├── Groth16/Bulleproofs → BN254 (EVM precompile)
+    ├── Groth16/Bulletproofs → BN254 (EVM precompile)
     └── PLONK → BLS12-381 (more efficient PLONK arithmetization)
 ```
 
@@ -149,6 +154,22 @@ Decide: Hash Function
     └── Password hashing → Argon2 (not for on-chain)
 ```
 
+### EVM Cryptographic Precompile Reference
+
+| Address | Precompile | Gas Cost | Purpose |
+|---|---|---|---|
+| 0x01 | ecrecover | 3,000 | ECDSA public key recovery |
+| 0x02 | SHA-256 | 60 + 12/word | SHA-256 hash |
+| 0x03 | RIPEMD-160 | 600 + 120/word | RIPEMD-160 hash |
+| 0x04 | identity | 15 + 3/word | Data copy |
+| 0x05 | modexp | Variable (200-50,000+) | Modular exponentiation |
+| 0x06 | ecadd (BN254) | 150 | BN254 point addition |
+| 0x07 | ecmul (BN254) | 6,000 | BN254 scalar multiplication |
+| 0x08 | ecpairing (BN254) | 45,000 base + 34,000/pair | BN254 pairing check |
+| 0x09 | BLAKE2f | Variable | BLAKE2 compression |
+| 0x0a | Point evaluation (EIP-4844) | 50,000 | KZG proof verification |
+| 0x0b | P256VERIFY (P-256) | ~3,450 | secp256r1 signature verification |
+
 ## Common Pitfalls
 
 1. **Non-deterministic ECDSA nonce reuse**: Reusing a nonce (k-value) across two ECDSA signatures reveals the private key. Always use RFC 6979 deterministic nonce generation.
@@ -161,6 +182,14 @@ Decide: Hash Function
 8. **Integer overflow in scalar arithmetic**: Overflow in curve order arithmetic can cause signature malleability or key recovery (especially in EVM precompiles).
 9. **Invalid curve point attacks**: Accepting points from an attacker that lie on a curve with different order (weaker security) than the intended curve.
 10. **Ignoring post-quantum threat**: Deploying long-lived contracts or validators without planning for post-quantum migration creates existential risk.
+11. **ECDSA signature malleability**: ECDSA signatures can be malleated (r, s) → (r, n-s) to produce a different valid signature for the same message. Use lower-s form (BIP-62/BIP-146).
+12. **EIP-712 domain separator collision**: Using the same domain separator across different contracts allows cross-contract replay of typed signatures.
+13. **Incorrect EIP-191 version byte**: Using wrong version byte (0x00 vs 0x01 vs 0x45) makes signed messages validate against different intended formats.
+14. **Hash-to-curve using cofactor clearing incorrectly**: Improper cofactor clearing in hash-to-curve can produce points in small subgroups or invalid points.
+15. **PSBT non-witness UTXO omission**: Not including full non-witness UTXO in PSBT for legacy inputs prevents hardware wallet from verifying the input.
+16. **BIP-32 hardened derivation in non-hardened code**: Hardened derivation requires the private key, but some code tries to derive hardened paths from public key alone.
+17. **Pairing target field mismatch**: Using G1×G2 pairings when G2×G1 is expected (or vice versa) produces incorrect verification.
+18. **KRACK-like attacks in threshold signing**: Some threshold protocols (GG20) have known attacks where a compromised party can extract other parties' secret shares during signing.
 
 ## Best Practices
 
@@ -169,8 +198,11 @@ Decide: Hash Function
 - BIP-39 mnemonic seeds must use 12+ words (128+ bits of entropy) and standard wordlist
 - BIP-44 path structure: `m/44'/coin'/account'/change/index`
 - For Taproot: use BIP-86 path: `m/86'/coin'/account'/change/index`
+- For validator keys (Ethereum 2.0): use EIP-2333 (BLS key derivation with `withdraw` prefix)
 - Hardware wallet signing for all high-value key operations
 - Regular key rotation schedule for validator and operator keys
+- Sharded key storage with geographic distribution for critical keys
+- Use SLIP-0010 for Ed25519 HD derivation (not BIP-32 which doesn't support Ed25519)
 
 ### Signature Verification
 - Always validate signature bounds (r, s < curve order; s is low-s for ECDSA)
@@ -178,6 +210,8 @@ Decide: Hash Function
 - Use batched verification when verifying multiple signatures
 - For EVM: prefer `ecrecover` precompile over custom Solidity ECDSA
 - Constant-time comparison for signature validation to prevent timing attacks
+- Use EIP-712 typed structured data for smart contract signatures (not raw `eth_sign`)
+- Verify domain separator matches the verifying contract's chain ID and address
 
 ### Zero-Knowledge Implementation
 - Use Groth16 for fixed-circuit proofs (most gas-efficient on EVM)
@@ -185,6 +219,36 @@ Decide: Hash Function
 - Use Bulletproofs for range proofs and confidential transactions
 - Always verify proof public inputs match the expected computation
 - Reference audited implementations (circom, halo2, bellman)
+- Use recursive proofs for batched verification (reduce on-chain cost)
+
+### Elliptic Curve Operations
+- Always validate point-on-curve before any scalar multiplication
+- Use Montgomery ladder or window method for constant-time operations
+- Precompute multiples for fixed-point multiplication (GLV method for secp256k1)
+- Use Shamir's trick for multi-scalar multiplication (faster than separate)
+- Validate infinity point as valid (not a failure condition)
+
+### Cryptographic Audit Checklist
+- [ ] Known-Answer Tests (KATs) pass against NIST/BSI/standard test vectors
+- [ ] No secret-dependent branching (constant-time) in any operation using private key data
+- [ ] ECDSA nonces generated deterministically per RFC 6979
+- [ ] All points validated on-curve and in-correct-subgroup before operations
+- [ ] BLS proof of possession verified before including public key in aggregation
+- [ ] Domain separation tags are unique per protocol context
+- [ ] Hash-to-curve uses approved method (IETF hash-to-curve v16+)
+- [ ] BIP-32/BIP-39 implementation verified against standard test vectors
+- [ ] ECDSA signatures use lower-s form (canonical encoding)
+- [ ] EIP-712 domain separators include chain ID to prevent cross-chain replay
+- [ ] Post-quantum awareness documented (with migration path)
+
+### Implementation Security Patterns
+- Use libsecp256k1 for secp256k1 (the reference implementation, constantly audited)
+- Use blst for BLS12-381 (Supranational, audited, constant-time)
+- For Ed25519 batch verification, use ed25519-dalek's `verify_batch` (batched scalar multiplication)
+- For threshold ECDSA: prefer CMP protocol (CGGMP21) over GG20 (GG20 has known flaws)
+- For threshold EdDSA: FROST (Flexible Round-Optimized Schnorr Threshold) is the standard
+- For BLS threshold: use the BLS IETF draft specification with PoP
+- Never implement custom pairing operations—always use audited libraries (bn256, blst, mcl)
 
 ## Compared With
 
@@ -198,6 +262,38 @@ Decide: Hash Function
 | Maturity | Production (20+ years) | Production (10+ years) | Standardization (2024+) |
 | Side-channel risk | Low (constant-time) | Medium (pairing complex) | High (lattice ops) |
 
+## Signature Aggregation Schemes Compared
+
+| Scheme | Rounds | Signers | Aggregation Type | Trust Model |
+|---|---|---|---|---|
+| BLS | 1 round | Unlimited | Signature + public key | PoP required |
+| MuSig2 | 2 rounds | ~100 practical | Public key only | Key aggregation (no PoP) |
+| FROST | 2-3 rounds | ~50 practical | Threshold | t-of-n, identifiable abort |
+| ROAST | Round-optimized | Unlimited | Wraps any threshold scheme | Robust (handles faulty signers) |
+| Bellare-Neven | 3 rounds | Unlimited | Public key only | No PoP, provably secure |
+
+## Hash Function Comparison for ZK Circuits
+
+| Hash | Constraints (per 256-bit) | Prover Time | Best For |
+|---|---|---|---|
+| Poseidon | ~10 | ~0.1ms | ZK-optimized, general purpose |
+| Rescue | ~12 | ~0.15ms | ZK-optimized (Plonky2) |
+| MiMC | ~5 | ~0.05ms | Smallest constraints (weak security at low rounds) |
+| SHA-256 | ~30,000 | ~10ms | Compatibility with Bitcoin/Ethereum |
+| Keccak-256 | ~25,000 | ~8ms | EVM compatibility |
+| Blake2s | ~15,000 | ~5ms | General purpose, EVM precompile |
+| Pedersen | ~2 | ~0.02ms | Only for commitments (not collision-resistant) |
+
+## Merkle Tree Variants
+
+| Type | Depth | Proof Size | Use Case |
+|---|---|---|---|
+| Binary Merkle | log2(n) | 32*log2(n) bytes | General proof of inclusion |
+| Merkle Patricia Trie | Variable | O(log n) | Ethereum state storage |
+| Sparse Merkle Tree | 256 | 256*32=8KB (can prune) | Identity, state commitments |
+| Verkle Trie (IPA) | 8 (k=256) | ~1KB for 2^24 entries | Ethereum state (future) |
+| Sparse Compact SMT | 256 | O(log n) with pruning | Celestia, rollup state |
+
 ## Performance Considerations
 
 - **EVM ecrecover**: ~2,000-3,000 gas per signature recovery on mainnet
@@ -208,6 +304,9 @@ Decide: Hash Function
 - **Merkle proof verification**: O(log n) hashes; 256-bit hash = 32 bytes per level
 - **HD wallet derivation**: BIP-32 hardened key derivation ~10x slower than non-hardened
 - **Key generation**: Ed25519 fastest (~0.1ms), BLS12-381 slowest (~10ms with pairings)
+- **BLS signature aggregation**: O(n) for n signatures, batch verification O(n) but 10x faster than individual
+- **MuSig2 key aggregation**: O(n) for key setup, then single verification
+- **EIP-712 signing**: ~0.5ms off-chain, ~20k gas on-chain for `ecrecover` + `ecrecover` match
 
 ## Operations & Maintenance
 
@@ -216,6 +315,7 @@ Decide: Hash Function
 - Governance multi-sig keys: Rotate quarterly with hardware wallet ceremony
 - Hot wallet (operational) keys: Rotate weekly or use threshold signing with M-of-N
 - Cold/treasury keys: Rotate annually with GPS-located ceremony recording
+- BLS validator withdrawal keys: Must not rotate without exit + re-deposit (stake linked)
 
 ### Monitoring
 - **Signature failure rate**: Spike may indicate network attack or implementation bug
@@ -223,6 +323,13 @@ Decide: Hash Function
 - **Key registration events**: Monitor for unauthorized key changes
 - **Nonce reuse detection**: Scan blockchain for ECDSA signatures with identical `r` values
 - **Pairing computation time**: Track on validators for resource planning
+- **PSBT signing failures**: Cluster by signer to identify faulty hardware wallets
+
+### Cryptographic Testing
+- Run KATs on every deployment to verify implementation correctness
+- Fuzz test with: zero scalars, infinity points, out-of-order field elements, large nonces
+- Cross-verify: compare against independent library output (e.g., btcd vs libsecp256k1)
+- Property-based tests: (sign → recover → verify) roundtrip must always pass
 
 ## Rules
 
@@ -242,6 +349,15 @@ Decide: Hash Function
 14. Threshold signatures: prefer FROST over GG20 for newer implementations (simpler, audited)
 15. ECDSA signature malleability: use lower-s form as standardized in BIP-62/BIP-146
 16. Never truncate hash outputs below 160 bits for blockchain address derivation
+17. EIP-712 typed data signatures must include chain ID in domain separator
+18. Hardware wallet signing must verify the displayed message against the raw bytes being signed
+19. BLS signature aggregation must verify PoP before including any public key in the aggregate set
+20. Use SLIP-0010 for Ed25519 HD derivation (BIP-32 does not support Ed25519 natively)
+21. MuSig2 requires key aggregation with tweak support for Taproot output key construction
+22. PSBT (BIP-174) must include full non-witness UTXO for legacy transaction inputs
+23. Hash-to-curve implementations must follow IETF draft-irtf-cfrg-hash-to-curve v16
+24. Cross-chain signature verification must prevent chain ID replay using domain separation
+25. ZK proof verification on-chain must check all public inputs against contract state
 
 ## References
 - references/blockchain-cryptography-advanced.md — Blockchain Cryptography Advanced Topics

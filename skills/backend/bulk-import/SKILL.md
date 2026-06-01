@@ -21,6 +21,46 @@ tags: [backend, data, phase-10]
 ## Purpose
 Design robust bulk import systems that handle large CSV/Excel files with validation, progress tracking, error recovery, and audit trails.
 
+## Architecture Decision Trees
+
+### Import Mode Selection
+
+| Criterion | Insert | Upsert | Replace |
+|-----------|--------|--------|---------|
+| Duplicate handling | Fails on conflict | Updates existing | Truncate all first |
+| Performance | Fastest | Moderate (check per row) | Fast (truncate + insert) |
+| Idempotent | No | Yes (by dedup field) | No (destructive) |
+| Risk level | Low | Low | High (data loss) |
+| Audit trail | All inserts | Updates logged | Lost on truncate |
+| Rollback complexity | Simple (transaction) | Moderate | Complex (needs backup) |
+| Use case | New data ingestion | Sync with external system | Full reimport/replace |
+
+Decision: Upsert for production syncs. Insert for immutable audit data. Replace only with pre-import backup.
+
+### Parsing Strategy
+
+| Criterion | Streaming (CSV) | Full load (Excel) | Hybrid (chunked) |
+|-----------|----------------|-------------------|------------------|
+| Memory | O(1) rows in memory | Full file in memory | O(batch size) |
+| Max file size | Unlimited | ~100MB practical | ~500MB |
+| Row validation | Per-batch | All before processing | Per-batch |
+| Error collection | Per-batch | Full before process | Per-batch |
+| Progress tracking | Yes (real-time) | No (must parse first) | Yes (per chunk) |
+| Random access | No | Yes | No |
+
+Decision: Streaming for CSV. Chunked for Excel > 10MB. Full load for Excel < 10MB.
+
+### Deduplication Strategy
+
+| Approach | Precision | Performance | Implementation |
+|----------|-----------|-------------|----------------|
+| DB unique constraint | Exact | Fast (index) | Schema definition |
+| Pre-check with SELECT | Exact | Slow on large tables | Query existing values |
+| Hash-based (MD5 row hash) | Approximate | Fast | Hash + compare |
+| External dedup (Redis set) | High | Very fast | SET + EXISTS check |
+
+Decision: DB unique constraint for exact dedup. Redis Bloom filter for high-volume approximate dedup.
+
 ## Agent Protocol
 
 ### Trigger
@@ -350,28 +390,225 @@ app.get('/api/imports/templates/:type', (req, res) => {
 });
 ```
 
-## Rules
+## Implementation Patterns
 
-1. Never trust file extensions — validate MIME types and content signatures.
-2. Always implement file size limits at both proxy and application level.
-3. Never process imports synchronously for files over 10K rows.
-4. Always strip BOM and detect encoding (UTF-8, UTF-16, Latin-1) on CSV files.
-5. Never assume column order — always use header mapping by name.
-6. Always trim whitespace from CSV values during parsing.
-7. Never allow import into production without preview step.
-8. Always implement idempotent imports to prevent duplicate processing.
-9. Never expose internal column names — use display labels in templates.
-10. Always implement import cancellation for long-running jobs.
-11. Never allow import of PII without audit trail.
-12. Always implement row count limits per import job.
-13. Never swallow validation errors — collect and return all errors.
-14. Always use streaming parsers for files > 10MB.
-15. Never import into tables without backup for replace mode.
-16. Always provide downloadable error report with row numbers.
-17. Never process files that fail header validation.
-18. Always enforce rate limits per user per time window.
-19. Never store raw uploaded files without retention policy.
-20. Always test imports with edge cases (empty rows, special chars, quotes, commas in values).
+### Pattern: Column Header Mapping
+
+```typescript
+interface ColumnMapping {
+  displayName: string;    // From CSV header
+  fieldName: string;      // Internal field name
+  required: boolean;
+  defaultValue?: unknown;
+  transform?: (value: string) => unknown;
+}
+
+class HeaderMapper {
+  async detectHeaders(file: Buffer, mimeType: string): Promise<ColumnMapping[]> {
+    const headers = await this.parseHeaders(file, mimeType);
+    const mapping = this.fuzzyMatch(headers, this.expectedColumns);
+    const unmatched = headers.filter(h => !mapping.find(m => m.displayName === h));
+    if (unmatched.length > 0) {
+      throw new ImportError(`Unrecognized columns: ${unmatched.join(', ')}`);
+    }
+    return mapping;
+  }
+
+  private fuzzyMatch(actual: string[], expected: ColumnMapping[]): ColumnMapping[] {
+    return actual.map(header => {
+      const match = expected.find(e =>
+        e.displayName.toLowerCase() === header.toLowerCase() ||
+        e.fieldName.toLowerCase() === header.toLowerCase()
+      );
+      if (!match) return null;
+      return { ...match, displayName: header };
+    }).filter(Boolean) as ColumnMapping[];
+  }
+}
+```
+
+### Pattern: Error Report Generation
+
+```typescript
+interface ImportError {
+  row: number;
+  column: string;
+  value: string;
+  message: string;
+  code: string;
+}
+
+async function generateErrorReport(errors: ImportError[], format: 'csv' | 'xlsx'): Promise<Buffer> {
+  if (format === 'csv') {
+    const header = 'Row,Column,Value,Error,Code\n';
+    const rows = errors.map(e =>
+      `"${e.row}","${e.column}","${e.value.replace(/"/g, '""')}","${e.message.replace(/"/g, '""')}","${e.code}"`
+    ).join('\n');
+    return Buffer.from(header + rows, 'utf-8');
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Import Errors');
+  sheet.columns = [
+    { header: 'Row', key: 'row', width: 10 },
+    { header: 'Column', key: 'column', width: 20 },
+    { header: 'Value', key: 'value', width: 30 },
+    { header: 'Error', key: 'message', width: 50 },
+    { header: 'Code', key: 'code', width: 15 },
+  ];
+  errors.forEach(e => sheet.addRow(e));
+  sheet.getRow(1).font = { bold: true };
+  return await workbook.xlsx.writeBuffer() as Buffer;
+}
+```
+
+### Pattern: Import Webhook Notifications
+
+```typescript
+interface ImportNotification {
+  importId: string;
+  status: 'completed' | 'partial' | 'failed';
+  summary: { total: number; processed: number; failed: number; skipped: number };
+  downloadUrl?: string;
+  errorReportUrl?: string;
+}
+
+async function notifyImportComplete(job: ImportJob): Promise<void> {
+  const notification: ImportNotification = {
+    importId: job.id,
+    status: job.status,
+    summary: {
+      total: job.rowCount,
+      processed: job.processingProgress?.processed || 0,
+      failed: job.processingProgress?.failed || 0,
+      skipped: job.rowCount - (job.processingProgress?.processed || 0) - (job.processingProgress?.failed || 0),
+    },
+  };
+
+  if (job.webhookUrl) {
+    await fetch(job.webhookUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(notification),
+    });
+  }
+
+  if (job.notifyUserId) {
+    await notificationService.send(job.notifyUserId, {
+      type: 'import_complete',
+      title: `Import ${job.status}: ${job.fileName}`,
+      ...notification,
+    });
+  }
+}
+```
+
+## Production Considerations
+
+### Scalability
+- Queue workers: scale horizontally by import type; dedicated worker pools for large imports
+- DB connections: batch processing uses pooled connections; release between batches
+- Memory: streaming parsers for files > 50MB; never load entire file into memory
+- Storage: upload files to S3/Blob storage; process from stream without local temp file
+
+### Monitoring
+- Metrics: import duration, rows/second, error rate by type, queue depth, failure rate
+- Alerts: error rate > 5%, queue backlog > 100 jobs, same file re-upload > 3 times
+- Logging: structured logs per import job (importId, userId, status, rowCount, duration)
+
+### Error Recovery
+- Partial success: import valid rows, report errors, allow retry of failed rows only
+- Rollback: transaction per batch; failed batch rolls back without affecting previous batches
+- Retry: exponential backoff for transient DB errors; manual retry for data errors after fix
+- Cancellation: set cancel flag; worker checks flag between batches and stops gracefully
+
+## Anti-Patterns
+
+| Anti-Pattern | Why | Fix |
+|-------------|-----|-----|
+| Direct INSERT without validation | Bad data corrupts database | Validation pipeline before any insert |
+| Single transaction for entire file | Failure loses all progress; locks table | Batch per transaction (500-1000 rows) |
+| Processing on main thread | Blocks HTTP response; no retry | Background queue always |
+| Ignoring BOM/encoding | Corrupted strings for special chars | Auto-detect encoding with `chardet` or `iconv-lite` |
+| Overwriting data without backup | Replace mode can't be undone | Auto-backup before replace; transaction rollback |
+| No header validation | Wrong column mapping = wrong data | Validate headers before processing any rows |
+| Synchronous progress tracking | Users refresh waiting; no feedback | WebSocket push or poll endpoint for progress |
+| Storing full file content in DB | DB bloat; file storage is cheaper | Object storage with metadata reference in DB |
+| Too-large batch size (10K+) | Long transaction; deadlock risk | Optimal batch size: 500-1000 rows |
+| No dedup before import | Duplicate records; manual cleanup | Dedup check per batch; fail or skip duplicates |
+
+## Security Considerations
+
+- File validation: check MIME type + magic bytes (not extension); reject unknown types
+- Upload path traversal: sanitize filename; use UUID-based storage keys, never user-provided names
+- CSV injection: don't open generated CSV in Excel directly (formulas starting with =, +, -, @ can execute)
+  - Mitigation: prefix dangerous-starting values with tab or single quote in CSV output
+- Rate limiting: per-user, per-hour import limits (e.g., 5 imports/hour, 500MB/hour total)
+- PII: mask sensitive fields in preview; enforce field-level access control
+- Audit: log every import action (upload, validate, confirm, cancel) with userId, timestamp, row count
+- File retention: auto-delete uploaded files after 30 days; allow user-triggered immediate deletion
+
+## Testing Strategies
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { parse } from 'csv-parse';
+
+describe('Bulk Import', () => {
+  it('parses CSV with headers', async () => {
+    const csv = 'name,email,age\nAlice,alice@test.com,30\nBob,bob@test.com,25';
+    const records: Record<string, string>[] = [];
+    const parser = parse(csv, { columns: true, skip_empty_lines: true });
+    for await (const record of parser) records.push(record);
+    expect(records).toHaveLength(2);
+    expect(records[0].name).toBe('Alice');
+  });
+
+  it('validates required fields', async () => {
+    const validator = new ImportValidator();
+    validator.register('email', { validate: async (f, v) => !v ? { field: f, message: 'Required' } : null });
+    const result = await validator.validate([{ email: '' }, { email: 'test@test.com' }]);
+    expect(result.errorCount).toBe(1);
+    expect(result.validCount).toBe(1);
+  });
+
+  it('detects encoding', async () => {
+    const buf = Buffer.from('name,email\nJalapeño,test@test.com', 'utf-8');
+    const encoding = await detectEncoding(buf);
+    expect(encoding).toBe('UTF-8');
+  });
+
+  it('rejects oversized files', () => {
+    const file = { size: 100 * 1024 * 1024, mimetype: 'text/csv' };
+    expect(validateFile(file, { maxSize: 50 * 1024 * 1024 })).toBe(false);
+  });
+
+  it('processes batch with transaction rollback on error', async () => {
+    const result = await processBatch(
+      [{ id: 1, name: 'Valid' }, { id: 2, name: null }],
+      'insert',
+      undefined,
+      mockDb
+    );
+    expect(result.processed).toBe(0);
+    expect(result.failed).toBe(2);
+  });
+
+  it('generates downloadable error report', async () => {
+    const errors = [{ row: 1, column: 'email', value: 'bad', message: 'Invalid format', code: 'INVALID_EMAIL' }];
+    const report = await generateErrorReport(errors, 'csv');
+    expect(report.toString()).toContain('Row,Column,Value,Error,Code');
+    expect(report.toString()).toContain('1,"email","bad","Invalid format","INVALID_EMAIL"');
+  });
+});
+```
+
+- Test with real CSV/Excel files containing edge cases: BOM, UTF-16, emoji, null bytes, quote-escaped fields
+- Load test: 500K rows CSV, measure throughput (target > 5K rows/second)
+- Test cancel: start import, cancel mid-way, verify no partial data committed
+- Test replace mode: verify old data is backed up before truncate, can be restored
+
+## Rules
 
 ## References
   - references/bulk-export.md — Bulk Export

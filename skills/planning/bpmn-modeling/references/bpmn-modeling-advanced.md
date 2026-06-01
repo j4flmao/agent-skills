@@ -1,214 +1,221 @@
-# Bpmn Modeling Advanced Topics
+# BPMN Modeling Advanced Topics
 
 ## Introduction
-Advanced Bpmn Modeling topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Advanced BPMN topics cover executable process models, integration with automation engines, DMN decision tables, performance analysis through process mining, and enterprise-wide process modeling governance.
 
-## Advanced Architecture Patterns
+## Executable Process Models (Level 4-5)
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+### BPMN 2.0 XML Structure
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             targetNamespace="http://example.com/process">
+  <process id="orderProcess" name="Order Fulfillment" isExecutable="true">
+    <startEvent id="start" name="Order Received" />
+    <serviceTask id="validatePayment" name="Validate Payment"
+                 implementation="paymentService.validate" />
+    <exclusiveGateway id="paymentStatus" name="Payment OK?" />
+    <endEvent id="end" name="Order Completed" />
+    <sequenceFlow id="sf1" sourceRef="start" targetRef="validatePayment" />
+    <sequenceFlow id="sf2" sourceRef="validatePayment" targetRef="paymentStatus" />
+    <sequenceFlow id="sf3" sourceRef="paymentStatus" targetRef="end">
+      <conditionExpression>${paymentStatus == 'APPROVED'}</conditionExpression>
+    </sequenceFlow>
+  </process>
+</definitions>
+```
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+### Camunda-Specific Extensions
+```xml
+<serviceTask id="chargeCard" name="Charge Credit Card"
+             camunda:class="com.example.ChargeCardDelegate"
+             camunda:retryTimeCycle="R3/PT10S" />
+<errorEventDefinition id="paymentError" errorRef="paymentFailed" />
+```
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+### Implementation Patterns per Engine
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+| Pattern | Camunda 8 | Flowable | Temporal |
+|---------|-----------|----------|----------|
+| Service task | Job worker in Go/Java/JS | Spring bean delegate | Activity implementation |
+| User task | Tasklist API | Form integration | Signal with external handler |
+| Timer catch | Cron or duration | Cron or duration | Timer/Delay workflow |
+| Message catch | Message correlation | Message event subscription | Signal with workflow ID |
+| Business rule | DMN decision | DMN decision | Embedded decision logic |
+| Error boundary | BPMN error + escalation | Error boundary event | Exception + retry policy |
 
-## Performance Optimization
+## DMN Decision Tables for Automation
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+### DMN XML Example
+```xml
+<decision id="shippingDecision" name="Determine Shipping Method">
+  <decisionTable hitPolicy="UNIQUE">
+    <input id="orderTotal" label="Order Total" typeRef="number" />
+    <input id="customerTier" label="Customer Tier" typeRef="string" />
+    <output id="shippingMethod" label="Shipping Method" typeRef="string" />
+    <rule id="r1">
+      <inputEntry><text>> 100</text></inputEntry>
+      <inputEntry><text>"PREMIUM"</text></inputEntry>
+      <outputEntry><text>"EXPRESS"</text></outputEntry>
+    </rule>
+  </decisionTable>
+</decision>
+```
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+### FEEL Expressions (Friendly Enough Expression Language)
+```
+// Context to evaluate
+{ "total": 150, "tier": "PREMIUM" }
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+// Returns "EXPRESS"
+shippingDecision(total, tier)
+```
 
-## Security Hardening
+### DMN Design Principles
+| Principle | Explanation |
+|-----------|-------------|
+| Single purpose | One decision per table |
+| Complete | Every input combination has an output |
+| Consistent | No overlapping rules with different outputs |
+| Atomic | Each rule tests one condition |
+| Testable | Every rule can be validated independently |
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+## Advanced Gateway Patterns
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+### Complex Gateway
+Used for complex synchronization conditions that cannot be expressed with AND/OR/XOR:
+- Example: "Continue when 3 out of 5 parallel paths complete"
+- Use sparingly — most complex conditions can be refactored into simpler patterns
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+### Event Subprocess
+Interrupting and non-interrupting event subprocesses handle exceptions at the process level:
+- Interrupting: cancels the parent activity
+- Non-interrupting: runs in parallel with the parent activity
+- Use for: SLA violations, timeout handling, cancellation requests
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+### Transaction Subprocess
+Boundary for ACID transaction behavior:
+- Cancel end event triggers compensation
+- All completed activities in the transaction are compensated
+- Use for: financial transactions, inventory reservations
 
-## Monitoring and Observability
+## Process Mining Integration
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+### What is Process Mining?
+Process mining extracts process models from event logs (database audit trails, application logs, system events). It compares the discovered model with the designed model to find deviations.
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+### Application
+| Use Case | Method | Outcome |
+|----------|--------|---------|
+| Conformance checking | Compare event log to BPMN model | Detect deviations |
+| Performance analysis | Annotate BPMN with timing data | Identify bottlenecks |
+| Model discovery | Generate BPMN from event logs | Discover actual process |
+| Social network analysis | Map handoffs between resources | Role optimization |
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+### Process Mining Tools
+| Tool | Vendor | Features |
+|------|--------|----------|
+| Celonis | Celonis | Full process mining suite, object-centric |
+| Disco | Fluxicon | Lightweight, fast model discovery |
+| PM4Py | Open source | Python-based process mining library |
+| Signavio | SAP | Process modeling + mining |
+| ARIS | Software AG | Enterprise process analysis |
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+## Enterprise Process Governance
 
-## Scalability and Reliability
+### Process Repository Structure
+```
+/processes/
+  /domain/
+    /L1-value-chain/
+    /L2-process-flows/
+    /L3-detailed/
+    /L4-executable/
+    /L5-technical/
+  /shared/
+    /subprocesses/
+    /decision-tables/
+    /data-objects/
+```
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+### Version Control
+- Store BPMN XML in Git alongside code
+- Version DMN tables in the same repository
+- Link process models to stories and ADRs
+- Review process changes in pull requests
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+### Review Cadence
+| Review Type | Frequency | Participants |
+|-------------|-----------|--------------|
+| Model validation | Per change | Process owner + participants |
+| Performance review | Quarterly | Process owner + analyst |
+| Governance review | Annually | Process council |
+| Compliance audit | Per audit cycle | Compliance + auditor |
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+## Performance Optimization Patterns
 
-## Integration and Interoperability
+### Reducing Cycle Time
+| Pattern | Application | Expected Impact |
+|---------|-------------|----------------|
+| Parallelize sequential tasks | Independent activities | 30-50% reduction |
+| Automate manual decisions | Simple rule-based decisions | 50-80% reduction |
+| Remove approval steps | Low-value approvals | 20-40% reduction |
+| Reduce handoffs | Resequence activities | 15-25% reduction |
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+### Scaling Automation
+| Strategy | Description | When to Use |
+|----------|-------------|-------------|
+| Retry with backoff | Failed service tasks retry | Transient failures |
+| Queue-based decoupling | Service tasks write to queue | High-volume processing |
+| Bulk processing | Aggregate items for batch | Similar tasks, low urgency |
+| Parallel execution | Fan-out service tasks | Independent items |
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+## Error Handling Advanced Patterns
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+### Compensation
+If a transaction fails mid-process, already-completed activities need to be rolled back:
+- Each compensatable activity has a compensation handler
+- A cancel end event triggers compensation
+- Compensation runs in reverse order of completion
 
-## DevOps and Automation
+### Escalation
+Non-fatal issues that require human intervention:
+- Escalation events route to a manager/owner
+- The original process continues or waits
+- Escalation can happen at any level
 
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
+### Retry with Exponential Backoff
+```
+Service Task: Process Payment
+Retry: R3/PT10S, R3/PT30S, R3/PT5M
+Max retries: 9 (3 attempts at each interval)
+Escalation: After all retries exhausted → Manual review
+```
 
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
+## Tool-Specific Automation Setup
 
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+### Camunda 8
+- Deploy: `zbctl deploy process.bpmn`
+- Workers: Job worker in Go, Java, JS, or Python
+- Tasks: Service tasks, user tasks, business rule tasks
+- Forms: Camunda Tasklist for user tasks
+- DMN: Deploy alongside BPMN
+
+### Temporal
+- Workflows: Code-defined (Go, Java, TS, Python)
+- Activities: Atomic task implementations
+- Signals: External trigger mechanism
+- Queries: Read workflow state
+- Retry: Built-in with configurable policies
 
 ## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- Executable processes require careful implementation planning
+- DMN tables must be complete, consistent, and testable
+- Process mining reveals the gap between designed and actual processes
+- Error handling patterns prevent process failures from becoming system failures
+- Version control for process models is as important as code
+- Match automation engine to process complexity
+- Event-based gateways handle real-world uncertainty
+- Compensation is essential for transaction integrity
+- Retry policies must account for idempotency
+- Governance prevents process model proliferation

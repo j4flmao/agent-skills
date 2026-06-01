@@ -1,213 +1,95 @@
 # Identity Provider Fundamentals
 
 ## Overview
-Identity Provider is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Identity providers centralize authentication and authorization across applications. This covers IdP selection, SSO protocols (OIDC, SAML), directory sync (SCIM), MFA, and session management — the foundation of enterprise identity.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Identity Provider helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### IdP Deployment Models
+| Model | Examples | Ops Cost | Control | Best For |
+|-------|----------|----------|---------|----------|
+| Self-hosted | Keycloak, Authentik | High | Full | Teams with ops capability, cost-sensitive |
+| Managed | Azure AD, Okta, Auth0 | Low | Medium | Most organizations |
+| Cloud-native | Cognito, Firebase Auth | Low | Low | Single-cloud, simpler needs |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Identity Provider solutions. These principles help maintain code quality and reduce technical debt.
+### SSO Protocol Comparison
+| Feature | OIDC/OAuth 2.0 | SAML 2.0 |
+|---------|---------------|-----------|
+| Format | JSON/REST | XML/SOAP |
+| Complexity | Simple | Complex |
+| Mobile support | Native | Limited |
+| SPA support | PKCE | Poor |
+| Enterprise support | Growing | Broad |
+| Token format | JWT | SAML assertion |
+| Session management | Refresh tokens | Session index |
 
-### Concept 3: Data Management
-Proper data management is essential for Identity Provider. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+Recommendation: OIDC for all new integrations. SAML only when OIDC is not supported by the application.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+### OIDC Flow Types
+| Flow | Use Case | Security |
+|------|----------|----------|
+| Authorization Code | Server-side web apps | High (secret on server) |
+| Authorization Code + PKCE | SPAs, mobile apps | High (code verifier) |
+| Client Credentials | Machine-to-machine | Medium (no user context) |
+| Resource Owner Password | Legacy (avoid) | Low (credentials exposed) |
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+Never use the Implicit flow (deprecated by OAuth 2.1). Always use Authorization Code with PKCE for public clients.
 
-## Architecture Patterns
+### Authentication vs Authorization
+Authentication (AuthN): "Who are you?" Verifies identity. IdP provides ID token with user claims.
 
-### Pattern 1: Standard Architecture
-The standard architecture for Identity Provider follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+Authorization (AuthZ): "What can you do?" Determines permissions. IdP provides access token with scopes/roles. Application-level authorization may use the IdP as policy decision point (PDP) or manage permissions internally.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### Directory Sync with SCIM
+SCIM 2.0 (System for Cross-domain Identity Management) automates user provisioning and deprovisioning. Standard REST API for create, read, update, deactivate operations.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+Sync frequency: incremental every 15 minutes, full sync nightly for reconciliation. Handle deprovisioning: soft-delete with 30-day grace period, then hard delete. Map directory groups to application roles.
 
-## Implementation Guide
+## MFA Methods
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+| Method | Security | UX | Cost |
+|--------|----------|----|------|
+| TOTP (authenticator app) | High | Medium | Free |
+| WebAuthn (FIDO2/passkeys) | Very High | High | Key cost per user |
+| Push notification | High | Very High | Per-user IdP cost |
+| SMS/voice | Low | High | Per-message cost |
+| Hardware key (YubiKey) | Very High | High | $20-50 per key |
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+Recommended: WebAuthn primary, TOTP backup, recovery codes for emergencies. Enforce phishing-resistant MFA (WebAuthn) for privileged accounts.
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+## Security Policies
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+### Session Management
+- Idle timeout: 15 minutes
+- Max session lifetime: 8 hours
+- Refresh token rotation: enabled
+- Refresh token reuse detection: enabled (revoke on stolen token)
+- Session revocation on password change: enforce
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
-
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
-
-## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+### Brute Force Protection
+- Account lockout: 5 consecutive failures
+- Lockout duration: 15 minutes (increasing with each lockout)
+- Progressive delay: 1s -> 5s -> 30s after 3, 4, 5 failures
+- CAPTCHA after 2 failures
+- Alert on brute force pattern detection
 
 ## Common Pitfalls
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+### No HA for Self-Hosted IdP
+IdP downtime = all applications inaccessible. Self-hosted IdP must be multi-node with load balancing, external HA database, cross-AZ deployment, and DR failover. Test failover quarterly.
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+### Session Mismatch
+Application session timeout longer than IdP session timeout. User logged into app but IdP silently fails re-auth. Set application session <= IdP session. Use silent authentication (prompt=none) with refresh tokens.
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+### Weak Token Validation
+Applications must validate token signature (JWKS endpoint), issuer (iss), audience (aud), and expiry (exp). Missing validation allows token forgery. Rotate signing keys regularly.
 
 ## Key Points
-- Understand core Identity Provider concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- OIDC is preferred over SAML for all new integrations
+- Authorization Code + PKCE is the standard for all public clients
+- SCIM automation is mandatory for compliance (SOC2, SOX)
+- MFA must be enforced for all users, not just admins
+- Self-hosted IdP requires HA architecture — don't skimp
+- Token validation (signature, issuer, audience, expiry) is mandatory for all apps
+- Session timeout must be <= IdP session timeout
+- Deprovisioning is as important as provisioning — test the offboarding flow

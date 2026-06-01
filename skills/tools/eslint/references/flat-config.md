@@ -311,6 +311,152 @@ export default [
 ];
 ```
 
+## Migration Patterns
+
+### Step-by-Step Migration
+```javascript
+// 1. Install dependencies
+// npm install eslint @eslint/js typescript-eslint --save-dev
+
+// 2. Create minimal eslint.config.js
+import js from '@eslint/js';
+export default [js.configs.recommended];
+
+// 3. Add rules progressively
+export default [
+  js.configs.recommended,
+  {
+    rules: {
+      'no-unused-vars': 'warn',
+      'no-console': 'warn',
+    },
+  },
+];
+
+// 4. Add plugins one at a time
+import ts from 'typescript-eslint';
+export default [
+  js.configs.recommended,
+  ...ts.configs.recommended,
+  {
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'warn',
+    },
+  },
+];
+
+// 5. Remove old config files
+// rm .eslintrc.json .eslintrc.js .eslintignore
+```
+
+### Understanding Config Precedence
+```javascript
+// Flat config uses array-based precedence:
+// Later configs override earlier ones (within same files)
+
+export default [
+  // Config 1: Base rules
+  {
+    rules: {
+      'no-console': 'error',
+      'semi': ['error', 'always'],
+    },
+  },
+
+  // Config 2: Override semi for TypeScript files
+  {
+    files: ['**/*.ts'],
+    rules: {
+      'semi': 'off', // Overrides Config 1 for .ts files
+    },
+  },
+
+  // files with narrower patterns take precedence within the same config
+  // But array order is the primary precedence mechanism
+];
+```
+
+## Monorepo Configuration
+
+### Multi-Package Config
+```javascript
+// Root eslint.config.js
+import ts from 'typescript-eslint';
+
+export default [
+  ...ts.configs.recommended,
+
+  // Package-specific overrides
+  {
+    files: ['packages/api/src/**/*.ts'],
+    rules: { 'no-console': 'off' },
+  },
+  {
+    files: ['packages/web/src/**/*.ts'],
+    rules: { 'react-hooks/rules-of-hooks': 'error' },
+  },
+  {
+    files: ['packages/shared/src/**/*.ts'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'error',
+    },
+  },
+];
+```
+
+## TypeScript Configuration
+
+### Full TypeScript Setup
+```javascript
+import js from '@eslint/js';
+import ts from 'typescript-eslint';
+import globals from 'globals';
+
+export default [
+  js.configs.recommended,
+  ...ts.configs.strictTypeChecked,
+  {
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', destructuredArrayIgnorePattern: '^_' },
+      ],
+      '@typescript-eslint/explicit-function-return-type': [
+        'warn',
+        { allowExpressions: true },
+      ],
+      '@typescript-eslint/strict-boolean-expressions': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/await-thenable': 'error',
+    },
+  },
+  {
+    files: ['**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
+];
+```
+
+## Key Anti-Patterns
+- **Mixing flat config and .eslintrc**: Can't use both — flat config is all-or-nothing
+- **Missing `files` pattern**: Config applies to ALL files, not just the ones you think
+- **Order matters**: Later configs override earlier ones for same files
+- **Assuming extends behavior**: Flat config doesn't cascade like .eslintrc
+- **No ignores config**: Will lint node_modules and dist without ignore patterns
+- **Forgetting `...` spread for array configs**: Plugin configs are arrays, need spread
+- **Using `env`**: env doesn't exist in flat config; use `languageOptions.globals`
+- **Using `parserOptions.project` without service**: Use `projectService: true` for faster type-checked linting
+
 ## Key Points
 - Flat config uses eslint.config.js (ESM) file
 - Configuration is an array of config objects
@@ -336,3 +482,5 @@ export default [
 - CLI flags remain compatible with flat config
 - Config inspection via --print-config flag
 - Type safety through TypeScript for config files
+- Custom configs can be shared as npm packages
+- `ignores` with `**/node_modules/**` is automatically included

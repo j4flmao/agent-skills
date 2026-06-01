@@ -2,7 +2,7 @@
 name: ml-feature-engineering
 description: >
   Use this skill when asked about feature engineering, featuretools, tsfresh, feature selection, feature extraction, encoding, scaling, one-hot encoding, target encoding, feature interaction, datetime features, text features, or feature importance. This skill enforces: categorical encoding strategies (one-hot, label, target, ordinal), numerical scaling methods (standard, min-max, robust), datetime feature extraction (year, month, day, dayofweek, cyclical encoding), text feature extraction (TF-IDF, count vectorizer, word embeddings), feature interaction generation, feature selection techniques (filter, wrapper, embedded), and automated feature engineering with Featuretools deep feature synthesis and tsfresh for time-series. Do NOT use for: model training, deep learning architecture, or experiment tracking.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -61,7 +61,65 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 - [ ] Feature validation (no leakage, cardinality handling, missing values)
 
 ### Max Response Length
-300 lines of code and configuration.
+400 lines of code and configuration.
+
+## Decision Trees
+
+### Encoding Strategy Selection
+```
+Categorical feature cardinality
+  ├── < 15 unique values → OneHotEncoder (handle_unknown="ignore")
+  │   For linear models: drop first category to avoid multicollinearity
+  │   For tree models: keep all categories
+  ├── 15-100 unique values
+  │   ├── Ordered → OrdinalEncoder with explicit mapping
+  │   └── Unordered → BinaryEncoder or TargetEncoder with smoothing
+  ├── 100-10000 unique values
+  │   ├── TargetEncoder (smoothing=10, min_samples_leaf=5)
+  │   ├── CatBoostEncoder (ordered target encoding, reduces leakage)
+  │   └── LeaveOneOutEncoder (if enough samples per category)
+  └── > 10000 unique values
+      ├── CountEncoder (frequency as feature)
+      ├── Hashing trick (n_components=2^16, signed=True)
+      └── Entity embeddings via neural network
+```
+
+### Feature Scaling Selection
+```
+Numerical feature distribution
+  ├── Approximately normal → StandardScaler (zero mean, unit var)
+  ├── Uniform distribution → MinMaxScaler (bounded [0,1])
+  ├── Heavy outliers or skewed
+  │   ├── RobustScaler (median, IQR) — preserves outliers
+  │   └── Winsorize then StandardScaler — caps outliers
+  ├── Highly skewed (> 1 skew)
+  │   ├── PowerTransformer (Yeo-Johnson) — handles negative
+  │   ├── QuantileTransformer (normal output) — ranks
+  │   └── Log-transform (for strictly positive)
+  └── Sparse data → StandardScaler(with_mean=False) or MaxAbsScaler
+```
+
+### Feature Selection Method Selection
+```
+Data size and characteristic
+  ├── Quick initial screening
+  │   ├── VarianceThreshold (remove constant/near-constant)
+  │   └── Correlation filter (remove >0.95 pairwise)
+  ├── < 50K samples, < 500 features
+  │   ├── Mutual information (non-linear, captures any relationship)
+  │   ├── SelectKBest with f_classif (linear only)
+  │   └── RFE with LogisticRegression (wrapper, slow but accurate)
+  ├── 50K-500K samples, 500-5000 features
+  │   ├── SelectFromModel with Lasso (L1 regularization)
+  │   ├── Permutation importance (model-agnostic)
+  │   └── LightGBM built-in importance (fast)
+  ├── > 500K samples or > 5000 features
+  │   ├── L1-regularized linear model (fast feature elimination)
+  │   ├── RandomForest feature importance (parallel)
+  │   └── Boruta (shadow features, robust but slow)
+  └── High cardinality categorical
+      └── Target encoding → group rare categories → encode → select
+```
 
 ## Workflow
 
@@ -109,18 +167,14 @@ def scale_numerical(df, num_cols):
     for col in num_cols:
         col_skew = skew(df[col].dropna())
         if abs(col_skew) > 1:
-            # Highly skewed: PowerTransformer or RobustScaler
             pt = PowerTransformer(method="yeo-johnson")
             scaled[f"{col}_power"] = pt.fit_transform(df[[col]])
         elif df[col].std() > 10 * abs(df[col].median()):
-            # Outlier-prone: RobustScaler
             rs = RobustScaler()
             scaled[f"{col}_robust"] = rs.fit_transform(df[[col]])
         else:
-            # Default: StandardScaler
             ss = StandardScaler()
             scaled[f"{col}_standard"] = ss.fit_transform(df[[col]])
-
     return scaled
 ```
 
@@ -131,8 +185,6 @@ Extract components: year, month, day, dayofweek, quarter, hour, minute, is_weeke
 def extract_datetime_features(df, date_col):
     dates = pd.to_datetime(df[date_col])
     features = pd.DataFrame(index=df.index)
-
-    # Components
     features["year"] = dates.dt.year
     features["month"] = dates.dt.month
     features["day"] = dates.dt.day
@@ -140,20 +192,13 @@ def extract_datetime_features(df, date_col):
     features["quarter"] = dates.dt.quarter
     features["hour"] = dates.dt.hour
     features["is_weekend"] = (dates.dt.dayofweek >= 5).astype(int)
-    features["dayofyear"] = dates.dt.dayofyear
-
-    # Cyclical encoding for month and dayofweek
     features["month_sin"] = np.sin(2 * np.pi * features["month"] / 12)
     features["month_cos"] = np.cos(2 * np.pi * features["month"] / 12)
     features["dow_sin"] = np.sin(2 * np.pi * features["dayofweek"] / 7)
     features["dow_cos"] = np.cos(2 * np.pi * features["dayofweek"] / 7)
-
-    # Difference from reference date
     reference = pd.Timestamp("2025-01-01")
     features["days_since_ref"] = (dates - reference).dt.days
-
     return features
-
 
 def create_lag_features(df, group_col, value_col, lags=[1, 7, 30]):
     features = pd.DataFrame(index=df.index)
@@ -161,7 +206,6 @@ def create_lag_features(df, group_col, value_col, lags=[1, 7, 30]):
         features[f"{value_col}_lag_{lag}"] = (
             df.groupby(group_col)[value_col].shift(lag)
         )
-    # Rolling features
     for window in [7, 14, 30]:
         rolling = df.groupby(group_col)[value_col].transform(
             lambda x: x.rolling(window, min_periods=1).mean()
@@ -175,10 +219,8 @@ TF-IDF: term frequency-inverse document frequency, best for medium-length docume
 
 ```python
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
-import re
 
 def extract_text_features(texts, max_features=10000):
-    # TF-IDF with n-grams
     tfidf = TfidfVectorizer(
         max_features=max_features,
         stop_words="english",
@@ -188,19 +230,14 @@ def extract_text_features(texts, max_features=10000):
         max_df=0.8,
     )
     tfidf_matrix = tfidf.fit_transform(texts)
-
-    # Additional text features
     text_df = pd.DataFrame(index=range(len(texts)))
     text_df["char_count"] = texts.str.len()
     text_df["word_count"] = texts.str.split().str.len()
     text_df["avg_word_length"] = text_df["char_count"] / (text_df["word_count"] + 1)
     text_df["capital_ratio"] = texts.str.findall(r"[A-Z]").str.len() / (text_df["char_count"] + 1)
     text_df["digit_count"] = texts.str.findall(r"\d").str.len()
-
     return tfidf_matrix, text_df
 
-
-# Word embeddings (using pretrained GloVe)
 def text_to_avg_embeddings(texts, embedding_index, embed_dim=100):
     embeddings = np.zeros((len(texts), embed_dim))
     for i, text in enumerate(texts):
@@ -219,29 +256,22 @@ from sklearn.preprocessing import PolynomialFeatures
 
 def create_interactions(df, num_cols, cat_cols, target=None):
     features = pd.DataFrame(index=df.index)
-
-    # Polynomial interactions (degree 2)
     poly = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
     poly_features = poly.fit_transform(df[num_cols])
     poly_names = poly.get_feature_names_out(num_cols)
     for name, vals in zip(poly_names, poly_features.T):
         features[name] = vals
-
-    # Category-numeric cross features
     for cat in cat_cols[:10]:
         if df[cat].nunique() < 20:
             for num in num_cols[:5]:
                 group_means = df.groupby(cat)[num].transform("mean")
                 features[f"{cat}_{num}_ratio"] = df[num] / (group_means + 1e-10)
                 features[f"{cat}_{num}_diff"] = df[num] - group_means
-
-    # Ratio features
     for i in range(len(num_cols)):
         for j in range(i+1, len(num_cols)):
             col_a, col_b = num_cols[i], num_cols[j]
             denominator = df[col_b].replace(0, np.nan)
             features[f"{col_a}_div_{col_b}"] = df[col_a] / denominator
-
     return features
 ```
 
@@ -258,32 +288,22 @@ from sklearn.linear_model import LogisticRegression
 
 def select_features(X, y, method="embedded", n_features=50):
     if method == "filter":
-        # Mutual information
         selector = SelectKBest(mutual_info_classif, k=n_features)
         X_selected = selector.fit_transform(X, y)
-
     elif method == "wrapper":
-        # RFE with logistic regression
         estimator = LogisticRegression(max_iter=1000, penalty="l1", solver="saga")
         selector = RFE(estimator, n_features_to_select=n_features, step=10)
         X_selected = selector.fit_transform(X, y)
-
     elif method == "embedded":
-        # L1 regularization
         selector = SelectFromModel(
             LogisticRegression(C=0.1, penalty="l1", solver="saga", max_iter=1000),
             prefit=False, threshold="median",
         )
         X_selected = selector.fit_transform(X, y)
-
-    # Variance threshold (remove near-constant features)
     vt = VarianceThreshold(threshold=0.01)
     X_selected = vt.fit_transform(X) if method == "none" else X_selected
-
     return X_selected, selector
 
-
-# Tree-based importance
 def get_feature_importance(X, y, feature_names):
     model = RandomForestClassifier(n_estimators=200, max_depth=8, n_jobs=-1)
     model.fit(X, y)
@@ -317,20 +337,132 @@ def automated_feature_engineering(entities, relationships, target_entity, max_de
         verbose=True,
     )
     return feature_matrix, feature_defs
-
-
-# Example: customers -> orders -> products
-entities = {
-    "customers": (customers_df, "customer_id"),
-    "orders": (orders_df, "order_id"),
-    "products": (products_df, "product_id"),
-}
-relationships = [
-    ("customers", "customer_id", "orders", "customer_id"),
-    ("orders", "product_id", "products", "product_id"),
-]
-feature_matrix, features = automated_feature_engineering(entities, relationships, "customers")
 ```
+
+### Step 8: Date-Only Features
+For date columns without time component, extract: days since epoch, days until next event, relative to a reference date. Difference between multiple date columns yields duration features (e.g., order_to_shipping_days). For subscription/billing: days since last activity, days until renewal, account age.
+
+```python
+def date_difference_features(df, date_col_a, date_col_b):
+    dates_a = pd.to_datetime(df[date_col_a])
+    dates_b = pd.to_datetime(df[date_col_b])
+    diff_days = (dates_b - dates_a).dt.days
+    return pd.DataFrame({f"{date_col_a}_to_{date_col_b}_days": diff_days})
+```
+
+### Step 9: Target Encoding in Cross-Validation
+Target encoding leaks target information if applied to full dataset before splitting. Always use within cross-validation:
+```python
+from sklearn.model_selection import KFold
+import numpy as np
+
+def target_encode_cv(df, cat_col, target, n_folds=5, smoothing=10):
+    """Target encoding with cross-validation to prevent leakage."""
+    encoded = np.zeros(len(df))
+    kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
+    for train_idx, val_idx in kf.split(df):
+        train_targets = df.iloc[train_idx][target]
+        global_mean = train_targets.mean()
+        for cat in df[cat_col].unique():
+            cat_mask = (df.iloc[train_idx][cat_col] == cat)
+            cat_count = cat_mask.sum()
+            cat_mean = train_targets[cat_mask].mean()
+            smoothed = (cat_mean * cat_count + global_mean * smoothing) / (cat_count + smoothing)
+            encoded[val_idx[df.iloc[val_idx][cat_col] == cat].index] = smoothed
+    return encoded
+
+# Stratified version for classification
+from sklearn.model_selection import StratifiedKFold
+def target_encode_cv_classification(df, cat_col, target, n_folds=5, smoothing=10):
+    encoded = np.zeros(len(df))
+    skf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
+    for train_idx, val_idx in skf.split(df, df[target]):
+        train_targets = df.iloc[train_idx][target]
+        global_mean = train_targets.mean()
+        for cat in df[cat_col].unique():
+            cat_mask = (df.iloc[train_idx][cat_col] == cat)
+            cat_count = cat_mask.sum()
+            cat_mean = train_targets[cat_mask].mean()
+            smoothed = (cat_mean * cat_count + global_mean * smoothing) / (cat_count + smoothing)
+            encoded[val_idx[df.iloc[val_idx][cat_col] == cat].index] = smoothed
+    return encoded
+```
+
+## Anti-Patterns
+
+- **Data leakage via target encoding outside CV**: target encoding the entire dataset and then splitting causes the model to see the target during training. Always encode within cross-validation folds.
+- **Applying scaling before splitting**: fit StandardScaler on entire dataset, then split — mean/var leak from test into train. Fit scaler on train only.
+- **One-hot encoding high cardinality features directly**: 10,000 categories → 10,000 columns. Use target encoding, binary encoding, or hash encoding instead.
+- **Creating features with future information**: lag features should only use past data. For time series, shifting must respect temporal order.
+- **Over-aggressive feature interactions**: polynomial degree 3 on 100 features creates ~170K features. Limit to degree 2 and interaction_only=True.
+- **Removing too many features with variance threshold**: near-zero variance features may still be predictive. Use variance threshold as first pass, then model-based selection.
+- **Ignoring rare categories in target encoding**: categories with 1-2 samples will have extreme target means. Set min_samples_leaf=5-20 to smooth them toward global mean.
+- **Using label encoding for unordered categories**: label encoding assigns arbitrary numbers (0, 1, 2...) → model interprets ordering. Only use for ordinal features or tree models.
+- **Not handling unseen categories in production**: OneHotEncoder with handle_unknown="ignore", TargetEncoder with default value for unseen categories.
+- **Creating redundant features**: correlation >0.95 between features adds noise and slows training. Remove redundant features after creation.
+
+## Production Considerations
+
+### Feature Store Integration
+```python
+# Feast feature view with engineered features
+from feast import FeatureView, Feature, Field
+from feast.types import Float32, Int64, String
+
+user_features = FeatureView(
+    name="user_engineered_features",
+    entities=["user_id"],
+    ttl=timedelta(days=1),
+    features=[
+        Field(name="user_total_purchases", dtype=Float32),
+        Field(name="user_days_since_last_purchase", dtype=Float32),
+        Field(name="user_avg_order_value", dtype=Float32),
+        Field(name="user_purchase_frequency_7d", dtype=Float32),
+    ],
+    online=True,
+    source=user_features_source,
+)
+```
+
+### Pipeline Automation
+```yaml
+# feature_pipeline.yaml
+feature_engineering:
+  encoding:
+    cat_low_cardinality_threshold: 15
+    cat_high_cardinality_strategy: target_encoding
+    smoothing: 10
+    min_samples_leaf: 5
+  scaling:
+    default: standard
+    outlier_strategy: robust
+    skewed_strategy: yeo_johnson
+  datetime:
+    extract_components: [year, month, day, dayofweek, quarter, hour]
+    cyclical_encode: [month, dayofweek, hour]
+    lags: [1, 7, 30]
+  interactions:
+    max_degree: 2
+    max_cat_num_interactions: 10
+    max_num_num_ratios: 5
+  validation:
+    check_leakage: true
+    check_future_info: true
+    max_correlation: 0.95
+```
+
+### Performance Benchmarking
+- Featuretools DFS: O(n × max_depth × n_primitives) where n = total rows across all entities
+- tsfresh: ~100 features per input series, scales linearly with series count
+- Memory: store engineered features in Parquet format (compression ratio ~5-10x vs CSV)
+- Time budget: set max_features=200 for DFS to prevent explosion, limit depth to 2
+
+### Monitoring
+- Track feature distribution drift (PSI, KS test) per engineered feature
+- Monitor null ratio per feature after engineering
+- Log feature importance rankings per training run
+- Alert on feature correlation spikes (indicating redundant feature creation)
+- Cache frequently computed features in feature store
 
 ## Rules
 - Fit encoders/scalers on training data only, transform validation/test
@@ -340,9 +472,11 @@ feature_matrix, features = automated_feature_engineering(entities, relationships
 - Feature interactions limited to degree 2 to control explosion
 - Filter methods for quick initial screening, embedded for final selection
 - Mutual information captures non-linear relationships better than correlation
-- Featuretools max_depth=2 for most projects, max_depth=3 for large datasets
+- Featuretools max_depth=2 for most projects
 - Validate features for target leakage (no future information)
 - Drop near-zero variance features before model training
+- Always encode within CV folds for target encoding
+- Log feature importance and distribution for every training run
 
 ## References
   - references/automated-fe.md — Automated Feature Engineering

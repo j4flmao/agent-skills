@@ -8,7 +8,7 @@ description: >
   aware ordering, autoscale boundaries, and capacity drill cadence. Do NOT use for: cloud cost optimization
   (see devops-cloud-cost-optimization), FinOps governance (see devops-finops), or per-team budget allocation
   (see enterprise-cost-governance).
-version: "2.0.0"
+version: "2.1.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -58,6 +58,40 @@ Memory: Measure RSS vs limit. Track page cache and buffer cache. Plan for GC ove
 Storage: Measure logical usage, replication factor, backup copies, retention growth. Plan for compaction/defragmentation overhead. Account for snapshot and restore scratch space.
 
 Network: Measure ingress/egress, p95 bandwidth, connection count, packet rate. Plan for spike buffers and CDN cache-miss scenarios. Account for cross-region replication traffic.
+
+## Architecture / Decision Trees
+
+### Growth Model Selection Decision Tree
+```
+Is historical data available for 12+ months?
+  ├── Yes → Can you identify a seasonal pattern?
+  │   ├── Yes → Use SEASONAL model
+  │   │   Example: ecommerce, tax season, sports
+  │   └── No → Is growth rate accelerating?
+  │       ├── Yes → Is there a known ceiling?
+  │       │   ├── Yes → Use LOGISTIC (S-curve)
+  │       │   └── No → Use EXPONENTIAL (viral, high-growth)
+  │       └── No → Use LINEAR (mature, B2B SaaS)
+  └── No → Do you have business targets?
+      ├── Yes → Use TOP-DOWN from business targets
+      └── No → Use EVENT-DRIVEN (launch-based)
+```
+
+### Forecasting Model Confidence Scoring
+| Signal | Score | Action |
+|--------|-------|--------|
+| R-squared > 0.95, MAPE < 5% | High | Use as primary |
+| R-squared > 0.85, MAPE < 15% | Medium | Use with buffer |
+| R-squared < 0.85, MAPE > 15% | Low | Investigate drivers |
+| No fit | None | Use worst-case only |
+
+### Resource Type Multipliers for Total Capacity
+| Resource | Base Factor | Replication | Backup | Total Multiplier |
+|----------|-------------|-------------|--------|-----------------|
+| Database storage | 1x (data) | 2x (RF=3) | 1x (snapshot) | 4x |
+| Object storage | 1x (data) | 2x (replication) | 1x (backup) | 4x |
+| Compute (K8s) | 1x (requests) | 1.3x (scheduler overhead) | 0 | 1.3x |
+| Network egress | 1x (user traffic) | 0.3x (CDN miss) | 0 | 1.3x |
 
 ## Agent Protocol
 
@@ -353,6 +387,7 @@ An enterprise migrating from colo to cloud discovered that their 16-week bare-me
 - Capacity data collected at service level, not just infrastructure level.
 - Alerts configured for forecast-to-actual variance exceeding 20%.
 - Hardware burn-in and staging time included in procurement lead time.
+- Supply chain constraints (chip shortages, cable delays) factored into lead time estimates.
 
 ## References
   - references/capacity-planning-advanced.md -- Capacity Planning Advanced Topics

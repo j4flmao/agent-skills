@@ -2,7 +2,7 @@
 name: frontend-feature-flags
 description: >
   Use this skill when the user says 'feature flags', 'LaunchDarkly', 'split testing', 'A/B testing', 'gradual rollout', 'canary release', 'feature toggle', 'flag provider', 'targeting rule', or when implementing frontend feature flags. This skill enforces: typed flag definitions, provider-agnostic abstraction layer, gradual rollout with percentage targeting, and A/B test assignment tracking. Works with LaunchDarkly, Split.io, Flagsmith, or custom flag backends. Do NOT use for: backend-only flag evaluation, server-side config management, infrastructure provisioning.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -51,6 +51,58 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 4096 tokens.
+
+## Feature Flag Architecture / Decision Trees
+
+### Flag Provider Decision Tree
+```
+Need real-time flag updates without page reload?
+  |-- YES --> LaunchDarkly (SSE-based, best in class) or Flagsmith
+  |-- NO --> Do we have existing LaunchDarkly infra?
+  |     |-- YES --> Use LaunchDarkly
+  |     |-- NO --> Budget/scale constraints?
+  |           |-- SMALL --> Custom flag backend (API + localStorage cache)
+  |           |-- MEDIUM --> Flagsmith (open-source option available)
+  |           |-- LARGE --> LaunchDarkly or Split.io
+```
+
+### Flag Type Decision Tree
+```
+What does this flag control?
+  |-- Show/hide a UI element --> boolean flag
+  |     Example: newCheckoutFlow: boolean
+  |
+  |-- Numerical configuration --> number flag
+  |     Example: maxCartItems: number
+  |
+  |-- Which layout/copy to show --> string flag
+  |     Example: homepageLayout: "legacy" | "redesign-v1" | "redesign-v2"
+  |
+  |-- Complex configuration object --> json flag
+        Example: promoBanner: { enabled: boolean, text: string, ctaUrl: string }
+```
+
+### Rollout Strategy Decision Tree
+```
+What is the audience for this flag?
+  |-- Internal testing only -->
+  |     Strategy: Target by email domain (@company.com) or SSO group
+  |     Proceed when: Internal team validates feature
+  |
+  |-- Beta testers -->
+  |     Strategy: Target by user IDs in beta list
+  |     Proceed when: Beta feedback collected, blockers resolved
+  |
+  |-- Staged public rollout -->
+  |     Strategy: Percentage rollout
+  |     Phases: 5% -> 10% -> 25% -> 50% -> 100%
+  |     Proceed when: Error rate < 0.1% at each phase
+  |
+  |-- A/B experiment -->
+        Strategy: 50/50 split with randomization consistent per user
+        Duration: Minimum 1 week, determined by sample size calculator
+        Decision: Analyze after reaching statistical significance (p < 0.05)
+```
 
 ## Workflow
 
@@ -194,6 +246,170 @@ function PricingPage() {
 - [ ] Delete dead flag keys from provider dashboard.
 - [ ] Keep flag definition file as source of truth — delete the entry.
 - [ ] Run codemod to remove conditional branches: `git grep 'useFlag\|useABTest'`.
+
+### Step 7: Custom Flag Backend (No Provider)
+```typescript
+// Minimal in-memory + localStorage backend
+class LocalFlagClient implements FlagClient {
+  private flags: Map<string, unknown> = new Map()
+  private listeners: Set<() => void> = new Set()
+
+  constructor(private configUrl: string) {}
+
+  async initialize() {
+    const response = await fetch(this.configUrl)
+    const data = await response.json()
+    Object.entries(data).forEach(([key, value]) => {
+      this.flags.set(key, value)
+    })
+    // Persist to localStorage for offline tolerance
+    localStorage.setItem('feature-flags-cache', JSON.stringify(data))
+  }
+
+  getBoolean(key: string, defaultVal: boolean): boolean {
+    return (this.flags.get(key) ?? defaultVal) as boolean
+  }
+
+  getNumber(key: string, defaultVal: number): number {
+    return (this.flags.get(key) ?? defaultVal) as number
+  }
+
+  getString(key: string, defaultVal: string): string {
+    return (this.flags.get(key) ?? defaultVal) as string
+  }
+
+  getJson(key: string, defaultVal: unknown): unknown {
+    return this.flags.get(key) ?? defaultVal
+  }
+
+  track(event: string, data?: Record<string, unknown>) {
+    console.log('[FlagTrack]', event, data)
+    // Send to analytics
+  }
+}
+```
+
+### Step 8: Testing with Feature Flags
+```typescript
+// Mock flag client for tests
+class MockFlagClient implements FlagClient {
+  private overrides: Map<string, unknown> = new Map()
+
+  setFlag(key: string, value: unknown) {
+    this.overrides.set(key, value)
+  }
+
+  getBoolean(key: string, defaultVal: boolean): boolean {
+    return (this.overrides.get(key) ?? defaultVal) as boolean
+  }
+  // ... other methods
+}
+
+// Test
+it('shows new checkout when flag is enabled', () => {
+  const mockClient = new MockFlagClient()
+  mockClient.setFlag('new-checkout-flow', true)
+
+  render(
+    <FlagProvider client={mockClient}>
+      <CheckoutPage />
+    </FlagProvider>
+  )
+
+  expect(screen.getByTestId('new-checkout')).toBeInTheDocument()
+})
+```
+
+### Step 9: SSR / Next.js Integration
+```typescript
+// Server-side flag evaluation (Next.js App Router)
+import { cookies } from 'next/headers'
+
+async function getServerFlags() {
+  const cookieStore = await cookies()
+  const userId = cookieStore.get('user_id')?.value
+
+  // Evaluate flags server-side
+  const flags = await evaluateFlags(userId, [
+    { key: 'new-checkout-flow', default: false },
+  ])
+
+  return flags
+}
+
+// Pass flags to client via RSC or inline script
+export default async function Page() {
+  const flags = await getServerFlags()
+  return <ClientShell serverFlags={flags} />
+}
+```
+
+## Common Pitfalls
+
+### 1. Raw String Keys Throughout Codebase
+```typescript
+// BAD -- scattered string keys
+if (ldClient.variation('new-checkout-flow', false)) { }
+
+// GOOD -- typed flag definitions
+if (useFlag('newCheckoutFlow')) { }
+```
+
+### 2. No Fallback Value
+```typescript
+// BAD -- no default, crashes if provider unavailable
+ldClient.variation('my-flag')
+
+// GOOD -- always provide default
+ldClient.variation('my-flag', false)
+```
+
+### 3. Provider Imported Directly in Components
+Direct SDK imports couple components to a specific provider. Always wrap in an abstraction layer so you can swap providers without touching component code.
+
+### 4. Forgetting to Clean Up Dead Flags
+Old flag conditions accumulate as technical debt. Dead flag code hides bugs and confuses developers. Set a 2-release maximum lifespan.
+
+### 5. No Exposure Tracking for A/B Tests
+Without exposure tracking, you cannot analyze experiment results. Every A/B test flag must fire an exposure event when the user is assigned.
+
+## Compared With
+
+| Feature | LaunchDarkly | Split.io | Flagsmith | Custom Backend |
+|---------|-------------|----------|-----------|---------------|
+| Real-time updates | SSE | SSE | Polling | Polling |
+| Percentage rollout | Yes | Yes | Yes | Yes |
+| User targeting | Yes | Yes | Yes | Manual |
+| A/B test analysis | Built-in | Built-in | External | External |
+| Open source | No | No | Yes | N/A |
+| Free tier | 5 seats, 3 flags | 50 MAU | 1,000 MAU | Unlimited |
+| SDK languages | 15+ | 15+ | 10+ | Any |
+
+## Performance Considerations
+
+### SDK Bundle Size
+LaunchDarkly client-side SDK is ~35KB gzipped. Split.io is ~25KB gzipped. If bundle size is a concern, consider a custom backend with a tiny client (~2KB).
+
+### Flag Evaluation Latency
+LaunchDarkly evaluates flags client-side in ~1-5ms once initialized. Initialization requires a network call (100-500ms). Always set `timeout` to avoid blocking rendering.
+
+### Polling vs SSE
+- SSE (LaunchDarkly): Instant updates, persistent connection. Good for real-time flags.
+- Polling (custom/Flagsmith): Configurable interval (30s-300s). Lower server cost but staleness.
+- Hybrid: Evaluate once on page load, then subscribe to SSE for updates.
+
+## Accessibility Considerations
+
+- Flag-controlled UI changes should be announced to screen readers (use `aria-live` regions)
+- Don't hide critical functionality behind a flag without fallback for users who miss the feature
+- A/B test variants should maintain the same accessibility level as control
+
+## Security Considerations
+
+- Never expose flag evaluation context (user attributes, targeting rules) to unauthorized users
+- Flag admin dashboards require authentication and audit logging
+- Flag values received from the provider must be validated before use (especially JSON flags)
+- Don't use feature flags to hide security vulnerabilities
 
 ## Rules
 - All flags defined in one typed file — no raw string keys in components.

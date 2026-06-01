@@ -2,7 +2,7 @@
 name: backend-audit-logging
 description: >
   Use this skill when the user says 'audit log', 'audit trail', 'compliance logging', 'tamper-evident log', 'immutable log', 'audit table', 'change tracking', 'who changed what', 'data provenance', 'audit events', 'reporting log'. This skill implements immutable audit trails for compliance (SOC 2, SOX, HIPAA, GDPR). Applies to any backend stack. Do NOT use for: application logging (error logs, debug logs), metrics, or tracing.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -41,54 +41,56 @@ Action: {read|create|update|delete}
 ```
 
 ### Completion Criteria
-- [ ] Audit events recorded for all sensitive operations.
-- [ ] Audit log is append-only (immutable).
-- [ ] Tamper evidence implemented (hash chain or similar).
-- [ ] Retention policy configured.
-- [ ] Audit logs queryable by actor, resource, and time range.
+- [ ] Audit events recorded for all sensitive operations
+- [ ] Audit log is append-only (immutable)
+- [ ] Tamper evidence implemented (hash chain or similar)
+- [ ] Retention policy configured
+- [ ] Audit logs queryable by actor, resource, and time range
 
-### Max Response Length
-3 lines per event type. 15 lines for full implementation.
-
-## Architecture / Decision Trees
+## Architecture Decision Trees
 
 ### Storage Backend Decision Tree
-
 ```
 What is the primary compliance requirement?
-├── SOC 2 / SOX → PostgreSQL with hash chain (append-only table)
-├── HIPAA → Encrypted database with strict access controls + hash chain
-├── GDPR → Searchable storage with data deletion capability (anonymization)
-├── PCI-DSS → Immutable log with strict access controls and 1-year retention
+├── SOC 2 / SOX → PostgreSQL with hash chain (append-only table, partition by month)
+├── HIPAA → Encrypted database with strict access controls + hash chain + 6-year retention
+├── GDPR → Searchable storage with data deletion capability (anonymization, not deletion)
+├── PCI-DSS → Immutable log with strict access controls, 1-year retention, quarterly review
 └── General compliance → Cloud-native audit service (AWS CloudTrail, Azure Monitor)
 
 What is the write volume?
-├── < 1000 events/sec → Relational database (PostgreSQL, MySQL)
-├── 1000-10000 events/sec → Time-series database (TimescaleDB, InfluxDB)
-└── > 10000 events/sec → Log aggregator (Elasticsearch) + blockchain-style batching
+├── < 1000 events/sec → Relational database (PostgreSQL, MySQL) with hash chain
+├── 1000–10000 events/sec → Time-series database (TimescaleDB, ClickHouse)
+└── > 10000 events/sec → Log aggregator (Elasticsearch) + batched hash chain
 ```
 
 ### Tamper Evidence Decision Tree
-
 ```
 Is tamper evidence required by compliance framework?
 ├── Yes → Is regulatory framework HIPAA or PCI-DSS?
-│   ├── Yes → Hash chain with periodic verification and external audit service
-│   └── No → Hash chain (SHA-256 linked list) or digital signature
-└── No → Append-only table with database-level access controls
+│   ├── Yes → Hash chain with periodic verification (quarterly) + external audit service
+│   └── No → Hash chain (SHA-256 linked list) or digital signature per entry
+└── No → Append-only table with database-level access controls (no hash chain needed)
+
+Volume consideration:
+├── Single DB (<1000/s) → Hash chain linking each row via previous_hash
+├── Medium (1000–10000/s) → Batch Merkle tree, publish root hash periodically
+└── High (>10000/s) → Periodic hash anchor (chain per batch, not per event)
 ```
 
-### Event Schema Design
-
+### Audit Event Schema Decision Tree
 ```
-Minimal: actor, action, resource, timestamp
-Standard: + resource_id, changes (diff), metadata, correlation_id
-Complete: + previous_hash, hash, digital_signature, event_version, tenant_id
+What needs to be recorded?
+├── Just who did what? → Minimal: actor, action, resource, timestamp
+├── Plus what changed? → Standard: + resource_id, changes (diff), metadata, correlation_id
+├── Plus proof of integrity? → Complete: + previous_hash, hash, digital_signature
+└── Multi-tenant? → Complete + tenant_id
 ```
 
 ## Workflow
 
 ### Step 1: Define Audit Events
+
 ```yaml
 events:
   user.access:       User accessed PII data
@@ -103,26 +105,47 @@ events:
   auth.failed:       Authentication failed
   admin.action:      Administrative action performed
   integration.call:  External API call made
+  data.masked:       Sensitive data masked
+  consent.granted:   User consent recorded
+  consent.revoked:   User consent revoked
 ```
 
-### Step 2: Create Audit Table
+### Step 2: Create Audit Table (PostgreSQL)
+
 ```sql
 CREATE TABLE audit_log (
-  id            BIGSERIAL PRIMARY KEY,
-  event_type    VARCHAR(50) NOT NULL,
-  actor_id      VARCHAR(100) NOT NULL,
-  actor_type    VARCHAR(20) NOT NULL,   -- 'user' | 'system' | 'api'
-  resource_type VARCHAR(50) NOT NULL,
-  resource_id   VARCHAR(100),
-  action        VARCHAR(10) NOT NULL,   -- 'create' | 'read' | 'update' | 'delete'
-  changes       JSONB,                  -- diff of old/new values
-  metadata      JSONB,                  -- IP, user-agent, requestId
-  correlation_id VARCHAR(64),           -- trace across services
-  occurred_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  hash          VARCHAR(64),            -- SHA-256 of previous row + this row data
-  previous_hash VARCHAR(64),
-  tenant_id     VARCHAR(50)             -- for multi-tenant systems
+  id              BIGSERIAL PRIMARY KEY,
+  event_type      VARCHAR(50) NOT NULL,
+  actor_id        VARCHAR(100) NOT NULL,
+  actor_type      VARCHAR(20) NOT NULL,   -- 'user' | 'system' | 'api'
+  resource_type   VARCHAR(50) NOT NULL,
+  resource_id     VARCHAR(100),
+  action          VARCHAR(10) NOT NULL,   -- 'create' | 'read' | 'update' | 'delete'
+  changes         JSONB,                  -- diff of old/new values
+  metadata        JSONB,                  -- IP, user-agent, requestId
+  correlation_id  VARCHAR(64),            -- trace across services
+  occurred_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  hash            VARCHAR(64),            -- SHA-256 of previous row + this row data
+  previous_hash   VARCHAR(64),
+  tenant_id       VARCHAR(50),             -- for multi-tenant systems
+  event_version   INT DEFAULT 1
 );
+
+-- Prevent UPDATE/DELETE via trigger
+CREATE OR REPLACE FUNCTION prevent_audit_mutation()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 'Audit log is append-only. UPDATE and DELETE are not permitted.';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER prevent_audit_update
+    BEFORE UPDATE ON audit_log
+    FOR EACH ROW EXECUTE FUNCTION prevent_audit_mutation();
+
+CREATE TRIGGER prevent_audit_delete
+    BEFORE DELETE ON audit_log
+    FOR EACH ROW EXECUTE FUNCTION prevent_audit_mutation();
 
 -- Indexes for common queries
 CREATE INDEX idx_audit_event_type ON audit_log(event_type);
@@ -130,67 +153,117 @@ CREATE INDEX idx_audit_actor ON audit_log(actor_id, actor_type);
 CREATE INDEX idx_audit_resource ON audit_log(resource_type, resource_id);
 CREATE INDEX idx_audit_occurred_at ON audit_log(occurred_at);
 CREATE INDEX idx_audit_tenant ON audit_log(tenant_id) WHERE tenant_id IS NOT NULL;
+
+-- Partition by month
+CREATE TABLE audit_log_2026_01 PARTITION OF audit_log
+    FOR VALUES FROM ('2026-01-01') TO ('2026-02-01');
+CREATE TABLE audit_log_2026_02 PARTITION OF audit_log
+    FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
 ```
 
 ### Step 3: Implement Hash Chain
-```javascript
-async function appendAuditLog(event) {
+
+```typescript
+import { createHash } from 'crypto';
+
+async function appendAuditLog(event: AuditEvent, db: Database): Promise<void> {
   const lastRow = await db.query('SELECT id, hash FROM audit_log ORDER BY id DESC LIMIT 1');
   const previousHash = lastRow.rows[0]?.hash || '';
-  const row = { ...event, previousHash };
-  row.hash = crypto.createHash('sha256')
-    .update(previousHash + JSON.stringify(row, Object.keys(row).sort()))
+
+  // Build entry with hash chain
+  const entry = { ...event, previousHash };
+  const canonicalData = canonicalize(entry);
+  entry.hash = createHash('sha256')
+    .update(previousHash + canonicalData)
     .digest('hex');
-  await db.query('INSERT INTO audit_log SET ?', row);
+
+  await db.query('INSERT INTO audit_log SET ?', entry);
+}
+
+function canonicalize(obj: Record<string, unknown>): string {
+  return JSON.stringify(obj, Object.keys(obj).sort());
+}
+
+// Hash chain verification
+async function verifyChainIntegrity(db: Database): Promise<{ chainIntact: boolean; brokenLinks: number }> {
+  const result = await db.raw(`
+    SELECT COUNT(*) as broken FROM (
+      SELECT id, hash, previous_hash,
+        LAG(hash) OVER (ORDER BY id) as expected_previous
+      FROM audit_log
+    ) sub
+    WHERE sub.previous_hash != COALESCE(sub.expected_previous, '')
+  `);
+  return { chainIntact: Number(result.rows[0].broken) === 0, brokenLinks: Number(result.rows[0].broken) };
 }
 ```
 
 ### Step 4: Emit Audit Events from Code
-```javascript
+
+```typescript
 // ORM hook or middleware
-auditLog.append({
+auditService.append({
   eventType: 'user.update',
   actorId: req.user.id,
   actorType: 'user',
   resourceType: 'user_profile',
   resourceId: profileId,
   action: 'update',
-  changes: diff(oldProfile, newProfile),
+  changes: diff(oldProfile, newProfile),  // Only non-sensitive fields
   metadata: {
     ip: req.ip,
     userAgent: req.headers['user-agent'],
-    requestId: req.id
+    requestId: req.id,
   },
-  correlationId: req.correlationId
+  correlationId: req.correlationId,
 });
 ```
 
-### Step 5: Implement Retention and Archival
-```bash
-# Tier 1: Hot storage (7 days) — queryable via API, online
-# Tier 2: Warm storage (1 year) — queryable with delay (S3/Glacier/Parquet export)
-# Tier 3: Cold storage (7 years) — archived, not directly queryable
+**Python example:**
+```python
+from dataclasses import dataclass, asdict
+from datetime import datetime, timezone
+import hashlib, json
+
+@dataclass
+class AuditEvent:
+    event_type: str
+    actor_id: str
+    actor_type: str
+    resource_type: str
+    resource_id: str
+    action: str
+    changes: dict | None = None
+    metadata: dict | None = None
+    correlation_id: str = ""
+    tenant_id: str = ""
+    occurred_at: str = ""
+
+class AuditService:
+    def __init__(self, db):
+        self.db = db
+
+    async def append(self, event: AuditEvent):
+        event.occurred_at = datetime.now(timezone.utc).isoformat()
+        last = await self.db.fetch("SELECT hash FROM audit_log ORDER BY id DESC LIMIT 1")
+        previous_hash = last[0]["hash"] if last else ""
+
+        data = {**asdict(event), "previous_hash": previous_hash}
+        canonical = json.dumps(data, sort_keys=True)
+        data["hash"] = hashlib.sha256((previous_hash + canonical).encode()).hexdigest()
+
+        await self.db.execute("INSERT INTO audit_log VALUES (...)", data)
 ```
 
-### Step 6: Tamper Verification
-```sql
--- Verify hash chain integrity
-SELECT COUNT(*) FROM (
-  SELECT id, hash, previous_hash,
-    LAG(hash) OVER (ORDER BY id) as computed_previous
-  FROM audit_log
-) t WHERE previous_hash != computed_previous;
--- If count > 0, the log has been tampered with.
-```
+### Step 5: Audit Query Service
 
-### Step 7: Audit Query API
-```javascript
+```typescript
 class AuditQueryService {
-  async search({ actorId, resourceType, eventType, from, to, page, limit }) {
-    const query = knex('audit_log')
+  async search({ actorId, resourceType, eventType, from, to, page, limit }: AuditSearchParams): Promise<AuditSearchResult> {
+    let query = knex('audit_log')
       .where('occurred_at', '>=', from)
       .where('occurred_at', '<=', to);
-    
+
     if (actorId) query.where('actor_id', actorId);
     if (resourceType) query.where('resource_type', resourceType);
     if (eventType) query.where('event_type', eventType);
@@ -204,7 +277,7 @@ class AuditQueryService {
     return { rows, total: Number(total.count), page, limit };
   }
 
-  async verifyIntegrity() {
+  async verifyIntegrity(): Promise<{ chainIntact: boolean }> {
     const result = await db.raw(`
       SELECT COUNT(*) as broken FROM (
         SELECT id, hash, previous_hash,
@@ -218,68 +291,177 @@ class AuditQueryService {
 }
 ```
 
-## Common Pitfalls
+### Step 6: Implement Retention and Archival
 
-### Pitfall 1: Logging Sensitive Values in Diff
-Recording actual SSN, credit card numbers, or passwords in the changes diff. Use tokenization or masking: show that a field changed, not what it changed to.
+```
+Tier 1: Hot storage (7-30 days) — queryable via API, online (SSD)
+Tier 2: Warm storage (1 year) — queryable with delay (S3/Parquet export, query via Athena)
+Tier 3: Cold storage (7 years) — archived, not directly queryable (Glacier/Deep Archive)
+```
 
-### Pitfall 2: No Correlation ID Across Services
-In microservice architectures, each service logs audit events independently without a common trace ID. This makes reconstructing a user's full action sequence impossible.
+```typescript
+class AuditArchivalService {
+  async archiveToS3(endDate: Date): Promise<void> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-### Pitfall 3: Blocking on Audit Writes
-Using synchronous database inserts for audit logging impacts main request latency. Use async writes, message queues, or background batch processing.
+    const rows = await knex('audit_log')
+      .where('occurred_at', '<', endDate)
+      .where('occurred_at', '>=', thirtyDaysAgo);
 
-### Pitfall 4: Single Points of Failure in the Chain
-Running the hash chain on a single database without monitoring. Implement periodic verification, remote backups, and alerting on chain breaks.
+    // Write to Parquet in S3
+    await s3.putObject({
+      Bucket: 'audit-archive',
+      Key: `year=${endDate.getUTCFullYear()}/month=${endDate.getUTCMonth() + 1}/audit.parquet`,
+      Body: await toParquet(rows),
+    });
 
-### Pitfall 5: Ignoring Clock Skew
-Distributed systems log events with different server clocks. Always use NTP-synchronized clocks and log in UTC. Timestamp events at the application layer, not the database.
+    // Delete from hot storage
+    await knex('audit_log')
+      .where('occurred_at', '<', endDate)
+      .delete();
+  }
+}
+```
 
-### Pitfall 6: No Audit Coverage for System Actions
-Auditing only user-initiated actions but missing cron jobs, background workers, and admin scripts. Every state change must be audited regardless of initiator.
+## Production Considerations
 
-### Pitfall 7: Monolithic Audit Table
-Using a single audit_log table for all event types creates query performance issues. Partition by time or use separate tables for different event categories.
+### Write Performance
+- Audit log writes must be asynchronous — never block the request path
+- Use a message queue (Kafka, RabbitMQ, SQS) between application and audit storage
+- Batch writes: collect events for 100ms or 100 events, then flush
+- Hash computation adds ~0.1ms per entry — negligible for <1000/s
+- For high-volume, use batch hash chains (Merkle tree per batch, not per entry)
 
-## Best Practices
+### Compliance Requirements Per Framework
 
-- Use an append-only storage mechanism (immutable table, WORM storage, event store).
-- Implement a hash chain or Merkle tree for tamper evidence.
-- Log at the service boundary, not deep inside internal functions.
-- Use structured event schemas with versioning for forward compatibility.
-- Include correlation IDs to trace events across microservices.
-- Always log in UTC with timezone information, never server local time.
-- Implement async audit writing to avoid impacting main request latency.
-- Mask or tokenize sensitive values in the diff — log that a change occurred, not the sensitive value.
-- Partition audit data by time for query performance and lifecycle management.
-- Test tamper detection regularly (quarterly minimum).
-- Provide a query API for auditors with role-based access control.
-- Log reads of sensitive data (PII, PHI, financial data), not just writes.
+| Framework | Retention | Review Frequency | Special Requirements |
+|-----------|-----------|-----------------|---------------------|
+| SOC 2 | 12 months minimum | Quarterly | Access control, tamper evidence |
+| SOX | 7 years | Annual | Immutable, auditor access |
+| HIPAA | 6 years | Annual | Encryption, access logs, BAA |
+| GDPR | Until consent revoked | On request | Erasure capability, consent tracking |
+| PCI-DSS | 12 months | Quarterly | Cardholder data protection, logging |
 
-## Compared With
+### ClickHouse for High-Volume Audit
+```sql
+CREATE TABLE audit_log (
+    event_type String,
+    actor_id String,
+    actor_type String,
+    resource_type String,
+    resource_id String,
+    action String,
+    changes String,
+    metadata String,
+    correlation_id String,
+    tenant_id String,
+    occurred_at DateTime('UTC'),
+    event_version UInt8,
+    hash String,
+    previous_hash String
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(occurred_at)
+ORDER BY (occurred_at, event_type, actor_id)
+TTL occurred_at + INTERVAL 7 YEAR DELETE;
+```
 
-### Database Audit Log vs Application Audit Log
-Database audit logs capture all changes at the DB level (pgAudit, MariaDB Audit Plugin). Application logs capture business context. Use both: database logs for raw data changes, application logs for business intent.
+## Anti-Patterns
 
-### Hash Chain vs WORM Storage
-Hash chains provide verifiable tamper evidence on standard storage. WORM (Write Once Read Many) provides physical immutability at the storage layer. Use hash chains for cost-effective verification. Use WORM for regulatory requirements requiring physical immutability.
+### Anti-Pattern 1: Logging Sensitive Values in Diff
+Recording actual SSN, credit card numbers, or passwords in the changes diff.
+Fix: Use tokenization or masking — show that a field changed, not what it changed to.
 
-### PostgreSQL Audit vs Dedicated Audit Service
-PostgreSQL with audit table is simpler and cost-effective for moderate volume. Dedicated services (AWS CloudTrail, Azure Monitor, Auditd) scale better and provide native integration. Choose based on volume, compliance needs, and cloud provider.
+### Anti-Pattern 2: No Correlation ID Across Services
+Each service logs audit events independently without a common trace ID.
+Fix: Propagate correlation ID through all services, include in every audit event.
 
-### Centralized vs Decentralized Audit
-Centralized audit stores all events in one system for easy querying. Decentralized stores events per service with global correlation via event bus. Choose centralized for simpler compliance reporting. Choose decentralized for microservice autonomy.
+### Anti-Pattern 3: Blocking on Audit Writes
+Using synchronous DB inserts for audit logging impacts main request latency.
+Fix: Use async writes, message queues, or background batch processing.
+
+### Anti-Pattern 4: Single Point of Failure in Chain
+Running hash chain on a single database without monitoring.
+Fix: Implement periodic verification, remote backups, alert on chain breaks.
+
+### Anti-Pattern 5: Ignoring Clock Skew
+Distributed systems log events with different server clocks.
+Fix: NTP-synchronized clocks, log in UTC, timestamp at application layer not database.
+
+### Anti-Pattern 6: No Audit Coverage for System Actions
+Auditing only user actions but missing cron jobs, background workers, admin scripts.
+Fix: Every state change must be audited regardless of initiator.
+
+### Anti-Pattern 7: Monolithic Audit Table
+Single audit_log table for all event types creates query performance issues.
+Fix: Partition by time or use separate tables for different event categories.
+
+### Anti-Pattern 8: Mutable Audit Log
+Allowing UPDATE or DELETE on audit records defeats the purpose.
+Fix: Database triggers to prevent mutations, restricted permissions.
+
+## Security Considerations
+
+### Access Control
+- Role-based access for audit log queries (auditor, admin, security)
+- Read-only access for most roles
+- No one (including DBAs) can delete audit log entries
+- Audit log access is itself audited
+- Encrypt sensitive fields within audit entries
+
+### Immutability Enforcement
+- Database triggers to prevent UPDATE/DELETE
+- Application-level write-once check (reject updates to existing entries)
+- WORM storage at the filesystem level for archived data
+- Restricted database permissions (INSERT only for app user)
+- Hash chain verification detects any tampering
+
+### Encryption
+- Encrypt audit log at rest (TDE or column-level encryption)
+- Encrypt sensitive fields (PII, PHI) within the audit entry
+- Use separate encryption keys for audit data
+- Key rotation without data re-encryption (envelope encryption)
+
+## Comparative Analysis
+
+### Hash Chain vs WORM Storage vs Digital Signatures
+| Aspect | Hash Chain | WORM Storage | Digital Signatures |
+|--------|------------|-------------|-------------------|
+| Tamper detection | Verifiable by anyone | Physical immutability | Verifiable with public key |
+| Implementation | Application-level | Storage-level | Application-level |
+| Cost | Low (in-DB) | Medium (specialized HW) | Low (compute only) |
+| Performance | ~0.1ms per entry | Writes are cheap | ~1ms per entry |
+| Key management | None | None | Private key protection |
+| Compliance acceptance | Widely accepted | Gold standard | Accepted |
+
+### Database Audit vs Application Audit
+| Aspect | Database Audit (pgAudit) | Application Audit |
+|--------|-------------------------|-------------------|
+| Granularity | Row-level, all changes | Business context |
+| Context | SQL statements only | Actor, reason, business action |
+| Coupling | Zero (DB plugin) | Application code required |
+| Tamper evidence | DB-level | Application-level hash chain |
+| Queryability | SQL only | Rich API with business filters |
+| Performance overhead | 5-15% on DB | Minimal (async) |
+
+### PostgreSQL vs Elasticsearch vs ClickHouse
+| Aspect | PostgreSQL | Elasticsearch | ClickHouse |
+|--------|-----------|---------------|------------|
+| Write throughput | <5000/s | 5000-50000/s | >50000/s |
+| Query latency | <10ms | <100ms | <50ms |
+| Compression | 2:1 | 3:1 | 5-10:1 |
+| Hash chain support | Native | Requires external | Requires external |
+| Operational complexity | Low | High | Medium |
 
 ## Performance Considerations
-
-- Audit log writes should be asynchronous. Use a message queue (RabbitMQ, Kafka) between application and audit storage.
-- Batch audit writes: collect events for 100ms or 100 events, then flush.
-- Partition audit tables by month for query performance and easy archival.
-- Archive data older than retention period to Parquet/ORC files on object storage.
-- Hash computation adds CPU overhead. Use streaming hash computation for large payloads.
-- Index only columns used in common queries. Avoid over-indexing on high-write tables.
-- Consider columnar storage (ClickHouse, TimescaleDB) for high-volume audit analytics.
-- For >100k events/sec, use a dedicated event pipeline (Kafka → Flink → Object Store).
+- Async writes via message queue to avoid blocking requests
+- Batch inserts (100 records or 100ms window) for throughput
+- Partition by month for query performance and archival
+- Archive data > retention to Parquet/ORC on object storage
+- Index only columns used in common queries — avoid over-indexing
+- Hash computation: SHA-256 of ~1KB = ~0.05ms. Negligible.
+- For >100K events/sec, use Kafka + Flink + ClickHouse pipeline
+- Cold data in object storage costs ~$0.023/GB/month (S3 Glacier)
 
 ## Rules
 - Audit logs are append-only. Never UPDATE or DELETE rows.
@@ -303,8 +485,9 @@ Centralized audit stores all events in one system for easy querying. Decentraliz
 - `references/audit-log-monitoring.md` — Monitoring and alerting for audit log systems
 - `references/audit-trail.md` — Audit trail design principles
 - `references/compliance-logging.md` — Compliance logging best practices
-- `references/audit-log-architecture.md` — Deep architecture patterns, storage backends, hash chain internals
-- `references/audit-log-compliance.md` — Detailed compliance mapping for SOC 2, HIPAA, GDPR, PCI-DSS, SOX
+- `references/audit-log-fundamentals.md` — Audit Logging Fundamentals
+- `references/audit-log-advanced.md` — Audit Logging Advanced Patterns
+- `references/audit-log-storage-comparison.md` — Audit Storage Backend Comparison
 
 ## Handoff
 No artifact produced unless requested.

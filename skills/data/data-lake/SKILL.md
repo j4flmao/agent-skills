@@ -58,209 +58,413 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 - [ ] Compaction policy set (file size target, interval)
 - [ ] Vacuum retention period configured
 - [ ] Schema evolution rules defined
-- [ ] Time travel retention configured
-- [ ] Incremental query plan for CDC tables
 
 ### Max Response Length
-300 lines of code and configuration.
+250 lines of config.
 
 ## Workflow
 
-### Step 1: Choose Table Format
-```
-Delta Lake (Databricks, open source):
-  - Transaction log in _delta_log/ as JSON + checkpoint Parquet
-  - ACID via optimistic concurrency control on commit
-  - Native Spark integration, great for Databricks/Spark workloads
-  - Z-order clustering, generated columns, liquid clustering
-  - Ingest: COPY INTO, streaming, batch
-  - Query: Spark, Trino (connector), Presto, Athena (since 2023)
+### Step 1: Select Table Format
 
-Apache Iceberg (community, Apache):
-  - Catalog-based (Hive, Nessie, JDBC, REST, DynamoDB)
-  - Table metadata tree: metadata -> manifest list -> manifest -> data files
-  - Hidden partitioning, partition evolution (change partition spec without rewrite)
-  - Best engine interoperability: Spark, Flink, Trino, Presto, Hive, Dremio
-  - S3 tables, object stores as first-class citizens
-  - Compaction: Spark or Flink procedure
+#### Format Comparison Matrix
 
-Apache Hudi (community, Apache):
-  - Designed for CDC and near-real-time ingestion
-  - Record-level upserts/deletes, incremental pull (commit metadata)
-  - Two write modes: Copy-On-Write (CoW) and Merge-On-Read (MoR)
-  - Index: Bloom filter, HBase, bucket, simple
-  - Clustering: replace/append data layout after writes
-  - Best for: streaming ingestion with upserts, CDC pipelines
-```
+| Feature | Delta Lake | Apache Iceberg | Apache Hudi |
+|---|---|---|---|
+| Primary sponsor | Databricks | Apache (Netflix) | Apache (Uber) |
+| ACID | Optimistic concurrency | MVCC + optimistic | MVCC |
+| Multi-engine | Spark, some Trino | Spark, Trino, Flink, Hive | Spark, Flink, Hive |
+| Schema evolution | Add/drop/rename/comment | Add/drop/rename/reorder | Add/drop/rename |
+| Partition evolution | No (re-write) | Yes (hidden partitioning) | No |
+| Time travel | Delta log (max 30 days default) | Snapshot metadata | Timeline |
+| Incremental query | Spark streaming source | Spark + Flink + Trino | Incremental queries |
+| CDC support | CDC via merge into | Row-level delete + merge | Native CDC (MOR) |
+| Table maintenance | OPTIMIZE, VACUUM | rewrite_data_files, expire_snapshots | clustering, compaction |
+| File compaction | Bin-packing | Rewrite data files | Inline or async |
 
-### Step 2: Transaction Log and Metadata
-Delta Lake transaction log: _delta_log/00000000000000000001.json. Each commit is an atomic JSON file with add/remove actions. Checkpoint: periodic Parquet snapshot of all commits for faster replay. Iceberg metadata: /metadata/v1.metadata.json -> manifest list -> manifests -> data files in /data.
+#### Format Selection Decision Tree
 
 ```
-Delta Lake table layout:
-  /table/
-    _delta_log/
-      00000000000000000001.json  (add file A, add file B)
-      00000000000000000002.json  (remove file A, add file C)
-      _last_checkpoint            (pointer to latest checkpoint)
-    partition=2024/
-      part-00001.snappy.parquet
-      part-00002.snappy.parquet
+Primary query engine?
+├── Spark (only), Databricks ecosystem → Delta Lake
+├── Multi-engine (Spark + Trino + Flink)
+│   ├── Partition evolution needed → Apache Iceberg
+│   └── No partition evolution → Delta Lake or Iceberg
+├── Heavy CDC / update workloads
+│   ├── Need native CDC → Apache Hudi (MOR)
+│   └── General CDC → Apache Iceberg with merge
+└── Hive/Presto/Trino only
+    ├── Iceberg (best Hive/Trino support)
+    └── Hudi (older Hive support)
 
-Iceberg table layout:
-  /table/
-    metadata/
-      00001-xxxxxxxx.metadata.json   (table schema, partition spec, snapshot)
-      snap-xxxxxxxx.avro             (manifest list for snapshot)
-    data/
-      partition=2024/
-        00000-0.parquet              (data file, with partition in path)
+Write pattern?
+├── Append-heavy (logs, events) → Any format
+├── Update-heavy (CDC, GDPR deletions) → Hudi (MOR) or Iceberg
+└── Deletes (GDPR right to erasure) → Iceberg or Delta
 ```
 
-### Step 3: Write Modes
-Copy-On-Write (CoW): write whole Parquet files on every change (merge/update/delete). Best for: read-heavy, fewer updates, OLAP queries. Merge-On-Read (MoR): write deltas (log files) + compact lazily. Best for: write-heavy, CDC, frequent updates. Hudi calls these CoW (Snapshot query) and MoR (Read-optimized / Snapshot queries).
+### Step 2: Configure ACID Guarantees
 
-```
-Comparison:
-                     CoW          MoR
-  Write speed:      Slow         Fast
-  Read speed:       Fast         Slow (merge deltas)
-  File count:       Low          High (deltas + base)
-  Latency:          Higher write  Lower write
-  Use case:         BI queries   Streaming ingest
+#### Delta Lake Concurrency
+
+```yaml
+# Delta Lake ACID config
+delta.autoOptimize.autoCompact: true
+delta.autoOptimize.optimizeWrite: true
+delta.maxRetryCommitAttempts: 10000000  # Retry on conflict
+delta.tuneFileSizesForRewrites: true
+
+# Concurrent write conflict handling
+# Delta uses optimistic concurrency — retries on conflict
+# For high-contention tables, use partition-level writes
+# Avoid writing to same partition from multiple jobs simultaneously
+
+# Isolation level
+delta.isolationLevel: Serializable  # Default (most strict)
+# delta.isolationLevel: WriteSerializable  # Less strict, better concurrency
 ```
 
-### Step 4: Compaction
-CoW: implicitly compacted on every write (full files rewritten). MoR: need explicit compaction to merge delta logs into base files. Delta Lake: OPTIMIZE command with Z-order. Iceberg: rewrite_data_files Spark procedure. Hudi: inline or async clustering.
+#### Iceberg Concurrency
+
+```yaml
+# Iceberg catalog-level conflict handling
+# Iceberg uses optimistic concurrency at catalog level
+# Retry mechanism built into Spark/Flink Iceberg integrations
+# For high-contention scenarios, use:
+  1. Partition-level writes
+  2. Retry with exponential backoff (built-in)
+  3. Serializable isolation (default)
+
+# Iceberg catalog properties
+iceberg:
+  catalog:
+    type: hive  # or nessie, glue, jdbc, rest
+    lock-impl: in-memory  # For testing only
+    # Production: use catalog-native locking (HMS Lock, DynamoDB)
+    warehouse: s3://data-lake/warehouse
+```
+
+### Step 3: Write Mode Selection
+
+#### Copy-on-Write (CoW)
+Writes rewrite entire Parquet files. Best for: read-heavy workloads, append-only tables, smaller tables, OLAP queries. Pros: no merge at read time, simple file layout, compact storage. Cons: write amplification (rewrite whole file on single row update).
+
+#### Merge-on-Read (MoR)
+Writes append delta logs (Avro/Parquet), compacted later. Best for: update-heavy workloads, CDC ingestion, large tables with frequent updates, tables where write speed matters more than read speed. Pros: fast writes, no write amplification. Cons: read overhead merging base + delta files.
+
+```yaml
+# Hudi MOR configuration
+hoodie.datasource.write.table.type: MERGE_ON_READ
+hoodie.table.type: MERGE_ON_READ
+hoodie.compact.inline: true  # Inline compaction
+hoodie.compact.inline.max.delta.commits: 5  # Compact every 5 commits
+
+# Iceberg: use merge-in-read (not separate write mode)
+# Iceberg handles all updates via merge-on-read automatically
+```
+
+### Step 4: Partition Strategy
+
+#### Partition Design Rules
+Partition by: low-to-medium cardinality columns (< 1000 partitions for daily, < 365 for daily year). Prefer: date-based partitioning (event_date, year/month/day) for time-series data. Avoid: high-cardinality columns as partition keys (customer_id, order_id). Iceberg hidden partitioning: define partition transforms and Iceberg manages partition layout transparently.
 
 ```sql
--- Delta Lake optimize (compact small files + Z-order)
-OPTIMIZE sales_data
-ZORDER BY (customer_id, product_id);
+-- Delta Lake
+CREATE TABLE events (
+    event_id STRING,
+    event_type STRING,
+    event_date DATE,
+    payload STRUCT<
+        user_id: STRING,
+        page: STRING,
+        duration: INT
+    >
+)
+USING DELTA
+PARTITIONED BY (event_date)
+LOCATION 's3://data-lake/events/';
 
--- Iceberg rewrite data files (compact to target size)
+-- Apache Iceberg with hidden partitioning
+CREATE TABLE events (
+    event_id STRING,
+    event_type STRING,
+    event_date DATE,
+    payload STRUCT<user_id: STRING, page: STRING, duration: INT>
+)
+USING ICEBERG
+PARTITIONED BY (days(event_date))
+LOCATION 's3://data-lake/events/';
+
+-- Hudi
+CREATE TABLE events (
+    event_id STRING,
+    event_type STRING,
+    event_date DATE,
+    payload STRING  -- JSON
+)
+USING HUDI
+PARTITIONED BY (event_date)
+OPTIONS (
+    primaryKey = 'event_id',
+    preCombineField = 'event_date',
+    hoodie.datasource.write.table.type = 'COPY_ON_WRITE'
+)
+LOCATION 's3://data-lake/events/';
+```
+
+### Step 5: File Layout Optimization
+
+#### Target File Size
+
+```yaml
+# Target: 128MB - 1GB files (balance parallelism with overhead)
+# For Delta:
+delta.targetFileSize: 256mb
+delta.tuneFileSizesForRewrites: true
+
+# For Iceberg:
+write.target-file-size-bytes: 268435456  # 256MB
+
+# For Hudi:
+hoodie.parquet.max.file.size: 268435456
+hoodie.parquet.small.file.limit: 134217728  # 128MB - files below this merged
+```
+
+#### Compaction
+
+```sql
+-- Delta Lake compact
+OPTIMIZE events ZORDER BY (event_type, user_id);
+
+-- Iceberg compact
 CALL catalog.system.rewrite_data_files(
-  table => 'sales.sales_data',
-  options => map('target-file-size-bytes', '536870912')
+    table => 'events',
+    strategy => 'binpack',
+    options => map('target-file-size-bytes', '268435456')
 );
-
--- Hudi clustering (reorganize data layout)
-CALL run_clustering(
-  table => 'sales_data',
-  order => 'customer_id'
-);
-```
-
-### Step 5: Vacuum and Retention
-Vacuum removes old files no longer referenced by the transaction log. Delta: vacuum retention default 7 days (must be > time travel queries need). Iceberg: expire_snapshots removes old snapshots + orphan files. Hudi: clean and archive commands.
-
-```sql
--- Delta vacuum (dry run first, then actual)
-VACUUM sales_data RETAIN 168 HOURS;  -- 7 days
 
 -- Iceberg expire snapshots
-CALL catalog.system.expire_snapshots(
-  table => 'sales.sales_data',
-  retain_last => 10,
-  older_than => TIMESTAMP '2024-01-01 00:00:00'
-);
+CALL catalog.system.expire_snapshots('events', TIMESTAMP '2026-01-01 00:00:00');
 
--- Hudi clean (remove old file versions)
-CALL run_clean(table => 'sales_data', retain_commits => 10);
+-- Hudi compaction (inline)
+-- Configured at write time:
+hoodie.compact.inline: true
+hoodie.compact.inline.max.delta.commits: 5
+hoodie.compact.inline.max.delta.seconds: 3600
 ```
 
-### Step 6: Schema Evolution
-Delta: column add, rename, drop (needs explicit), nullable change. Iceberg: add, drop, rename, reorder, widen type (int->long). Hudi: add, drop, modify. All three support: ADD COLUMN, DROP COLUMN, CHANGE COLUMN type (restricted).
+#### Z-Order / Hilbert Clustering
 
 ```sql
--- Delta schema evolution
-ALTER TABLE sales_data ADD COLUMN discount DECIMAL(5,2) AFTER price;
-ALTER TABLE sales_data ALTER COLUMN customer_id DROP NOT NULL;
+-- Delta Z-order: reduces data scanned for queries filtering on clustered columns
+OPTIMIZE events ZORDER BY (event_type, user_id);
+-- Z-order effect: queries on event_type or user_id scan fewer files
+-- Best for: 2-4 columns frequently used in WHERE clauses together
 
--- Iceberg schema evolution
-ALTER TABLE sales_data ADD COLUMN discount DECIMAL(5,2);
-ALTER TABLE sales_data RENAME COLUMN product_id TO sku_id;
-ALTER TABLE sales_data ALTER COLUMN price TYPE DOUBLE;
-```
-
-### Step 7: Time Travel
-Delta: VERSION AS OF or TIMESTAMP AS OF. Iceberg: snapshot_id or AS OF TIMESTAMP. Hudi: begin/end commit time or instant time.
-
-```sql
--- Delta time travel
-SELECT * FROM sales_data VERSION AS OF 42;
-SELECT * FROM sales_data TIMESTAMP AS OF '2024-01-15 10:00:00';
-
--- Iceberg time travel
-SELECT * FROM sales_data FOR SYSTEM_VERSION AS OF 391184759034827;
-SELECT * FROM sales_data FOR SYSTEM_TIME AS OF '2024-01-15 10:00:00';
-
--- Hudi time travel
-SELECT * FROM sales_data TIMESTAMP AS OF '20240115100000';
-```
-
-### Step 8: Z-order / Hilbert Clustering
-Z-order: maps multi-dimensional data to 1D space for colocation. Clustering: reorganize files so similar values cluster together. Benefits: better data skipping in queries with filters on Z-order columns. Hilbert: newer, better locality preservation than Z-order.
-
-```sql
--- Delta Z-order
-OPTIMIZE sales_data ZORDER BY (customer_id, order_date);
-
--- Iceberg sort-order
-CALL catalog.system.rewrite_data_files(
-  table => 'sales.sales_data',
-  strategy => 'sort',
-  sort_order => 'customer_id ASC NULLS LAST, order_date DESC'
-);
+-- Iceberg sort order (v2+)
+CREATE TABLE events (
+    ...
+) USING ICEBERG
+PARTITIONED BY (days(event_date))
+ORDER BY (event_type, user_id);
 
 -- Hudi clustering
-CALL run_clustering(table => 'sales_data', order => 'customer_id');
-
--- Liquid clustering (Delta, Databricks)
-ALTER TABLE sales_data CLUSTER BY (customer_id, order_date);
+CALL run_clustering(
+    table => 'events',
+    order => 'event_type,user_id',
+    target_file_max_size => 268435456
+);
 ```
 
-### Step 9: CDC and Incremental Queries
-Hudi: designed for CDC — upsert on primary key, incremental query between commits. Delta: CDC with Change Data Feed (CDF) enabled. Iceberg: incremental read with Spark or Flink.
+### Step 6: Vacuum / Snapshot Expiration
+
+```yaml
+# Delta VACUUM default retention: 7 days
+# Keep enough for concurrent read isolation + time travel queries
+vacuum:
+  retention_hours: 168  # 7 days
+  # For compliance: extend based on audit requirements
+  # For testing environments: reduce to 24h
+  # NEVER vacuum concurrently with active write operations
+
+# Iceberg snapshot expiration
+expire_snapshots:
+  retain_last_n: 10     # Keep 10 most recent
+  older_than: 7 days    # Delete snapshots older than 7 days
+  # Run daily as maintenance job
+  # Spark SQL: CALL catalog.system.expire_snapshots('table', older_than => 7)
+
+# Hudi cleaner
+hoodie.cleaner.policy: KEEP_LATEST_COMMITS
+hoodie.cleaner.commits.retained: 10  # Keep last 10 commits
+```
+
+### Step 7: Schema Evolution
+
+#### Evolution Allowed Operations
+
+| Operation | Delta Lake | Iceberg | Hudi |
+|---|---|---|---|
+| Add column | Yes (nullable) | Yes | Yes |
+| Drop column | Yes | Yes | Yes |
+| Rename column | Yes (no references) | Yes | Yes |
+| Reorder columns | No | Yes | No |
+| Widen type | Yes (safe casts) | Yes (safe casts) | Limited |
+| Narrow type | No | No | No |
+| Add comment | Yes | Yes | Via Hive |
 
 ```sql
--- Delta CDF (enable on table)
-ALTER TABLE sales_data SET TBLPROPERTIES (delta.enableChangeDataFeed = true);
--- Read changes between versions
-SELECT * FROM table_changes('sales_data', 42, 45);
+-- Delta Lake schema evolution
+ALTER TABLE events ADD COLUMN new_field STRING;
+ALTER TABLE events ALTER COLUMN old_field DROP;
+ALTER TABLE events RENAME COLUMN old_field TO new_field;
 
--- Hudi incremental query
-SELECT * FROM sales_data
-WHERE _hoodie_commit_time > '20240115100000'
-  AND _hoodie_commit_time <= '20240116120000';
+-- Iceberg schema evolution
+ALTER TABLE events ADD COLUMN new_field STRING;
+ALTER TABLE events DROP COLUMN old_field;
+ALTER TABLE events RENAME COLUMN old_field TO new_field;
+-- Iceberg reorders columns:
+ALTER TABLE events ALTER COLUMN col2 FIRST;
+ALTER TABLE events ALTER COLUMN col3 AFTER col1;
+
+-- Hudi schema evolution (Spark SQL)
+ALTER TABLE events ADD COLUMNS (new_field STRING);
 ```
 
-### Step 10: Apache XTable (OneTable)
-Apache XTable provides multi-format table interoperability across Delta Lake, Iceberg, and Hudi. It maintains a primary table format and synchronizes metadata to secondary formats, enabling cross-engine querying without data duplication. For example, maintain as Delta Lake (Databricks) and auto-sync to Iceberg (Trino/Athena). XTable runs as a Spark application or standalone via API. Sync can be incremental (sourcing only changed files from primary format). Use XTable when different teams use different engines requiring different formats, during format migration, or when building a multi-engine data platform.
+### Step 8: Time Travel
 
-### Step 11: Nessie Catalog
-Nessie provides Git-like version control for Iceberg tables (and others via REST Catalog API). Branches, tags, commits, and merges operate on catalog metadata — schemas, partitions, table snapshots. A Nessie commit captures the state of all tables atomically, enabling multi-table atomic operations. Integrates as an Iceberg REST catalog. Features: multi-branch development (dev branch for experiments, main for production), zero-copy environment isolation (branching clones catalog state without data duplication), and cross-table time travel. Use Nessie for multi-environment Iceberg tables, CI/CD for data, and consistent multi-table snapshots for ML training.
+```sql
+-- Delta Lake time travel
+SELECT * FROM events VERSION AS OF 12345;        -- By version number
+SELECT * FROM events TIMESTAMP AS OF '2026-05-01'; -- By timestamp
+
+-- Restore to previous version
+RESTORE TABLE events TO VERSION AS OF 12345;
+
+-- Iceberg time travel
+SELECT * FROM events FOR SYSTEM_TIME AS OF '2026-05-01 12:00:00';  -- By timestamp
+SELECT * FROM events FOR SYSTEM_VERSION AS OF 12345;                -- By snapshot ID
+
+-- Hudi time travel
+SELECT * FROM events TIMESTAMP AS OF '2026-05-01 12:00:00';
+```
+
+### Step 9: Incremental Queries
+
+```sql
+-- Delta incremental query (Spark Streaming source)
+spark.readStream.format("delta")
+    .option("startingVersion", "100")
+    .table("events")
+
+-- Delta change data feed
+ALTER TABLE events SET TBLPROPERTIES (delta.enableChangeDataFeed = true);
+SELECT * FROM table_changes('events', 12345, 12350);
+
+-- Iceberg incremental read
+SELECT * FROM events.incremental(100)  -- Spark incremental query
+
+-- Hudi incremental pull
+SELECT * FROM events WHERE _hoodie_commit_time > '20260101000000';
+```
+
+### Step 10: Performance Optimization
+
+#### Read Optimization
+
+```yaml
+# Parallelism and file scanning
+spark.sql.files.maxPartitionBytes: 256MB     # Max bytes per partition
+spark.sql.files.openCostInBytes: 4MB          # Cost of opening a file
+spark.sql.files.minPartitionNum: 1            # Min partitions
+
+# Iceberg read optimizations
+read.split.target-size: 268435456             # 256MB split target
+read.split.planning-lookback: 10              # Planned splits count
+read.split.open-file-cost: 4194304            # 4MB open cost
+```
+
+#### Write Optimization
+
+```yaml
+# Parallel writes
+spark.sql.shuffle.partitions: 400            # Adjust for data volume
+spark.sql.hive.convertMetastoreParquet: true
+
+# Iceberg write optimizations
+write.distribution-mode: hash                 # hash, range, none
+write.wap.enabled: false                      # Write-Audit-Publish
+write.merge.mode: merge-on-read               # Default for Iceberg updates
+
+# Delta write optimizations
+delta.autoOptimize.autoCompact: true
+delta.autoOptimize.optimizeWrite: true
+```
 
 ## Rules
-- Always enable ACID (Delta, Iceberg, or Hudi) for any production lake table
-- CoW for BI/analytics tables; MoR for high-ingestion CDC tables
-- Set target file size: 256MB-1GB (avoid megabytes or gigabytes+ files)
-- Vacuum retention = max expected time travel window + 24h
-- Partition granularity: day for event data, month/year for historical
-- Z-order on high-cardinality filter columns (customer_id, device_id)
-- Enable file skipping statistics for all Iceberg tables
-- Test schema evolution on staging before production
+- Always use open table formats — never raw Parquet/ORC on object stores
+- Partition by date for time-series data — enable partition pruning
+- Compaction target: 128MB-1GB files for optimal read parallelism
+- Vacuum retention: 7 days minimum for time travel and concurrent reads
+- Enable Z-order/Hilbert clustering for multi-column filter patterns
+- Use hidden partitioning (Iceberg) for transparent partition management
+- Monitor small files — run compaction when avg file size < 64MB
+- Run vacuum/snapshot expiration as scheduled maintenance jobs
+- Enable change data feed for incremental downstream consumers
+- Test schema changes on staging before production rollout
+- Use column-level statistics for CBO on query engines
+
+### Lake Maintenance Jobs
+
+```yaml
+# Recommended maintenance schedule for lake tables
+maintenance_jobs:
+  - name: compact_small_files
+    schedule: "0 2 * * *"  # Daily at 2 AM
+    tables:
+      - pattern: "prod.*"  # All production tables
+      - except: ["prod.ref.*"]  # Skip reference tables
+    target_file_size: 256MB
+  
+  - name: expire_snapshots
+    schedule: "0 3 * * *"  # Daily at 3 AM
+    retention: 7 days
+    tables:
+      - pattern: "*"
+  
+  - name: remove_orphan_files
+    schedule: "0 4 * * 0"  # Weekly on Sunday
+    tables:
+      - pattern: "*"
+  
+  - name: update_statistics
+    schedule: "0 5 * * *"  # Daily at 5 AM
+    tables:
+      - pattern: "prod.*"
+    compute_stats: true
+    compute_column_stats: true
+```
+
+## Rules
+- Always use open table formats — never raw Parquet/ORC on object stores
+- Partition by date for time-series data — enable partition pruning
+- Compaction target: 128MB-1GB files for optimal read parallelism
+- Vacuum retention: 7 days minimum for time travel and concurrent reads
+- Enable Z-order/Hilbert clustering for multi-column filter patterns
+- Use hidden partitioning (Iceberg) for transparent partition management
+- Monitor small files — run compaction when avg file size < 64MB
+- Run vacuum/snapshot expiration as scheduled maintenance jobs
+- Enable change data feed for incremental downstream consumers
+- Test schema changes on staging before production rollout
+- Use column-level statistics for CBO on query engines
+- Never run vacuum concurrently with active write operations
+- Document table format decision in ADR with specific rationale
+- Monitor write amplification for update-heavy tables (prefer MoR)
+- Use version catalog (Nessie) for Git-like branching on the lake
 
 ## References
-  - references/data-lake-advanced.md — Data Lake Advanced Topics
-  - references/data-lake-fundamentals.md — Data Lake Fundamentals
-  - references/lake-gov-access.md — Data Lake Governance and Access Control
-  - references/lake-operations.md — Lake Operations Reference
-  - references/lake-performance-tuning.md — Data Lake Performance Tuning
-  - references/nessie-catalog.md — Nessie Catalog — Git for Iceberg
-  - references/table-formats.md — Table Formats Reference
-  - references/xtable-multi-format.md — Apache XTable Multi-Format Interoperability
+Coming soon.
+
 ## Handoff
-`data-distributed-storage` for S3-compatible object store configuration
-`data-batch-processing` for Spark SQL optimization on lake tables
-`data-data-lakehouse` for medallion architecture on top of lake
+`data-data-platform` for overall lake architecture
+`data-data-warehouse` for warehouse layer on top of lake
+`data-distributed-storage` for storage infrastructure details

@@ -83,55 +83,168 @@ Is SvelteKit used?
   └── No -> onMount() + $state() + fetch()
 ```
 
-## Common Pitfalls
+### Decision Tree: Animation Strategy
 
-### Pitfall 1: Missing Keyed Each Blocks
+```
+What kind of animation?
+  ├── Enter/leave single element -> transition: directive
+  ├── List reorder -> animate:flip + keyed each
+  ├── Shared element between routes -> SvelteKit crossfade
+  └── Continuous animation -> svelte/motion (tweened, spring)
+```
+
+## Component Design Patterns
+
+### Form with Superforms + Zod
+
 ```svelte
-<!-- Wrong — no key, transitions won't animate correctly -->
-{#each items as item}
-  <div transition:slide>{item.text}</div>
-{/each}
+<script>
+  import { superForm } from 'sveltekit-superforms/client'
+  import { schema } from './schema'
 
-<!-- Correct — keyed each for proper animate:flip -->
+  const { form, errors, enhance, submitting } = superForm(data.form, { schema })
+</script>
+
+<form method="POST" use:enhance>
+  <input name="email" type="email" bind:value={form.email} aria-invalid={!!errors.email} />
+  {#if errors.email}<span>{errors.email}</span>{/if}
+  <input name="password" type="password" bind:value={form.password} />
+  {#if errors.password}<span>{errors.password}</span>{/if}
+  <button type="submit" disabled={submitting}>
+    {submitting ? 'Submitting...' : 'Login'}
+  </button>
+</form>
+```
+
+### Custom Action (use:)
+
+```svelte
+<script>
+  function tooltip(node: HTMLElement, text: string) {
+    const tip = document.createElement('div')
+    tip.className = 'tooltip'
+    tip.textContent = text
+    tip.style.cssText = 'position:absolute;background:#333;color:white;padding:4px 8px;border-radius:4px;'
+
+    function show() {
+      const rect = node.getBoundingClientRect()
+      tip.style.top = `${rect.top - tip.offsetHeight - 4}px`
+      tip.style.left = `${rect.left + rect.width / 2 - tip.offsetWidth / 2}px`
+      document.body.appendChild(tip)
+    }
+
+    function hide() { tip.remove() }
+
+    node.addEventListener('mouseenter', show)
+    node.addEventListener('mouseleave', hide)
+
+    return {
+      destroy() {
+        node.removeEventListener('mouseenter', show)
+        node.removeEventListener('mouseleave', hide)
+        hide()
+      },
+      update(newText: string) { tip.textContent = newText },
+    }
+  }
+
+  let message = $state('Hello')
+</script>
+
+<button use:tooltip={message}>Hover me</button>
+```
+
+### Nested Transition Animation
+
+```svelte
+<script>
+  import { fly, slide } from 'svelte/transition'
+  import { cubicOut } from 'svelte/easing'
+
+  let items = $state([
+    { id: 1, text: 'Item 1' },
+    { id: 2, text: 'Item 2' },
+    { id: 3, text: 'Item 3' },
+  ])
+
+  function removeItem(id: number) {
+    items = items.filter(i => i.id !== id)
+  }
+
+  function addItem() {
+    items = [...items, { id: Date.now(), text: `Item ${items.length + 1}` }]
+  }
+</script>
+
+<button onclick={addItem}>Add</button>
 {#each items as item (item.id)}
-  <div transition:slide animate:flip>{item.text}</div>
+  <div
+    transition:fly={{ y: -20, duration: 200, easing: cubicOut }}
+    animate:flip={{ duration: 300 }}
+  >
+    <span>{item.text}</span>
+    <button onclick={() => removeItem(item.id)}>x</button>
+  </div>
 {/each}
 ```
 
-### Pitfall 2: Side Effects in Action Update
-Action update functions should not have side effects that trigger re-renders. Keep updates focused on DOM manipulation only.
+## State Management Patterns
 
-### Pitfall 3: Using onMount for Data in SvelteKit
+### Local Form State
+
 ```svelte
 <script>
-  import { onMount } from 'svelte'
-  // Wrong in SvelteKit — use load() instead
-  onMount(async () => {
-    const res = await fetch('/api/data')
-    data = await res.json()
+  let email = $state('')
+  let password = $state('')
+  let errors = $state<Record<string, string>>({})
+</script>
+```
+
+### Derived Values
+
+```svelte
+<script>
+  let cart = $state<CartItem[]>([])
+  let total = $derived(cart.reduce((sum, i) => sum + i.price * i.quantity, 0))
+  let itemCount = $derived(cart.reduce((sum, i) => sum + i.quantity, 0))
+</script>
+```
+
+### Reactive Side Effects
+
+```svelte
+<script>
+  let theme = $state('light')
+
+  $effect(() => {
+    localStorage.setItem('theme', theme)
+    document.documentElement.setAttribute('data-theme', theme)
   })
 </script>
 ```
-In SvelteKit, use `load()` functions for SSR data fetching. `onMount` is for standalone Svelte only.
 
-### Pitfall 4: Overusing Transitions
-Every transition creates CSS animation classes. Too many concurrent transitions can cause jank. Use `transition:slide` with `duration: 200` for lists; reserve `fly` and `scale` for hero elements.
+### Cross-Component State via Context
 
-### Pitfall 5: Forgetting use:enhance Returns
-`use:enhance` can return a cleanup function. Use it for canceling in-flight requests when the form resubmits.
+```svelte
+<script>
+  // provider component
+  import { setContext } from 'svelte'
+  let user = $state<User | null>(null)
+  setContext('user', {
+    get user() { return user },
+    login: (u: User) => user = u,
+    logout: () => user = null,
+  })
+</script>
 
-## Compared With
+<script>
+  // consumer component
+  import { getContext } from 'svelte'
+  let ctx = getContext<{ user: User | null; login: (u: User) => void; logout: () => void }>('user')
+</script>
+```
 
-### Svelte Forms vs React Hook Form
-Svelte's `bind:value` is simpler than React Hook Form's `register()`. SvelteKit's `use:enhance` provides progressive enhancement out of the box, while React needs to handle both client and server validation separately.
-
-### Svelte Animations vs Framer Motion
-Svelte's transition/animate directives are built-in and CSS-driven, producing zero JS overhead for animations. Framer Motion (React) is JS-driven with more complex orchestration but has a larger bundle.
-
-### Svelte Actions vs Vue Directives
-Svelte actions (`use:action`) are similar to Vue's custom directives but simpler — no config object, just a function returning `{ update, destroy }`. Both encapsulate DOM behavior.
-
-## Performance Considerations
+## Performance Optimization
 
 ### CSS-Driven Animations
 Svelte transitions compile to CSS animations. Use `css` option in custom transitions for GPU-accelerated properties (transform, opacity). Avoid animating layout-triggering properties (width, height, margin).
@@ -146,93 +259,166 @@ Svelte transitions compile to CSS animations. Use `css` option in custom transit
 ### Data Fetching
 SvelteKit load functions run on the server for SSR, meaning no waterfall fetch on the client. Use `+page.server.ts` for DB queries and `+page.ts` for public API calls. Parallelize with `Promise.all` in load functions.
 
+### Keyed Each Blocks
+Always use keyed each blocks `{#each items as item (item.id)}` for efficient DOM updates and correct animation behavior.
+
+## Build & Bundle Considerations
+
+### SvelteKit Build
+```bash
+npm run build    # Adapter-specific build
+npm run preview  # Preview production build
+```
+
+### Standalone Svelte Build
+```bash
+npm run build    # Output to dist/
+```
+
+### CSS Extraction
+Svelte scopes CSS automatically per component. Global styles go in `app.html` or imported via Vite.
+
+## Testing Strategies
+
+### Component Tests
+
+```tsx
+import { render, screen, fireEvent } from '@testing-library/svelte'
+import { describe, it, expect } from 'vitest'
+import Counter from './Counter.svelte'
+
+it('increments on click', async () => {
+  render(Counter, { props: { initial: 0 } })
+  await fireEvent.click(screen.getByRole('button'))
+  expect(screen.getByText('1')).toBeDefined()
+})
+```
+
+### SvelteKit Form Action Tests
+
+```tsx
+import { describe, it, expect } from 'vitest'
+import { actions } from './+page.server'
+
+it('validates form data', async () => {
+  const formData = new FormData()
+  formData.set('email', 'invalid')
+  const result = await actions.default({ request: new Request('http://localhost', { method: 'POST', body: formData }) })
+  expect(result.status).toBe(400)
+})
+```
+
+## Migration Patterns
+
+### Svelte 4 to Svelte 5
+
+```svelte
+// Svelte 4: stores
+import { writable, derived } from 'svelte/store'
+const count = writable(0)
+const doubled = derived(count, $c => $c * 2)
+count.update(n => n + 1)
+
+// Svelte 5: runes
+let count = $state(0)
+let doubled = $derived(count * 2)
+count++
+```
+
+### React to Svelte 5
+
+```tsx
+// React
+const [count, setCount] = useState(0)
+const doubled = useMemo(() => count * 2, [count])
+useEffect(() => { document.title = String(count) }, [count])
+
+// Svelte 5
+let count = $state(0)
+let doubled = $derived(count * 2)
+$effect(() => { document.title = String(count) })
+```
+
+## Anti-Patterns
+
+### Missing Keyed Each
+
+```svelte
+<!-- Anti-pattern: no key -->
+{#each items as item}
+  <div transition:slide>{item.text}</div>
+{/each}
+
+<!-- Correct: keyed -->
+{#each items as item (item.id)}
+  <div transition:slide animate:flip>{item.text}</div>
+{/each}
+```
+
+### onMount for Data in SvelteKit
+
+In SvelteKit, use `load()` functions instead of onMount for initial data. onMount is for standalone Svelte only.
+
+### Side Effects in Action Update
+
+Action update functions should not trigger re-renders. Keep them focused on DOM manipulation.
+
+### Overusing Transitions
+
+Too many concurrent transitions cause jank. Use `fade`/`slide` with short durations for lists; reserve `fly`/`scale` for hero elements.
+
+## Common Pitfalls
+
+1. **Missing keyed each blocks** — transitions break without keys
+2. **Side effects in action update** — keep DOM focused
+3. **onMount for data in SvelteKit** — use load() instead
+4. **Overusing transitions** — short durations for lists
+5. **Forgetting use:enhance returns** — cancel in-flight requests
+
+## Compared With
+
+### Svelte Forms vs React Hook Form
+Svelte's bind:value is simpler. SvelteKit's use:enhance provides progressive enhancement out of the box.
+
+### Svelte Animations vs Framer Motion
+Svelte transitions are CSS-driven with zero JS overhead. Framer Motion is JS-driven with larger bundle.
+
+### Svelte Actions vs Vue Directives
+Both encapsulate DOM behavior. Svelte actions are simpler (function returning update/destroy).
+
 ## Ecosystem & Tooling
 
-### Core Packages
 | Package | Purpose |
 |---------|---------|
 | svelte | Framework core |
 | @sveltejs/kit | Meta-framework |
-| svelte-forms-lib | Lightweight form library |
-| superforms | Zod-based form validation with SvelteKit |
-| svelte-motion | Spring animations for Svelte |
-| @sveltejs/adapter-* | Deployment adapters |
-
-### Tools
-- **Svelte VS Code Extension** — Syntax highlighting, IntelliSense.
-- **svelte-check** — CLI type checking.
-- **svelte-migrate** — Svelte 4 to 5 migration.
-- **svelte-scoped-any** — Scoped CSS with `:global()`.
-
-### Form Libraries
-| Library | Features |
-|---------|----------|
-| Superforms | Zod integration, use:enhance, auto field errors |
-| svelte-forms-lib | Lightweight, no dependencies |
-| Felte | Yup/Zod support, progressive enhancement |
-
-### Animation Libraries
-| Library | Purpose |
-|---------|---------|
-| svelte/transition | Built-in: fade, slide, scale, fly, blur |
-| svelte/animate | Built-in: flip |
-| svelte/motion | Built-in: tweened, spring |
-| svelte-motion | Framer Motion API port |
+| superforms | Zod form validation |
+| svelte-motion | Spring animations |
+| Felte | Form library |
 
 ## Workflow
 
 ### Step 1: Forms (bind:value + Validation)
 ```svelte
-<script>
-  let email = $state('')
-  let password = $state('')
-  let errors = $state<Record<string, string>>({})
-
-  async function handleSubmit(e: Event) {
-    e.preventDefault()
-    const result = schema.safeParse({ email, password })
-    if (!result.success) { errors = result.error.flatten().fieldErrors; return }
-    await fetch('/api/login', { method: 'POST', body: JSON.stringify(result.data) })
-  }
-</script>
-
 <form onsubmit={handleSubmit}>
   <input type="email" bind:value={email} aria-invalid={!!errors.email} />
   {#if errors.email}<span>{errors.email}</span>{/if}
   <input type="password" bind:value={password} />
-  {#if errors.password}<span>{errors.password}</span>{/if}
   <button type="submit">Login</button>
 </form>
 ```
-For SvelteKit, use `use:enhance` for progressive enhancement and `superForms` with Zod.
 
-### Step 2: Animations (transition: directive)
+### Step 2: Animations (transition:)
 ```svelte
-<script>
-  import { fade, slide, scale, fly } from 'svelte/transition'
-  let visible = $state(false)
-</script>
-
-<button onclick={() => visible = !visible}>Toggle</button>
 {#if visible}
   <div transition:fade={{ duration: 300 }}>Fade</div>
   <div transition:slide>Slide</div>
   <div transition:fly={{ x: 200 }}>Fly in</div>
 {/if}
-<div in:fly={{ y: -50 }} out:slide>Content</div>
 ```
 
 ### Step 3: List Animations (animate:flip)
 ```svelte
-<script>
-  import { flip } from 'svelte/animate'
-  import { slide } from 'svelte/transition'
-  let items = $state([{ id: 1, text: 'A' }, { id: 2, text: 'B' }])
-
-  function shuffle() { items = [...items].reverse() }
-</script>
-
-<button onclick={shuffle}>Shuffle</button>
 {#each items as item (item.id)}
   <div transition:slide animate:flip={{ duration: 300 }}>
     {item.text}
@@ -242,102 +428,55 @@ For SvelteKit, use `use:enhance` for progressive enhancement and `superForms` wi
 
 ### Step 4: Actions (use:)
 ```svelte
-<script>
-  function clickOutside(node: HTMLElement, cb: () => void) {
-    function handler(e: MouseEvent) {
-      if (!node.contains(e.target as Node)) cb()
-    }
-    document.addEventListener('click', handler)
-    return {
-      destroy() { document.removeEventListener('click', handler) },
-      update(newCb: () => void) { cb = newCb },
-    }
-  }
-
-  let open = $state(true)
-</script>
-
 <div use:clickOutside={() => open = false}>
-  Menu content — clicking outside closes
+  Menu content
 </div>
 ```
 
 ### Step 5: Data Fetching (onMount + $state)
 ```svelte
-<script>
-  import { onMount } from 'svelte'
-
-  let users = $state<User[]>([])
-  let loading = $state(true)
-
-  onMount(async () => {
-    const res = await fetch('/api/users')
-    users = await res.json()
-    loading = false
-  })
-</script>
-
-{#if loading}
-  <p>Loading...</p>
-{:else}
-  {#each users as user}
-    <p>{user.name}</p>
-  {/each}
-{/if}
+onMount(async () => {
+  const res = await fetch('/api/users')
+  users = await res.json()
+})
 ```
-For SvelteKit, use `load` function in `+page.ts` / `+page.server.ts` for SSR data.
 
 ### Step 6: SvelteKit Form Actions
 ```svelte
-<script>
-  import { enhance } from '$app/forms'
-  let { form } = $props()
-</script>
-
 <form method="POST" use:enhance>
   <input name="email" />
   <button>Submit</button>
 </form>
 ```
-Form actions in `+page.server.ts` handle validation, errors, and redirects on the server.
 
-### Step 7: Motion Stores (tweened, spring)
+### Step 7: Motion Stores
 ```svelte
 <script>
   import { tweened } from 'svelte/motion'
-  import { cubicOut } from 'svelte/easing'
-  const progress = tweened(0, { duration: 400, easing: cubicOut })
-
-  function start() { progress.set(100) }
+  const progress = tweened(0, { duration: 400 })
 </script>
-
 <progress value={$progress}></progress>
-<button onclick={start}>Start</button>
 ```
 
 ## Rules
-- bind:value for form inputs — explicit onChange handlers only when needed.
-- use:enhance for progressive form enhancement in SvelteKit.
-- transition: directive for enter/leave, animate:flip for list reorder.
-- Actions (use:) for reusable DOM behavior — return update/destroy.
-- onMount + $state for CSR fetching, SvelteKit load for SSR.
-- Key each blocks with (item.id) for proper list transitions.
-- Use superforms for complex forms with Zod validation.
-- Prefer CSS-driven transitions over JS animations for performance.
-- Always return cleanup from action destroy and update functions.
-- Motion stores (tweened, spring) for smoothly animated values.
+- bind:value for form inputs.
+- use:enhance for progressive enhancement in SvelteKit.
+- transition: for enter/leave, animate:flip for list reorder.
+- Actions (use:) for reusable DOM behavior.
+- onMount + $state for CSR, SvelteKit load for SSR.
+- Key each blocks with stable keys for transitions.
+- Prefer CSS-driven transitions over JS animations.
 
 ## References
-- references/svelte-component-patterns.md — Svelte Component Patterns
-- references/svelte-forms.md — Svelte Forms — bind:value, Form Actions, Validation, File Uploads
-- references/svelte-routing.md — Svelte Routing Patterns
-- references/svelte-state.md — Svelte State Management Patterns
-- references/svelte-stores-state.md — Svelte Stores and State
-- references/svelte-transitions.md — Svelte Transitions — Transition, Animation, InView Directives, Custom Transitions
-- references/svelte-stores-state-management.md — Svelte Stores and State Management
-- references/svelte-ssr-hydration.md — Svelte SSR and Hydration
+- references/svelte-component-patterns.md
+- references/svelte-forms.md
+- references/svelte-routing.md
+- references/svelte-state.md
+- references/svelte-stores-state.md
+- references/svelte-transitions.md
+- references/svelte-ssr-hydration.md
 
 ## Handoff
 No artifact produced.
-Next skill: frontend-sveltekit if using SvelteKit, or frontend-universal-testing.
+Next skill: frontend-sveltekit if using SvelteKit.
 Carry forward: form binding patterns, transition/animate conventions, action patterns.

@@ -1,213 +1,169 @@
-# Llm Ops Fundamentals
+# LLM Ops Fundamentals
 
 ## Overview
-Llm Ops is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+LLM Ops is the discipline of managing large language models in production. Unlike traditional MLOps (training, deployment, monitoring of predictive models), LLMOps must handle non-deterministic outputs, prompt sensitivity, context window constraints, token-based cost models, and unique failure modes (hallucination, refusal, drift). This reference covers fundamental concepts required to operate LLMs reliably at scale.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Llm Ops helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### LLM Lifecycle
+```
+Data Collection -> Training/FT -> Evaluation -> Deployment -> Monitoring -> Iteration
+                               ^                                       |
+                               +---------- Drift Detection ------------+
+```
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Llm Ops solutions. These principles help maintain code quality and reduce technical debt.
+Each stage is an operational concern:
+- Data: quality, deduplication, leakage prevention, format standardization
+- Training: compute orchestration, checkpoint management, experiment tracking
+- Evaluation: golden datasets, LLM-as-judge, human eval, regression testing
+- Deployment: serving infrastructure, scaling, caching, routing
+- Monitoring: quality, cost, latency, safety, drift
+- Iteration: prompt tuning, fine-tuning, model swap, architecture change
 
-### Concept 3: Data Management
-Proper data management is essential for Llm Ops. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### What Makes LLMOps Different from MLOps
+| Aspect | Traditional MLOps | LLMOps |
+|--------|------------------|--------|
+| Output | Deterministic (classification, regression) | Non-deterministic (generation) |
+| Cost Model | Compute time + storage | Tokens (input + output) x price |
+| Monitoring | Accuracy, precision, recall | Faithfulness, hallucination, safety, refusal |
+| Failure Mode | Model degradation | Hallucination, drift, prompt injection |
+| Versioning | Model version only | Model + prompt + template version |
+| Serving | CPU batch inference | GPU with KV cache, batching |
+| Cold Start | Instant | Minutes (model load), seconds (cache warmup) |
+| A/B Testing | Model comparison | Model + prompt comparison (2D) |
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+### Model Selection Fundamentals
+**Open vs Closed:**
+- Closed API: minimal ops overhead, per-token pricing, rate limits, data privacy concerns, provider dependency
+- Open self-host: full control, fixed GPU cost at scale, operational overhead, requires ops expertise
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+**Size vs Cost:**
+- 7B models: 1 GPU, ~2000 tok/s, good for simple/structured tasks
+- 70B models: 4-8 GPUs, ~500 tok/s, required for complex reasoning
+- 200B+ models: 8+ GPUs, highest quality, highest latency and cost
 
-## Architecture Patterns
+**Latency vs Quality:**
+- Every 2x model size -> ~2x latency -> ? quality gain (diminishing returns)
+- Distillation: train small model on large model outputs. ~90% quality at ~10% cost.
 
-### Pattern 1: Standard Architecture
-The standard architecture for Llm Ops follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+### Serving Fundamentals
+**Hardware:**
+- GPU memory must hold model weights + KV cache + overhead. Rule: 2x model size in GB for FP16 inference.
+- Quantization: FP16 (2 bytes/param), INT8 (1 byte/param), FP4 (0.5 byte/param). Each reduces memory 2x but may degrade quality.
+- KV cache per request: 2 x layers x hidden_dim x sequence_length x 2 bytes. At 8192 context with 70B model: ~4-8 GB per concurrent request.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+**Batching:**
+- Wait for N requests or T ms, then forward as batch. Higher batch = higher throughput = higher latency.
+- Continuous batching (vLLM/TGI): add/remove requests mid-generation. No need to wait for slowest request.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+**Quantization:**
+- AWQ: activation-aware weight quantization. Best quality for INT4. Pre-compute scales offline.
+- GPTQ: post-training quantization. Good INT4 quality. Slightly slower than AWQ for batch=1.
+- FP8: native hardware support on H100. No re-calibration needed. Best quality.
+- GGUF (llama.cpp): CPU-friendly quantization. Ops count scales well on CPU.
 
-## Implementation Guide
+### Prompt Ops Fundamentals
+Prompts are code. They require version control, testing, CI/CD, and monitoring.
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+**Template Structure:**
+- System prompt: sets behavior, never user-modifiable
+- Context: retrieved documents, dynamic per-query
+- Instructions: task specification, output format
+- Few-shot examples: input-output pairs for in-context learning
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+**Versioning:**
+- File per prompt: YAML with template, params, model config, test refs
+- VCS: Git with PR review, semantic versions, environment tags
+- Registry: service that serves prompt by name+version at runtime
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+**Testing:**
+- Golden dataset: curated input-output pairs with expected behavior
+- Edge cases: empty input, very long context, adversarial prompts, PII in input
+- Regression: run on previous production dataset, compare metrics
+- Safety: toxicity, bias, refusal boundaries
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+### Monitoring Fundamentals
+**LLM-Specific Metrics:**
+- Time-to-first-token (TTFT): time to first output token. Proxy for user-perceived latency.
+- Tokens-per-output-token (TPOT): time per output token. Determines streaming speed.
+- Faithfulness: does output agree with provided context? LLM-as-judge score.
+- Hallucination rate: outputs with claims not supported by context or knowledge.
+- Refusal rate: appropriate (safety) vs inappropriate (over-refusal) rejections.
+- Response length: consistent with expectations? Drift indicates prompt issue.
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+**Tiered Observability:**
+```
+L1 Infrastructure: GPU util, VRAM, TTFT, TPOT, queue depth, error rate
+L2 Cost: tokens/request, cost/query, daily spend, cost/user
+L3 Quality: faithfulness, hallucination rate, safety score, user satisfaction
+L4 Drift: input embedding distance, output length shift, topic shift
+```
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### Cost Fundamentals
+**Token Accounting:**
+- 1 token ~ 0.75 words for English. Varies by language (CJK: 1 token ~ 1 char).
+- Input/output ratio varies by use case: Q&A ~5:1, summarization ~1:5, agent ~10:1.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+**Pricing Models:**
+- API: input tokens x price_in + output tokens x price_out. Output is 3-5x cost of input.
+- Self-host: GPU rental x hours + storage + networking + ops labor. Fixed per month.
+- Break-even: compare API monthly cost vs self-host TCO. Self-host wins at sufficient volume.
+
+**Cost Levers (in order of impact):**
+1. Model selection: switch to more efficient model (2-10x savings)
+2. Model routing: cheap model for simple queries (40-70% savings)
+3. Prompt optimization: shorter prompts = fewer input tokens (10-30% savings)
+4. Caching: exact-match + semantic cache (20-50% hit rate savings)
+5. Batch size: larger batches = better GPU utilization per token
+6. Quantization: FP8/INT4 vs FP16 (2x throughput, no quality loss with FP8)
 
 ## Best Practices
 
 | Practice | Description | Priority |
 |----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+| Version prompts as code | YAML in Git, PR reviews, semantic versions | High |
+| Test prompts before deploy | Golden dataset with automated eval gates | High |
+| Tiered monitoring | L1 infra -> L2 cost -> L3 quality -> L4 drift | High |
+| Model routing | Cheaper model for simple queries | High |
+| Cache responses | Exact-match first, semantic second | High |
+| Budget alerts | Warn at 75%, block at 100% | High |
+| Canary prompt deploys | 5% -> 25% -> 50% -> 100% with auto-rollback | High |
+| Track cost per query | Know unit economics per feature/user | Medium |
+| Quantize for inference | FP16 or lower, never FP32 | Medium |
+| Measure drift | Embedding distance, output distribution | Medium |
+| LLM-as-judge eval | Automated quality scoring in CI | Medium |
 
 ## Common Pitfalls
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+### Pitfall 1: One Model for Everything
+Using the largest model for every query. A query classifier routing to GPT-4o-mini for simple Q&A saves 40-70% with no user-facing quality difference.
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+### Pitfall 2: No Prompt Versioning
+"Which prompt is deployed in production?" becomes an investigation. Manual edits in production DB/code create unreproducible states. Fix: Git-based prompt registry with runtime API.
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+### Pitfall 3: Ignoring Cost Per Query
+Tracking total spend but not cost per query. Without unit economics, you cannot predict how scaling affects budget, or attribute cost to features/teams.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+### Pitfall 4: Vanity Monitoring
+Tracking only latency and uptime. Hallucination rate could double without any infrastructure alert. Must track quality metrics as first-class SLOs.
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+### Pitfall 5: Deploying Without Eval
+"Looks good to me" prompt changes cause silent quality regressions. Automated eval on golden dataset must be a CI gate.
 
-## Tooling Ecosystem
+### Pitfall 6: Neglecting Context Window
+Production context lengths drift upward over time as use cases expand. Monitor P95 context length. 128K context on models with 8192 training = quality degradation at length.
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+### Pitfall 7: No Rollback Plan
+Every deploy should have a tested rollback path. Rollback by: feature flag toggle (<1s), traffic rebalance (immediate), Git revert + deploy (~2min).
 
 ## Key Points
-- Understand core Llm Ops concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- LLMOps differs fundamentally from MLOps: non-deterministic, token-based, prompt-sensitive
+- Prompts are code: version, test, CI/CD -- cannot be repeated enough
+- Model routing is the highest-impact cost lever: match model to query complexity
+- Cache everything: exact-match, semantic, prefix KV cache
+- Monitor in tiers: infra -> cost -> quality -> drift
+- Cost per query is the unit economics of LLM operations
+- Test prompts on golden dataset before every deployment
+- Every deployment must have a tested rollback path
+- Context window monitoring prevents silent quality degradation
+- Quantize for inference: never serve FP32

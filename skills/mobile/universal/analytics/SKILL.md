@@ -33,14 +33,6 @@ Phrases: "analytics", "event tracking", "Firebase Analytics", "Mixpanel", "Ampli
 Analytics module: provider initialization, event tracking service, screen view auto-tracker, user properties manager, consent management, privacy controls.
 
 ### Response Format
-```
-<analytics>
-<provider>{init, config, provider selection}</provider>
-<events>{schema, naming, automatic, custom}</events>
-<screen>{auto-track via navigation listener}</screen>
-<privacy>{consent, opt-out, deletion, ATT}</privacy>
-</analytics>
-```
 No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
 
 ### Completion Criteria
@@ -58,23 +50,15 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Analytics Service Layer Pattern
 ```
-┌──────────────────────────────────────────────────┐
-│                  Feature Code                     │
-│   calls AnalyticsService.track("event", props)    │
-└────────────────────┬─────────────────────────────┘
-                     │
-┌────────────────────▼─────────────────────────────┐
-│              AnalyticsService (Facade)             │
-│  • Consent checking before forwarding              │
-│  • Property enrichment (device, session, version)  │
-│  • Rate limiting and batching                      │
-│  • Multi-provider routing                          │
-└────┬────────────┬────────────┬────────────────────┘
-     │            │            │
-┌────▼──┐  ┌─────▼─────┐  ┌──▼───────────┐
-│Provider│  │  Provider │  │  File/Log     │
-│   A    │  │    B      │  │  Fallback     │
-└────────┘  └───────────┘  └──────────────┘
+AnalyticsService (Facade)
+├── Consent checking before forwarding
+├── Property enrichment (device, session, version)
+├── Rate limiting and batching
+├── Multi-provider routing
+│
+├── Provider A (Firebase)
+├── Provider B (Mixpanel)
+└── File/Log Fallback
 ```
 
 ### Decision Tree: Provider Selection
@@ -90,21 +74,26 @@ What is your budget?
     Full data control, custom dashboards, no per-event cost
 ```
 
-### Decision Tree: Event Architecture
+### Decision Tree: SDK Initialization Strategy
 ```
-What type of data?
-├── User action (tap, swipe, purchase) → Custom event
-│   Naming: {domain}_{action}_{object}
-│   Properties: up to 25 typed values, no PII
-├── Screen view → Automatic screen tracking event
-│   Via navigation listener/hook — never manual
-│   Properties: screen_name, screen_class, screen_route
-├── Error/non-fatal → Error event
-│   Naming: error_{domain}
-│   Properties: error_message, error_code, screen_name
-└── Performance metric → Performance event
-    Naming: perf_{category}_{measure}
-    Properties: duration_ms, endpoint, status_code
+Init timing?
+├── Before app root renders → Firebase, Mixpanel, Amplitude (they start collecting immediately)
+│   Must: wrap in try/catch, never crash on init failure
+├── After first frame → Non-critical analytics (custom server, niche providers)
+│   Screen view events from first frame won't be captured
+└── Lazy init on first user action → Privacy-first approach
+    Show consent dialog first, init only after consent
+```
+
+### Decision Tree: Identity Strategy
+```
+User lifecycle?
+├── Anonymous first, then sign up → Identity stitching
+│   On signup: alias anonymous ID to user ID
+├── Login required to use app → User ID immediately
+│   Set user ID on auth success, reset on logout
+└── No auth → Device ID
+    Use advertising ID (ATT on iOS) or vendor ID
 ```
 
 ## Workflow
@@ -172,18 +161,6 @@ What type of data?
 - **Debug mode leaks**: Debug/release analytics keys committed to the wrong build config results in test data polluting production dashboards.
 - **Event schema drift**: After months of development, event payloads drift from the original tracking plan. Regular audits catch drift before dashboards break.
 
-## Compared With
-
-| Approach | Use Case | Tradeoff |
-|----------|----------|----------|
-| Firebase Analytics | MVPs, early-stage apps | Limited segmentation, no A/B testing |
-| Mixpanel | Product-led growth, retention focus | Cost scales with MTU, steep learning curve |
-| Amplitude | Behavioral analytics, predictive models | Higher MTU cost than Mixpanel at scale |
-| Custom server | Enterprise, regulated industries | High engineering cost, no prebuilt dashboards |
-| Segment/Tealium | Multi-provider routing | Middleware cost, adds latency, single point of failure |
-| PostHog (self-hosted) | Open-source, data sovereignty | Self-hosting ops cost, less mature mobile SDKs |
-| Snowplow | Data warehouse-native analytics | Requires data engineering team, no real-time dashboard |
-
 ## Performance
 
 - Event batching: 25-50 events or 60-second interval reduces network calls by 95% vs per-event dispatch
@@ -193,40 +170,6 @@ What type of data?
 - CPU impact: analytics SDK adds 1-3ms on the main thread per event fire — use background thread for serialization
 - Memory: analytics libraries add 2-8MB to the app binary (Firebase ~5MB, Mixpanel ~3MB, Amplitude ~4MB)
 - Startup delay: async analytics SDK init avoids blocking TTI — init in background, flush after first frame
-- Battery impact: batched flushes use significantly less radio power than per-event flushes (radio stays in low-power state longer)
-- Threading: serialize and batch events on a background queue, flush on a dedicated network thread
-
-## Tooling
-
-| Tool | Category | Platform |
-|------|----------|----------|
-| Firebase DebugView | Event verification | iOS, Android |
-| Mixpanel Live View | Real-time event stream | iOS, Android, Web |
-| Amplitude Data | Schema management, governance | Cross-platform |
-| Segment Protocols | Event tracking plan enforcement | Cross-platform |
-| Snowplow Micro | Local testing analytics pipeline | Cross-platform |
-| BigQuery | Custom SQL analytics, event export | Backend |
-| Looker / Metabase | Business intelligence dashboards | Backend |
-| Profitwell / RevenuCat | Revenue analytics (subscriptions) | iOS, Android |
-| Countly | Self-hosted analytics alternative | iOS, Android, Web |
-| Matomo | Privacy-focused open-source analytics | Cross-platform |
-| Analytics Lint (Swift) | iOS event schema validation | iOS |
-| Firebase Test Lab | Automated event coverage testing | Android |
-| XCUITest + Analytics | Verify events fire in UI tests | iOS |
-| Charles Proxy | Inspect analytics network requests | iOS, Android |
-
-## Configuration Reference
-
-```kotlin
-// Analytics service initialization
-class AnalyticsService(private val providers: List<AnalyticsProvider>) {
-    fun track(event: AnalyticsEvent) {
-        if (!consentManager.isAllowed(event.category)) return
-        val enriched = event.copy(properties = event.properties + sessionData())
-        providers.forEach { it.track(enriched) }
-    }
-}
-```
 
 ## Rules
 
@@ -243,9 +186,187 @@ class AnalyticsService(private val providers: List<AnalyticsProvider>) {
 - User data deletion API must remove all analytics data across all providers and local storage
 - Analytics SDK initialization must not block the first render — lazy-init or async-init pattern required
 - Offline event queue must have a bounded size with oldest-drop policy to prevent unbounded storage growth
-- Each event must include a server-defined schema version to allow future schema migration
 - Production and debug analytics keys must be in separate build configurations — never ship debug keys to production
-- Event volume anomalies must trigger alerts — unexpected drops or spikes indicate instrumentation bugs
+
+## Deferred Deep Linking & Analytics Attribution
+
+Deep linking attribution requires mapping installs back to the marketing source that drove them. The attribution chain works as follows: (1) user taps an analytics-tracked link containing campaign parameters, (2) link redirects through the attribution SDK's click tracker, (3) if the app isn't installed, the Store redirect saves the click data to the SDK's server, (4) on first app launch, the attributions SDK queries its server for pending attribution data, (5) the analytics SDK then sets user properties for `install_source`, `campaign_id`, `ad_network`, and `click_timestamp`. This allows analytics queries to segment by acquisition channel. The attribution window is typically 7-30 days after click. Implement attribution as a separate concern from analytics — use an attribution SDK (Adjust, Branch, AppsFlyer) alongside your analytics SDK.
+
+## Server-Side Analytics Validation
+
+Event data flowing from mobile apps should be validated server-side before entering the analytics pipeline. Implement a validation proxy between the mobile client and your analytics provider: (1) validate event schema (required properties present, correct types, no PII leaking), (2) validate property cardinality (no more than 25 unique values for partition keys), (3) reject events exceeding 32KB payload limit, (4) apply rate limits per user (100 events/second max), (5) filter bot traffic and test device IDs. Use a serverless function or dedicated validation service. Log rejected events to a separate dead-letter queue for auditing and debugging. Schema validation catches tracking plan drift before it pollutes dashboards.
+
+## A/B Test Architecture Decision Tree
+
+```
+Experimentation needs?
+├── No experimentation → Skip. Don't add A/B framework until needed.
+├── Simple feature flags → Firebase Remote Config / LaunchDarkly
+│   └── Boolean flags, gradual rollout, kill switch
+├── Product A/B tests → Mixpanel Experiments / Amplitude Experiment
+│   └── Full statistical engine, sample size calculator, MVT
+└── Enterprise experimentation → Google Optimize / Optimizely
+    └── Server-side, personalization, audience targeting
+```
+
+## Sampling Strategy Decision Tree
+
+```
+Event volume?
+├── <10M events/month → No sampling. Track everything.
+├── 10M-100M events/month → Adaptive sampling
+│   └── High-value events: 100% (purchase, login, error)
+│   └── Low-value events: 10% (scroll, hover, background)
+└── >100M events/month → Fixed-rate sampling per event type
+    └── Set sample rates per event: critical=100%, important=50%, verbose=5%
+    └── Document sampling rate per event in tracking plan
+```
+
+## Production Considerations
+
+### Analytics Failure Modes
+
+| Failure | Symptom | Mitigation |
+|---------|---------|------------|
+| SDK init crash | App crashes on launch | Wrap init in try/catch, never block launch |
+| Queue overflow | Events lost after queue cap | Set bounded queue (max 500), oldest-drop |
+| Network timeouts | Events stuck in queue | Exponential backoff flush (2s→60s), flush on app bg |
+| Schema drift | Dashboard values look wrong | CI schema validation, tracking plan audit |
+| Provider outage | No events for hours | Multi-provider routing, failover to log file |
+| Consent lost | Essential events also stop | Separate essential from non-essential queues |
+
+### Troubleshooting Checklist
+
+- Verify events appear in provider debug view after 5 minutes
+- Check device logs for analytics SDK errors (look for provider name)
+- Confirm consent status is correctly persisted between app launches
+- Validate event payload size is under 32KB
+- Ensure analytics SDK initialized before navigation system
+- Test on airplane mode: events should queue and flush when reconnected
+- Check user property cardinality — high-cardinality properties break segmentation
+
+### CI/CD Integration
+
+- Run analytics schema validation as CI step using a local validation script
+- Maintain a tracking plan YAML checked into the repo
+- CI validates all new/edited events against the tracking plan
+- Integration tests assert events fire with correct properties
+- Periodic (nightly) data quality jobs compare actual event counts vs. expected
+- Deploy analytics config changes separately from app releases (remote config)
+
+## Code Examples
+
+### Firebase Analytics Swift
+```swift
+import FirebaseAnalytics
+
+final class AnalyticsService {
+    static let shared = AnalyticsService()
+    private var isInitialized = false
+
+    func initialize() {
+        FirebaseApp.configure()
+        isInitialized = true
+    }
+
+    func logEvent(_ name: String, parameters: [String: Any]? = nil) {
+        guard isInitialized, ConsentManager.shouldTrack(.analytics) else { return }
+        var enriched = parameters ?? [:]
+        enriched["app_version"] = App.version
+        enriched["session_id"] = SessionManager.current.id
+        Analytics.logEvent(name, parameters: enriched)
+    }
+
+    func setUserProperty(_ value: String?, forName name: String) {
+        guard ConsentManager.shouldTrack(.analytics) else { return }
+        Analytics.setUserProperty(value, forName: name)
+    }
+}
+```
+
+### Mixpanel Kotlin
+```kotlin
+class MixpanelAnalyticsProvider(private val context: Context) : AnalyticsProvider {
+    private lateinit var mixpanel: MixpanelAPI
+
+    override fun initialize(token: String) {
+        mixpanel = MixpanelAPI.getInstance(context, token)
+    }
+
+    override fun trackEvent(name: String, properties: Map<String, Any>?) {
+        mixpanel.track(name, properties)
+    }
+
+    override fun identify(userId: String) {
+        mixpanel.identify(userId)
+    }
+
+    override fun alias(anonymousId: String, userId: String) {
+        mixpanel.alias(anonymousId, userId)
+    }
+
+    override fun setUserProperties(properties: Map<String, Any>) {
+        val updater = mixpanel.people
+        properties.forEach { (key, value) -> updater.set(key, value) }
+    }
+
+    override fun flush() {
+        mixpanel.flush()
+    }
+}
+```
+
+### Amplitude React Native
+```typescript
+import { init, track, identify, Identify } from '@amplitude/analytics-react-native';
+
+export class AmplitudeService {
+  private initialized = false;
+
+  async init(apiKey: string, userId?: string) {
+    await init(apiKey, userId, {
+      flushIntervalMillis: 30000,
+      flushQueueSize: 30,
+      optOut: !ConsentManager.consentGiven,
+    }).promise;
+    this.initialized = true;
+  }
+
+  track(eventName: string, properties?: Record<string, any>) {
+    if (!this.initialized || !ConsentManager.shouldTrack('analytics')) return;
+    track(eventName, properties);
+  }
+
+  setUserId(id: string) {
+    identify(new Identify().set('userId', id));
+  }
+
+  setUserProperty(name: string, value: string | number | boolean) {
+    identify(new Identify().set(name, value));
+  }
+}
+```
+
+## Analytics Implementation Checklist
+
+- [ ] Provider SDK initialized before app root renders (async init)
+- [ ] Event names use `snake_case`, max 40 chars
+- [ ] Properties typed, max 25 per event, max 100 chars per string value
+- [ ] No PII in any event property
+- [ ] Screen views tracked via navigation listener (not manual)
+- [ ] Consent management implemented respecting GDPR/CCPA categories
+- [ ] ATT prompt (iOS 14.5+) with contextual timing
+- [ ] Identity stitching on anonymous-to-authenticated transition
+- [ ] User properties set on login/update
+- [ ] Offline queue with bounded size (max 500), oldest-drop policy
+- [ ] Event batching: 25-50 events or 60s interval
+- [ ] Exponential backoff for failed flushes (2s→60s)
+- [ ] Production/debug keys in separate configs
+- [ ] Schema validation in CI
+- [ ] Event schema changelog in tracking plan
+- [ ] Data retention configured per provider
+- [ ] User deletion API integrated
+- [ ] Debug mode verifies events reach dashboard
 
 ## References
   - references/analytics-privacy.md — Analytics Privacy
@@ -256,5 +377,9 @@ class AnalyticsService(private val providers: List<AnalyticsProvider>) {
   - references/mobile-analytics.md — Mobile Analytics Implementation
   - references/mobile-analytics-event-tracking.md — Mobile Analytics Event Tracking
   - references/mobile-analytics-privacy-compliance.md — Mobile Analytics Privacy and Compliance
+  - references/analytics-fundamentals.md — Analytics Fundamentals
+  - references/analytics-advanced.md — Advanced Analytics Patterns
+  - references/analytics-debugging.md — Analytics Debugging & Testing
+
 ## Handoff
 Hand off to mobile-crash-reporting skill when Crashlytics integration is needed, or to mobile-networking when custom analytics server endpoint is required.

@@ -57,6 +57,48 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ### Max Response Length
 Folder structure: unlimited. Code: 20 lines per example.
 
+## Architecture Decision Trees
+
+### Module vs Standalone Decision
+```
+Is this a new Angular 17+ project?
+  Yes -> Standalone components only. No NgModule.
+  No (migrating from NgModule) ->
+    Is the NgModule shared across many features?
+      Yes -> Keep as shared module for now, migrate incrementally
+      No -> Refactor to standalone + imports array
+
+Does the feature need lazy loading?
+  Yes -> loadChildren or loadComponent in route config
+  No -> Keep in same chunk
+```
+
+### State Management Decision
+```
+What type of state?
+  Local component state -> signal() or BehaviorSubject
+  Derived/computed state -> computed()
+  Cross-component within feature -> Signal-based service (injectable with signals)
+  Cross-feature global state -> Signal Store (@ngrx/signals) or NgRx
+  Async streams (HTTP, WebSocket) -> RxJS Observable -> toSignal() conversion
+  URL/route state -> ActivatedRoute params as signals
+
+State + async mixed?
+  Use RxJS for the async part, convert with toSignal() for template consumption
+```
+
+### DI Strategy Decision
+```
+Is the service singleton or scoped?
+  Application-wide singleton -> providedIn: 'root'
+  Feature-scoped -> provided in standalone component or route providers
+  Per-component instance -> provided in component decorator
+
+Does the service have multiple implementations?
+  Yes -> InjectionToken + useClass/useFactory
+  No -> Direct injectable class
+```
+
 ## Workflow
 
 ### Step 1: Standalone Component Structure
@@ -170,11 +212,6 @@ export class UsersComponent {
 
 ### Step 4: New Control Flow (v17+)
 ```html
-<!-- OLD: structural directives -->
-<div *ngIf="isLoading$ | async">Loading...</div>
-<div *ngFor="let user of users$ | async">{{ user.name }}</div>
-
-<!-- NEW: control flow syntax -->
 @if (isLoading()) {
   <app-spinner />
 } @else if (error()) {
@@ -356,6 +393,69 @@ angular_performance:
     - "Unsubscribe from observables — takeUntilDestroyed() (Angular 16+)"
 ```
 
+## Testing Strategies
+
+```yaml
+angular_testing:
+  component_tests:
+    tool: "Jest + Angular Testing Library or Jasmine/Karma"
+    patterns:
+      - "Use TestBed.configureTestingModule with standalone component imports"
+      - "Test signal-based state by asserting on rendered output"
+      - "Use @angular/cdk/testing for component harness patterns"
+    example:
+      code: |
+        import { render, screen } from '@testing-library/angular'
+        import { UsersComponent } from './users.component'
+
+        test('renders users list', async () => {
+          const view = await render(UsersComponent, {
+            componentProviders: [provideMockStore({ initialState })]
+          })
+          expect(screen.getByText('User List')).toBeInTheDocument()
+        })
+
+  service_tests:
+    pattern: "Test services with signal state directly"
+    code: |
+      const service = TestBed.inject(UserStore)
+      await service.loadUsers()
+      expect(service.users().length).toBe(10)
+
+  e2e:
+    tool: "Playwright or Cypress"
+    focus: "Critical user journeys — auth flow, CRUD operations"
+```
+
+## Migration Patterns
+
+### Standalone Migration Path
+1. Create new components with `standalone: true` always.
+2. Convert existing root AppModule to use `bootstrapApplication` + `appConfig`.
+3. Convert feature NgModules: move declarations to component imports, add `standalone: true`.
+4. Replace `*ngIf`, `*ngFor`, `*ngSwitch` with `@if`, `@for`, `@switch`.
+5. Replace constructor DI with `inject()`.
+6. Replace RxJS local state with `signal()` / `computed()`.
+
+### NgModule to Standalone Conversion
+| NgModule Pattern | Standalone Equivalent |
+|------------------|----------------------|
+| `declarations: [Comp]` | `standalone: true` on component |
+| `imports: [CommonModule]` | `imports: [CommonModule]` on component |
+| `providers: [Service]` | `providers: [Service]` on component or `providedIn: 'root'` |
+| `bootstrap: [AppComponent]` | `bootstrapApplication(AppComponent, appConfig)` |
+| Lazy load NgModule | `loadComponent: () => import(...)` |
+
+## Build/Bundle Considerations
+
+- Standalone components reduce bundle size (no NgModule runtime overhead).
+- `@defer` blocks enable lazy loading of component dependencies.
+- `provideHttpClient(withFetch())` enables the newer, smaller fetch-based HTTP client.
+- `provideZoneChangeDetection({ eventCoalescing: true })` reduces change detection cycles.
+- `ng build --configuration production` enables AOT, minification, and tree-shaking.
+- `sourceMap: false` and `namedChunks: false` in production.
+- Use `@angular/build` (Vite-based) in Angular 17+ for faster builds.
+
 ## Rules
 - Standalone components by default. NgModules only for NgRx feature states or backward compatibility.
 - Signals for component and local state. RxJS only for complex async streams (HTTP, WebSocket, debounced inputs).
@@ -374,6 +474,8 @@ angular_performance:
   - references/module-structure.md — Angular Module Structure
   - references/signals-guide.md — Angular Signals Guide
   - references/standalone-components.md — Angular Standalone Components
+  - references/angular-micro-frontends.md — Angular Micro-Frontends Reference
+
 ## Handoff
 No artifact produced.
 Next skill: angular-patterns — DI, interceptors, guards, NgRx vs Signal Store.

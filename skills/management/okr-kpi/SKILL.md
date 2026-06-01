@@ -46,7 +46,7 @@ The key insight is that OKRs and KPIs serve different purposes and should not be
 - H2 per Objective, H3 for the KR table under each objective with columns: KR name, metric (with unit), baseline, target, owner, type (committed/aspirational), current score
 - KPI definition sheet as a markdown table with all classification columns
 - Cascade as an indented tree showing propagation of KRs to objectives at lower levels
-- No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+- No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output.
 
 ### Completion Criteria
 OKR document complete with at least 3 objectives and 3-5 KRs per objective. KPI sheet populated with baselines and quarterly targets for 5+ metrics. Cascade maps across 3 organizational levels.
@@ -54,17 +54,124 @@ OKR document complete with at least 3 objectives and 3-5 KRs per objective. KPI 
 ### Max Response Length
 3000 tokens
 
+## Framework and Methodology
+
+### OKR vs KPI Decision Tree
+
+```
+Is this a time-bound change or ongoing health measurement?
+  ├── Time-bound change (this quarter only)
+  │   └── Is it inspirational or a delivery commitment?
+  │       ├── Inspirational, stretch goal
+  │       │   └── Aspirational OKR — expect ~60% achievement
+  │       └── Delivery commitment, must achieve
+  │           └── Committed OKR — expect 100% achievement
+  └── Ongoing health measurement (no end date)
+      └── KPI — track continuously, never mark complete
+          └── Does it predict future outcomes or measure past?
+              ├── Leading indicator — sign-ups, feature adoption
+              └── Lagging indicator — revenue, retention, churn
+```
+
+### OKR Writing Framework
+
+Every OKR must pass the following quality checks:
+
+```
+Objective: Qualitative, inspirational, time-bound
+  - Verbs that imply change: transform, establish, accelerate, dominate
+  - NOT: "Maintain system uptime" (maintenance, not change)
+  - YES: "Achieve industry-leading API reliability"
+
+Key Results: Quantitative, measurable, falsifiable
+  - Each KR must contain a number and a target
+  - NOT: "Improve performance significantly"
+  - YES: "Reduce P95 latency from 400ms to 150ms"
+  - NOT: "Make the team more agile"
+  - YES: "Reduce cycle time from 5 days to 2 days"
+```
+
+### KPI Classification Framework
+
+| Axis | Type | What It Measures | Example |
+|------|------|-----------------|---------|
+| Timing | Leading | Predicts the future | Sign-ups per week |
+| Timing | Lagging | Measures the past | Quarterly revenue |
+| Level | Input | Team effort | Stories committed |
+| Level | Output | Team production | Features shipped |
+| Level | Impact | Business result | Net Promoter Score |
+
+### Cascade Decision Tree
+
+```
+How do I cascade OKRs to my team?
+  ├── Company KR directly maps to team scope
+  │   └── Team adopts KR as-is or splits into sub-metrics
+  ├── Company KR needs team-level interpretation
+  │   └── Company KR becomes team Objective
+  │       └── Team defines own KRs aligned to company direction
+  ├── Team contributes to multiple company OKRs
+  │   └── Team defines one Objective per contribution area
+  │       └── Each team KR maps to one company KR
+  └── Team supports another team's OKRs
+      └── Define enabling KRs that unblock dependent teams
+```
+
+### OKR Cycle Timeline
+
+```
+Week -2: Leadership drafts company OKRs
+Week -1: Company OKRs shared for feedback
+Week 0:  Company OKRs finalized, teams begin cascade
+Week 1:  Team OKR drafts created in planning sessions
+Week 2:  Team OKRs reviewed with management, aligned
+Week 3:  Individual OKRs drafted (if used)
+Weeks 4-12: Weekly check-ins (15 min, no scoring)
+Week 13: Quarterly scoring and retrospective
+Week 14: Next quarter OKR drafting begins
+```
+
 ## Workflow
 
-1. **Define OKR structure** — Write inspirational qualitative Objectives in 1-2 sentences using active, energizing language. Use verbs that imply change: "dominate," "transform," "establish," "unlock," "accelerate." Attach precisely 3-5 measurable Key Results per objective. Each KR entry includes: the metric name and unit, the current baseline value (measured before the quarter starts), the specific target value for quarter end, the person responsible for tracking, and a flag marking it as committed (must achieve, treat as a delivery target) or aspirational (stretch goal, aim high and accept 60% achievement). Initialize all KR scores at 0.0 at the start of the quarter.
+### Step 1: Define OKR Structure
 
-2. **Define KPIs** — Separate KPIs from OKRs conceptually. KPIs have no end date — they are ongoing health metrics you always monitor. Classify each KPI along two axes: leading indicators (predict future outcomes — sign-ups this week, feature adoption rate, code review turnaround) vs lagging indicators (measure past results — revenue, retention rate, churn). And by level: input (what the team does — story points committed), output (what the team produces — features shipped), and impact (what the business gets — NPS change, revenue growth). Set a target for the quarter and record the current baseline.
+Write inspirational qualitative Objectives in 1-2 sentences using active, energizing language. Use verbs that imply change: "dominate," "transform," "establish," "unlock," "accelerate." Attach precisely 3-5 measurable Key Results per objective. Each KR entry includes: the metric name and unit, the current baseline value (measured before the quarter starts), the specific target value for quarter end, the person responsible for tracking, and a flag marking it as committed (must achieve, treat as a delivery target) or aspirational (stretch goal, aim high and accept 60% achievement). Initialize all KR scores at 0.0 at the start of the quarter.
 
-3. **Cascade** — Company-level OKRs define the strategic direction. Team-level OKRs derive from company KRs: the company KR "Reduce P95 latency from 400ms to 150ms" becomes the platform team's Objective "Achieve industry-leading API response times." Individual-level OKRs derive from team KRs. Each level adapts and translates — aligned in direction but not copy-pasted. Cross-functional teams may contribute to multiple higher-level objectives. Document the cascade tree so everyone can trace how their work connects to company goals.
+### Step 2: Define KPIs
 
-4. **Track weekly** — The weekly check-in is a 15-minute individual exercise, not a meeting. For each KR: update the current numeric progress value, rate confidence as high (on track with strong evidence, >75% confidence), medium (some risk or uncertainty, 50-75%), or low (off track, unlikely to hit target, <50%), and flag any blockers or dependencies that need unblocking. No scoring or grades during weekly check-ins — scores are exclusively for the quarterly review. Weekly is about visibility, course correction, and surfacing support needs early.
+Separate KPIs from OKRs conceptually. KPIs have no end date — they are ongoing health metrics you always monitor. Classify each KPI along two axes: leading indicators (predict future outcomes — sign-ups this week, feature adoption rate, code review turnaround) vs lagging indicators (measure past results — revenue, retention rate, churn). And by level: input (what the team does — story points committed), output (what the team produces — features shipped), and impact (what the business gets — NPS change, revenue growth). Set a target for the quarter and record the current baseline.
 
-5. **Review quarterly** — At the end of each quarter, score every KR on the 0.0 to 1.0 scale against its target. Green (0.7-1.0): achieved or substantially achieved, KR delivered as planned. Yellow (0.4-0.6): progress made but not fully met, partial achievement with learnings. Red (0.0-0.3): minimal progress, the KR was not achieved, needs discussion. For each KR, write a brief retrospective note: what enabled progress, what blocked completion, what the team would do differently next time. Carry forward incomplete KRs that remain strategically relevant. Remember that aspirational OKRs should average ~0.6 across all KRs — 1.0 on every KR means the team did not stretch enough.
+### Step 3: Cascade
+
+Company-level OKRs define the strategic direction. Team-level OKRs derive from company KRs: the company KR "Reduce P95 latency from 400ms to 150ms" becomes the platform team's Objective "Achieve industry-leading API response times." Individual-level OKRs derive from team KRs. Each level adapts and translates — aligned in direction but not copy-pasted. Cross-functional teams may contribute to multiple higher-level objectives. Document the cascade tree so everyone can trace how their work connects to company goals.
+
+### Step 4: Track Weekly
+
+The weekly check-in is a 15-minute individual exercise, not a meeting. For each KR: update the current numeric progress value, rate confidence as high (on track with strong evidence, >75% confidence), medium (some risk or uncertainty, 50-75%), or low (off track, unlikely to hit target, <50%), and flag any blockers or dependencies that need unblocking. No scoring or grades during weekly check-ins — scores are exclusively for the quarterly review. Weekly is about visibility, course correction, and surfacing support needs early.
+
+### Step 5: Review Quarterly
+
+At the end of each quarter, score every KR on the 0.0 to 1.0 scale against its target. Green (0.7-1.0): achieved or substantially achieved, KR delivered as planned. Yellow (0.4-0.6): progress made but not fully met, partial achievement with learnings. Red (0.0-0.3): minimal progress, the KR was not achieved, needs discussion. For each KR, write a brief retrospective note: what enabled progress, what blocked completion, what the team would do differently next time. Carry forward incomplete KRs that remain strategically relevant. Remember that aspirational OKRs should average ~0.6 across all KRs — 1.0 on every KR means the team did not stretch enough.
+
+### Step 6: Conduct OKR Writing Workshop
+
+Schedule a 2-hour workshop per team at the start of each quarter cycle. Agenda: review previous quarter scores (20 min), present company OKRs and strategic context (15 min), brainstorm Objectives aligned to company priorities (25 min), define 3-5 KRs per Objective with baselines and targets (40 min), review and refine for quality (15 min), assign owners and log into tracking system (5 min). Output: draft OKRs ready for management review.
+
+### Step 7: Align Cross-Functional OKRs
+
+For OKRs requiring multiple teams: identify shared KRs (multiple teams contribute to same metric), define dependency KRs (Team A's output enables Team B's KR), establish joint ownership with clear per-team contribution, create cross-team checkpoint cadence (bi-weekly sync). Document collaborative KRs in both teams' OKR sets with cross-reference annotations.
+
+### Step 8: Manage OKR Mid-Quarter Adjustments
+
+If external factors change: assess whether the Objective is still relevant, adjust KR targets if the baseline has shifted significantly, add or remove KRs if scope has changed materially, re-score at adjustment point to establish new baseline. Communicate changes to all stakeholders. Document rationale for adjustments. Limit adjustments to one per quarter per OKR.
+
+### Step 9: Create OKR Visibility Dashboard
+
+Build a dashboard showing: each Objective with its KR list, current progress bars per KR (0-100%), confidence indicators (green/yellow/red), trend arrows (improving/stable/declining), owner names, last updated timestamp. Dashboard should be auto-updating from the tracking tool. Make it visible to the entire organization. Review as a team in the weekly check-in.
+
+### Step 10: Run Quarterly OKR Retrospective
+
+After scoring, conduct a 1-hour retrospective on the OKR process itself. Questions: did the OKRs drive the right behavior? Were the KRs truly measurable? Was the cascade effective? Did weekly check-ins happen consistently? What would improve next quarter's cycle? Document process improvements for the next quarter.
 
 ## Models
 
@@ -76,41 +183,179 @@ OKR document complete with at least 3 objectives and 3-5 KRs per objective. KPI 
 ```
 For committed OKRs, all KRs should score 1.0. They are delivery commitments, not aspirations. For aspirational OKRs, the average score across all KRs should land around 0.6 — this is the signal that the team stretched appropriately.
 
-### KPI Classification
-| Axis | Type | What It Measures | Example |
-|---|---|---|---|
-| Timing | Leading | Predicts the future | Sign-ups per week |
-| Timing | Lagging | Measures the past | Quarterly revenue |
-| Level | Input | Team effort | Stories committed |
-| Level | Output | Team production | Features shipped |
-| Level | Impact | Business result | Net Promoter Score |
+### OKR Maturity Model
+
+| Level | Stage | Characteristics |
+|-------|-------|-----------------|
+| 1 | Ad-hoc | No formal OKRs, goals vary by manager, no alignment |
+| 2 | Started | OKRs written but not tracked, forgotten by week 4 |
+| 3 | Practicing | OKRs tracked weekly, scored quarterly, cascade exists |
+| 4 | Embedded | OKRs drive prioritization, KPIs separate, mid-quarter adjustments |
+| 5 | Optimizing | Data-driven target setting, cross-functional alignment, predictive modeling |
+
+### KPI Design Principles
+
+| Principle | Description | Example |
+|-----------|-------------|---------|
+| Actionable | Can the metric owner influence it? | "Team velocity" (actionable) vs "Stock price" (not) |
+| Timely | Available at decision-making cadence | Daily deployment frequency vs Quarterly NPS |
+| Specific | Clearly defined numerator/denominator | "P95 API latency in ms" vs "System performance" |
+| Comparable | Same definition across teams | Standardized DORA metrics vs custom definitions |
+| Verifiable | Can be independently audited | Automated data source vs self-reported |
+
+## Common Pitfalls
+
+### Pitfall 1: OKR/KPI Confusion
+Using OKRs to track ongoing operations ("Maintain 99.9% uptime") rather than change. Fix: uptime is a KPI, not an OKR. An OKR would be "Improve uptime from 99.9% to 99.99%."
+
+### Pitfall 2: Too Many Objectives
+Teams with 5+ objectives have no focus. Fix: limit to 2-4 objectives per level. Everything else is business-as-usual tracked by KPIs.
+
+### Pitfall 3: Non-Measurable KRs
+"Improve developer experience" without a metric. Fix: add a measurable KR like "Reduce CI pipeline time from 15 min to 5 min" or "Improve eNPS from 30 to 50."
+
+### Pitfall 4: Copy-Paste Cascade
+Each level copying the same KR rather than translating. Fix: a company KR "Reduce churn from 5% to 3%" becomes the product team's Objective "Build stickier user experience" with their own KRs.
+
+### Pitfall 5: No Weekly Tracking
+Writing OKRs and forgetting them until quarter end. Fix: implement a 15-minute weekly check-in ritual. No exception.
+
+### Pitfall 6: KPI Proliferation
+Tracking 50+ KPIs per team obscures what matters. Fix: max 5-7 KPIs per team. If everything is a priority, nothing is.
+
+### Pitfall 7: Scoring Gaming
+Setting easy targets to guarantee 1.0 scores. Fix: expect aspirational OKRs to average 0.6. Leadership should review score distributions.
+
+### Pitfall 8: Individual Performance Linkage
+Tying compensation to OKR scores discourages stretch goals. Fix: separate performance evaluation from OKR scoring. OKRs are for alignment and learning, not evaluation.
+
+### Pitfall 9: Cascading Without Context
+Teams receive company OKRs without understanding the strategic rationale. Fix: leadership shares context behind each Objective — why this, why now, why important.
+
+### Pitfall 10: No Retrospective
+Scoring without learning misses the point. Fix: every quarter, review what worked and what didn't in the OKR process itself.
+
+## Best Practices
+
+- **Objectives are qualitative, KRs are quantitative** — Never mix the two forms. An objective is an inspirational sentence. A KR is a number with a baseline and a target.
+- **3-5 KRs per objective** — Fewer than 3 misses important dimensions. More than 5 dilutes focus and makes the score noisy.
+- **Every KR must contain a number** — "Improve performance" is not a KR because it is not falsifiable. "Reduce P95 latency from 400ms to 200ms" is a KR.
+- **Score against the target, not against effort** — The KR target is the goal. Met = 1.0. Halfway = 0.5. Effort without outcome is not a score.
+- **Committed OKRs should hit 1.0 across all KRs** — They are delivery commitments. A committed KR scoring 0.7 needs a serious retro discussion.
+- **Aspirational OKRs should average ~0.6** — 1.0 on every aspirational KR means targets were too low. 0.6 is the sweet spot.
+- **KPIs track ongoing health, OKRs track time-bound change** — KPIs have no end date. OKRs are specific to a quarter.
+- **Cascade downward, translate, never copy** — A higher-level KR becomes a lower-level Objective, adapted to the team's specific context.
+- **Weekly check-ins keep OKRs alive** — Without weekly tracking, OKRs are forgotten by week 4.
+- **Separate OKR scoring from performance reviews** — Linking compensation to OKR scores kills stretch goals.
+
+## Compared With
+
+| Framework | Focus | Best For | Weakness |
+|-----------|-------|----------|----------|
+| OKR (this skill) | Stretch goals, alignment | Innovation, growth | Not for routine operations |
+| KPI (this skill) | Health metrics | Ongoing measurement | No direction setting |
+| SMART Goals | Precision | Individual targets | Rigid, lacks alignment |
+| Balanced Scorecard | Multi-perspective | Enterprise strategy | Heavy, complex |
+| North Star Metric | Single focus | Product-led growth | Too narrow alone |
+| Objectives & Standards | Commitments | Reliable delivery | Not aspirational |
+
+## Templates and Tools
+
+### OKR Template
+```
+Objective: {inspirational statement}
+└── KR 1: {metric} from {baseline} to {target} [{committed/aspirational}] Owner: {name}
+└── KR 2: {metric} from {baseline} to {target} [{committed/aspirational}] Owner: {name}
+└── KR 3: {metric} from {baseline} to {target} [{committed/aspirational}] Owner: {name}
+```
+
+### Weekly Check-In Template
+```
+Name: {name} | Week: {n}
+KR 1: {name} — {current value} / {target} — Confidence: {H/M/L}
+  Blockers: {none or description}
+KR 2: {name} — {current value} / {target} — Confidence: {H/M/L}
+  Blockers: {none or description}
+Action Items: {what needs to happen this week}
+```
+
+### KPI Definition Sheet
+| KPI Name | Type | Baseline | Target | Owner | Frequency |
+|----------|------|----------|--------|-------|-----------|
+| P95 Latency | Lagging/Output | 400ms | 200ms | Platform team | Daily |
+| Deployment Frequency | Leading/Output | 5/week | 10/week | Dev team | Weekly |
+| NPS | Lagging/Impact | 30 | 50 | Product | Quarterly |
+
+### OKR Cascade Template
+```
+Company Objective: {objective}
+  └── Company KR 1: {metric} {baseline}→{target}
+      └── Team Alpha Objective: {team objective aligned to KR 1}
+          └── Team Alpha KR 1: {metric} {baseline}→{target}
+          └── Team Alpha KR 2: {metric} {baseline}→{target}
+      └── Team Beta Objective: {team objective aligned to KR 1}
+          └── Team Beta KR 1: {metric} {baseline}→{target}
+  └── Company KR 2: {metric} {baseline}→{target}
+      └── Team Gamma Objective: {team objective aligned to KR 2}
+          └── Team Gamma KR 1: {metric} {baseline}→{target}
+```
+
+## OKR Examples by Role
+
+### Engineering Team
+```
+Objective: Ship reliable, fast software that delights users
+KR 1: Reduce P95 API latency from 400ms to 150ms [aspirational]
+KR 2: Increase deployment frequency from 5/week to 15/week [committed]
+KR 3: Reduce change fail rate from 10% to 3% [committed]
+KR 4: Improve unit test coverage from 72% to 85% [committed]
+```
+
+### Product Team
+```
+Objective: Make our onboarding the best in class
+KR 1: Increase 7-day activation rate from 40% to 65% [aspirational]
+KR 2: Reduce time-to-value from 14 days to 5 days [committed]
+KR 3: Improve onboarding NPS from 20 to 45 [aspirational]
+KR 4: Ship 3 onboarding experiments per month [committed]
+```
+
+### Platform Team
+```
+Objective: Empower engineering teams to self-serve infrastructure
+KR 1: Reduce service provisioning time from 3 days to 4 hours [committed]
+KR 2: Publish internal platform API docs for 100% of services [committed]
+KR 3: Achieve 95% developer satisfaction with platform tools [aspirational]
+KR 4: Reduce infrastructure cost per deployment by 20% [committed]
+```
 
 ## Rules
 
-- **Objectives are qualitative, KRs are quantitative** — Never mix the two forms. An objective is an inspirational sentence. A KR is a number with a baseline and a target.
-- **3-5 KRs per objective** — Fewer than 3 misses important dimensions of the objective. More than 5 dilutes focus and makes the score noisy.
-- **Every KR must contain a number** — "Improve performance" is not a KR because it is not falsifiable. "Reduce P95 latency from 400ms to 200ms" is a KR because we can objectively measure success.
-- **Score against the target, not against effort** — The KR target is the goal. Met = 1.0. Halfway = 0.5. Effort without outcome is not a score. The KR is outcome-based.
-- **Committed OKRs should hit 1.0 across all KRs** — They are delivery commitments. A committed KR scoring 0.7 at quarter end needs a serious retro discussion about what went wrong.
-- **Aspirational OKRs should average ~0.6** — 1.0 on every aspirational KR means the team set targets too low and did not stretch. 0.0 means they tried nothing. 0.6 is the sweet spot.
-- **KPIs track ongoing health, OKRs track time-bound change** — KPIs have no end date (you always track uptime). OKRs are specific to a quarter. Do not confuse the two.
-- **Cascade downward, translate, never copy** — A higher-level KR becomes a lower-level Objective, but adapted to the team's specific scope and context. Copy-pasting is not cascading.
-
-## Related Skills
-
-- **sprint-retro** — Review OKR progress and confidence levels during the sprint retro
-- **create-roadmap** — Align roadmap themes with OKR objectives and key results
-- **create-story** — Break down OKR key results into actionable sprint stories
-- **pm** — Coordinate OKR definition with product management and stakeholders
+- Objectives are qualitative, KRs are quantitative — never mix the two forms
+- 3-5 KRs per objective — fewer than 3 misses dimensions, more than 5 dilutes focus
+- Every KR must contain a number with a baseline and target — not falsifiable otherwise
+- Score against the target, not against effort — met = 1.0, effort without outcome is not a score
+- Committed OKRs should hit 1.0 across all KRs — they are delivery commitments
+- Aspirational OKRs should average ~0.6 — 1.0 on every KR means targets were too low
+- KPIs track ongoing health, OKRs track time-bound change — never conflate
+- Cascade downward, translate, never copy — adapt to team context
+- Separate OKR scoring from performance reviews — kills stretch goals
+- Weekly check-ins measure progress and confidence, not scores — scores are quarterly
+- Review OKR scores with a retrospective — scoring without learning misses the point
+- Cross-functional OKRs need explicit shared ownership definitions
+- KPI count per team: max 5-7 — more than that obscures focus
+- Leading KPIs are more actionable than lagging — prioritize them
+- OKR mid-quarter adjustments are allowed but limited to one per OKR
 
 ## References
   - references/kpi-dashboard.md — KPI Dashboard
   - references/kpi-tracking-tools.md — KPI Tracking Tools
   - references/okr-alignment.md — OKR Alignment
   - references/okr-examples.md — OKR Examples
-  - references/okr-kpi-advanced.md — Okr Kpi Advanced Topics
+  - references/okr-kpi-advanced.md — OKR KPI Advanced Topics
   - references/okr-kpi-frameworks.md — OKR vs KPI Frameworks
-  - references/okr-kpi-fundamentals.md — Okr Kpi Fundamentals
+  - references/okr-kpi-fundamentals.md — OKR KPI Fundamentals
   - references/okr-template.md — OKR Template
+
 ## Handoff
 sprint-retro (review OKR progress during the sprint retrospective), create-roadmap (align the product roadmap themes with OKR objectives and KRs).

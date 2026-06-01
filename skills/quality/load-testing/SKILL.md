@@ -104,6 +104,298 @@ export default function () {
 ### Step 6: Distributed Execution
 For >10,000 RPS: k6 operator on Kubernetes (k6-operator), Locust with master/worker mode, artillery with multiple workers. Monitor aggregate metrics centrally.
 
+## Load Testing Script Examples
+
+### k6 — Comprehensive Load Test
+```javascript
+import http from "k6/http";
+import { check, sleep, group } from "k6";
+import { Rate, Trend } from "k6/metrics";
+
+const errorRate = new Rate("errors");
+const loginDuration = new Trend("login_duration");
+
+export const options = {
+  stages: [
+    { duration: "2m", target: 50 },   // ramp-up
+    { duration: "10m", target: 50 },  // sustain
+    { duration: "5m", target: 100 },  // ramp to peak
+    { duration: "10m", target: 100 }, // peak load
+    { duration: "2m", target: 0 },    // ramp-down
+  ],
+  thresholds: {
+    http_req_duration: ["p(95)<800", "p(99)<1500"],
+    http_req_failed: ["rate<0.01"],
+    errors: ["rate<0.05"],
+    login_duration: ["p(95)<2000"],
+  },
+};
+
+const BASE_URL = __ENV.BASE_URL || "http://localhost:3000";
+
+export default function () {
+  group("user_login", function () {
+    const payload = JSON.stringify({
+      email: `user_${__VU}@example.com`,
+      password: "test123",
+    });
+    const res = http.post(`${BASE_URL}/api/login`, payload, {
+      headers: { "Content-Type": "application/json" },
+    });
+    loginDuration.add(res.timings.duration);
+    errorRate.add(res.status !== 200);
+    check(res, {
+      "login status 200": (r) => r.status === 200,
+      "login under 2s": (r) => r.timings.duration < 2000,
+    });
+    sleep(Math.random() * 0.5 + 0.3);
+  });
+
+  group("browse_products", function () {
+    const res = http.get(`${BASE_URL}/api/products?page=1&limit=20`);
+    check(res, { "products status 200": (r) => r.status === 200 });
+    sleep(Math.random() * 0.3 + 0.2);
+  });
+}
+```
+
+### Locust — Python Load Test
+```python
+from locust import HttpUser, task, between, events
+import json
+
+class WebsiteUser(HttpUser):
+    wait_time = between(1, 3)
+    
+    def on_start(self):
+        response = self.client.post("/api/login", json={
+            "email": "loadtest@example.com",
+            "password": "test123"
+        })
+        self.token = response.json().get("token")
+        self.client.headers.update({"Authorization": f"Bearer {self.token}"})
+    
+    @task(3)
+    def browse_products(self):
+        self.client.get("/api/products?page=1")
+    
+    @task(2)
+    def view_product_detail(self):
+        self.client.get("/api/products/42")
+    
+    @task(1)
+    def add_to_cart(self):
+        self.client.post("/api/cart/items", json={
+            "product_id": 42, "quantity": 1
+        })
+```
+
+### k6 — Spike Test
+```javascript
+export const options = {
+  stages: [
+    { duration: "2m", target: 50 },   // normal load
+    { duration: "30s", target: 500 },  // spike
+    { duration: "1m", target: 500 },   // sustain spike
+    { duration: "2m", target: 50 },    // recovery
+    { duration: "3m", target: 50 },    // observe recovery
+  ],
+  thresholds: {
+    http_req_duration: ["p(95)<2000", "p(99)<5000"],
+    http_req_failed: ["rate<0.02"],
+  },
+};
+```
+
+### k6 — Soak Test
+```javascript
+export const options = {
+  stages: [
+    { duration: "5m", target: 100 },   // ramp-up
+    { duration: "120m", target: 100 }, // 2-hour soak
+    { duration: "5m", target: 0 },     // ramp-down
+  ],
+  thresholds: {
+    http_req_duration: ["p(95)<1000"],
+    http_req_failed: ["rate<0.01"],
+  },
+};
+```
+
+## CI/CD Pipeline Integration
+
+### GitHub Actions — Load Test Stage
+```yaml
+name: Load Test
+on:
+  schedule:
+    - cron: "0 6 * * 1-5"  # Weekdays at 6 AM
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "Test scenario"
+        required: true
+        default: "load"
+        type: choice
+        options: [load, stress, spike, soak]
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    services:
+      influxdb:
+        image: influxdb:1.8
+        ports:
+          - 8086:8086
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run k6 test
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: tests/k6/${{ github.event.inputs.scenario }}.js
+          flags: --out influxdb=http://localhost:8086/k6
+        env:
+          BASE_URL: ${{ secrets.LOAD_TEST_URL }}
+      - name: Check thresholds
+        run: |
+          # Parse k6 output for threshold violations
+          if grep -q "thresholds on metrics have been breached" results.txt; then
+            echo "Thresholds breached! Check Grafana dashboard."
+            exit 1
+          fi
+```
+
+## Load Testing Anti-Patterns
+
+### Anti-Pattern: Testing Only Happy Paths
+Load testing only the most common API endpoint (e.g., GET /api/products) misses system behavior under mixed workloads. Real users perform a variety of operations: login, browse, search, add to cart, checkout. Mix read and write operations proportionally to real traffic patterns.
+
+### Anti-Pattern: No Think Time
+Sending requests back-to-back without delays creates unrealistic load. Real users pause between actions (reading, typing, thinking). Apply think time of 100-500ms between requests. Vary think time randomly to avoid thundering herd patterns.
+
+### Anti-Pattern: Testing Against Production
+Running load tests against production risks degrading real user experience. Use staging environment with production-scale infrastructure. If production testing is unavoidable (capacity validation), run during off-peak hours with automatic abort on error rate spikes.
+
+### Anti-Pattern: Ignoring Resource Utilization
+Focusing only on response times while ignoring CPU, memory, disk I/O, and connection pool utilization. A system with acceptable latency but 95% CPU usage will fail under any additional load. Monitor server-side metrics alongside client-side response times.
+
+### Anti-Pattern: Short Durations
+Running load tests for 5-10 minutes misses memory leaks, connection pool exhaustion, garbage collection degradation, and slow resource leaks. Load tests should sustain peak load for minimum 10 minutes. Soak tests for minimum 2 hours.
+
+### Anti-Pattern: No Baseline Comparison
+Running load tests without comparing against previous runs makes it impossible to detect performance regressions. Store historical results. Alert on any significant deviation. Use statistical comparison (not single-run pass/fail).
+
+## Load Testing Maturity Model
+
+| Level | Characteristics | Practices |
+|---|---|---|
+| 1: Initial | Ad-hoc performance checks | Manual testing, no script versioning, no baselines |
+| 2: Defined | Scripted load tests | k6/Locust scripts in version control, basic thresholds, scheduled runs |
+| 3: Managed | Multi-scenario testing | Load, stress, spike, soak scenarios; CI integration; dashboards (Grafana); regression alerts |
+| 4: Measured | Performance as quality gate | Thresholds in CI pipeline, automatic rollback on regression, trend analysis, resource monitoring correlation |
+| 5: Optimized | Predictive performance engineering | Chaos + load testing combined, auto-scaling validation, capacity forecasting, SLA-driven performance budgets |
+
+## Load Test Results Analysis
+
+```yaml
+load_test_report:
+  scenario: "Peak Load - 100 concurrent users"
+  environment: "staging-us-east-1 (8x t3.large)"
+  duration: "15 minutes"
+  results:
+    throughput:
+      avg_rps: 450
+      peak_rps: 623
+    latency:
+      p50: 145ms
+      p95: 380ms
+      p99: 890ms
+      max: 2100ms
+    errors:
+      rate: 0.3%
+      http_500: 12
+      timeouts: 3
+    resources:
+      cpu_avg: 62%
+      memory_avg: 71%
+      db_connections: 42/100
+  thresholds:
+    - metric: "p95 latency"
+      threshold: "< 500ms"
+      actual: "380ms"
+      status: "PASS"
+    - metric: "error rate"
+      threshold: "< 1%"
+      actual: "0.3%"
+      status: "PASS"
+    - metric: "cpu utilization"
+      threshold: "< 80%"
+      actual: "62%"
+      status: "PASS"
+  recommendations:
+    - "Increase DB connection pool from 100 to 150 for headroom"
+    - "Investigate p99 spike correlated with GC pause at 12 min mark"
+```
+
+## Performance Metrics Decision Tree
+
+```
+What performance characteristic are you validating?
+├── Normal operation → Load test
+│   ├── Target: expected peak traffic × 1.5
+│   └── Duration: 15 minutes sustained
+├── Breaking point → Stress test
+│   ├── Ramp up until error rate exceeds 5% or latency exceeds SLA
+│   └── Document the breaking point
+├── Recovery behavior → Spike test
+│   ├── Double traffic in 30 seconds
+│   └── Measure recovery time to normal latency
+├── Long-term stability → Soak test
+│   ├── 80% of peak capacity for 2+ hours
+│   └── Monitor memory, connection pools, GC
+└── Scalability → Ramp test
+    ├── Increase load stepwise every 5 minutes
+    └── Verify linear scalability
+```
+
+## Load Testing Results Analysis (Additional)
+
+```yaml
+custom_metrics:
+  - name: "Checkout Flow Latency"
+    p50: 320ms
+    p95: 890ms
+    p99: 2100ms
+    trend: "+12% from last week — investigate"
+  - name: "Database Connection Pool"
+    active_connections: 72
+    max_connections: 100
+    wait_count: 3
+    trend: "Stable, within limits"
+  - name: "CPU Utilization"
+    avg: 68%
+    max: 91%
+    trend: "Peak correlates with payment API calls"
+  - name: "Memory"
+    avg_heap: "1.2GB"
+    max_heap: "2.8GB"
+    gc_pause_avg: "45ms"
+    trend: "GC pauses increased 30% — investigate memory leak in payment module"
+```
+
+## Common Load Testing Tools Comparison
+
+| Feature | k6 | Locust | Artillery | JMeter |
+|---|---|---|---|---|
+| Language | JavaScript | Python | YAML + JS | GUI + Java |
+| Protocol support | HTTP, gRPC, WebSocket, browser | HTTP | HTTP, WebSocket, Socket.io | Extensive (HTTP, JDBC, JMS, FTP, etc.) |
+| Distributed mode | k6-operator (K8s) | Master/worker | Built-in | Master/worker |
+| Threshold assertions | Built-in | Custom | Built-in | Plugins |
+| CI integration | Native | Docker/CLI | CLI | CLI + plugins |
+| Scripting complexity | Low-Medium | Low | Very Low | Medium-High |
+| Performance (RPS per instance) | 30K+ | 10K+ | 5K+ | 3K+ |
+| Best for | Modern cloud-native teams | Python teams | Simple API testing | Enterprise, complex protocols |
+
 ## Rules
 - Ramp-up gradually — never start at full load
 - Think time between requests (mean 300ms, vary ±100ms)
@@ -113,6 +405,16 @@ For >10,000 RPS: k6 operator on Kubernetes (k6-operator), Locust with master/wor
 - Test in pre-production environment with production-like data
 - Run load tests on a schedule, not just ad-hoc
 - Document test conditions (environment, data volume, network)
+- Store historical results for trend analysis — 90 days minimum
+- Alert on p95 latency increase >20% from baseline
+- Never run destructive load tests against production
+- Monitor server-side metrics alongside client-side metrics
+- Mix read and write operations proportionally to real traffic
+- Abort test automatically if error rate exceeds 5%
+- Version control load test scripts alongside application code
+- Use dedicated test accounts and data — never production credentials in load tests
+- Target test environment must be isolated from production traffic
+- Each test scenario must have documented goal and intended analysis
 
 ## References
   - references/execution.md — Execution

@@ -30,6 +30,9 @@ Before activating, verify:
 - Volume and frequency (daily/hourly batch, CDC, real-time)
 - Orchestration preference (Airflow, Dagster, Prefect)
 - Transformation tool (dbt, custom SQL, Spark)
+- Data volume and growth rate
+- SLAs for data freshness and availability
+- Existing monitoring and alerting infrastructure
 
 ### Output Artifact
 ETL pipeline design with DAG structure, transformation config, error handling as YAML and SQL.
@@ -56,6 +59,7 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 - [ ] Error handling with retry, dead-letter, and notification
 - [ ] Data validation checks on each stage
 - [ ] Monitoring and alerting configured
+- [ ] Data lineage tracking set up
 
 ### Max Response Length
 300 lines of code and configuration.
@@ -69,6 +73,7 @@ Transform happens before loading. Best for: on-premises databases, structured da
 Transform happens in the warehouse. Best for: cloud warehouses (Snowflake, BigQuery, Redshift), raw data preservation, agile schema evolution, when the warehouse provides sufficient compute for transformations. ELT loads raw data into staging tables first, then transforms using SQL. Recommended for most cloud data warehouse pipelines.
 
 ### Decision Guide
+
 | Factor | Choose ETL | Choose ELT |
 |---|---|---|
 | Target | On-prem DB or file system | Cloud data warehouse |
@@ -78,30 +83,209 @@ Transform happens in the warehouse. Best for: cloud warehouses (Snowflake, BigQu
 | Team skill set | Python/Spark engineers | SQL analysts |
 | Schema stability | Fixed schema | Evolving schema |
 
-## Airflow DAG Patterns
+## Airflow DAG Design
 
 ### DAG Structure
 One DAG per data domain. Structure: `start → extract → validate_extract → load_staging → validate_staging → transform → validate_transform → load_mart → complete`. Task dependencies use the bitshift operator: `extract >> validate_extract >> load_staging`.
 
+#### DAG Template
+
+```python
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from airflow.providers.postgres.operators.postgres import PostgresOperator
+
+default_args = {
+    'owner': 'data-engineering',
+    'depends_on_past': False,
+    'email_on_failure': True,
+    'email': ['pager@company.com'],
+    'retries': 3,
+    'retry_delay': timedelta(minutes=5),
+    'retry_exponential_backoff': True,
+    'max_retry_delay': timedelta(hours=1),
+    'execution_timeout': timedelta(hours=2),
+    'sla': timedelta(minutes=30),
+}
+
+with DAG(
+    'etl_orders_daily',
+    default_args=default_args,
+    description='Daily orders ETL from PostgreSQL to warehouse',
+    schedule='0 3 * * *',  # Daily 3 AM
+    start_date=datetime(2026, 1, 1),
+    catchup=False,
+    max_active_runs=1,
+    tags=['etl', 'orders', 'daily'],
+) as dag:
+    start = DummyOperator(task_id='start')
+    extract = PythonOperator(task_id='extract_orders', ...)
+    complete = DummyOperator(task_id='complete')
+
+    start >> extract >> complete
+```
+
 ### Task Parameters
-Every task has: retries (3 with exponential backoff), execution timeout (2x expected runtime), SLA (30 minutes miss → alert), and a retry delay (5 min base, doubling each attempt). Use `max_active_runs=1` for sequential execution. Use `catchup=False` to skip past schedule intervals on backfill.
+
+| Parameter | Value | Rationale |
+|---|---|---|
+| retries | 3 | Handle transient failures |
+| retry_delay | 5 min | Immediate retry after brief outages |
+| retry_exponential_backoff | true | Avoid thundering herd on recovery |
+| max_retry_delay | 1 hour | Cap to prevent runaway scheduling |
+| execution_timeout | 2x expected runtime | Prevent stuck tasks |
+| sla | 30 min from schedule | Alert on delays |
+| pool | domain_pool | Resource management |
 
 ### Scheduling Patterns
-Daily: `0 3 * * *` (off-peak hours). Hourly: `0 * * * *`. Weekly: `0 4 * * 1` (Mondays 4am). Event-driven: use `TriggerDagRunOperator` from another DAG. Data-aware scheduling: use Airflow 2.4+ datasets as dependencies between DAGs.
+Daily: `0 3 * * *` (off-peak hours). Hourly: `0 * * * *`. Weekly: `0 4 * * 1` (Mondays 4am). Event-driven: use `TriggerDagRunOperator` from another DAG. Data-aware scheduling: use Airflow 2.4+ datasets as dependencies between DAGs. Sensor pattern: `ExternalTaskSensor` or `SqlSensor` to wait for upstream completion.
 
 ## dbt Transformation Patterns
 
 ### Model Organization
-Staging models (`stg_<source>__<table>.sql`) are source-close with minimal transformations — column renaming, type casting, dedup. Intermediate models (`int_<domain>__<purpose>.sql`) contain business logic, joins, and complex transformations. Mart models (`fct_<process>.sql`, `dim_<entity>.sql`) are aggregated, consumption-ready for dashboards and analytics.
+
+```
+models/
+  staging/
+    stg_orders.sql        # Source-close, minimal transforms
+    stg_customers.sql
+    stg_payments.sql
+  intermediate/
+    int_order_details.sql # Business logic, joins
+    int_customer_metrics.sql
+  marts/
+    fct_orders.sql        # Aggregated, consumption-ready
+    dim_customers.sql
+    dim_products.sql
+```
+
+#### Staging Model Pattern
+
+```sql
+-- models/staging/stg_orders.sql
+WITH source AS (
+    SELECT * FROM {{ source('postgres', 'orders') }}
+),
+renamed AS (
+    SELECT
+        id AS order_id,
+        customer_id,
+        order_date,
+        status,
+        total_amount,
+        created_at,
+        updated_at
+    FROM source
+    WHERE _deleted = false  -- Exclude soft-deleted records
+)
+SELECT * FROM renamed
+```
+
+#### Intermediate Model Pattern
+
+```sql
+-- models/intermediate/int_order_details.sql
+WITH orders AS (
+    SELECT * FROM {{ ref('stg_orders') }}
+),
+payments AS (
+    SELECT * FROM {{ ref('stg_payments') }}
+)
+SELECT
+    o.order_id,
+    o.customer_id,
+    o.order_date,
+    o.status,
+    o.total_amount,
+    COALESCE(p.total_paid, 0) AS total_paid,
+    o.total_amount - COALESCE(p.total_paid, 0) AS balance_due,
+    CASE
+        WHEN o.status = 'delivered' AND p.total_paid >= o.total_amount THEN 'paid'
+        WHEN o.status = 'delivered' THEN 'payment_pending'
+        WHEN o.status = 'cancelled' THEN 'cancelled'
+        ELSE 'active'
+    END AS order_health
+FROM orders o
+LEFT JOIN payments p ON o.order_id = p.order_id
+```
 
 ### Testing
-Generic tests on every column: unique, not_null, accepted_values, relationships. Custom generic tests for project-specific patterns (freshness, row count thresholds). Singular tests for complex business rule validation. Test severity: error (blocking), warn (informational). Run critical tests in CI.
+
+#### Generic Tests
+
+```yaml
+# schema.yml
+version: 2
+models:
+  - name: stg_orders
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['draft', 'submitted', 'confirmed', 'shipped', 'delivered', 'cancelled']
+      - name: total_amount
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: '>= 0'
+```
+
+#### Test Maturity Model
+
+| Level | Model Testing | CI Integration | Coverage |
+|---|---|---|---|
+| 1: Basic | Generic tests (unique, not_null) | Manual dbt test run | Key columns only |
+| 2: Defined | + accepted_values, relationships | CI pipeline step | All columns on marts |
+| 3: Managed | + custom generic tests, freshness tests | Blocking CI gate | All models, all columns |
+| 4: Measured | + singular tests, data contract tests | CI gate + weekly full audit | Staging + intermediate + marts |
+| 5: Optimized | + cross-model assertions, anomaly detection | CI gate + automated alerting | Full lineage, all transforms |
 
 ### Documentation
-Auto-generate docs with `dbt docs generate`. Add model descriptions using `doc()` blocks with markdown. Document column descriptions, model lineage, and test coverage.
+
+```yaml
+# schema.yml — model and column descriptions
+version: 2
+models:
+  - name: fct_orders
+    description: >
+      Order fact table containing one row per completed order.
+      Used for revenue reporting, sales analysis, and forecasting.
+    columns:
+      - name: order_id
+        description: "Unique identifier for each order from source system"
+        tests: [unique, not_null]
+      - name: total_amount
+        description: "Total order amount including tax and shipping, in USD"
+```
 
 ### Snapshots
 SCD Type 2 snapshots track historical changes to dimension tables. Strategy: `timestamp` (based on `updated_at` column) or `check` (based on column value changes). Query current records with `WHERE dbt_valid_to IS NULL`.
+
+```sql
+-- snapshots/customers.sql
+{% snapshot customers_snapshot %}
+{{
+    config(
+        target_schema='snapshots',
+        unique_key='customer_id',
+        strategy='timestamp',
+        updated_at='updated_at',
+        invalidate_hard_deletes=True
+    )
+}}
+SELECT * FROM {{ source('postgres', 'customers') }}
+{% endsnapshot %}
+```
 
 ## Batch vs Incremental Processing
 
@@ -109,39 +293,124 @@ SCD Type 2 snapshots track historical changes to dimension tables. Strategy: `ti
 Process all data from the source in each run. Simple to implement and debug. Best for: small datasets, reference data, initial loads, nightly reporting. Full refresh is the default materialization for small dimension tables.
 
 ### Incremental Processing
-Process only new or changed data since the last run. Complex to implement but efficient for large datasets. Best for: large fact tables, event data, append-only logs, daily/hourly loading. Implemented in dbt via `is_incremental()` macro with timestamp or batch ID filtering.
+Process only new or changed data since the last run. Complex to implement but efficient for large datasets. Best for: large fact tables, event data, append-only logs, daily/hourly loading.
+
+```sql
+{{ config(materialized='incremental', unique_key='order_id') }}
+
+SELECT * FROM {{ source('postgres', 'orders') }}
+{% if is_incremental() %}
+    WHERE updated_at > (SELECT MAX(updated_at) FROM {{ this }})
+{% endif %}
+```
+
+#### Incremental Strategies
+
+| Strategy | Method | When to Use |
+|---|---|---|
+| Timestamp | `WHERE updated_at > max(updated_at)` | Append-only or update-tracked tables |
+| Batch ID | `WHERE batch_id > max(batch_id)` | Batch-oriented ingestion |
+| Full refresh | Truncate and reload | Small tables, dimension tables |
+| Merge/Upsert | `unique_key` + merge logic | CDC, upsert-heavy streams |
+| Insert+Delete | Insert new, delete removed | Replace all records per partition |
+| Micro-batch | 5-15 min intervals | Near-real-time with batch tooling |
 
 ## S3 Staging
 
 ### Staging Area Design
 Raw data lands in S3 (or equivalent cloud storage) partitioned by source, date, and load timestamp. Structure: `s3://data-lake/landing/<source>/<date>/<load_id>/`. Data is in columnar format (Parquet) for efficient querying. Glue Crawler or equivalent registers partitions in the metastore. Staging tables in the warehouse point to the S3 location.
 
+```yaml
+staging_area:
+  raw: s3://data-lake/raw/salesforce/
+  structure: "{source}/{object}/{year}/{month}/{day}/{load_id}/"
+  format: parquet
+  compression: zstd
+  retention: 30 days raw, 7 days staging
+  validation:
+    - row_count_match
+    - schema_compatibility
+    - checksum_verification
+```
+
 ## Data Validation
 
 ### Stage Validations
-Row count thresholds (±10% from expected), null rates (<5% for key columns), freshness checks (data age < 2x schedule interval), schema validation (column count, names, types match expected). Failures halt the pipeline and trigger an alert.
+
+| Check | Threshold | Action |
+|---|---|---|
+| Row count delta | ±10% from expected | Halt, alert |
+| Null rate | <5% for key columns | Halt, alert |
+| Freshness | < 2x schedule interval | Halt, alert |
+| Schema validation | Column count, names, types match | Halt, alert |
+| Row-level checksum | Match source checksum | Halt, alert |
+| Duplicate keys | 0 duplicates | Halt, alert |
 
 ### Transform Validations
-Referential integrity (FKs match PKs), aggregate comparison (totals match between source and target), unique key enforcement (no duplicates in PK columns), distribution drift detection (value distributions compared to baseline). Quality check results are logged to a monitoring table.
+Referential integrity: FK columns match PK values in referenced tables. Aggregate comparison: totals match between source and target (SUM, COUNT). Unique key enforcement: no duplicates in PK columns. Distribution drift: value distributions compared to baseline (Kolmogorov-Smirnov test for numerical fields).
+
+```python
+# Custom validation hook
+def validate_row_count(df, expected_min=1000, expected_max=None):
+    count = df.count()
+    if count < expected_min:
+        raise ValueError(f"Row count {count} below minimum {expected_min}")
+    if expected_max and count > expected_max:
+        raise ValueError(f"Row count {count} exceeds maximum {expected_max}")
+    return True
+```
 
 ## Error Handling
 
 ### Retry Strategy
-Retryable errors: connection timeout, rate limit, lock wait timeout, network error. Non-retryable: schema mismatch, invalid data, permission denied. Exponential backoff for retries: 5min, 25min, 125min. Max 3 retries for transient errors, 0 for hard errors.
+
+| Error Type | Retryable | Max Retries | Backoff | Fallback |
+|---|---|---|---|---|
+| Connection timeout | Yes | 3 | 5min, 25min, 125min | DLQ |
+| Rate limit | Yes | 5 | 1min, 2min, 4min, 8min, 16min | DLQ |
+| Lock wait timeout | Yes | 3 | 1min, 5min, 15min | DLQ |
+| Schema mismatch | No | 0 | - | Halt + Alert |
+| Invalid data | No | 0 | - | DLQ |
+| Permission denied | No | 0 | - | Halt + Alert |
 
 ### Dead Letter Queue
-Failed records written to a DLQ table with payload, error message, and timestamp. DLQ records are reviewed weekly for reprocessing or schema updates. Backfill script accepts a date range to reprocess DLQ records.
+
+```sql
+-- DLQ table structure
+CREATE TABLE pipeline_dlq (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    dag_id VARCHAR(100) NOT NULL,
+    task_id VARCHAR(100) NOT NULL,
+    execution_date TIMESTAMPTZ NOT NULL,
+    source_table VARCHAR(200),
+    record_id VARCHAR(200),
+    payload JSONB,
+    error_message TEXT,
+    error_type VARCHAR(100),
+    retry_count INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    resolved_at TIMESTAMPTZ,
+    resolution VARCHAR(500)
+);
+
+-- Backfill query
+INSERT INTO staging_orders (
+    SELECT * FROM pipeline_dlq
+    WHERE dag_id = 'etl_orders_daily'
+    AND resolved_at IS NULL
+    AND error_type = 'invalid_data_format'
+);
+```
 
 ### Alerting
-Slack alert on task failure. PagerDuty for consecutive failures >3. Email digest of daily pipeline health. Alert on: task failure, SLA miss, data validation failure, DLQ write, pipeline stall (>30 min without progress).
 
-## Monitoring and Lineage
-
-### Pipeline Health Metrics
-DAG success rate (target >99%), average task duration, queue depth, data freshness lag, row count trends. Track in a monitoring dashboard (Datadog, Grafana, or Airflow's built-in metrics).
-
-### Data Lineage
-Airflow generates DAG lineage showing task dependencies and data flow. dbt generates model lineage showing transformation dependencies. Combine both for end-to-end lineage from source to dashboard. Store lineage metadata in OpenLineage or DataHub for cross-tool visibility.
+| Event | Channel | Priority | Runbook |
+|---|---|---|---|
+| Task failure | Slack #data-pipelines | Medium | Check task logs, review code |
+| 3 consecutive failures | PagerDuty | High | Investigate immediately |
+| SLA miss | Slack @data-eng | High | Prioritize next business day |
+| Validation failure | Slack #data-quality | Medium | Review data, update rules |
+| DLQ write | Slack #data-pipelines | Low | Weekly review meeting |
 
 ## Pipeline Architecture Comparison
 
@@ -154,16 +423,6 @@ Airflow generates DAG lineage showing task dependencies and data flow. dbt gener
 | Complexity | High (transform engine) | Low (SQL only) | Medium | High |
 | Cost | Medium (compute + storage) | Low (warehouse only) | Medium | High (streaming infra) |
 | Use case | On-prem sources, compliance | Cloud warehouse, agile schema | Near-real-time dashboards | Real-time operations |
-
-## dbt Test Maturity Model
-
-| Level | Model Testing | CI Integration | Coverage |
-|---|---|---|---|
-| 1: Basic | Generic tests (unique, not_null) | Manual dbt test run | Key columns only |
-| 2: Defined | + accepted_values, relationships | CI pipeline step | All columns on marts |
-| 3: Managed | + custom generic tests, freshness tests | Blocking CI gate | All models, all columns |
-| 4: Measured | + singular tests, data contract tests | CI gate + weekly full audit | Staging + intermediate + marts |
-| 5: Optimized | + cross-model assertions, anomaly detection | CI gate + automated alerting | Full lineage, all transforms |
 
 ## Common Airflow DAG Patterns
 
@@ -210,12 +469,6 @@ Source → Extract Task
   │   └── Row count FAIL → Halt pipeline (schema/volume issue)
   └── Failure (retryable) → Retry (3x, exponential backoff)
       └── All retries exhausted → DLQ + Alert + Halt
-
-Transform Task
-  ├── Success → Validate Transform
-  │   ├── Quality checks pass → Load Mart → Complete
-  │   └── Quality checks fail → Alert, halt
-  └── Failure (non-retryable) → DLQ + Alert + Halt
 ```
 
 ## Pipeline SLA Dashboard Metrics
@@ -229,6 +482,17 @@ Transform Task
 | Validation pass rate | > 99% | > 95% | < 95% |
 | Retry rate | < 5% | 5-10% | > 10% |
 | SLA miss rate | < 1% | 1-5% | > 5% |
+
+## Orchestration Comparison
+
+| Platform | Language | Scheduler | Best For |
+|---|---|---|---|
+| Apache Airflow | Python | Centralized/polling | Enterprise, complex DAGs, large ecosystem |
+| Dagster | Python | Event-driven, asset-focused | Data platform teams, asset lineage |
+| Prefect | Python | Cloud or self-hosted | Teams wanting Python-native, modern UX |
+| Kestra | YAML | Event-driven | YAML-first teams, declarative pipelines |
+| AWS Step Functions | JSON/ASL | Event-driven | AWS-native serverless pipelines |
+| Azure Data Factory | JSON/UI | Cloud-native | Azure shops, no-code ETL |
 
 ## Additional ETL Tools
 
@@ -244,6 +508,36 @@ Kestra uses declarative YAML for pipeline definitions with a powerful orchestrat
 ### Cloud ETL Services
 AWS Glue: serverless Spark-based ETL with schema crawler and auto-generated catalog. Azure Data Factory: 90+ built-in connectors with mapping data flows and trigger-based orchestration. GCP Dataflow: fully-managed Apache Beam for batch and streaming with auto-scaling and exactly-once semantics.
 
+## Pipeline CI/CD
+
+### Testing Pipeline
+```yaml
+# .github/workflows/dbt-ci.yml
+jobs:
+  dbt-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dbt-labs/dbt-action@v1
+        with:
+          dbt_command: dbt build --select state:modified+ --target ci
+      - uses: dbt-labs/dbt-action@v1
+        with:
+          dbt_command: dbt docs generate
+```
+
+### Deployment Pipeline
+```yaml
+# Deploy steps:
+# 1. PR merged to main → trigger staging deployment
+# 2. Build and test in staging environment
+# 3. Run dbt run --full-refresh on staging (weekly)
+# 4. Smoke tests pass (row counts, freshness)
+# 5. Promote to production: dbt run --target prod
+# 6. Run dbt test --target prod (post-deployment validation)
+# 7. Rollback: dbt run --select fct_orders --vars '{"prev_version": true}'
+```
+
 ## Rules
 - ELT over ETL for cloud warehouses
 - One DAG per domain, max 20 tasks per DAG
@@ -255,6 +549,10 @@ AWS Glue: serverless Spark-based ETL with schema crawler and auto-generated cata
 - All transformations idempotent
 - Monitor data freshness, not just pipeline success
 - Track row count trends for anomaly detection
+- dbt artifacts archived for lineage tracking
+- Backfills are run as separate DAG runs with catchup
+- Pipeline code reviewed and tested before production deploy
+- Every pipeline has a documented owner and on-call rotation
 
 ## References
   - references/cloud-etl-services.md — Cloud ETL Services

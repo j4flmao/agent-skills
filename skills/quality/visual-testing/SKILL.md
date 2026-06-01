@@ -325,6 +325,158 @@ Stringent thresholds (0%) catch all visual changes but increase false positives 
 - **Argos CI**: Open-source visual testing with GitHub integration. Git-lfs for baseline image storage. Self-hostable.
 - **Lost Pixel**: Open-source visual regression testing. Storybook and page-based testing. GitHub Action integration. Visual diff report with zoom and highlight.
 
+## Visual Testing Examples
+
+### Playwright — Element-Level Snapshot
+```typescript
+import { test, expect } from "@playwright/test";
+
+test("product card component renders correctly", async ({ page }) => {
+  await page.goto("/products/42");
+  const productCard = page.getByTestId("product-card");
+  await expect(productCard).toBeVisible();
+  await expect(productCard).toHaveScreenshot("product-card.png", {
+    maxDiffPixels: 50,
+    animations: "disabled",
+  });
+});
+```
+
+### Playwright — Full Page Snapshot with Masking
+```typescript
+test("dashboard page matches baseline", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.waitForLoadState("networkidle");
+  await expect(page).toHaveScreenshot("dashboard.png", {
+    fullPage: true,
+    mask: [
+      page.getByTestId("user-avatar"),
+      page.getByTestId("live-timestamp"),
+      page.getByTestId("third-party-widget"),
+    ],
+  });
+});
+```
+
+### Percy + Playwright Integration
+```typescript
+import percySnapshot from "@percy/playwright";
+
+test("checkout page visual regression", async ({ page }) => {
+  await page.goto("/checkout");
+  await page.waitForLoadState("networkidle");
+  await percySnapshot(page, "Checkout Page", {
+    widths: [375, 768, 1280],
+    minHeight: 2000,
+  });
+});
+```
+
+### Visual Testing with Dynamic Content Handling
+```typescript
+test("user profile page with stable snapshot", async ({ page }) => {
+  await page.goto("/profile");
+  // Freeze dynamic content before snapshot
+  await page.evaluate(() => {
+    document.querySelectorAll("[data-dynamic]").forEach((el) => {
+      el.textContent = "FROZEN_VALUE";
+    });
+  });
+  // Disable animations
+  await page.addStyleTag({
+    content: "*, *::before, *::after { animation: none !important; transition: none !important; }",
+  });
+  await expect(page).toHaveScreenshot("profile.png");
+});
+```
+
+## CI Integration for Visual Tests
+
+```yaml
+name: Visual Tests
+on: pull_request
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Percy Visual Tests
+        run: npx percy exec -- npx playwright test --grep @visual
+        env:
+          PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
+          PERCY_BRANCH: ${{ github.head_ref }}
+          PERCY_TARGET_BRANCH: ${{ github.base_ref }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-diffs
+          path: __screenshots__/
+  chromatic:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: npm ci
+      - name: Chromatic Storybook Visual Tests
+        uses: chromaui/action@v1
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          onlyChanged: true
+          autoAcceptChanges: false
+```
+
+## Visual Testing Maturity Model
+
+| Level | Characteristics | Practices |
+|---|---|---|
+| 1: Initial | No visual testing | Manual visual inspection only, no automation, UI bugs found by users |
+| 2: Defined | Basic visual snapshots | Playwright built-in snapshots for critical pages, manual baseline update, local storage |
+| 3: Managed | Cloud-based visual testing | Percy/Chromatic with cloud review workflow, per-component thresholds, cross-browser testing, CI integration |
+| 4: Measured | Comprehensive visual coverage | Responsive breakpoints tested, dynamic content handling (masks, clips), flaky diff management, quarterly baseline audit |
+| 5: Optimized | AI-powered visual QA | Applitools AI matching for layout tolerance, automatic baseline updates on intentional changes, predictive diff analysis, self-healing selectors for visual targets |
+
+## Visual Testing Anti-Patterns (Additional)
+
+### Anti-Pattern: No Dynamic Content Strategy
+Every visual test will fail if it captures date stamps, user avatars, random IDs, or real-time data. You must have a strategy: clip regions, DOM transformation callbacks (`percyCSS`, `page.evaluate`), or data attribute toggling to stabilize dynamic regions.
+
+### Anti-Pattern: Approving Diffs on Feature Branches
+Baseline changes approved on feature branches create baselines contaminated with unmerged changes. When the feature branch is finally merged, the baseline already includes the new look, and the real diff is lost. Always approve baseline changes from main branch builds.
+
+### Anti-Pattern: Screenshots Before Page is Ready
+Capturing screenshots before fonts load, images render, or animations complete creates inconsistent baselines. Always wait for `networkidle`, use `waitForSelector` for critical elements, and disable animations before capturing.
+
+### Anti-Pattern: Ignoring Anti-Aliasing Diffs
+Different operating systems (macOS vs Linux) and browsers render fonts with different anti-aliasing, creating 1-3 pixel diffs that are not real regressions. Set appropriate thresholds (0.1-0.2%) instead of 0, and use consistent CI environments for baseline and test runs.
+
+## Visual Testing Baseline Maintenance
+
+```yaml
+baseline_workflow:
+  capture: "On every main branch build, all snapshots are captured and auto-approved"
+  review: "On PR builds, diffs are displayed in cloud dashboard for human review"
+  approve: "Reviewer marks each diff as approved or rejected"
+  update: "After merge to main, new baseline is automatically created"
+  retention:
+    active: "Last 30 days of baselines retained for comparison"
+    archive: "Quarterly full-suite archive for trend analysis"
+    cleanup: "Purge baselines for deleted components or retired views"
+  threshold_strategy:
+    icons: "0% tolerance — pixel-perfect required"
+    buttons_inputs: "0.1% tolerance — sub-pixel variation OK"
+    cards_surfaces: "0.2% tolerance — shadow rendering OK"
+    images_media: "0.5% tolerance — compression artifacts OK"
+    full_pages: "0.3% tolerance — aggregate acceptable"
+```
+
 ## References
   - references/baseline-management.md -- Baseline Management
   - references/screenshot-comparison.md -- Screenshot Comparison

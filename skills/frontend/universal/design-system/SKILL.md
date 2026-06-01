@@ -2,7 +2,7 @@
 name: frontend-design-system
 description: >
   Use this skill when the user says 'design system', 'design tokens', 'component library', 'theme', 'colors', 'typography system', 'spacing system', 'component API design', 'variant system', or when creating or extending a frontend design system. This skill enforces: three-tier token hierarchy (primitive, semantic, component), CSS custom properties as the token layer, CVA for component variants, component API with max 10 props, and dark mode via semantic token swap. Works with React, Vue, Angular. Do NOT use for: backend API design, database schema, or individual component implementation.
-version: "1.2.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -92,6 +92,19 @@ Does the component render its children?
   |-- NO --> Does it accept many optional sub-elements?
         |-- YES --> Use slots pattern (leftIcon, rightIcon, subtitle)
         |-- NO  --> Keep props flat under 10
+```
+
+### Component Complexity Decision Tree
+
+```
+How many visual states does the component have?
+  |-- 1-3 (simple) -->
+  |     |-- Single variant, few props --> Direct utility classes or styled()
+  |-- 4-10 (moderate) -->
+  |     |-- Multiple variants (size, color) --> CVA or recipe()
+  |-- 10+ (complex) -->
+        |-- Compound component for sub-elements --> Compound + CVA
+        |-- Slots for optional elements --> Slot pattern + CVA
 ```
 
 ## Workflow
@@ -259,6 +272,43 @@ it('applies disabled state', () => {
 });
 ```
 
+### Step 9: Style Dictionary Integration
+```json
+{
+  "color": {
+    "brand": {
+      "500": { "value": "#3b82f6" }
+    }
+  },
+  "spacing": {
+    "sm": { "value": "0.5rem" },
+    "md": { "value": "1rem" }
+  }
+}
+```
+```bash
+npx style-dictionary build --config style-dictionary.config.js
+# Outputs: css/tokens.css, scss/_tokens.scss, js/tokens.js
+```
+
+### Step 10: Accessibility Integration
+Every component in the design system must:
+- Support keyboard navigation (Tab, Enter, Escape, Arrow keys)
+- Have visible focus states (not just outline: none)
+- Meet WCAG 2.1 AA contrast ratios (4.5:1 normal text, 3:1 large)
+- Expose ARIA attributes for screen readers
+- Support prefers-reduced-motion
+
+```typescript
+// Base focus style mixin for all components
+const focusVisible = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+
+const buttonVariants = cva(
+  `inline-flex items-center justify-center rounded-md font-medium transition-colors ${focusVisible}`,
+  // ...
+)
+```
+
 ## Common Pitfalls
 
 ### 1. Hardcoded Values
@@ -290,6 +340,12 @@ Every interactive component must have visible focus states. Design system compon
 
 ### 5. Prop Drilling Theme Context
 Passing theme values through component props creates tight coupling. Use CSS custom properties or React context for theming.
+
+### 6. No Loading States
+Every data-driven component (Table, Dropdown, Autocomplete) must handle loading, empty, and error states. These should be part of the design system.
+
+### 7. Missing Responsive Variants
+Components should support responsive behavior at the container level, not just the page level.
 
 ## Compared With
 

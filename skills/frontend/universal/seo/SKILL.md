@@ -2,7 +2,7 @@
 name: frontend-seo
 description: >
   Use this skill when the user says 'seo', 'meta tags', 'open graph', 'structured data', 'JSON-LD', 'sitemap', 'robots.txt', 'canonical url', 'ssr seo'. This skill enforces SEO best practices — meta tag optimization, structured data injection, XML sitemap generation, robots.txt configuration, canonical URL handling, and SSR strategies for search engine crawlers. Applies to any frontend stack.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -52,6 +52,76 @@ No file output unless requested.
 
 ### Max Response Length
 150 lines unless generating full sitemap or multiple JSON-LD blocks.
+
+## SEO Architecture / Decision Trees
+
+### Meta Tag Strategy Decision Tree
+```
+Page type?
+  |-- Content page (article, product, blog post) -->
+  |     OG: title, description, image derived from content
+  |     JSON-LD: Article or Product schema
+  |     Title: "Primary Keyword — Secondary Keyword | Site"
+  |
+  |-- Listing / category page -->
+  |     OG: category name + generic category image
+  |     JSON-LD: CollectionPage or BreadcrumbList
+  |     Title: "Category Name | Site"
+  |
+  |-- User profile / dashboard (auth required) -->
+  |     OG: site-level defaults (noindex to prevent crawling)
+  |     Robots: noindex, nofollow
+  |
+  |-- Error page (404, 500) -->
+        OG: site-level defaults with error context
+        Title: "Page Not Found | Site"
+```
+
+### Rendering Strategy for SEO Decision Tree
+```
+SEO critical?
+  |-- YES -->
+  |     |-- Public content (same for all users)? -->
+  |     |     SSG or ISR (pre-rendered, crawler sees full content immediately)
+  |     |
+  |     |-- User-specific? -->
+  |           SSR (crawler gets full HTML, but user data is dynamic)
+  |
+  |-- NO -->
+        |-- Behind auth? --> CSR is fine (Google won't index)
+        |-- Not auth, but low SEO value? --> CSR with basic SSG shell
+```
+
+### Structured Data Decision Tree
+```
+Content type?
+  |-- Article / Blog Post -->
+  |     Schema: Article, NewsArticle, or BlogPosting
+  |     Required: headline, author, datePublished, dateModified, image
+  |
+  |-- Product -->
+  |     Schema: Product
+  |     Required: name, image, description, offers (price, availability)
+  |     Optional: review, aggregateRating, brand
+  |
+  |-- Breadcrumb navigation -->
+  |     Schema: BreadcrumbList
+  |     Required: position, name, item URL for each level
+  |
+  |-- FAQ page -->
+  |     Schema: FAQPage
+  |     Required: mainEntity array with Question/Answer pairs
+  |
+  |-- Organization / Local Business -->
+  |     Schema: Organization or LocalBusiness
+  |     Required: name, logo, url, address (for LocalBusiness)
+  |
+  |-- Event -->
+        Schema: Event
+        Required: name, startDate, location, offers
+```
+
+---
 
 ## Workflow
 
@@ -126,23 +196,57 @@ npx lhci collect --url=https://example.com
 npx lhci assert --preset=lighthouse:recommended
 ```
 
-## Component Architecture
+### Step 9: Next.js App Router Metadata API
+```typescript
+// app/products/[id]/page.tsx
+import { Metadata } from 'next'
 
-### Meta Tag Decision Tree
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const product = await getProduct(params.id)
+
+  return {
+    title: `${product.name} | Store`,
+    description: product.description.slice(0, 160),
+    openGraph: {
+      title: product.name,
+      description: product.description.slice(0, 160),
+      images: [{ url: product.image, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: product.name,
+      description: product.description.slice(0, 160),
+      images: [product.image],
+    },
+    alternates: {
+      canonical: `https://example.com/products/${product.slug}`,
+    },
+  }
+}
 ```
-Is this a content page (article, product)?
-  Yes → Generate OG tags from content: title, description, image
-  No → Is this a listing/category page?
-    Yes → OG tags with category name + generic image
-    No → Default OG tags from site config
 
-Does the page have dynamic content?
-  Yes → Use framework meta API (generateMetadata, useHead)
-  No → Static metadata in page config
+### Step 10: JSON-LD Component (React)
+```tsx
+function JsonLd({ data }: { data: Record<string, unknown> }) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify({ '@context': 'https://schema.org', ...data }),
+      }}
+    />
+  )
+}
 
-Is the page paginated?
-  Yes → Add rel="next" and rel="prev", self-referencing canonical
-  No → Standard canonical to current URL
+// Usage
+<JsonLd
+  data={{
+    '@type': 'Product',
+    name: product.name,
+    image: product.image,
+    offers: { '@type': 'Offer', price: product.price, priceCurrency: 'USD' },
+  }}
+/>
 ```
 
 ## Common Pitfalls
@@ -156,17 +260,6 @@ Is the page paginated?
 7. **No lastmod in sitemap**: Helps Google understand freshness.
 8. **Missing alt text on images**: Accessibility and SEO issue.
 
-## Best Practices
-
-1. Title format: `Primary Keyword — Secondary Keyword | Brand`
-2. OG image: 1200x630px, < 300 KB, serve via CDN
-3. Canonical URL always absolute, no tracking params
-4. JSON-LD in `<head>` or end of `<body>` — non-blocking
-5. Regenerate sitemap on content publish
-6. Allow CSS/JS in robots.txt — Google needs them to render
-7. Use structured data testing tool before deployment
-8. Monitor Core Web Vitals via Search Console
-
 ## Compared With
 
 | Aspect | SSR/SSG | Client-side (CSR) | Hybrid |
@@ -178,25 +271,28 @@ Is the page paginated?
 | Complexity | Higher | Lower | Medium |
 | Use case | Content sites | Apps | Both |
 
-## Performance
+## Performance Considerations
 
-1. SSR improves LCP by 40-60% compared to CSR for content pages.
-2. JSON-LD in `<head>` adds ~1-5KB to HTML size.
-3. Sitemap generation: static at build time preferred over dynamic generation.
-4. Preconnect to CDN for OG images reduces LCP font/hero image delay.
-5. Inline critical CSS for above-the-fold content improves FCP.
-6. Proper cache headers on SSG pages enables CDN caching (s-maxage).
+- SSR improves LCP by 40-60% compared to CSR for content pages
+- JSON-LD in `<head>` adds ~1-5KB to HTML size
+- Sitemap generation: static at build time preferred over dynamic generation
+- Preconnect to CDN for OG images reduces LCP font/hero image delay
+- Inline critical CSS for above-the-fold content improves FCP
+- Proper cache headers on SSG pages enables CDN caching (s-maxage)
 
-## Tooling
+## Accessibility Considerations
 
-1. `Lighthouse` — SEO audit + performance audit.
-2. `Google Search Console` — monitor index status, submit sitemaps.
-3. `Ahrefs / Semrush` — competitive SEO analysis.
-4. `Google Rich Results Test` — validate JSON-LD.
-5. `Schema.org Validator` — validate structured data.
-6. `next-sitemap` — sitemap and robots.txt generation for Next.js.
-7. `sitemap-generator-cli` — standalone sitemap generator.
-8. `Yoast SEO` (WordPress) or equivalent for CMS.
+- Alt text on images is both an SEO ranking factor and accessibility requirement
+- Structured data does not affect visual accessibility but helps users find content
+- Descriptive page titles help screen reader users navigate between tabs
+- Skip-to-content links improve both accessibility and SEO (content reachable)
+
+## Security Considerations
+
+- JSON-LD can include URLs — ensure they are HTTPS and not open redirects
+- Meta tags cannot be exploited for XSS (they are HTML-encoded by default)
+- Sitemap URLs should not expose unpublished or sensitive content
+- Noindex is a crawl directive, not a security measure — use authentication for private pages
 
 ## Rules
 - Never use `noindex` on public pages unless explicitly requested.

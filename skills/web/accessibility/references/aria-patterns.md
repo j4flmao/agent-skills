@@ -293,10 +293,117 @@ ARIA (Accessible Rich Internet Applications) provides attributes that enhance HT
 </div>
 ```
 
+## Decision Trees
+
+### Choose aria-live Region Type
+```
+Is the update user-initiated?
+├── Yes → aria-live="polite" (e.g., search results updating)
+├── No → Is it time-critical?
+│   ├── Yes → aria-live="assertive" (e.g., error notification)
+│   └── No → aria-live="polite" (e.g., stock ticker)
+```
+
+### Choose Widget Role
+```
+Does the element receive input?
+├── Yes → Is it a range value?
+│   ├── Yes → role="slider" + aria-valuenow/valuemin/valuemax
+│   └── No → Is it a selection from options?
+│       ├── Yes → Is it a text input with suggestions?
+│       │   ├── Yes → role="combobox" + aria-autocomplete
+│       │   └── No → role="listbox" + aria-selected
+│       └── No → Is it a toggle between states?
+│           ├── Yes → role="switch" + aria-checked
+│           └── No → role="button" + aria-pressed
+└── No → Is it a container for dynamic content?
+    ├── Yes → role="region" + aria-live + aria-label
+    └── No → role="presentation" / role="none"
+```
+
+## Anti-Patterns
+- **aria-hidden="true" on focusable elements**: Hides from AT but still focusable
+- **Missing focus management in dialogs**: Trap focus inside modal with aria-modal
+- **Overusing role="alert"**: Only for time-sensitive, important messages
+- **Wrong aria-checked on role="switch"**: Switch uses aria-checked, not aria-pressed
+- **Missing aria-label on icon-only buttons**: Screen reader cannot identify purpose
+- **Nested interactive elements**: E.g., button inside a button
+- **aria-expanded not synced with actual state**: Must update via JS
+- **tabindex > 0**: Use tabindex="0" or tabindex="-1" only
+- **aria-describedby pointing to hidden text**: Ensure description is accessible
+- **role="menu" for navigation**: nav + aria-label is correct; role="menu" is for app menus
+- **Not managing aria-selected in tab panels**: Must update when tab changes
+- **aria-live="assertive" for non-critical updates**: Disrupts screen reader flow
+- **Duplicate roles and semantic HTML**: Don't add role="button" to a <button>
+- **Missing aria-controls reference**: Interactive element must reference controlled region
+
+## Keyboard Interaction Patterns
+
+### Custom Button
+```javascript
+button.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    activateButton();
+  }
+});
+```
+
+### Custom Select (Listbox)
+```javascript
+listbox.addEventListener('keydown', (e) => {
+  switch (e.key) {
+    case 'ArrowDown':
+      e.preventDefault();
+      focusNextOption();
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      focusPreviousOption();
+      break;
+    case 'Home':
+      e.preventDefault();
+      focusFirstOption();
+      break;
+    case 'End':
+      e.preventDefault();
+      focusLastOption();
+      break;
+    case 'Enter':
+    case ' ':
+      e.preventDefault();
+      selectOption(e.target);
+      break;
+  }
+});
+```
+
+### Custom Dialog
+```javascript
+dialog.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeDialog();
+  }
+  if (e.key === 'Tab') {
+    trapFocus(e);
+  }
+});
+```
+
+## ARIA Live Region Animation Example
+```javascript
+function announceUpdate(message, priority = 'polite') {
+  const region = document.getElementById('announcements');
+  region.setAttribute('aria-live', priority);
+  // Clear and set with timeout for re-announcement
+  region.textContent = '';
+  setTimeout(() => {
+    region.textContent = message;
+  }, 50);
+}
+```
+
 ## Key Points
-- ARIA supplements but does not replace semantic HTML
-- First rule of ARIA: don't use ARIA if native HTML works
-- role="alert" for time-sensitive, important information
 - aria-live="polite" for non-urgent updates
 - aria-live="assertive" for urgent updates that interrupt
 - aria-expanded indicates expandable/collapsible state
@@ -323,3 +430,8 @@ ARIA (Accessible Rich Internet Applications) provides attributes that enhance HT
 - Screen reader testing validates ARIA implementation
 - Automated tools catch common ARIA violations
 - User testing with assistive technologies validates real-world usage
+- Use native HTML elements before ARIA roles (button > role="button")
+- aria-atomic="true" announces the entire live region, not just changed content
+- aria-relevant="additions text" controls what changes trigger announcements
+- aria-dropeffect and aria-grabbed for drag-and-drop (deprecated, use HTML5 DnD)
+- aria-owns establishes parent-child relationships in the accessibility tree

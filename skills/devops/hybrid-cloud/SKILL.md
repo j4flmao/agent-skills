@@ -1,15 +1,19 @@
 ---
-name: devops-hybrid-cloud
+name: hybrid-cloud
 description: >
-  Use this skill when bridging on-prem / colo with public cloud, or running across multiple clouds:
-  AWS Direct Connect / Azure ExpressRoute / GCP Cloud Interconnect, site-to-site VPN, identity
-  federation (SAML / OIDC / AWS IAM Identity Center / Azure AD), data gravity decisions, multi-cloud
-  DNS, hybrid Kubernetes (Anthos, EKS Anywhere, AKS Arc), and split-stack architectures (DB on-prem,
-  app on cloud, or vice versa). This skill enforces: dedicated connectivity + VPN backup, identity
-  federation source of truth, data-gravity-aware placement, multi-region DNS strategy, cost guardrails
-  for cross-cloud egress. Do NOT use for: pure cloud-native single-provider design (see
-  devops-aws/gcp/azure), on-prem-only network (see devops-network-infrastructure), DC facility design
-  (see devops-datacenter).
+  Use this skill when the user says 'hybrid cloud', 'hybrid-cloud',
+  'cloud burst', 'on-prem to cloud', 'cloud repatriation', 'hybrid
+  connectivity', 'express route', 'direct connect', 'VPN', 'transit
+  gateway', 'cloud interconnect', 'multi-cloud', 'cross-cloud',
+  'data gravity', 'cloud migration', 'hybrid workload', 'hybrid
+  networking', 'hybrid storage', 'hybrid compute', 'hybrid identity',
+  'cloud agnostic'.
+  Covers: Designing hybrid architectures, connectivity patterns,
+  hybrid identity, hybrid compute orchestration, data synchronization,
+  disaster recovery across environments, repatriation planning, vendor
+  comparison.
+  Do NOT use this for: single-cloud architectures, pure on-prem
+  environments, or basic VPN setup without hybrid context.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -18,249 +22,304 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [devops, hybrid-cloud, multi-cloud, direct-connect, federation, phase-2]
+tags: [devops, hybrid-cloud, multi-cloud, cloud-architecture, hcp, phase-4]
 ---
 
-# DevOps Hybrid Cloud
+# Hybrid Cloud
 
 ## Purpose
-Connect on-prem / colo to one or more public clouds with reliable network, federated identity,
-sensible data placement, and predictable egress cost. Run workloads where their data is, with
-control plane that spans environments.
+Design and operate hybrid cloud architectures that span on-premises data centers and public cloud providers, with secure networking, consistent identity, unified management, and resilient data synchronization.
 
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "hybrid cloud", "multi-cloud", "Direct Connect", "ExpressRoute", "Cloud
-Interconnect", "Megaport", "Equinix Fabric", "Transit Gateway", "Cloud WAN", "site-to-site VPN",
-"federation", "SAML", "AWS IAM Identity Center", "Azure AD Connect", "data gravity", "data egress",
-"cross-cloud", "Anthos", "EKS Anywhere", "AKS Arc", "ARC", "hybrid K8s", "on-prem to cloud".
+Exact user phrases: "hybrid cloud", "cloud burst", "hybrid connectivity", "Direct Connect", "ExpressRoute", "transit gateway", "cloud interconnect", "multi-cloud", "cross-cloud", "data gravity", "cloud migration", "hybrid workload", "repatriation", "hybrid identity".
 
 ### Input Context
-- Existing on-prem footprint (colo? own DC? scale?)
-- Cloud providers in use (and which workloads)
-- Latency requirements between sites
-- Data residency / sovereignty rules
-- Identity directory (AD / LDAP / Okta / Workday)
-- Compliance regime
-- Budget for connectivity + egress
+Before activating, verify:
+- On-premises hypervisor (VMware, Hyper-V, Nutanix).
+- Cloud provider(s) (AWS, Azure, GCP).
+- Current workload placement decisions (data gravity, latency).
+- Identity provider (Active Directory, Azure AD, Okta).
+- Compliance and data residency requirements.
+- Existing connectivity (VPN, Direct Connect, ExpressRoute).
 
 ### Output Artifact
-Hybrid design: connectivity topology, identity federation, data placement policy, DNS strategy,
-egress cost model, K8s/control plane choice if applicable.
+Architecture decision record with connectivity topology, identity federation config, workload placement matrix, and synchronization patterns.
 
 ### Response Format
 ```
-Connectivity: {DX / ER / Interconnect + VPN backup, BGP topology, speeds}
-Identity: {source of truth, federation protocol, sync flows}
-Data placement: {service → location, reason (gravity / latency / cost / regulation)}
-DNS: {authoritative, split-horizon if needed, latency-based routing}
-Egress: {expected GB/month, $/month, mitigation}
-Hybrid K8s: {one cluster / multiple / control plane location}
+Connectivity: {DirectConnect|ExpressRoute|VPN|SD-WAN}
+Identity: {ADFS|AzureAD Connect|Okta SCIM}
+Compute: {VMware HCX|Anthos|Arc|EKS Anywhere|AKS Arc}
+Storage: {FSx|NetApp CVO|Azure NetApp Files|Pure Cloud Block Store}
 ```
-
 No preamble. No postamble. No explanations.
 
 ### Completion Criteria
-- [ ] Connectivity: dedicated link + VPN backup
-- [ ] BGP design between on-prem and cloud
-- [ ] Identity: single source of truth with federation flows
-- [ ] Data placement decisions documented with reasoning
-- [ ] DNS strategy for cross-environment resolution
-- [ ] Egress cost modeled with mitigations
-- [ ] K8s / orchestration spans environments if needed
-- [ ] Failure modes: single connectivity loss, single cloud outage
-- [ ] Compliance/residency requirements satisfied
+- [ ] Connectivity plan (primary + backup path, MTTR < 5 min failover).
+- [ ] Identity federation configured with consistent RBAC across environments.
+- [ ] Workload placement matrix (data gravity, latency, compliance documented).
+- [ ] Data synchronization strategy for stateful workloads.
+- [ ] DR plan with RPO/RTO for hybrid workloads.
+- [ ] Monitoring and observability across environments.
 
 ### Max Response Length
-350 lines.
+400 lines.
 
-## Workflow
+## Quick Start
+Establish hybrid connectivity: VPN to cloud as interim → provision Direct Connect/ExpressRoute within 30 days → configure route propagation via Transit Gateway → federate on-prem AD with cloud IdP → deploy hybrid compute (VMware HCX, Anthos, Arc) → set up data sync layer → implement monitoring across both environments.
 
-### Step 1: Pick Connectivity Method
-```
-Site-to-site VPN (IPsec)
-  Setup: hours; speed: 1.25 Gbps per tunnel (AWS); cost: cheap; reliability: Internet-quality
-  Use: backup, dev/test, low-volume
+## Decision Tree: Connectivity Options
+| Method | Latency | Bandwidth | Cost | Use Case |
+|--------|---------|-----------|------|----------|
+| **Site-to-Site VPN** | >5ms | Up to 1.25 Gbps per tunnel | Low | Interim, DR, low-volume |
+| **Direct Connect / ExpressRoute** | 1-3ms | 50 Mbps - 100 Gbps | Medium + egress | Primary, high-volume, latency-sensitive |
+| **SD-WAN over MPLS** | 5-10ms | Up to 1 Gbps per circuit | Medium | Branch offices, multi-site |
+| **Cloud Interconnect (GCP)** | 1-3ms | 10-200 Gbps | Medium | GCP primary connectivity |
+| **Megaport / Equinix Fabric** | <1ms | Up to 10 Gbps per port | Medium | Multi-cloud exchange |
+| **Colo cross-connect** | <1ms | 1-100 Gbps | Low per link | Same-facility hybrid |
 
-Dedicated cloud links
-  AWS Direct Connect:    1G / 10G / 100G ports, dedicated cross-connect at colo
-  Azure ExpressRoute:    50M – 100G, similar model
-  GCP Cloud Interconnect Dedicated (10G / 100G) or Partner (50M-50G)
-  Setup: 2-8 weeks; cost: port + cross-connect + per-GB egress (cheaper than Internet egress)
-  Use: production, high-volume, latency-sensitive
+## Core Workflow
 
-Cloud exchange providers
-  Megaport, Equinix Fabric, PacketFabric, Console Connect
-  Setup: minutes once enabled; multi-cloud from one port
-  Use: agile, multi-cloud, smaller commit
-```
+### Step 1: Hybrid Connectivity Design
+```hcl
+# AWS Transit Gateway + VPN + Direct Connect
+resource "aws_dx_gateway" "main" {
+  name            = "dxgw-main"
+  amazon_side_asn = "64512"
+}
 
-Best practice: **dedicated link primary + VPN backup**. Never single-pathed.
-
-### Step 2: BGP Topology
-```
-On-prem AS (private 65xxx)
-   eBGP
-   | 
-Direct Connect Gateway / VGW
-   |
-Cloud VPC / Transit Gateway / Cloud Router
-   |
-Workloads
-
-Multi-region: announce on-prem prefixes via DX to multiple Direct Connect Gateways
-              receive cloud prefixes via BGP
-              use LOCAL_PREF / AS-prepend for path selection
+resource "aws_dx_private_virtual_interface" "primary" {
+  connection_id    = aws_dx_connection.primary.id
+  name             = "dxvif-primary"
+  vlan             = 100
+  address_family   = "ipv4"
+  bgp_asn          = "65550"
+}
 ```
 
-```bash
-# Frr on-prem example
-router bgp 65001
- neighbor 169.254.255.1 remote-as 7224          ! AWS DX peer
- neighbor 169.254.255.1 password $BGP_KEY
- address-family ipv4 unicast
-  neighbor 169.254.255.1 prefix-list cloud-out out
-  neighbor 169.254.255.1 prefix-list cloud-in in
-  network 10.10.0.0/16
+```hcl
+# Azure ExpressRoute + Virtual WAN
+resource "azurerm_express_route_circuit" "primary" {
+  name                  = "er-primary"
+  location              = azurerm_resource_group.main.location
+  resource_group_name   = azurerm_resource_group.main.name
+  service_provider_name = "Equinix"
+  peering_location      = "Silicon Valley"
+  bandwidth_in_mbps     = 1000
+  sku {
+    tier   = "Standard"
+    family = "MeteredData"
+  }
+}
 ```
 
-### Step 3: Identity Federation
-```
-Choose source of truth:
-  Active Directory     classic, on-prem; sync to cloud via AAD Connect (Azure) / AWS Directory Service
-  Azure AD / Entra ID  cloud-native; federate via SAML/OIDC to other clouds
-  Okta / OneLogin      vendor IdP; federate everywhere
-  Workday              HR-driven provisioning
+### Step 2: Identity Federation
+```yaml
+# ADFS → Azure AD hybrid identity flow
+Identity sources:
+  On-prem: Active Directory Domain Services
+  Cloud:   Azure AD / AWS IAM Identity Center / GCP Cloud Identity
+  Sync:    Azure AD Connect (password hash sync + passthrough auth)
+
+Federation protocols:
+  SAML 2.0: Primary for web apps
+  OpenID Connect: Modern apps, API access
+  Kerberos: On-prem legacy, seamless SSO
+
+# Okta Universal Directory as alternative
+# - Masters identities in Okta
+# - Syncs to AD via AD Agent
+# - Syncs to cloud IdPs via SCIM connectors
 ```
 
-Federation flows:
-```
-User logs in to Azure AD → SAML assertion → AWS IAM Identity Center → role assumption in AWS
-User logs in to Okta → OIDC token → GCP Workforce Identity Federation → access to GCP
+### Step 3: Hybrid Compute Orchestration
+```yaml
+# VMware Cloud on AWS (HCX)
+Network extension:
+  - HCX L2 stretch (vMotion without re-IP)
+  - HCX network extension appliance (per segment)
+  - Compute profiles: compute-intensive, memory-optimized
 
-Pattern: never replicate passwords; always SAML/OIDC tokens
+Migration types:
+  - Bulk migration: vSphere replication 8 VMs at a time
+  - Cold migration: power-off, move via HCX bulk
+  - Replication-assisted: near-zero downtime, vMotion over WAN
 ```
 
 ```yaml
-# AWS IAM Identity Center → assumes role in AWS account
-# Permission set example
-arn:aws:iam::aws:policy/job-function/DataScientist + custom inline:
-  Statement:
-    - Effect: Allow
-      Action: s3:GetObject
-      Resource: arn:aws:s3:::analytics/*
+# Google Anthos (GKE on-prem + cloud)
+- GKE on VMware for on-premises Kubernetes
+- Cloud Run for Anthos
+- Config Management (sync from Cloud Source Repositories or GitLab)
+- Service Mesh (Anthos Service Mesh, Istio-based)
+- Multi-cluster ingress for global load balancing
 ```
 
-### Step 4: Data Gravity Decisions
-```
-Data gravity:  large datasets are expensive to move; compute should go to data, not vice versa
+```yaml
+# Azure Arc / AWS Outposts
+Azure Arc:
+  - Servers: Any Linux/Windows VM on-prem
+  - Kubernetes: AKS hybrid, K3s, Rancher
+  - Data: SQL Managed Instance, PostgreSQL Hyperscale
+  - Policies: Azure Policy + Guest Configuration
 
-Decision tree:
-  Dataset > 10 TB?            keep where born; query in place
-  Dataset < 100 GB?           move freely
-  Egress > $X/month?          move dataset closer to consumers
-  Regulated data?             keep in compliant zone, query via federation
-```
-
-Examples:
-```
-On-prem ERP DB (1 TB, regulated) + cloud analytics
-  → keep ERP on-prem, use CDC (Debezium) to ship change events to cloud data lake
-On-prem Hadoop cluster + cloud GPU for ML
-  → store features in cloud (versioned), train on cloud GPU, return models on-prem
-SaaS API + on-prem data
-  → put API on cloud (CDN, scale), use Direct Connect for DB calls back, cache aggressively
+AWS Outposts:
+  - Native AWS services on-prem (EC2, EBS, RDS, ECS, EKS)
+  - Up to 96 racks, 1U or 2U configuration
+  - 1-10 Gbps per Outpost rack
+  - Local gateway for low-latency on-prem traffic
 ```
 
-### Step 5: DNS Strategy
-```
-Split-horizon DNS
-  Internal name (api.internal) → resolves to private IPs (VPC + on-prem)
-  External name (api.example.com) → resolves to public IP (CDN / LB)
-
-Authoritative DNS:
-  Route 53 (AWS), Cloud DNS (GCP), Azure DNS, NS1, Cloudflare DNS, BIND on-prem
-  
-Multi-environment resolution:
-  Route 53 Private Hosted Zone + on-prem resolver forwarder (53 over VPN)
-  Or run BIND on-prem with zone delegations / conditional forwarders
-```
-
-```bash
-# Linux resolver forwarder for on-prem to query AWS Route 53 PHZ
-# /etc/resolv.conf (systemd-resolved)
-nameserver 169.254.169.254       # if EC2-style
-# or via unbound on prem
-forward-zone:
-  name: "internal.example.com"
-  forward-addr: 10.10.0.2        # Route 53 Inbound Resolver Endpoint
+### Step 4: Data Synchronization Strategy
+```yaml
+Data gravity decision matrix:
+  Data source          | Sync method                     | RPO     | RTO
+  ---------------------|---------------------------------|---------|-------
+  User profiles        | Azure AD Connect / Okta AD Sync | <5 min  | <1 min
+  Databases (OLTP)     | Always On AG / DMS CDC           | <1 sec  | <30 sec
+  Blob/object storage   | Rclone / Storage Sync / DataSync  | <15 min | <1 min
+  Files (NAS/EFS/FSx)  | NetApp SnapMirror / DFS-R        | <1 min  | <5 min
+  Message queues       | Cross-region replication         | <1 sec  | <1 sec
+  Analytics            | Periodic extract + incremental   | 1 hour  | 1 hour
 ```
 
-### Step 6: Egress Cost Modeling
-```
-Within-region cloud: free
-Cross-region cloud: $0.02-0.10/GB
-Cloud to Internet: $0.05-0.12/GB (CDN cheaper)
-Cloud to on-prem via Direct Connect: $0.02/GB (much cheaper than Internet egress)
-Cloud to cloud: usually treated as Internet egress (expensive)
+### Step 5: Disaster Recovery Strategy
+```yaml
+# Hybrid DR patterns
 
-Estimate: 100 TB/month cross-cloud at $0.08 = $8,000/month
-Mitigation:
-  - Keep big data within one cloud
-  - Use cloud exchange (Megaport/Equinix) for cross-cloud at lower rates
-  - CDN in front of cross-cloud traffic to cache
-  - Compress / deduplicate before transfer
-  - Schedule bulk transfers during pricing windows if applicable
-```
+Pilot light:
+  - Replicate data to cloud, provision compute only during DR
+  - Lowest cost, longest RTO (hours)
+  - Service Catalog / CloudFormation templates for rapid provisioning
 
-### Step 7: Hybrid Kubernetes
-```
-Option A — separate clusters per environment, federated control
-  Karmada, Kubefed (deprecated), Argo CD multi-cluster
-  Each cluster autonomous; control plane orchestrates
+Warm standby:
+  - Base compute running at minimum scale in cloud
+  - Scale up during DR event
+  - Database replica in cloud, failover via DNS/Route53
+  - RTO < 30 min
 
-Option B — single cluster spans environments
-  Anthos (GKE on-prem + GCP)
-  EKS Anywhere (on-prem EKS, optionally connected back)
-  AKS on Azure Arc / AKS HCI
-  OpenShift across clouds and DCs
-  Higher latency = more risk; usually one cluster per environment
-
-Option C — control plane in cloud, workers anywhere
-  GKE Autopilot / Anthos
-  EKS with self-managed Linux on-prem (limited)
+Multi-site active-active:
+  - Workloads running in both environments
+  - DNS weighted routing or global load balancer
+  - Database multi-region writes (conflict resolution needed)
+  - RPO near-zero, RTO < 1 min
 ```
 
-### Step 8: Failure Modes + Mitigation
+```hcl
+# AWS DMS for hybrid DB replication
+resource "aws_dms_replication_task" "hybrid" {
+  replication_instance_arn = aws_dms_replication_instance.main.replication_instance_arn
+  migration_type            = "full-load-and-cdc"
+  table_mappings            = jsonencode({
+    rules: [{
+      rule-type: "selection",
+      rule-id: "1",
+      rule-name: "1",
+      object-locator: {
+        schema-name: "public",
+        table-name: "%"
+      },
+      rule-action: "include"
+    }]
+  })
+  replication_task_settings = jsonencode({
+    TargetMetadata: {
+      ParallelLoadThreads: 4,
+      ParallelApplyThreads: 4
+    },
+    FullLoadSettings: {
+      TargetTablePrepMode: "DROP_AND_CREATE",
+      CreatePkAfterFullLoad: true
+    }
+  })
+}
 ```
-Direct Connect down:          fail to VPN backup; BGP withdraws DX, prefers VPN
-Cloud region outage:          failover to second cloud or on-prem DR
-On-prem outage:               cloud continues for cloud-resident services; on-prem-dependent degraded
-Identity provider down:       AD can stand alone; SaaS apps with cached tokens degrade
-Cross-cloud egress spike:     billing surprise; set budget alarms
+
+### Step 6: Monitoring Across Environments
+```yaml
+Observability stack for hybrid cloud:
+  Metrics:  Prometheus + Thanos / Azure Monitor + Grafana
+  Logs:     Loki / Splunk / Azure Log Analytics
+  Tracing:  OpenTelemetry Collector (gateway mode)
+  Alerts:   PagerDuty / Opsgenie with on-call rotations
+
+Key metrics to monitor:
+  - Cross-environment latency (ping, traceroute, mtr)
+  - Tunnel/connection state (VPN, DX, ER)
+  - Sync lag for replicated data
+  - Compute utilization on both sides
+  - Egress data transfer costs
+  - Queue depth for async workloads
+```
+
+### Step 7: Cloud Repatriation
+```yaml
+Trigger for repatriation:
+  - Data egress costs exceed on-prem TCO
+  - Latency-sensitive workloads need deterministic performance
+  - Data gravity pulling compute back to on-prem
+  - Compliance/censorship requirements
+  - Reserved instance expiration → re-evaluation point
+
+Process:
+  1. TCO analysis (compute + storage + egress + networking vs. colo/capex)
+  2. Data transfer plan (DMS reverse, Snowball/Data Box offline)
+  3. Cutover plan with rollback
+  4. Decommission cloud resources post-migration
+
+Key repatriation services:
+  - AWS Outposts / Azure Stack / GDC (for managed hybrid)
+  - VMware Cloud Foundation (self-managed SDDC)
+  - Anthos / AKS hybrid / EKS Anywhere (K8s portability)
 ```
 
 ## Rules
-- Always have dedicated link + VPN backup (never single-pathed).
-- Identity has ONE source of truth; federation to all consumers.
-- Data placement decisions documented (gravity / latency / cost / regulation).
-- Cloud egress cost monitored with monthly alerts at 50% / 80% / 100% of budget.
-- BGP peers password-protected and prefix-filtered both directions.
-- Cross-environment DNS resolution tested as part of DR drill.
-- Compliance: data residency verified for every regulated dataset.
-- Hybrid K8s: single cluster only when latency permits; otherwise federate.
+- Always provision a backup connectivity path (VPN as backup to Direct Connect).
+- Never route production traffic over the internet without IPsec encryption.
+- Use BGP for dynamic routing in all hybrid connections when available.
+- Federate identity before migrating workloads to maintain consistent access.
+- Monitor and limit egress traffic — it is the largest hidden hybrid cost.
+- Document data gravity for every workload before deciding placement.
+- Treat cloud as a separate failure domain — never make on-prem dependent on cloud.
+- Test DR failover quarterly with actual workload cutover.
+
+## Production Considerations
+- Latency over Direct Connect varies by provider location — test with `mtr` before committing.
+- BGP timers should be aggressive (3s keepalive, 9s hold) for fast failover on DX/ER.
+- Set MTU 9000 internally for jumbo frames across Direct Connect.
+- Route propagation via Transit Gateway: 100 routes per TGW attachment limit.
+- Monitor ExpressRoute BFD status — silent failure on ER circuit is common.
+- Use SNAT for overlapping IP ranges ($10.0.0.0/8 on both sides).
+- Azure AD Connect: domain and OU filtering, don't sync service accounts.
+- Database CDC replication needs enough bandwidth — measure daily change volume.
+- Place log aggregation across environments in a single SIEM for unified search.
+- Tag resources consistently across cloud and on-prem (tag-on-prem-tools like rmm).
+
+## Anti-Patterns
+- Cloud-first without data gravity analysis — huge egress costs.
+- No backup connectivity path — single point of failure.
+- L2 extension everywhere — broadcast storms across environments.
+- Identity split — different passwords, mismatched groups.
+- All workloads in cloud during repatriation — move incrementally.
+- Manual config for BGP — route leaks, misconfiguration.
+- Cloud as pure DR without testing — failover never actually works.
+- Synchronous writes across hybrid connection — latency kills app perf.
+- Ignoring cloud provider egress costs during cost allocation.
 
 ## References
-  - references/data-gravity.md — Data Gravity — Placement Decisions
-  - references/direct-connect.md — Direct Connect / ExpressRoute / Cloud Interconnect
   - references/hybrid-cloud-advanced.md — Hybrid Cloud Advanced Topics
   - references/hybrid-cloud-fundamentals.md — Hybrid Cloud Fundamentals
-  - references/identity-federation.md — Identity Federation — AD, AAD, Okta, SAML, OIDC
-  - references/multi-cloud-dns.md — Multi-Cloud DNS — Authoritative, Split-Horizon, Routing Policies
+  - references/vpn-direct-connect.md — VPN vs Direct Connect — Decision Guide
+  - references/identity-federation.md — Identity Federation Patterns
+  - references/hybrid-storage.md — Hybrid Storage Patterns
+  - references/disaster-recovery-hybrid.md — Hybrid DR Strategies
+  - references/repatriation.md — Cloud Repatriation Guide
 ## Handoff
-- `devops-aws / gcp / azure` for cloud-side specifics.
-- `devops-network-infrastructure` for on-prem BGP, fabric, MPLS.
-- `devops-datacenter` for colo cross-connect provisioning.
-- `enterprise-business-continuity` for hybrid failure scenarios.
-- `enterprise-cost-governance` for cross-cloud budget tracking.
+- `devops-aws` for native AWS services integration.
+- `devops-azure` for Azure Arc and ExpressRoute depth.
+- `devops-gcp` for Anthos and GCP interconnect.
+- `devops-datacenter` for on-prem DC alongside hybrid.
+- `enterprise-high-availability` for HA/DR across environments.
+- `devops-network-infrastructure` for BGP and connectivity deep-dive.

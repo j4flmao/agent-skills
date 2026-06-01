@@ -1,214 +1,90 @@
 # Flutter Advanced Topics
 
-## Introduction
-Advanced Flutter topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+## Overview
+Advanced Flutter topics cover rendering pipeline optimization, custom painting, platform-specific integration, advanced state management patterns, production monitoring, and build optimization.
 
-## Advanced Architecture Patterns
+## Rendering Pipeline
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+### Widget, Element, Render Tree
+Three trees in Flutter: Widget (configuration, immutable), Element (instance, mutable), RenderObject (layout/paint). Understanding rebuild vs repaint: `build` creates new widget tree, `paint` renders to canvas. `RepaintBoundary` isolates repaint regions.
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+### CustomPainter
+Subclass `CustomPainter` for custom drawing with Canvas API. `shouldRepaint` controls repaint triggers. Use `Path`, `Paint`, `Canvas` methods for shapes. `ClipPath` for clipping. Performance: minimize draw calls, avoid allocating in paint.
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+### Layout Protocol
+`RenderBox` handles layout constraints. `performLayout` sets child sizes using `BoxConstraints`. `computeDryLayout` for intrinsic sizing. Custom `SingleChildLayoutDelegate` for position-based layout. `Flow` widget for efficient reparenting.
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+### Impeller Engine
+Impeller is Flutter's next-gen rendering engine (replaces Skia on iOS). Pre-compiled shaders eliminate jank. Enabled by default on iOS, opt-in on Android. Reduces first-frame latency and eliminates shader compilation jank.
 
-## Performance Optimization
+## Advanced State Management
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+### Riverpod Advanced
+`family` modifier for parameterized providers. `autodispose` for cleanup when no listeners. `overrideWith` for testing. `Notifier` (Riverpod 2+) replaces StateNotifier with simpler API. `StreamNotifier` for stream-based state.
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+### BLoC Advanced
+`BlocObserver` for global logging/analytics. `BlocSelector` for targeted rebuilds. `HydratedBloc` for automatic state persistence. `Bloc-to-Bloc` communication via `StreamSubscription`. `Emitter` is async — emit multiple states from one event.
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+### Custom State Management
+`ValueNotifier` + `ValueListenableBuilder` for simple cases. `InheritedWidget`/`InheritedNotifier` for tree-scoped state. `ChangeNotifier` + `ListenableBuilder` for lightweight observable. `Provider` as DI layer under custom implementations.
 
-## Security Hardening
+## Platform Integration
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+### Method Channel Performance
+Batch platform channel calls to reduce overhead. Use `BasicMessageChannel` for string-based communication. `EventChannel` for continuous streams (sensors). Consider `FFI` (dart:ffi) for compute-heavy native code. Profile channel latency with `debugProfilePlatformChannels`.
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+### Pigeon for Type-Safe Channels
+Define message format in `.pigeon` file. Run pigeon to generate Dart + native code. Type-safe, no string-based method names. Supports async (Future) and synchronous calls. Reduces runtime errors from channel mistyping.
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+### Platform Views
+Embed native views in Flutter via `AndroidView` / `UiKitView`. Performance cost: platform views bypass Flutter rendering. Use `HybridComposition` (Android) for keyboard handling. Limit number of platform views per frame.
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+## Build Optimization
 
-## Monitoring and Observability
+### Tree Shaking and Dead Code
+Flutter's tree shaker removes unused widgets and Dart code. Use `--analyze-size` to analyze bundle composition. `--no-tree-shake-icons` if using fewer icons. `--split-debug-info` removes debug symbols from release. Use `dart compile` for aggressive optimization.
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+### Deferred Loading
+`DeferredLibrary` for splitting code into lazy-loaded chunks. Download on demand, never at install. Useful for large features (onboarding, admin panels). Handle load failures gracefully with fallback. Available on Android and web.
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+### App Size Reduction
+Remove unused assets with `flutter clean` and asset audit. Use WebP for images (30% smaller than PNG). Use vector (SVG) over raster when possible. `--android-build-aab` for Play Store app bundles. `--no-codesign` for Android.
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+## Production Monitoring
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+### Crash Reporting
+Firebase Crashlytics for automatic crash reporting. `FlutterError.onError` for global error handling. `PlatformDispatcher.onError` for platform-level errors. Send breadcrumbs (user actions leading to crash). Deobfuscate stack traces with debug info symbols.
 
-## Scalability and Reliability
+### Performance Monitoring
+Firebase Performance for traces and HTTP metrics. Sentry Performance for distributed tracing. Custom `Timeline` events for fine-grained profiling. `DevTools` for local profiling. `flutter build apk --profile` for profile builds.
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+### Logging and Analytics
+`logging` package for structured logs. `Firebase Analytics` for event tracking. `Mixpanel` or `Amplitude` for product analytics. Log level management: verbose in debug, error in production. Never log PII or tokens.
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+## Animations
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+### Implicit vs Explicit
+`AnimatedContainer`, `AnimatedOpacity`, `TweenAnimationBuilder` for implicit. `AnimationController` + `Tween` for explicit control. `Hero` for shared element transitions. `StaggeredAnimation` for sequenced multi-widget animations. Use 60fps (or 120fps for ProMotion).
 
-## Integration and Interoperability
+### Custom Animations
+`AnimatedBuilder` for non-animated child reuse. `TweenSequence` for chained animations. `CurvedAnimation` with easing curves. `AnimationController` with `vsync: this` for ticker management. `SpringSimulation` for physics-based motion.
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+## Advanced Testing
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+### Golden Tests
+`golden_toolkit` for multi-device golden tests. `deviceFrameBuilder` for device frames. `surfaceSize` configuration per test. Diff threshold for pixel tolerance. CI integration with golden file comparison. Review golden changes manually.
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+### Integration Testing
+`IntegrationTestWidgetsFlutterBinding` for real device testing. `Screenshot` for visual diff in CI. `testAll` for multiple device orientations. `replay` for gesture sequences. Test on both iOS and Android simulators/emulators.
 
 ## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- Impeller engine eliminates shader compilation jank
+- RepaintBoundary isolates repaint regions for performance
+- Pigeon for type-safe platform channels
+- Deferred loading for lazy code chunks
+- --analyze-size for bundle composition analysis
+- CustomPainter for GPU-accelerated custom drawing
+- Riverpod Notifier (2+) for simpler state management
+- Sentry/Crashlytics for production error monitoring
+- Golden tests for visual regression
+- WebP images for 30% bundle size reduction

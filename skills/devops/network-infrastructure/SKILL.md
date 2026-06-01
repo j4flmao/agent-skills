@@ -107,7 +107,7 @@ Oversubscription: total leaf-to-server bw : total leaf-to-spine bw.
 ### Step 2: Underlay Routing
 ```
 BGP unnumbered (FRR / Cumulus / SONiC)   modern, no need to manage per-link IPs
-OSPF                                     classic, simple, smaller scale
+OSPF                                     classic, simpler scale
 ISIS                                     ISP-grade, used by hyperscalers
 ```
 
@@ -119,17 +119,12 @@ BGP-only DCs (Hyperscale pattern):
 ### Step 3: Overlay (if multi-tenant L2 needed)
 ```
 EVPN/VXLAN
-  L2 stretch over L3 underlay
-  Tenant separation via VNI (VXLAN Network Identifier)
-  Type-2 MAC routes via BGP
-  Type-5 IP prefix routes for inter-VNI
-
-NVGRE   Microsoft alternative (less common)
-GENEVE  newer flexible header (used by NSX)
-```
+  L2 stretch over L3 underlay. Tenant separation via VNI.
+  Type-2 MAC routes via BGP. Type-5 IP prefix routes for inter-VNI.
 
 Use only if you NEED L2 stretch (legacy apps, vMotion, multi-AZ cluster requiring same subnet).
 Modern apps prefer L3-everywhere.
+```
 
 ### Step 4: North-South — Multi-Homing + BGP
 Get your own ASN + PI space for control. Multi-home to ≥ 2 transit + 1+ IX.
@@ -146,7 +141,6 @@ Inbound: AS-prepend for less-preferred ingress; MED only with same neighbor.
 ```
 
 ```bash
-# FRR example
 router bgp 65001
  bgp router-id 198.51.100.1
  neighbor 192.0.2.1 remote-as 174       ! Cogent
@@ -156,30 +150,23 @@ router bgp 65001
   neighbor 192.0.2.1 prefix-list out-default out
   neighbor 192.0.2.1 route-map prefer-peer in
   neighbor 192.0.2.5 prefix-list out-default out
- exit
 ```
 
 ### Step 5: Anycast
 Same IP announced from multiple POPs. BGP withdraws on failure → traffic shifts in seconds.
-
-Use cases:
-- DNS (root + recursive)
-- Anycast HTTPS (CDN-style)
-- Multi-region API gateway
-
+Use cases: DNS (root + recursive), Anycast HTTPS (CDN-style), Multi-region API gateway.
 Requirement: stateless or session-portable workload (anycast may hop mid-conn under churn).
 
 ### Step 6: L2 Redundancy (within a rack/row)
 ```
-MLAG / VPC (vendor names)   two switches act as one LACP partner
-                            servers LACP-bond two NICs to two switches
-                            survives one switch loss seamlessly
-VRRP / HSRP                 virtual IP shared by switch pair as default gateway
-                            sub-second failover
+MLAG / VPC   two switches act as one LACP partner
+             servers LACP-bond two NICs to two switches
+             survives one switch loss seamlessly
+VRRP / HSRP  virtual IP shared by switch pair as default gateway
+             sub-second failover
 ```
 
 ```
-VRRP example (Cisco-like syntax):
 interface Vlan100
  ip address 10.10.0.2 255.255.255.0
  vrrp 1 ip 10.10.0.1
@@ -207,23 +194,54 @@ Provider: avoid two carriers riding same physical fiber underneath
 Test: actual run from carrier maps; insist on diverse routes in SLA
 ```
 
-### Step 9: RPKI / Security
-- Publish ROAs for your prefixes (announces only with your AS)
-- Validate inbound BGP with RPKI (drop invalid origins)
-- Filter inbound by max-prefix limit + RFC 6996 bogon list
-- BGPsec (if all peers support; still rare)
-- Anti-DDoS at edge: rate-limit, blackhole community, RTBH
+### Step 9: QoS and Traffic Shaping
+```
+Classify at edge:
+  EF (46): VoIP, real-time       — strict priority, 5% BW
+  AF41 (34): video, interactive   — guaranteed BW, 20%
+  AF31 (26): critical data, DB    — guaranteed BW, 30%
+  AF21 (18): standard web         — scavenger, 30%
+  BE (0): best-effort             — remaining, 15%
+  
+Apply on all uplinks: shape, queue, police inbound to protect fabric.
+```
 
-### Step 10: Monitoring
+### Step 10: Network Automation
+```yaml
+# Ansible playbook example for BGP config
+- name: Configure BGP on leaf switches
+  hosts: leaf_switches
+  tasks:
+  - name: Set BGP ASN
+    cisco.ios.ios_bgp:
+      config:
+        bgp_as: "{{ leaf_asn }}"
+        log_neighbor_changes: true
+        neighbors:
+        - neighbor: "{{ item }}"
+          remote_as: "{{ spine_asn }}"
+          description: "uplink-to-spine-{{ inventory_hostname }}"
+      state: merged
+    loop: "{{ spine_ips }}"
+```
+
+### Step 11: DOCSIS / Fiber OLT Access (Last Mile)
+For ISPs or edge POPs, apply cable access standards. DOCSIS 3.1 supports 10G down/1G up.
+GPON/XGS-PON for fiber to the home. Use BNG (Broadband Network Gateway) for subscriber management.
+
+### Step 12: Monitoring Tools and KPIs
 ```
 BGP neighbor state          up/down + uptime + prefixes received
 Interface counters          errors, drops, throughput per port
 ECMP hash distribution      uneven = polarization, retune hash
-Latency to upstream peers    ping / mtr from edge to {transit, peer}
-DDoS / volume anomaly        netflow / sFlow / IPFIX export
+Latency to upstream peers   ping / mtr from edge to {transit, peer}
+DDoS / volume anomaly       netflow / sFlow / IPFIX export
+Switch CPU/memory           control-plane load
+Fabric utilization          per-spine / per-leaf link utilization
 ```
 
-Tools: librenms, observium, Prometheus + snmp_exporter, flow collector (akvorado, pmacct).
+Tools: librenms, observium, Prometheus + snmp_exporter, flow collector (akvorado, pmacct),
+oxidized for config backup, batfish for config validation.
 
 ## Rules
 - Multi-home BGP from day one for any north-south critical traffic.
@@ -236,6 +254,28 @@ Tools: librenms, observium, Prometheus + snmp_exporter, flow collector (akvorado
 - IPv6 dual-stack everywhere; IPv6-only acceptable for greenfield.
 - All changes via NetOps automation (Ansible, Nornir), never manual on prod.
 - Quarterly fail-test: pull one uplink / one switch and verify auto-recovery.
+- Deploy QoS classification at edge; trust boundaries on all uplinks.
+- NetFlow/sFlow export from every ToR for capacity planning + DDoS detection.
+
+## Production Considerations
+- Run BGP timers aggressively: 3s keepalive, 9s hold for ToR-to-spine.
+- Use BFD for sub-second failure detection alongside BGP.
+- Separate underlay (loopbacks) from overlay (VNI) addressing plan.
+- Deploy route reflectors at spine layer to avoid full iBGP mesh.
+- Prefix-list filter on all edges: max-prefix limits, RPKI invalid = reject.
+- Design for 50% headroom on spine uplinks during any single link failure.
+- Color-code and label both ends of every fiber patch for ops clarity.
+- Use digital optical monitoring (DOM) on all optics to predict failures.
+
+## Anti-Patterns
+- Single-carrier uplink — full outage during carrier maintenance.
+- Mixing MTU within a path — silent packet drops, inconsistent behavior.
+- No BGP filtering — accepts full BGP table from non-transit peers.
+- L2 loop with STP — spanning tree disables redundant links.
+- Oversubscription > 5:1 on storage fabric — throughput bottleneck.
+- Manual config only — config drift, no audit trail.
+- Flat network (no L3 segmentation) — broadcast storms, large blast radius.
+- Single fiber entry into building — backhoe fade takes out entire site.
 
 ## References
   - references/bgp-anycast.md — BGP + Anycast — Policy, RPKI, Multi-Homing
@@ -249,4 +289,3 @@ Tools: librenms, observium, Prometheus + snmp_exporter, flow collector (akvorado
 - `devops-cdn-edge` for global anycast and DDoS scrubbing.
 - `devops-cloud-architecture` for cloud VPC and Transit Gateway alongside on-prem.
 - `enterprise-high-availability` for app-level LB and failover.
-- `security-*` for DDoS, WAF, network segmentation policy.

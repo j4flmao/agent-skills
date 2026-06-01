@@ -21,6 +21,46 @@ tags: [backend, email, phase-10]
 ## Purpose
 Build reliable, deliverable, and compliant transactional email systems using proven provider integrations, responsive MJML templates, and deliverability best practices.
 
+## Architecture Decision Trees
+
+### Provider Selection
+
+| Criterion | Amazon SES | SendGrid | Resend | Postmark | SMTP (self) |
+|-----------|-----------|----------|--------|----------|-------------|
+| Volume pricing | $0.10/1K (62K free) | $19.95/50K | Free tier: 3K/mo | $10/10K | Infrastructure cost |
+| Deliverability | Good (reputation shared) | Good | Excellent (dedicated IP) | Excellent | Depends on setup |
+| Template engine | Custom HTML | Dynamic templates | React Email / MJML | Custom HTML | Any |
+| Webhooks | SNS + SQS | Event Webhook | Webhooks (built-in) | Webhooks | Custom |
+| Open/click tracking | SES Config Set | Built-in | Built-in | Built-in | Custom |
+| Dedicated IP | Yes (paid) | Yes (paid) | Yes | Yes | Yes |
+| API style | AWS SDK / SMTP | REST / SMTP | REST (simple) | REST / SMTP | SMTP |
+| Best for | High volume, AWS shops | Mid-volume marketing | Modern DX, dev teams | Transactional only | Full control |
+
+Decision: Resend for modern apps with great DX. SES for cost-sensitive high volume. Postmark for transactional-only where deliverability is critical.
+
+### Template Rendering Strategy
+
+| Strategy | Pros | Cons | Best For |
+|----------|------|------|----------|
+| MJML → HTML (build-time) | Fast, no runtime dep | Rebuild to change templates | Static templates |
+| MJML → HTML (runtime) | Dynamic per-user | CPU cost per send | Personalized templates |
+| React Email (JSX) | Component reuse, type-safe | Node.js only, build step | React codebases |
+| Handlebars + HTML | Universal, simple | No responsive guarantees | Mixed stacks |
+| Provider templates (SendGrid, SES) | No rendering code | Vendor lock-in, less flexible | Simple notifications |
+
+Decision: MJML compiled at build-time with runtime variable injection via Handlebars. React Email for all-React codebases.
+
+### Delivery Architecture Patterns
+
+| Pattern | Description | Latency | Reliability | Complexity |
+|---------|-------------|---------|-------------|------------|
+| Direct send (API) | Send immediately in request handler | Lowest | Low (no retry) | Simplest |
+| Queue + worker | Push to queue, worker sends | Medium | High (retry + DLQ) | Moderate |
+| Dedicated email service | Separate microservice | Higher | Highest (isolated) | Complex |
+| Third-party API | Provider API only | Low | Provider-dependent | Simplest |
+
+Decision: Queue + worker for production. Direct send for low-volume admin emails only.
+
 ## Agent Protocol
 
 ### Trigger
@@ -196,30 +236,284 @@ services:
       - "8025:8025" # Web UI
 ```
 
+## Implementation Patterns
+
+### Pattern: Queue-Based Email Worker with Retry
+
+```typescript
+// email-queue.ts
+import { Queue, Worker } from 'bullmq';
+import Redis from 'ioredis';
+
+const connection = new Redis(process.env.REDIS_URL!);
+const emailQueue = new Queue('transactional-email', { connection });
+
+interface EmailJob {
+  to: string;
+  subject: string;
+  body: { html: string; text: string };
+  templateId?: string;
+  variables?: Record<string, unknown>;
+  metadata?: { userId: string; type: string };
+  idempotencyKey: string;
+}
+
+async function enqueueEmail(job: EmailJob, delay = 0) {
+  const existing = await emailQueue.getJob(job.idempotencyKey);
+  if (existing) return existing;
+  return emailQueue.add(job.idempotencyKey, job, {
+    jobId: job.idempotencyKey,
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 2000 },
+    removeOnComplete: 1000,
+    removeOnFail: 100,
+    delay,
+  });
+}
+
+const worker = new Worker<EmailJob>('transactional-email', async (job) => {
+  const provider = getActiveProvider();
+  try {
+    const result = await provider.send({
+      from: process.env.FROM_EMAIL!,
+      to: job.data.to,
+      subject: job.data.subject,
+      html: job.data.body.html,
+      text: job.data.body.text,
+      headers: {
+        'X-Entity-Ref-ID': job.data.idempotencyKey,
+        'List-Unsubscribe': `<${process.env.UNSUBSCRIBE_URL}?uid=${job.data.metadata?.userId}>`,
+      },
+    });
+    await trackEvent(job.data.metadata?.type || 'unknown', 'sent', { jobId: job.id, messageId: result.id });
+    return result;
+  } catch (error) {
+    await trackEvent(job.data.metadata?.type || 'unknown', 'failed', { jobId: job.id, error: error.message });
+    throw error; // triggers BullMQ retry
+  }
+}, { connection, concurrency: 10, limiter: { max: 50, duration: 1000 } });
+```
+
+### Pattern: Provider Abstraction (Strategy Pattern)
+
+```typescript
+// providers/provider-interface.ts
+interface EmailProvider {
+  name: string;
+  send(params: SendParams): Promise<SendResult>;
+  verifyAddress(email: string): Promise<boolean>;
+  getSuppressionList(): Promise<string[]>;
+  addToSuppressionList(email: string): Promise<void>;
+  removeFromSuppressionList(email: string): Promise<void>;
+}
+
+// providers/resend.provider.ts
+import { Resend } from 'resend';
+export class ResendProvider implements EmailProvider {
+  name = 'resend';
+  private client = new Resend(process.env.RESEND_API_KEY);
+
+  async send(params: SendParams): Promise<SendResult> {
+    const { data, error } = await this.client.emails.send({
+      from: params.from, to: params.to, subject: params.subject,
+      html: params.html, text: params.text,
+      headers: params.headers,
+    });
+    if (error) throw new Error(error.message);
+    return { id: data!.id, provider: this.name };
+  }
+
+  async verifyAddress(email: string) {
+    const { data } = await this.client.contacts.create({ email, audienceId: 'audit' });
+    return !!data;
+  }
+
+  async getSuppressionList() { return []; }
+  async addToSuppressionList(email: string) { /* Resend manages automatically */ }
+  async removeFromSuppressionList(email: string) { /* Resend manages automatically */ }
+}
+
+// providers/ses.provider.ts
+import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+export class SesProvider implements EmailProvider {
+  name = 'ses';
+  private client = new SESClient({ region: process.env.AWS_REGION });
+
+  async send(params: SendParams): Promise<SendResult> {
+    const cmd = new SendEmailCommand({
+      Source: params.from,
+      Destination: { ToAddresses: [params.to] },
+      Message: {
+        Subject: { Data: params.subject, Charset: 'UTF-8' },
+        Body: {
+          Html: { Data: params.html, Charset: 'UTF-8' },
+          Text: { Data: params.text, Charset: 'UTF-8' },
+        },
+      },
+      ConfigurationSetName: process.env.SES_CONFIG_SET,
+    });
+    const result = await this.client.send(cmd);
+    return { id: result.MessageId!, provider: this.name };
+  }
+
+  async verifyAddress(email: string) {
+    try { await this.client.send(new SendEmailCommand({ Source: 'verify@domain.com', Destination: { ToAddresses: [email] }, Message: { Subject: { Data: 'Verify' }, Body: { Text: { Data: 'verify' } } } })); return true; }
+    catch { return false; }
+  }
+  async getSuppressionList(): Promise<string[]> { return []; }
+  async addToSuppressionList(email: string) { /* Use SES suppression list */ }
+  async removeFromSuppressionList(email: string) { /* Use SES suppression list */ }
+}
+```
+
+### Pattern: MJML Template with Handlebars
+
+```typescript
+// template-engine.ts
+import Handlebars from 'handlebars';
+import mjml from 'mjml';
+import fs from 'fs';
+import path from 'path';
+
+interface CompiledTemplate {
+  render(variables: Record<string, unknown>): { html: string; text: string; subject: string };
+}
+
+class EmailTemplateEngine {
+  private cache = new Map<string, CompiledTemplate>();
+
+  loadTemplate(type: string, locale = 'en'): CompiledTemplate {
+    const key = `${type}:${locale}`;
+    if (this.cache.has(key)) return this.cache.get(key)!;
+
+    const mjmlSource = fs.readFileSync(path.join(__dirname, `templates/${locale}/${type}.mjml`), 'utf-8');
+    const { html, errors } = mjml(mjmlSource, { validationLevel: 'strict' });
+    if (errors.length > 0) throw new Error(`MJML errors: ${errors.map(e => e.message).join(', ')}`);
+
+    const template = Handlebars.compile(html);
+    const textTemplate = Handlebars.compile(stripHtml(html));
+    const subjectTemplate = Handlebars.compile(extractSubject(mjmlSource));
+
+    const compiled: CompiledTemplate = {
+      render: (variables) => ({
+        html: template(variables),
+        text: textTemplate(variables),
+        subject: subjectTemplate(variables),
+      }),
+    };
+    this.cache.set(key, compiled);
+    return compiled;
+  }
+}
+```
+
+## Production Considerations
+
+### Deliverability
+- Warm up dedicated IPs gradually: start at 50/day, increase 20% daily over 4-6 weeks
+- Monitor reputation: bounce rate <2%, complaint rate <0.1%, spam trap hits = 0
+- Implement feedback loop: process ARF reports (Abuse Reporting Format) from ISPs
+- Domain reputation: use subdomain per email type (e.g., tx.example.com, mktg.example.com)
+- Throttle sending: never send >50% of daily volume in first hour
+
+### Infrastructure
+- Run email worker as separate process with dedicated resources
+- DLQ for failed emails after exhausting retries — alert on DLQ growth
+- Rate limit per provider: track usage and failover to secondary provider at 80% quota
+- Template caching: compile MJML → HTML at deploy time, not at send time
+
+### Monitoring
+- Metrics: send rate, delivery rate, bounce rate, complaint rate, open rate, click rate, latency p50/p95/p99
+- Alerts: bounce rate >3%, complaint rate >0.1%, queue depth >10K, any provider returning 5xx
+- Dashboards: Grafana with email funnel (enqueued → sent → delivered → opened → clicked)
+
+## Anti-Patterns
+
+| Anti-Pattern | Why | Fix |
+|-------------|-----|-----|
+| Sending email in request handler | Blocks response; no retry on failure | Queue + worker pattern |
+| Using FROM address without domain auth | Gmail/Outlook will spam or reject | Set up SPF, DKIM, DMARC first |
+| Ignoring suppression list | High complaint rate; account suspension | Check suppression list before every send |
+| HTML-only emails | Spam filters penalize; accessibility broken | Always include plaintext multipart/alternative |
+| Generic sender name ("noreply") | Low open rates; users don't recognize | Use recognizable name like "Acme Support" |
+| No tracking of bounces/complaints | Ignorance of deliverability problems | Process webhooks; store event per email |
+| Sending to unverified domains | High bounce rate damages reputation | Verify domain ownership; warm up gradually |
+| Same template for all locales | Poor engagement; legal risk in some regions | Locale-specific templates with i18n |
+
+## Security Considerations
+
+- Store API keys in secrets manager (AWS Secrets Manager, HashiCorp Vault), never in code or env files committed to git
+- Rotate SMTP credentials and API keys every 90 days
+- Validate all email addresses against allow-list for security-critical emails (password reset, 2FA)
+- Implement HMAC-signed unsubscribe links to prevent abuse unsubscribe
+- Rate limit password reset emails: max 3 per hour per user
+- Never include raw user input in email subject or body without escaping
+- Use subdomains for transactional vs. marketing to isolate reputation risk
+- TLS required for all SMTP connections — reject connections that downgrade to plaintext
+
+## Testing Strategies
+
+```typescript
+import { describe, it, expect, beforeAll } from 'vitest';
+import { MailHog } from 'mailhog';
+
+async function testEmailDelivery() {
+  const mailhog = new MailHog({ host: 'localhost', port: 8025 });
+
+  describe('Transactional Email', () => {
+    beforeAll(async () => {
+      await mailhog.deleteAll();
+    });
+
+    it('sends welcome email', async () => {
+      await sendWelcomeEmail({ name: 'Test User', email: 'test@example.com' });
+      const messages = await mailhog.messages();
+      const msg = messages.items.find(m => m.to.includes('test@example.com'));
+      expect(msg).toBeDefined();
+      expect(msg.subject).toBe('Welcome to Our Platform');
+      expect(msg.html).toContain('Test User');
+    });
+
+    it('renders MJML template correctly', async () => {
+      const { html } = renderTemplate('welcome', { name: 'Alice' });
+      expect(html).toContain('Alice');
+      expect(html).toContain('<mjml>'); // compiled, not raw
+    });
+
+    it('validates email format before sending', () => {
+      expect(validateEmail('not-an-email')).toBe(false);
+      expect(validateEmail('user@example.com')).toBe(true);
+    });
+
+    it('enforces rate limits', async () => {
+      const results = await Promise.allSettled(
+        Array.from({ length: 101 }, (_, i) => sendEmail({ email: `user${i}@test.com` }))
+      );
+      const rejected = results.filter(r => r.status === 'rejected');
+      expect(rejected.length).toBeGreaterThan(0);
+    });
+
+    it('processes bounce webhook', async () => {
+      const result = await handleBounceWebhook({
+        email: 'bounce@example.com',
+        reason: '550 mailbox full',
+        timestamp: new Date().toISOString(),
+      });
+      expect(result.suppressed).toBe(true);
+      const suppressed = await isSuppressed('bounce@example.com');
+      expect(suppressed).toBe(true);
+    });
+  });
+}
+```
+
+- Use MailHog in CI for integration testing without real email delivery
+- Test all 10+ email clients with Email on Acid or Litmus before going live
+- Validate SPF/DKIM/DMARC records with `checkdmarc` Python library in CI
+- Load test: send 10K emails through queue, measure throughput and worker utilization
+- A/B test subject lines and sender names for open rate optimization
+
 ## Rules
-
-1. Never hardcode email credentials — always use environment variables or secret management.
-2. Always validate email addresses before sending (RFC 5321 syntax check + MX record check).
-3. Always include List-Unsubscribe header for bulk-sending domains.
-4. Never send marketing content through transactional email streams.
-5. Always implement suppression list checks before sending.
-6. Always use TLS for SMTP connections (port 587 or 465).
-7. Never log full email body content in application logs.
-8. Always provide plaintext fallback alongside HTML.
-9. Always test emails with real-world email clients (Gmail, Outlook, Apple Mail).
-10. Never exceed provider rate limits — implement client-side throttling.
-11. Always monitor bounce rate (< 2%) and complaint rate (< 0.1%).
-12. Never send to unverified domains without proper warmup.
-13. Always implement idempotent email sending to prevent duplicates.
-14. Never store sensitive data (passwords, tokens) in email body.
-15. Always provide unsubscribe mechanism in every email.
-16. Always track email lifecycle (sent, delivered, opened, clicked, bounced, complained).
-17. Never assume HTML rendering — always test across clients.
-18. Always implement gradual sending (IP warmup) for new domains.
-19. Never use generic "from" name — use recognizable sender identity.
-20. Always keep template rendering separate from business logic.
-
-## References
   - references/deliverability.md — Email Deliverability
   - references/delivery-setup.md — Email Delivery Setup
   - references/email-analytics.md — Email Analytics

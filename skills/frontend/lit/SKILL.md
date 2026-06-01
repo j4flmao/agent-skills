@@ -40,7 +40,7 @@ Template: {shadow DOM structure}
 Events: {CustomEvent dispatch}
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output.
 
 ### Completion Criteria
 - [ ] Components extend LitElement or ReactiveElement.
@@ -54,122 +54,104 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ### Max Response Length
 2560 tokens.
 
-## Workflow
+## Component Architecture / Decision Trees
 
-### Step 1: LitElement Component
+### Architecture Options
+
+| Approach | Trade-off | When to Use |
+|----------|-----------|-------------|
+| LitElement | Full API (render, styles, lifecycle) | Most components |
+| ReactiveElement | No template system, minimal | When bundle is critical |
+| @lit-labs/ssr | Server rendering + hydration | SSR-required projects |
+| @lit/react | React wrapper generation | React design systems |
+
+### Base Class Decision
+
+```
+Do you need the full LitElement API (render, styles, lifecycle)?
+  Yes -> LitElement (default)
+  No -> Is bundle size critical?
+    Yes -> ReactiveElement (no template system, manual DOM management)
+    No -> LitElement for maintainability
+
+Do you need SSR?
+  Yes -> LitElement + @lit-labs/ssr
+  No -> LitElement (default)
+```
+
+### Reactive Property Configuration
+
+```
+Is the property part of the public API?
+  Yes -> @property() — exposes as HTML attribute, triggers update
+  No -> @state() — internal only, triggers update but no attribute
+
+How should the attribute be named?
+  CamelCase property -> 'my-prop' attribute (auto kebab-case)
+  Need custom name -> attribute: 'custom-name'
+  No attribute needed -> attribute: false
+
+Should the attribute reflect changes back to DOM?
+  Yes -> reflect: true (useful for CSS attribute selectors)
+  No -> reflect: false (default, better performance)
+```
+
+### Styling Strategy
+
+```
+How should styles be scoped?
+  Shadow DOM -> static styles in LitElement (default, best encapsulation)
+  Light DOM -> override createRenderRoot() for shared styles
+  Adopted stylesheets -> adoptedStyleSheets for performance (multiple instances)
+  CSS custom properties -> ::part() for component customization API
+```
+
+## Component Design Patterns
+
+### Basic Component with Properties
+
 ```typescript
-import { LitElement, html, css, PropertyValues } from 'lit'
-import { property, customElement, state } from 'lit/decorators.js'
+import { LitElement, html, css } from 'lit'
+import { property, state } from 'lit/decorators.js'
 
-@customElement('user-card')
-export class UserCard extends LitElement {
+export class MyCounter extends LitElement {
   static styles = css`
-    :host { display: block; padding: 16px; border: 1px solid #ccc; border-radius: 8px; }
-    .name { font-size: 1.2em; font-weight: 600; }
-    .role { color: #666; }
+    :host { display: block; padding: 1rem; }
+    button { cursor: pointer; }
   `
 
-  @property({ type: String }) name = ''
-  @property({ type: String }) role = 'member'
-  @property({ type: Boolean, reflect: true }) active = false
+  @property({ type: Number }) initial = 0
+  @state() private count = 0
 
-  @state() private expanded = false
+  connectedCallback() {
+    super.connectedCallback()
+    this.count = this.initial
+  }
 
   render() {
     return html`
-      <div class="name">${this.name}</div>
-      <div class="role">${this.role}</div>
-      <button @click=${() => this.expanded = !this.expanded}>
-        ${this.expanded ? 'Less' : 'More'}
-      </button>
-      ${this.expanded ? html`<div><slot></slot></div>` : ''}
+      <p>Count: ${this.count}</p>
+      <button @click=${() => this.count++}>+</button>
+      <button @click=${() => this.count--}>-</button>
     `
   }
 }
 ```
 
-### Step 2: Reactive Properties Configuration
+### Component with Typed Events
+
 ```typescript
-@property({
-  type: Number,
-  attribute: 'max-items',
-  reflect: true,
-  converter: {
-    fromAttribute: (value) => value ? parseInt(value) : 10,
-    toAttribute: (value) => value?.toString() ?? null,
-  },
-}) maxItems = 10
+import { LitElement, html } from 'lit'
+import { property } from 'lit/decorators.js'
 
-// Internal state
-@state() private _loading = false
-```
-| Option | Purpose |
-|--------|---------|
-| `type` | Serialization/deserialization between property and attribute |
-| `attribute` | Custom attribute name (kebab-case) |
-| `reflect` | Sync property changes back to attribute |
-| `converter` | Custom fromAttribute/toAttribute logic |
-| `hasChanged` | Custom change detection function |
-
-### Step 3: Lifecycle
-```typescript
-@customElement('data-widget')
-export class DataWidget extends LitElement {
-  @property({ type: String }) endpoint = ''
-
-  @state() private data: unknown = null
-  @state() private error: string | null = null
-
-  connectedCallback() {
-    super.connectedCallback()
-    this._loadData()
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback()
-    this._abortController?.abort()
-  }
-
-  protected willUpdate(changed: PropertyValues<this>) {
-    if (changed.has('endpoint')) this._loadData()
-  }
-
-  protected updated(changed: PropertyValues<this>) {
-    if (changed.has('data')) this.dispatchEvent(new CustomEvent('data-loaded', { detail: this.data }))
-  }
-
-  private _abortController?: AbortController
-
-  private async _loadData() {
-    this._abortController?.abort()
-    this._abortController = new AbortController()
-    try {
-      const res = await fetch(this.endpoint, { signal: this._abortController.signal })
-      this.data = await res.json()
-    } catch (e) {
-      if (e instanceof Error && e.name !== 'AbortError') this.error = e.message
-    }
-  }
-
-  render() {
-    return html`<pre>${JSON.stringify(this.data, null, 2)}</pre>`
-  }
-}
-```
-
-### Step 4: Events
-```typescript
-// Dispatch typed events
-@customElement('form-input')
-export class FormInput extends LitElement {
+export class MyDropdown extends LitElement {
+  @property({ type: Array }) options: string[] = []
   @property({ type: String }) value = ''
-  @property({ type: String }) label = ''
 
-  private _handleInput(e: Event) {
-    const target = e.target as HTMLInputElement
-    this.value = target.value
-    this.dispatchEvent(new CustomEvent<string>('input-change', {
-      detail: target.value,
+  private select(option: string) {
+    this.value = option
+    this.dispatchEvent(new CustomEvent('select', {
+      detail: option,
       bubbles: true,
       composed: true,
     }))
@@ -177,73 +159,247 @@ export class FormInput extends LitElement {
 
   render() {
     return html`
-      <label>${this.label}
-        <input .value=${this.value} @input=${this._handleInput} />
-      </label>
-    `
-  }
-}
-```
-Use `bubbles: true` for parent catching. Use `composed: true` to cross shadow DOM boundaries.
-
-### Step 5: Templates & Directives
-```typescript
-import { LitElement, html } from 'lit'
-import { ifDefined } from 'lit/directives/if-defined.js'
-import { repeat } from 'lit/directives/repeat.js'
-import { classMap } from 'lit/directives/class-map.js'
-import { styleMap } from 'lit/directives/style-map.js'
-import { when } from 'lit/directives/when.js'
-import { until } from 'lit/directives/until.js'
-
-@customElement('data-table')
-export class DataTable extends LitElement {
-  @property({ type: Array }) data: Row[] = []
-  @property({ type: String }) sortKey = ''
-
-  render() {
-    const classes = { 'sortable': true, 'sorted': !!this.sortKey }
-
-    return html`
-      <table>
-        ${repeat(this.data, (row) => row.id, (row) => html`
-          <tr class=${classMap(classes)}>
-            <td>${row.name}</td>
-            <td>${row.value}</td>
-          </tr>
+      <div @click=${(e: Event) => {
+        const target = e.target as HTMLElement
+        if (target.dataset.value) this.select(target.dataset.value)
+      }}>
+        ${this.options.map(o => html`
+          <div data-value=${o} class=${o === this.value ? 'active' : ''}>
+            ${o}
+          </div>
         `)}
-      </table>
-      ${when(this.data.length === 0, () => html`<p>No data</p>`)}
+      </div>
     `
   }
 }
 ```
 
-### Step 6: Lit SSR
-```typescript
-// server/render.js
-import { render } from '@lit-labs/ssr/lib/render-with-global-dom-shim.js'
-import { html } from 'lit'
-import './components/my-component.js'
+### Renderless Controller Pattern
 
-const app = express()
-app.get('/', async (req, res) => {
-  const rendered = await render(html`<my-component></my-component>`)
-  res.send(`<!DOCTYPE html><html><body>${rendered}</body></html>`)
+```typescript
+import { ReactiveController, ReactiveControllerHost } from 'lit'
+
+export class ResizeController implements ReactiveController {
+  private entries: ResizeObserverEntry[] = []
+  private observer: ResizeObserver | null = null
+
+  constructor(private host: ReactiveControllerHost) {
+    this.host.addController(this)
+  }
+
+  hostConnected() {
+    this.observer = new ResizeObserver(entries => {
+      this.entries = entries
+      this.host.requestUpdate()
+    })
+    this.observer.observe(this.host as HTMLElement)
+  }
+
+  hostDisconnected() {
+    this.observer?.disconnect()
+  }
+}
+```
+
+## State Management Patterns
+
+### Local State with @state
+
+```typescript
+@state() private visible = false
+@state() private items: Item[] = []
+```
+
+### Derived State via Getter
+
+```typescript
+get total() { return this.items.reduce((s, i) => s + i.price, 0) }
+get count() { return this.items.length }
+```
+
+### Reactive Controller for Shared Logic
+
+Controllers encapsulate stateful behavior (resize observers, intersection observers, form state) and can be reused across components.
+
+## Performance Optimization
+
+### Rendering Performance
+- lit-html: templates parsed once, cloned on each render.
+- Only dynamic parts (expressions) updated, not entire template.
+- No virtual DOM diffing — direct DOM manipulation at expression level.
+- `repeat()` directive uses key-based identity for efficient list updates.
+
+### Bundle Size
+- Lit runtime: ~5KB gzipped (no dependencies).
+- ReactiveElement: ~3KB without template system.
+- No JSX runtime needed — templates are standard tagged templates.
+
+### Optimization Techniques
+- Use `@property({ hasChanged })` to customize change detection.
+- Use `shouldUpdate()` to skip renders when inputs haven't meaningfully changed.
+- Batch property changes — Lit automatically batches updates via microtask.
+- Use `adoptedStyleSheets` for shared styles across many component instances.
+
+## Build & Bundle Considerations
+
+- Lit uses standard ES modules — works with any bundler (Rollup, webpack, Vite).
+- `lit` package includes lit-html and LitElement in one import.
+- For tree-shaking: import only what you use from `lit/directives/*`.
+- Production build: minify + bundle with Rollup or Vite.
+- SSR: `@lit-labs/ssr` for Node.js rendering, `@lit-labs/ssr-client` for hydration.
+- `@lit/react` creates React wrappers for Lit components.
+- Use `@lit/localize` for internationalization.
+
+## Testing Strategies
+
+### Unit Testing with Web Test Runner
+
+```typescript
+import { fixture, assert } from '@open-wc/testing'
+import './my-element.js'
+
+describe('MyElement', () => {
+  it('renders with default properties', async () => {
+    const el = await fixture('<my-element></my-element>')
+    assert.equal(el.shadowRoot?.querySelector('button')?.textContent?.trim(), 'Click me')
+  })
+
+  it('reacts to property changes', async () => {
+    const el = await fixture<MyElement>('<my-element></my-element>')
+    el.count = 5
+    await el.updateComplete
+    assert.include(el.shadowRoot?.textContent ?? '', '5')
+  })
 })
 ```
-For React integration, use `@lit/react` to create React wrappers:
-```typescript
-import { createComponent } from '@lit/react'
-import { MyElement } from './my-element.js'
 
-export const MyReactComponent = createComponent({
-  tagName: 'my-element',
-  elementClass: MyElement,
-  react: React,
-  events: { onMyEvent: 'my-event' },
+### Event Testing
+
+```typescript
+it('dispatches custom event on button click', async () => {
+  const el = await fixture<MyElement>('<my-element></my-element>')
+  const handler = sinon.spy()
+  el.addEventListener('my-event', handler)
+  el.shadowRoot?.querySelector('button')?.click()
+  assert.isTrue(handler.calledOnce)
+  assert.equal(handler.firstCall.args[0].detail, 'clicked')
 })
 ```
+
+### Key Testing Practices
+- Use `@open-wc/testing` for test helpers (fixture, assert, waitFor).
+- Wait for `el.updateComplete` before asserting after property changes.
+- Test property → attribute reflection and attribute → property deserialization.
+- Test shadow DOM queries with `el.shadowRoot.querySelector`.
+
+## Migration Patterns
+
+### From Vanilla Custom Elements to Lit
+
+| Vanilla | Lit |
+|---------|-----|
+| `class MyEl extends HTMLElement` | `class MyEl extends LitElement` |
+| `observedAttributes()` | `@property()` decorator |
+| `attributeChangedCallback()` | `willUpdate()` / `updated()` |
+| `connectedCallback()` + manual render | `render()` auto-called |
+| `this.innerHTML = template` | `return html\`...\`` |
+| Manual style attachment | `static styles = css\`...\`` |
+
+**Migration order**: 1) Change extends to LitElement, 2) Replace observedAttributes with @property, 3) Replace innerHTML with render(), 4) Add static styles, 5) Convert lifecycle methods.
+
+### From React to Lit
+
+| React Concept | Lit Equivalent |
+|---------------|----------------|
+| `useState` | `@state()` property |
+| `useEffect` | `updated()` / `willUpdate()` |
+| `useMemo` | `shouldUpdate()` for control |
+| JSX | html tagged template literal |
+| Props | `@property()` decorator |
+| Event callbacks | CustomEvent dispatch |
+
+## Anti-Patterns
+
+1. **Forgetting to call super on lifecycle**: `super.connectedCallback()`, `super.disconnectedCallback()`, `super.updated()`.
+2. **Imperative DOM manipulation in render()**: render() should be pure — side effects go in updated().
+3. **Large template literals**: Break templates into helper functions or sub-components.
+4. **Missing @state for internal state**: Using @property for internal state exposes it as an HTML attribute.
+5. **Events without composed: true**: Events can't cross shadow DOM boundaries without composed: true.
+6. **Not using lit-html directives**: Directives (repeat, classMap, styleMap) optimize rendering vs manual DOM.
+7. **Memory leaks from missing disconnectedCallback**: Always clean up timers, observers, and event listeners.
+8. **Shadow DOM a11y issues**: ARIA attributes on host may not cross shadow boundary without :host.
+
+## Common Pitfalls
+
+1. Forgetting to call super on lifecycle — always call `super.connectedCallback()`.
+2. Missing @state for internal state — @property exposes it as HTML attribute.
+3. Events without composed: true — can't cross shadow boundaries.
+4. Large template literals — break into smaller functions.
+5. Memory leaks — always clean up in disconnectedCallback.
+
+## Compared With
+
+| Aspect | Lit | Stencil | Vanilla WC |
+|--------|------|---------|------------|
+| Bundle size | ~5KB | ~8KB | 0KB |
+| Rendering | lit-html (template literal) | JSX (compiled) | Manual |
+| Reactivity | @property/@state decorators | @Prop/@State decorators | attributeChangedCallback |
+| SSR | @lit-labs/ssr | @stencil/core (SSR) | Manual |
+| TypeScript | Full support | Required | Optional |
+
+## Template Directives Reference
+
+| Directive | Purpose |
+|-----------|---------|
+| `ifDefined` | Render attr only if defined |
+| `classMap` | Toggle CSS classes |
+| `styleMap` | Inline styles |
+| `repeat` | Keyed list rendering |
+| `when` | Conditional rendering |
+| `until` | Promise placeholder |
+| `live` | Attribute always matches live value |
+| `keyed` | Force DOM reuse |
+| `guard` | Memoize template parts |
+| `cache` | Cache DOM across conditionals |
+
+## Lifecycle Reference
+
+| Method | Purpose |
+|--------|---------|
+| `connectedCallback()` | Element added to DOM |
+| `disconnectedCallback()` | Element removed from DOM |
+| `willUpdate(changed)` | Before render |
+| `update(changed)` | Before render (read prop values) |
+| `render()` | Return lit-html template |
+| `updated(changed)` | After render |
+| `firstUpdated(changed)` | First render only |
+| `shouldUpdate(changed)` | Control whether render fires |
+
+## Tooling
+
+1. Lit VS Code Extension — syntax highlighting
+2. `@lit/reactive-element` — base class without template
+3. `@lit-labs/ssr` — server-side rendering
+4. `@lit/react` — React wrapper generation
+5. `@lit/localize` — i18n
+6. `lit-analyzer` — type checking
+7. `@open-wc/testing` — testing utilities
+8. `@web/test-runner` — test runner
+9. Storybook for Lit — component development
+
+## Ecosystem
+
+### UI Libraries Built with Lit
+- **Shoelace** — Most popular Lit library
+- **Material Web** — Google's MD3 components
+- **Wired Elements** — Hand-drawn style
+- **Vaadin Components** — Enterprise UI
+
+### Integration Patterns
+- React: `@lit/react` creates wrappers
+- Vue: Native custom elements
+- Angular: Custom Elements Schema
+- Svelte: `<svelte:options tag="my-el" />`
 
 ## Rules
 - Extend LitElement for full feature set, ReactiveElement for minimal footprint.
@@ -252,7 +408,6 @@ export const MyReactComponent = createComponent({
 - Events use CustomEvent with typed `detail` — always set `bubbles` and `composed`.
 - Styles are scoped via static `styles` — avoid global leak from shadow DOM.
 - Use lit-html directives (`repeat`, `classMap`, `ifDefined`, `when`) over imperative DOM.
-- Lit SSR is required for server rendering — lit-html templates render to string synchronously.
 
 ## References
   - references/lit-advanced.md — Lit Advanced
@@ -261,6 +416,7 @@ export const MyReactComponent = createComponent({
   - references/lit-essentials.md — Lit Essentials
   - references/lit-fundamentals.md — Lit Fundamentals
   - references/lit-testing.md — Lit Testing Reference
+
 ## Handoff
 No artifact produced.
 Next skill: frontend-universal-web-components for vanilla custom elements and cross-framework compatibility.

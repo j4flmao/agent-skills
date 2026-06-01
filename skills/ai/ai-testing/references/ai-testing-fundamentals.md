@@ -1,213 +1,285 @@
-# Ai Testing Fundamentals
+# AI Testing Fundamentals
 
 ## Overview
-Ai Testing is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
 
-## Core Concepts
+AI/LLM testing differs fundamentally from traditional software testing. Outputs are probabilistic, non-deterministic, and context-dependent. This reference covers the foundational taxonomy, test type design, golden dataset principles, and evaluation methodology specific to LLM systems.
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Ai Testing helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+## LLM Testing Taxonomy
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Ai Testing solutions. These principles help maintain code quality and reduce technical debt.
+### Test Dimensions
 
-### Concept 3: Data Management
-Proper data management is essential for Ai Testing. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+| Dimension | What It Measures | Why It's Unique to LLMs |
+|-----------|-----------------|------------------------|
+| Factuality | Information correctness against ground truth | LLMs hallucinate — traditional software returns deterministic results |
+| Safety | Harmful, biased, toxic, or policy-violating output | LLMs can generate novel harmful content not explicitly programmed |
+| Consistency | Output stability across semantically equivalent inputs | Traditional software is deterministic; LLMs vary per invocation |
+| Format | Structural compliance (JSON, schema, regex) | LLM structured output requires parsing — fragile without guarantees |
+| Robustness | Graceful handling of edge cases (empty, adversarial, long inputs) | LLMs are sensitive to input perturbations in ways traditional code isn't |
+| Latency | Response time distribution (P50, P95, P99) | LLM inference has higher variance than traditional API calls |
+| Cost | Token consumption per query, per test run | LLM testing directly consumes API budget — costs scale linearly with test count |
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+### Priority Taxonomy
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+```
+P0 (Gate — 100% required, blocks deployment)
+├── Factuality: Core knowledge, business-critical facts
+├── Safety: Refusal on harmful inputs, toxicity limits, bias bounds
+└── Format: Critical structured outputs (payment parsing, medical codes)
 
-## Architecture Patterns
+P1 (Quality — ≥90% pass rate, blocks if below threshold)
+├── Consistency: Top-K query groups with rephrased variants
+├── Robustness: Edge cases, adversarial inputs, out-of-distribution queries
+└── Format: Non-critical structured outputs
 
-### Pattern 1: Standard Architecture
-The standard architecture for Ai Testing follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+P2 (Monitor — tracked, non-blocking, trend-alerted)
+├── Latency: P50/P95/P99 thresholds per model
+├── Style: Tone, verbosity, persona adherence
+└── Cost: Token efficiency per output category
+```
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+## Golden Dataset Design Principles
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Dataset Composition
 
-## Implementation Guide
+```
+Golden Dataset
+├── Core (60%): Highest-value, most-frequent production queries
+│   ├── Factuality: Ground-truth verifiable statements
+│   └── Safety: Known attack vectors, policy boundaries
+├── Edge (20%): Boundary conditions, corner cases
+│   ├── Empty / minimal input
+│   ├── Very long input (>4K tokens)
+│   ├── Special characters, Unicode, mixed scripts
+│   └── Adversarial: jailbreak attempts, prompt injection
+└── Drift (20%): Recent production samples refreshed per cycle
+    ├── New query patterns from logs
+    └── Regression-failing cases from previous runs
+```
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Ground Truth Labeling Requirements
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+Every golden dataset entry must include:
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+```python
+@dataclass
+class GoldenExample:
+    input: str
+    expected_output: str | None  # None for safety/refusal tests
+    category: Literal["factuality", "safety", "format", "consistency", "robustness"]
+    priority: Literal["P0", "P1", "P2"]
+    difficulty: Literal["easy", "medium", "hard"]
+    source: Literal["human_curated", "production_sampled", "synthetic", "adversarial"]
+    context: dict | None  # Retrieved documents, system prompt, conversation history
+    tags: list[str]
+    created_at: str  # ISO 8601
+    superseded_by: str | None  # Version chain for test evolution
+```
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+### Dataset Quality Gates
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+```python
+def validate_golden_dataset(examples: list[GoldenExample]) -> dict:
+    checks = {}
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+    # Minimum size
+    checks["min_size"] = len(examples) >= 100
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+    # Category balance — no category < 10% or > 50%
+    cats = Counter(e.category for e in examples)
+    total = len(examples)
+    checks["category_balance"] = all(
+        0.1 <= count/total <= 0.5 for count in cats.values()
+    )
 
-## Best Practices
+    # Input uniqueness — no duplicate or near-duplicate inputs
+    inputs = [e.input.strip().lower() for e in examples]
+    checks["input_uniqueness"] = len(set(inputs)) / len(inputs) > 0.95
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+    # Freshness — at least 10% from last 30 days
+    thirty_days_ago = (datetime.utcnow() - timedelta(days=30)).isoformat()
+    recent = sum(1 for e in examples if e.created_at >= thirty_days_ago)
+    checks["freshness"] = recent / total >= 0.1
 
-## Common Pitfalls
+    # Label consistency — all required fields populated
+    missing = sum(1 for e in examples if e.expected_output is None and e.category != "safety")
+    checks["label_completeness"] = missing == 0
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+    return checks
+```
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+## Assertion Strategies for Probabilistic Outputs
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+### Assertion Type Selection by Output Type
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+| Output Type | Recommended Assertion | Rationale |
+|-------------|---------------------|-----------|
+| Classification label | ExactMatch | Deterministic expected value |
+| Extractive QA | Contains / SemanticSimilarity | Multiple valid phrasings |
+| Summarization | Faithfulness | Must be grounded in source |
+| JSON structured output | JSONSchema + FieldAssertion | Structural + value constraints |
+| Open-ended generation | LLM-as-Judge | Best automated proxy for quality |
+| Code generation | CompileCheck + FunctionalTest | Executable verification |
+| Refusal | RefusalAssertion | Phrase-based + semantic check |
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+### Statistical Assertion Pattern
 
-## Tooling Ecosystem
+For non-deterministic outputs, run N queries and assert on aggregate:
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+```python
+class StatisticalAssertion:
+    def __init__(self, name: str, sample_size: int = 5, min_pass_rate: float = 0.8):
+        self.name = name
+        self.sample_size = sample_size
+        self.min_pass_rate = min_pass_rate
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+    async def evaluate(self, model_fn, input_text: str, assertion_fn) -> AssertionResult:
+        outputs = await asyncio.gather(*[
+            model_fn(input_text) for _ in range(self.sample_size)
+        ])
+        passes = sum(1 for o in outputs if assertion_fn(o))
+        pass_rate = passes / self.sample_size
+        return AssertionResult(
+            name=self.name,
+            passed=pass_rate >= self.min_pass_rate,
+            score=pass_rate,
+            details={
+                "sample_size": self.sample_size,
+                "passes": passes,
+                "pass_rate": pass_rate,
+                "threshold": self.min_pass_rate,
+                "outputs": outputs,
+            },
+        )
+```
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+## Evaluation Metrics Taxonomy
 
-## Integration Patterns
+### Automated Metrics
 
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
+| Metric | What It Captures | When To Use | Pitfall |
+|--------|-----------------|-------------|---------|
+| BLEU | N-gram overlap with reference | Translation, short-form generation | Penalizes valid paraphrasing |
+| ROUGE-L | Longest common subsequence | Summarization | Misses semantic equivalence |
+| BERTScore | Token-level cosine similarity with BERT embeddings | Any text generation | Biased toward BERT-like models |
+| METEOR | Unigram precision/recall with synonym matching | Translation | Requires synonym tables |
+| Perplexity | Model confidence in its own output | Language modeling quality | Cannot measure factual accuracy |
 
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
+### LLM-as-Judge Metrics
 
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
+| Judge Type | Prompt Template Style | Best For |
+|------------|----------------------|----------|
+| Pointwise | "Score 1-5: accuracy, relevance, completeness" | Absolute quality scoring |
+| Pairwise | "Which response is better? A or B?" | Model comparison, A/B testing |
+| Multi-turn | "Did the assistant correctly reference conversation history?" | Conversational agents |
+| Rubric-based | Structured criteria with explicit scoring guidelines | Reducing judge variance |
 
-## Performance Optimization
+```python
+class LLMJudge:
+    def __init__(self, judge_model, rubric: str | None = None):
+        self.judge = judge_model
+        self.rubric = rubric
 
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
+    async def score_accuracy(self, query: str, response: str, context: str) -> float:
+        prompt = f"""Evaluate the accuracy of this response given the context.
 
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
+Context: {context}
+Query: {query}
+Response: {response}
 
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+Is every statement in the response supported by the context?
+Score from 0.0 (no support) to 1.0 (fully supported).
+Respond with only a number between 0 and 1."""
+
+        result = await self.judge.generate(prompt)
+        return self._parse_score(result)
+
+    async def score_pairwise(self, query: str, response_a: str, response_b: str) -> str:
+        prompt = f"""Which response is better for the query?
+
+Query: {query}
+Response A: {response_a}
+Response B: {response_b}
+
+Consider: accuracy, completeness, safety, clarity.
+Reply with ONLY "A", "B", or "TIE"."""
+
+        result = await self.judge.generate(prompt)
+        return result.strip().upper()
+
+    def _parse_score(self, text: str) -> float:
+        try:
+            return float(text.strip()[:4])
+        except ValueError:
+            return 0.0
+```
+
+## Test Fixture and Environment Management
+
+### Model Client Fixtures
+
+```python
+import pytest_asyncio
+
+@pytest_asyncio.fixture
+async def model_client(request):
+    """Fixture that provides model client with configurable temperature."""
+    model_name = getattr(request, "param", "gpt-4o")
+    temperature = 0.0  # deterministic for testing
+    client = ModelClient(model_name, temperature=temperature)
+    yield client
+    await client.close()
+
+@pytest_asyncio.fixture(params=[0.0, 0.7, 1.0])
+async def model_with_temperature(request):
+    """Parameterized fixture to test model behavior at different temperatures."""
+    client = ModelClient("gpt-4o-mini", temperature=request.param)
+    yield client
+    await client.close()
+```
+
+### Test Isolation Requirements
+
+- **Stateless model calls**: Each test must produce the same output given the same input (use temperature=0.0 for deterministic tests)
+- **No shared state between tests**: Use fresh model client per test or per module
+- **Context isolation**: Each test case supplies its own context/retrieval documents
+- **Rate limit handling**: Implement retry with backoff in model client, not in test logic
+- **Test data immutability**: Golden datasets must not be modified during test execution
+
+## Common Anti-Patterns
+
+### Testing on Training Data
+Using examples that appear in the model's training data as golden tests. The model may have memorized these, producing inflated pass rates that don't reflect real performance.
+
+**Mitigation**: Maintain a held-out set of never-before-seen examples. Cross-reference against known training data contamination benchmarks.
+
+### Overfitting to the Eval Set
+Iterating on prompt/model changes solely to improve golden dataset scores without measuring generalization.
+
+**Mitigation**: Hold a blind test set (20% of golden) that is never examined during iteration. Only reveal scores at release time.
+
+### Ignoring Edge Cases
+Only testing "happy path" queries (e.g., "What is the capital of France?") while ignoring boundary conditions.
+
+**Mitigation**: Maintain a dedicated edge case collection. Test empty input, very long input (>4K tokens), Unicode injection, adversarial prompts, out-of-distribution topics.
+
+### Single-Temperature Testing
+Testing only at temperature=0.0, missing the quality degradation that appears at higher temperatures.
+
+**Mitigation**: Run critical tests at temperature=0.0 for reproducibility AND at temperature≥0.7 for robustness.
+
+### Using LLM-as-Judge Without Calibration
+Using a judge model to score outputs without validating that the judge agrees with human evaluators.
+
+**Mitigation**: Run a calibration study: have both judge model and humans score 100 examples. Measure Cohen's kappa. Only deploy judge if κ ≥ 0.6.
 
 ## Key Points
-- Understand core Ai Testing concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- LLM testing requires probabilistic, not deterministic, assertion strategies
+- Golden datasets must balance coverage, freshness, and category distribution
+- Every test needs category, priority, threshold, and source metadata
+- Use statistical assertions (N-samples with pass-rate threshold) for non-deterministic outputs
+- Calibrate LLM-as-Judge against human raters before relying on automated scores
+- Test at multiple temperatures to capture stochastic behavior
+- Never iterate on held-out test data — maintain a blind eval set
+- Track assertion latency vs model latency separately for CI timeout planning
+- Version golden datasets with semantic versioning tied to prompt/model releases
+- Automate dataset quality gates (size, balance, freshness, uniqueness) in CI

@@ -1,214 +1,84 @@
-# Dotnet Maui Advanced Topics
+# .NET MAUI Advanced Topics
 
-## Introduction
-Advanced Dotnet Maui topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+## Overview
+Advanced .NET MAUI topics cover custom handlers, complex animations, native platform integration, advanced MVVM patterns, performance profiling, and production deployment.
 
-## Advanced Architecture Patterns
+## Custom Handlers
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+### Replacing Default Handlers
+Subclass existing handlers (e.g., `EntryHandler`) and override `Map*` methods. `PropertyMapper` for custom property mapping. `CommandMapper` for custom methods. Register in `MauiProgram.cs` via `ConfigureMauiHandlers`. Example: custom Entry with character limit.
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+### Custom Platform Views
+Create handler for a custom .NET MAUI control. Define `PlatformView` (native control) + `VirtualView` (MAUI abstraction). Map property changes to native updates. Connect native events to MAUI events. Register handler with `AppBuilder.UseMauiApp` configuration.
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+### Performance Tuning
+Minimize handler re-creation by using `Mapper` overrides. Batch property updates via `UpdateProperties`. Avoid creating handlers in tight loops. Recycle handlers where possible. Profile with `dotnet trace` for handler-related overhead.
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+## Advanced Data Binding
+
+### Compiled Bindings
+Always use `x:DataType` for compile-time binding validation. `x:DataType="vm:OrderViewModel"` on page level. Incompatible types caught at compile time. Better performance than reflection-based binding. Works with `{Binding Order.Property}` path expressions.
+
+### MultiBinding and Converters
+`MultiBinding` for combining multiple source properties. `IValueConverter` for value transformations. `IMultiValueConverter` for multi-source converters. Converters should be stateless and thread-safe. `CommunityToolkit.Maui` provide common converters (BoolToObject, InvertedBool).
+
+### Behaviors and Attached Properties
+`Behavior<T>` for adding functionality to existing controls. `PlatformBehavior` for platform-specific behaviors. Attached properties for custom markup extensions. `Microsoft.Xaml.Interactivity` for reusable interaction logic. Behaviors over custom controls when possible.
+
+## Advanced Navigation
+
+### Shell Route Factories
+Custom `ShellContent` with `ContentTemplate` for lazy page loading. Route-specific data passing via `IQueryAttributable`. Tab preselection at startup. Dynamic shell item visibility based on auth state. `Shell.Current.ItemTemplate` for dynamic flyout items.
+
+### Deep Linking
+Configure URI schemes and universal links. Handle incoming links in `App.OnAppLinkRequestReceived`. Support deferred deep linking (store attribution). Test with `adb shell am start -d "myapp://route"`. iOS: Associated Domains entitlement.
+
+## Advanced MVVM
+
+### Messenger Patterns
+`WeakReferenceMessenger` from CommunityToolkit.Mvvm. `Send` for publishing messages, `Register` for receiving. Message types: `ValueChangedMessage<T>`, `AsyncRequestMessage<T>`, `CollectionRequestMessage<T>`. Unregister in ViewModel disposal. Use for cross-ViewModel communication.
+
+### Dependency Injection
+`.NET MAUI` uses `Microsoft.Extensions.DependencyInjection`. Register services in `MauiProgram.cs` via `builder.Services`. Transient, Singleton, Scoped lifetimes. `IServiceProvider` for manual resolution. `ServiceHelper` from CommunityToolkit for service locator fallback.
+
+### Unit of Work Pattern
+Wrap multiple database operations in a transaction. `UnitOfWork` manages context/scoped DB connection. Commit on success, rollback on failure. Works with dependency injection per-scope. Ensures data consistency across repositories.
 
 ## Performance Optimization
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+### Startup Time
+Reduce assembly load: fewer controls in App.xaml. Lazy-load heavy pages with `ContentTemplate`. `BackgroundService` for background initialization. Native AOT publish (limited MAUI support). Profile startup with `dotnet trace` + PerfView.
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+### Collection Performance
+`CollectionView` over `ListView` (better virtualization). `ItemsLayout` for custom grid layouts. `DataTemplate` caching with `x:DataType`. `RemainingItemsThreshold` for infinite scroll. Avoid complex layouts inside item templates.
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+### Memory Management
+Unsubscribe from events and messengers in `OnDisappearing` / `Dispose`. Clear `ObservableCollection` on page dispose. Use `WeakReference` for long-lived event targets. Profile with JetBrains dotMemory or Visual Studio Diagnostic Tools. Monitor GC frequency.
 
-## Security Hardening
+## Platform-Specific Code
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+### Platform Conditional
+`#if ANDROID`, `#if IOS`, `#if WINDOWS`, `#if MACCATALYST` for conditional compilation. `Platforms/Android`, `Platforms/iOS` folders for platform files. `DeviceInfo.Platform` for runtime checks. `OnPlatform`/`OnIdiom` markup extensions for XAML.
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+### Platform Effects
+`PlatformEffect` for lightweight platform customization. `RoutingEffect` for platform-independent effects. Attach to controls via `Effects.Add()`. iOS: `PlatformEffect` for iOS-specific behavior. Android: `PlatformEffect` for Android-specific behavior.
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+## Production Deployment
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+### Code Signing
+iOS: Apple Distribution certificate + provisioning profile via Fastlane. Android: Keystore with `dotnet publish -f net8.0-android -c Release`. Windows: SignTool with Authenticode certificate. macOS: Developer ID for notarization.
 
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+### App Store Submission
+iOS: `.ipa` via App Store Connect or Transporter. Android: `.aab` via Google Play Console. Windows: `.msix` via Microsoft Store. macOS: `.pkg` via App Store or notarized DMG. CI/CD with GitHub Actions + Fastlane.
 
 ## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- Custom handlers extend native platform controls
+- Compiled bindings (x:DataType) for compile-time validation and performance
+- WeakReferenceMessenger for cross-ViewModel communication
+- CollectionView over ListView for better scroll performance
+- Native AOT publish for startup optimization (limited support)
+- Platform effects for lightweight customization
+- BackgroundService for deferred initialization
+- MAUI lifecycle: OnStart, OnSleep, OnResume
+- Fastlane for automated code signing and store submission
+- dotMemory / PerfView for memory and performance profiling

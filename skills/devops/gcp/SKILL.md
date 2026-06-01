@@ -4,7 +4,7 @@ description: |
   Trigger: "GCP", "Google Cloud", "Google Kubernetes Engine", "GKE",
   "Cloud Run", "Cloud Functions", "Cloud Storage", "Cloud SQL",
   "Terraform GCP", "gcloud CLI", "Cloud Build"
-  Exclusion: Not for AWS or Azure — use those specific skills.
+  Exclusion: Not for AWS or Azure -- use those specific skills.
 version: 1.0.0
 author: j4flmao
 license: MIT
@@ -35,133 +35,515 @@ Terraform/Deployment Manager configs, gcloud CLI commands, GKE cluster config, C
 ### Response Format
 Terraform/gcloud CLI commands with explanations. YAML configs for GKE and Cloud Run.
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble. No postamble. No explanations. No filler/hedging/transitions.
 
 ### Completion Criteria
 GKE cluster running, Cloud Run service deployed, networking secured, CI/CD pipeline passing, monitoring configured, IAM least-privilege enforced, cost budgets active.
 
-### Max Response Length
-8000 tokens.
-
-## Components
-
-### Core Services (Detailed)
-Compute Engine: VMs with sole-tenant nodes, preemptible instances (60-91% discount), machine type families — E2 (general), N2 (balanced), C2 (compute), M1/M2 (memory), G2 (GPU). GKE: managed Kubernetes with Autopilot (serverless, no node management, PSA enforced) or Standard (custom node pools, taints, machine types). Cloud Storage: unified object storage with Standard, Nearline (>30d), Coldline (>90d), Archive (>365d) tiers, object versioning, retention policies, object holds. Cloud SQL: managed MySQL/PostgreSQL/MS SQL with automatic failover, read replicas, cross-region replication, backup retention up to 365 days. BigQuery: serverless data warehouse with slot reservations (flex/ flat/ annual), BI Engine for real-time dashboards, streaming buffer for real-time ingestion, DDL/DML support. Pub/Sub: async messaging with exactly-once delivery, schema registry, topic retention, dead-letter queues, pull/push subscriptions. Cloud Run: container-based, scale-to-zero, pay-per-request, max instances for cost control, VPC egress, secrets integration. Cloud Functions: FaaS 2nd gen (event-driven), supports HTTP, Pub/Sub, Storage, Firestore, Firebase triggers.
-
-### IAM and Organization
-Resource hierarchy: organization node -> folders (dept/team) -> projects (service/env) -> resources. IAM roles: basic (owner/editor/viewer — avoid), predefined (service-specific curated roles like roles/storage.objectViewer), custom (fine-grained permission sets, least privilege). IAM Conditions: restrict access by resource.name, resource.service, IP address range, request time. Policy Analyzer: audit effective permissions for any principal. Privileged Access Manager: JIT elevation with approval and auto-expiration. Service accounts: per-microservice identity with automatic key rotation, workload identity federation for on-prem.
-
-### Networking (Detailed)
-Shared VPC: host project hosts VPC, service projects attach subnets — centralized NAT, firewall, and VPN management. Cloud NAT: outbound-only egress, static IP support, NAT gateway logging. Cloud Load Balancing: global HTTP/S LB (anycast IP, 1M+ QPS), internal TCP/UDP LB (private traffic), network passthrough LB (high-throughput), SSL proxy (TLS termination). Cloud CDN: global content cache, signed URLs/ cookies, cache invalidation, negative caching. Cloud Armor: WAF rules (OWASP top 10), DDoS protection (L3/L7), rate limiting, IP allow/deny lists, geo-based access control. VPC Service Controls: data exfiltration prevention via perimeters around managed services. Private Google Access: on-prem access to GCP APIs via private IP. Hybrid connectivity: Cloud VPN (IPsec, 99.9% SLA), Dedicated Interconnect (10-100 Gbps, 99.99% SLA), Partner Interconnect (50-10 Gbps).
-
-### GKE Cluster Design (Detailed)
-Autopilot: no node management, PSA enforced, cluster autoscaling included, pay-per-pod, ideal for most stateless workloads. Standard: system vs user node pools, taints/tolerations, custom machine types (including GPUs, high-mem), node auto-upgrade/repair, sole-tenant nodes. Multi-region clusters: regional cluster with nodes in 3 zones for HA. Workload Identity: K8s SA annotated with IAM SA email — no service account keys in pods. Cluster autoscaler: adds/removes nodes based on pod resource requests. VPA: recommends container resource requests, auto-applies in Auto mode. HPA: scales replicas based on CPU/memory or custom metrics. Priority classes: critical system pods preempt batch work. GKE Gateway Controller: multi-cluster, multi-tenant ingress with traffic splitting and canary.
-
-### Cloud Build CI/CD (Detailed)
-Workers: standard (1-32 CPU, 4-128 GB) or custom machine types. Triggers: push to branch, new PR, tag creation, schedule (cron). Kaniko cache: build images in GCR/AR without Docker daemon, layer caching for speed. Cloud Deploy: delivery pipeline with targets (dev -> staging -> prod), approval gates, canary/blue-green rollout strategies via Skaffold. Artifact Registry: stores container images, Maven/Gradle packages, npm modules, Python packages. Binary Authorization: enforce deployment attestation from specific signers only. Secret Manager: store and manage API keys, passwords, certificates — access controlled via IAM.
-
-### Infrastructure as Code (Detailed)
-Terraform: modular configuration with remote state in GCS bucket (state locking via object versioning), provider version pinning, multiple environments via workspaces. Deployment Manager: native GCP IaC with YAML config + Python/Jinja templates, preview mode for dry-run. Config Controller (ACM): fleet-level OPA/Gatekeeper policy enforcement. Config Connector: manage GCP resources (projects, IAM, networks, Cloud SQL) via K8s CRDs — GitOps-friendly. Forseti: security scanner for org policy violations, IAM audit, and compliance checks.
-
-### Cost Management (Detailed)
-Budgets: per-project or per-service budgets with alerts at 50%, 80%, 100%, 150% — Pub/Sub notifications for automation. CUD: committed use discounts for 1yr or 3yr on vCPU, memory, GPUs — 20-60% discount. Preemptible/Spot: 60-91% discount, max 24h runtime for spot, preemptible has no max. Labels: mandatory cost-allocation labels propagated to billing export. Billing export to BigQuery: granular hourly cost and usage data for custom reporting. Recommender: idle VM, oversized VM, underutilized disk, and CUD recommendations.
-
-### Monitoring and Observability (Detailed)
-Cloud Monitoring: metrics ingestion, custom dashboards with MQL, alerting policies with notification channels (email, SMS, PagerDuty, Slack), uptime checks (HTTP/ TCP) from global locations. Cloud Logging: structured JSON logging, log-based metrics (count, distribution, boolean), log buckets with retention (30d to 365d), log exports to BigQuery (analysis) and Pub/Sub (streaming). Cloud Trace: distributed tracing with auto-instrumentation via OpenTelemetry, trace sampling rate configurable. Cloud Profiler: continuous CPU and heap profiling for Go, Java, Python, Node.js — identifies performance bottlenecks with no code changes. Error Reporting: automatic exception grouping and deduplication, real-time alerts.
-
-## Best Practices and Design Patterns
+## Architecture / Decision Trees
 
 ### Compute Pattern Selection
-Stateless HTTP services: Cloud Run (simplest, scale-to-zero) or GKE (more control, stateful neighbors). Stateful workloads: GKE with StatefulSets, PVCs, or Cloud SQL managed. Event-driven processing: Cloud Functions for simple triggers, Pub/Sub + Cloud Run for complex pipelines, Eventarc for multi-source routing. Batch/worker: Cloud Run jobs (containerized batch), GKE spot node pools (large-scale), Cloud Tasks (async queues). Data warehouse: BigQuery with slot commitments for predictable cost, BI Engine for latency-sensitive dashboards.
 
-### Networking Patterns
-Hub-and-spoke VPC: shared VPC host project centrally manages networks, firewall, NAT, and VPN. Service projects attach to subnets. VPC Service Controls: perimeter around sensitive data (Cloud Storage, BigQuery) prevents exfiltration to non-perimeter resources. Private Google Access: on-prem workloads access GCP APIs via internal IP without public internet. Hybrid networking: Cloud VPN (IPsec) for low-cost, Dedicated Interconnect for high-throughput/low-latency, Partner Interconnect for medium bandwidth.
+| Workload Type | Recommended Service | Reason |
+|---|---|---|
+| Stateless HTTP | Cloud Run | Scale-to-zero, pay-per-request, simplest |
+| Stateful / complex | GKE (Standard) | Custom node pools, GPUs, StatefulSets |
+| Simple event-driven | Cloud Functions (2nd gen) | Eventarc, Pub/Sub, Storage triggers |
+| Batch / background | Cloud Run Jobs | Containerized batch, retries, timeout |
+| Data warehouse | BigQuery | Serverless, slot commitments, BI Engine |
+| ML training | GKE with GPUs | Custom hardware, distributed training |
+| Web hosting | Cloud Storage + LB | Static sites, CDN, global LB |
 
-### Security Patterns
-Workload Identity: K8s SA annotated with IAM SA — no service account keys. Binary Authorization: enforce attestation for all container deployments — only signed images deploy to production. Cloud Armor WAF: OWASP top 10 rules, rate limiting per IP, geo-allow/deny lists, pre-configured rules for known attack vectors. VPC Service Controls: create perimeters around Cloud Storage, BigQuery, Cloud SQL — deny access from outside perimeter. IAM Conditions: restrict service account usage to specific IP ranges, resource types, and time windows.
+### GKE Cluster Mode Decision Tree
+- Small team, no node management: Autopilot (serverless, PSA enforced, pay-per-pod).
+- Full control, custom hardware: Standard with node pools, taints, GPUs.
+- Multi-region HA: Regional cluster in 3 zones.
+- Cost-sensitive: Preemptible/Spot node pools for batch.
+- Compliance-heavy: Private cluster with VPC Service Controls.
 
-### Resiliency Patterns
-Multi-zone GKE: regional cluster with nodes spread across 3 zones within region. Multi-region Cloud SQL: cross-region replica with automated failover for Tier 1 databases. Cloud Storage dual-region: synchronous replication across two regions within continent — 15min RPO. Application load balancing: global HTTP/S LB with failover across backend service groups in different regions. Cloud CDN with origin failover: primary origin + backup origin for static content.
+### Networking Pattern Decision Tree
+- Single project: VPC with subnets per environment.
+- Multi-project: Shared VPC (host project, service projects).
+- On-prem connectivity: Cloud VPN (low cost) or Dedicated Interconnect (high throughput).
+- Internet-facing: Cloud LB + Cloud Armor WAF.
+- Private services: Private Google Access + VPC SC perimeters.
 
-### Migration Patterns
-Lift-and-shift: Migrate for Compute Engine (formerly Velostrata) moves VMs with minimal downtime. Container migration: Migrate for Anthos converts VM to container running on GKE. Database migration: Database Migration Service for homogeneous (Cloud SQL to Cloud SQL) and heterogeneous (Oracle to Cloud SQL) migrations. Storage migration: Storage Transfer Service for large-scale data movement from on-prem or other clouds. Data warehouse migration: BigQuery Data Transfer Service, ALZ for warehouse schema conversion.
+### Database Selection
 
-## Deployment Guides
+| Requirement | Service | Best For |
+|---|---|---|
+| Relational, managed | Cloud SQL | MySQL, PostgreSQL, SQL Server |
+| NoSQL, high throughput | Firestore / Bigtable | Real-time, IoT, large-scale |
+| Data warehouse | BigQuery | Analytics, reporting, ML |
+| In-memory, cache | Memorystore | Redis, Memcached |
+| Spanner | Cloud Spanner | Global, strong consistency, horizontal scale |
 
-### GKE Cluster Deployment Steps
-1. Create VPC with secondary CIDR ranges for pods and services
-2. Create Cloud Router and Cloud NAT for private cluster egress
-3. Create GKE cluster (Autopilot or Standard) with Workload Identity enabled
-4. Configure node pools: system pool (critical addons), user pool (workloads), spot pool (batch/fault-tolerant)
-5. Enable Workload Identity: annotate K8s SA with IAM SA email
-6. Configure cluster autoscaler, VPA, and HPA
-7. Enable Managed Prometheus for cluster monitoring
-8. Configure GKE Gateway Controller for ingress
+## Core Workflow
 
-### Cloud Run Deployment Steps
-1. Build container image with Cloud Build (kaniko cache for speed)
-2. Push to Artifact Registry in same region as Cloud Run service
-3. Deploy with gcloud: set max-instances (cost control), min-instances (cold-start), concurrency, CPU, memory, VPC connector, service account
-4. Configure Cloud Scheduler + Cloud Tasks for async job scheduling
-5. Set up Eventarc triggers for event-driven invocation
-6. Enable Cloud Run for Anthos for hybrid deployment on GKE
-7. Configure revision traffic splitting for canary deployments
+### Step 1: Project and Organization Setup
+```hcl
+# Resource hierarchy: Organization > Folder > Project > Resources
+resource "google_folder" "engineering" {
+  display_name = "Engineering"
+  parent       = "organizations/123456789"
+}
 
-### Cloud SQL High Availability Setup
-1. Enable high availability: create primary in one zone, standby in another zone within same region
-2. Configure automated backups: daily backup window during low traffic, retention based on compliance
-3. Enable point-in-time recovery: transaction log retention for second-level restore granularity
-4. Set up cross-region read replica for read scaling and DR failover target
-5. Configure maintenance window: weekly maintenance during off-peak hours
-6. Use Cloud SQL Proxy or private IP for secure connections from Cloud Run and GKE
-7. Enable deletion protection to prevent accidental instance deletion
+resource "google_project" "production" {
+  name       = "Production Project"
+  project_id = "prod-${var.service_name}"
+  folder_id  = google_folder.engineering.id
+  billing_account = "012345-ABCDEF-012345"
+}
 
-### Cloud Storage Best Practices
-1. Object lifecycle management: transition to Nearline at 30d, Coldline at 90d, Archive at 365d
-2. Object versioning: retain previous versions for data protection, expire noncurrent after N days
-3. Retention policies: WORM compliance via retention policies and bucket locks for regulated data
-4. Signed URLs: time-limited URLs for temporary object access without IAM, expire after 1-60 minutes
-5. CORS configuration: allow cross-origin requests from your web application domain only
-6. Pub/Sub notifications: notify downstream systems on object create/delete in storage bucket
-7. Requester pays: shift egress costs to requestors for shared datasets
+# Enable required APIs
+resource "google_project_service" "apis" {
+  for_each = toset([
+    "compute.googleapis.com",
+    "container.googleapis.com",
+    "cloudrun.googleapis.com",
+    "sqladmin.googleapis.com",
+    "storage.googleapis.com",
+    "monitoring.googleapis.com",
+    "logging.googleapis.com",
+    "cloudbuild.googleapis.com",
+  ])
+  project = google_project.production.project_id
+  service = each.key
+}
+```
 
-### Cloud Build CI/CD Pipeline Steps
-1. Set up Cloud Build trigger: push to main branch builds and deploys to dev environment
-2. Add Kaniko cache: store layer cache in Artifact Registry for faster builds
-3. Configure Cloud Build workers: use private pool for VPC access, e2-highcpu-8 for build performance
-4. Add Cloud Deploy delivery pipeline: dev -> staging (auto) -> prod (manual approval gate)
-5. Integrate Skaffold: local development builds to Cloud Run, continuous deployment via Cloud Deploy
-6. Set up Binary Authorization attestation: only images signed by CI can deploy to prod
-7. Configure Secret Manager: database passwords, API keys mounted as environment variables
+### Step 2: VPC and Networking
+```hcl
+resource "google_compute_network" "main" {
+  name                    = "main-vpc"
+  project                 = google_project.production.project_id
+  auto_create_subnetworks = false
+}
+
+resource "google_compute_subnetwork" "app" {
+  name          = "app-subnet"
+  project       = google_project.production.project_id
+  network       = google_compute_network.main.name
+  region        = "us-central1"
+  ip_cidr_range = "10.0.1.0/24"
+
+  secondary_ip_range {
+    range_name    = "pods"
+    ip_cidr_range = "10.1.0.0/16"
+  }
+  secondary_ip_range {
+    range_name    = "services"
+    ip_cidr_range = "10.2.0.0/20"
+  }
+
+  private_ip_google_access = true
+}
+
+resource "google_compute_router" "nat" {
+  name    = "nat-router"
+  region  = "us-central1"
+  network = google_compute_network.main.name
+}
+
+resource "google_compute_router_nat" "main" {
+  name                               = "nat-config"
+  router                             = google_compute_router.nat.name
+  region                             = "us-central1"
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+}
+```
+
+### Step 3: GKE Cluster (Standard)
+```hcl
+resource "google_service_account" "gke_sa" {
+  project      = google_project.production.project_id
+  account_id   = "gke-sa"
+  display_name = "GKE Service Account"
+}
+
+resource "google_container_cluster" "primary" {
+  name     = "primary-cluster"
+  location = "us-central1"
+  project  = google_project.production.project_id
+
+  network    = google_compute_network.main.name
+  subnetwork = google_compute_subnetwork.app.name
+
+  remove_default_node_pool = true
+  initial_node_count       = 1
+
+  # VPC-native (alias IP)
+  ip_allocation_policy {
+    cluster_secondary_range_name  = "pods"
+    services_secondary_range_name = "services"
+  }
+
+  # Workload Identity
+  workload_identity_config {
+    workload_pool = "${google_project.production.project_id}.svc.id.goog"
+  }
+
+  # Private cluster
+  private_cluster_config {
+    enable_private_nodes    = true
+    enable_private_endpoint = false
+    master_ipv4_cidr_block  = "172.16.0.0/28"
+  }
+
+  # Security
+  enable_shielded_nodes = true
+  enable_intranode_visibility = true
+
+  # Maintenance
+  maintenance_policy {
+    daily_maintenance_window {
+      start_time = "03:00"
+    }
+  }
+
+  # Monitoring
+  monitoring_config {
+    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"]
+    managed_prometheus {
+      enabled = true
+    }
+  }
+
+  # Release channel
+  release_channel {
+    channel = "REGULAR"
+  }
+
+  datapath_provider = "ADVANCED_DATAPATH"
+  networking_mode   = "VPC_NATIVE"
+}
+
+resource "google_container_node_pool" "primary_nodes" {
+  name     = "primary-pool"
+  location = "us-central1"
+  cluster  = google_container_cluster.primary.name
+  project  = google_project.production.project_id
+
+  initial_node_count = 3
+  autoscaling {
+    min_node_count = 1
+    max_node_count = 5
+  }
+
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+
+  node_config {
+    machine_type = "e2-standard-4"
+    disk_size_gb = 100
+    disk_type    = "pd-standard"
+    service_account = google_service_account.gke_sa.email
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
+    labels = {
+      environment = "production"
+      pool        = "primary"
+    }
+    shielded_instance_config {
+      enable_secure_boot          = true
+      enable_integrity_monitoring = true
+    }
+    workload_metadata_config {
+      mode = "GKE_METADATA"
+    }
+  }
+}
+```
+
+### Step 4: Cloud Run Service
+```hcl
+resource "google_cloud_run_v2_service" "api" {
+  name     = "api-service"
+  location = "us-central1"
+  project  = google_project.production.project_id
+
+  template {
+    revision = "api-v1"
+
+    containers {
+      image = "us-central1-docker.pkg.dev/${google_project.production.project_id}/app-repo/api:latest"
+
+      resources {
+        limits = {
+          cpu    = "1"
+          memory = "512Mi"
+        }
+      }
+
+      env {
+        name  = "DATABASE_URL"
+        value = "postgres://user:pass@cloudsql-instance:5432/appdb"
+      }
+      env {
+        name = "GOOGLE_CLOUD_PROJECT"
+        value = google_project.production.project_id
+      }
+
+      ports {
+        container_port = 8080
+      }
+
+      startup_probe {
+        http_get {
+          path = "/health/ready"
+        }
+        initial_delay_seconds = 0
+        timeout_seconds       = 240
+        period_seconds        = 240
+        failure_threshold     = 1
+      }
+
+      liveness_probe {
+        http_get {
+          path = "/health/live"
+        }
+      }
+    }
+
+    scaling {
+      min_instance_count = 1
+      max_instance_count = 10
+    }
+
+    service_account = google_service_account.cloud_run_sa.email
+
+    vpc_access {
+      connector = google_vpc_access_connector.connector.id
+      egress    = "ALL_TRAFFIC"
+    }
+  }
+
+  depends_on = [
+    google_project_service.apis
+  ]
+}
+
+# Allow unauthenticated invocations (if public API)
+resource "google_cloud_run_v2_service_iam_member" "public" {
+  location = google_cloud_run_v2_service.api.location
+  project  = google_cloud_run_v2_service.api.project
+  name     = google_cloud_run_v2_service.api.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+```
+
+### Step 5: Cloud SQL
+```hcl
+resource "google_sql_database_instance" "postgres" {
+  name             = "app-db"
+  database_version = "POSTGRES_16"
+  region           = "us-central1"
+  project          = google_project.production.project_id
+
+  settings {
+    tier              = "db-custom-2-7680"
+    disk_size         = 100
+    disk_type         = "PD_SSD"
+    disk_autoresize   = true
+    disk_autoresize_limit = 500
+    availability_type = "REGIONAL"
+
+    ip_configuration {
+      ipv4_enabled    = false
+      private_network = google_compute_network.main.id
+      require_ssl     = true
+    }
+
+    backup_configuration {
+      enabled                        = true
+      point_in_time_recovery_enabled = true
+      backup_retention_settings {
+        retained_backups = 30
+        retention_unit   = "COUNT"
+      }
+    }
+
+    maintenance_window {
+      day  = 7  # Sunday
+      hour = 3  # 3am
+    }
+
+    insights_config {
+      query_insights_enabled  = true
+      query_string_length     = 1024
+      record_application_tags = true
+      record_client_address   = true
+    }
+
+    database_flags {
+      name  = "max_connections"
+      value = "200"
+    }
+
+    deny_maintenance_period {
+      end_date   = "2024-12-31"
+      start_date = "2024-01-01"
+      time       = "05:00"
+    }
+  }
+  deletion_protection = true
+}
+```
+
+### Step 6: Cloud Build CI/CD
+```yaml
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - build
+      - -t
+      - "us-central1-docker.pkg.dev/$PROJECT_ID/app-repo/api:$SHORT_SHA"
+      - .
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - push
+      - "us-central1-docker.pkg.dev/$PROJECT_ID/app-repo/api:$SHORT_SHA"
+  - name: "gcr.io/google.com/cloudsdktool/google-cloud-cli:stable"
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - api-service
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/app-repo/api:$SHORT_SHA
+      - --region=us-central1
+      - --platform=managed
+images:
+  - "us-central1-docker.pkg.dev/$PROJECT_ID/app-repo/api:$SHORT_SHA"
+```
+
+### Step 7: IAM and Security
+```hcl
+# Custom IAM role with least privilege
+resource "google_project_iam_custom_role" "app_deployer" {
+  project     = google_project.production.project_id
+  role_id     = "appDeployer"
+  title       = "Application Deployer"
+  description = "Permissions for deploying applications"
+  permissions = [
+    "run.services.update",
+    "run.services.get",
+    "cloudbuild.builds.create",
+    "cloudbuild.builds.get",
+    "artifactregistry.repositories.downloadArtifacts",
+    "artifactregistry.repositories.uploadArtifacts",
+  ]
+}
+
+# Service account for Cloud Run
+resource "google_service_account" "cloud_run_sa" {
+  project      = google_project.production.project_id
+  account_id   = "cloud-run-sa"
+  display_name = "Cloud Run Service Account"
+}
+
+# Workload Identity binding
+resource "google_service_account_iam_member" "workload_identity" {
+  service_account_id = google_service_account.gke_sa.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:${google_project.production.project_id}.svc.id.goog[default/default]"
+}
+
+# IAM condition: restrict to specific IP range
+data "google_iam_policy" "restricted" {
+  binding {
+    role = "roles/storage.objectViewer"
+    members = ["user:dev@example.com"]
+    condition {
+      title       = "office_ip"
+      description = "Only allow access from office IP"
+      expression  = "request.ip.matches('203.0.113.0/24')"
+    }
+  }
+}
+```
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Service Account Keys in Pods
+Storing GCP service account keys as Kubernetes secrets creates credential management burden and rotation complexity. Use Workload Identity: annotate K8s SA with IAM SA email -- no keys needed.
+
+### Anti-Pattern 2: Public IP on GKE Nodes
+Assigning public IPs to GKE node pools exposes attack surface. Use Cloud NAT for egress, private nodes for workloads. All node-to-node traffic stays within VPC.
+
+### Anti-Pattern 3: Default Service Account
+Using the Compute Engine default service account on GKE nodes grants excessive permissions. Create least-privilege service accounts per workload. Use separate SAs per environment.
+
+### Anti-Pattern 4: No VPC Service Controls
+Without VPC SC perimeters, data in Cloud Storage and BigQuery is accessible from any network. Create perimeters around sensitive data to prevent exfiltration.
+
+### Anti-Pattern 5: Ignoring Budget Alerts
+Deploying production workloads without budget alerts risks unexpected bills. Always configure budget alerts at 50%, 80%, 100%, and 150% before any deployment.
+
+### Anti-Pattern 6: Using Default VPC
+Default VPCs have wide-open firewall rules and auto-created subnets. Create custom VPCs with private networking, specific CIDR ranges, and least-privilege firewall rules.
+
+### Anti-Pattern 7: Overprovisioning Cloud Run
+Setting max-instances too high risks cost spikes under load. Setting min-instances too high wastes money on idle. Start with min=0, max=10. Tune based on traffic patterns.
+
+## Production Considerations
+
+### Security
+- Workload Identity over service account keys for GKE to GCP auth.
+- Cloud Armor WAF policies for all internet-facing LBs.
+- VPC Service Controls for sensitive data perimeters.
+- Binary Authorization for container deployment attestation.
+- Secret Manager for secrets -- never in ConfigMaps or env vars.
+- IAM Conditions for time-bound, IP-restricted access.
+- Cloud Audit Logs enabled for all services.
+
+### Cost Optimization
+- Preemptible/Spot for stateless batch and worker workloads.
+- Committed Use Discounts for stable baseline capacity.
+- Cloud Run scale-to-zero for non-critical services.
+- BigQuery slot commitments for predictable analytics costs.
+- Label all resources for cost allocation.
+
+### Observability
+- Managed Prometheus for GKE monitoring.
+- Cloud Logging with log-based metrics.
+- Cloud Trace for distributed tracing.
+- Cloud Profiler for continuous performance profiling.
+- Uptime checks for external endpoint monitoring.
+- Error Reporting for automatic exception grouping.
 
 ## Rules
-1. Workload Identity over service account keys for GKE <-> GCP auth.
-2. Cloud Run for stateless services, GKE for stateful workloads.
-3. Cloud Armor WAF policies for internet-facing LBs.
-4. VPC Service Controls for sensitive data perimeters.
-5. Cloud Build + Cloud Deploy for CI/CD with Skaffold.
-6. Artifact Registry over Container Registry (new standard).
-7. Resource labels for cost allocation and organization.
-8. Cloud Audit Logs enabled for all services.
-9. IAM least privilege — custom roles over predefined where possible.
-10. Budget alerts configured before any production deployment.
-11. Shared VPC over peering for multi-project networking.
-12. Preemptible/Spot for stateless batch and worker workloads.
-13. Cloud NAT for private cluster egress — never assign public IPs to nodes.
-14. Managed Prometheus for GKE monitoring — unmanaged Prometheus creates admin burden.
-15. VPC-native clusters for pod IP addressability via secondary ranges.
-16. Regional clusters over zonal for workload HA.
-17. Secret Manager for secrets — never in configmaps or env vars.
-18. Cloud Deploy for progressive delivery — never direct kubectl to production.
+- Workload Identity over service account keys for GKE auth.
+- Cloud Run for stateless services, GKE for stateful workloads.
+- Cloud Armor WAF for internet-facing LBs.
+- VPC Service Controls for sensitive data perimeters.
+- Cloud Build + Cloud Deploy for CI/CD with Skaffold.
+- Artifact Registry over Container Registry (new standard).
+- Resource labels for cost allocation and organization.
+- Cloud Audit Logs enabled for all services.
+- IAM least privilege -- custom roles over predefined.
+- Budget alerts before any production deployment.
+- Shared VPC over peering for multi-project networking.
+- Preemptible/Spot for stateless batch workloads.
+- Cloud NAT for private cluster egress.
+- Managed Prometheus for GKE monitoring.
+- VPC-native clusters for pod IP addressability.
+- Regional clusters over zonal for workload HA.
+- Secret Manager for secrets.
 
 ## References
-  - references/gcp-advanced.md — Gcp Advanced Topics
-  - references/gcp-compute.md — GCP Compute
-  - references/gcp-data-ai.md — GCP Data & AI
-  - references/gcp-devops.md — Google Cloud DevOps
-  - references/gcp-fundamentals.md — Gcp Fundamentals
-  - references/gcp-gke.md — GCP GKE
-  - references/gcp-infrastructure.md — Google Cloud Infrastructure
-  - references/gcp-serverless.md — GCP Serverless
+- references/gcp-advanced.md -- Gcp Advanced Topics
+- references/gcp-compute.md -- GCP Compute
+- references/gcp-data-ai.md -- GCP Data and AI
+- references/gcp-devops.md -- Google Cloud DevOps
+- references/gcp-fundamentals.md -- Gcp Fundamentals
+- references/gcp-gke.md -- GCP GKE
+- references/gcp-infrastructure.md -- Google Cloud Infrastructure
+- references/gcp-serverless.md -- GCP Serverless
+
 ## Handoff
 Hand off to GCP for Google Cloud-specific provisioning or CI/CD. Hand off to terraform for multi-cloud IaC. Hand off to kubernetes-patterns for workload manifests on GKE.

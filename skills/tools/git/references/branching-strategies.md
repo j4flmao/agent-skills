@@ -215,6 +215,84 @@ git checkout -b release/1.x v1.5.0
 git checkout -b release/2.x v2.0.0
 ```
 
+## Environment-Based Branching
+
+### Environment Per Branch
+```bash
+# Staging environment
+git checkout -b staging main
+# Deploy staging branch to staging server
+git push origin staging
+
+# Production (same as main with extra checks)
+# Deploy main to production after CI + review
+
+# Preview/feature environments
+git checkout -b preview/feat-payment
+git push origin preview/feat-payment  # Auto-deploys to preview URL
+```
+
+## Monorepo Branching
+
+### Independent Versioning
+```bash
+# Monorepo with multiple packages
+# Each package can have its own release branch
+git checkout -b release/api-v2.0.0 develop
+git checkout -b release/web-v1.5.0 develop
+
+# Use changesets for coordinated releases
+npx changeset
+npx changeset version
+# This bumps all affected packages and creates changelogs
+```
+
+## Security Branching Patterns
+
+### Signed Commits
+```bash
+# Configure GPG signing
+git config --global user.signingkey <GPG_KEY_ID>
+git config --global commit.gpgsign true
+git config --global tag.gpgsign true
+
+# Verify signatures
+git log --show-signature
+
+# Sign specific commit
+git commit -S -m "fix: security vulnerability"
+git tag -s v1.0.0 -m "Signed release tag"
+```
+
+## Merge Strategy Selection Flowchart
+```
+Workflow choice:
+├── Need full history preservation?
+│   ├── YES → git merge --no-ff
+│   ├── Feature developed as clean atomic commits → git rebase + merge
+│   └── Messy WIP commits → git merge --squash
+├── Need linear history?
+│   ├── All commits meaningful → git rebase + merge
+│   └── Single commit per feature → git merge --squash
+└── Need easy revert?
+    ├── Merge commit → One revert reverts entire feature
+    └── Rebase/linear → Cherry-pick or revert each commit
+```
+
+## Key Anti-Patterns
+- **Long-lived feature branches (>2 days)**: Causes painful merge conflicts
+- **No branch protection on main**: Accidental pushes break production
+- **Force pushing to shared branches**: Destroys others' work
+- **Merging without CI passing**: Broken code enters main
+- **No cleanup after merge**: Stale branches accumulate
+- **Rebasing shared branches**: Changes commit hashes, causes chaos
+- **Large monolithic PRs**: Hard to review, high risk of bugs
+- **Multiple features in one branch**: Can't release independently
+- **No semantic versioning**: Unclear what versions contain
+- **Skipping hotfix branch for urgent fixes**: Breaks normal flow
+- **Cherry-picking instead of merging properly**: Duplicate commits, lost context
+- **Not using feature flags**: Incomplete features block releases
+
 ## Key Points
 - Git Flow uses develop/release/hotfix branches for structured releases
 - GitHub Flow uses feature branches with pull requests to main
@@ -236,3 +314,8 @@ git checkout -b release/2.x v2.0.0
 - Signed commits verify contributor identity
 - Linear history simplifies git bisect for regression finding
 - Environment-specific branches (staging, production) manage deployments
+- GPG signing validates commit authorship
+- Branch naming with issue references enables traceability
+- Automated branch deletion after merge keeps repo clean
+- Git bisect works best with linear, clean history
+- Feature toggles decouple deploy from release

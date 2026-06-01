@@ -1,214 +1,102 @@
 # Data Governance Advanced Topics
 
 ## Introduction
-Advanced Data Governance topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Advanced data governance covers automated policy enforcement, data mesh governance, data contracts, privacy engineering, ML data governance, and governance-as-code.
 
-## Advanced Architecture Patterns
+## Automated Policy Enforcement
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+### Policy-as-Code for Data
+Define data policies in code and enforce them programmatically. Examples: "All S3 buckets containing PII must have encryption enabled", "All databases must have automated backups", "All datasets must have an assigned owner."
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+Enforcement points: data platform API gateway, ETL pipeline CI/CD, data catalog registration, query engine (Trino/Athena query rewrite for access control).
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+### Automated Classification Pipelines
+Scan new data sources on ingestion. Run PII detection across sample records. Automatically tag columns with classification level. Notify data owners of classification assignments. Escalate unclassifiable data to governance team.
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+### Compliance Scanning
+Schedule automated scans: data classification compliance (% of datasets classified), retention compliance (% of datasets with purge automation), access control compliance (Restricted data access reviewed), quality SLA compliance (datasets meeting SLAs).
 
-## Performance Optimization
+## Data Mesh Governance
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+### Federated Ownership
+Data mesh distributes data ownership to domain teams. Each domain owns its data products. Central governance sets standards: classification scheme, quality framework, catalog schema, access control model.
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+### Data Product Standards
+Every data product must have: clear schema with documentation, defined quality SLAs, access control policy, data lineage, owner contact, and change notification process.
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+### Cross-Domain Data Contracts
+When one domain's data product is consumed by another domain, a data contract defines: schema, freshness SLA, expected row count bounds, change notification process, backward compatibility requirements.
 
-## Security Hardening
+## Data Contracts
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+### Contract Components
+| Component | Description | Example |
+|-----------|-------------|---------|
+| Schema | Data structure and types | Avro schema with fields |
+| SLAs | Freshness, completeness, availability | 60s freshness, 99.9% completeness |
+| Semantics | Business meaning of fields | "Amount in USD, excluding tax" |
+| Quality gates | Automated validation rules | No null IDs, positive amounts |
+| Change process | Notification and migration | 14 days notice for breaking changes |
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+### Contract Enforcement
+Validate contracts in producer CI/CD: schema change undergoes compatibility check, quality gates pass before deployment, SLA changes notify consumers. Consumer CI/CD: validate that consumer can handle latest schema version.
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
+## Privacy Engineering
 
 ### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
+Build privacy controls as default system behavior: minimize data collection, provide user access and deletion mechanisms, conduct privacy impact assessments, implement purpose limitation in data pipelines.
 
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
+### Data Minimization
+Collect only what is needed. Delete when no longer needed. Anonymize or pseudonymize where possible. Default: do not log PII in application logs. Use tokenization for credit card storage (PCI compliance).
 
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
+### Right to Erasure (GDPR Art. 17)
+Automated deletion pipeline: receive deletion request -> verify identity -> identify all data stores containing subject's data -> execute deletion -> verify completeness -> confirm to requester. Complete within 30 days.
 
-## Emerging Technologies and Trends
+## ML Data Governance
 
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
+### Training Data Governance
+Track training data provenance: source, transformations, labeling process, version. Monitor training data quality: label accuracy, class balance, drift from production distribution. Document model cards with training data characteristics.
 
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
+### Feature Store Governance
+Govern feature definitions, computation logic, and freshness. Prevent training/serving skew by ensuring production features match training features. Version features and track which model versions use which feature versions.
 
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
+### Model Data Lineage
+Track which training data produced which model, and which models serve predictions for which consumers. Enable impact analysis: "If this training data source changes, which models are affected?"
 
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+## Governance-as-Code
+
+### Infrastructure for Data Governance
+Define governance resources in IaC: data catalog schemas, classification rules, quality monitors, retention policies, access control policies. Code review for governance changes. CI/CD pipeline validates governance before deployment.
+
+### Automated Governance Reviews
+Quarterly governance review is automated: identify unowned datasets (no owner assigned in 90 days), flag classification drift (dataset content changed but classification did not), detect orphaned assets (no reads in 6 months), report quality SLA trends.
+
+## Incident Response for Data Governance
+
+### Data Quality Incident Response
+1. Detect: automated monitoring triggers alert
+2. Assess: determine impact scope and affected consumers
+3. Contain: stop propagation of bad data (block downstream consumers)
+4. Investigate: root cause analysis
+5. Remediate: fix source, recalculate derived data
+6. Verify: validate data is correct post-fix
+7. Document: incident report and preventive measures
+
+### Data Breach Response (Governance Perspective)
+1. Identify which datasets were accessed
+2. Determine classification of affected data
+3. Execute legal hold if litigation anticipated
+4. Preserve forensic evidence of access
+5. Assess regulatory notification requirements
+6. Document breach for audit trail
+7. Implement preventive controls
+
+## Key Points
+- Policy-as-code enables consistent, automated enforcement across all data platforms
+- Data mesh distributes ownership but centralizes standards for consistency
+- Data contracts prevent breaking changes between producers and consumers
+- Privacy by design minimizes compliance risk at the architecture level
+- ML data governance extends traditional governance to training data and features
+- Governance-as-code makes governance reviewable, testable, and deployable
+- Automated quality incident response minimizes impact of data quality failures
+- Breach response must include governance assessment of affected data classification

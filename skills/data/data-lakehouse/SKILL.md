@@ -357,6 +357,108 @@ Scalability considerations: Bronze layer scales horizontally with object storage
 | Soda / Monte Carlo | Data observability and quality |
 | Delta Live Tables (DLT) | Declarative ETL pipelines |
 
+### Lakehouse Query Engine Optimization
+
+```yaml
+# Query engine optimization by workload
+optimization:
+  bi_dashboards:
+    engine: "Databricks SQL Warehouse (serverless)"
+    config:
+      - use_photon: true  # Vectorized engine (2-10x faster)
+      - warehouse_size: "SMALL to LARGE"  # Scale based on concurrency
+      - auto_stop: 15min
+      - min_clusters: 1
+      - max_clusters: 5
+    tips:
+      - "Create materialized views on gold tables"
+      - "Use Databricks SQL with Photon for dashboard queries"
+      - "Result caching for repeated query patterns"
+      - "Aggregate at gold layer — avoid detail-level queries in BI"
+  
+  ml_training:
+    engine: "Spark (Python DataFrame API)"
+    config:
+      - "Use Delta format for training data reads"
+      - "Enable Delta caching for repeated data access"
+      - "Auto-optimize: target file size 256MB"
+    tips:
+      - "Extract training data from gold layer"
+      - "Use point-in-time joins for feature computation"
+      - "Persist intermediate results as Delta tables"
+  
+  ad_hoc_exploration:
+    engine: "Databricks Notebooks + Spark SQL"
+    config:
+      - "Use Databricks SQL for SQL exploration"
+      - "Pandas on Spark for Python exploration"
+      - "Auto-scaling clusters for concurrent ad-hoc queries"
+    tips:
+      - "Set query timeout (5min default for exploration)"
+      - "Use sample tables for initial exploration"
+      - "Tag expensive queries for cost tracking"
+  
+  streaming:
+    engine: "Structured Streaming (Spark)"
+    config:
+      - "Auto-compact on streaming tables"
+      - "Trigger interval: 1-60 seconds based on latency needs"
+      - "Output mode: append for fact tables, update for aggregates"
+    tips:
+      - "Use merge-on-read for update-heavy streams"
+      - "Set bronze retention to match stream reprocessing window"
+      - "Monitor streaming lag through Delta change data feed"
+```
+
+### Lakehouse Platform Comparison
+
+```yaml
+lakehouse_platforms:
+  databricks:
+    description: "Unified analytics platform (original lakehouse)"
+    catalog: "Unity Catalog"
+    formats: "Delta Lake (native), Iceberg, Hudi"
+    engines: "Spark, Databricks SQL, Photon"
+    ml_integration: "MLflow, Feature Store, Model Serving"
+    strengths: ["Best Delta Lake support", "Unity Catalog", "Photon", "ML integration"]
+    weaknesses: ["DBU cost at scale", "Vendor lock-in concerns"]
+  
+  apache_iceberg:
+    description: "Open table format with broad engine support"
+    catalog: "Nessie, Hive, JDBC, REST, Glue"
+    formats: "Iceberg"
+    engines: "Spark, Trino, Flink, Hive, Presto, Dremio"
+    ml_integration: "Via Spark/Python"
+    strengths: ["Most open ecosystem", "Partition evolution", "Multi-engine"]
+    weaknesses: ["Less mature governance vs Unity Catalog", "Self-managed catalog"]
+  
+  aws_sagemaker_lakehouse:
+    description: "AWS lakehouse with SageMaker + Athena + Iceberg"
+    catalog: "Glue Catalog"
+    formats: "Iceberg (via Athena), Delta (via Spark)"
+    engines: "Athena, Spark on EMR, Redshift Spectrum"
+    ml_integration: "SageMaker"
+    strengths: ["AWS-native", "Serverless Athena queries", "Low cost"]
+    weaknesses: ["Decoupled components", "Less integrated than Databricks"]
+```
+
+### Decision Tree
+
+#### Lakehouse Platform Selection
+```
+Primary ecosystem?
+├── Databricks ecosystem, need unified ML + BI
+│   └── Databricks with Delta Lake + Unity Catalog
+├── Open-source, multi-engine, non-Databricks
+│   └── Apache Iceberg with Nessie/REST catalog + Trino/Spark
+├── AWS-native, tight AWS integration
+│   └── AWS Lake Formation + Iceberg + Athena/EMR
+├── Google Cloud-native
+│   └── BigLake + Iceberg + BigQuery/Dataproc
+└── Multi-cloud, avoid vendor lock-in
+    └── Apache Iceberg (most portable table format)
+```
+
 ## Rules
 - Bronze is append-only, never modified in place
 - Silver enforces schema, deduplicates, and validates
@@ -375,6 +477,8 @@ Scalability considerations: Bronze layer scales horizontally with object storage
 - Monitor file sizes — target 256MB-1GB per file
 - Enable change data feed for gold tables consumed by streaming
 - Test disaster recovery quarterly with full restore playbook
+- Match query engine to workload (Photon for BI, Spark for ML, streaming for real-time)
+- Choose lakehouse platform based on ecosystem, ML needs, and open standards
 
 ## References
   - references/lakehouse-architecture.md — Lakehouse Architecture Reference

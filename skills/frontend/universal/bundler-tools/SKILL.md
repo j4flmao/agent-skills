@@ -8,7 +8,7 @@ compatibility:
   codex: true
   windsurf: true
 tags: [frontend, bundler, build, phase-7, universal]
-version: "1.2.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 ---
@@ -17,7 +17,7 @@ license: "MIT"
 
 **Description:** Configures and optimizes frontend build tools -- bundler selection, code splitting, tree shaking, asset optimization, build performance. Triggered by "bundler", "Vite", "Webpack", "Turbopack", "build tool", "bundle config", "build optimization", "tree shaking", "code splitting", "lazy loading", "chunk splitting", "asset bundling", "build performance", "bundler migration".
 
-**Version:** 1.2.0
+**Version:** 2.0.0
 **Author:** j4flmao
 **License:** MIT
 
@@ -96,6 +96,31 @@ Project type?
         |-- Fine-grained: Nx + Vite/Webpack
 ```
 
+### Code Splitting Decision Tree
+
+```
+Is this a route-level import?
+  |-- YES --> Use dynamic import: `const Page = lazy(() => import('./Page'))`
+  |-- NO  --> Is this a heavy library (editor, chart, PDF)?
+        |-- YES --> Dynamic import on interaction trigger
+        |-- NO  --> Is it shared across 3+ routes?
+              |-- YES --> Extract as vendor chunk
+              |-- NO  --> Keep in route chunk (don't over-split)
+```
+
+### Build Performance Decision Tree
+
+```
+Build times too slow?
+  |-- Dev server -->
+  |     |-- Vite: Check optimizeDeps.include for slow deps
+  |     |-- Webpack: Enable filesystem cache, swap babel for swc/esbuild
+  |-- Production -->
+        |-- Too many chunks? -> Merge small chunks, manualChunks
+        |-- Too slow? -> Enable parallelism, parallel minification
+        |-- Too large? -> Analyze with bundle-analyzer, find heavy deps
+```
+
 ### Architecture Options
 
 **Option A: Vite with Rollup production build.**
@@ -129,6 +154,32 @@ Best for: Publishing npm packages with multiple formats (ESM, CJS, UMD).
 - Route-based splitting: one chunk per route (SPA frameworks).
 - Component-level: lazy-load heavy components (charts, editors, maps).
 - Lib splitting: extract large deps to separate chunks.
+- Interaction-triggered loading: load code only when user clicks/hovers.
+
+```typescript
+// Route-level code splitting
+const UserDashboard = lazy(() => import('./pages/UserDashboard'))
+const AdminPanel = lazy(() => import('./pages/AdminPanel'))
+
+// Interaction-triggered dynamic import
+async function handleExport() {
+  const { generatePDF } = await import('./utils/pdf-generator')
+  generatePDF(data)
+}
+
+// Prefetch on hover for instant navigation
+function SidebarLink({ to, label }: { to: string; label: string }) {
+  const prefetch = useCallback(() => {
+    const preloaded = import(`./pages/${to}`)
+  }, [to])
+
+  return (
+    <a href={to} onMouseEnter={prefetch} onFocus={prefetch}>
+      {label}
+    </a>
+  )
+}
+```
 
 ### 3. Tree Shaking
 - `"sideEffects": false` in `package.json` -- tells bundler to remove unused exports.
@@ -137,6 +188,19 @@ Best for: Publishing npm packages with multiple formats (ESM, CJS, UMD).
 - Dead code elimination via minifier (terser, esbuild, swc).
 - Mark components as `/*#__PURE__*/` when they have no side effects.
 
+```typescript
+// BAD -- barrel file prevents tree shaking
+// components/index.ts
+export { Button } from './Button'
+export { Card } from './Card'
+export { Input } from './Input'
+export { Modal } from './Modal'
+// ... 50 more exports — all included even if only Button is used
+
+// GOOD -- direct import enables tree shaking
+import { Button } from './components/Button'
+```
+
 ### 4. Asset Optimization
 - CSS minification via lightningcss (Vite) or css-minimizer-webpack-plugin.
 - JS minification via esbuild (Vite) or terser-webpack-plugin (Webpack).
@@ -144,12 +208,53 @@ Best for: Publishing npm packages with multiple formats (ESM, CJS, UMD).
 - Font subsetting: remove unused glyphs from icon fonts / variable fonts.
 - Brotli/Gzip compression generated at build time for static hosting.
 
+```typescript
+// Vite config with image optimization
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { ViteImageOptimizer } from 'vite-plugin-image-optimizer'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    ViteImageOptimizer({
+      png: { quality: 80 },
+      jpeg: { quality: 80 },
+      webp: { quality: 80 },
+      avif: { quality: 60 },
+    }),
+  ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+        },
+      },
+    },
+  },
+})
+```
+
 ### 5. Build Performance
 - Content hash in filenames for cache invalidation: `[name].[contenthash:8].js`.
 - Persistent cache: Vite's cacheDir, Webpack's `cache: { type: 'filesystem' }`.
 - esbuild-loader for TS/JSX transpilation (swap babel-loader).
 - swc-loader as alternative (faster than babel, slower than esbuild).
 - Exclude large deps from bundling if served separately (CDN).
+
+```typescript
+// Webpack 5 persistent caching
+module.exports = {
+  cache: {
+    type: 'filesystem',
+    buildDependencies: {
+      config: [__filename],
+    },
+  },
+}
+```
 
 ### 6. Environment Config
 - Mode-specific `.env` files: `.env.development`, `.env.production`, `.env.local`.
@@ -173,6 +278,77 @@ npx webpack-bundle-analyzer dist/stats.json
 # Track over time in CI
 ```
 
+### 9. Vite Specific Configuration
+```typescript
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': 'http://localhost:8080',
+    },
+  },
+  build: {
+    target: 'es2020',
+    sourcemap: false,
+    minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes('node_modules/react-dom')) return 'react-vendor'
+          if (id.includes('node_modules/lodash')) return 'lodash'
+        },
+      },
+    },
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom'],
+  },
+})
+```
+
+### 10. Webpack 5 Specific Configuration
+```javascript
+const path = require('path')
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+
+module.exports = {
+  entry: './src/index.tsx',
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: '[name].[contenthash:8].js',
+    chunkFilename: '[name].[contenthash:8].chunk.js',
+    clean: true,
+    publicPath: '/',
+  },
+  resolve: {
+    extensions: ['.ts', '.tsx', '.js', '.jsx'],
+  },
+  module: {
+    rules: [
+      { test: /\.tsx?$/, use: 'swc-loader', exclude: /node_modules/ },
+      { test: /\.css$/, use: [MiniCssExtractPlugin.loader, 'css-loader', 'postcss-loader'] },
+    ],
+  },
+  optimization: {
+    splitChunks: {
+      chunks: 'all',
+      cacheGroups: {
+        vendor: { test: /[\\/]node_modules[\\/]/, name: 'vendor', chunks: 'all' },
+      },
+    },
+  },
+  plugins: [
+    new HtmlWebpackPlugin({ template: './public/index.html' }),
+    new MiniCssExtractPlugin({ filename: '[name].[contenthash:8].css' }),
+  ],
+}
+```
+
 ---
 
 ## Common Pitfalls
@@ -182,8 +358,6 @@ npx webpack-bundle-analyzer dist/stats.json
 // BAD: re-exports everything, bundler includes unused exports
 export { Button } from './Button';
 export { Card } from './Card';
-export { Input } from './Input';
-export { Modal } from './Modal';
 // ... 50 more exports
 
 // GOOD: tree-shakeable, direct imports
@@ -199,7 +373,6 @@ const Component = React.lazy(() => import(`./pages/${pageName}`));
 const pages = {
   home: () => import('./pages/Home'),
   about: () => import('./pages/About'),
-  contact: () => import('./pages/Contact'),
 };
 ```
 
@@ -214,6 +387,12 @@ All node_modules in a single vendor chunk means a change to any dependency inval
 
 ### 6. Source Maps in Production
 Generating full source maps in production slows the build and exposes source code. Use `hidden-source-map` for error monitoring or disable entirely.
+
+### 7. Missing TypeScript Path Aliases Resolution
+If you use `@/components/Button` in code, the bundler must resolve it. Vite: `resolve.alias`. Webpack: `resolve.alias`.
+
+### 8. CSS Ordering Issues with Code Splitting
+When CSS is extracted per chunk, load order can cause styling race conditions. Use consistent CSS extraction strategy and test across chunks.
 
 ---
 
@@ -250,6 +429,23 @@ Generating full source maps in production slows the build and exposes source cod
 - `webpack-bundle-analyzer` for Webpack projects
 - Track baseline: `npm run build` time, total output size, entry chunk size, vendor chunk count
 
+### CI Pipeline Integration
+```yaml
+# Track bundle size in CI
+name: Bundle Size
+on: [pull_request]
+jobs:
+  bundle-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci && npm run build
+      - run: npx bundlesize
+      - uses: andresz1/size-limit-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+```
+
 ---
 
 ## Ecosystem & Tooling
@@ -285,6 +481,8 @@ Generating full source maps in production slows the build and exposes source cod
 8. Keep production entry chunk under 200KB (gzipped) for fast initial load.
 9. Separate vendor code from application code for cache optimization.
 10. Measure build time and bundle size in CI and alert on regressions.
+11. Configure manualChunks to split large vendor bundles by category.
+12. Use esbuild or swc for transpilation, not Babel, for new projects.
 
 ---
 

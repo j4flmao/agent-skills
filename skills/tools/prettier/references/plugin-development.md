@@ -271,6 +271,190 @@ test('respects tab width option', () => {
 }
 ```
 
+## Advanced Doc Builders
+
+### Doc Builder Usage Patterns
+```javascript
+const { builders } = require('prettier/doc');
+const { group, indent, line, hardline, softline, fill, ifBreak } = builders;
+
+// Pattern: Group with soft indent (fits on one line or breaks)
+function printFunctionDeclaration(path, options, print) {
+  return group([
+    'function ',
+    path.call(print, 'name'),
+    '(',
+    indent(softline),
+    group(path.call(print, 'params')),
+    softline,
+    ') ',
+    path.call(print, 'body'),
+  ]);
+}
+
+// Pattern: Fill for inline lists (like array elements)
+function printArrayElements(path, options, print) {
+  return group([
+    '[',
+    indent(
+      fill(
+        path.map(print, 'elements').flatMap((doc, i) => [
+          doc,
+          i < path.getValue().elements.length - 1 ? [',', line] : '',
+        ])
+      )
+    ),
+    softline,
+    ']',
+  ]);
+}
+
+// Pattern: Conditional formatting
+function printTernary(node, options) {
+  return group([
+    path.call(print, 'condition'),
+    indent(
+      ifBreak(
+        [line, '? '],
+        ' ? '
+      )
+    ),
+    path.call(print, 'consequent'),
+    indent(
+      ifBreak(
+        [line, ': '],
+        ' : '
+      )
+    ),
+    path.call(print, 'alternate'),
+  ]);
+}
+```
+
+### Embed Pattern (Format Inside Strings)
+```javascript
+module.exports = {
+  // ...plugin setup...
+  languages: [{ name: 'MyLang', parsers: ['mylang-parser'], extensions: ['.my'] }],
+  parsers: { 'mylang-parser': parser },
+  printers: { 'mylang-ast': printer },
+  embed: (path, print, textToDoc, options) => {
+    const node = path.getValue();
+
+    // Format SQL inside SQL_QUERY strings
+    if (node.type === 'StringLiteral' && /sql|query/i.test(node.name)) {
+      const formatted = textToDoc(node.value, { parser: 'sql' });
+      if (formatted) {
+        return formatted;
+      }
+    }
+
+    // Format CSS inside style strings
+    if (node.type === 'TaggedTemplateLiteral' && node.tag === 'css') {
+      return textToDoc(node.quasis[0].value.raw, { parser: 'css' });
+    }
+
+    return null; // Don't embed
+  },
+};
+```
+
+### Comment Handling
+```javascript
+const printer = {
+  print: (path, options, print) => { /* ... */ },
+
+  // Attach comments to appropriate nodes
+  canAttachComment: (node) => {
+    return node.type !== 'Comment' && node.type !== 'Whitespace';
+  },
+
+  // Print comments associated with a node
+  printComment: (commentPath, options) => {
+    const comment = commentPath.getValue();
+    switch (comment.type) {
+      case 'LineComment':
+        return `// ${comment.value}`;
+      case 'BlockComment':
+        return `/* ${comment.value} */`;
+      default:
+        return '';
+    }
+  },
+
+  // Determine where comments should be attached
+  massageAstNode: (node, originalNode) => {
+    return {
+      ...node,
+      comments: originalNode.comments?.map((c) => ({
+        type: c.type,
+        value: c.value,
+        loc: c.loc,
+      })),
+    };
+  },
+};
+```
+
+## Plugin Testing Patterns
+
+### Comprehensive Tests
+```javascript
+const prettier = require('prettier');
+const plugin = require('../index');
+
+describe('my-lang formatter', () => {
+  const format = (code, options = {}) =>
+    prettier.format(code, {
+      parser: 'mylang-parser',
+      plugins: [plugin],
+      ...options,
+    });
+
+  test('formats basic assignment', () => {
+    expect(format('name=value')).toBe('name = value;\n');
+  });
+
+  test('formats multiple lines', () => {
+    const input = 'a=1\nb=2\nc=3';
+    expect(format(input)).toBe('a = 1;\nb = 2;\nc = 3;\n');
+  });
+
+  test('handles empty input', () => {
+    expect(format('')).toBe('\n');
+  });
+
+  test('preserves comments', () => {
+    const input = '// This is a comment\nname=value';
+    const output = format(input);
+    expect(output).toContain('// This is a comment');
+    expect(output).toContain('name = value;');
+  });
+
+  test('respects tab width', () => {
+    const input = 'a=1\n  b=2';
+    const output4 = format(input, { tabWidth: 4 });
+    const output2 = format(input, { tabWidth: 2 });
+    expect(output4).toMatch(/^ {4}/m);
+    expect(output2).toMatch(/^ {2}/m);
+  });
+
+  test('snapshot test', () => {
+    const complex = `
+// Configuration
+server.port=8080
+server.host=localhost
+db.name=mydb
+
+// Features
+feature.darkMode=true
+feature.analytics=false
+    `.trim();
+    expect(format(complex)).toMatchSnapshot();
+  });
+});
+```
+
 ## Key Points
 - Plugin structure: languages, parsers, printers, options
 - Languages array defines supported file extensions and names
@@ -299,3 +483,10 @@ test('respects tab width option', () => {
 - Plugin testing with snapshot tests
 - Embed handlers format embedded languages (SQL in strings)
 - Multi-parse support for template languages
+- Plugin options should use descriptive names with category/type/schema
+- Printer can implement `printComments`, `canAttachComment`, `printComment`
+- MassageAstNode cleans up non-standard properties before printing
+- Prettier 3.x supports `required: false` for optional plugin dependencies
+- Plugins can provide `defaultOptions` for custom configuration defaults
+- Doc IR debugging: use `prettier.debug.printToDoc()` to inspect generated doc tree
+- Plugin distribution via npm with `prettier-plugin-` prefix

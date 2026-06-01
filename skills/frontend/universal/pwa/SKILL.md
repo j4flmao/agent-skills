@@ -2,7 +2,7 @@
 name: frontend-pwa
 description: >
   Use this skill when the user says 'PWA', 'service worker', 'offline support', 'web manifest', 'caching strategy', 'progressive web app', 'install prompt', 'workbox'. This skill enforces service worker best practices, offline-first caching strategies, manifest configuration, and Lighthouse PWA audit compliance. Applies to any frontend stack.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -49,6 +49,67 @@ No file output unless requested.
 
 ### Max Response Length
 150 lines for SW + manifest output combined.
+
+## PWA Architecture / Decision Trees
+
+### Service Worker Approach Decision Tree
+```
+Build tool?
+  |-- Vite --> vite-plugin-pwa (auto SW generation, best DX)
+  |-- Next.js --> @serwist/next (successor to next-pwa)
+  |-- Webpack --> workbox-webpack-plugin (full control)
+  |-- Astro --> @astrojs/service-worker
+  |-- Vanilla / no build tool --> Raw sw.js + workbox CDN
+  |
+  |-- Need full offline support?
+       |-- YES: Workbox with precache + runtime cache
+       |-- NO:  Custom sw.js with minimal caching (offline page only)
+```
+
+### Caching Strategy Decision Tree
+```
+What resource type?
+  |-- Build-time asset (JS/CSS/img with hash) -->
+  |     CacheFirst — never changes, cache once and serve forever
+  |
+  |-- HTML navigation -->
+  |     NetworkFirst — prefer fresh HTML, fallback to cache
+  |     Timeout: 3s for fast fallback
+  |
+  |-- API GET request -->
+  |     |-- User-specific (profile, dashboard) -->
+  |     |     NetworkFirst with timeout (3s)
+  |     |     Never cache auth tokens or personal data
+  |     |
+  |     |-- Public API (products, posts) -->
+  |           StaleWhileRevalidate — instant cached response, update in background
+  |
+  |-- Third-party resource (CDN, analytics) -->
+  |     StaleWhileRevalidate
+  |     Handle opaque responses (no CORS) carefully
+  |
+  |-- User-generated content (avatars, uploads) -->
+        CacheFirst with versioning
+        Purge and re-cache when user updates
+```
+
+### Update Flow Decision Tree
+```
+New SW version detected?
+  |-- Critical update (security fix, breaking change) -->
+  |     Auto skipWaiting + refresh all active tabs
+  |     Toast: "App updated" (information only)
+  |
+  |-- Non-critical update (feature, bug fix) -->
+  |     Wait for next navigation or user consent
+  |     Toast: "New version available. Update?" with Refresh button
+  |
+  |-- User clicks "Refresh" / accepts update -->
+        postMessage({ type: 'SKIP_WAITING' })
+        SW activates, page reloads with new version
+```
+
+---
 
 ## Workflow
 
@@ -142,25 +203,56 @@ self.addEventListener('push', (event) => {
 });
 ```
 
-### Step 8: Test Offline
+### Step 8: Background Sync
+```js
+// Register sync in the app
+navigator.serviceWorker.ready.then((registration) => {
+  registration.sync.register('sync-pending-orders');
+});
+
+// Handle sync in SW
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-pending-orders') {
+    event.waitUntil(syncPendingOrders());
+  }
+});
+```
+
+### Step 9: Test Offline
 Use Chrome DevTools > Network > Offline. Verify: page loads from cache, API shows cached response, offline-specific UI appears.
 
-## Component Architecture
+### Step 10: Vite PWA Plugin Config
+```typescript
+// vite.config.ts
+import { VitePWA } from 'vite-plugin-pwa'
 
-### Service Worker Strategy Decision Tree
-```
-What resource type?
-├── Build-time asset (JS/CSS/img with hash)
-│   └── CacheFirst — never changes
-├── HTML navigation
-│   └── NetworkFirst — prefer fresh, fallback to cache
-├── API GET request
-│   ├── User-specific → NetworkFirst with timeout
-│   └── Public → StaleWhileRevalidate
-├── Third-party resource (CDN, analytics)
-│   └── StaleWhileRevalidate
-└── User-generated content (avatars, uploads)
-    └── CacheFirst with versioning
+export default defineConfig({
+  plugins: [
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico'],
+      manifest: {
+        name: 'My App',
+        short_name: 'MyApp',
+        theme_color: '#2563eb',
+        icons: [
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https?:\/\/api\.example\.com\/.*/i,
+            handler: 'NetworkFirst',
+            options: { cacheName: 'api-cache', expiration: { maxEntries: 50, maxAgeSeconds: 86400 } },
+          },
+        ],
+      },
+    }),
+  ],
+})
 ```
 
 ## Common Pitfalls
@@ -174,17 +266,6 @@ What resource type?
 7. **No offline fallback**: Users see browser's generic offline page. Provide a branded offline page.
 8. **Over-caching**: Caching too much data leads to quota exceeded errors.
 
-## Best Practices
-
-1. Version cache names (`v1`, `v2`) to enable clean upgrades without stale data.
-2. Register SW on page load (not DOMContentLoaded) for immediate control.
-3. Cache-first for versioned assets — content-hash URLs never change.
-4. Network-first with timeout for API — fresh data preferred, cache as fallback.
-5. `skipWaiting()` on install with user consent flow — new SW activates when ready.
-6. Purge old caches on activate — prevents storage quota issues.
-7. Use Workbox for complex strategies — it handles edge cases (range requests, opaque responses).
-8. Test offline behavior with DevTools and real network throttling.
-
 ## Compared With
 
 | Aspect | Raw SW | Workbox | vite-plugin-pwa |
@@ -196,26 +277,30 @@ What resource type?
 | Update management | Manual | Manual | Built-in |
 | Dev tools | Browser DevTools | Browser + Workbox | Browser + Vite |
 
-## Performance
+## Performance Considerations
 
-1. SW registration is async and non-blocking — does not affect page load.
-2. CacheFirst serves assets from cache instantly (0ms network wait).
-3. NetworkFirst with timeout balances freshness and performance (3s default timeout).
-4. Precache critical assets in install event — all pages get instant load after first visit.
-5. SW runs in separate thread — no main thread blocking.
-6. Cache storage quota: ~6% of available disk space per origin.
-7. Lighthouse PWA score impact: passing all audits requires SW, manifest, HTTPS, and 200 offline.
+- SW registration is async and non-blocking — does not affect page load
+- CacheFirst serves assets from cache instantly (0ms network wait)
+- NetworkFirst with timeout balances freshness and performance (3s default timeout)
+- Precache critical assets in install event — all pages get instant load after first visit
+- SW runs in separate thread — no main thread blocking
+- Cache storage quota: ~6% of available disk space per origin
+- Lighthouse PWA score impact: passing all audits requires SW, manifest, HTTPS, and 200 offline
 
-## Tooling
+## Accessibility Considerations
 
-1. `workbox-cli` — generate service worker from config.
-2. `workbox-webpack-plugin` — Webpack integration.
-3. `vite-plugin-pwa` — Vite integration with auto-generation.
-4. `@serwist/next` — Next.js PWA toolkit (successor to next-pwa).
-5. Chrome DevTools > Application > Service Workers — debug SW lifecycle.
-6. `pwa-asset-generator` — generate all icon sizes from a source image.
-7. `Lighthouse` — audit PWA compliance.
-8. `Workbox DevTools` — inspect cache contents and strategies.
+- Offline pages should maintain the same accessibility structure as online pages
+- Push notifications must provide meaningful information, not just "New update"
+- Update toasts need keyboard-dismissible and screen-reader-announceable patterns
+- Install prompts should have proper focus management
+
+## Security Considerations
+
+- Service worker scope restricts which paths the SW controls — keep it narrow
+- Never cache `Cache-Control: no-store` responses
+- Always use HTTPS for SW registration (required by spec)
+- Push notification data must be encrypted end-to-end
+- Background sync should not expose user data without authentication
 
 ## Rules
 - Never cache user-specific or sensitive data (auth tokens, personal info) in the service worker.

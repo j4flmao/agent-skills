@@ -85,6 +85,380 @@ Are you conditionally showing content?
        └── Array of objects -> <For> (with stable keys)
 ```
 
+### Decision Tree: Effect Strategy
+
+```
+What kind of side effect?
+  ├── React to signal change -> createEffect with tracking
+  ├── DOM mutation after render -> createEffect (DOM access safe here)
+  ├── Cleanup on dispose -> onCleanup inside createEffect
+  └── No tracking needed -> createRenderEffect (runs before DOM paint)
+```
+
+## Component Design Patterns
+
+### Counter with createSignal
+
+```tsx
+function Counter(props: { initial?: number }) {
+  const [count, setCount] = createSignal(props.initial ?? 0)
+  const doubled = createMemo(() => count() * 2)
+  return (
+    <div>
+      <p>Count: {count()}</p>
+      <p>Doubled: {doubled()}</p>
+      <button onClick={() => setCount(c => c + 1)}>+</button>
+      <button onClick={() => setCount(c => c - 1)}>-</button>
+    </div>
+  )
+}
+```
+
+### Form with createStore
+
+```tsx
+function SignupForm() {
+  const [form, setForm] = createStore({
+    email: '', password: '', confirmPassword: '',
+    errors: {} as Record<string, string>,
+  })
+  const [submitted, setSubmitted] = createSignal(false)
+
+  const isValid = createMemo(() =>
+    form.email.includes('@') && form.password.length >= 8
+  )
+
+  const handleSubmit = async (e: Event) => {
+    e.preventDefault()
+    const result = schema.safeParse({ email: form.email, password: form.password })
+    if (!result.success) {
+      setForm('errors', result.error.flatten().fieldErrors)
+      return
+    }
+    await submitToApi(result.data)
+    setSubmitted(true)
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input value={form.email} onInput={(e) => setForm('email', e.currentTarget.value)} />
+      {form.errors.email && <span>{form.errors.email}</span>}
+      <input type="password" value={form.password} onInput={(e) => setForm('password', e.currentTarget.value)} />
+      <button type="submit" disabled={!isValid()}>Submit</button>
+    </form>
+  )
+}
+```
+
+### Data Fetching with createResource
+
+```tsx
+function UserProfile() {
+  const params = useParams()
+  const [user, { mutate, refetch }] = createResource(() => params.id, fetchUser)
+
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <Show when={user()} fallback={<div>User not found</div>}>
+        <h1>{user().name}</h1>
+        <p>{user().email}</p>
+        <button onClick={() => mutate({ ...user()!, name: 'Updated' })}>Optimistic Update</button>
+        <button onClick={refetch}>Refresh</button>
+      </Show>
+    </Suspense>
+  )
+}
+```
+
+### Context Provider Pattern
+
+```tsx
+const ThemeContext = createContext<{ theme: () => string; toggle: () => void }>()
+
+function ThemeProvider(props: { children: any }) {
+  const [theme, setTheme] = createSignal('light')
+  const toggle = () => setTheme(t => t === 'light' ? 'dark' : 'light')
+  return (
+    <ThemeContext.Provider value={{ theme, toggle }}>
+      {props.children}
+    </ThemeContext.Provider>
+  )
+}
+
+function ThemedButton() {
+  const ctx = useContext(ThemeContext)!
+  return <button class={`btn-${ctx.theme()}`} onClick={ctx.toggle}>Toggle Theme</button>
+}
+```
+
+## State Management Patterns
+
+### Local State with createSignal
+
+```tsx
+const [count, setCount] = createSignal(0)
+const [name, setName] = createSignal('')
+const [items, setItems] = createSignal<string[]>([])
+
+setCount(5)
+setName('John')
+setItems([...items(), 'new item'])
+setItems(items => [...items, 'new item']) // functional update
+```
+
+### Derived State with createMemo
+
+```tsx
+const count = createSignal(0)
+const doubled = createMemo(() => count() * 2)
+const label = createMemo(() => count() > 10 ? 'High' : 'Low')
+// doubled() and label() are cached until count() changes
+```
+
+### Complex State with createStore
+
+```tsx
+const [state, setState] = createStore({
+  user: { profile: { name: 'Alice', email: 'alice@test.com' }, settings: { theme: 'dark' } },
+  items: [] as Item[],
+})
+setState('user', 'profile', 'name', 'Bob') // path syntax
+setState('items', items => [...items, newItem]) // functional
+```
+
+### Shared State with Context
+
+```tsx
+const AuthContext = createContext<{ user: () => User | null; login: (e: string, p: string) => Promise<void> }>()
+
+function AuthProvider(props: { children: any }) {
+  const [user, setUser] = createSignal<User | null>(null)
+  const login = async (email: string, password: string) => {
+    const u = await api.login(email, password)
+    setUser(u)
+  }
+  return <AuthContext.Provider value={{ user, login }}>{props.children}</AuthContext.Provider>
+}
+```
+
+### Server State with createResource
+
+```tsx
+const [data, { mutate, refetch }] = createResource(source, fetcher)
+// source: reactive signal — refetches when source changes
+// fetcher: async function that returns data
+// mutate: optimistic update without refetch
+// refetch: force re-fetch
+```
+
+## Performance Optimization
+
+### No VDOM Overhead
+SolidJS skips the virtual DOM entirely. The compiler produces direct DOM manipulation code:
+```tsx
+// Input
+<p>Count: {count()}</p>
+// Compiled output (conceptual):
+// textNode.data = `Count: ${count()}`
+```
+No diffing, no reconciliation, no component-level re-renders.
+
+### Granular Updates
+When a signal changes, only the specific DOM nodes reading that signal update. A list of 1000 items updating one item updates exactly one DOM node — not the list, not the parent, not the component.
+
+### createStore Proxy Cost
+`createStore` wraps objects in proxies for deep tracking. For very large arrays (10K+), proxy overhead can be significant. Use `createSignal` with immutable updates for performance-critical large lists.
+
+### Bundle Size
+- SolidJS runtime: ~8KB gzipped (vs React ~45KB, Vue ~30KB).
+- No JSX runtime needed — compiled away at build time.
+- Lazy imports via `lazy()` for route-level code splitting.
+
+### createEffect Best Practices
+- Effects run after DOM paint — safe to access DOM elements
+- Use `onCleanup` for subscriptions, intervals, listeners
+- Keep effects focused on one concern
+- Avoid reading signals in effects that don't need tracking (use `untrack`)
+
+## Build & Bundle Considerations
+
+### Vite Configuration
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite'
+import solidPlugin from 'vite-plugin-solid'
+
+export default defineConfig({
+  plugins: [solidPlugin()],
+  build: {
+    target: 'esnext',
+    polyfillDynamicImport: false,
+  },
+})
+```
+
+### Build Commands
+```bash
+npm run build    # Production build to dist/
+npm run dev      # Dev server with HMR
+```
+
+### Code Splitting
+
+```tsx
+import { lazy } from 'solid-js'
+const Home = lazy(() => import('./pages/Home'))
+const Users = lazy(() => import('./pages/Users'))
+
+<Router>
+  <Route path="/" component={Home} />
+  <Route path="/users" component={Users} />
+</Router>
+```
+
+### SolidJS with TypeScript
+- Use `Component<Props>` type for component definitions
+- Signal types inferred automatically
+- Use `JSX.Element` for children/rendered content type
+
+## Testing Strategies
+
+### Unit Testing Signals
+
+```tsx
+import { createSignal, createMemo, createEffect } from 'solid-js'
+import { describe, it, expect } from 'vitest'
+
+describe('signals', () => {
+  it('createSignal works', () => {
+    const [count, setCount] = createSignal(0)
+    expect(count()).toBe(0)
+    setCount(5)
+    expect(count()).toBe(5)
+  })
+
+  it('createMemo caches derived values', () => {
+    const [count, setCount] = createSignal(0)
+    const doubled = createMemo(() => count() * 2)
+    expect(doubled()).toBe(0)
+    setCount(5)
+    expect(doubled()).toBe(10)
+  })
+})
+```
+
+### Testing Components
+
+```tsx
+// __tests__/Counter.test.tsx
+import { render, screen, fireEvent } from 'solid-testing-library'
+import { describe, it, expect } from 'vitest'
+import Counter from './Counter'
+
+describe('Counter', () => {
+  it('renders initial count', () => {
+    render(() => <Counter initial={5} />)
+    expect(screen.getByText('5')).toBeDefined()
+  })
+
+  it('increments on click', async () => {
+    render(() => <Counter />)
+    const btn = screen.getByRole('button')
+    fireEvent.click(btn)
+    expect(screen.getByText('1')).toBeDefined()
+  })
+})
+```
+
+### E2E Testing
+
+```tsx
+// e2e/app.spec.ts
+import { test, expect } from '@playwright/test'
+
+test('loads home page', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('h1')).toBeVisible()
+})
+```
+
+## Migration Patterns
+
+### React to SolidJS
+
+```tsx
+// React: useState + useEffect + useMemo
+const [count, setCount] = useState(0)
+const doubled = useMemo(() => count * 2, [count])
+useEffect(() => { document.title = `Count: ${count}` }, [count])
+
+// SolidJS: createSignal + createMemo + createEffect
+const [count, setCount] = createSignal(0)
+const doubled = createMemo(() => count() * 2)
+createEffect(() => { document.title = `Count: ${count()}` })
+```
+
+| React | SolidJS |
+|-------|---------|
+| useState | createSignal |
+| useReducer | createStore with manual actions |
+| useEffect | createEffect |
+| useMemo | createMemo |
+| useCallback | $() or module-level function |
+| useContext + createContext | createContext |
+| useRef | createSignal (for DOM) or ref prop |
+
+## Anti-Patterns
+
+### Destructuring Signals
+
+```tsx
+// Anti-pattern: destructuring loses tracking
+const { count, setCount } = useCounter()
+// <p>{count}</p> — never updates
+
+// Correct: keep as signal
+const count = useCounter()
+// <p>{count()}</p>
+```
+
+### createEffect for Derived State
+
+```tsx
+// Anti-pattern: effect for computation
+createEffect(() => { setDoubled(count() * 2) })
+
+// Correct: memo
+const doubled = createMemo(() => count() * 2)
+```
+
+### Conditional createSignal
+
+```tsx
+// Anti-pattern: signal inside condition
+if (condition) { const [x] = createSignal(0) }
+
+// Correct: always at top level
+const [x] = createSignal(0)
+```
+
+### Forgetting onCleanup
+
+```tsx
+// Anti-pattern: no cleanup
+createEffect(() => {
+  const interval = setInterval(tick, 1000)
+  // memory leak!
+})
+
+// Correct
+createEffect(() => {
+  const interval = setInterval(tick, 1000)
+  onCleanup(() => clearInterval(interval))
+})
+```
+
 ## Common Pitfalls
 
 ### Pitfall 1: Destructuring Signals
@@ -148,29 +522,6 @@ Vue uses a proxy-based reactivity system similar to SolidJS's stores. SolidJS co
 
 ### SolidJS vs Svelte
 Both compile to fine-grained DOM updates. Svelte uses template syntax with magic assignments; SolidJS uses JSX with explicit function calls for signals. SolidJS feels more like React; Svelte feels more like vanilla HTML.
-
-## Performance Considerations
-
-### No VDOM Overhead
-SolidJS skips the virtual DOM entirely. The compiler produces direct DOM manipulation code:
-```tsx
-// Input
-<p>Count: {count()}</p>
-// Compiled output (conceptual):
-// textNode.data = `Count: ${count()}`
-```
-No diffing, no reconciliation, no component-level re-renders.
-
-### Granular Updates
-When a signal changes, only the specific DOM nodes reading that signal update. A list of 1000 items updating one item updates exactly one DOM node — not the list, not the parent, not the component.
-
-### createStore Proxy Cost
-`createStore` wraps objects in proxies for deep tracking. For very large arrays (10K+), proxy overhead can be significant. Use `createSignal` with immutable updates for performance-critical large lists.
-
-### Bundle Size
-- SolidJS runtime: ~8KB gzipped (vs React ~45KB, Vue ~30KB).
-- No JSX runtime needed — compiled away at build time.
-- Lazy imports via `lazy()` for route-level code splitting.
 
 ## Ecosystem & Tooling
 

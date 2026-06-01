@@ -2,7 +2,7 @@
 name: frontend-web-components
 description: >
   Use this skill when the user says 'web component', 'custom element', 'shadow DOM', 'HTML template', 'CustomElementsRegistry', 'ElementInternals', 'form-associated element', 'cross-framework component', 'vanilla web component'. This skill enforces: custom element lifecycle methods, shadow DOM for style encapsulation, <slot> and <template> patterns, ElementInternals for form participation, and attribute/property reflection for cross-framework compatibility. Requires no specific framework — works in any web project. Do NOT use for: Lit-specific components, framework-specific components (React/Vue/Angular), or projects that should use a library-based approach.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -54,6 +54,69 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 2560 tokens.
+
+## Web Component Architecture / Decision Trees
+
+### Architecture Decision Tree
+```
+Is this a reusable component shared across frameworks?
+  |-- YES --> Web Components (framework-agnostic by nature)
+  |     Use case: design system components, shared widgets
+  |
+  |-- NO, single framework only -->
+        |-- Using React? --> React component (simpler, better DX)
+        |-- Using Vue? --> Vue SFC (simpler, better DX)
+        |-- Using Angular? --> Angular component (simpler, better DX)
+        |-- Vanilla JS project? --> Web Component
+```
+
+### Shadow DOM Decision Tree
+```
+Does the component need style encapsulation?
+  |-- YES -->
+  |     |-- Needs to be accessible from outside for testing? -->
+  |     |     YES: attachShadow({ mode: 'open' })
+  |     |     NO:  attachShadow({ mode: 'closed' }) — rare, breaks tooling
+  |     |
+  |     |-- Content projection needed? -->
+  |           Use <slot> elements in shadow DOM template
+  |
+  |-- NO -->
+        Light DOM (no shadow root, styles are global)
+        Simpler, but CSS can leak in/out
+```
+
+### Form-Associated Decision Tree
+```
+Does the component represent a form value?
+  |-- YES (input, select, checkbox, custom file picker) -->
+  |     Set static formAssociated = true
+  |     Use attachInternals() for form participation
+  |     Update value: _internals.setFormValue(val)
+  |     Report validity: _internals.setValidity(flags)
+  |
+  |-- NO (button, tooltip, accordion, card) -->
+        Regular custom element, no form involvement
+```
+
+### Cross-Framework Wrapper Decision Tree
+```
+What framework consumes this component?
+  |-- React -->
+  |     Wrapper: useRef + useEffect to set properties/attributes
+  |     Events: addEventListener in useEffect, cleanup in return
+  |     Complex props: set via element.property (not attribute)
+  |
+  |-- Vue -->
+  |     Wrapper: template with :prop binding + @event handler
+  |     v-model: implement with :value + @input pattern
+  |
+  |-- Angular -->
+  |     Wrapper: CUSTOM_ELEMENTS_SCHEMA for template
+  |     or Angular wrapper component with ElementRef
+```
+
+---
 
 ## Workflow
 
@@ -261,6 +324,64 @@ Key compatibility rules:
 - Listen for CustomEvent using `addEventListener` (not `on*` attributes).
 - Reflect primitive properties as attributes for declarative HTML usage.
 - Avoid internal state that depends on framework reactivity.
+
+## Common Pitfalls
+
+### 1. Not Cleaning Up in disconnectedCallback
+Event listeners and MutationObservers attached in `connectedCallback` must be removed in `disconnectedCallback`. Otherwise, the element leaks memory.
+
+### 2. attributeChangedCallback Not Triggering
+`attributeChangedCallback` only fires for attributes listed in `observedAttributes`. If you add a custom attribute without listing it, the callback won't fire.
+
+### 3. Property Setters Not Using setAttribute
+```javascript
+// BAD -- setting internal state without triggering attributeChanged
+set size(val) { this._size = val; this._render(); }
+
+// GOOD -- delegates to setAttribute, triggers attributeChanged
+set size(val) { this.setAttribute('size', val); }
+```
+
+### 4. Events Not Crossing Shadow Boundary
+Events dispatched from within shadow DOM don't cross the boundary by default. Use `composed: true` to bubble up through shadow roots.
+
+### 5. Naming Without Hyphen
+Custom element names MUST contain a hyphen (e.g., `my-button`). Single-word names conflict with built-in HTML elements.
+
+## Compared With
+
+| Approach | Bundle Size | Framework Agnostic | SSR | Learning Curve |
+|----------|------------|-------------------|-----|---------------|
+| Vanilla Web Component | 0KB (native) | Yes | Limited (declarative shadow DOM) | Medium |
+| Lit | ~5KB | Yes | Yes | Low |
+| Stencil | ~8KB | Yes | Yes | Medium |
+| React component | 0KB (runtime) | No (React only) | Yes | Low |
+| Vue SFC | 0KB (runtime) | No (Vue only) | Yes | Low |
+
+## Performance Considerations
+
+- Web Components are native browser APIs — no framework overhead
+- Shadow DOM style scoping is built into the browser CSS engine — no runtime cost
+- `attributeChangedCallback` is synchronous and runs during the attribute change microtask
+- Custom elements registered once via `customElements.define()` — no runtime registration cost
+- Declarative Shadow DOM (HTML streaming with shadow root) enables SSR for web components
+- Chrome DevTools Performance shows custom element lifecycle as distinct markers
+
+## Accessibility Considerations
+
+- Shadow DOM preserves accessibility tree — ARIA attributes inside shadow root are exposed
+- Use `:host` and `::part()` for styling without breaking accessibility
+- Form-associated custom elements participate in native form validation (accessible error messages)
+- Slotted content inherits light DOM accessibility — don't duplicate ARIA roles in shadow DOM
+- Focus management must be handled explicitly in `connectedCallback` if the component manages focus
+- Use `ElementInternals.aria*` properties for setting ARIA attributes from JavaScript
+
+## Security Considerations
+
+- `innerHTML` in shadow DOM can introduce XSS if user content is not sanitized
+- Closed shadow DOM mode prevents external inspection but doesn't improve security
+- Custom elements inherit the page's CSP — no special security consideration
+- Form-associated custom elements participate in the parent form — validate on the server
 
 ## Rules
 - Always define `observedAttributes` for reactive attribute-to-property sync.

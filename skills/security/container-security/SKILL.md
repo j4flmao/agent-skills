@@ -298,6 +298,197 @@ Keyless (Cosign OIDC): no key management, CI provider identity, cloud CI suitabl
 5. Remediate: update base images, add scanning rules, tune policies
 6. Document: incident report, preventive measures
 
+## CI/CD Pipeline Examples
+
+### GitHub Actions — Container Security Pipeline
+```yaml
+# .github/workflows/container-scan.yml
+name: Container Security
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Image
+        run: docker build -t app:${{ github.sha }} .
+      - name: Trivy Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: app:${{ github.sha }}
+          format: sarif
+          severity: CRITICAL,HIGH
+          exit-code: 1
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: app:${{ github.sha }}
+          format: cyclonedx-json
+      - name: Sign Image
+        run: |
+          cosign sign --keyless \
+            --identity-token ${{ secrets.ID_TOKEN }} \
+            registry.example.com/app@${{ steps.digest.outputs.digest }}
+      - name: Push to Registry
+        run: docker push registry.example.com/app:${{ github.sha }}
+```
+
+### GitLab CI — Container Security
+```yaml
+container-scan:
+  stage: test
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  script:
+    - trivy image --severity CRITICAL,HIGH --exit-code 1 $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - syft packages $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA -o cyclonedx-json > sbom.json
+  artifacts:
+    reports:
+      cyclonedx: sbom.json
+```
+
+## Kyverno Policy Examples
+
+### Require Non-Root User
+```yaml
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-non-root
+spec:
+  validationFailureAction: Enforce
+  rules:
+    - name: check-run-as-non-root
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+      validate:
+        message: "Containers must run as non-root user"
+        pattern:
+          spec:
+            securityContext:
+              runAsNonRoot: true
+```
+
+### Block Privileged Containers
+```yaml
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-privileged
+spec:
+  validationFailureAction: Enforce
+  rules:
+    - name: check-privileged
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+      validate:
+        message: "Privileged containers are not allowed"
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  privileged: false
+```
+
+## Container Security Anti-Patterns
+
+### Anti-Pattern: Using :latest Tag
+`latest` tag is ambiguous — point to different images over time. No traceability, no rollback, no audit. Use semantic versioning (`v1.2.3`) or commit SHA (`sha-abc123`) for immutable references. Enforce with admission controller blocking `latest`.
+
+### Anti-Pattern: Blindly Trusting Base Images
+Pulling base images from Docker Hub without verification. Base images can contain malware, outdated packages, or backdoors. Use only verified official images. Pin to digest. Scan base images before building. Use Docker Content Trust or Cosign verification.
+
+### Anti-Pattern: Scanning Only at Build Time
+New CVEs discovered daily. An image passing scan at build time may have critical vulnerabilities hours later. Rescan deployed images daily. Alert on new critical findings in running workloads. Auto-create tickets.
+
+### Anti-Pattern: No Resource Limits
+Containers without CPU/memory limits can DoS the host node. One compromised container can starve others. Always set resource requests and limits. Admission policy should require resource specifications.
+
+### Anti-Pattern: Storing Secrets in Image Layers
+Using `ENV` or build args for secrets embeds them in image layers. Anyone with `docker history` or registry access can extract secrets. Use `RUN --mount=type=secret` for build-time secrets. Inject runtime secrets via volumes, env-from, or secrets manager.
+
+## Vulnerability Management Anti-Patterns
+
+### Anti-Pattern: Treating All CVEs Equally
+Not all CVEs are exploitable in your context. A CVE in a library function never called from application code is low risk. Use reachability analysis (Snyk, Mend) to prioritize fixable and reachable vulnerabilities. Gate only on reachable critical/high.
+
+### Anti-Pattern: No Exception Process
+Blocking every CVE without exceptions causes deployment paralysis. Establish a documented exception process with compensating controls, owner approval, and expiry dates. Track exception metrics and reduce over time.
+
+### Anti-Pattern: Manual CVE Triage at Scale
+Manual triage does not scale beyond 10-20 images. Automate vulnerability scanning results correlation with reachability, fixability, and exploitability (EPSS score). Auto-assign findings to service teams based on image ownership.
+
+## Container Security Operations
+
+### Daily Operations Checklist
+- [ ] Verify scan pipeline ran successfully for all builds
+- [ ] Check for new critical CVEs in deployed images
+- [ ] Review Falco critical alerts from last 24 hours
+- [ ] Verify admission controller policies are enforcing
+- [ ] Check registry for unsigned images
+
+### Weekly Operations
+- [ ] Review vulnerability exception requests and expiry
+- [ ] Tune Falco rules for false positives
+- [ ] Update base images to latest patch versions
+- [ ] Review admission control audit logs
+- [ ] Patch confirmed vulnerabilities within SLA
+
+### Monthly Operations
+- [ ] Full registry rescan and vulnerability report
+- [ ] Metrics report: vulnerability age, fix rate, count by severity
+- [ ] Update scanner vulnerability databases
+- [ ] Test Cosign verification end-to-end
+- [ ] Validate SBOM generation for all active images
+- [ ] Review and update exception list
+
+### Incident Response Playbook
+1. **Detect**: Falco alert (shell in container, crypto miner behavior, unexpected outbound connection) or scan finding (new critical CVE in deployed image)
+2. **Assess**: Identify affected images, running instances, blast radius. Determine if exploit exists in the wild (CISA KEV, EPSS > 0.9).
+3. **Contain**: Patch image, rebuild, redeploy. If active compromise, isolate pod with network policy, capture forensic snapshot.
+4. **Eradicate**: Remove compromised container, revoke credentials that may have been exposed, rotate secrets.
+5. **Recover**: Deploy patched image. Verify admission policies blocked similar images. Update scanning rules.
+6. **Post-mortem**: Root cause analysis. Update Dockerfile, base image, or admission policies to prevent recurrence.
+
+## Container Security Maturity Model
+
+### Level 1: Basic
+- Manual image building with no scanning
+- Root user in containers
+- `latest` tags used in production
+- No admission control
+- No runtime monitoring
+
+### Level 2: Defined
+- Image scanning in CI (Trivy, fail on critical)
+- Multi-stage builds with non-root user
+- Semantic versioning for images
+- Basic admission policies (block privileged)
+- Falco deployed with default rules
+
+### Level 3: Managed
+- Automated SBOM generation and signing per build
+- Admission control with image verification (Cosign)
+- Runtime monitoring with custom Falco rules and alerting
+- Vulnerability management with SLA and exception process
+- Daily rescan of deployed images
+
+### Level 4: Optimized
+- Policy-as-code with GitOps-driven admission (Kyverno/OPA in CI)
+- Behavioral analysis with Tracee for advanced threat detection
+- Automated CVE remediation with PR creation
+- Reachability-aware vulnerability prioritization
+- Container security metrics in executive dashboard
+
 ## Rules
 - No root user in container runtime
 - No latest tag -- use semantic versioning or commit SHA

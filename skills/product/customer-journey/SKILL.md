@@ -120,6 +120,49 @@ Set up automated alerts when any metric drops below threshold. Schedule regular 
 - Funnel steps must be sequential, non-overlapping, and consistent across users.
 - Time-to-value is a leading indicator of retention — include it in all journey analyses.
 
+## Journey Analytics Advanced Methods
+
+### Path Analysis
+Analyze the actual paths users take through the journey, not just the ideal designed path. Use sequence analysis to find common navigation patterns. Identify top 5-10 most common paths and their conversion rates. Compare power user paths vs churning user paths to find differentiating behaviors. Look for loop patterns where users get stuck repeating the same steps without progressing. Use sankey diagrams to visualize flow between stages.
+
+### Customer Effort Score Integration
+Place micro-surveys at key journey milestones using CES questions: "How much effort did you personally have to put forth to handle [journey step]?" (Very Low Effort to Very High Effort, 1-5). Score each journey step independently. Correlate high-effort steps with churn, support volume, and NPS. Target <2.5 average CES per step. High-effort steps are the highest-priority optimization targets.
+
+### Journey-Level Attribution
+Attribute revenue or retention impact to specific journey stages, not just the last touchpoint. Use time-decay attribution (more weight to recent stages), position-based attribution (more weight to first and last stages), or data-driven attribution (ML model assigning credit based on correlation with outcomes). Compare attribution models to understand which stages drive the most value.
+
+## Journey Governance
+
+### Journey Ownership Model
+Assign a journey owner for each major customer journey. The owner has end-to-end accountability for journey metrics: completion rate, satisfaction score, time-to-value, and revenue impact. Journey owners are cross-functional — they coordinate across product, design, engineering, marketing, sales, and support.
+
+Responsibilities: maintain journey map and service blueprint, monitor journey metrics, identify optimization opportunities, run experiments, coordinate cross-functional improvements, report journey health to leadership.
+
+### Journey Health Score
+Composite metric capturing overall journey quality:
+
+```
+Journey Health Score = w1 × completion_rate + w2 × satisfaction + w3 × TTV_score + w4 × retention_impact
+
+Where:
+  completion_rate = % of users completing journey end-to-end
+  satisfaction = CSAT or CES at journey completion (normalized 0-1)
+  TTV_score = 1 - (actual_TTV / target_TTV), capped at 0-1
+  retention_impact = correlation between journey completion and D30 retention
+  w1-w4 = weights summing to 1.0 (determined by business priorities)
+```
+
+Target: >0.8 Green, 0.6-0.8 Yellow, <0.6 Red. Track monthly for high-traffic journeys, quarterly for low-traffic.
+
+### Journey Review Cadence
+
+| Review Type | Frequency | Participants | Agenda |
+|-------------|-----------|-------------|--------|
+| Health check | Weekly (high-traffic) | Journey owner + PM | Metric trends, alerts, ongoing experiments |
+| Deep dive | Monthly | Cross-functional team | Funnel analysis, pain point review, experiment results |
+| Strategic review | Quarterly | Leadership + journey owners | Journey priorities, resource allocation, ROI analysis |
+| Full refresh | Annually | All stakeholders | Journey map update, new research, market changes |
+
 ## Framework / Methodologies
 
 ### McKinsey Customer Journey Excellence Framework

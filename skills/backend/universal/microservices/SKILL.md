@@ -2,7 +2,7 @@
 name: microservices
 description: >
   Use this skill when designing microservices architecture — decomposition, communication, data, discovery, observability, deployment. This skill enforces: bounded context decomposition, database-per-service ownership, saga patterns for distributed transactions, strangler fig migration. Do NOT use for: monolith application design, frontend architecture, single-service API design.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -50,6 +50,52 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 
 ### Max Response Length
 4096 tokens
+
+## Decision Tree
+
+### Should You Use Microservices?
+
+```
+What is your situation?
+  ├── Small team (<10 devs), early stage product, uncertain domain
+  │   └── Monolith recommended. Reason: microservices add accidental complexity before you understand the domain.
+  ├── Medium team, well-understood domain, scaling issues in monolith
+  │   └── Decompose selectively: extract hot paths first (bounded contexts)
+  ├── Large organization, multiple teams, clear domain boundaries
+  │   └── Microservices aligned to team topology (Conway's Law)
+  └── Migrating from monolith with growing complexity
+      └── Strangler Fig: extract one bounded context at a time
+```
+
+### How to Decompose?
+
+```
+What boundary defines this service?
+  ├── Business capability (orders, payments, shipping)
+  │   └── Standard approach: map to business functions
+  ├── DDD subdomain (core, supporting, generic)
+  │   └── Follow bounded contexts from domain modeling
+  ├── Team topology (one team = one or more services)
+  │   └── Conway's Law: services mirror communication structure
+  └── Data ownership (candidate for extraction)
+      └── If a data domain changes independently, it's a decomposition candidate
+```
+
+### Communication Pattern Selection
+
+```
+What does the caller need?
+  ├── Immediate response, strong consistency, low latency needed
+  │   └── Synchronous (HTTP/gRPC) — but beware cascading failures
+  ├── Fire-and-forget, eventual consistency OK, decouple in time
+  │   └── Async (message queue / event) — resilient, scalable
+  ├── Distributed transaction spanning 3+ services
+  │   └── Saga orchestration — central coordinator
+  ├── Guaranteed event publication DB → broker
+  │   └── Transactional outbox — write event in same DB transaction
+  └── Need to rebuild state from events or audit trail
+      └── Event sourcing — store events as source of truth
+```
 
 ## Workflow
 
@@ -152,6 +198,54 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 4. **Strangler** — incrementally replace monolith endpoints with service endpoints
 5. **Monolith retirement** — when all features migrated, decommission monolith
 
+### Step 10: API Versioning and Contracts
+
+```typescript
+// Contract-first approach: define OpenAPI / protobuf before implementation
+// Use consumer-driven contracts (CDC) to detect breaking changes
+
+// API versioning strategies:
+// 1. URL path: /v1/orders, /v2/orders
+// 2. Header: Accept: application/vnd.myapp.v1+json
+// 3. Query param: /orders?version=1
+// Recommendation: URL path for major versions, additive field expansion for minor
+```
+
+### Step 11: Cross-Cutting Concerns
+
+| Concern | Implementation |
+|---------|---------------|
+| Configuration | Centralized (Consul, etcd, K8s ConfigMap + secrets). Never env-specific in code |
+| Shared libraries | Minimize. Prefer duplication over coupling via shared libs |
+| Error handling | Standard error envelope across all services |
+| Health checks | Readiness (can serve?) + Liveness (is alive?) exposed on management port |
+| Graceful shutdown | Drain connections, complete in-flight, then exit |
+| Rate limiting | Per service + global via API gateway |
+
+## Production Considerations
+
+| Concern | Practice |
+|---------|----------|
+| Service boundaries wrong | Expect to merge/split services as understanding grows. Plan for refactoring |
+| Network latency | Inter-service calls add 1-10ms. Batch queries where possible |
+| Data consistency | Eventual consistency is default. Accept it or use saga with compensating actions |
+| Team autonomy vs consistency | Balance: shared infrastructure (monitoring, CI) without coupling service decisions |
+| Testing | Unit (service-local) + Integration (per service) + Contract (per API pair) + E2E (minimal) |
+| Observability | Must be in place before going live. Debugging without it is guesswork |
+
+## Anti-Patterns
+
+| Anti-Pattern | Problem | Fix |
+|---|---|---|
+| **Distributed Monolith** | Services tightly coupled, deployed together | Enforce strict API contracts, independent deploy |
+| **Shared Database** | Multiple services same DB schema | Extract shared data into dedicated service |
+| **Too Fine-grained** | Excessive network calls, latency | Merge related services |
+| **God Service** | One service does everything | Decompose by capability |
+| **No Monitoring** | Cannot debug production issues | Add OpenTelemetry before going live |
+| **Synchronous Chains** | A calls B calls C — high latency, fragile | Async where possible, parallel calls |
+| **Leaky Abstractions** | Service exposes internal DB schema in API | API is contract — hide implementation |
+| **Golden Hammer** | All problems solved with microservices | Consider monolith first, extract when needed |
+
 ## Rules
 - No shared databases between services — ever.
 - Each service independently deployable with its own CI/CD.
@@ -161,16 +255,9 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 - No service calls another service's database directly.
 - Strangler Fig for monolith migration — no big-bang rewrites.
 - Communication patterns documented per service pair with rationale.
-
-### Anti-Patterns
-
-| Anti-Pattern | Problem | Fix |
-|---|---|---|
-| **Distributed Monolith** | Services tightly coupled, deployed together | Enforce strict API contracts, independent deploy |
-| **Shared Database** | Multiple services same DB schema | Extract shared data into dedicated service |
-| **Too Fine-grained** | Excessive network calls, latency | Merge related services |
-| **God Service** | One service does everything | Decompose by capability |
-| **No Monitoring** | Cannot debug production issues | Add OpenTelemetry before going live |
+- Always define API contracts before implementation (contract-first).
+- Each service has at most one DB (shared-nothing).
+- Prefer eventual consistency unless strong consistency is legally required.
 
 ## References
   - references/communication-patterns.md — Communication Patterns

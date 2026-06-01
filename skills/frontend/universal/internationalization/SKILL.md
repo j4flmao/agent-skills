@@ -2,7 +2,7 @@
 name: frontend-internationalization
 description: >
   Use this skill when the user says 'i18n', 'internationalization', 'localization', 'locale switching', 'RTL', 'right-to-left', 'i18next', 'react-intl', 'vue-i18n', 'translation', 'language selector', 'formatjs', 'ICU message format', 'pluralization', 'LTR', 'bidirectional text'. This skill enforces proper i18n library selection, locale switching patterns, RTL/LTR layout support, ICU message syntax, and translation file management. Works with any frontend framework (React, Vue, Angular, Svelte). Do NOT use for: backend i18n, database collation, or content translation workflows.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -66,6 +66,70 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 4096 tokens
+
+## i18n Architecture / Decision Trees
+
+### Library Selection Decision Tree
+```
+Framework?
+  |-- React -->
+  |     SSR needed?
+  |     |-- YES: next-i18next (Next.js) or react-i18next (any)
+  |     |-- NO: react-i18next (full featured) or react-intl (ICU, smaller bundle)
+  |
+  |-- Vue -->
+  |     |-- Vue 3: vue-i18n (official)
+  |     |-- Nuxt: @nuxtjs/i18n
+  |
+  |-- Angular -->
+  |     |-- @angular/localize (official, compile-time)
+  |     |-- ngx-translate (runtime)
+  |
+  |-- Svelte -->
+  |     |-- svelte-i18n or sveltekit-i18n
+  |
+  |-- Cross-framework / monorepo -->
+        |-- i18next (framework-agnostic adapter)
+```
+
+### Locale Loading Decision Tree
+```
+Number of locales?
+  |-- 2-3 locales, small files (<50KB total) -->
+  |     Bundle all translations? If yes: Include in main bundle (no loading delay)
+  |     If no: Lazy load on locale switch
+  |
+  |-- 4-10 locales, moderate files -->
+  |     Lazy-load per locale on demand. Split by namespace (common, auth, admin).
+  |     Cache loaded resources in memory.
+  |
+  |-- 10+ locales -->
+  |     Lazy-load per locale, per namespace. Only load active locale.
+  |     Consider CDN-hosted translation files to reduce initial bundle.
+  |
+  |-- SSR application -->
+        Load locale server-side, serialize to client via inline script.
+        Hydrate client with server-loaded resources (no double fetch).
+```
+
+### RTL Strategy Decision Tree
+```
+RTL support needed?
+  |-- YES -->
+  |     CSS approach?
+  |     |-- Use CSS logical properties (inline-start/end) throughout
+  |     |-- Set dir="rtl" on <html> element on locale change
+  |     |-- Verify: all margin-left/right, padding-left/right, text-align left/right are replaced
+  |     |
+  |     Testing?
+  |     |-- Visual: toggle locale to RTL, check every page
+  |     |-- Automated: screenshot tests with RTL locale
+  |
+  |-- NO -->
+        Ensure CSS logical properties are used anyway (future-proof).
+```
+
+---
 
 ## Workflow
 
@@ -218,6 +282,89 @@ function renderWithI18n(ui: React.ReactElement) {
   return render(<I18nextProvider i18n={i18n}>{ui}</I18nextProvider>)
 }
 ```
+
+### 11. Locale-Specific Number Formatting
+```typescript
+const formatters = {
+  currency: (locale: string, amount: number, currency: string) =>
+    new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount),
+  percent: (locale: string, value: number) =>
+    new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 }).format(value),
+  unit: (locale: string, value: number, unit: string) =>
+    new Intl.NumberFormat(locale, { style: 'unit', unit }).format(value),
+}
+
+// Usage
+formatters.currency('de-DE', 19.99, 'EUR') // "19,99 €"
+formatters.percent('en-US', 0.25)           // "25%"
+```
+
+## Common Pitfalls
+
+### 1. Hardcoded Strings in Components
+```typescript
+// BAD -- hardcoded string, cannot be translated
+<h2>Welcome back, {name}!</h2>
+
+// GOOD -- translatable key
+<h2>{t('auth.welcomeBack', { name })}</h2>
+```
+
+### 2. CSS left/right Instead of Logical Properties
+Using `left`/`right` properties requires overriding every rule for RTL. CSS logical properties (`inline-start`/`inline-end`) flip automatically.
+
+### 3. Not Persisting User Locale Choice
+Detecting locale from `navigator.language` alone loses the user's choice after they switch. Always persist to localStorage or user preferences API.
+
+### 4. Bundling All Locales
+Importing all translation files in the main bundle increases initial JS size by 100KB+ per additional locale. Lazy-load by locale and namespace.
+
+### 5. Missing Pluralization Rules
+Some languages have complex plural rules (Arabic has 6 forms, Polish has 3). ICU handles this automatically — but only if you use proper plural syntax.
+
+### 6. No Fallback Chain
+When a translation key is missing in the target locale, the app should fall back to the default locale, then to the key itself. Without this, users see empty strings.
+
+## Compared With
+
+| Feature | i18next | FormatJS | vue-i18n | @angular/localize |
+|---------|---------|----------|----------|-------------------|
+| ICU message format | Plugin | Native | Built-in | Built-in |
+| Pluralization | Built-in | Built-in | Built-in | Built-in |
+| Lazy loading | Built-in | Manual | Manual | Build-time |
+| SSR support | Yes | Yes | Yes (Nuxt) | Build-time |
+| TypeScript support | Good | Good | Good | Built-in |
+| Bundle size | ~10KB | ~5KB | ~6KB | 0KB (compile-time) |
+| Framework agnostic | Yes | React only | Vue only | Angular only |
+
+## Performance Considerations
+
+### Bundle Impact
+- Including i18next: ~10KB gzipped
+- Lazy-loaded locale resources per language: 2-20KB gzipped depending on app size
+- All 10 locales bundled eagerly: +100KB+ to initial JS
+- With lazy loading: only active locale loaded, ~2-20KB
+
+### SSR Serialization Cost
+Serializing translation resources to the client adds ~5-50KB to the initial HTML payload. For large apps, consider streaming or loading only the current page's namespace.
+
+### RTL CSS Cost
+CSS logical properties have negligible performance cost. Flipping layout on locale change triggers a full layout recalculation (style recalc + layout pass), typically taking 10-50ms.
+
+## Accessibility Considerations
+
+- `dir` and `lang` attributes on `<html>` are required for screen readers
+- RTL text must use the correct Unicode bidirectional characters
+- Icons with directional meaning (arrows, chevrons) should flip in RTL mode
+- Translation text may be longer in some languages — allow for text expansion (30-50% longer in German, Arabic)
+- Form labels and button text must be translated, not just content
+
+## Security Considerations
+
+- Never interpolate user input directly into translated strings (XSS risk)
+- i18next escapes values by default — do not disable `escapeValue`
+- Translation files from user-generated content (crowdsourced) must be sanitized
+- Avoid using `dangerouslySetInnerHTML` with translated content
 
 ## Rules
 1. Never embed user-facing strings directly in components — always use translation keys.

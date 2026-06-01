@@ -334,6 +334,65 @@ Post-failover validation:
   4. Application health check (canary read/write)
 ```
 
+### Replication Conflict Handling
+
+```yaml
+conflict_resolution:
+  last_writer_wins:
+    strategy: "Use latest timestamp to determine winner"
+    plus: "Simple, fast, no coordination needed"
+    minus: "Potential data loss from concurrent writes"
+    best_for: "User profiles, session data, low-concurrency scenarios"
+    implementation: "Use server-side timestamps (not client) for tie-breaking"
+  
+  merge:
+    strategy: "Merge concurrent updates (field-level or CRDT)"
+    plus: "No data loss, convergent state"
+    minus: "Complex implementation, schema constraints"
+    best_for: "Collaborative documents, counters, sets"
+    implementation: "CRDTs: OR-Set, G-Counter, LWW-Register"
+  
+  application_resolve:
+    strategy: "Flag conflicts for manual resolution"
+    plus: "Domain-specific decisions, no silent overwrites"
+    minus: "Requires human intervention, delays processing"
+    best_for: "Financial transactions, regulatory records"
+    implementation: "Store conflicting versions in conflict queue, alert owner"
+
+# Example: CRDT counter merge
+def merge_counters(local_counter, remote_counter):
+    return {
+        "total": max(local_counter.get("total", 0), remote_counter.get("total", 0)),
+        "per_shard": {
+            shard: max(
+                local_counter.get("per_shard", {}).get(shard, 0),
+                remote_counter.get("per_shard", {}).get(shard, 0)
+            )
+            for shard in set(list(local_counter.get("per_shard", {})) + 
+                             list(remote_counter.get("per_shard", {})))
+        }
+    }
+```
+
+### Topology Decision Tree
+
+```
+Deployment topology?
+├── Single region, high availability
+│   ├── Primary-replica (1 primary, 2+ replicas)
+│   └── Semi-sync for write durability
+├── Multi-region, disaster recovery
+│   ├── Active-passive (primary region, standby in other)
+│   ├── Async replication between regions
+│   └── DNS-based failover
+├── Multi-region, low latency reads everywhere
+│   ├── Active-active (writes in all regions, merged)
+│   ├── CRDT or LWW for conflict resolution
+│   └── Read replicas in each region
+└── Multi-region, strong consistency required
+    └── Active-passive with synchronous commitment (coordinated commit)
+```
+
 ## Rules
 - Async for cross-region (latency makes sync impractical for writes)
 - Semi-sync for same-region replication (at least one replica ack'd)
@@ -343,6 +402,8 @@ Post-failover validation:
 - Test DR failover quarterly with actual traffic cutover
 - Monitor replication lag (alert if > 30s for async, > 5s for semi-sync)
 - Document runbook for failover: detect -> promote -> reroute -> validate
+- Use CRDTs for conflict-free merging in active-active setups
+- Match replication topology to consistency requirements
 
 ## References
   - references/conflict-resolution.md — Conflict Resolution Reference

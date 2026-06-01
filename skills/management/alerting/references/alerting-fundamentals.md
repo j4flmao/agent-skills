@@ -1,213 +1,170 @@
 # Alerting Fundamentals
 
 ## Overview
-Alerting is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Alerting detects and notifies when systems require attention. This reference covers fundamental concepts for defining alerts, choosing thresholds, reducing noise, and building effective on-call practices.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Alerting helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Concept 1: What Makes a Good Alert?
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Alerting solutions. These principles help maintain code quality and reduce technical debt.
+A good alert is: actionable, timely, and unambiguous.
 
-### Concept 3: Data Management
-Proper data management is essential for Alerting. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+**Criteria**:
+- Requires human judgment or intervention
+- Can't be automated (if it can, automate it)
+- Has a clear response procedure (runbook exists)
+- Signals a real problem, not noise
+- Arrives early enough to prevent user impact
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+**If no one takes action on an alert, it should not fire.** Every alert must trigger a response or be silenced.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Concept 2: Alert Severity Levels
 
-## Architecture Patterns
+| Severity | Response Time | Resolution Time | Example |
+|----------|--------------|-----------------|---------|
+| P0 (Critical) | 5 min | 2 hours | Site down, data loss, security breach |
+| P1 (Major) | 15 min | 8 hours | Feature degraded, high error rate |
+| P2 (Minor) | 1 hour | 48 hours | Elevated latency, capacity warning |
+| P3 (Trivial) | Next business day | Next sprint | Disk usage > 80%, deprecated cert |
+| P4 (Informational) | None | None | Deploy completed, backup succeeded |
 
-### Pattern 1: Standard Architecture
-The standard architecture for Alerting follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+P0 and P1 page on-call. P2 and P3 go to team channel. P4 logs only.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### Concept 3: Alert Fatigue
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+When too many alerts desensitize responders. Symptoms: alerts ignored, silenced, or routed to email graveyard.
 
-## Implementation Guide
+**Causes**:
+- Thresholds too sensitive (minor fluctuations trigger alerts)
+- Too many low-severity alerts mixed with critical ones
+- Duplicate alerts from overlapping monitors
+- Noisy alerts never tuned or retired
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+**Consequences**: real incidents missed, responder burnout, loss of trust in monitoring.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Concept 4: The RED Method
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+Monitor every service by three metrics:
+- **Rate**: requests per second (traffic)
+- **Errors**: failed requests count or rate
+- **Duration**: latency distribution (p50, p95, p99)
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+Alert on error rate spikes and latency degradation. Rate changes are informational unless sudden drops indicate issues.
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+### Concept 5: The USE Method
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+Monitor every resource by:
+- **Utilization**: % of resource in use (CPU, memory, disk)
+- **Saturation**: queue depth or contention
+- **Errors**: error count
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+USE is for infrastructure resources (servers, databases, network). RED is for services. Combine both for complete coverage.
+
+### Concept 6: Threshold Types
+
+**Static threshold**: fixed value (e.g., CPU > 90%). Simple but requires manual tuning. Not adaptive to traffic patterns.
+
+**Dynamic/baseline threshold**: based on historical patterns (e.g., request count deviates > 3σ from 7-day rolling average). Catches anomalies that static thresholds miss.
+
+**Rate of change**: alert on how fast a metric changes (e.g., error rate doubling in 5 minutes). Catches problems faster than absolute thresholds.
+
+### Concept 7: Alert States
+
+- **Firing**: alert condition is currently true
+- **Resolved**: alert condition has returned to normal
+- **Pending**: condition detected but waiting for evaluation duration (prevents flapping)
+- **Acknowledged**: responder has seen the alert and is working on it
+- **Silenced**: alert temporarily suppressed (maintenance, known issue)
+
+Every alert should auto-resolve when the condition clears. Manual resolution creates stale alerts.
+
+### Concept 8: Runbook Fundamentals
+
+A runbook answers: "What do I do when this alert fires?"
+
+**Essential sections**:
+- Alert name and description
+- Severity and response SLA
+- Impact assessment (what's affected, who's affected)
+- Immediate mitigation steps (numbered, in order)
+- Verification steps (how to confirm fix)
+- Escalation path if mitigation fails
+- Post-resolution tasks (post-mortem, monitoring check)
+
+Runbooks should be tested during low-stress periods (game days). A runbook that hasn't been tested is a wish, not a plan.
+
+### Concept 9: On-Call Rotation Basics
+
+**Rotation types**:
+- Weekly rotation: common, predictable, manageable
+- Daily rotation: intensive, better for high-incident environments
+- Follow-the-sun: global teams covering 24 hours
+
+**Best practices**:
+- Primary + secondary on-call
+- Secondary shadows for knowledge transfer
+- Max 1 week on-call per 4 weeks per person
+- Handoff includes active incidents, known issues, tips
+- No deploys during last day of on-call shift
 
 ## Best Practices
 
 | Practice | Description | Priority |
 |----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+| Alert on Symptoms | Not causes — page on user-facing impact | High |
+| Every Alert Actionable | If no action, silence it | High |
+| Runbooks for Every Alert | Tested runbook = quick resolution | High |
+| Auto-Resolve | Alerts clear when condition normalizes | High |
+| Silence During Maintenance | Planned work should not page | High |
+| Review Thresholds Quarterly | Tune based on incident data | Medium |
+| Track Alert Fatigue | Monitor alert volume per shift | Medium |
 
 ## Common Pitfalls
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+### Pitfall 1: Alerting on Causes
+Alerting on specific failure modes (e.g., "disk full on server-3") instead of symptoms (e.g., "API error rate > 5%"). Causes change, symptoms matter.
+Fix: alert on symptoms. Use cause information in runbook.
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+### Pitfall 2: Threshold Too Sensitive
+Alert fires multiple times per day for minor fluctuations. Responders learn to ignore it.
+Fix: use longer evaluation windows (5 min instead of 1 min). Add hysteresis (different thresholds for fire and resolve).
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+### Pitfall 3: No Runbook
+Alert fires with no documented response. On-call wastes time figuring out what to do.
+Fix: every alert must have a runbook. Write it before or immediately after creating the alert.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+### Pitfall 4: Silent Degradation
+No alert for gradual performance degradation. System slows down but no one notices until users complain.
+Fix: alert on p95 latency trends and error rate increases. Use baseline/threshold alerts for slow degradation.
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+### Pitfall 5: Pager Happy
+Everything is P0. No severity differentiation. On-call treats all alerts as noise.
+Fix: classify severity by user impact. Only P0/P1 page. P2+ goes to channel.
 
 ## Tooling Ecosystem
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+### Alerting Platforms
+- Prometheus + Alertmanager: open-source, Kubernetes-native
+- Datadog: SaaS monitoring with integrated alerting
+- Grafana: alerting on any data source
+- PagerDuty: on-call scheduling + alert routing
+- Opsgenie: alert management with escalation
+- Sentry: application error alerting
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+### On-Call Tools
+- PagerDuty: scheduling, escalation, incident response
+- Opsgenie: rotation management, alert routing
+- Squadcast: SRE-focused incident management
+- Incident.io: incident command and timeline
 
 ## Key Points
-- Understand core Alerting concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- Alert on symptoms (user impact), not causes
+- Every alert must be actionable — silence noise
+- Runbook before alert goes live — test it
+- Use RED (Rate, Errors, Duration) for services
+- Use USE (Utilization, Saturation, Errors) for resources
+- Auto-resolve alerts when condition clears
+- P0/P1 page; P2+ go to channel
+- Track alert fatigue — too many alerts = no alerts
+- On-call max 1 week in 4 per person
+- Review and tune thresholds quarterly

@@ -1,214 +1,76 @@
 # Kotlin Multiplatform Advanced Topics
 
-## Introduction
-Advanced Kotlin Multiplatform topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+## Overview
+Advanced KMP topics cover Compose Multiplatform, iOS framework distribution, performance optimization, advanced expect/actual patterns, C interop, and production deployment strategies.
 
-## Advanced Architecture Patterns
+## Compose Multiplatform
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+### Shared UI with Compose
+Compose Multiplatform renders on Android (Canvas), iOS (Skia/UIKit), desktop, and web. Write UI once in commonMain using `@Composable` functions. Platform-specific styling via `expect` composables. Resource management via `org.jetbrains.compose.resources`.
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+### iOS Rendering
+iOS renders Compose via a UIKit-backed `UIViewController`. Set `composeApplication` in `MainViewController.kt`. Performance comparable to SwiftUI for most use cases. Custom fonts via font registration in `Info.plist`. Material3 components work cross-platform.
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+### Desktop and Web Targets
+Desktop: JVM-based, runs on Windows/macOS/Linux. Window management with `application { Window { ... } }`. Web: Canvas-based or DOM-based rendering. Target selection based on deployment requirements. Same codebase compiles to all targets.
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+## Advanced Expect/Actual
+
+### Interface-Based Abstraction
+Prefer interface in commonMain with platform implementations injected via DI (Koin, kotlin-inject). Avoid expect/actual for pure abstraction — use interfaces + DI. Reserve expect/actual for platform APIs (system services, hardware).
+
+### Hierarchical Structure
+`kotlin.sourceSets { iosMain { dependsOn(appleMain) } }` for shared Apple code. `nativeMain` for all native targets (iOS, macOS, watchOS, tvOS). Commonize platform APIs across similar targets. Reduces actual implementations for shared behavior (URLSession, Foundation).
+
+### Squashing Declarations
+Multiple expect declarations can share a single actual. iOS doesn't differentiate between iOS/tvOS/watchOS for some APIs. Use `@OptionalExpectation` for optional platform APIs. `@HiddenFromObjC` for Kotlin-only API (no iOS framework export).
 
 ## Performance Optimization
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+### Kotlin/Native Memory Model
+Stable memory model (since Kotlin 1.8): concurrent access protected by compiler. `@SharedImmutable` for frozen shared objects. `AtomicReference`/`AtomicInt` for lock-free concurrency. No manual freezing needed in new memory model.
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+### Integration with iOS Performance
+Kotlin/Native overhead vs native Swift: <5% for typical business logic. Ktor latency vs URLSession: comparable (~1-2ms overhead). Avoid heavy coroutine flows across Kotlin/Swift boundary — batch results. Minimize expect/actual calls in hot paths.
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+### Binary Size
+KMP adds 2-5MB to iOS binary for Kotlin runtime + shared code. Optimize: enable `isStatic = true` in framework config (embeds runtime). R8/ProGuard for Android. Remove unused expect/actual implementations. Use `@Transient` on properties.
 
-## Security Hardening
+## Advanced iOS Integration
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+### Framework Distribution
+Embed KMP framework as XCFramework for distribution. `BinaryFramework` in Gradle for CI publishing. SPM compatibility via `xcframeworks`. CocoaPods podspec generation. Versioning aligned with app releases. Binary size optimization per architecture.
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+### Swift/Kotlin Interop
+Kotlin enums export as Swift enums. Sealed classes export as Swift enums with associated values. `Flow` exports as `Kotlinx_coroutines_coreFlow`. Use `@ObjCName` for Swift-friendly naming. `@Throws` for Kotlin exceptions → Swift throws.
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+### iOS-Specific Modules
+`appleMain` for shared iOS/macOS code. Use `@ObjCExport(false)` to hide from Objective-C. `fun Interface` for protocols. `UIApplication` interop via cinterop. UIKit/CoreGraphics interop in iosMain only.
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+## C Interop
 
-## Monitoring and Observability
+### cinterop Configuration
+Define `.def` files for C library bindings. `headers` for C header files. `staticLibraries` for linking static libs. `libraryPaths` for library search paths. Generate bindings via Gradle cinterop task. Access as Kotlin top-level functions.
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+### Memory Management
+`CPointer` for C pointer handling. `NativePlacement` for allocating native memory. `memScoped` for automatic cleanup. `usePinned` for direct buffer access. Arena-based allocators for complex C interop.
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+## CI/CD for KMP
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+### Multi-Platform Builds
+Android: runs on Linux (Ubuntu). iOS: requires macOS runner. `./gradlew allTests` for all targets. `./gradlew :shared:linkDebugFrameworkIosArm64` for iOS framework. Separate CI jobs per platform. Cache Gradle dependencies and Kotlin/Native compiler.
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+### Publishing
+`maven-publish` for Android artifacts. CocoaPods trunk for iOS framework. GitHub Packages or Artifactory for internal distribution. Versioning: semantic version for shared module. Binary compatibility checks in CI.
 
 ## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- Compose Multiplatform for shared UI across platforms
+- Interface-based DI over expect/actual for pure abstraction
+- Kotlin/Native stable memory model (no manual freezing)
+- XCFramework for iOS binary distribution
+- cinterop for C library integration
+- Flow + coroutines for shared async logic
+- iOS overlay artifacts for Apple-specific APIs
+- Minimal Swift/Kotlin boundary crossing in hot paths
+- Separate CI jobs per platform (macOS for iOS, Linux for Android)
+- Binary size: 2-5MB overhead for Kotlin runtime

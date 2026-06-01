@@ -297,6 +297,150 @@ jobs:
 }
 ```
 
+## Monorepo Configuration
+
+### Multi-Package Config Pattern
+```javascript
+// Root prettier.config.js (monorepo)
+module.exports = {
+  ...require('@company/prettier-config'),
+  overrides: [
+    {
+      files: 'packages/web/**/*.{ts,tsx}',
+      options: { singleQuote: true, printWidth: 100 },
+    },
+    {
+      files: 'packages/api/**/*.ts',
+      options: { singleQuote: false, printWidth: 120 },
+    },
+    {
+      files: 'packages/docs/**/*.md',
+      options: { proseWrap: 'always', printWidth: 80 },
+    },
+  ],
+};
+```
+
+## Advanced Integration Patterns
+
+### Prettier + ESLint + TypeScript
+```javascript
+// eslint.config.js — full setup
+import js from '@eslint/js';
+import ts from 'typescript-eslint';
+import reactPlugin from 'eslint-plugin-react';
+import prettier from 'eslint-config-prettier';
+import eslintPluginPrettier from 'eslint-plugin-prettier';
+
+export default [
+  js.configs.recommended,
+  ...ts.configs.recommended,
+  {
+    files: ['**/*.{jsx,tsx}'],
+    plugins: { react: reactPlugin },
+    rules: { ...reactPlugin.configs.recommended.rules },
+  },
+  prettier, // MUST be last — disables all style rules
+  {
+    plugins: { prettier: eslintPluginPrettier },
+    rules: {
+      'prettier/prettier': [
+        'error',
+        {
+          singleQuote: true,
+          semi: true,
+          trailingComma: 'all',
+          printWidth: 100,
+        },
+      ],
+    },
+  },
+];
+```
+
+### Git Pre-Commit Hook with Prettier
+```json
+{
+  "lint-staged": {
+    "*.{js,ts,tsx,jsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md,yaml,yml}": [
+      "prettier --write"
+    ],
+    "*.{css,scss,less}": [
+      "prettier --write",
+      "stylelint --fix"
+    ]
+  }
+}
+```
+
+### CI Optimization
+```yaml
+# Only check changed files in CI for speed
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for diff
+      - uses: actions/setup-node@v4
+      - run: npm ci
+      - name: Check formatting on changed files
+        run: |
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep -E '\.(js|ts|tsx|json|md)$' || true)
+          if [ -n "$CHANGED_FILES" ]; then
+            npx prettier --check $CHANGED_FILES
+          fi
+```
+
+## Resolving Conflicts with ESLint
+
+### Rule Conflict Map
+```javascript
+// eslint-config-prettier disables these ESLint rules:
+const conflictingRules = [
+  'indent', 'quotes', 'semi', 'comma-dangle', 'max-len',
+  'function-paren-newline', 'implicit-arrow-linebreak',
+  'jsx-quotes', 'no-mixed-spaces-and-tabs', 'no-tabs',
+  'object-curly-newline', 'operator-linebreak',
+  'arrow-parens', 'brace-style', 'comma-style',
+  'dot-location', 'keyword-spacing', 'linebreak-style',
+  'newline-per-chained-call', 'no-extra-semi',
+  'no-floating-decimal', 'no-multi-spaces',
+  'no-multiple-empty-lines', 'nonblock-statement-body-position',
+  'padded-blocks', 'quote-props', 'space-before-function-paren',
+  'wrap-regex', '@typescript-eslint/quotes', '@typescript-eslint/semi',
+];
+
+// Always use eslint-config-prettier as the last config
+```
+
+## Config Pattern Decision Tree
+```
+Where should config live?
+├── Single project → .prettierrc at repository root
+├── Monorepo with shared config → @company/prettier-config npm package
+├── ESM project → prettier.config.js (export default)
+├── CJS project → .prettierrc.js (module.exports)
+├── Simple config → .prettierrc.json
+└── YAML preference → .prettierrc.yaml
+```
+
+## Key Anti-Patterns
+- **Changing every default**: You lose Prettier's value as opinionated formatter
+- **No prettierignore**: Prettier wastes time checking build artifacts
+- **No endOfLine config**: Cross-platform diffs in PRs
+- **Formatting without requireConfig**: Prettier may format with unexpected settings
+- **Running Prettier after ESLint**: Run Prettier first, then ESLint (or use lint-staged)
+- **Ignoring CI formatting failures**: Fix formatting before merging
+- **Per-developer config drift**: Share config via package or workspace settings
+- **Not formatting on save**: Inconsistent formatting across team members
+- **Using Prettier for code quality**: Use ESLint for quality, Prettier for formatting only
+
 ## Key Points
 - Prettier config files support .prettierrc, prettier.config.js, and package.json
 - Shareable configs as npm packages (@company/prettier-config)

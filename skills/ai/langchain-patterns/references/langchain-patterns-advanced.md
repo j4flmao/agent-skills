@@ -1,214 +1,565 @@
-# Langchain Patterns Advanced Topics
+# LangChain Patterns Advanced Topics
 
-## Introduction
-Advanced Langchain Patterns topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+## Custom Runnable Components
 
-## Advanced Architecture Patterns
+### Subclassing Runnable
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+```python
+from langchain_core.runnables import Runnable
+from langchain_core.runnables.config import RunnableConfig
+from typing import Any, Iterator, AsyncIterator
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+class DocumentEnricher(Runnable[str, str]):
+    """Enriches documents with external data before LLM processing."""
+    
+    def __init__(self, enrichment_api: str, cache_ttl: int = 3600):
+        self.api = enrichment_api
+        self.cache: dict[str, str] = {}
+        self.cache_ttl = cache_ttl
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+    def invoke(self, input: str, config: RunnableConfig | None = None) -> str:
+        enriched = self._fetch_cached(input)
+        return f"Context:\n{input}\n\nEnrichment:\n{enriched}"
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+    async def ainvoke(self, input: str, config: RunnableConfig | None = None) -> str:
+        enriched = await self._fetch_cached_async(input)
+        return f"Context:\n{input}\n\nEnrichment:\n{enriched}"
+
+    def stream(self, input: str, config: RunnableConfig | None = None) -> Iterator[str]:
+        yield self.invoke(input, config)
+
+    async def astream(self, input: str, config: RunnableConfig | None = None) -> AsyncIterator[str]:
+        yield await self.ainvoke(input, config)
+
+    def _fetch_cached(self, query: str) -> str:
+        import time
+        now = time.time()
+        if query in self.cache:
+            ts, val = self.cache[query]
+            if now - ts < self.cache_ttl:
+                return val
+        result = self._call_api(query)
+        self.cache[query] = (time.time(), result)
+        return result
+
+    def _call_api(self, query: str) -> str:
+        import requests
+        resp = requests.post(self.api, json={"query": query}, timeout=5)
+        return resp.json().get("enrichment", "")
+
+    async def _fetch_cached_async(self, query: str) -> str:
+        import aiohttp, asyncio
+        async with aiohttp.ClientSession() as session:
+            async with session.post(self.api, json={"query": query}) as resp:
+                data = await resp.json()
+                return data.get("enrichment", "")
+
+# Usage
+enricher = DocumentEnricher("https://enrich.internal/api")
+chain = enricher | prompt | llm | parser
+```
+
+### RunnableLambda with Complex Logic
+
+```python
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+
+def multi_stage_validate(data: dict) -> dict:
+    if not data.get("query"):
+        raise ValueError("query required")
+    data["query"] = data["query"].strip()
+    data["sanitized"] = True
+    data["timestamp"] = __import__("time").time()
+    return data
+
+def log_and_track(data: dict) -> dict:
+    duration = __import__("time").time() - data.pop("timestamp", 0)
+    print(f"Query: {data['query'][:50]}... Duration: {duration:.2f}s")
+    return data
+
+validation_chain = (
+    RunnableLambda(multi_stage_validate)
+    .assign(context=retriever)
+    .assign(formatted_context=lambda x: format_docs(x["context"]))
+    | RunnableLambda(log_and_track)
+    | prompt | llm | parser
+)
+```
+
+### Custom Output Parser
+
+```python
+from langchain_core.output_parsers import BaseOutputParser
+from typing import Optional
+
+class StructuredCitationParser(BaseOutputParser[dict]):
+    """Parses responses with inline citations like [1], [2]."""
+    
+    def parse(self, text: str) -> dict:
+        import re
+        citations = re.findall(r'\[(\d+)\]', text)
+        clean_text = re.sub(r'\s*\[(\d+)\]', '', text)
+        return {
+            "answer": clean_text.strip(),
+            "citations": list(set(int(c) for c in citations)),
+        }
+
+    @property
+    def _type(self) -> str:
+        return "citation_parser"
+
+parser = StructuredCitationParser()
+chain = prompt | llm | parser
+result = chain.invoke({"question": "What is RAG?"})
+# {'answer': 'RAG is...', 'citations': [1, 3, 5]}
+```
+
+---
+
+## Advanced Agent Patterns
+
+### Adding Memory to Tool-Calling Agent
+
+```python
+from langchain.memory import ConversationSummaryMemory
+from langchain_core.prompts import MessagesPlaceholder
+
+memory = ConversationSummaryMemory(
+    llm=llm,
+    return_messages=True,
+    memory_key="chat_history",
+    max_token_limit=2000,
+)
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are a helpful assistant with tools."),
+    MessagesPlaceholder(variable_name="chat_history"),
+    ("human", "{input}"),
+    MessagesPlaceholder(variable_name="agent_scratchpad"),
+])
+
+agent = create_tool_calling_agent(llm, tools, prompt)
+agent_executor = AgentExecutor(
+    agent=agent,
+    tools=tools,
+    memory=memory,
+    max_iterations=15,
+    return_intermediate_steps=True,
+)
+
+# Memory persists across calls
+r1 = agent_executor.invoke({"input": "Hi, I'm working on project X"})
+r2 = agent_executor.invoke({"input": "What project am I working on?"})  # Remembers
+```
+
+### Parallel Tool Execution Agent
+
+```python
+from langgraph.graph import StateGraph, END
+
+class AgentState(TypedDict):
+    messages: list
+    next_actions: list
+    tool_results: dict
+
+def decide_actions(state: AgentState) -> AgentState:
+    """LLM decides which tools to call in parallel."""
+    response = llm_with_tools.invoke(state["messages"])
+    state["next_actions"] = parse_tool_calls(response)
+    return state
+
+def execute_tools(state: AgentState) -> AgentState:
+    """Execute all tool calls in parallel."""
+    import asyncio
+    async def run():
+        tasks = {tc.name: tool_map[tc.name].ainvoke(tc.args)
+                 for tc in state["next_actions"]}
+        results = await asyncio.gather(*tasks.values(), return_exceptions=True)
+        state["tool_results"] = dict(zip(tasks.keys(), results))
+        return state
+    return asyncio.run(run())
+
+def synthesize(state: AgentState) -> AgentState:
+    """Combine tool results and generate final response."""
+    result_text = "\n".join(
+        f"{name}: {res}" for name, res in state["tool_results"].items()
+        if not isinstance(res, Exception)
+    )
+    state["messages"].append(AIMessage(content=result_text))
+    final = llm.invoke(state["messages"])
+    state["messages"].append(final)
+    return state
+
+# LangGraph workflow
+graph = StateGraph(AgentState)
+graph.add_node("decide", decide_actions)
+graph.add_node("execute", execute_tools)
+graph.add_node("synthesize", synthesize)
+graph.add_edge("decide", "execute")
+graph.add_edge("execute", "synthesize")
+graph.add_conditional_edges(
+    "synthesize",
+    lambda s: "end" if is_final(s) else "decide",
+    {"end": END, "continue": "decide"},
+)
+graph.set_entry_point("decide")
+app = graph.compile()
+```
+
+### Custom Planning Agent
+
+```python
+from langchain.agents import AgentExecutor, BaseSingleActionAgent
+from langchain.schema import AgentAction, AgentFinish
+
+class PlanningAgent(BaseSingleActionAgent):
+    def __init__(self, llm, tools, planner_llm=None):
+        self.llm = llm
+        self.tools = {t.name: t for t in tools}
+        self.planner_llm = planner_llm or llm
+
+    @property
+    def input_keys(self):
+        return ["input"]
+
+    def plan(self, intermediate_steps, **kwargs):
+        from langchain_core.prompts import ChatPromptTemplate
+        prompt = ChatPromptTemplate.from_template(
+            "Goal: {input}\n\nAvailable tools: {tool_names}\n\n"
+            "Previous steps: {history}\n\n"
+            "What is the single next action? Output: Action: tool_name\nAction Input: args"
+        )
+        history = "\n".join(
+            f"Thought: {s[0].tool}\nObservation: {str(s[1])[:200]}"
+            for s in intermediate_steps[-5:]  # windowed history
+        )
+        response = self.planner_llm.invoke(prompt.format(
+            input=kwargs["input"],
+            tool_names=", ".join(self.tools.keys()),
+            history=history or "None yet",
+        ))
+        return self._parse_action(response.content)
+
+    def _parse_action(self, text: str) -> AgentAction | AgentFinish:
+        import re
+        if "Final Answer:" in text:
+            return AgentFinish(
+                return_values={"output": text.split("Final Answer:")[1].strip()},
+                log=text,
+            )
+        match = re.search(r"Action:\s*(\w+)\nAction Input:\s*(.+)", text, re.DOTALL)
+        if match:
+            return AgentAction(tool=match.group(1), tool_input=match.group(2).strip(), log=text)
+        return AgentFinish(return_values={"output": text}, log=text)
+
+agent = PlanningAgent(llm, tools)
+executor = AgentExecutor(agent=agent, tools=tools, max_iterations=10)
+```
+
+---
+
+## Graph-Based Workflows with LangGraph
+
+### Stateful Multi-Step RAG
+
+```python
+from typing import TypedDict, Annotated, Sequence
+from langgraph.graph import StateGraph, END
+from langgraph.graph.message import add_messages
+
+class RAGState(TypedDict):
+    messages: Annotated[Sequence, add_messages]
+    question: str
+    context: list
+    sub_questions: list
+
+def decompose(state: RAGState) -> RAGState:
+    prompt = ChatPromptTemplate.from_template(
+        "Break this question into retrieval sub-questions:\n{question}"
+    )
+    chain = prompt | llm | StrOutputParser()
+    sub_qs = chain.invoke({"question": state["question"]}).split("\n")
+    state["sub_questions"] = [q.strip() for q in sub_qs if q.strip()]
+    return state
+
+def retrieve(state: RAGState) -> RAGState:
+    all_docs = []
+    for sq in state["sub_questions"]:
+        docs = retriever.invoke(sq)
+        all_docs.extend(docs)
+    state["context"] = all_docs
+    return state
+
+def generate(state: RAGState) -> RAGState:
+    context = format_docs(state["context"])
+    prompt = ChatPromptTemplate.from_template(
+        "Context:\n{context}\n\nQuestion:\n{question}\n\nAnswer:"
+    )
+    chain = prompt | llm
+    response = chain.invoke({"context": context, "question": state["question"]})
+    state["messages"].append(response)
+    return state
+
+graph = StateGraph(RAGState)
+graph.add_node("decompose", decompose)
+graph.add_node("retrieve", retrieve)
+graph.add_node("generate", generate)
+graph.set_entry_point("decompose")
+graph.add_edge("decompose", "retrieve")
+graph.add_edge("retrieve", "generate")
+graph.add_edge("generate", END)
+app = graph.compile()
+
+result = app.invoke({
+    "messages": [],
+    "question": "Compare Python and Rust for web development",
+    "context": [],
+    "sub_questions": [],
+})
+```
+
+### Human-in-the-Loop Agent
+
+```python
+from langgraph.graph import StateGraph, END
+from langgraph.checkpoint import MemorySaver
+
+class HumanLoopState(TypedDict):
+    messages: list
+    requires_approval: bool
+    tool_calls: list
+
+def propose_action(state: HumanLoopState) -> HumanLoopState:
+    response = llm_with_tools.invoke(state["messages"])
+    state["tool_calls"] = extract_tool_calls(response)
+    state["requires_approval"] = len(state["tool_calls"]) > 0
+    state["messages"].append(response)
+    return state
+
+def human_approval(state: HumanLoopState) -> HumanLoopState:
+    """Graph pauses here. External system provides approval."""
+    print(f"Proposed actions: {state['tool_calls']}")
+    print("Waiting for approval...")
+    # The checkpointer saves state; external system resumes with
+    # {"approved": True/False} via app.update_state()
+    return state
+
+def execute_approved(state: HumanLoopState) -> HumanLoopState:
+    for tc in state["tool_calls"]:
+        result = tool_map[tc["name"]].invoke(tc["args"])
+        state["messages"].append(ToolMessage(content=result, tool_call_id=tc["id"]))
+    return state
+
+def should_continue(state: HumanLoopState) -> str:
+    state["requires_approval"] = False
+    if is_final_answer(state["messages"][-1]):
+        return "end"
+    return "continue"
+
+graph = StateGraph(HumanLoopState)
+graph.add_node("propose", propose_action)
+graph.add_node("approve", human_approval)
+graph.add_node("execute", execute_approved)
+graph.set_entry_point("propose")
+graph.add_edge("propose", "approve")
+graph.add_edge("approve", "execute")
+graph.add_conditional_edges("execute", should_continue, {
+    "end": END,
+    "continue": "propose",
+})
+app = graph.compile(checkpointer=MemorySaver())
+```
+
+---
+
+## Multi-Modal Chains
+
+### Vision + Text Chain
+
+```python
+from langchain_core.messages import HumanMessage
+
+def image_qa(image_url: str, question: str) -> str:
+    """Use a multimodal model for image-based Q&A."""
+    vision_llm = ChatOpenAI(model="gpt-4o", max_tokens=1024)
+    message = HumanMessage(content=[
+        {"type": "text", "text": question},
+        {"type": "image_url", "image_url": {"url": image_url}},
+    ])
+    response = vision_llm.invoke([message])
+    return response.content
+
+class MultiModalRAG:
+    def __init__(self, text_retriever, image_retriever):
+        self.text_retriever = text_retriever
+        self.image_retriever = image_retriever
+        self.llm = ChatOpenAI(model="gpt-4o")
+
+    def query(self, question: str) -> dict:
+        text_docs = self.text_retriever.invoke(question)
+        image_docs = self.image_retriever.invoke(question)
+        messages = [HumanMessage(content=[
+            {"type": "text", "text": f"Question: {question}\n\nContext:\n"
+                                      f"{format_docs(text_docs)}"},
+            *[{"type": "image_url",
+               "image_url": {"url": doc.metadata["url"]}}
+              for doc in image_docs[:3]],
+        ])]
+        response = self.llm.invoke(messages)
+        return {"answer": response.content, "sources": text_docs + image_docs}
+```
+
+---
+
+## Advanced Error Recovery
+
+### Transactional Chain with Rollback
+
+```python
+class TransactionalChain:
+    def __init__(self, primary, fallback, checkpoint_store=None):
+        self.primary = primary
+        self.fallback = fallback
+        self.checkpoints = checkpoint_store or []
+
+    def invoke(self, input_data: dict) -> dict:
+        checkpoint = self._save_checkpoint(input_data)
+        try:
+            result = self.primary.invoke(input_data)
+            self._commit(checkpoint)
+            return {"status": "success", "data": result}
+        except RetryableError:
+            self._rollback(checkpoint)
+            result = self.fallback.invoke(input_data)
+            return {"status": "degraded", "data": result}
+        except FatalError as e:
+            self._rollback(checkpoint)
+            return {"status": "failed", "error": str(e)}
+
+    def _save_checkpoint(self, data):
+        cp = {"data": deepcopy(data), "timestamp": time.time()}
+        self.checkpoints.append(cp)
+        return cp
+
+    def _commit(self, checkpoint):
+        checkpoint["committed"] = True
+
+    def _rollback(self, checkpoint):
+        logger.info(f"Rolling back: {checkpoint['timestamp']}")
+
+# Usage
+chain = TransactionalChain(
+    primary=rag_chain,
+    fallback=simple_llm_chain,
+)
+result = chain.invoke({"question": "Complex question needing RAG"})
+```
+
+### Adaptive Retrieval Strategy
+
+```python
+class AdaptiveRetriever:
+    def __init__(self, strategies: dict, fallback_retriever):
+        self.strategies = strategies  # {"dense": ..., "hybrid": ..., "compression": ...}
+        self.fallback = fallback_retriever
+        self.performance_log = []
+
+    def retrieve(self, query: str, metadata: dict = None) -> list:
+        strategy = self._select_strategy(query, metadata)
+        try:
+            docs = strategy.invoke(query)
+            self._log(query, strategy.__class__.__name__, len(docs), success=True)
+            return docs
+        except Exception as e:
+            self._log(query, strategy.__class__.__name__, 0, success=False, error=str(e))
+            logger.warning(f"Strategy {strategy} failed: {e}. Falling back.")
+            return self.fallback.invoke(query)
+
+    def _select_strategy(self, query, metadata):
+        # Short queries → dense; long/ambiguous → multi-query
+        if metadata and metadata.get("ambiguous"):
+            return self.strategies["multi_query"]
+        if len(query.split()) < 3:
+            return self.strategies["dense"]
+        return self.strategies["hybrid"]
+
+    def _log(self, query, strategy, count, success, error=None):
+        self.performance_log.append({
+            "query": query[:50], "strategy": strategy,
+            "result_count": count, "success": success,
+            "error": error, "timestamp": time.time(),
+        })
+```
+
+---
 
 ## Performance Optimization
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+### Batching and Caching
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+```python
+from langchain_core.caches import InMemoryCache
+from langchain.globals import set_llm_cache
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+# Cache identical LLM calls
+set_llm_cache(InMemoryCache())
 
-## Security Hardening
+# Redis cache for shared instances
+from langchain.cache import RedisCache
+set_llm_cache(RedisCache(redis_client))
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+# Custom cache key strategy
+class SemanticCache(RedisCache):
+    def _key(self, *args, **kwargs) -> str:
+        import hashlib
+        raw = str(args) + str(sorted(kwargs.items()))
+        return f"llm_cache:{hashlib.sha256(raw.encode()).hexdigest()}"
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+# Batch processing
+results = chain.batch(inputs, config={"max_concurrency": 5})
+```
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+### Token Budget Management
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+```python
+class TokenBudget:
+    def __init__(self, max_tokens: int = 128000):
+        self.max = max_tokens
+        self.used = defaultdict(int)
 
-## Monitoring and Observability
+    def reserve(self, operation: str, estimated_tokens: int) -> bool:
+        """Reserve tokens before making a call. Returns False if over budget."""
+        total = sum(self.used.values())
+        if total + estimated_tokens > self.max:
+            return False
+        self.used[operation] += estimated_tokens
+        return True
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+    def release(self, operation: str, actual_tokens: int):
+        self.used[operation] = min(self.used[operation], actual_tokens)
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+    def reset(self):
+        self.used.clear()
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+budget = TokenBudget(max_tokens=64000)
+if budget.reserve("rag_query", 4000):
+    answer = rag_chain.invoke(query)
+    budget.release("rag_query", actual_tokens)
+```
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+---
 
 ## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
 
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- Custom Runnables via subclassing enable full control over invoke/stream lifecycle.
+- RunnableLambda wraps arbitrary functions into the LCEL pipeline.
+- LangGraph enables complex state machines, cycles, and human-in-the-loop patterns.
+- Parallel tool execution dramatically reduces agent latency for independent calls.
+- Custom agents via subclassing BaseSingleActionAgent for non-standard routing logic.
+- Multi-modal chains combine text + image + code processing in a single pipeline.
+- Transactional patterns with checkpoints provide safe error recovery for critical chains.
+- Adaptive retrieval strategies auto-select the best retriever based on query characteristics.
+- Semantic caching with custom key functions can dramatically reduce duplicate calls.
+- Token budget management prevents context overflow in long-running agent sessions.
+- Always benchmark retrieval strategies on your domain data before production deployment.
+- LangGraph checkpoints enable pause/resume workflows and durable agent execution.

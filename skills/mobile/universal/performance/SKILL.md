@@ -179,6 +179,71 @@ profiling_workflow:
 
 ## Rendering Performance
 
+### Android
+
+```kotlin
+// LazyColumn with stable keys
+LazyColumn {
+    items(orders, key = { it.id }) { order ->
+      key(order.id) { OrderCard(order) }
+    }
+}
+
+// Avoid recomposition — use derivedStateOf
+val visibleCount = remember(orders) {
+  derivedStateOf { orders.count { it.isVisible } }
+}
+
+// Compose modifier optimization
+@Composable
+fun OrderCard(order: Order) {
+  Column(
+    modifier = Modifier
+      .drawWithContent { /* custom draw */ }  // Only redraws when needed
+      .then(Modifier.padding(8.dp))
+  ) { ... }
+}
+
+// Use immutable state holders
+@Immutable
+data class OrderUiState(val orders: List<Order>, val isLoading: Boolean)
+```
+
+### iOS (SwiftUI)
+
+```swift
+// Cell reuse — UIKit
+func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    let cell = tableView.dequeueReusableCell(withIdentifier: "OrderCell")!
+    return cell
+}
+
+// SwiftUI — LazyVStack instead of VStack
+ScrollView {
+    LazyVStack {
+        ForEach(orders, id: \.id) { order in
+            OrderRow(order: order)
+        }
+    }
+}
+
+// Reduce view body recomputation
+struct OrderListView: View {
+    let orders: [Order]
+    var body: some View {
+        List(orders, id: \.id) { order in
+            NavigationLink(value: order) {
+                OrderRow(order: order)
+            }
+        }
+    }
+}
+
+// EquatableView for diffing
+EquatableView(content: OrderRow(order: order))
+    .equatable()
+```
+
 ### Flutter
 
 ```dart
@@ -190,6 +255,18 @@ RepaintBoundary(child: MapWidget());
 
 // Use ListView.builder — not ListView(children: [])
 ListView.builder(itemCount: items.length, itemBuilder: ...);
+
+// Use ValueListenableBuilder for targeted rebuilds
+ValueListenableBuilder<int>(
+  valueListenable: counterNotifier,
+  builder: (context, count, child) {
+    return Text('Count: $count');
+  },
+);
+
+// Avoid passing function references that cause rebuilds
+// Bad: builder: (context) => MyWidget(onTap: () => handleTap())
+// Good: builder: (context) => MyWidget(onTap: handleTap)
 ```
 
 ### React Native
@@ -202,30 +279,191 @@ ListView.builder(itemCount: items.length, itemBuilder: ...);
   getItemLayout={getItemLayout}
   maxToRenderPerBatch={10}
   windowSize={5}
+  removeClippedSubviews={true}
+  initialNumToRender={10}
 />
 
 // UseMemo for expensive computations
 const total = useMemo(() => computeTotal(orders), [orders]);
+
+// UseCallback for stable function references
+const handlePress = useCallback((id: string) => {
+  navigation.navigate('OrderDetail', { id });
+}, [navigation]);
+
+// React.memo for preventing unnecessary re-renders
+const OrderRow = React.memo(({ order }: { order: Order }) => {
+  return <Text>{order.title}</Text>;
+});
+
+// InteractionManager for deferring non-critical work
+InteractionManager.runAfterInteractions(() => {
+  loadNonCriticalData();
+});
+```
+
+## Image Optimization
+
+### Sizing and Caching
+```kotlin
+// Android — Coil with size constraints
+AsyncImage(
+  model = ImageRequest.Builder(LocalContext.current)
+    .data(url)
+    .size(400, 300)           // Downsample to display size
+    .crossfade(true)
+    .memoryCachePolicy(CachePolicy.ENABLED)
+    .build(),
+  contentDescription = null
+)
+
+// Coil memory cache config
+val imageLoader = ImageLoader.Builder(context)
+  .memoryCachePolicy(CachePolicy.ENABLED)
+  .memoryCache {
+    MemoryCache.Builder()
+      .maxSizePercent(0.25)    // 25% of available heap
+      .build()
+  }
+  .build()
+```
+
+```swift
+// iOS — Kingfisher or Nuke for disk-backed cache
+KFImage.url(URL(string: url))
+  .resizable()
+  .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 400, height: 300)))
+  .cacheMemoryOnly(false)       // Enable disk cache
+  .memoryCacheOptions(.init(memory costLimit: 50 * 1024 * 1024))  // 50MB limit
+
+// URLSession cache config
+let config = URLSessionConfiguration.default
+config.urlCache = URLCache(memoryCapacity: 50_000_000, diskCapacity: 200_000_000)
+```
+
+```dart
+// Flutter — cached_network_image
+CachedNetworkImage(
+  imageUrl: url,
+  width: 200,
+  height: 150,
+  memCacheWidth: 400,         // Cache downsampled version
+  memCacheHeight: 300,
+  placeholder: (_, __) => const Shimmer(),
+  errorWidget: (_, __, ___) => const Icon(Icons.error),
+)
+```
+
+```typescript
+// React Native — fast-image with cache
+import FastImage from 'react-native-fast-image';
+
+<FastImage
+  style={{ width: 200, height: 150 }}
+  source={{ uri: url, priority: FastImage.priority.normal }}
+  resizeMode={FastImage.resizeMode.contain}
+/>
+```
+
+### WebP and AVIF Conversion
+```yaml
+# Convert PNG/JPG to WebP for 25-35% size reduction
+cwebp -q 80 input.png -o output.webp
+
+# Android supports WebP natively (API 18+)
+# iOS supports WebP via SDWebImage/Kingfisher
+# AVIF offers 50% better compression than JPEG — Android 12+, iOS 16+
+```
+
+## Startup Optimization
+
+### Android
+```kotlin
+// Baseline Profiles (src/main/baseline-prof.txt)
+// Improves cold start by 30-40%
+HSPLcom/example/app/MainActivity;->onCreate(Landroid/os/Bundle;)V
+HSPLcom/example/app/features/orders/OrderListScreen;-><init>()V
+HSPLcom/example/app/data/repository/OrderRepository;->getOrders()Lkotlinx/coroutines/flow/Flow;
+
+// Startup tracing
+@ExperimentalTraceFolksApi
+class MainApplication : Application() {
+  override fun onCreate() {
+    trace("Application.onCreate") {
+      super.onCreate()
+      // Init critical SDKs first
+      trace("init.crashlytics") { FirebaseCrashlytics.init(this) }
+      // Defer non-critical
+      trace("init.analytics") { /* defer */ }
+    }
+  }
+}
+
+// App Startup library for deterministic init ordering
+// InitializationProvider in AndroidManifest with dependencies
 ```
 
 ### iOS
-
 ```swift
-// Cell reuse
-func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-    let cell = tableView.dequeueReusableCell(withIdentifier: "OrderCell")!
-    // configure
-    return cell
+// Reduce dynamic framework linking — prefer static frameworks
+// In Build Settings: Mach-O Type = Static Library
+
+// Defer non-critical initialization
+@main
+struct MyApp: App {
+  @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+
+  var body: some Scene {
+    WindowGroup {
+      ContentView()
+        .onAppear {
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            initNonCriticalSDKs()
+          }
+        }
+    }
+  }
+}
+
+// Use +load/+initialize sparingly — they block startup
+// Avoid +load in Objective-C categories
+```
+
+### Flutter
+```dart
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(MyApp());
+  // Defer SDK init to after first frame
+  SchedulerBinding.instance.addPostFrameCallback((_) {
+    _initNonCriticalSDKs();
+  });
+}
+
+// Use deferred loading for heavy packages
+import 'package:heavy_package' deferred as heavy;
+
+Future<void> loadHeavyPackage() async {
+  await heavy.loadLibrary();
 }
 ```
 
-### Android
+### React Native
+```typescript
+// Use inline requires for heavy imports
+const HeavyModule = {
+  get instance() {
+    return require('./HeavyModule').default;
+  }
+};
 
-```kotlin
-// LazyColumn with keys
-LazyColumn {
-    items(orders, key = { it.id }) { order -> OrderCard(order) }
-}
+// InteractionManager for deferring
+InteractionManager.runAfterInteractions(() => {
+  Analytics.init();
+});
+
+// Hermes engine for faster startup (enabled by default in RN 0.70+)
+// hermes.enable = true in metro.config.js
 ```
 
 ## Memory
@@ -277,17 +515,198 @@ npx react-native-bundle-analyzer
 # Enable in Xcode: Assets.car per-device slicing, on-demand resources
 ```
 
-## Common Pitfalls
+## Network Performance
 
-- **Optimizing before profiling**: Guessing at bottlenecks leads to optimizing the wrong code. Always profile first.
-- **Testing only on flagship devices**: Flagships hide performance problems that affect the majority of users on mid-range devices.
-- **Ignoring JS thread in React Native**: Expensive JS computations block the JS thread, causing frame drops even when native rendering is fast.
-- **Unbounded image caches**: In-memory image caches without size limits cause OOM on low-memory devices.
-- **Synchronous storage reads**: Reading from disk on the main thread blocks the UI. Use async storage APIs.
-- **Over-using RepaintBoundary**: Too many repaint boundaries in Flutter increase layer tree complexity and GPU memory.
-- **Not handling low memory warnings**: Apps that ignore `didReceiveMemoryWarning` (iOS) or `onTrimMemory` (Android) get killed by the OS.
-- **Debug build performance testing**: Debug builds have disabled optimizations and extra logging — always profile release builds.
-- **Metric reporting overhead**: Performance monitoring SDKs add 2-5% CPU overhead. Disable verbose instrumentation in production builds.
+### Connection Pooling and Multiplexing
+```kotlin
+// OkHttp — connection pooling is default, configure for your use case
+val client = OkHttpClient.Builder()
+  .connectionPool(ConnectionPool(maxIdleConnections = 5, keepAliveDuration = 5, TimeUnit.MINUTES))
+  .protocols(listOf(Protocol.HTTP_2, Protocol.HTTP_1_1))
+  .build()
+```
+
+### Response Caching with Etag
+```typescript
+// Axios — conditional requests
+api.interceptors.request.use(async (config) => {
+  const cached = await cache.get(config.url);
+  if (cached?.etag) {
+    config.headers['If-None-Match'] = cached.etag;
+  }
+  return config;
+});
+
+api.interceptors.response.use(async (response) => {
+  if (response.status === 304) {
+    return cache.get(response.config.url);  // Return cached response
+  }
+  if (response.headers.etag) {
+    await cache.set(response.config.url, { ...response, etag: response.headers.etag });
+  }
+  return response;
+});
+```
+
+### Request Batching
+```dart
+class BatchedApiClient {
+  final _queue = <String>{};
+  Timer? _timer;
+
+  void fetch(String id) {
+    _queue.add(id);
+    _timer ??= Timer(Duration(milliseconds: 50), _flush);
+  }
+
+  Future<void> _flush() async {
+    final ids = _queue.toList();
+    _queue.clear();
+    _timer = null;
+    // Single batch request instead of N individual requests
+    final results = await api.getOrdersBatch(ids);
+    for (final result in results) {
+      cache.put(result.id, result);
+    }
+  }
+}
+```
+
+### Payload Compression
+```kotlin
+// OkHttp — gzip is automatic for response bodies
+// Request body compression:
+val client = OkHttpClient.Builder()
+  .addInterceptor { chain ->
+    val request = chain.request()
+    val compressedBody = request.body?.let { body ->
+      compressGzip(body)
+    }
+    if (compressedBody != null) {
+      chain.proceed(request.newBuilder()
+        .header("Content-Encoding", "gzip")
+        .method(request.method, compressedBody)
+        .build())
+    } else {
+      chain.proceed(request)
+    }
+  }
+  .build()
+```
+
+## Battery Optimization
+
+### Location Efficiency
+```swift
+// Prefer significant-change over continuous
+// Bad
+manager.startUpdatingLocation()
+
+// Good
+manager.startMonitoringSignificantLocationChanges()
+
+// Or region monitoring
+manager.startMonitoring(for: region)
+
+// Reduce update frequency
+manager.desiredAccuracy = kCLLocationAccuracyHundredMeters  // Not Best
+manager.distanceFilter = 100  // Only update every 100m
+```
+
+```kotlin
+// Android — Fused Location Provider with balanced power
+val request = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 60000)
+  .setMinUpdateDistanceMeters(100f)
+  .build()
+```
+
+### Background Work Scheduling
+```kotlin
+// Android — WorkManager (not raw AlarmManager or Service)
+val constraints = Constraints.Builder()
+  .setRequiredNetworkType(NetworkType.CONNECTED)
+  .setRequiresBatteryNotLow(true)
+  .build()
+
+val syncWork = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
+  .setConstraints(constraints)
+  .build()
+```
+
+```swift
+// iOS — BGTaskScheduler (not background fetch)
+let request = BGProcessingTaskRequest(identifier: "com.example.sync")
+request.requiresNetworkConnectivity = true
+request.requiresExternalPower = false  // false = allow on battery
+try? BGTaskScheduler.shared.submit(request)
+```
+
+### Push over Polling
+```
+Polling: N requests per hour, each wakes radio for ~10-20 seconds
+  → 30 requests/hour × 15s = 450s of radio time per hour
+  → Battery drain: HIGH
+
+Push notification: 0 background network, push wakes app only when needed
+  → Battery drain: NEGLIGIBLE
+```
+
+### Network Batching for Radio Efficiency
+- Radio energy profile: ramp-up (~2s high power) → transfer → tail (~10s high power)
+- Batch requests into 1-2 minute windows to avoid multiple radio ramp-ups
+- Use `JobScheduler` (Android) / `BGTaskScheduler` (iOS) for opportunistic batching
+- Prefetch data for likely user actions when on WiFi
+
+## Anti-Patterns
+
+### General
+- **Optimizing before profiling**: Guessing at bottlenecks leads to optimizing wrong code. Always profile first
+- **Testing only on flagship devices**: Flagships hide performance problems affecting majority of users on mid-range
+- **Debug build performance testing**: Debug builds have disabled optimizations — always profile release builds
+- **Metric reporting overhead**: Performance monitoring SDKs add 2-5% CPU. Disable verbose instrumentation in production
+- **Premature optimization**: Adds complexity without evidence. Measure first, optimize second
+- **Not setting performance budgets**: Without targets, performance degrades incrementally with each feature
+
+### Rendering Anti-Patterns
+- **Ignoring JS thread in React Native**: Expensive JS computations block JS thread, causing frame drops even when native rendering is fast. Use `InteractionManager` and `useMemo`
+- **Over-using RepaintBoundary**: Too many repaint boundaries increase layer tree complexity and GPU memory in Flutter
+- **Nested ScrollViews**: Both inner and outer scroll — user gets stuck. Use single scroll direction
+- **Recreating widgets on every build**: `Widget build()` creating new objects each call triggers unnecessary recomposition. Extract constants
+- **No list item keys**: Missing keys causes full list diffing instead of targeted updates. Always provide stable keys
+- **Compose without `key()`**: Items in `LazyColumn` without keys cause incorrect animations and full recomposition
+
+### Memory Anti-Patterns
+- **Unbounded image caches**: In-memory image caches without size limits cause OOM on low-memory devices. Set explicit limits
+- **Not handling low memory warnings**: Apps ignoring `didReceiveMemoryWarning` (iOS) or `onTrimMemory` (Android) get killed
+- **Synchronous storage reads**: Reading from disk on main thread blocks UI. Use async storage APIs
+- **Static references to Activity/Context**: Android memory leak classic. Use Application context for singletons
+- **Timer not cancelled on dispose**: Timer holds reference to callback, callback holds reference to screen. Use `disposeBag` / `AutoDispose`
+- **View reference in ViewModel**: ViewModel outlives View. Never hold View reference — observe state
+- **Bitmaps not recycled pre-API 12 (Android)**: Unrecycled bitmaps cause native memory leak. Use `Bitmap.recycle()` or libraries like Coil/Glide
+
+### Startup Anti-Patterns
+- **Synchronous SDK init**: Every SDK adding 100ms to startup adds up. Defer non-critical init
+- **Loading all features on cold start**: Lazy-load feature modules. Only load what user sees first
+- **Heavy deserialization on resume**: JSON parsing of last state blocks warm start. Cache serialized state
+- **Dynamic framework sprawl (iOS)**: Each dynamic framework adds link time. Use static frameworks
+- **Large storyboard/nib files (iOS)**: XIB loading is slow. Prefer programmatic UI for critical screens
+- **Reflection-heavy DI on startup**: Annotation processing at runtime slows first screen. Use compile-time DI (Dagger/Hilt)
+
+### Bundle Size Anti-Patterns
+- **Unused assets shipped**: PNGs, fonts, sounds not referenced in code. Use `flutter clean`, `npx react-native-analyzer`
+- **Including debug symbols in release**: `--split-debug-info` (Flutter), `strip` (iOS), `minifyEnabled` (Android)
+- **Duplicate libraries**: Same library included by multiple dependencies. Use `dependency:analysis` or Gradle dependency tree
+- **No App Thinning (iOS)**: Each device downloads full IPA. Enable asset catalog slicing and on-demand resources
+- **No Android App Bundle**: APK includes resources for all densities/ABIs. AAB generates device-specific APKs
+- **Shipping multiple architectures unnecessarily**: `x86_64` emulator libs in release. Filter with `abiFilters`
+
+### Battery Anti-Patterns
+- **Polling instead of push notifications**: Each poll wakes cellular radio for ~20s. Replace with push + silent notification
+- **Continuous location in background**: Kills battery. Use significant-change or region monitoring
+- **No background work constraints**: WorkManager without network/battery constraints runs at inappropriate times
+- **Wake locks held too long**: Prevent device sleep. Use `acquire(timeout)` with timeout, always release in finally
+- **Animation in background**: UIKit/Compose animations continue when view offscreen. Pause in `onDisappear` / `Disappear`
+- **No adaptive sync**: Same sync frequency on WiFi and cellular. Reduce on metered networks, pause on low battery
 
 ## Compared With
 

@@ -1,213 +1,174 @@
-# Ai Agents Fundamentals
+# AI Agents Fundamentals
 
-## Overview
-Ai Agents is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+## What Is an AI Agent?
 
-## Core Concepts
+An AI agent is an autonomous system that uses a language model to perceive its environment, reason about goals, and take actions through tools. Unlike a standard LLM call (input → output), an agent operates in a **perception-action loop**: observe state, reason about next action, execute action, observe new state, repeat until goal completion.
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Ai Agents helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Core Properties
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Ai Agents solutions. These principles help maintain code quality and reduce technical debt.
+| Property | Description | Absence Means |
+|----------|-------------|---------------|
+| Agency | Autonomous decision-making within bounds | Just a chatbot |
+| Tool Use | Ability to call external functions/APIs | Purely conversational |
+| Memory | Retention of past interactions and state | Each turn is stateless |
+| Planning | Decomposition of goals into steps | Reactive only, no strategy |
+| Adaptation | Response to intermediate results | Fixed pipeline, not agentic |
 
-### Concept 3: Data Management
-Proper data management is essential for Ai Agents. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Agent vs. Non-Agent
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+```
+LLM Call:    Input → [LLM] → Output                    (stateless, single turn)
+Chain:       Input → [LLM] → [Transform] → [LLM] → Output  (fixed pipeline)
+Agent:       Input → [Reason → Act → Observe]^n → Output (adaptive loop)
+```
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+## Perception-Action Loop
 
-## Architecture Patterns
+The fundamental building block of all agent architectures:
 
-### Pattern 1: Standard Architecture
-The standard architecture for Ai Agents follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Agent Loop                              │
+│                                                              │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────┐   │
+│  │ Perceive │───→│  Reason  │───→│   Act    │───→│Observe│   │
+│  │ (Input)  │    │ (Think)  │    │ (Tool)   │    │(Result)│  │
+│  └──────────┘    └──────────┘    └──────────┘    └───┬──┘   │
+│       ↑                                               │     │
+│       └───────────────────────────────────────────────┘     │
+│                                                              │
+│  When goal achieved: Output Final Answer                     │
+└─────────────────────────────────────────────────────────────┘
+```
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### Loop Termination Conditions
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+| Condition | Trigger | Behavior |
+|-----------|---------|----------|
+| Success | Goal criteria met | Output final answer, clean up |
+| Max Iterations | Turn count exceeded | Output best-effort, log warning |
+| Loop Detection | Repeated action pattern | Terminate, escalate |
+| Budget Exceeded | Token/dollar threshold | Graceful degradation |
+| Error Threshold | Consecutive failures | Escalate to human |
+| Human Interrupt | User cancellation | Rollback, cleanup |
 
-## Implementation Guide
+## Tool-Use Paradigm
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+Tools are the mechanism by which agents interact with external systems. The model does not execute code directly — it declares intent via structured function calls, and the runtime executes them safely.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Tool Contract
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+```
+[Agent] ──tool_call(name, params)──→ [Runtime] ──execute()──→ [External System]
+                                                                    │
+         [Agent] ←──tool_result(data, error)─── [Runtime] ←────────┘
+```
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+### Tool Schema Anatomy
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+```json
+{
+  "name": "search_documents",
+  "description": "Search knowledge base for relevant documents. Use when you need information about policies, products, or procedures. Do NOT use for real-time data or personal information.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Search query (2-5 keywords for best results)"
+      },
+      "max_results": {
+        "type": "integer",
+        "description": "Number of results (1-20)",
+        "default": 5
+      },
+      "category": {
+        "type": "string",
+        "enum": ["policy", "product", "procedure", "all"],
+        "description": "Filter by category"
+      }
+    },
+    "required": ["query"]
+  }
+}
+```
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+Critical elements:
+- **Name**: snake_case, unique, descriptive
+- **Description**: Must include both when-to-use AND when-not-to-use
+- **Parameters**: Enums with descriptions per value, sensible defaults
+- **Required**: Minimum viable set (more required = more failure modes)
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+## Agency Spectrum
 
-## Best Practices
+Not all agent problems require full autonomy. Classify along the agency spectrum:
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+```
+Level 0: Direct Call     — LLM generates text, no tools, no loop
+Level 1: Tool-Use        — LLM selects tool, single call, no reasoning trace
+Level 2: ReAct           — LLM reasons + acts in loop, adaptive
+Level 3: Plan-Execute    — LLM plans, then executes, with re-planning
+Level 4: Multi-Agent     — Multiple specialized agents coordinate
+Level 5: Autonomous      — Self-directed goal pursuit, minimal human input
+```
 
-## Common Pitfalls
+Choose the minimum level that solves the problem. Higher levels increase cost, latency, and failure modes.
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+## Memory Fundamentals
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+### Why Agents Need Memory
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+Without memory, an agent treats each turn as an independent problem. Memory enables:
+- **Coherence**: Consistent behavior across conversation turns
+- **Learning**: Adaptation based on past interactions
+- **State**: Tracking progress in multi-step tasks
+- **Context**: Referencing earlier information without re-processing
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+### Memory Types
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+| Type | Storage | Lookup | Capacity | Cost |
+|------|---------|--------|----------|------|
+| Buffered | In-memory list | Sequential scan | Context window | Free |
+| Summary | LLM-generated text | Included in prompt | 1-5 summaries | Low (per-summary) |
+| Key-Value | Redis/DynamoDB | Exact match | Unlimited | Low |
+| Vector | Pinecone/Qdrant | Semantic search | Unlimited | Medium |
+| Graph | Neo4j | Traversal | Unlimited | Medium |
 
-## Tooling Ecosystem
+### Retention Policies
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+- **TTL-based**: Drop entries older than N hours/days
+- **Capacity-based**: Drop oldest when buffer full
+- **Relevance-based**: Drop lowest-scored on semantic retrieval
+- **Importance-based**: Keep high-importance (user preferences, critical facts)
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+## Multi-Agent Fundamentals
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+### Why Multiple Agents?
 
-## Integration Patterns
+| Reason | Single Agent Limitation | Multi-Agent Solution |
+|--------|------------------------|---------------------|
+| Specialization | One model must excel at everything | Each agent optimized for one domain |
+| Tool overload | Too many tools confuse selection | Tools grouped by agent role |
+| Context limits | Single context window insufficient | Distributed context across agents |
+| Failure isolation | One bug breaks everything | Agents can retry/reroute |
+| Parallelism | Sequential processing | Concurrent subtask execution |
 
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
+### Communication Patterns
 
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+- **Direct Call**: Agent A calls Agent B's API (tight coupling)
+- **Message Queue**: Agents publish/consume from queues (async, decoupled)
+- **Shared Memory**: Agents read/write to shared state (coordination)
+- **Blackboard**: Structured workspace agents contribute to (collaboration)
 
 ## Key Points
-- Understand core Ai Agents concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
 
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- AI agents operate on a perception-action loop, not single-turn generation
+- Choose the minimum agency level that solves the problem
+- Tool descriptions are the primary mechanism for correct tool selection
+- Memory strategy must match retention requirements (session vs. permanent)
+- Multi-agent systems require explicit communication and termination protocols
+- Every agent needs bounded iteration, error handling, and escalation paths
+- Safety guardrails must constrain tool access and detect runaway behavior
+- Logging and tracing are essential for debugging agent behavior
+- Agent evaluation requires both component-level and system-level testing
+- The agency spectrum helps match architecture to actual problem complexity

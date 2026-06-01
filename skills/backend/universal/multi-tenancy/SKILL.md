@@ -21,6 +21,7 @@ Implement tenant isolation in a SaaS application using row-level, schema-per-ten
 ## Architecture/Decision Trees
 
 ### Isolation Strategy Decision Tree
+
 ```
 Is regulatory compliance required (GDPR/SOC 2/HIPAA)?
   |-- YES --> Do tenants require full data separation?
@@ -134,6 +135,32 @@ INSERT INTO tenant_{id}.settings (key, value) VALUES ('theme', 'default');
 # Use a migration orchestration table to track per-tenant progress
 ```
 
+```typescript
+// Per-tenant migration runner
+async function migrateTenants(migrationName: string, migrationFn: (schema: string) => Promise<void>) {
+  const tenants = await tenantRepository.listActive();
+
+  // Use batch processing with concurrency limit
+  const BATCH_SIZE = 10;
+  for (let i = 0; i < tenants.length; i += BATCH_SIZE) {
+    const batch = tenants.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (tenant) => {
+        const schema = `tenant_${tenant.id}`;
+        try {
+          await migrationFn(schema);
+          await migrationTracker.recordSuccess(tenant.id, migrationName);
+          logger.info('Migration applied', { tenant: tenant.id, migration: migrationName });
+        } catch (err) {
+          await migrationTracker.recordFailure(tenant.id, migrationName, err);
+          logger.error('Migration failed', { tenant: tenant.id, migration: migrationName, error: err });
+        }
+      })
+    );
+  }
+}
+```
+
 ### Step 7: Implement Tenant-Aware Caching
 - Cache keys must include tenant ID prefix.
 - Bust cache scoped to tenant, not globally.
@@ -143,6 +170,39 @@ INSERT INTO tenant_{id}.settings (key, value) VALUES ('theme', 'default');
 - Soft-delete: mark tenant as inactive, retain data per retention policy.
 - Hard-delete: purge all tenant data, take final backup before deletion.
 - Anonymization: replace PII with anonymized tokens for analytics retention.
+
+### Step 9: Rate Limiting Per Tenant
+
+```typescript
+class TenantRateLimiter {
+  async checkLimit(tenantId: string): Promise<boolean> {
+    const key = `ratelimit:tenant:${tenantId}`;
+    const current = await redis.incr(key);
+    if (current === 1) {
+      await redis.pexpire(key, 1000);  // 1 second window
+    }
+    return current <= 1000;  // max 1000 requests/second per tenant
+  }
+}
+```
+
+### Step 10: PostgreSQL Row-Level Security (Defense in Depth)
+
+```sql
+-- Enable RLS on tables
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+-- Create policy that uses session setting
+CREATE POLICY tenant_isolation ON orders
+  USING (tenant_id = current_setting('app.tenant_id')::UUID);
+
+CREATE POLICY tenant_isolation ON users
+  USING (tenant_id = current_setting('app.tenant_id')::UUID);
+
+-- Application sets tenant context at connection start
+SET app.tenant_id = 'uuid-here';
+```
 
 ## Models
 
@@ -195,28 +255,46 @@ class TenantPoolRegistry:
                 del self.pools[tenant_id]
 ```
 
-## Rules
-- Never let one tenant access another tenant's data — always enforce scoping at the database level, not just in application code.
-- Tenant ID must come from the authentication token, never from user input.
-- All indexes must include the tenant_id column (or be unique per schema).
-- For schema-per-tenant: manage migrations centrally but execute per tenant.
-- Backups must be restorable per tenant for enterprise plans.
-- Log all cross-tenant access attempts as security events.
-- Tenant context must be validated at every service boundary.
-- Never use shared database sequences across tenants (use UUIDs or per-tenant sequences).
-- Connection pool limits per tenant: implement max connections per tenant.
-- Rate limiting must be per-tenant, not global — one noisy tenant affects others.
-- Feature flags should support per-tenant rollout before global rollout.
-- Monitor tenant-level query performance — a slow tenant is a canary for issues.
+### Background Job Tenant Propagation
+```typescript
+// Always pass tenant context to background jobs
+interface JobPayload {
+  tenantId: string;
+  data: Record<string, unknown>;
+}
 
-## Best Practices
-- Use UUIDs for primary keys to avoid tenant ID collision in shared tables.
-- Implement tenant-level rate limiting early — hard to retrofit.
-- Separate tenant metadata (plan, status, config) from tenant data.
-- Cache tenant configuration aggressively; invalidate on plan change.
-- Use database row-level security (RLS) policies as a defense-in-depth layer.
-- Test cross-tenant data leakage with dedicated security test suites.
-- Document tenant onboarding/offboarding runbooks for operations teams.
+class TenantAwareWorker {
+  async process(job: JobPayload, handler: (ctx: TenantContext) => Promise<void>) {
+    const tenant = await tenantCache.get(job.tenantId);
+    if (!tenant || tenant.status !== 'active') {
+      logger.warn('Skipping job for inactive tenant', { tenantId: job.tenantId });
+      return;
+    }
+    await asyncLocalStorage.run({ tenantId: tenant.id, tenant }, () => handler(tenant));
+  }
+}
+```
+
+## Production Considerations
+
+| Concern | Practice |
+|---------|----------|
+| Noisy neighbor | One tenant's heavy query degrades everyone. Rate limit per tenant, monitor top tenants |
+| Schema count bloat | PostgreSQL metadata cache degrades >5000 schemas. Archive old tenants |
+| Connection pooling | DB-per-tenant: use PgBouncer/RDS Proxy. Row-level: single pool with tenant_id column |
+| Backup strategy | DB-per-tenant: staggered backups. Row-level: global backup with per-tenant extract capability |
+| Tenant migration | Schema-per-tenant → DB-per-tenant requires data export/import. Plan for migration |
+| Monitoring | Per-tenant metrics: query latency, error rate, request count, storage usage |
+
+## Security
+
+| Risk | Mitigation |
+|------|-----------|
+| Cross-tenant data access | Row-Level Security as defense-in-depth. Never rely on app-layer alone |
+| Tenant ID in URL | Use auth token, never URL params for tenant ID. Validate token claims |
+| Background job leaks | Always pass tenant context in job payload, validate before processing |
+| Shared cache poisoning | Prefix all cache keys with tenant ID |
+| Rate limit bypass | Apply rate limits at gateway (per IP) AND application (per tenant) |
 
 ## Common Pitfalls
 - **Leaky tenant context**: Forgetting to propagate tenant ID in background jobs, webhooks, or message queues. Always pass tenant context explicitly in job payloads.
@@ -248,6 +326,21 @@ class TenantPoolRegistry:
 - **Laravel**: `spatie/laravel-multitenancy` for row-level, `stancl/tenancy` for schema-per-tenant.
 - **Connection pooling**: PgBouncer, RDS Proxy, Prisma Data Proxy for managing per-tenant connections.
 - **Monitoring**: Prometheus metrics per tenant (query latency, error rates, request count).
+
+## Rules
+- Never let one tenant access another tenant's data — always enforce scoping at the database level, not just in application code.
+- Tenant ID must come from the authentication token, never from user input.
+- All indexes must include the tenant_id column (or be unique per schema).
+- For schema-per-tenant: manage migrations centrally but execute per tenant.
+- Backups must be restorable per tenant for enterprise plans.
+- Log all cross-tenant access attempts as security events.
+- Tenant context must be validated at every service boundary.
+- Never use shared database sequences across tenants (use UUIDs or per-tenant sequences).
+- Connection pool limits per tenant: implement max connections per tenant.
+- Rate limiting must be per-tenant, not global — one noisy tenant affects others.
+- Feature flags should support per-tenant rollout before global rollout.
+- Monitor tenant-level query performance — a slow tenant is a canary for issues.
+- Use RLS as defense-in-depth, not as primary isolation mechanism.
 
 ## References
   - references/data-partitioning.md — Data Partitioning at Scale Reference

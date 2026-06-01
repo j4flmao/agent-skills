@@ -1,213 +1,357 @@
-# Model Training Fundamentals
+# Model Training: Core Concepts & Training Loop Fundamentals
 
 ## Overview
-Model Training is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+LLM training fundamentals cover the core mechanics of gradient-based optimization for transformer language models: loss functions, optimizers, backward pass mechanics, precision strategies, normalization, regularization, and the training loop itself. These fundamentals apply to both pre-training and fine-tuning.
 
-## Core Concepts
+## Training Loop Anatomy
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Model Training helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Basic Training Step
+```python
+def training_step(model, batch, optimizer, scheduler, scaler, gradient_accumulation_steps=1):
+    # 1. Forward pass: compute logits and loss
+    with torch.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=True):
+        outputs = model(
+            input_ids=batch["input_ids"],
+            attention_mask=batch["attention_mask"],
+            labels=batch["labels"],
+        )
+        loss = outputs.loss / gradient_accumulation_steps
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Model Training solutions. These principles help maintain code quality and reduce technical debt.
+    # 2. Backward pass: compute gradients
+    scaler.scale(loss).backward()
 
-### Concept 3: Data Management
-Proper data management is essential for Model Training. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+    # 3. Optimizer step (after accumulating gradients)
+    if (step + 1) % gradient_accumulation_steps == 0:
+        scaler.unscale_(optimizer)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        scaler.step(optimizer)
+        scaler.update()
+        optimizer.zero_grad()
+        if scheduler is not None:
+            scheduler.step()
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+    return loss.detach()
+```
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Full Training Loop
+```python
+def train(model, train_dataloader, eval_dataloader, optimizer, scheduler, scaler, config):
+    model.train()
+    global_step = 0
+    best_eval_loss = float("inf")
 
-## Architecture Patterns
+    for epoch in range(config.num_epochs):
+        for step, batch in enumerate(train_dataloader):
+            batch = {k: v.to(config.device) for k, v in batch.items()}
+            loss = training_step(model, batch, optimizer, scheduler, scaler, config.gradient_accumulation_steps)
+            global_step += 1
 
-### Pattern 1: Standard Architecture
-The standard architecture for Model Training follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+            if global_step % config.logging_steps == 0:
+                log_metrics({"train/loss": loss.item() * config.gradient_accumulation_steps, "step": global_step})
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+            if global_step % config.eval_steps == 0:
+                eval_metrics = evaluate(model, eval_dataloader, config.device)
+                log_metrics({f"eval/{k}": v for k, v in eval_metrics.items()})
+                if eval_metrics["eval_loss"] < best_eval_loss:
+                    best_eval_loss = eval_metrics["eval_loss"]
+                    save_checkpoint(model, optimizer, scheduler, global_step, eval_metrics, config.output_dir)
+                model.train()
+```
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+## Loss Functions
 
-## Implementation Guide
+### Causal Language Modeling (CLM) Loss
+```python
+# Cross-entropy loss on next-token prediction
+# Labels: input_ids shifted left by 1
+# Loss computed only on non-padding, non-input tokens (masked with -100)
+def clm_loss(logits, labels):
+    # logits: (batch, seq_len, vocab_size)
+    # labels: (batch, seq_len) with -100 for ignored positions
+    shift_logits = logits[..., :-1, :].contiguous()
+    shift_labels = labels[..., 1:].contiguous()
+    loss_fct = torch.nn.CrossEntropyLoss()
+    return loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+```
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### DPO Loss
+```python
+# DPO loss directly optimizes policy from preference pairs
+def dpo_loss(policy_chosen_logps, policy_rejected_logps, ref_chosen_logps, ref_rejected_logps, beta=0.1):
+    policy_log_ratios = policy_chosen_logps - policy_rejected_logps
+    ref_log_ratios = ref_chosen_logps - ref_rejected_logps
+    logits = policy_log_ratios - ref_log_ratios
+    loss = -F.logsigmoid(beta * logits).mean()
+    return loss
+```
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### PPO / Reward Model Loss (Bradley-Terry)
+```python
+# Reward model: maximize log(sigmoid(reward_chosen - reward_rejected))
+# PPO policy: maximize reward - KL(ref || policy)
+def bradley_terry_loss(reward_chosen, reward_rejected):
+    return -F.logsigmoid(reward_chosen - reward_rejected).mean()
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+def ppo_policy_loss(log_probs, ref_log_probs, advantages, kl_coef=0.2):
+    ratio = torch.exp(log_probs - ref_log_probs)
+    pg_loss = -advantages * ratio
+    kl_loss = (log_probs - ref_log_probs).mean()
+    return pg_loss.mean() + kl_coef * kl_loss
+```
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+## Optimizers
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+### AdamW (Standard)
+```python
+from transformers import get_cosine_schedule_with_warmup
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+optimizer = torch.optim.AdamW(
+    model.parameters(),
+    lr=2e-4,
+    betas=(0.9, 0.999),
+    eps=1e-8,
+    weight_decay=0.01,
+)
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+# 8-bit optimizer for memory savings
+# import bitsandbytes as bnb
+# optimizer = bnb.optim.AdamW8bit(model.parameters(), lr=2e-4)
+```
 
-## Best Practices
+### Parameter Groups with Different LR / Decay
+```python
+# Apply weight decay only to non-bias, non-norm parameters
+def configure_optimizer(model, lr, weight_decay):
+    decay_params = []
+    no_decay_params = []
+    for name, param in model.named_parameters():
+        if not param.requires_grad:
+            continue
+        if "bias" in name or "layernorm" in name.lower() or "layer_norm" in name.lower():
+            no_decay_params.append(param)
+        else:
+            decay_params.append(param)
+    return torch.optim.AdamW([
+        {"params": decay_params, "weight_decay": weight_decay},
+        {"params": no_decay_params, "weight_decay": 0.0},
+    ], lr=lr, betas=(0.9, 0.999))
+```
 
-| Practice | Description | Priority |
+### Lion Optimizer
+```python
+# Lion: memory-efficient alternative to AdamW (only tracks one momentum)
+# Often yields better generalization, especially for pre-training
+# optimizer = lion_pytorch.Lion(model.parameters(), lr=1e-4, weight_decay=0.01)
+```
+
+## Learning Rate Schedules
+
+### Schedule Comparison
+| Schedule | Best For | Behavior |
+|----------|----------|----------|
+| Cosine | Fine-tuning, continued pre-training | Warmup then cosine decay to 0 |
+| Linear | Quick fine-tuning | Warmup then linear decay to 0 |
+| Warmup-Stable-Decay | Pre-training | Warmup, constant LR, cosine decay |
+| Constant | Short LoRA runs | Warmup then constant |
+| Inverse Square Root | Large-scale pre-training | Slow decay, follows scaling laws |
+
+### Implementation
+```python
+# Common schedules from transformers
+from transformers import (
+    get_cosine_schedule_with_warmup,
+    get_linear_schedule_with_warmup,
+    get_constant_schedule_with_warmup,
+)
+
+num_training_steps = len(train_dataloader) * num_epochs // gradient_accumulation_steps
+num_warmup_steps = int(0.03 * num_training_steps)
+
+scheduler = get_cosine_schedule_with_warmup(
+    optimizer,
+    num_warmup_steps=num_warmup_steps,
+    num_training_steps=num_training_steps,
+)
+```
+
+### Warmup-Stable-Decay (Pre-training)
+```python
+def get_warmup_stable_decay_schedule(optimizer, num_warmup, num_stable, num_decay):
+    def lr_lambda(current_step):
+        if current_step < num_warmup:
+            return float(current_step) / float(max(1, num_warmup))
+        elif current_step < num_warmup + num_stable:
+            return 1.0
+        else:
+            progress = float(current_step - num_warmup - num_stable) / max(1, num_decay)
+            return max(0.0, 0.5 * (1.0 + math.cos(math.pi * progress)))
+    return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+```
+
+## Precision & Mixed Precision Training
+
+### Precision Types
+| Precision | Bits | Range | Use Case |
+|-----------|------|-------|----------|
+| FP32 | 32 | 1e-38 to 3e38 | Reference, loss scaling |
+| FP16 | 16 | 6e-5 to 6e4 | Older GPUs, high throughput |
+| BF16 | 16 | 1e-38 to 3e38 | Modern GPUs (A100+, H100), stable |
+| FP8 | 8 | Varies | H100-native, frontier |
+| NF4 (QLoRA) | 4 | Quantized | Memory-limited fine-tuning |
+| INT8 | 8 | Quantized | Inference, LoRA on quantized |
+
+### Mixed Precision with GradScaler
+```python
+# FP16 requires dynamic loss scaling to prevent underflow
+scaler = torch.cuda.amp.GradScaler()
+
+# BF16 doesn't need scaling but may need more tokens for same quality
+# For A100/H100: use BF16 if supported, otherwise FP16 + scaler
+
+# In the training loop:
+with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16):
+    outputs = model(**batch)
+    loss = outputs.loss / gradient_accumulation_steps
+scaler.scale(loss).backward()
+```
+
+### TF32 (A100+)
+```python
+# TF32 uses FP32 mantissa precision for matrix math on A100+
+# Free speedup with minimal quality impact
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
+```
+
+## Normalization
+
+### Layer Norm (Standard Transformer)
+```python
+# Applied after each sublayer (attention, FFN)
+# Normalizes across hidden dimension
+# x_norm = (x - mean) / sqrt(var + eps) * weight + bias
+```
+
+### RMS Norm (Llama-style)
+```python
+# Simplified LayerNorm without centering
+# Used in Llama, Mistral, Gemma
+# x_norm = x / sqrt(mean(x^2) + eps) * weight
+```
+
+### Pre-Norm vs Post-Norm
+```
+Pre-Norm (modern): LayerNorm → Sublayer → Residual
+  - More stable training, no warmup needed in many cases
+  - Default in Llama, Mistral, GPT-NeoX, OPT
+
+Post-Norm (original): Sublayer → LayerNorm → Residual
+  - Requires careful warmup and initialization
+  - Used in original GPT, BERT, T5
+```
+
+## Regularization
+
+### Dropout
+```python
+# During training: randomly zero elements
+# During inference: identity
+# Typical values:
+#   - Embedding dropout: 0.0-0.1
+#   - Attention dropout: 0.0-0.1
+#   - FFN dropout: 0.0-0.2 (LoRA default: 0.05)
+# Higher dropout = more regularization = more data needed
+```
+
+### Weight Decay
+```python
+# L2 regularization on weights (not bias, not norm params)
+# Typical: 0.01-0.1 for fine-tuning
+# 0.1 for pre-training (Chinchilla scaling)
+# Not applied to: bias, LayerNorm weights, embedding matrices
+```
+
+### Label Smoothing
+```python
+# Softens hard targets, improves calibration
+# loss = (1 - epsilon) * CE + epsilon * uniform_CE
+# Typical epsilon: 0.1
+```
+
+### Gradient Clipping
+```python
+# Prevent gradient explosion
+# Clip gradient norm to max_norm
+torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+# Typical values: 0.3-1.0 for LLM training
+# Too low: impedes learning. Too high: doesn't prevent spikes.
+```
+
+## Gradient Checkpointing (Activation Checkpointing)
+
+```python
+# Trade compute for memory: don't store all activations
+# Recompute them during backward pass
+# Memory: O(L) → O(sqrt(L)) or O(1) depending on strategy
+# Speed: ~20-30% slower but 2-3x memory reduction
+
+model.gradient_checkpointing_enable()
+# Or in Trainer:
+# TrainingArguments(gradient_checkpointing=True)
+```
+| Strategy | Memory | Recomputation |
+|----------|--------|---------------|
+| No checkpointing | 100% | None |
+| Selective (default) | ~60% | Some layers |
+| Full (every layer) | ~30% | All layers |
+
+## Sequence Packing & Attention Masking
+
+```python
+# Pack multiple sequences into one sample to avoid padding waste
+# Common in pre-training where samples are variable-length
+
+class DataCollatorForSeq2SeqPacking:
+    """Pack sequences to max_length with 1D attention mask."""
+    def __call__(self, features):
+        input_ids = [f["input_ids"] for f in features]
+        # Concatenate and split at max_length boundaries
+        concat = torch.cat([torch.tensor(ids) for ids in input_ids])
+        num_chunks = math.ceil(len(concat) / self.max_length)
+        chunks = torch.split(concat[:num_chunks * self.max_length], self.max_length)
+        # Pad last chunk if needed
+        batch = torch.stack([F.pad(c, (0, self.max_length - len(c)), value=self.pad_id) for c in chunks])
+        return {"input_ids": batch, "attention_mask": (batch != self.pad_id).long(), "labels": batch.clone()}
+```
+
+## Tokenization Strategies for Training
+
+### Padding Strategies
+| Strategy | Description | Use Case |
 |----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+| `max_length` | Pad/crop all to fixed length | Simple, wastes tokens |
+| `longest` | Pad to longest in batch | Flexible, variable batch size |
+| `padding_free` | Pack sequences, no padding | Most efficient, requires special attention |
 
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+### Vocabulary Considerations
+```python
+# Extending vocabulary for domain-specific tokens
+# Add new tokens, resize embeddings, re-initialize
+special_tokens = ["[CUSTOM_TOKEN_1]", "[CUSTOM_TOKEN_2]"]
+tokenizer.add_tokens(special_tokens)
+model.resize_token_embeddings(len(tokenizer))
+# New embeddings are initialized randomly (requires fine-tuning)
+```
 
 ## Key Points
-- Understand core Model Training concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- Training step: forward → loss → backward (gradients) → optimizer step → scheduler step
+- Loss: cross-entropy on next-token prediction, masking non-predicted positions with -100
+- AdamW is the default optimizer; 8-bit variant saves memory
+- Cosine schedule with 3% warmup is the default configuration
+- BF16 preferred over FP16 for stable training on modern GPUs
+- Gradient checkpointing trades compute for memory, essential for models > 7B
+- Pre-norm (LayerNorm/RMSNorm before sublayer) is the modern standard
+- Weight decay applies to weights, not bias/norm parameters
+- Gradient clipping at 1.0 prevents training instability
+- Data padding wastes compute; prefer packing or longest-batch strategies
+- New tokens require embedding resizing and fine-tuning

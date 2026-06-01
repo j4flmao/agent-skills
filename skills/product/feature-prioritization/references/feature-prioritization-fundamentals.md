@@ -1,213 +1,110 @@
 # Feature Prioritization Fundamentals
 
 ## Overview
-Feature Prioritization is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Feature prioritization is the systematic process of evaluating and ranking product features to allocate limited development resources to the highest-impact work. Effective prioritization replaces HiPPO (Highest Paid Person's Opinion) with structured decision-making, aligns engineering effort with business strategy, and ensures teams build what matters most to users and the business.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Feature Prioritization helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Concept 1: Prioritization is About Trade-offs
+Every team has more ideas than capacity. Prioritization is the practice of explicitly choosing what NOT to build. Documenting what won't be done is as important as documenting what will. Without explicit deprioritization, teams suffer from scope creep, context switching, and unfinished work.
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Feature Prioritization solutions. These principles help maintain code quality and reduce technical debt.
+### Concept 2: Framework Selection
+No single framework works for all decisions. RICE works when quantitative data is available. MoSCoW works when stakeholder alignment is the challenge. Kano works when customer satisfaction is the goal. Opportunity scoring works when solving pain points is the priority. Match the framework to the decision context — don't force one framework on every decision.
 
-### Concept 3: Data Management
-Proper data management is essential for Feature Prioritization. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Concept 3: Confidence Matters
+Scoring without confidence levels gives false precision. A feature with a high RICE score based on guesses is riskier than a medium-scoring feature backed by data. Always report confidence alongside scores. Low-confidence, high-scoring items need further validation before commitment.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+### Concept 4: Stakeholder Alignment
+Prioritization is as much about people as about data. Stakeholders with different incentives will have different priorities. Structured frameworks create a shared language for discussing trade-offs. When stakeholders disagree, return to data and strategy — not authority or seniority.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Concept 5: Dynamic Re-Prioritization
+Priorities change as markets, user needs, and business strategy evolve. Set a regular re-prioritization cadence (quarterly minimum). Re-score when strategy changes, major competitive moves occur, or new user research contradicts assumptions. Static backlogs are stale backlogs.
 
-## Architecture Patterns
+## RICE Scoring
 
-### Pattern 1: Standard Architecture
-The standard architecture for Feature Prioritization follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+### The Four Dimensions
+**Reach:** How many users are affected per time period (typically per quarter). Use analytics data when available. Estimate range (best/worst/most likely). Document data source.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+**Impact:** Degree of influence on key outcome. Scale 1-5: 5=transformative, 1=minimal. Impact is about magnitude, not direction — assume positive impact if the feature is well-designed.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+**Confidence:** How confident are you in the estimates? 1.0=high (experiments, analytics), 0.8=medium (strong proxy data), 0.5=low (educated guess), 0.2=very low (pure speculation). Confidence prevents acting on guesses as if they were facts.
 
-## Implementation Guide
+**Effort:** Total person-weeks (or team-weeks) for complete delivery. Include design, development, QA, documentation, release. Get estimates from engineering, not product assumptions. Include uncertainty ranges.
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Calculation
+RICE Score = (Reach × Impact × Confidence) / Effort. Sort descending. Higher score = higher priority. Normalize scores for comparison across different timeframes. RICE enables objective comparison of very different types of work — a small effort, medium-impact feature can outrank a large effort, high-impact feature.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+## MoSCoW Method
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+### Categories
+- **Must have:** Critical for current cycle goal. Without this, the goal is not achieved. Limit to 20% of capacity.
+- **Should have:** Important but not critical. Can be delivered in next cycle if necessary. Include only after Must items fit.
+- **Could have:** Nice to include if time permits. Often the first to drop when timelines tighten.
+- **Won't have:** Explicitly out of scope. Documented so they aren't forgotten but won't creep into current cycle.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+### Workshop Facilitation
+1. Present all candidate features with context and data
+2. Each stakeholder individually classifies features
+3. Reveal and discuss differences — focus on Must have consensus
+4. Verify capacity: Must + Should should not exceed 60% of available capacity
+5. Reserve 20% buffer for unexpected work and bugs
+6. Document Won't haves — they return to the backlog, not oblivion
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+## Kano Model
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### Categories
+**Basic needs:** Table stakes. Users expect them. Their absence causes dissatisfaction, but their presence doesn't create satisfaction. Examples: login works, page loads, data doesn't disappear. Invest to meet threshold, no more.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+**Performance needs:** Linear relationship — more is better. Users explicitly request these. Better performance = higher satisfaction. Examples: faster search, more integrations, better reports. Invest proportionally to impact.
 
-## Best Practices
+**Delightful needs:** Unexpected features that create excitement. Users don't expect them, so their absence doesn't cause dissatisfaction. Examples: animations, Easter eggs, surprise features. Invest selectively — they become performance needs over time.
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+### Prioritization Rule
+Basic > Performance > Delightful. Never sacrifice basic needs for delightful features. A product that delights but doesn't work reliably will fail. A product that works reliably but doesn't delight can succeed.
 
-## Common Pitfalls
+## Opportunity Scoring
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+### Method
+Score each feature by: importance of the problem (1-10) and satisfaction with current solution (1-10). Calculate: Opportunity = importance + max(importance - satisfaction, 0). Score range: 0-20. Focus: >12 = high opportunity, 8-12 = medium, <8 = low.
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+### When to Use
+Best for problem-focused prioritization where the goal is solving user pain points rather than delivering features. Requires user research to understand problem importance. Works well with persona-driven development — score opportunities per persona.
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+## Priority Buckets
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+### P0-P3 Definitions
+- **P0:** Must ship this cycle. Limited to top 10-20% of backlog. Requires documented rationale approved by product lead.
+- **P1:** Next cycle priority. Queued and ready. Top 20-30% of remaining backlog.
+- **P2:** Valuable but no immediate plan. Future consideration. Next 20-30%.
+- **P3:** Explicit won't do. Documented rationale. Reviewed quarterly. Bottom 20-40%.
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+### Governance
+P0 count must not exceed 50% of team capacity. P0+P1 must not exceed 80%. Track P0 delivery rate: if <80% of P0 items ship on time, reduce P0 count next cycle. Any stakeholder can request re-prioritization but must provide updated scoring data.
 
-## Tooling Ecosystem
+## Anti-Patterns
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+### HiPPO
+Highest Paid Person's Opinion overrides data. Prevention: use structured scoring completed independently by all stakeholders. Anonymize scores before discussion.
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+### Everything is P0
+All stakeholders demand top priority. Prevention: enforce capacity-based limits. "If everything is priority, nothing is."
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+### False Precision
+Treating scores as exact when data is uncertain. Prevention: always include confidence level. Use score ranges. Round to meaningful precision.
 
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+### Analysis Paralysis
+Over-scoring without making decisions. Prevention: set deadlines. 80% confidence is sufficient for most decisions. Perfect information is never available.
 
 ## Key Points
-- Understand core Feature Prioritization concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- Prioritization is about choosing what NOT to build
+- Match the framework to the decision context
+- Confidence prevents acting on guesses as facts
+- MoSCoW requires stakeholder participation — it's a consensus tool
+- Kano: basic needs first, then performance, then delightful
+- Opportunity scoring is best for problem-focused prioritization
+- Document P3 (won't do) as carefully as P0 (must do)
+- Re-prioritize quarterly or when strategy changes
+- Scores are decision aids, not objective truth
+- Effort estimates must come from engineering
+- Every metric needs a counter metric — prioritize outcomes, not output
+- Get to 80% confidence and decide — perfect information is never available

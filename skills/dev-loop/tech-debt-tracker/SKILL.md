@@ -1,220 +1,313 @@
 ---
 name: dev-loop-tech-debt-tracker
 description: >
-  Use this skill when the user says 'tech debt', 'technical debt', 'debt tracker', 'code debt', 'debt backlog', 'TODO debt', 'FIXME debt', 'HACK debt', 'debt triage', 'debt estimation'. Scans codebase for debt markers, categorizes, estimates impact, and prioritizes. Do NOT use for: code review or refactoring.
+  Use when the user asks about technical debt tracking, tech debt management, code quality metrics, debt prioritization, or establishing a tech debt reduction process. Do NOT use for: refactoring implementation (dev-loop-refactor-guide), or code review (dev-loop-code-review).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
 compatibility:
   claude-code: true
   cursor: true
   codex: true
   windsurf: true
-tags: [dev-loop, tech-debt, quality, phase-7]
-version: "2.0.0"
-author: "j4flmao"
-license: "MIT"
+tags: [dev-loop, tech-debt, code-quality]
 ---
 
-# Dev Loop Tech Debt Tracker
+# Technical Debt Tracker
 
 ## Purpose
-Discover, categorize, and prioritize technical debt across the codebase. Converts scattered TODO/FIXME/HACK markers into actionable backlog items quantified by developer impact and fix effort for sprint planning.
-
-Technical debt is inevitable in any codebase that ships features. The key is managing it intentionally rather than letting it accumulate silently until it blocks delivery. This skill implements Ward Cunningham's debt quadrant model with a quantitative interest rate calculation so debt decisions are driven by data, not emotion. Every TODO in the codebase becomes a conscious decision: either accept the weekly interest cost and keep working, or pay down the principal by fixing it. The output is a prioritized backlog sorted by ROI, ready for sprint planning with clear effort estimates.
-
-Treating tech debt like financial debt changes how teams talk about it. Instead of abstract guilt about code quality, teams discuss quantifiable interest rates, principal costs, and return on investment. An item with ROI > 1 pays for itself in under a week and should be scheduled immediately. An item with ROI < 0.1 costs more to fix than to carry — document the decision to accept it and move on.
+Systematically identify, track, prioritize, and reduce technical debt — establishing a quantifiable, transparent process that balances feature velocity with codebase health.
 
 ## Agent Protocol
 
 ### Trigger
-"tech debt", "technical debt", "debt tracker", "code debt", "debt backlog", "TODO debt", "FIXME debt", "HACK debt", "debt triage", "debt estimation"
+Exact user phrases: "technical debt", "tech debt", "code debt", "debt tracking", "code quality debt", "debt backlog", "reduce tech debt", "tech debt sprint", "debt prioritization", "code health".
 
 ### Input Context
-- Source code directory path (default: current project root — scanned recursively)
-- Debt marker keywords to scan (default: TODO, FIXME, HACK, XXX, WORKAROUND, TEMPORARY, BUG, OPTIMIZE, REVIEW, KLUDGE)
-- Directory and file patterns to exclude (default: node_modules/, vendor/, dist/, build/, .git/, __pycache__/, *.min.js, *.bundle.*)
-- Optional: previous debt report file path for computing delta and trend analysis (are we accumulating debt faster than we pay it down?)
-- Optional: team size (number of active developers) for more accurate impact estimation across the team
+- Codebase size and age (lines of code, years in production)
+- Current pain points (slow development, frequent bugs, long onboarding)
+- Existing debt indicators (test coverage %, cyclomatic complexity, duplication)
+- Team size and velocity (story points per sprint, team capacity)
+- Business constraints (release deadlines, regulatory requirements, SLAs)
+- Tooling available (SonarQube, CodeClimate, Codacy, custom)
 
 ### Output Artifact
-Structured debt report — per-file listing of debt markers with severity classification, quadrant categorization, quantitative interest and principal estimates, and a prioritized action list ready for story creation
-
-### Response Format
-- Summary statistics: total debt item count, breakdown by severity (critical / major / minor), breakdown by quadrant category
-- Per-file detailed listing with: absolute file path, line number, marker keyword, full line content plus 3 lines of surrounding context, severity classification, and a brief impact note
-- Prioritized action items table sorted by ROI descending: ID, file path, description of the debt, interest in hours/week, principal in hours, ROI ratio, recommended priority label
-- Recommended sprint allocation for top items with effort grouped into a sprint-sized chunk
-- No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+Tech debt inventory with prioritized items, remediation estimates, and tracking system.
 
 ### Completion Criteria
-Debt report generated with all scanned items categorized and quantified. Interest and principal estimated with rationale for every item. A prioritized action list with at least 3 items ready for the sprint backlog.
+- [ ] Debt discovery methods established (automated scans + developer input)
+- [ ] Debt items cataloged with type, location, impact, and effort
+- [ ] Prioritization rubric defined (impact × frequency × effort)
+- [ ] Debt items entered into tracking system (backlog with labels/tags)
+- [ ] Interest rate estimated (cost of NOT fixing per sprint)
+- [ ] Budget established (% of sprint capacity for debt reduction)
+- [ ] Reporting/metrics configured (debt ratio, trend over time)
 
 ### Max Response Length
-2500 tokens
+200 lines.
 
-## Architecture
+## Framework/Methodology
 
-### Debt Management Pipeline
+### Tech Debt Decision Tree
 ```
-Codebase Scan ──> Marker Extraction ──> Classification ──> Quantification ──> Prioritization ──> Backlog
-                                                                                                    
-ripgrep for       Parse context       Quadrant          Interest rate     ROI = interest    Sprint-sized
-TODO/FIXME/HACK   lines around        mapping +         calculation       / principal       chunks sorted
-                  each marker         severity           (hours/week)      (ratio)           by ROI desc
-```
-
-### Decision Tree: Debt Classification
-```
-What is the nature of the debt?
-├── Known shortcut taken deliberately
-│   ├── Comment says "TODO: fix after launch", "hack for now", "quick fix"
-│   └── → Quadrant: Reckless & Intentional (Priority 2)
-├── Code written without awareness of better approach
-│   ├── Comment says "why does this work?", "not sure but it passes tests"
-│   └── → Quadrant: Reckless & Inadvertent (Priority 1 — most dangerous)
-├── Correct for original requirements, now outdated
-│   ├── Comment says "legacy: needs update for new schema"
-│   └── → Quadrant: Prudent & Inadvertent (Priority 3)
-└── Deliberate deferral with known tradeoff
-    ├── Comment says "optimize later if this becomes a bottleneck"
-    └── → Quadrant: Prudent & Intentional (Priority 4 — lowest)
+What type of technical debt?
+├── Code debt (messy, untestable, duplicated)
+│   → Refactoring, extract method, improve naming
+│   → Cost: Slow feature development, bugs
+├── Architecture debt (tight coupling, wrong abstraction)
+│   → Significant restructuring, extract service
+│   → Cost: Hard to change, can't add features
+├── Test debt (low coverage, flaky tests)
+│   → Write tests, stabilize flaky tests
+│   → Cost: Fear of change, regressions
+├── Documentation debt (missing, outdated)
+│   → Update docs, add README, API docs
+│   → Cost: Long onboarding, miscommunication
+├── Dependency debt (outdated, incompatible, vulnerable)
+│   → Update deps, migrate to supported versions
+│   → Cost: CVEs, compatibility issues, blocked upgrades
+└── Infrastructure debt (manual deploy, no CI, outdated config)
+    → Automate, migrate, upgrade
+    → Cost: Slow deploys, environment drift, incidents
 ```
 
-### Decision Tree: Severity Assessment
+### Ward Cunningham's Debt Metaphor
 ```
-What is the impact of this debt?
-├── Blocks development, risks production data, or is a security vulnerability
-│   → Critical severity — fix within current sprint
-│   Examples: hardcoded credentials, missing input validation, data loss bug
-├── Significantly slows development, causes frequent context switches
-│   → Major severity — schedule within next sprint
-│   Examples: slow test suite, confusing API, duplicated logic
-└── Cosmetic, style inconsistency, dead code, outdated comments
-    → Minor severity — backlog, fix opportunistically during related work
-    Examples: naming inconsistency, whitespace, unused imports, stale docstrings
+Borrowing (taking on debt):
+  Ship feature quickly with imperfect code
+  → Saves time NOW (principal)
+  → Costs time LATER (interest payments)
+
+Interest payments:
+  Every change to debt-ridden code takes longer
+  More bugs, more testing time, more merge conflicts
+  Slower onboarding, blocked dependencies
+
+Bankruptcy:
+  When interest payments exceed capacity
+  → Complete rewrite required
+  → System becomes unchangeable
 ```
 
 ## Workflow
 
-1. **Scan for debt markers** — Search the codebase recursively for all configured debt marker keywords: TODO, FIXME, HACK, XXX, WORKAROUND, TEMPORARY, BUG, OPTIMIZE, REVIEW, KLUDGE. Use ripgrep for performance (it respects .gitignore by default, reducing noise). Group results by file in alphabetical order with line numbers. For each match, read 3 lines of surrounding context to understand the scope and severity. Classify each item: critical (actively blocks development, risks data integrity, introduces security vulnerabilities, or causes incorrect behavior in production), major (significantly slows development, causes frequent context switches, adds cognitive load for multiple developers), minor (cosmetic issue, style inconsistency, dead code, outdated comments — annoying but not harmful).
+### Step 1: Discover and Catalog Debt
 
-2. **Categorize by quadrant** — Map each debt item onto the four-quadrant matrix. Reckless & Intentional: the team knowingly chose a bad approach (the comment says "hack" or "quick fix" with awareness of the cost). Reckless & Inadvertent: the code was written without understanding better alternatives (no awareness of the debt at the time). Prudent & Intentional: a deliberate tradeoff was made to defer cleanup (the comment says "TODO: refactor after launch" or "will fix when we add X"). Prudent & Inadvertent: the code was correct when written, but the team's understanding has evolved and a better approach now exists. The triage order prioritizes the reckless-prone side of the quadrant first, then moves to prudent items.
+```yaml
+# Automated discovery tools
+automated_discovery:
+  sonarqube:
+    metrics:
+      - "Code coverage < 60%"
+      - "Duplication > 5%"
+      - "Cognitive complexity > 15 per function"
+      - "Technical Debt Ratio > 5%"
+      - "Bugs: 0 (zero tolerance)"
+      - "Code Smells: trending up"
 
-3. **Estimate impact** — For each debt item, answer three questions: how many developers does this affect? (1, 2-3, 4-8, or the whole team), how often does each developer encounter this? (multiple times per day, daily, a few times per week, weekly, monthly), and how much time does each encounter waste in fractional hours? (0.1 for a minor annoyance, 0.5 for a moderate interruption, 1+ for a significant blocker). Calculate the weekly interest rate: weekly hours wasted = number of affected developers x encounters per week x hours wasted per encounter. This is the quantifiable cost of not fixing the debt.
+  eslint / tslint:
+    rules:
+      - "no-unused-vars: warn"
+      - "no-nested-ternary: warn"
+      - "max-lines-per-function: [warn, 50]"
+      - "max-depth: [warn, 4]"
+      - "complexity: [warn, 10]"
 
-4. **Prioritize by ROI** — Interest rate is the weekly hours wasted (the cost of carrying the debt). Principal is the estimated total fix effort in hours including: code changes, test updates or additions, refactoring of any dependent code, code review time, and deployment and validation effort. ROI = interest rate / principal. An ROI of 1.0 means the fix pays for itself in one week. Sort the debt backlog by ROI descending. Items with ROI > 1.0 should be fixed immediately (they cost more to carry than to fix). Items with ROI between 0.1 and 1.0 should be evaluated for backlog inclusion. Items with ROI < 0.1 are likely not worth fixing — accept the debt.
-
-5. **Track in backlog** — Convert each debt item into a structured story or spike with: a descriptive title derived from the marker context (e.g., "Refactor cache eviction logic in UserService"), a description with file locations and the quadrant classification, the ROI score as a label for easy prioritization, the estimated effort in story points or hours, and the linked source lines. Allocate 20% of each sprint's capacity for debt reduction work (approximately one day per sprint per developer). Review the debt ROI dashboard during the weekly team sync. Re-run the full scan quarterly to catch new debt items and re-evaluate existing ones as the codebase evolves.
-
-6. **Trend analysis and reporting** — Maintain a debt history: track the total interest rate across the codebase over time. A rising trend means debt is accumulating faster than it is being paid down. A falling trend means the 20% capacity reserve is working. Report at each quarterly review: total debt items, total weekly interest (hours), total principal (hours), debt ratio (total interest / total principal), items by quadrant, and trend direction. Use the trend report to advocate for increased or decreased debt capacity based on data.
-
-7. **Debt prevention for new features** — Every feature story should allocate ~10% of its points for incidental cleanup discovered during implementation. This prevents new features from adding net-new debt. During code review, flag new TODO/FIXME/HACK markers as potential debt items. Require a reason comment for every TODO: `TODO(#1234): refactor after auth migration`. Without an issue reference, the TODO is just deferred work with no accountability. Review debt markers in the codebase as part of the definition of done for each release.
-
-## Models
-
-### Debt Quadrant with Priority
-| | Intentional | Inadvertent |
-|---|---|---|
-| **Reckless** | Priority 2: "We had no time" | Priority 1: "We didn't know" |
-| **Prudent** | Priority 4: "We'll fix later" | Priority 3: "Now we know better" |
-
-Triage order: Reckless/Inadvertent (most dangerous, team is unaware) -> Reckless/Intentional (high cost, team knows but chose shortcuts) -> Prudent/Inadvertent (moderate, emergent) -> Prudent/Intentional (lowest, deliberate deferrals).
-
-### Interest Rate Calculation
+# Manual discovery
+manual_discovery:
+  developer_cues:
+    - "\"I'm afraid to touch that code\""
+    - "\"This always breaks when we change X\""
+    - "\"I don't know what this function does\""
+    - "\"We can't upgrade library X because of incompatibility\""
+    - "\"It takes 2 hours to run the full test suite\""
+  team_retrospective:
+    - "\"What slowed us down this sprint?\""
+    - "\"What would make development faster?\""
+    - "\"Which parts of the codebase are hardest to change?\""
 ```
-Weekly Interest (hours) = Devs_Affected x Encounters_Per_Week x Hours_Wasted_Per_Encounter
-Principal (hours) = Code_Changes + Test_Updates + Dependent_Refactors + Review + Deploy
-ROI = Weekly_Interest / Principal
+
+### Step 2: Prioritize Debt Items
+
+```yaml
+prioritization_matrix:
+  factors:
+    impact:
+      - "Development speed: How much does this slow new features?"
+      - "Bug frequency: How often does this cause bugs?"
+      - "Risk: What's the cost if this fails in production?"
+      - "Blockers: Is this blocking other improvements?"
+
+    effort:
+      - "Small (< 1 day): Can fit in current sprint"
+      - "Medium (1-3 days): Dedicated tech debt task"
+      - "Large (3-10 days): Requires epic/planning"
+      - "X-Large (> 10 days): Major initiative"
+
+  scoring:
+    formula: "Priority = Impact (1-5) × Frequency (1-5) / Effort (1-5)"
+    example:
+      - "Duplicated validation logic: Impact 4, Frequency 5, Effort 2 = 10.0"
+      - "Outdated auth library: Impact 5, Frequency 3, Effort 3 = 5.0"
+      - "Missing README: Impact 1, Frequency 1, Effort 1 = 1.0"
 ```
-Example: 5 developers x 3 encounters/week x 0.25 hours = 3.75 hours/week interest. Principal of 8 hours. ROI = 3.75 / 8 = 0.47. The fix pays for itself in about 2 weeks. This is a solid candidate for the next sprint.
 
-### Debt Classification Matrix
-| Quadrant | Marker Keywords | Typical ROI | Action |
-|----------|----------------|-------------|--------|
-| Reckless & Inadvertent | (no comment, poor code) | 0.5-2.0 | Fix next sprint |
-| Reckless & Intentional | HACK, QUICK FIX, WORKAROUND | 0.3-1.5 | Schedule within 2 sprints |
-| Prudent & Inadvertent | OPTIMIZE, REVIEW, BUG | 0.1-0.5 | Backlog, evaluate quarterly |
-| Prudent & Intentional | TODO (with issue ref), TEMPORARY | 0.01-0.3 | Accept or schedule at roadmap |
+### Step 3: Tech Debt Inventory
 
-## Rules
+```markdown
+# Tech Debt Backlog
 
-- **Every item needs a severity** — Critical = blocks development or risks production. Major = measurably slows the team. Minor = cosmetic, naming, or dead code with no active harm.
-- **Interest must be quantified in hours** — "This is really bad" is not a metric. If you cannot estimate the hours wasted per week, mark the item as unquantified and flag it for manual team triage.
-- **Principal estimate includes the full fix cycle** — The estimate covers: code modifications, writing or updating tests, refactoring dependent code, code review time, deployment, and post-deploy verification.
-- **20% capacity reserve** — Reserve one day per developer per sprint for debt. Unused reserve rolls to the next sprint. If the debt backlog is empty, pair on something else, but keep the capacity.
-- **Re-scan quarterly** — Debt evolves as the codebase grows. An item that was low priority last quarter may become critical this quarter after new features layered on top of it.
-- **No developer shaming** — Debt is a rational, predictable outcome of shipping software under real-world constraints. The goal is awareness and intentional management, not assigning blame.
-- **Accept debt below the ROI threshold** — Items with ROI < 0.1 cost more to fix than to carry. Document the acceptance decision and move on. Not all debt needs to be paid.
-- **New features get a debt allowance** — Every feature story should allocate ~10% of its points for incidental cleanup discovered during implementation. This prevents debt accumulation from new work.
-- **Every TODO must reference a tracking issue** — Bare TODOs with no issue reference are deferred work without accountability. Enforce `TODO(#1234): description` format with lint rules.
-- **Debt interest is additive across the team** — An item that wastes 2 hours/week for 10 developers costs 20 hours/week total — equivalent to half a developer's productive time.
-- **Trend direction is more important than absolute count** — A codebase with 200 debt items but declining interest rate is healthier than one with 50 items but rising interest rate.
-- **Debt reporting must be automated** — Manual debt tracking is abandoned within 2 sprints. Integrate the scan into CI for automatic PR comments on new debt markers.
+| ID | Item | Type | Impact | Effort | Priority | Status |
+|----|------|------|--------|--------|----------|--------|
+| T-001 | Extract validation logic from OrderService | Code | 4 | 2 | 10.0 | TODO |
+| T-002 | Update deprecated auth library | Dependency | 5 | 3 | 5.0 | TODO |
+| T-003 | Add test coverage for payment module | Test | 3 | 5 | 1.5 | TODO |
+| T-004 | Standardize error handling across API | Architecture | 4 | 3 | 4.0 | IN PROGRESS |
+| T-005 | Remove dead code in user module | Code | 2 | 1 | 6.0 | TODO |
+| T-006 | Reduce flaky E2E tests | Test | 5 | 8 | 1.5 | PRIORITIZED |
+| T-007 | Update Docker base image | Infrastructure | 3 | 1 | 9.0 | DONE |
+```
+
+### Step 4: Track Interest Rate
+
+```yaml
+# Interest rate estimation per sprint
+interest_calculation:
+  metric: "Extra minutes per task × tasks per sprint"
+  example:
+    debt_item: "Poorly abstracted OrderService (T-001)"
+    extra_time_per_task: "15 minutes (navigate, understand, avoid breakage)"
+    tasks_per_sprint: "8 (tasks touching order processing)"
+    interest_per_sprint: "120 minutes (2 hours)"
+    monthly_cost: "8 hours (one full day per month)"
+
+  reporting:
+    - "Track: time spent working around debt vs fixing it"
+    - "Measure: velocity trend (are we slowing down?)"
+    - "Compare: sprint velocity with/without debt reduction"
+
+interest_types:
+  - "Navigation time: Finding where to make changes"
+  - "Understanding time: Figuring out the code"
+  - "Accident time: Recovering from unintended breaks"
+  - "Testing time: Running entire suite for one change"
+  - "Coordination time: Aligning teams around unclear interfaces"
+```
+
+### Step 5: Establish Debt Reduction Process
+
+```yaml
+# Process for managing tech debt
+debt_management_process:
+
+  budget:
+    rule: "15-20% of sprint capacity for tech debt"
+    rationale: "Based on industry research — less = debt grows, more = features stall"
+    tracking: "Labeled as 'tech-debt' in sprint backlog"
+
+  sprint_cycle:
+    start:
+      - "Review debt backlog (10 min sprint planning)"
+      - "Select highest priority items within budget"
+    during:
+      - "One PR = fix + test for debt items"
+      - "Flag new debt discovered during feature work"
+    end:
+      - "Review resolved debt items"
+      - "Measure interest savings"
+      - "Update debt metrics dashboard"
+
+  gates:
+    new_feature:
+      - "If feature touches debt-ridden code: refactor first"
+      - "Before/after complexity comparison required"
+    code_review:
+      - "Don't add new debt (code must be cleaner than when found)"
+      - "Flag opportunities but don't block on unrelated cleanup"
+
+  metrics:
+    - "Tech debt ratio (SonarQube or similar)"
+    - "Test coverage %"
+    - "Cyclomatic complexity average"
+    - "Duplication %"
+    - "Time to implement standard feature"
+```
+
+### Step 6: Add Debt Tracking to Backlog
+
+```yaml
+# GitLab issue template: tech-debt.md
+title: "[Debt] Short description"
+labels: ["tech-debt", "needs-triage"]
+---
+## Description
+<!-- What is the debt and where is it located? -->
+
+## Impact
+- [ ] Slows feature development
+- [ ] Causes bugs / regressions
+- [ ] Blocks dependency upgrade
+- [ ] Security risk
+- [ ] Increases onboarding time
+
+## Symptoms
+<!-- What specific pain points does this cause? -->
+
+## Location
+- File(s):
+- Module:
+- Last modified:
+
+## Suggested Fix
+<!-- How would we fix this? -->
+
+## Effort Estimate
+- [ ] Small (< 1 day)
+- [ ] Medium (1-3 days)
+- [ ] Large (3-10 days)
+- [ ] X-Large (> 10 days, needs planning)
+
+## Interest Rate
+<!-- How much time does this cost per sprint? -->
+
+## Acceptance Criteria
+- [ ] Fix implemented
+- [ ] Tests added/updated
+- [ ] Documentation updated (if API changed)
+- [ ] Duplicate/similar patterns found and noted
+```
 
 ## Common Pitfalls
 
-- **Interest rate inflation**: Overestimating the number of affected developers or encounters per week inflates ROI. Use conservative estimates and document assumptions.
-- **Principal underestimation**: Fixing debt always takes longer than expected. Add a 50% buffer to principal estimates for unexpected dependencies and edge cases.
-- **Ignoring compound interest**: Debt in a hot path affects every developer on every change to that module. A 5-minute annoyance per encounter multiplied by 10 developers and 5 encounters per day = 4 hours/week.
-- **Bias toward recent debt**: New markers get more attention than old ones, but old debt in critical paths may have higher ROI. Sort by ROI, not by discovery date.
-- **Missing implicit debt**: Not all debt has a TODO marker. Copy-pasted code, overgrown functions, missing tests, and outdated dependencies are invisible to keyword scanning.
-- **Treating all TODOs equally**: A TODO in a rarely-used edge case is not the same as a TODO in the authentication middleware. Weight by code path criticality.
-- **Debt fatigue**: If every sprint produces more debt items than it resolves, the team becomes desensitized to the report. Address systemic causes before adding more tracking.
+| Pitfall | Description | Prevention |
+|---------|-------------|------------|
+| Not quantifying debt | "We have technical debt" without specifics | Measure impact in time/cost per sprint |
+| Only tracking, never fixing | Backlog of debt items nobody addresses | Dedicate sprint budget to reductions |
+| Zero-debt goal | Trying to eliminate all debt is impossible | Manage debt, don't eliminate it |
+| No prioritization | Every debt item seems equally important | Use impact × frequency / effort formula |
+| Blaming developers | Debt seen as laziness, not trade-off | Debt is rational at the time — manage forward |
+| No interest calculation | No visibility into the cost of debt | Track and communicate interest to stakeholders |
+| Big bang rewrite | "Let's just rewrite everything" | Incremental repayment, one area at a time |
+| Ignoring tests as debt | Low coverage isn't tracked | Include test debt in the tracker |
 
-## Compared With
+## Best Practices
 
-| Approach | Quantitative | Covers Implicit Debt | Automated | Team Adoption |
-|----------|-------------|---------------------|-----------|---------------|
-| This skill (keyword scan + ROI) | Yes | No (markers only) | Yes | High (low effort) |
-| CodeClimate / SonarQube | Partial (maintainability) | Yes (complexity, duplication) | Yes | Medium (tool setup) |
-| Manual debt board | No | Yes (team knowledge) | No | Low (abandoned quickly) |
-| Architecture Decision Records | No | Partial (documents tradeoffs) | No | Medium (doc overhead) |
-| Static analysis (linters) | No | Yes (code quality rules) | Yes | High (in CI) |
-| Developer surveys | Subjective | Yes | No | Low (infrequent) |
-
-## Performance
-
-- Scan speed: ripgrep scans 100K files in ~2-5 seconds for keyword markers — negligible time in CI
-- Context extraction: reading 3 lines around each match adds ~50ms per 1000 matches
-- Classification: automated quadrant mapping processes ~200 items/second with heuristic rules
-- Interest estimation: ~100ms per item for the arithmetic calculations
-- Full report generation: for a 500K-line codebase, expect <15 seconds total from scan to formatted report
-- Storage: debt history tracks ~1KB per scan (JSON summary statistics plus hashed item IDs for delta detection)
-- CI impact: debt scan can run as a parallel CI step in <30 seconds, not blocking the main build pipeline
-- Memory: scanning a 500K-line codebase uses <200MB of heap
-
-## Tooling
-
-| Tool | Category | Use Case |
-|------|----------|----------|
-| ripgrep (rg) | Code search | Fastest keyword scanning across codebase |
-| SonarQube | Static analysis | Complexity, duplication, code smells |
-| CodeClimate | Quality platform | Maintainability ratings, debt trend |
-| Jira / Linear | Issue tracking | Sprint backlog for debt items |
-| GitHub Issues | Issue tracking | Lightweight debt tracking per repo |
-| Dependabot / Renovate | Dependency updates | Automated dependency debt management |
-| ESLint / Pylint / RuboCop | Linting | Enforce TODO-with-issue pattern |
-| husky / lefthook | Git hooks | Block commits with unlinked TODOs |
-| Codecov | Coverage tracking | Test debt visibility |
-| SecretScanner / truffleHog | Secret detection | Security debt (hardcoded secrets) |
-
-## Related Skills
-
-- **sprint-retro** — Review debt trends during sprint retro with the full team
-- **create-story** — Convert prioritized debt items into backlog stories ready for sprint planning
-- **create-roadmap** — Allocate roadmap capacity and track debt reduction across quarters
-- **performance-profiler** — Profile performance-related debt paths for quantified impact data
-- **security-auditor** — Identify security-related debt items and tag by vulnerability severity
-- **refactor-guide** — Plan and execute structured refactoring for high-ROI debt items
-- **code-review** — Review debt fix PRs for correctness, test coverage, and regression risks
-- **debugging-strategy** — Investigate debt items that manifest as recurring bugs in production
+| Practice | Rationale |
+|----------|-----------|
+| Track debt alongside features | Same backlog, same prioritization process |
+| Dedicate 15-20% sprint capacity | Prevents debt from growing unsustainably |
+| Quantify interest rate | Stakeholders understand the cost of delay |
+| Fix debt near new code | Scout Rule: leave code cleaner than you found it |
+| Use automated tools | SonarQube, CodeClimate, or custom metric dashboards |
+| Label debt items consistently | Track trends over time |
+| Review debt quarterly | Reassess priorities, close completed items |
+| Celebrate debt reduction | Recognize cleanup work as valuable |
+| Distinguish intentional from accidental | Not all debt is bad — some is strategic |
 
 ## References
-  - references/debt-prioritization.md — Tech Debt Prioritization
-  - references/debt-tracking.md — Debt Tracking Reference
-  - references/repayment-strategies.md — Tech Debt Repayment Strategies
-  - references/tech-debt-management.md — Technical Debt Management
   - references/tech-debt-tracker-advanced.md — Tech Debt Tracker Advanced Topics
   - references/tech-debt-tracker-fundamentals.md — Tech Debt Tracker Fundamentals
-  - references/tech-debt-prioritization.md — Tech Debt Prioritization Reference
-  - references/tech-debt-communication.md — Tech Debt Communication Guide
+  - references/tech-debt-tracker-metrics.md — Tech Debt Metrics Reference
+  - references/tech-debt-tracker-prioritization.md — Tech Debt Prioritization Reference
 ## Handoff
-sprint-retro, create-story
+Hand off to `dev-loop-refactor-guide` for refactoring implementation of debt items. Hand off to `dev-loop-security-auditor` for security-related debt.

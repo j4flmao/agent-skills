@@ -1,214 +1,139 @@
-# Create Story Advanced Topics
-
-## Introduction
-Advanced Create Story topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+# Story Advanced Topics
+
+## Advanced Acceptance Criteria Patterns
+
+### State-Dependent Scenarios
+```
+Given invoice status is "pending"
+When user clicks "pay"
+Then invoice status changes to "processing"
+And payment processing job is queued
+```
+
+### Multi-Condition Scenarios
+```
+Given user is authenticated
+And account has insufficient balance
+When user initiates transfer of $500
+Then transfer is rejected
+And user sees "Insufficient balance" error
+And balance is not debited
+```
+
+### Concurrency Scenarios
+```
+Given two users access the last available item simultaneously
+When both users attempt to purchase
+Then exactly one purchase succeeds
+And the other user sees "Item no longer available"
+```
+
+### Data-Driven Scenarios
+```
+Given a product with price $10.00
+When user applies coupon "SAVE10" (10% off)
+Then total is $9.00
+
+Given a product with price $10.00
+When user applies coupon "SAVE5" ($5 off)
+Then total is $5.00
+```
+
+## Story Splitting Techniques
+
+### By CRUD Operation
+One story for Create, one for Read, one for Update, one for Delete. Each is independently completable. Useful when different operations have different priority or complexity.
+
+### By User Role
+One story for Admin, one for Regular User, one for Anonymous User. Each role has different permissions and flows. Useful for permission-sensitive features.
+
+### By Form Section
+For complex forms, split by logical section. Story 1: Profile information. Story 2: Payment details. Story 3: Review and submit. Useful for multi-step wizards.
+
+### By Device
+One story for Desktop, one for Mobile, one for Tablet. Useful when responsive behavior is complex.
+
+### By Scenario
+Basic story (happy path only), then follow-up stories for edge cases and error handling. Useful when the happy path is urgent.
+
+### By Data Type
+One story per data type in polymorphic features. Story 1: Text posts. Story 2: Image posts. Story 3: Video posts.
+
+## Story States (Kanban)
+
+| State | Definition | Owner |
+|-------|------------|-------|
+| Backlog | Refined, estimated, prioritized | Product Manager |
+| Ready | Dependencies met, next to start | Product Manager |
+| In Progress | Developer actively working | Developer |
+| In Review | Code review, QA testing | Developer + QA |
+| Done | Merged, deployed, verified | QA |
+| Blocked | Waiting on dependency | Developer (escalating) |
+
+## Technical Notes Depth
+
+### Minimal Technical Notes
+For simple stories where implementation is well-understood:
+- File references only
+- ADR references
+- DB migration flag
+
+### Detailed Technical Notes
+For complex stories with multiple components:
+- File references with line numbers or patterns
+- API contract references
+- Data model changes with field-by-field specs
+- Migration plan with rollback
+- Performance considerations
+- Security considerations
+- Error handling strategy
+
+### Spike Story Technical Notes
+For research stories:
+- Research questions
+- Decision criteria
+- Constraints
+- Output format (ADR recommendation, comparison table, prototype)
+- Timebox duration
+
+## Estimating with Reference Stories
+Use completed stories as anchors for estimation:
+1. Find a completed story similar in scope
+2. Adjust for known differences (complexity, uncertainty, new technology)
+3. Apply the same size
+
+This is more accurate than estimating from scratch because it uses the team's actual history rather than hypotheticals.
+
+## Handling Technical Debt Stories
+Technical debt stories follow the same format but the user role is "Developer" or "System":
+"As a developer, I want consistent error handling middleware so that API errors are predictable and code review is faster."
+
+Acceptance criteria for tech debt stories focus on developer experience and system qualities: consistency, performance, maintainability, testability.
+
+## Linking to PRD and Brief
+Every story file should include traceability links:
+- Epic: {Epic name from PRD}
+- PRD Feature: {Feature from brief}
+- Related ADRs: ADR-{NNN}, ADR-{NNN}
+
+This ensures anyone reading the story can understand its context without searching.
+
+## Story Refinement (Backlog Grooming)
+
+### Refinement Cadence
+- Weekly: 2-hour session for 2-week sprint cycle
+- Review: Stories for the next 1-2 sprints
+- Accept: Stories passing Definition of Ready
+- Split: Stories too large
+- Add: Missing acceptance criteria
+- Re-estimate: Stories where understanding changed
+
+### Definition of Ready
+A story is ready for implementation when:
+- Acceptance criteria are clear and testable
+- Dependencies are resolved or documented
+- Technical notes reference specific files and patterns
+- Complexity is estimated
+- UX designs are complete (if UI story)
+- API contracts are defined (if backend story)
+- Team has capacity to start

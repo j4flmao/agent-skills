@@ -43,52 +43,422 @@ Mesh installed, sidecars injected, mTLS enabled, traffic rules applied, telemetr
 ### Max Response Length
 8000 tokens.
 
+## Decision Tree: Istio vs Linkerd
+| Factor | Istio | Linkerd |
+|--------|-------|---------|
+| Complexity | High, many CRDs (20+) | Low, fewer concepts |
+| Features | Rich (traffic split, fault injection, WASM) | Focused (mTLS, metrics, tap) |
+| Performance overhead | 5-15ms latency added | 1-5ms latency added |
+| Resource usage | 200-500Mi per sidecar | 20-50Mi per sidecar |
+| Multi-cluster | Native east-west gateway | Service mirroring |
+| Customization | WASM, EnvoyFilter, extensive API | Limited (annotation-based) |
+| Learning curve | Steep | Moderate |
+| Community | Large, CNCF graduated | CNCF graduated |
+| Best for | Complex traffic management, compliance | Simplicity, low overhead, small teams |
+
 ## Components
 
-### Istio Architecture in Depth
-Pilot: service discovery abstraction (bridges K8s services to Envoy), traffic management rule conversion (VirtualService/DestinationRule -> Envoy filter config), Envoy xDS protocol for dynamic configuration push. No longer requires Mixer. Citadel: SPIFFE-compatible certificate authority, issues X.509 certificates with 24h TTL to every sidecar, auto-rotation before expiry, supports integration with external CA (cert-manager, Vault). Galley: validates all Istio CRDs before persistence, ingests platform state (services, endpoints, pods) and distributes to Pilot. Validation webhook prevents invalid config from being applied. Envoy sidecar: L4/L7 proxy, implements routing rules, mTLS, circuit breakers, retries, timeouts, rate limiting, access logging, telemetry generation (metrics, traces, logs). Ingress gateway: dedicated Envoy at mesh edge, handles TLS termination, mTLS passthrough, traffic routing to internal services. Egress gateway: dedicated Envoy for outbound traffic with policy enforcement, TLS origination, and audit logging.
+### Istio Architecture
+Pilot: service discovery abstraction (bridges K8s services to Envoy), traffic management rule conversion (VirtualService/DestinationRule -> Envoy filter config), Envoy xDS protocol for dynamic configuration push. Citadel: SPIFFE-compatible certificate authority, issues X.509 certificates with 24h TTL to every sidecar, auto-rotation before expiry, supports integration with external CA (cert-manager, Vault). Galley: validates all Istio CRDs before persistence, ingests platform state (services, endpoints, pods). Envoy sidecar: L4/L7 proxy, implements routing rules, mTLS, circuit breakers, retries, timeouts, rate limiting, access logging, telemetry generation. Ingress gateway: dedicated Envoy at mesh edge, handles TLS termination, mTLS passthrough, traffic routing. Egress gateway: dedicated Envoy for outbound traffic with policy enforcement.
 
 ### Traffic Management CRDs
-VirtualService: hosts (service DNS names), http/tcp routes (match: uri, headers, method, query params), route (destination host, subset, weight, port), fault injection (abort with HTTP status, delay with fixed/exponential duration), mirror (shadow traffic to another destination), retries (attempts, perTryTimeout, retryOn), timeout, corsPolicy. DestinationRule: host, trafficPolicy (loadBalancer: ROUND_ROBIN/LEAST_REQUEST/RANDOM/PASSTHROUGH, connectionPool: tcp/http settings, outlierDetection: consecutive errors, interval, baseEjectionTime, maxEjectionPercent, minHealthPercent), subsets (name + labels for version routing), tlsSettings (ISTIO_MUTUAL, DISABLE, SIMPLE). Gateway: selector (which Envoy deployment), servers (port, protocol, TLS mode, hosts). ServiceEntry: hosts, ports, resolution (DNS/STATIC/NONE), location (MESH_INTERNAL/MESH_EXTERNAL).
+VirtualService: hosts (service DNS names), http/tcp routes (match: uri, headers, method, query params), route (destination host, subset, weight, port), fault injection (abort with HTTP status, delay), mirror, retries, timeout, corsPolicy. DestinationRule: host, trafficPolicy (loadBalancer, connectionPool, outlierDetection), subsets, tlsSettings. Gateway: selector, servers (port, protocol, TLS mode, hosts). ServiceEntry: hosts, ports, resolution, location.
 
-### Canary and Blue-Green CRDs
-Canary: VirtualService weight-based routing — two subsets (v1, v2) in DestinationRule, gradual weight shift from v1 to v2. Rollback by shifting weight back. Combine with Kiali metrics monitoring for automated weight progression. Blue-green: VirtualService routes all traffic to active subset, new version deployed alongside, switch virtual service to point at new version, monitor, rollback by switching back. Both patterns use Argo Rollouts for automation with metrics-based promotion, or Flagger for automated canary analysis with Prometheus queries.
-Pilot: traffic management, converts VirtualService/DestinationRule into Envoy config, handles service discovery. Mixer (deprecated, replaced by telemetry v2/extensions): policy enforcement and telemetry collection — now handled by Envoy filters and WASM extensions. Citadel: certificate issuance and rotation for mTLS, SPIFFE-compatible workload identities. Galley: configuration validation, ingestion, and distribution to mesh components — validates Istio CRDs before applying. Envoy sidecar: L4/L7 proxy handles all inbound/outbound traffic, applies routing rules, mTLS, circuit breakers, telemetry. Ingress/Egress gateways: Envoy-based edge proxies for inbound and outbound traffic management.
+## Installation
 
-### 2. Sidecar Injection
-Namespace label for automatic injection: `istio-injection=enabled` (Istio) or `linkerd.io/inject=enabled` (Linkerd). Annotations override defaults per-pod. Sidecar resource limits/requests must be set to avoid OOM under load. Sidecar version must match control plane version — upgrade sidecars first with rolling restart. Injection via mutating webhook — pods restart on label change. Selective injection via `sidecar.istio.io/inject: "true"` annotation for specific deployments.
+### Istio with Production Profile
+```bash
+istioctl install --set profile=production \
+  --set meshConfig.accessLogFile=/dev/stdout \
+  --set meshConfig.accessLogEncoding=JSON \
+  --set meshConfig.enableTracing=true \
+  --set values.global.proxy.resources.requests.cpu=100m \
+  --set values.global.proxy.resources.requests.memory=128Mi \
+  --set values.global.proxy.resources.limits.cpu=500m \
+  --set values.global.proxy.resources.limits.memory=256Mi \
+  --set values.pilot.resources.requests.cpu=500m \
+  --set values.pilot.resources.requests.memory=2Gi
 
-### 3. Traffic Management
-VirtualService: defines routing rules — URI match, header match, weight-based split between subsets, fault injection (abort, delay), mirroring for shadow traffic. DestinationRule: defines load balancing policy (round_robin, least_request, random), connection pool settings (max connections, pending requests, timeout), circuit breaker (outlier detection: consecutive 5xx, interval, ejection time), TLS settings (ISTIO_MUTUAL, DISABLE). Gateway: ingress traffic entry point (shared or per-namespace), TLS termination at gateway. ServiceEntry: registers external services into mesh for traffic management and mTLS.
+# Create namespace label for auto-injection
+kubectl label namespace default istio-injection=enabled
 
-### 4. Security
-mTLS modes: DISABLE (plain text), PERMISSIVE (accept both TLS and plain text — migration mode), STRICT (TLS only). PeerAuthentication sets mTLS mode at mesh/namespace/workload level. RequestAuthentication validates JWT tokens from external callers. AuthorizationPolicy — default-deny with explicit ALLOW rules: principals (SPIFFE identities), namespaces, IP ranges, paths, methods, ports. SPIFFE format: `spiffe://cluster.local/ns/<namespace>/sa/<service-account>`. Trust domain configuration for multi-cluster mTLS.
+# Verify
+istioctl verify-install
+istioctl proxy-status
+```
 
-### 5. Observability
-Prometheus: HTTP/gRPC metrics (request count, duration, size, error rate) via Envoy metrics. Grafana: pre-built dashboards for service, workload, and mesh control plane metrics. Kiali: service graph topology visualization, health/error rate overlay, traffic animation, distributed tracing integration, Istio config validation. Jaeger: distributed tracing with trace sampling configurable per service/route. Access logs: Envoy logs for request/response details — configurable via telemetry API. WASM extensions for custom metrics and log enrichment.
+### Istio with Helm (GitOps-friendly)
+```bash
+helm repo add istio https://istio-release.storage.googleapis.com/charts
+helm upgrade -i istio-base istio/base -n istio-system --create-namespace
+helm upgrade -i istiod istio/istiod -n istio-system \
+  --set meshConfig.accessLogFile=/dev/stdout \
+  --set meshConfig.enableTracing=true
+helm upgrade -i istio-ingressgateway istio/gateway -n istio-system \
+  --set service.type=LoadBalancer
+```
 
-### 6. Canary and Blue-Green Deployments
-Canary: VirtualService weight routing — 90% v1, 10% v2. Gradual weight shift based on metrics. Combine with DestinationRule subsets (v1, v2 labels). Blue-green: VirtualService switches all traffic to new version after validation. Can also use Argo Rollouts with Istio integration for automated canary with metrics-based promotion.
+### Linkerd Installation
+```bash
+linkerd install | kubectl apply -f -
+linkerd check
+kubectl annotate namespace default linkerd.io/inject=enabled
+```
 
-### 7. mTLS Deep Dive
-Certificate lifecycle: Citadel issues SPIRE-compatible certificates with 24h TTL, auto-rotated by Envoy sidecar. Peer certificate validation on every connection. mTLS bypass detection via telemetry. Solution: STRICT mode on all namespaces after migration. Migration: DISABLE -> PERMISSIVE (monitor for non-TLS traffic) -> STRICT. Verify mTLS status via Kiali edges, Istioctl dashboard, or Envoy admin interface.
+## Traffic Management Examples
 
-### 8. Egress Control
-ServiceEntry for external services: allows mesh-enforced mTLS and traffic policies to external endpoints. Egress Gateway: routes external traffic through dedicated gateway for security policy enforcement, access logging, and audit. Egress TLS origination: gateway terminates TLS to external service, mTLS from sidecar to gateway. Block-all-egress by default, allow specific external services via ServiceEntry.
+### VirtualService with Weighted Canary
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: myapp
+spec:
+  hosts:
+  - myapp.default.svc.cluster.local
+  http:
+  - match:
+    - uri:
+        prefix: /api
+    route:
+    - destination:
+        host: myapp
+        subset: v1
+      weight: 90
+    - destination:
+        host: myapp
+        subset: v2
+      weight: 10
+    timeout: 5s
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
+      retryOn: connect-failure,refused-stream,503
+    corsPolicy:
+      allowOrigins:
+      - exact: https://myapp.example.com
+      allowMethods: [GET, POST, PUT, DELETE]
+```
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: myapp
+spec:
+  host: myapp
+  trafficPolicy:
+    loadBalancer:
+      simple: LEAST_REQUEST
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 10
+        http2MaxRequests: 1000
+        maxRequestsPerConnection: 10
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+  - name: v2
+    labels:
+      version: v2
+```
 
-### 9. Mesh Expansion (VM Integration)
-Extend mesh to include VMs (non-K8s workloads). Workload entry registers VM with mesh: provides SPIFFE identity, mTLS certificate, and Envoy proxy. VM must have Istio sidecar installed and connect to control plane. Use cases: legacy VM workloads, database VMs, on-premise services. DNS resolution and network connectivity must be pre-configured.
+### Fault Injection for Resilience Testing
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: myapp-fault
+spec:
+  hosts:
+  - myapp
+  http:
+  - fault:
+      delay:
+        percentage:
+          value: 10
+        fixedDelay: 5s
+      abort:
+        percentage:
+          value: 5
+        httpStatus: 500
+    route:
+    - destination:
+        host: myapp
+        subset: v1
+```
 
-## Operational Practices
+### Traffic Mirroring (Shadow Traffic)
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: myapp-mirror
+spec:
+  hosts:
+  - myapp
+  http:
+  - route:
+    - destination:
+        host: myapp
+        subset: v1
+    mirror:
+      host: myapp
+      subset: v2
+    mirrorPercentage:
+      value: 50
+```
 
-### Mesh Installation and Upgrade Procedure
-Install: istioctl install with custom profile (production overrides), or Helm for GitOps deployment. Validate: istioctl verify-install, test injection in non-production namespace, verify mTLS with istioctl authz check. Upgrade: download new istioctl version, run istioctl x precheck to validate upgrade compatibility, upgrade control plane with canary revision (revision-based upgrade retains old control plane), run istioctl proxy-status to verify sidecars connect to new control plane, upgrade data plane by restarting workloads (rolling restart) to inject new sidecar version. Post-upgrade: run full integration test suite, verify mTLS and routing still working, remove old control plane revision.
+### Ingress Gateway with TLS Termination
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: myapp-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - myapp.example.com
+    tls:
+      mode: SIMPLE
+      credentialName: myapp-tls-cert
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: myapp-ingress
+spec:
+  hosts:
+  - myapp.example.com
+  gateways:
+  - myapp-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /api
+    route:
+    - destination:
+        host: myapp
+        port:
+          number: 8080
+```
 
-### Performance and Resource Tuning
-Sidecar resources: request 100m CPU and 128Mi memory per sidecar, limit 500m CPU and 256Mi memory. For high-traffic services: 500m/512Mi request, 2 CPU/1Gi limit. Concurrency: Envoy worker threads default to half CPU cores. Connection pool tuning: adjust maxConnections, http1MaxPendingRequests, http2MaxRequests based on service throughput. Buffer sizes: per-connection buffer pool for high-latency services. Access logs: disable in high-throughput namespaces, sample at 1% in production. Telemetry: WASM-based metrics generation over legacy Mixer for better performance.
+## Security Configuration
 
-### Troubleshooting Common Issues
-Sidecar not injected: verify namespace label, check mutating webhook, verify sidecar injector ConfigMap exists. mTLS failure: check PeerAuthentication mode, certificate expiry, workload entry for VMs. Traffic not routing: verify VirtualService host matches service DNS, DestinationRule subset labels match pod labels. High sidecar memory: reduce connection pool limits, check for connection leaks, upgrade Envoy version. Gateway 503: verify service mesh endpoint routing, check DestinationRule circuit breaker thresholds, verify ServiceEntry for external services. Kiali not showing topology: enable telemetry, check Prometheus is running and scraping sidecar metrics, verify Kiali has namespace access.
+### mTLS: PERMISSIVE to STRICT Migration
+```yaml
+# Step 1: Mesh-wide PERMISSIVE
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: istio-system
+spec:
+  mtls:
+    mode: PERMISSIVE
+---
+# Step 2: Per-namespace STRICT
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: production
+spec:
+  mtls:
+    mode: STRICT
+---
+# Step 3: Per-workload override (opt-out)
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: legacy-workload
+  namespace: production
+spec:
+  selector:
+    matchLabels:
+      app: legacy
+  mtls:
+    mode: PERMISSIVE
+```
+
+### AuthorizationPolicy (Default Deny)
+```yaml
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all
+  namespace: production
+spec:
+  {}
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: myapp-allow
+  namespace: production
+spec:
+  selector:
+    matchLabels:
+      app: myapp
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/frontend/sa/frontend-sa"]
+    - source:
+        namespaces: ["monitoring"]
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/api/*"]
+    when:
+    - key: request.headers[x-api-version]
+      values: ["v1", "v2"]
+```
+
+### RequestAuthentication (JWT Validation)
+```yaml
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: jwt-auth
+  namespace: production
+spec:
+  selector:
+    matchLabels:
+      app: myapp
+  jwtRules:
+  - issuer: https://accounts.example.com
+    jwksUri: https://accounts.example.com/.well-known/jwks.json
+    forwardOriginalToken: true
+    audiences:
+    - myapp-api
+```
+
+## Observability Configuration
+
+### Access Logging (JSON format)
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio-mesh-config
+  namespace: istio-system
+data:
+  mesh: |-
+    accessLogFile: /dev/stdout
+    accessLogEncoding: JSON
+    accessLogFormat: |
+      {"start_time":"%START_TIME%","method":"%REQ(:METHOD)%","path":"%REQ(X-ENVOY-ORIGINAL-PATH?)%","protocol":"%PROTOCOL%","response_code":"%RESPONSE_CODE%","response_flags":"%RESPONSE_FLAGS%","duration":"%DURATION%","upstream_host":"%UPSTREAM_HOST%","bytes_received":"%BYTES_RECEIVED%","bytes_sent":"%BYTES_SENT%","trace_id":"%REQ(X-REQUEST-ID)%","user_agent":"%REQ(USER-AGENT)%"}
+    enableTracing: true
+```
+
+### WASM Extension for Custom Metrics
+```yaml
+apiVersion: extensions.istio.io/v1alpha1
+kind: WasmPlugin
+metadata:
+  name: custom-metrics
+  namespace: istio-system
+spec:
+  selector:
+    matchLabels:
+      app: myapp
+  url: oci://ghcr.io/org/custom-metrics:v1
+  phase: STATS
+  imagePullPolicy: IfNotPresent
+  pluginConfig:
+    metrics:
+    - name: custom_request_count
+      type: COUNTER
+```
+
+## Multi-Cluster Setup (Primary-Remote)
+
+### Cluster A (Primary)
+```bash
+istioctl install --set profile=production \
+  --set values.global.meshID=mesh1 \
+  --set values.global.multiCluster.clusterName=cluster-a \
+  --set values.global.network=network1
+# Expose services via east-west gateway
+samples/multicluster/gen-eastwest-gateway.sh --mesh mesh1 --cluster cluster-a --network network1 | kubectl apply -f -
+```
+
+### Cluster B (Remote)
+```bash
+istioctl install --set profile=remote \
+  --set values.global.meshID=mesh1 \
+  --set values.global.multiCluster.clusterName=cluster-b \
+  --set values.global.network=network2
+# Join cluster B to mesh
+istioctl create-remote-secret --name cluster-b | kubectl apply -f - -n istio-system
+```
+
+## Sidecar Injection Configuration
+
+### Resource Limits for Sidecars
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    sidecar.istio.io/proxyCPU: 100m
+    sidecar.istio.io/proxyMemory: 128Mi
+    sidecar.istio.io/proxyCPULimit: 500m
+    sidecar.istio.io/proxyMemoryLimit: 256Mi
+spec:
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+```
+
+## Troubleshooting Commands
+```bash
+# Check sidecar status
+istioctl proxy-status
+istioctl proxy-status <pod-name>
+
+# View Envoy config
+istioctl proxy-config clusters <pod-name>
+istioctl proxy-config listeners <pod-name>
+istioctl proxy-config routes <pod-name>
+istioctl proxy-config endpoints <pod-name>
+
+# Check mTLS
+istioctl authz check <pod-name>
+istioctl experimental authz check <pod-name> -a
+
+# Verify injection
+istioctl analyze <deployment-yaml>
+kubectl describe mutatingwebhookconfiguration istio-sidecar-injector
+
+# Envoy admin (port-forward required)
+kubectl port-forward <pod-name> 15000:15000
+curl localhost:15000/server_info
+curl localhost:15000/stats
+
+# Check control plane health
+kubectl get pods -n istio-system
+kubectl logs -n istio-system deployment/istiod
+istioctl dashboard kiali
+istioctl dashboard jaeger
+istioctl dashboard grafana
+```
 
 ## Rules
 1. mTLS in STRICT mode for all mesh-internal traffic.
@@ -103,43 +473,32 @@ Sidecar not injected: verify namespace label, check mutating webhook, verify sid
 10. Migration: PERMISSIVE -> monitor -> STRICT — never go directly to STRICT.
 11. Sidecar version must match control plane version exactly.
 12. Access logs sampled at 1% in production — 100% sample impacts performance.
-13. Kiali configured with namespace access for topology visualization.
-14. WASM extensions over legacy Mixer for telemetry generation.
-15. Istio control plane metrics (Pilot, Galley, Citadel) monitored separately from data plane.
-16. Sidecar injection not enabled on istio-system namespace to prevent recursive injection.
-17. Service mesh version compatibility verified before Istio control plane upgrade.
-18. Access log sampling rate configured per namespace — high-traffic services use 1% sample.
-19. Kiali dashboard accessed via SSO with read-only role for most team members.
-20. DestinationRule circuit breaker settings tuned based on actual service performance data.
+13. WASM extensions over legacy Mixer for telemetry generation.
+14. Service mesh version compatibility verified before upgrade.
 
-## Multi-Mesh and Federation
-Multi-primary mesh: each cluster has its own Istio control plane, meshes connected via shared root CA and east-west gateway. Benefits: independent control planes, no single point of failure, cross-cluster service discovery via DNS. Primary-remote mesh: single control plane in primary cluster manages remote clusters via east-west gateway. Benefits: single control plane (simpler), consistent policy across clusters. Federation: independent meshes with explicit service sharing via MeshFederation CRD. Use cases: merging organizations, different trust domains, gradual mesh migration.
+## Production Considerations
+- Sidecar resource limits prevent OOM under traffic spikes.
+- Access log sampling (1% default) reduces storage and performance overhead.
+- Control plane metrics (Pilot, Galley, Citadel) monitored separately.
+- Canary upgrade for control plane: revision-based upgrades allow rollback.
+- East-west gateway for multi-cluster traffic with dedicated node pools.
+- Kiali accessed via SSO with read-only role for most team members.
+- DestinationRule circuit breaker tuned based on actual performance data.
+- mTLS migration plan: DISABLE -> PERMISSIVE (monitor) -> STRICT (per namespace).
+- WASM extensions for custom metrics replace deprecated Mixer telemetry.
+- ServiceEntry for all external dependencies with explicit allow.
 
-## Istio Multi-Cluster Service Discovery
-Service entries in primary cluster point to services in remote cluster via DNS or VIP. East-west gateway handles cross-cluster traffic with mTLS. Multi-cluster services: DNS suffix `global` for services that should resolve across clusters. Example: `myapp.myapp-ns.svc.cluster.local` (local) vs `myapp.myapp-ns.svc.clusterset.local` (global). Traffic management: VirtualService can route to subsets across clusters for multi-region deployments.
-
-## Scenario Playbooks
-
-### mTLS Migration (PERMISSIVE to STRICT)
-Phase 1 — DISABLE to PERMISSIVE: deploy PeerAuthentication with PERMISSIVE mode per namespace, monitor telemetry for non-mTLS traffic (Kiali edges show TLS status), identify services without sidecar injection. Phase 2 — fix gaps: enable sidecar injection on all namespaces, add AuthorizationPolicy for key services, verify mTLS on all Kiali edges. Phase 3 — PERMISSIVE to STRICT: deploy PeerAuthentication STRICT per namespace, start with low-traffic namespaces, monitor for connection failures, rollback to PERMISSIVE if issues. Phase 4 — enforce: mesh-wide PeerAuthentication STRICT, remove PERMISSIVE namespaces after 2 weeks of stable operation, add alert for mTLS failures.
-
-### Canary Deployment with Traffic Split
-1. Deploy v2 with subset labels: DestinationRule adds subset v2 matching label version=v2
-2. Deploy v2 workloads: deployment or rollout with label version=v2, initially 0 replicas
-3. Scale v2: increase v2 replicas to match v1 capacity
-4. Shift traffic: VirtualService updates weight from 100% v1 to 90% v1 / 10% v2
-5. Monitor: Kiali metrics, Grafana dashboards, error rate, latency for v2
-6. Gradual shift: 10% -> 25% -> 50% -> 75% -> 100% v2, each step with pause for monitoring
-7. Promote: remove v1 subset from DestinationRule, scale down v1 to 0, cleanup v1 resources
-8. Rollback: shift weight back to v1, scale up v1, scale down v2, investigate v2 failure
-
-### Gateway TLS Termination
-1. Create Kubernetes Secret with TLS certificate and key in istio-ingress namespace
-2. Configure Gateway with TLS mode SIMPLE and credentialName pointing to the secret
-3. Create VirtualService bound to gateway, routing host myapp.example.com to myapp service
-4. Optionally configure mTLS passthrough: Gateway TLS mode PASSTHROUGH, VirtualService routes TLS traffic without termination
-5. Certificate rotation: update Secret with new cert, Envoy hot-reloads without restart
-6. Multi-domain Gateway: add multiple servers with different hostnames and credential names
+## Anti-Patterns
+- Sidecar injection on istio-system namespace — recursive injection.
+- 100% access log sampling on high-traffic services — performance impact.
+- No circuit breaker on DestinationRule — cascading failures.
+- AuthorizationPolicy with allow-all before default-deny — security gap.
+- Direct STRICT mTLS mode without PERMISSIVE migration — broken connections.
+- Mixing sidecar versions across control plane — config mismatch.
+- No sidecar resource limits — sidecar OOM under load.
+- Using EnvoyFilter when Istio API covers the use case — maintenance burden.
+- Egress via wildcard instead of explicit ServiceEntry — security risk.
+- Single control plane revision for all namespaces during upgrades.
 
 ## References
   - references/istio-patterns.md — Istio Patterns
@@ -151,4 +510,4 @@ Phase 1 — DISABLE to PERMISSIVE: deploy PeerAuthentication with PERMISSIVE mod
   - references/service-mesh-fundamentals.md — Service Mesh Fundamentals
   - references/service-mesh-security.md — Service Mesh Security
 ## Handoff
-Hand off to service-mesh for Istio/Linkerd operations. Hand off to kubernetes-patterns for workload manifests. Hand off to monitoring for Prometheus/Grafana dashboards. Hand off to security for PKI and certificate management. Hand off to argo-cd for progressive delivery patterns (canary/blue-green) with Istio integration. Hand off to chaos-engineering for mesh resilience testing (mTLS failure, sidecar injection issues). Hand off to observability for distributed tracing with Jaeger/Zipkin integration.
+Hand off to monitoring for Prometheus/Grafana dashboards. Hand off to security for PKI and certificate management. Hand off to argo-cd for progressive delivery patterns with Istio integration. Hand off to chaos-engineering for mesh resilience testing.

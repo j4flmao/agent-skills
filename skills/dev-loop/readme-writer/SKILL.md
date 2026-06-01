@@ -1,14 +1,8 @@
 ---
-name: readme-writer
+name: dev-loop-readme-writer
 description: >
-  Use this skill when the user says 'write README', 'create README', 'README for
-  this project', 'project documentation', 'README.md', or when a project needs a
-  comprehensive README. Covers: project overview, features, tech stack, getting
-  started guide, development setup, environment variables, testing instructions,
-  deployment, architecture links, and contribution guidelines. Works with any
-  project. Do NOT use this for: CHANGELOG generation, API documentation, or
-  inline code documentation.
-version: "1.0.0"
+  Use when the user asks about writing README files, project documentation, README structure, README best practices, or documentation for open source projects. Do NOT use for: changelogs (dev-loop-changelog-generator), or API documentation.
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -16,165 +10,379 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [dev-loop, documentation, phase-4]
+tags: [dev-loop, readme, documentation]
 ---
 
 # README Writer
 
 ## Purpose
-Generate a comprehensive, well-structured README.md for any project.
+Write clear, structured, and effective README files that help users and contributors understand, install, use, and contribute to a project. A great README is the single most important documentation page for any project.
 
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "write README", "create README", "README for this project", "project documentation", "README.md".
+Exact user phrases: "write README", "create README", "README file", "README.md", "project documentation", "project README", "README template", "improve README".
 
 ### Input Context
-Before activating, verify:
-- The project structure and dependencies are readable.
-- The project's purpose and problem statement are clear.
-- The target audience (developers, users, both) is known.
+- Project name and description
+- Project type (CLI tool, library, web app, API server, desktop app, game)
+- Language and framework (Node.js, Python, Rust, Go, .NET, etc.)
+- Target audience (end users, developers, both)
+- Installation method (npm, pip, cargo, Docker, Homebrew, manual)
+- Build and test commands
+- Configuration options and environment variables
+- Contributing guidelines (if available)
+- License type
+- Badges (CI status, coverage, version, license)
 
 ### Output Artifact
-Writes to `README.md` at the project root.
-
-### Response Format
-Write to `README.md` at the project root.
-
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick. No explanation of what a README should contain.
+README.md file following the project's conventions and audience needs.
 
 ### Completion Criteria
-This skill is complete when:
-- [ ] README covers: Overview, Features, Tech Stack, Getting Started, Development Setup, Environment Variables, Testing, Deployment.
-- [ ] Installation instructions work from scratch (copy-pasteable commands).
-- [ ] All links point to existing files.
-- [ ] README is < 200 lines.
+- [ ] Project name and one-line description at top
+- [ ] Badges (CI status, version, license, coverage)
+- [ ] Table of Contents (if README is long)
+- [ ] Installation instructions (platform-specific if needed)
+- [ ] Quick start / usage example
+- [ ] API or command reference (or link to detailed docs)
+- [ ] Configuration guide
+- [ ] Development setup (how to build and test)
+- [ ] Contributing guidelines (or link to CONTRIBUTING.md)
+- [ ] License information
+- [ ] Links to related resources (docs site, issue tracker, changelog)
+- [ ] Screenshots or GIFs (if applicable)
 
 ### Max Response Length
-Direct file write. Response text: "README.md generated."
+150 lines.
 
-## Quick Start
-Read the project structure and dependencies (package.json, Cargo.toml, etc.). Generate README with: Overview, Features, Tech Stack, Getting Started, Development, Environment Variables, Testing, Deployment.
+## Framework/Methodology
 
-## When to Use This Skill
-- Starting a new open-source project
-- A project doesn't have a README yet
-- Updating an outdated README
-- User explicitly requests README creation
+### README Type Decision Tree
+```
+Who is the primary audience?
+├── End users (library, CLI tool, app)
+│   → Focus on: install → quickstart → usage → API/config
+│   → Minimal build instructions, no internal architecture
+├── Developers (framework, platform, SDK)
+│   → Focus on: install → API reference → examples → integration
+│   → Architecture overview, extensibility
+├── Contributors (open source, internal tool)
+│   → Focus on: setup → build → test → PR process → code style
+│   → Architecture, design decisions, code of conduct
+└── Both (most projects)
+    → Split into: User documentation (top) + Contributor docs (bottom)
+    → Clear section headers to jump between
+```
 
-## Core Workflow
+### README Sections (Standard Order)
+```
+1. Project Name + Description (one-liner)
+2. Badges
+3. Table of Contents (if 2+ scrolls)
+4. Features
+5. Installation
+6. Quick Start / Usage
+7. Configuration
+8. API Reference (or link to docs)
+9. Architecture (optional, contrib-focused)
+10. Development Setup
+11. Testing
+12. Contributing
+13. License
+14. Acknowledgments
+```
 
-### Step 1: Gather Project Information
-Read:
-- `package.json` / `Cargo.toml` / `go.mod` / `pyproject.toml` — dependencies, scripts
-- `AGENTS.md` or `CLAUDE.md` — project-specific rules
-- Config files — environment variables, ports
-- `docs/` folder — architecture documents, ADRs
-- Folder structure — understand the project layout
+## Workflow
 
-### Step 2: Generate README
+### Step 1: Write the Header
+
 ```markdown
 # Project Name
-> {One-line tagline — what problem does this solve?}
 
-## Overview
-{2-3 paragraphs. What is this project? Who is it for? What makes it different?}
+<!-- One-liner description -->
+A lightweight, type-safe HTTP client for building API integrations
+with automatic retry and timeout handling.
 
+<!-- Badges -->
+[![npm version](https://img.shields.io/npm/v/@myorg/api-client.svg)](https://www.npmjs.com/package/@myorg/api-client)
+[![build](https://github.com/myorg/api-client/actions/workflows/ci.yml/badge.svg)](https://github.com/myorg/api-client/actions)
+[![coverage](https://codecov.io/gh/myorg/api-client/branch/main/graph/badge.svg)](https://codecov.io/gh/myorg/api-client)
+[![license](https://img.shields.io/github/license/myorg/api-client.svg)](https://github.com/myorg/api-client/blob/main/LICENSE)
+[![npm downloads](https://img.shields.io/npm/dm/@myorg/api-client.svg)](https://www.npmjs.com/package/@myorg/api-client)
+```
+
+### Step 2: Features Section
+
+```markdown
 ## Features
-- {Feature 1}: {one-line description}
-- {Feature 2}: {one-line description}
 
-## Tech Stack
-| Category | Technology |
-|----------|-----------|
-| Runtime | Node.js 22 |
-| Framework | NestJS 11 |
-| Database | PostgreSQL 16 |
-| Message Broker | Redis / BullMQ |
+- 🚀 **Typed requests and responses** — Full TypeScript generics for end-to-end type safety
+- 🔁 **Automatic retry** — Configurable retry policy with exponential backoff
+- ⏱ **Timeout handling** — Per-request and global timeouts with cancellation
+- 🔒 **Auth integration** — Bearer token, API key, OAuth2, and custom auth providers
+- 📦 **Tiny bundle** — Tree-shakeable, ~3KB gzipped
+- 🌐 **Isomorphic** — Works in Node.js, browsers, and React Native
 
-## Prerequisites
-- {Required software} version {x}
-- {Required accounts/services}
+## Screenshots
 
-## Getting Started
-
-### Installation
-```bash
-git clone https://github.com/org/project.git
-cd project
-npm install
-cp .env.example .env
+> ![Demo](https://raw.githubusercontent.com/myorg/api-client/main/docs/demo.gif)
+> *API client in action with automatic retry and error handling*
 ```
 
-### Development
+### Step 3: Installation and Quick Start
+
+```markdown
+## Installation
+
 ```bash
-npm run dev
-# Server starts at http://localhost:3000
+# npm
+npm install @myorg/api-client
+
+# yarn
+yarn add @myorg/api-client
+
+# pnpm
+pnpm add @myorg/api-client
 ```
 
-### Database Setup
-```bash
-npm run db:migrate
-npm run db:seed
+## Quick Start
+
+```typescript
+import { createClient } from '@myorg/api-client';
+
+const api = createClient({
+  baseUrl: 'https://api.example.com',
+  auth: {
+    type: 'bearer',
+    token: () => getAuthToken(),  // Dynamic token provider
+  },
+  retry: {
+    maxRetries: 3,
+    backoff: 'exponential',
+  },
+});
+
+// Type-safe requests
+const user = await api.get<User>('/users/42');
+console.log(user.name); // Fully typed
+
+const newUser = await api.post<User>('/users', {
+  name: 'Alice',
+  email: 'alice@example.com',
+});
+```
 ```
 
-## Environment Variables
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `DATABASE_URL` | Yes | — | Postgres connection string |
-| `JWT_SECRET` | Yes | — | JWT signing key |
-| `PORT` | No | 3000 | Server port |
+### Step 4: Configuration
 
-## Testing
-```bash
-# Unit tests
-npm run test
+```markdown
+## Configuration
 
-# Integration tests
-npm run test:integration
+### Client Options
 
-# E2E tests
-npm run test:e2e
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `baseUrl` | `string` | (required) | Base URL for all requests |
+| `auth` | `AuthConfig` | `null` | Authentication configuration |
+| `timeout` | `number` | `30000` | Global timeout in milliseconds |
+| `retry` | `RetryConfig` | `{ maxRetries: 3 }` | Retry policy |
+| `headers` | `Record<string, string>` | `{}` | Default headers |
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `API_BASE_URL` | Yes | API server base URL |
+| `API_TOKEN` | Yes | Authentication token |
+| `API_TIMEOUT` | No | Request timeout (default: 30000) |
 ```
 
-## Deployment
-{Deployment instructions. Link to CI/CD pipeline docs.}
+### Step 5: API Reference (Concise)
 
-## Architecture
-See [docs/architecture.md](docs/architecture.md) for architecture documentation.
+```markdown
+## API Reference
 
+### `createClient(options): ApiClient`
+
+Creates a new API client instance.
+
+### `client.get<T>(path, options?): Promise<T>`
+
+Send a GET request.
+
+- `path` — URL path (appended to baseUrl)
+- `options.params` — Query parameters
+- `options.headers` — Additional headers
+- `options.timeout` — Per-request timeout (overrides global)
+- `options.signal` — AbortSignal for cancellation
+
+### `client.post<T>(path, body?, options?): Promise<T>`
+
+Send a POST request. Same options as `get()`.
+
+### `client.use(plugin: Plugin): void`
+
+Register a middleware plugin.
+
+See [full API documentation](https://docs.example.com/api-client) for details.
+```
+
+### Step 6: Development Setup
+
+```markdown
+## Development
+
+### Prerequisites
+
+- Node.js >= 18
+- pnpm >= 8
+
+### Setup
+
+```bash
+git clone https://github.com/myorg/api-client.git
+cd api-client
+pnpm install
+pnpm build
+```
+
+### Scripts
+
+| Command | Description |
+|---------|-------------|
+| `pnpm build` | Build the project |
+| `pnpm test` | Run tests |
+| `pnpm lint` | Lint source code |
+| `pnpm typecheck` | Run TypeScript checks |
+| `pnpm format` | Format code with Prettier |
+
+### Project Structure
+
+```
+src/
+  client.ts       # Main client implementation
+  auth/           # Authentication providers
+  retry/          # Retry policy implementations
+  plugins/        # Middleware system
+  types.ts        # TypeScript types
+test/
+  unit/           # Unit tests
+  integration/    # Integration tests
+docs/             # Documentation site content
+```
+
+### Publishing
+
+```bash
+# Create a new version (automates version bump + changelog + tag)
+pnpm run release
+
+# Or manually
+pnpm version patch  # or minor/major
+pnpm build
+pnpm publish
+git push --follow-tags
+```
+```
+
+### Step 7: Contributing and License
+
+```markdown
 ## Contributing
-{Contribution guidelines. Link to CONTRIBUTING.md if exists.}
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+
+- Code of conduct
+- Development workflow
+- Pull request process
+- Coding standards
 
 ## License
-MIT © {Author}
+
+[MIT](LICENSE) © 2026 My Organization
 ```
 
-### Step 3: Verify Completeness
-- [ ] Installation instructions work from scratch
-- [ ] Environment variables documented
-- [ ] Testing instructions work
-- [ ] Links point to existing files
+## Common Pitfalls
 
-## Rules & Constraints
-- README must work for someone who has NO prior knowledge of the project
-- Include exact commands that can be copy-pasted — don't use placeholders without examples
-- Link to `docs/` for detailed documentation — don't duplicate content
-- Keep it concise — < 200 lines for most projects
-- Badges (CI, coverage, license) at the top if available
-- Screenshots/diagrams for UI projects — not for backend libraries
+| Pitfall | Description | Prevention |
+|---------|-------------|------------|
+| No installation instructions | User can't figure out how to install | Always include explicit install commands |
+| Outdated screenshots | UI changed but README didn't | CI check: README screenshots age check |
+| Missing table of contents | Long README without navigation | Add TOC for READMEs longer than 2 scrolls |
+| Too much internal detail | User doesn't care about architecture | Keep user content at top, dev content at bottom |
+| No quick start | User must read full README to try | CLI example or code snippet as first code block |
+| Assuming context | "Simply run the script" — which script? | Always show complete commands |
+| No issue/PR links | User can't report bugs or contribute | Badge links to issues, contribute link |
+| No license | Users can't tell if they can use it | SPDX identifier or link to LICENSE file |
+| Broken badges | Dead links in header | Test badges periodically, use shields.io |
+| No code examples | Text-heavy without concrete usage | Show 3-5 line code example in quick start |
 
-## Output Format
-Write to `README.md` at the project root.
+## Best Practices
+
+| Practice | Rationale |
+|----------|-----------|
+| Start with a one-liner description | User immediately knows what the project does |
+| Use badges for at-a-glance status | CI, version, license, coverage in one row |
+| Show a working example first | User can evaluate in 30 seconds |
+| Keep it concise | Shorter READMEs are more likely to be read |
+| Split user/contributor content | Users leave after install/usage; contributors read on |
+| Use screenshots/GIF for visual projects | A picture is worth 1000 words of description |
+| Keep code blocks tested | CI should verify code examples work |
+| Use real examples | Don't use foo/bar, use realistic values |
+| Link to detailed docs | README is the front door, not the whole house |
+| Include platform-specific notes | Not everyone uses macOS or Linux |
+| Pin Node.js/Python/etc. versions | Users need to know what's compatible |
+
+## Templates & Tools
+
+### Minimal README (CLI Tool)
+```markdown
+# mycli
+
+A CLI tool for automating X.
+
+## Install
+```bash
+npm install -g mycli
+```
+
+## Usage
+```bash
+mycli init --project my-app
+mycli build --output ./dist
+mycli deploy --env production
+```
+
+## License
+MIT
+```
+
+### Library README Template
+```markdown
+# @myorg/libname
+
+[Badges]
+
+Type-safe library for doing Y.
+
+## Install
+`npm install @myorg/libname`
+
+## Usage
+```typescript
+```
+
+## API
+<!-- Generated from TypeScript types -->
+
+## License
+MIT
+```
 
 ## References
-  - references/badge-reference.md — Badge Reference
-  - references/readme-best-practices.md — README Best Practices
-  - references/readme-sections.md — README Sections Guide
-  - references/readme-template.md — README Template
-  - references/readme-writer-advanced.md — Readme Writer Advanced Topics
-  - references/readme-writer-fundamentals.md — Readme Writer Fundamentals
+  - references/readme-writer-advanced.md — README Writer Advanced Topics
+  - references/readme-writer-fundamentals.md — README Writer Fundamentals
+  - references/readme-writer-templates.md — README Templates Reference
+  - references/readme-writer-style-guide.md — README Style Guide Reference
 ## Handoff
-After completing this skill:
-- Next skill: **changelog-generator** — if release is upcoming
-- Pass context: project overview, tech stack, setup instructions
+Hand off to `dev-loop-changelog-generator` for changelog content. Hand off to `dev-loop-pr-writer` for PR descriptions.

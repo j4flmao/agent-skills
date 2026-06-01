@@ -2,7 +2,7 @@
 name: frontend-rendering-strategies
 description: >
   Use this skill when the user says 'rendering strategy', 'CSR', 'SSR', 'SSG', 'ISR', 'RSC', 'React Server Components', 'server-side rendering', 'static site generation', 'incremental static regeneration', 'hydration', 'client-side rendering', 'partial hydration', 'progressive hydration', 'streaming SSR', 'edge rendering', 'SSR vs SSG vs ISR', 'rendering decision'. This skill helps choose the right rendering strategy per route/page based on data freshness, SEO, user interactivity, and performance requirements. Works with Next.js, Astro, Nuxt, Remix, Gatsby, and similar frameworks. Do NOT use for: backend rendering patterns, CDN caching, or build tool configuration.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -61,6 +61,73 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 4096 tokens
+
+## Rendering Strategy Architecture / Decision Trees
+
+### Per-Route Strategy Decision Tree
+```
+For each route:
+  |-- SEO critical? -->
+  |     |-- YES -->
+  |     |     |-- Public content (same for all users)? -->
+  |     |     |     |-- YES --> SSG or ISR
+  |     |     |     |-- NO (user-specific) --> SSR (streamed)
+  |     |
+  |     |-- NO -->
+  |           |-- Highly interactive? -->
+  |                 |-- YES --> CSR (SPA with loading state)
+  |                 |-- NO --> SSR or RSC
+  |
+  |-- Content changes predictably? -->
+  |     |-- YES (e.g., blog posts updated hourly) --> ISR with revalidate
+  |     |-- NO (e.g., real-time dashboard) --> SSR or CSR
+  |
+  |-- React app? -->
+        |-- RSC for data-fetching, client components for interactivity
+        |-- Default: Server Components, opt-in to Client Components with "use client"
+```
+
+### Hydration Strategy Decision Tree
+```
+How much interactivity does the page need?
+  |-- None (static content, docs, blog) -->
+  |     No hydration needed. Zero JS sent.
+  |     Framework: Astro (default), or SSG without JS
+  |
+  |-- Some interactive islands (like buttons, forms) -->
+  |     Partial hydration / islands architecture
+  |     Framework: Astro (client:* directives), Qwik (resumable)
+  |
+  |-- Fully interactive (dashboard, admin) -->
+  |     |-- Content-heavy with slow data? -->
+  |     |     Progressive hydration: hydrate above-fold first
+  |     |     Streaming SSR: shell renders fast, data streams in
+  |     |
+  |     |-- App-like (SPA) -->
+  |           Full hydration: CSR with route-level code splitting
+  |
+  |-- React app with mixed concerns -->
+        Selective hydration (React 18+): prioritize by user interaction
+```
+
+### Data Fetching Decision Tree
+```
+Where does data come from?
+  |-- Database / ORM -->
+  |     |-- SSG/ISR: fetch at build time or revalidate interval
+  |     |-- SSR/RSC: fetch per request (may cache at CDN level)
+  |
+  |-- External API -->
+  |     |-- SSG: fetch at build time, cache result
+  |     |-- ISR: fetch at build time + revalidate
+  |     |-- SSR: fetch per request (add CDN caching if public)
+  |     |-- CSR: fetch on client (show loading state)
+  |
+  |-- User-specific (auth required) -->
+        SSR or CSR. Never SSG or ISR (cached response would leak data).
+```
+
+---
 
 ## Workflow
 
@@ -175,6 +242,63 @@ async function ProductPage({ params }: { params: { id: string } }) {
   )
 }
 ```
+
+### 8. Deployment Platform Considerations
+| Strategy | Vercel | Netlify | AWS (Lambda) | Static Hosting (S3) |
+|----------|--------|---------|-------------|-------------------|
+| SSG | ✓ | ✓ | ✓ | ✓ Best |
+| ISR | ✓ (built-in) | Partial | Manual Lambda | ✗ |
+| SSR | ✓ (serverless) | ✓ (serverless) | ✓ (Lambda) | ✗ |
+| CSR | ✓ | ✓ | ✓ | ✓ |
+
+## Common Pitfalls
+
+### 1. SSG for Authenticated Content
+Static pages are cached and shared. Never use SSG for user-specific pages — cached HTML would leak data between users.
+
+### 2. SSR Without Streaming
+SSR blocks the response until all data is fetched. Use streaming to send the shell immediately and stream data as it resolves.
+
+### 3. Over-Engineering Rendering
+Not every route needs a custom strategy. Default: SSG for content, CSR for admin, SSR for dynamic. Only use ISR when SSG + client fetch isn't sufficient.
+
+### 4. Wrong Hydration Strategy
+Fully hydrating a mostly-static blog page wastes bandwidth and CPU. Use islands (Astro) or progressive hydration for content-heavy pages.
+
+## Performance Considerations
+
+### Cost-Benefit by Strategy
+| Strategy | Server Cost | Client CPU | Time to Interactive | Cache Hit Ratio |
+|----------|------------|------------|-------------------|----------------|
+| SSG | 0 (build only) | Low | Fastest | 100% (CDN) |
+| ISR | Low | Low | Fast | ~99% (CDN) |
+| SSR | High | Medium | Depends on server | 0% (dynamic) |
+| CSR | 0 (static hosting) | High | Depends on JS size | 100% (CDN) |
+| RSC | Medium | Low | Fast (streaming) | Varies |
+
+### HTML Size Comparison
+| Strategy | HTML Size (example page) |
+|----------|------------------------|
+| CSR (empty shell) | ~1KB |
+| SSR (full HTML) | ~20KB |
+| SSG (full HTML) | ~20KB |
+| RSC (streamed) | ~5KB initial, streams rest |
+| Astro (islands) | ~15KB HTML + ~5KB JS per island |
+
+## Accessibility Considerations
+
+- SSR/SSG pages with full HTML are inherently more accessible (content available before JS loads)
+- CSR pages must manage focus during loading, error, and content transitions
+- Streaming SSR: use aria-busy on regions while content streams in
+- ISR: cached pages may show stale content — add a "Last updated" timestamp for context
+
+## Security Considerations
+
+- SSG: static pages are safe (no server-side processing per request)
+- SSR: validate all inputs, implement rate limiting, avoid heavy computation per request
+- ISR: revalidation API routes must be authenticated to prevent DoS
+- RSC: server components never expose server secrets to the client
+- Never embed secrets in SSR/RSC responses sent to the client
 
 ## Rules
 1. SSG is the default strategy for all public, static content — optimize for cache hit ratio.

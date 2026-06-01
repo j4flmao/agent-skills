@@ -371,6 +371,115 @@ Document stores: flexible schema, rich queries, medium scale. Wide-column: rigid
 - Latency targets: DynamoDB single-digit ms, Cassandra 1-5ms per node, MongoDB 1-10ms indexed.
 - Throughput: DynamoDB on-demand 4K write/sec/partition, read 8K/sec/partition. Cassandra 10K/sec/node.
 
+### NoSQL Use Case Decision Tree
+
+```
+Data access pattern?
+├── Key-value lookups by primary key
+│   ├── High throughput, low latency (< 5ms)
+│   │   └── DynamoDB or Redis
+│   └── Simple caching, session management
+│       └── Redis (in-memory, TTL-based expiry)
+├── Document-oriented, flexible schema
+│   ├── Rich queries, aggregations, indexes
+│   │   └── MongoDB (flexible schema, secondary indexes)
+│   └── Embedded sub-documents, hierarchical data
+│       └── MongoDB (embedding avoids joins)
+├── Wide-column, time-series, massive write throughput
+│   ├── Time-series event data
+│   │   └── Cassandra (partition by time bucket, cluster by entity)
+│   └── IoT sensor data, write-heavy workloads
+│       └── Cassandra (linear scale, no single point of contention)
+├── Graph, relationship-heavy
+│   ├── Social network, recommendation engine
+│   │   └── Neo4j (property graph model, traversal queries)
+│   └── Fraud detection, network analysis
+│       └── Neptune or Neo4j
+└── Search, full-text
+    └── Elasticsearch (inverted index, relevance scoring)
+```
+
+### Data Modeling Patterns by Database
+
+#### DynamoDB Single-Table Design
+
+```python
+# Single-table design for e-commerce
+# PK: entity type + ID, SK: relationship/sort key
+items = {
+    # Customer entity
+    {"PK": "CUSTOMER#123", "SK": "METADATA", "name": "Alice", "email": "alice@org.com", "tier": "gold"},
+    
+    # Customer's orders
+    {"PK": "CUSTOMER#123", "SK": "ORDER#2026-05-01#ORD001", "order_total": 150.00, "status": "shipped"},
+    {"PK": "CUSTOMER#123", "SK": "ORDER#2026-05-15#ORD002", "order_total": 75.00, "status": "pending"},
+    
+    # Customer's addresses
+    {"PK": "CUSTOMER#123", "SK": "ADDR#HOME", "street": "123 Main St", "city": "Portland"},
+    
+    # Order entity (GSI for order lookup)
+    {"PK": "ORDER#ORD001", "SK": "METADATA", "customer_id": "123", "total": 150.00, "status": "shipped"},
+    {"PK": "ORDER#ORD001", "SK": "ITEM#PROD-A", "product": "Widget", "price": 100.00, "qty": 1},
+    {"PK": "ORDER#ORD001", "SK": "ITEM#PROD-B", "product": "Gadget", "price": 50.00, "qty": 1},
+}
+
+# Access patterns:
+# Get customer + all orders: Query(PK="CUSTOMER#123")
+# Get customer orders by date: Query(PK="CUSTOMER#123", SK begins_with("ORDER#2026-05"))
+# Get order details: Query(PK="ORDER#ORD001")
+# GSI on status for all orders by status
+```
+
+#### MongoDB Embedding vs Referencing Decision
+
+```
+How is the data accessed?
+├── Sub-document accessed WITH parent (always together)
+│   └── Embed (e.g., order items in order document)
+├── Sub-document independent, but small cardinality
+│   └── Embed (e.g., addresses in customer document)
+├── Sub-document independent, large cardinality
+│   └── Reference with DBRef or manual ID (e.g., orders per customer)
+├── Many-to-many relationships
+│   └── Reference array (e.g., product categories)
+└── Growing unbounded array
+    └── Reference (e.g., customer activity log → separate collection)
+```
+
+#### Cassandra Data Modeling
+
+```yaml
+cassandra_modeling:
+  rule: "One table per query pattern"
+  example:
+    query_pattern_1: "Get orders by customer_id ordered by order_date DESC"
+    table: |
+      CREATE TABLE orders_by_customer (
+        customer_id TEXT,
+        order_date DATE,
+        order_id UUID,
+        total DECIMAL,
+        status TEXT,
+        PRIMARY KEY (customer_id, order_date, order_id)
+      ) WITH CLUSTERING ORDER BY (order_date DESC, order_id ASC);
+    
+    query_pattern_2: "Get orders by status and date range"
+    table: |
+      CREATE TABLE orders_by_status (
+        status TEXT,
+        order_date DATE,
+        customer_id TEXT,
+        order_id UUID,
+        total DECIMAL,
+        PRIMARY KEY ((status, order_date), customer_id, order_id)
+      );
+      
+  denormalization:
+    - "Duplicate data across tables — disk is cheap, joins are impossible"
+    - "Update in batch when source data changes"
+    - "Use Materialized Views for automatic denormalization (limited)"
+```
+
 ## Rules: model around known access patterns, never data shape
 - Single-table design in DynamoDB for all related entities
 - One table per query pattern in Cassandra
@@ -381,6 +490,8 @@ Document stores: flexible schema, rich queries, medium scale. Wide-column: rigid
 - Strong consistency for critical financial data
 - Denormalize to avoid reads spanning partitions
 - No cross-partition queries in Cassandra
+- Choose NoSQL type by access pattern: KV for lookups, document for flexibility, wide-column for writes
+- Model for access patterns before data shape — NoSQL is query-first design
 
 ## References
   - references/document-db.md — Document Database Reference

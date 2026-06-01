@@ -306,23 +306,203 @@ class BffService {
 ### BFF Count
 ```
 Number of distinct client types?
-  1-2 (+-> Single BFF with route segregation (/api/web, /api/mobile)
-  3+   (+-> Dedicated BFF service per client type, separate deployment
+├── 1-2 → Single BFF with route segregation (/api/web, /api/mobile)
+└── 3+ → Dedicated BFF service per client type, separate deployment
+
+Client types differ significantly in:
+├── Data shape (page vs compact) → Separate BFFs
+├── Auth mechanism (cookie vs token vs API key) → Separate BFFs
+├── Performance requirements (latency sensitive?) → Separate BFFs
+└── Similar across clients → Single BFF with routes
 ```
 
-### BFF vs GraphQL
+### BFF vs API Gateway vs GraphQL
 ```
-Client can define own data shape?
-  +-- Yes -> GraphQL federation (Apollo, Hasura). Client controls query.
-  +-- No  -> BFF pattern. Server defines the shape. Simpler, more performant.
+What does the client need?
+├── Raw proxy with auth/rate-limiting → API Gateway (Kong, NGINX, Envoy)
+├── Client-defined queries → GraphQL federation
+└── Server-shaped responses per client → BFF Pattern
+
+If BFF:
+├── Simple aggregation (1-2 services) → Lightweight BFF (single file, simple compose)
+├── Complex composition (3+ services) → Full BFF service with circuit breakers, caching
+└── Event-driven composition → Async BFF with message queue + SSE/WebSocket push
+
+If API Gateway works but clients need different data:
+├── Can gateway transform responses? → Yes → API Gateway with response transformation
+└── No → BFF behind the gateway
+
+If GraphQL but clients are diverse:
+├── Clients are internal → Single GraphQL gateway is fine
+└── Clients are external (3rd party) → BFF wrapping GraphQL (limits query complexity)
 ```
 
 ### Caching Strategy
 ```
 Data changes infrequently?
-  +-- Yes -> Long TTL (minutes). Cache-aside pattern.
-  +-- No  -> Short TTL + stale-while-revalidate. Background refresh.
+├── Yes → Long TTL (minutes). Cache-aside pattern.
+└── No → Short TTL + stale-while-revalidate. Background refresh.
+
+BFF cache location:
+├── In-memory (fast, lost on restart) → Best for single-instance, ephemeral data
+├── Redis (distributed, consistent) → Best for multi-instance, shared cache
+└── CDN (edge caching) → Best for public, static-like data
+
+Cache invalidation method:
+├── TTL-based → Simple, but stale window exists
+├── Tag-based (purge by category) → Precise, requires event system
+└── Webhook (backend notifies BFF) → Real-time, requires backend integration
 ```
+
+### BFF Deployment Strategy
+```
+Deployment model:
+├── Monolith with route segregation
+│   ├── Pros: Simple, single deploy, shared infra
+│   └── Cons: Scales together, one failure domain
+│   Best for: Early stage, < 3 clients, small team
+├── Per-client BFF service
+│   ├── Pros: Independent scaling, deploy, failure isolation
+│   └── Cons: More infra, inter-service comms, duplicated caches
+│   Best for: Mature product, 3+ clients, dedicated frontend teams
+└── BFF per feature domain
+    ├── Pros: Team-aligned (checkout BFF, search BFF), fine-grained scaling
+    └── Cons: Many services, client calls multiple BFFs, higher complexity
+    Best for: Large org with domain-aligned teams
+
+Auth pattern:
+├── API Gateway handles auth → BFF receives validated user context
+├── BFF handles auth directly → Dedicated auth per client type (preferred for security)
+└── Backend service handles auth → BFF is passthrough (simplest, least secure)
+```
+
+## Security Considerations
+
+### BFF-Specific Threats
+| Threat | Impact | Mitigation |
+|--------|--------|------------|
+| BFF as attack vector | Compromised BFF exposes all backend | Least privilege, network isolation |
+| Token forwarding | BFF leaks user token to wrong service | Scoped tokens, per-service API keys |
+| Cache poisoning | Stale/malicious data served to clients | Signed cache, input validation |
+| DoS via composition | One slow service blocks all BFF requests | Per-service timeouts, circuit breakers |
+| Data leakage across BFFs | Mobile BFF returns web-only data | Strict type contracts per BFF |
+
+### Network Security
+- BFFs in private subnet, only accessible via API Gateway or internal LB
+- No direct internet access to BFFs
+- mTLS between BFF and backing services
+- Rate limiting per BFF, per client IP, per user
+- Request size limits per BFF type (mobile: 1MB, web: 5MB)
+
+## Performance Deep Dive
+
+### Composition Latency Model
+```
+Total BFF latency = max(service1, service2, ..., serviceN) + serialization
+Serialization cost: JSON ~0.1ms/KB, Protobuf ~0.01ms/KB
+```
+
+For blocking composition (sequential):
+```
+Total = service1 + service2 + ... + serviceN → Death by N * P50
+```
+For parallel composition (Promise.all):
+```
+Total = max(service1, service2, ..., serviceN) → Only as slow as slowest
+```
+
+### Connection Management
+```typescript
+// Per-service connection pool with keep-alive
+import http from 'http';
+
+const SERVICE_POOLS = {
+  cart: new http.Agent({ keepAlive: true, maxSockets: 50, timeout: 5000 }),
+  pricing: new http.Agent({ keepAlive: true, maxSockets: 25, timeout: 10000 }),
+  shipping: new http.Agent({ keepAlive: true, maxSockets: 25, timeout: 3000 }),
+};
+
+async function callService(name: string, url: string): Promise<any> {
+  const agent = SERVICE_POOLS[name];
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), agent.timeout);
+  try {
+    const response = await fetch(url, { agent, signal: controller.signal });
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+```
+
+### Load Shedding
+```typescript
+// BFF load shedding — reject early when under pressure
+class BffLoadShedder {
+  private activeRequests = 0;
+  private maxConcurrent: number;
+  private queue: Array<{ resolve: Function; reject: Function }> = [];
+
+  constructor(maxConcurrent: number = 100) {
+    this.maxConcurrent = maxConcurrent;
+  }
+
+  async acquire<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.activeRequests >= this.maxConcurrent) {
+      // Shed load — return 503 immediately
+      throw new BffOverloadedError('Too many requests');
+    }
+    this.activeRequests++;
+    try {
+      return await fn();
+    } finally {
+      this.activeRequests--;
+    }
+  }
+}
+
+// Usage in BFF route
+app.get('/api/web/checkout/:cartId', async (req, res) => {
+  try {
+    const result = await loadShedder.acquire(() => composer.getCheckout(req.params.cartId, req.user.id));
+    res.json(result);
+  } catch (err) {
+    if (err instanceof BffOverloadedError) {
+      res.status(503).json({ error: 'Service temporarily unavailable' });
+    } else {
+      throw err;
+    }
+  }
+});
+```
+
+## Production Considerations
+
+### Observability
+```typescript
+// Structured BFF logging with request tracing
+interface BffLogContext {
+  traceId: string;
+  bffType: string;
+  clientIp: string;
+  userId: string;
+  duration: number;
+  services: Array<{ name: string; status: string; duration: number }>;
+}
+
+// Export metrics per BFF
+// - bff_request_duration_seconds{type="web", route="checkout"}
+// - bff_composition_services_count{type="mobile"}
+// - bff_cache_hit_ratio{type="partner"}
+// - bff_partial_failure_count{type="admin"}
+// - bff_downstream_error_count{service="cart", type="web"}
+```
+
+### Backend Service Contract Evolution
+- BFF acts as an anti-corruption layer between backend and frontend
+- When backend services change, update the BFF composition — front ends stay unchanged
+- BFF version is independent of backend service version
+- Deprecate old BFF endpoints, never break mobile clients in production
 
 ## Common Pitfalls
 
@@ -412,14 +592,16 @@ Data changes infrequently?
 - Cache invalidation via event-driven mechanisms (pub/sub, webhook).
 
 ## References
-  - references/bff-implementation-strategies.md — BFF Implementation Strategies
-  - references/bff-security-considerations.md — BFF Security Considerations
+  - references/bff-fundamentals.md — BFF Fundamentals
+  - references/bff-advanced.md — BFF Advanced
   - references/bff-architecture.md — BFF Architecture
   - references/bff-auth-session.md — BFF Auth and Session Reference
   - references/bff-orchestration.md — BFF Orchestration Reference
   - references/bff-performance.md — BFF Performance
   - references/bff-security.md — BFF Security
   - references/bff-testing.md — BFF Testing
+  - references/bff-implementation-strategies.md — BFF Implementation Strategies
+  - references/bff-rate-limiting.md — BFF Rate Limiting and Load Shedding
 
 ## Handoff
 No artifact produced unless requested.

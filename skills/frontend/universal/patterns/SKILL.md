@@ -4,7 +4,7 @@ description: >
   Use this skill when the user asks about frontend design patterns, component
   patterns, Container/Presentational, Compound Components, HOC, Render Props,
   Hooks patterns, Provider, or State Reducer.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -51,6 +51,59 @@ Produce the artifact directly. No preamble. No postamble. No explanations. No fi
 
 ### Max Response Length
 4096 tokens
+
+## Pattern Architecture / Decision Trees
+
+### Pattern Selection Decision Tree
+```
+What problem are you solving?
+
+  |-- Logic scattered across lifecycle methods? -->
+  |     |-- React: Custom Hooks (preferred) or HOC (legacy only)
+  |     |-- Vue: Composables
+  |     |-- Angular: Services + RxJS
+  |     |-- Svelte: Store + reactive statements
+  |
+  |-- Prop drilling (>3 levels)? -->
+  |     |-- React/Vue: Provider/Context pattern
+  |     |-- Angular: DI + services
+  |     |-- Alternative: Component composition (restructure tree)
+  |
+  |-- Complex multi-part UI (Tabs, Accordion, Select)? -->
+  |     |-- Compound Components with context-based state
+  |     |-- Each sub-component shares state via parent context
+  |
+  |-- Cross-cutting concern across many components? -->
+  |     |-- HOC (for pre-render wrapping like auth guards)
+  |     |-- Hooks (for functional composition)
+  |     |-- Provider (for global state like theme, locale)
+  |
+  |-- Dynamic rendering logic sharing? -->
+  |     |-- Render Props (when consumer needs rendering control)
+  |     |-- Slots (Vue/Svelte native slot pattern)
+  |
+  |-- Need to override internal component behavior? -->
+        |-- State Reducer pattern (for reusable component libraries)
+        |-- Strategy pattern (pass behavior as prop)
+```
+
+### Composition vs Configuration Decision Tree
+```
+How many variations does the component have?
+  |-- Few variations (2-3) -->
+  |     Props-based configuration is fine
+  |     Example: <Button variant="primary" size="md" />
+  |
+  |-- Many variations (4+), composable parts -->
+  |     Composition preferred
+  |     Example: <Card><Card.Header><Card.Body><Card.Footer>
+  |
+  |-- Consumer needs full rendering control -->
+        Render props / slots
+        Example: <DataTable columns={...} renderRow={(row) => ...} />
+```
+
+---
 
 ## Workflow
 
@@ -334,6 +387,37 @@ const { open, toggle } = useDropdown(
 | **HOC** | Wrapped component behavior | `render(hoc(WrappedComponent))` |
 | **Hooks** | Render hook via `renderHook` | `renderHook(() => useOrders(filters))` |
 | **Provider** | Consumer components render correctly | Wrap test with provider, assert children |
+
+## Performance Considerations
+
+### Pattern Re-render Cost
+| Pattern | Re-render triggers | Optimization |
+|---------|-------------------|--------------|
+| Container/Presentational | Parent state changes | React.memo on presentational |
+| Compound Components | Context value changes | Memoize context value with useMemo |
+| HOC | Wrapper re-renders passed props | Avoid inline object props |
+| Render Props | Parent re-renders → new function each time | useCallback on the render function |
+| Provider | Context value changes → all consumers re-render | Split by domain, memoize value |
+| Hooks | Hook internal state changes | Single responsibility, stable refs |
+
+### Provider Splitting for Performance
+```tsx
+// BAD -- single provider for everything, any change re-renders all consumers
+<AppProvider value={{ user, orders, theme, locale }}>
+  <App />
+</AppProvider>
+
+// GOOD -- split by domain, consumer only subscribes to what it needs
+<UserProvider>
+  <OrdersProvider>
+    <ThemeProvider>
+      <LocaleProvider>
+        <App />
+      </LocaleProvider>
+    </ThemeProvider>
+  </OrdersProvider>
+</UserProvider>
+```
 
 ## References
   - references/component-patterns.md — Component Patterns Reference

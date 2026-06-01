@@ -25,6 +25,55 @@ tags: [backend, universal, authorization, access-control, rbac, abac, phase-5]
 ## Purpose
 Design and implement authorization that is correct, auditable, and maintainable. Every protected resource must have an explicit access decision. Authorization rules live in code or policy, never in the developer's head.
 
+## Architecture Decision Trees
+
+### Authorization Model Selection
+```
+How many resource types need access control?
+├── < 10 → Flat RBAC (simple role-permission map)
+└── >= 10 → Do roles map well to resources?
+    ├── Yes → Does every user fit a single role?
+    │   ├── Yes → Hierarchical RBAC (roles + inheritance)
+    │   └── No → RBAC + ABAC hybrid (roles for coarse, attributes for exceptions)
+    └── No → Does access depend on relationships between entities?
+        ├── Yes → ReBAC (Zanzibar-style relationship tuples)
+        └── No → ABAC (attribute-based policies for maximal flexibility)
+
+Regulatory requirements (SoD, audit)?
+├── Yes → Constrained RBAC with SoD enforcement
+└── No → Standard RBAC or ABAC
+
+Multi-tenant?
+├── Yes → RBAC + scope-based authorization (org/department/team isolation)
+└── No → Single-tenant RBAC or ABAC
+```
+
+### Policy Engine Decision Tree
+```
+Existing policy engine in stack?
+├── Yes → Leverage existing engine
+└── No → Cloud-native / K8s?
+    ├── Yes → OPA (sidecar deployment, Rego policies, K8s admission control)
+    └── No → Need GUI for non-devs to manage policies?
+        ├── Yes → Permit.io (SaaS, visual policy editor)
+        └── No → Multi-language support critical?
+            ├── Yes → Casbin (libraries for 10+ languages, in-app)
+            └── No → Fine-grained, human-readable policies?
+                ├── Yes → Cerbos (YAML policies, sidecar)
+                └── No → ReBAC at massive scale?
+                    └── AuthZed / SpiceDB (Zanzibar, gRPC API)
+```
+
+### Temporary Access Decision Tree
+```
+Emergency scenario (production outage)?
+├── Yes → Break-glass protocol: MFA required, 30 min expiry, security team notified
+└── No → Need temporary elevated permissions?
+    ├── Yes → JIT elevation: request + approval, time-bound, auto-expire
+    └── No → Need to delegate permissions?
+        └── Delegation: delegator-scoped, time-bound, non-cascading
+```
+
 ## Agent Protocol
 
 ### Trigger
@@ -458,6 +507,171 @@ test('authorization matrix', () => {
 - Run on every change to role definitions or policies.
 - Snapshot current behavior before changes, diff after.
 
+## Anti-Patterns
+
+1. **Role explosion**: Creating hundreds of roles for every unique permission combination. Fix → Use attributes for exceptions, keep roles to < 20.
+2. **Super admin everywhere**: Every admin is super admin. Fix → Follow least privilege: scoped admin roles (org-admin, audit-admin, support-admin).
+3. **Client-side authorization only**: Hiding UI buttons but not enforcing server-side. Fix → API gateway or middleware enforces every decision.
+4. **Permission check in domain logic**: Auth logic mixed with business logic. Fix → Authorization is infrastructure, enforced before domain.
+5. **Hardcoded user IDs in policies**: `if (user.id === 'admin-user')`. Fix → Never reference specific users — use roles and attributes.
+6. **No default deny**: Everything is allowed unless explicitly denied. Fix → Reverse: deny by default, explicitly allow.
+7. **Caching decisions indefinitely**: Cached allow/deny results become stale. Fix → Cache with TTL tied to token expiry or policy change events.
+8. **Ignoring delegation chain depth**: Delegated permissions cascade infinitely. Fix → Limit depth to 1 (direct delegation only) or max 3 hops.
+9. **Break-glass without notification**: Emergency access with no audit trail. Fix → Always log, notify, and auto-expire.
+10. **Elevation never expires**: JIT roles that last forever. Fix → Always set TTL on elevation. Cron job to clean up expired.
+11. **Overly complex policies**: ABAC conditions that no one can understand or debug. Fix → Simpler RBAC + minimal ABAC. Document every condition.
+12. **Permissive wildcards**: `*.*` grants access to everything. Fix → Be explicit. Use wildcards only for true admin roles.
+13. **SoD only in code**: Separation of duties enforced but bypassable. Fix → Enforce SoD at the data layer, not just UI/middleware.
+14. **Authorization by omission**: Granting access because no policy matches (default allow). Fix → Always default deny.
+
+## Security Considerations
+
+### Denial-of-Service via Policy Evaluation
+- Complex ABAC policies with expensive conditions (DB lookups, API calls) can be flooded.
+- Mitigation: cache policy evaluation results, rate-limit authorization requests, set query complexity limits.
+- OPA: set `default_decision` timeout. Cerbos: configure evaluation deadline.
+
+### Privilege Escalation Vectors
+- **Horizontal**: User A reads User B's data. Mitigation → scope-based checks on every data access.
+- **Vertical**: User upgrades own role. Mitigation → role changes require audit trail + approval.
+- **Delegation abuse**: Delegate permissions to gain more than you have. Mitigation → delegation inherits delegator's scope, never exceeds.
+
+### Timing Attacks on Authorization
+- Different response times for "valid token, denied" vs "invalid token" can leak info.
+- Mitigation: consistent response times for all auth failures. Obfuscate error details.
+
+### Distributed Authorization Security
+- Policy bundles must be signed (OPA bundle signing). Verify signature before loading.
+- Sidecar-to-service communication must use mTLS.
+- Policy engine API endpoints must not be exposed to untrusted networks.
+
+## Performance Considerations
+
+### Policy Evaluation Latency
+| Engine | P50 (simple) | P50 (complex) | P99 (complex) |
+|--------|-------------|--------------|--------------|
+| In-app (Casbin) | ~0.05ms | ~0.5ms | ~2ms |
+| Sidecar (OPA) | ~0.5ms | ~5ms | ~20ms |
+| Sidecar (Cerbos) | ~1ms | ~3ms | ~15ms |
+| Network (SpiceDB) | ~5ms | ~15ms | ~50ms |
+| SaaS (Permit.io) | ~15ms | ~30ms | ~100ms |
+
+### Optimization Techniques
+- **Decision caching**: Cache allow/deny results with TTL = token expiry or 5 min max. Invalidate on policy change.
+- **Batch evaluations**: For list endpoints, batch all resource checks into one policy evaluation.
+- **Pre-computed permissions**: Store effective permissions (allow list) in JWT for frequently accessed resources.
+- **Read-replica policy engines**: For sidecar pattern, deploy policy engine as read-replica with local bundle cache.
+- **Connection pooling**: For network-based engines (SpiceDB), pool gRPC connections. Reuse for multiple evaluations.
+
+### Data-Level Authorization
+```sql
+-- Row-Level Security (RLS) in PostgreSQL
+CREATE POLICY tenant_isolation ON orders
+  USING (tenant_id = current_setting('app.current_tenant_id'));
+
+CREATE POLICY user_scope ON documents
+  USING (
+    owner_id = current_setting('app.current_user_id')
+    OR current_setting('app.current_role') = 'admin'
+  );
+
+-- Always set session context at auth middleware
+SELECT set_config('app.current_user_id', $1, false),
+       set_config('app.current_role', $2, false),
+       set_config('app.current_tenant_id', $3, false);
+```
+
+### Middleware Implementation Patterns
+
+**Express middleware with policy engine:**
+```javascript
+function authorizeMiddleware(action, resourceType) {
+  return async (req, res, next) => {
+    const decision = await policyEngine.check({
+      subject: { id: req.user.id, role: req.user.role, department: req.user.dept },
+      resource: { type: resourceType, id: req.params.id, ...resourceMeta(req) },
+      action,
+      env: { time: new Date(), ip: req.ip }
+    });
+    if (!decision.allowed) {
+      throw new ForbiddenError(decision.reason || 'Access denied');
+    }
+    // Attach decision metadata for downstream enforcement
+    req.authz = { decision, scope: decision.scope };
+    next();
+  };
+}
+```
+
+**FastAPI dependency injection:**
+```python
+from fastapi import Depends, HTTPException
+
+async def require_permission(action: str, resource: str):
+    async def dependency(user: dict = Depends(get_current_user)):
+        allowed = await authz_client.check({
+            "subject": user,
+            "action": action,
+            "resource": resource
+        })
+        if not allowed:
+            raise HTTPException(status_code=403, detail="Access denied")
+        return user
+    return dependency
+
+@app.get("/invoices/{invoice_id}")
+async def get_invoice(
+    invoice_id: str,
+    user: dict = Depends(require_permission("read", "invoice"))
+):
+    return await invoice_service.get(invoice_id, user)
+```
+
+**ASP.NET Core policy-based auth:**
+```csharp
+public class InvoiceAuthorizationHandler : AuthorizationHandler<InvoiceRequirement, Invoice>
+{
+    protected override Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
+        InvoiceRequirement requirement,
+        Invoice resource)
+    {
+        var userDept = context.User.FindFirst("department")?.Value;
+        if (userDept == resource.Department)
+        {
+            context.Succeed(requirement);
+        }
+        return Task.CompletedTask;
+    }
+}
+
+// Registration
+services.AddAuthorization(options => {
+    options.AddPolicy("InvoiceAccess", policy =>
+        policy.Requirements.Add(new InvoiceRequirement()));
+});
+```
+
+**Go HTTP middleware:**
+```go
+func Authorize(engine *casbin.Enforcer) func(http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            user := r.Context().Value("user").(*User)
+            resource := r.URL.Path
+            action := r.Method
+
+            allowed, err := engine.Enforce(user.Role, resource, action)
+            if err != nil || !allowed {
+                http.Error(w, "Forbidden", http.StatusForbidden)
+                return
+            }
+            next.ServeHTTP(w, r)
+        })
+    }
+}
+```
+
 ## Rules
 - Default deny: if no policy explicitly allows, access is denied.
 - Authorize at the right layer — data-level enforcement (RLS, query filter) is mandatory, UI hiding is optional UX.
@@ -468,12 +682,17 @@ test('authorization matrix', () => {
 - Delegated permissions must not exceed the delegator's own permissions.
 - Every user has exactly one role. Use attributes for exceptions, not custom roles.
 - Permission changes propagate immediately (no cache) or with documented delay.
+- Policy evaluation is a synchronous hot-path operation. Keep it fast (<5ms p99).
+- Default allow lists for known-safe operations (public endpoints, health checks). All else default deny.
 
 ## References
   - references/authorization-audit.md — Authorization Audit
   - references/authorization-delegation.md — Authorization Delegation
+  - references/authorization-fundamentals.md — Authorization Fundamentals
+  - references/authorization-advanced.md — Authorization Advanced
   - references/authorization-middleware.md — Authorization Middleware — Framework Integration
   - references/authorization-models.md — Authorization Models Comparison
+  - references/authorization-policy-distribution.md — Policy Distribution and Synchronization
   - references/authorization-testing.md — Authorization Testing
   - references/data-level-authorization.md — Data-Level Authorization
   - references/fine-grained-policies.md — Fine-Grained Access Policies (ABAC)

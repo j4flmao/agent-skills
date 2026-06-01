@@ -214,6 +214,59 @@ Dashboard design principles:
 - Annotation of significant events (releases, campaigns, incidents)
 - Drill-down capability for investigation
 
+## Advanced Segmentation Methods
+
+### Behavioral Cohorts
+Group users by shared behavior patterns, not just acquisition date. Create cohorts around feature adoption, engagement depth, or lifecycle stage. Track each cohort's behavior over time to identify trends. Compare early-stage vs mature product adoption patterns.
+
+**Segmentation dimensions for analytics:**
+| Dimension | Example Segments | Analysis Value |
+|-----------|-----------------|----------------|
+| Usage frequency | Power / Regular / Occasional / Dormant | Identify power user patterns |
+| Feature adoption | Feature explorers / Workflow specialists / Minimalists | Guide onboarding and feature discovery |
+| Lifecycle stage | New / Active / At-risk / Churned | Trigger interventions at right time |
+| Acquisition channel | Organic / Paid / Referral / Direct | Optimize channel mix and CAC |
+| Plan tier | Free / Pro / Enterprise | Design upgrade triggers and feature gating |
+
+### Counter Metric Design
+Every metric needs a counter metric — a guardrail that detects when optimizing one metric harms another. If you optimize for session duration, counter metric is task completion rate (longer sessions might mean confusion). If you optimize for feature adoption, counter metric is churn in adjacent features. If you optimize for conversion rate, counter metric is support ticket volume (aggressive conversion might create confused users).
+
+**Counter metric framework:**
+```
+Primary Metric: {metric we want to improve}
+Counter Metric 1: {what could be harmed if primary goes up}
+  Threshold: {when counter metric deviation triggers alert}
+Counter Metric 2: {what else could be harmed}
+  Threshold: {when counter metric deviation triggers alert}
+Review cadence: {how often to check both primary and counter metrics}
+```
+
+## Data Quality Framework
+
+### Tracking Quality Assurance
+Every event must pass validation before being trusted for analysis. Implement a tracking QA process:
+
+| Check | Method | Frequency | Alert |
+|-------|--------|-----------|-------|
+| Event volume | Compare to expected daily volume | Daily | >20% deviation |
+| Property validity | Check required properties are non-null | Per event | Missing properties logged |
+| Naming consistency | Validate against taxonomy spec | Per deployment | CI pipeline failure |
+| Duplicate detection | Check for identical events within 1s | Hourly | >0.01% duplication rate |
+| Schema compliance | Validate property types and enums | Per event | Reject invalid events |
+
+### Data Quality SLAs
+
+| SLA | Target | Measurement |
+|-----|--------|-------------|
+| Event delivery latency | <60s for 99% of events | Event created → received timestamp |
+| Data completeness | >99.5% of expected events tracked | Compare to server log count |
+| Property population rate | >99% of required properties have values | Null rate per property |
+| Tracking bug response time | <4 hours for P0, <24h for P1 | Bug reported → fix deployed |
+| Data availability SLA | 99.9% queryable within 2h of event | Query returns ≤2h old data |
+
+### Event Audit Process
+Quarterly, audit all tracked events: verify each event still fires correctly, check property schemas haven't drifted, remove events that no longer serve a purpose, consolidate duplicate events, document any schema changes. Publish audit results to analytics stakeholders.
+
 ## Common Pitfalls
 
 | Pitfall | Description | Prevention |

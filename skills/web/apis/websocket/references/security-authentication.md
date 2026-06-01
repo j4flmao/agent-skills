@@ -305,8 +305,225 @@ class SecureWebSocketServer {
 }
 ```
 
+## Decision Trees
+
+### Choose Authentication Timing
+```
+Can the client obtain a token before connecting?
+├── Yes → Authenticate during HTTP upgrade (recommended)
+│   └── Send token as query param or in first message
+└── No → Authenticate post-connection
+    └── Send credentials as first message, close if invalid
+```
+
+### Choose Authorization Model
+```
+Are actions scoped to the connection?
+├── Yes → Authenticate at connect time, authorize per message
+│   └── Check permissions for each message type
+└── No → Is there a hierarchy of roles?
+    ├── Yes → Role-based (admin, moderator, user, guest)
+    └── No → Attribute-based (user-specific permissions)
+```
+
+## Anti-Patterns
+- **Origin check disabled in production**: `origin: false` in ws config makes app vulnerable
+- **Token in URL query string**: Logged by proxies, stored in browser history
+- **No rate limiting on messages**: Allows message flooding attacks
+- **Trusting client-provided metadata**: user_id from client can be spoofed
+- **No message size limit**: Memory exhaustion via large messages
+- **Plaintext WebSocket (ws://)** on production: All traffic visible to network
+- **No CSRF protection**: Combine Origin + token validation
+- **Reconnecting with expired credentials**: Token refresh before reconnect
+- **No input sanitization**: WebSocket messages can carry XSS payloads
+- **Excessive close code detail**: Leaks server state through close reasons
+
+## Implementation Patterns
+
+### Server-Side Authentication
+```javascript
+const WebSocket = require('ws');
+const jwt = require('jsonwebtoken');
+
+const wss = new WebSocket.Server({ 
+  port: 8080,
+  verifyClient: (info, cb) => {
+    // Option 1: Authenticate during upgrade via query param
+    const token = new URL(info.req.url, 'http://localhost').searchParams.get('token');
+    if (!token) {
+      cb(false, 401, 'Unauthorized');
+      return;
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      info.req.user = decoded;
+      cb(true);
+    } catch (err) {
+      cb(false, 401, 'Invalid token');
+    }
+  },
+});
+
+wss.on('connection', (ws, req) => {
+  const user = req.user;
+  console.log(`User ${user.id} connected`);
+
+  // Set connection timeout
+  let timeout = setTimeout(() => {
+    ws.close(4001, 'Connection timeout');
+  }, 300000); // 5 min idle timeout
+
+  ws.on('message', (data) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => ws.close(4001, 'Connection timeout'), 300000);
+
+    try {
+      const msg = JSON.parse(data.toString());
+      // Validate message schema
+      if (!msg.type || typeof msg.type !== 'string') {
+        ws.send(JSON.stringify({ error: 'Invalid message format' }));
+        return;
+      }
+
+      // Rate limiting per user
+      if (!rateLimiter.check(user.id)) {
+        ws.close(4002, 'Rate limit exceeded');
+        return;
+      }
+
+      // Authorize action
+      if (!authorize(user, msg.type)) {
+        ws.send(JSON.stringify({ error: 'Forbidden' }));
+        return;
+      }
+
+      // Route message
+      handleMessage(user, msg);
+    } catch (err) {
+      ws.send(JSON.stringify({ error: 'Invalid JSON' }));
+    }
+  });
+
+  ws.on('close', () => {
+    clearTimeout(timeout);
+    console.log(`User ${user.id} disconnected`);
+  });
+});
+```
+
+### Rate Limiter
+```javascript
+class RateLimiter {
+  constructor(maxPerSecond = 10) {
+    this.maxPerSecond = maxPerSecond;
+    this.counters = new Map();
+  }
+
+  check(userId) {
+    const now = Date.now();
+    const windowMs = 1000;
+
+    if (!this.counters.has(userId)) {
+      this.counters.set(userId, { count: 1, windowStart: now });
+      return true;
+    }
+
+    const entry = this.counters.get(userId);
+    if (now - entry.windowStart > windowMs) {
+      entry.count = 1;
+      entry.windowStart = now;
+      return true;
+    }
+
+    entry.count++;
+    return entry.count <= this.maxPerSecond;
+  }
+}
+
+// Per-connection rate limiter
+class ConnectionRateLimiter {
+  constructor(maxPerSecond = 5) {
+    this.maxPerSecond = maxPerSecond;
+    this.connections = new Map(); // ip -> { count, windowStart }
+  }
+
+  allowConnection(ip) {
+    const now = Date.now();
+    const entry = this.connections.get(ip);
+
+    if (!entry || now - entry.windowStart > 1000) {
+      this.connections.set(ip, { count: 1, windowStart: now });
+      return true;
+    }
+
+    entry.count++;
+    return entry.count <= this.maxPerSecond;
+  }
+}
+```
+
+### Token Refresh Without Reconnection
+```javascript
+// Server-side: accept token update mid-connection
+ws.on('message', (data) => {
+  const msg = JSON.parse(data.toString());
+
+  if (msg.type === 'token_refresh') {
+    try {
+      const decoded = jwt.verify(msg.token, process.env.JWT_SECRET);
+      ws.user = decoded;
+      ws.send(JSON.stringify({ type: 'token_refreshed' }));
+    } catch {
+      ws.close(4003, 'Invalid refresh token');
+    }
+    return;
+  }
+});
+```
+
+### Message Validation with Schema
+```javascript
+function validateMessage(msg) {
+  const schemas = {
+    chat: {
+      type: 'object',
+      required: ['type', 'payload'],
+      properties: {
+        type: { type: 'string', pattern: '^[a-z_]+$' },
+        payload: {
+          type: 'object',
+          required: ['text'],
+          properties: {
+            text: { type: 'string', maxLength: 2000 },
+            room: { type: 'string', maxLength: 50 },
+          },
+        },
+      },
+    },
+    typing: {
+      type: 'object',
+      required: ['type'],
+      properties: {
+        type: { type: 'string', enum: ['typing_start', 'typing_stop'] },
+        room: { type: 'string', maxLength: 50 },
+      },
+    },
+  };
+
+  const schema = schemas[msg.type];
+  if (!schema) return { valid: false, error: 'Unknown message type' };
+
+  // Basic validation (use a library like ajv or zod in production)
+  if (!msg.payload && schema.required.includes('payload')) {
+    return { valid: false, error: 'Missing payload' };
+  }
+
+  return { valid: true };
+}
+```
+
 ## Key Points
-- WSS (TLS) encrypts all WebSocket traffic
 - Token authentication during upgrade or post-connection
 - Origin validation prevents cross-site hijacking
 - Rate limiting prevents connection and message flooding

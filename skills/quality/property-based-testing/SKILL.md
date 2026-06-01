@@ -140,8 +140,235 @@ Can you express a relation between input and output?
 - Parallel execution: Properties are independent and can run in parallel across worker processes
 - Shrinking budget: Some frameworks allow setting a shrinking time budget to prevent infinite shrinking loops
 
-## Rules
+## Property-Based Testing Examples
 
+### TypeScript/fast-check — Round-Trip Property
+```typescript
+import * as fc from "fast-check";
+
+// Property: encode/decode is a round-trip
+test("URL encoding and decoding round-trips correctly", () => {
+  fc.assert(
+    fc.property(fc.string({ minLength: 1 }), (raw: string) => {
+      const encoded = encodeURIComponent(raw);
+      const decoded = decodeURIComponent(encoded);
+      return decoded === raw;
+    }),
+  );
+});
+```
+
+### TypeScript/fast-check — Invariant Property
+```typescript
+// Property: sort always returns elements in non-decreasing order
+test("sort returns a sorted array", () => {
+  fc.assert(
+    fc.property(fc.array(fc.integer()), (arr: number[]) => {
+      const sorted = [...arr].sort((a, b) => a - b);
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i - 1] > sorted[i]) return false;
+      }
+      return true;
+    }),
+  );
+});
+```
+
+### TypeScript/fast-check — Idempotence Property
+```typescript
+// Property: removing duplicates is idempotent
+test("uniq is idempotent", () => {
+  fc.assert(
+    fc.property(fc.array(fc.integer()), (arr: number[]) => {
+      const once = uniq(arr);
+      const twice = uniq(once);
+      return JSON.stringify(once) === JSON.stringify(twice);
+    }),
+  );
+});
+```
+
+### Python/Hypothesis — Invariant Property
+```python
+from hypothesis import given, strategies as st
+from src.pricing import calculate_discount, PriceBreak
+
+@given(
+    quantity=st.integers(min_value=0, max_value=1000),
+    breaks=st.lists(
+        st.builds(PriceBreak,
+            quantity=st.integers(min_value=1, max_value=100),
+            discount_percent=st.decimals(min_value=0, max_value=100)
+        ),
+        min_size=0,
+        max_size=10,
+    ),
+)
+def test_discount_percent_is_never_negative(quantity, breaks):
+    discount = calculate_discount(quantity, breaks)
+    assert discount >= 0
+
+
+@given(
+    quantity=st.integers(min_value=0, max_value=1000),
+    breaks=st.lists(
+        st.builds(PriceBreak,
+            quantity=st.integers(min_value=1, max_value=100),
+            discount_percent=st.decimals(min_value=0, max_value=100)
+        ),
+        min_size=0,
+        max_size=10,
+    ),
+)
+def test_discount_percent_never_exceeds_100(quantity, breaks):
+    discount = calculate_discount(quantity, breaks)
+    assert discount <= 100
+```
+
+### Python/Hypothesis — Custom Strategy
+```python
+# Custom strategy for valid email addresses
+email_strategy = st.emails()
+
+@given(email_strategy)
+def test_email_validation(email):
+    assert is_valid_email(email)
+    assert "@" in email
+
+# Custom strategy for structured data
+user_strategy = st.fixed_dictionaries({
+    "name": st.text(min_size=1, max_size=100),
+    "age": st.integers(min_value=0, max_value=150),
+    "email": st.emails(),
+    "role": st.sampled_from(["admin", "user", "viewer"]),
+})
+
+@given(user_strategy)
+def test_user_creation(user):
+    result = create_user(user)
+    assert result["name"] == user["name"]
+    assert result["role"] in ["admin", "user", "viewer"]
+```
+
+### TypeScript/fast-check — Stateful Testing
+```typescript
+import * as fc from "fast-check";
+
+class CounterModel {
+  value: number = 0;
+}
+
+class IncrementCommand implements fc.Command<CounterModel, Counter> {
+  check = () => true;
+  async run(model: CounterModel, real: Counter): Promise<void> {
+    model.value += 1;
+    await real.increment();
+    expect(await real.get()).toBe(model.value);
+  }
+}
+
+test("counter behaves correctly under random commands", async () => {
+  await fc.assert(
+    fc.asyncProperty(
+      fc.commands([fc.constant(new IncrementCommand())], { size: "+1" }),
+      async (cmds) => {
+        const real = new Counter();
+        const model = new CounterModel();
+        const runner = fc.asyncModelRun(() => ({ model, real }));
+        await runner(cmds);
+      },
+    ),
+  );
+});
+```
+
+## CI Integration for Property-Based Tests
+
+```yaml
+# .github/workflows/pbt.yml
+name: Property-Based Tests
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * *"  # Nightly thorough run
+
+jobs:
+  fast:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npx vitest run --testPathPattern="\.pbt\.test\.ts$"
+        env:
+          PBT_RUNS: 100  # Fast: 100 runs per property
+      - name: Upload failing seeds
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failing-seeds
+          path: seeds/*.txt
+
+  thorough:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npx vitest run --testPathPattern="\.pbt\.test\.ts$" --reporter=junit
+        env:
+          PBT_RUNS: 10000  # Thorough: 10000 runs per property
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pbt-results
+          path: junit.xml
+      - name: Check shrinking quality
+        run: node scripts/check-shrinking-quality.js
+```
+
+## Property-Based Testing Anti-Patterns
+
+### Anti-Pattern: Heavy Generator Filtering
+Using `.filter()` that rejects more than 50% of generated values. This kills performance and breaks shrinking (shrinker gets confused by rejected values). Replace filters with constrained generators: `fc.integer({ min: 1 })` instead of `fc.integer().filter(n => n > 0)`.
+
+### Anti-Pattern: Testing Tautologies
+Writing properties that can never fail. Example: "the sum of two positive integers is positive" when the generator only produces positive integers. The property is a tautology — it encodes the generator constraint, not a system invariant.
+
+### Anti-Pattern: Insufficient Run Count
+Running only 10-20 iterations is not property-based testing — it's just random sampling with extra steps. The statistical power of PBT comes from many random tests. Minimum 100 runs for CI. Use 1000+ for thorough validation.
+
+### Anti-Pattern: Ignoring Shrinking Quality
+If the counterexample is still complex (100+ items instead of 1-3), the shrinker is not working effectively. Constrained generators shrink better: prefer `fc.integer({ min: 1, max: 100 })` over unbounded. Avoid `fc.anything()`.
+
+### Anti-Pattern: No Seed Capture
+When a property fails, the framework generates a seed that can reproduce the failure. If you don't log the seed, you cannot reproduce the failure deterministically. Always capture and store the failing seed alongside the counterexample.
+
+### Anti-Pattern: Stateful Test State Leakage
+Stateful property tests that share mutable state between command sequences produce irreproducible failures. Each test run must start from a clean state. Reset all state in beforeEach.
+
+## Property-Based Testing Maturity Model
+
+| Level | Characteristics | Practices |
+|---|---|---|
+| 1: Initial | No PBT | Example-based tests only, no property testing knowledge in team |
+| 2: Defined | Basic PBT adoption | Round-trip properties for serialization, basic generators, one or two team members proficient |
+| 3: Managed | Systematic PBT usage | All data transformation functions have properties, custom generators, shrinking optimization, stateful models for complex systems |
+| 4: Measured | PBT-integrated quality | Properties alongside examples for all critical logic, regression suite includes all counterexamples, CI has fast+thorough PBT stages |
+| 5: Optimized | Property-first development | Properties defined before implementation (PBT-driven development), mutation testing validates property quality, automated generator tuning |
+
+## Performance Considerations
+
+- Generator speed: most built-in generators < 50µs per value. Heavy filtering can increase to 1ms+.
+- Shrinking time: proportional to input complexity. Complex nested structures may take 100ms+ to shrink.
+- Memory: large generated objects consume significant memory. Set `maxLength`, `maxDepth` bounds.
+- CI execution budget: 100 runs × 50 properties × 10ms = 50 seconds for fast run. Plan 10-60 minutes for thorough run.
+- Adaptive depth: use environment variable for run count. `numRuns: process.env.CI ? (process.env.PBT_RUNS || 100) : 1000`.
+- Parallel execution: properties are independent and can run in parallel across workers. Use vitest sharding.
+
+## Rules
 1. Every property must have at least one corresponding example test for documentation
 2. Generator rejection rate must stay below 10% — rate-limit with constraints, not filters
 3. Every property test must capture and log the failing seed on failure
@@ -158,6 +385,8 @@ Can you express a relation between input and output?
 14. Performance properties must include baseline thresholds and alert on regression
 15. Resources (database connections, file handles) must be cleaned up after each property test
 16. CI must have separate fast (every commit) and thorough (nightly) property test stages
+17. Failing seeds must be committed alongside counterexample regression tests
+18. Generator complexity must be documented — understand what shapes your generators produce
 
 ## References
 - references/custom-generators.md — Custom Generators for Property-Based Testing

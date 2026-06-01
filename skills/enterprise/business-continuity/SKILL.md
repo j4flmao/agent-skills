@@ -8,7 +8,7 @@ description: >
   mapping, DR runbook structure, communication tree, executive crisis comms, vendor-lock fallback, and
   scheduled drill cadence. Do NOT use for: technical replication topology (see enterprise-high-availability),
   infrastructure DR setup (see devops-backup-dr), or incident-response paging (see devops-incident-response).
-version: "2.0.0"
+version: "2.1.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -58,6 +58,23 @@ Recovery Cost: Overtime, vendor emergency fees, expedited shipping, cloud spike 
 Customer Impact: Churn rate acceleration. Post-outage support volume. SLA credit payouts.
 
 Compute MAO (Maximum Acceptable Outage) as the intersection of financial survivability and stakeholder tolerance.
+
+## Architecture / Decision Trees
+
+### Recovery Strategy Selection
+| Strategy | RPO | RTO | Cost | Complexity | Best For |
+|----------|-----|-----|------|------------|----------|
+| Active-Active | <1s | <1min | 2x-3x | High | Tier-1 revenue-critical |
+| Active-Passive | <5min | <15min | 1.5x-2x | Medium | Tier-1 and Tier-2 |
+| Backup-Restore | 1-24h | 4-48h | 1x-1.2x | Low | Tier-2 and Tier-3 |
+| Manual Workaround | N/A | 24h+ | Minimal | N/A | Tier-4 |
+
+### Service Criticality Tier Decision Tree
+1. Is the service customer-facing? → If yes, minimum Tier-2
+2. Does it directly process revenue? → If yes, minimum Tier-1
+3. Does it handle regulated data (PII, PHI, PCI)? → If yes, minimum Tier-1
+4. Is there a manual workaround? → If yes, can be Tier-3 or Tier-4
+5. What is the cost-per-hour of downtime? → If >$10K/hr, minimum Tier-2; >$100K/hr, Tier-1
 
 ## Agent Protocol
 
@@ -266,6 +283,17 @@ Practice 5: Pre-declare war-room channels and tools. Slack channel naming conven
 
 Practice 6: Cross-train for key roles. Incident commander, scribe, comms lead, and technical lead should all have backups. Rotate role assignments in drills so everyone is familiar.
 
+## Standards Alignment
+
+| Standard | Requirement | BCP Mapping |
+|----------|-------------|-------------|
+| ISO 22301 | Business continuity management system | Full BCP framework |
+| ISO 27031 | ICT readiness for business continuity | IT/DR component |
+| NIST SP 800-34 | Contingency planning | DR runbooks, testing |
+| SOC 2 | Business continuity / disaster recovery | BCP, DR tests, evidence |
+| HIPAA | 164.308(a)(7) - Contingency Plan | Emergency mode, backup, DR |
+| PCI DSS | Requirement 12 - Information Security Policy | BCP including CDE recovery |
+
 ## Templates & Tools
 
 ### BCP Document Structure
@@ -294,6 +322,149 @@ Practice 6: Cross-train for key roles. Incident commander, scribe, comms lead, a
 - LastPass / 1Password for credential escrow
 - Lucidchart / Draw.io for dependency mapping
 - Splunk / DataDog for monitoring and alert correlation
+
+### BIA Calculation Spreadsheet Model
+```
+Revenue Impact = (Avg Revenue per Hour × Outage Duration) + (Churn Rate × CLV × Affected Users)
+Productivity Impact = (Affected Employees × Blended Hourly Rate × Outage Duration)
+Regulatory Impact = Base Fine + (Affected Records × Per-Record Penalty)
+Recovery Cost = (Overtime Hours × OT Rate) + Emergency Vendor Fees + Cloud Spike Costs
+Total Cost of Outage = Revenue + Productivity + Regulatory + Recovery
+```
+
+## Code Examples
+
+### BIA Calculator (Python)
+```python
+class BusinessImpactAnalysis:
+    def __init__(self, service_name, revenue_per_hour, affected_users, churn_rate=0.05):
+        self.service_name = service_name
+        self.revenue_per_hour = revenue_per_hour
+        self.affected_users = affected_users
+        self.churn_rate = churn_rate
+
+    def revenue_impact(self, hours):
+        return self.revenue_per_hour * hours
+
+    def churn_impact(self, clv=500):
+        return self.affected_users * self.churn_rate * clv
+
+    def regulatory_fine(self, records_exposed=0, per_record_penalty=0):
+        return records_exposed * per_record_penalty
+
+    def mao_hours(self, max_financial_loss=100000):
+        return max_financial_loss / (self.revenue_per_hour + (self.affected_users * self.churn_rate * 500 / 8760))
+
+    def tier_classify(self):
+        rph = self.revenue_per_hour
+        if rph > 100000 or self.affected_users > 1000000:
+            return "Tier-1"
+        elif rph > 10000 or self.affected_users > 100000:
+            return "Tier-2"
+        elif rph > 1000:
+            return "Tier-3"
+        return "Tier-4"
+
+checkout = BusinessImpactAnalysis("Checkout", 50000, 100000)
+print(checkout.mao_hours())  # Max hours before $100K loss
+```
+
+### Dependency Graph Builder (YAML)
+```yaml
+services:
+  checkout:
+    tier: 1
+    rto: 15m
+    rpo: 1m
+    dependencies:
+      - payment-service
+      - inventory-service
+      - auth-service
+    vendors:
+      stripe: { sla: "99.95%", fallback: adyen }
+    dr_runbook: runbooks/checkout-dr.md
+
+  payment-service:
+    tier: 1
+    rto: 15m
+    rpo: 1m
+    dependencies:
+      - db-payments
+    vendors:
+      stripe: { sla: "99.95%", fallback: adyen }
+```
+
+### DR Runbook Template (Markdown)
+```markdown
+# DR Runbook: {Service Name}
+## Tier: {1-4} | RTO: {time} | RPO: {time}
+
+### Detection
+- Alert: {metric} crosses {threshold}
+- Monitoring: {dashboard URL}
+
+### Decision
+- Declare incident when: {criteria}
+- Decision authority: {role}
+
+### First 30 Minutes
+1. {immediate action}
+2. {parallel workstream}
+3. {containment step}
+
+### Recovery Procedure
+1. {step 1}
+2. {step 2}
+3. {verification step}
+
+### Rollback
+- Trigger if: {condition}
+- Procedure: {steps}
+
+### Communication
+- Internal: {Slack channel}
+- Status page: {URL}
+- Executive: {contact}
+- Regulatory: {notification timeline}
+```
+
+### Chaos Engineering Scenario (Python/Gremlin)
+```python
+# Example: Kill a region to test failover
+scenario = {
+    "name": "us-east-1-region-failure",
+    "target": "checkout-service",
+    "attack": {
+        "type": "blackhole",
+        "target": "us-east-1",
+        "duration": 3600
+    },
+    "hypothesis": "Traffic routes to us-west-2 within 30s with <1% error rate",
+    "probes": [
+        "http_get https://checkout.example.com/health",
+        "metric_query 'aws_alb_target_response_time'",
+        "metric_query 'aws_alb_error_rate_5xx'"
+    ],
+    "rollback": "dns_failover_to_us_west_2"
+}
+```
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Bypassing the BIA
+Skipping the Business Impact Analysis and guessing RTO/RPO leads to either over-engineered (waste) or inadequate (risk) DR. Teams set RTO=1h because "that sounds right" without knowing the actual MAO. This results in spending $50K/month on multi-region replication for a service that could tolerate 24h of downtime.
+
+### Anti-Pattern 2: Single-Threaded Runbook Ownership
+One person writes and maintains all runbooks. When that person leaves or is unavailable, no one knows how to execute DR. Runbooks become stale because the single owner is a bottleneck. Every runbook must have a secondary owner and be reviewed quarterly.
+
+### Anti-Pattern 3: DR Plan That Requires the DR Team
+If executing the runbook requires SSH access to production, database credentials, and intimate knowledge of the architecture, the plan will fail when the primary engineers are unavailable. Runbooks must be executable by any on-call engineer with standard access.
+
+### Anti-Pattern 4: Testing Only Happy Path
+Every drill succeeds because everyone knows the scenario in advance and prepares. The real value is in testing failure modes: partial failure, cascading failure, network partition, corrupted data. Test with chaos engineering in production.
+
+### Anti-Pattern 5: BCP Written for the Last Disaster
+Plans reflect the last outage rather than anticipating future threats. If the last disaster was a cloud region failure, the plan focuses on multi-region. Meanwhile, a ransomware or supply-chain attack would bypass those defenses. Use threat modeling to identify current risks, not historical ones.
 
 ## Case Studies
 
@@ -334,6 +505,7 @@ A fintech startup lost their only infrastructure engineer with root access to al
   - references/ransomware-playbook.md -- Ransomware Playbook
   - references/regional-failure.md -- Regional Failure -- Multi-Region Playbook
   - references/vendor-risk.md -- Vendor Risk -- Classification, Fallback, SLA Monitoring
+  - references/third-party-continuity.md -- Third Party and Supply Chain Continuity
 ## Handoff
 - `enterprise-high-availability` for technical replication / failover design.
 - `enterprise-sla-management` for customer SLA structure and credit calculations.

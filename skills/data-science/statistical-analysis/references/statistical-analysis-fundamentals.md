@@ -1,213 +1,150 @@
 # Statistical Analysis Fundamentals
 
 ## Overview
-Statistical Analysis is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Statistical analysis provides the mathematical foundation for extracting insights from data, quantifying uncertainty, and making data-driven decisions. This reference covers descriptive and inferential statistics, hypothesis testing, regression modeling, time series analysis, and practical considerations for production data analysis.
 
-## Core Concepts
+## Descriptive Statistics
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Statistical Analysis helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Measures of Central Tendency
+Mean (arithmetic average): sensitive to outliers, appropriate for symmetric distributions. Median (50th percentile): robust to outliers, appropriate for skewed distributions (income, latency). Mode: most frequent value, used for categorical data. Trimmed mean removes extreme percentiles (5% each side) for a compromise between mean and median.
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Statistical Analysis solutions. These principles help maintain code quality and reduce technical debt.
+### Measures of Dispersion
+Variance: average squared deviation from mean, σ² = Σ(xᵢ - μ)² / n. Standard deviation: square root of variance, same units as data. IQR: Q3 - Q1, robust measure of spread. MAD (Median Absolute Deviation): median of |xᵢ - median(x)|, robust alternative to SD. Range: max - min, highly sensitive to outliers. Coefficient of variation: σ/μ, useful for comparing variability across different scales.
 
-### Concept 3: Data Management
-Proper data management is essential for Statistical Analysis. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Distribution Moments
+First moment: mean (location). Second moment: variance (spread). Third moment: skewness (asymmetry) — positive skew (right tail), negative skew (left tail), zero (symmetric). Fourth moment: kurtosis (tail thickness) — mesokurtic (normal), leptokurtic (heavy tails, fat tails risk), platykurtic (light tails). Jarque-Bera and D'Agostino-Pearson tests for normality based on skewness and kurtosis.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+### Data Visualization
+Histogram: bin counts for distribution shape (choose bins via Sturges' rule, Scott's rule, or FD estimator). Box plot: median, IQR, whiskers (1.5×IQR), outliers as points. Violin plot: box plot + KDE density. Q-Q plot: theoretical vs sample quantiles for distribution comparison. ECDF: empirical cumulative distribution function — no binning artifacts.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+## Probability Distributions
 
-## Architecture Patterns
+### Discrete Distributions
+Bernoulli: single trial, success/failure, parameter p. Binomial: n Bernoulli trials, parameters (n, p). Poisson: count of events in fixed interval, parameter λ (mean = variance). Negative Binomial: count of failures before r successes, handles overdispersion (variance > mean). Geometric: trials until first success.
 
-### Pattern 1: Standard Architecture
-The standard architecture for Statistical Analysis follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+### Continuous Distributions
+Normal: symmetric bell curve, parameters (μ, σ), CLT, ubiquitous. Student's t: heavier tails than normal, used for small samples, parameter df. Chi-square: sum of squared standard normals, goodness-of-fit, variance tests. F: ratio of two chi-squares, ANOVA and model comparison. Exponential: time between Poisson events, memoryless property. Beta: bounded [0,1], prior for proportions, parameters (α, β). Log-normal: ln(X) is normal, positive skew, multiplicative processes. Weibull: time-to-event, flexible hazard shapes (increasing, decreasing, constant).
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+## Inferential Statistics
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Sampling Distributions
+CLT: sample mean of i.i.d. variables with finite variance is approximately normal for large n (n ≥ 30 rule of thumb, but depends on underlying distribution skewness). Standard error: SD of sampling distribution, SE = σ/√n. Bootstrap: resample with replacement B times (B=1000+), compute statistic each time, use empirical distribution for inference.
 
-## Implementation Guide
+### Confidence Intervals
+CI = estimate ± critical_value × SE. z-based: normal distribution (known σ, large n). t-based: t distribution (unknown σ, small n), t_df. Wilson score interval: better coverage for binomial proportions than normal approximation. Bootstrap percentile CI: 2.5th and 97.5th percentiles of bootstrap distribution for 95% CI. Bootstrapped BCa (bias-corrected accelerated): adjusts for skewness and bias. CI interpretation: 95% of such intervals will contain the true parameter — NOT "95% probability parameter is in this interval" (frequentist).
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Hypothesis Testing Structure
+Define H₀ (null: no effect, difference = 0) and H₁ (alternative: effect exists). Choose α (Type I error rate, typically 0.05). Calculate test statistic and p-value. p-value = P(data or more extreme | H₀). Reject H₀ if p < α. Report: test statistic, df, p-value, CI, effect size. Never conclude "accept H₀" — fail to reject. Pre-register analysis to prevent p-hacking.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Common Hypothesis Tests
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+| Test | Purpose | Assumptions |
+|---|---|---|
+| One-sample t-test | Mean vs known value | Normality, independence |
+| Two-sample t-test | Compare two independent means | Normality, equal variance, independence |
+| Paired t-test | Compare two dependent means (pre/post) | Normality of differences |
+| Welch's t-test | Two means, unequal variances | Normality, independence |
+| One-way ANOVA | Compare ≥3 means | Normality, equal variance, independence |
+| Chi-square test | Association between categorical variables | Expected count ≥5, independence |
+| Fisher's exact | Small contingency tables | Fixed margins, independence |
+| Mann-Whitney U | Compare two distributions (non-parametric) | Same shape, independence |
+| Wilcoxon signed-rank | Paired comparison (non-parametric) | Symmetry of differences |
+| Kolmogorov-Smirnov | Compare two distributions | Continuous data |
+| Shapiro-Wilk | Test normality | N < 5000 |
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+## Regression Analysis
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+### Linear Regression
+Model: Y = β₀ + β₁X₁ + ... + βₚXₚ + ε, where ε ~ N(0, σ²). OLS minimizes sum of squared residuals. R² = 1 - SS_res / SS_tot, proportion of variance explained. Adjusted R² penalizes for number of predictors. F-test: overall model significance. t-tests: individual coefficients. Interpretation: βⱼ is change in Y for one-unit change in Xⱼ holding others constant. Standardize predictors (z-scores) for comparing effect magnitudes.
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### Logistic Regression
+Model: log(p/(1-p)) = β₀ + β₁X₁ + ... + βₚXₚ. Estimates log-odds. Exponentiate for odds ratios: exp(βⱼ). Interpretation: one-unit increase in Xⱼ multiplies odds by exp(βⱼ). Fit via maximum likelihood (iteratively reweighted least squares). Deviance: -2 × log-likelihood, analogous to SS_res. AIC/BIC for model selection. Hosmer-Lemeshow test for calibration. ROC-AUC for discrimination.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+### Regression Assumptions
+Linearity: relationship between X and Y is linear (partial residual plots). Independence: errors are independent. Homoscedasticity: constant variance of errors (Breusch-Pagan test, residual-vs-fitted plot). Normality of errors: Q-Q plot, Shapiro-Wilk (robust with large n). No perfect multicollinearity: VIF > 5-10 indicates collinearity concern. No autocorrelation: Durbin-Watson test for time-ordered data.
+
+### Regularized Regression
+Ridge (L2): adds λ×Σβⱼ² to loss — shrinks coefficients toward zero, no variable selection. Lasso (L1): adds λ×Σ|βⱼ| to loss — shrinks to zero for variable selection. Elastic Net: combines L1 and L2 — α balances mix. Tuning λ via cross-validation. Standardize predictors first. Best for: high-dimensional data, correlated predictors, automatic feature selection.
+
+## Time Series Analysis
+
+### Components
+Trend: long-term direction (upward, downward, stable). Seasonality: periodic patterns (hourly, daily, weekly, yearly). Cyclical: longer-term non-fixed cycles (economic cycles). Residual: irregular component after removing trend and seasonality. Decomposition: additive (Y = T + S + R) or multiplicative (Y = T × S × R). STL decomposition: robust, seasonal-trend decomposition using LOESS.
+
+### Stationarity
+Weak stationarity: constant mean, constant variance, autocovariance depends only on lag. Strong stationarity: full joint distribution is time invariant. Unit root tests: Augmented Dickey-Fuller (H₀: unit root/non-stationary), KPSS (H₀: stationary). Differencing: ∇Y_t = Y_t - Y_{t-1}, apply d times for I(d) process.
+
+### ARIMA Models
+AR(p): Y_t = c + φ₁Y_{t-1} + ... + φₚY_{t-p} + ε_t. MA(q): Y_t = c + ε_t + θ₁ε_{t-1} + ... + θ_qε_{t-q}. ARIMA(p,d,q): AR on d-differenced data + MA. ACF plot: identifies MA order (cuts after q). PACF plot: identifies AR order (cuts after p). AIC/BIC for model selection among candidates. Seasonal ARIMA SARIMA(p,d,q)(P,D,Q)_s adds seasonal terms.
+
+### Forecasting Evaluation
+Training/test split (temporal order maintained). Rolling window or expanding window cross-validation. Metrics: MAE, RMSE (same units as data), MAPE (scale-independent, undefined for zeros), MASE (scales by naive forecast). Forecast vs actuals plots. Prediction intervals not just point forecasts. Diebold-Mariano test for comparing forecast accuracy of two methods.
+
+## Effect Sizes and Practical Significance
+
+### Common Effect Sizes
+Cohen's d: (μ₁ - μ₂) / σ_pooled — standardized mean difference (small=0.2, medium=0.5, large=0.8). Pearson's r: correlation strength. Odds ratio: odds in group 1 / odds in group 2. Risk ratio: P(event | group 1) / P(event | group 2). Hedges' g: Cohen's d with small sample correction. Glass's Δ: (μ₁ - μ₂) / σ_control when variances differ.
+
+### Practical vs Statistical Significance
+Statistical significance: p < α (did the effect occur?). Practical significance: effect size > minimum meaningful threshold (does it matter?). A large sample can make trivial effects statistically significant. Always report both p-value and effect size with CI. Cost-benefit analysis: is implementing the change worth the resources?
+
+## Bayesian Statistics
+
+### Bayes Theorem
+P(θ | data) = P(data | θ) × P(θ) / P(data). Posterior = likelihood × prior / evidence. Prior: beliefs before seeing data (informative, weakly informative, uninformative). Conjugate priors: prior and posterior from same family (Beta-Binomial, Normal-Normal, Gamma-Poisson). MCMC: Markov Chain Monte Carlo for non-conjugate models (Metropolis-Hastings, Gibbs, NUTS in Stan/PyMC).
+
+### Bayesian Analysis Workflow
+1. Model specification: likelihood, prior, generative model
+2. Prior predictive check: simulate from prior — does it generate plausible data?
+3. MCMC sampling: 4 chains × 2000 iterations (keep 1000 per chain after warmup)
+4. Convergence diagnostics: R-hat < 1.01, ESS > 400, trace plots well-mixed
+5. Posterior predictive check: simulate from posterior — does it replicate observed data?
+6. Report: posterior mean, 94% HDI (highest density interval), probability of direction
+
+## Statistical Assumptions and Robustness
+
+### Robust Alternatives
+When normality fails: Mann-Whitney (instead of t-test), Kruskal-Wallis (instead of ANOVA), Spearman rank correlation (instead of Pearson). When variances unequal: Welch's t-test, heteroskedasticity-consistent SEs (HC0-HC4). When outliers present: trimmed means, Huber-White robust regression, quantile regression. Transformations: log(y) for positive skew, Box-Cox for optimizing normality.
+
+### Multiple Testing
+Family-wise error rate (FWER): Bonferroni (α/m), Holm-Bonferroni. False discovery rate (FDR): Benjamini-Hochberg, Benjamini-Yekutieli. Control for: post-hoc comparisons, multiple outcomes, subgroup analyses, sequential testing. Pre-registration and clear boundaries matter. Report all tests performed, not just significant ones.
+
+## Data Quality for Analysis
+
+### Missing Data Mechanisms
+MCAR (Missing Completely at Random): missingness independent of all variables — listwise deletion OK (reduces power). MAR (Missing at Random): missingness depends on observed data — multiple imputation (MICE, predictive mean matching). MNAR (Missing Not at Random): missingness depends on unobserved data — pattern mixture models, selection models, sensitivity analysis. Report missingness rates and handle transparently.
+
+### Outlier Detection
+Z-score: |z| > 3 flags outlier (parametric). IQR: below Q1 - 1.5×IQR or above Q3 + 1.5×IQR (standard box plot rule). Isolation Forest: tree-based anomaly detection for high dimensions. DBSCAN: density-based clustering with noise points. Domain-specific thresholds are preferred. Always investigate outliers before removing.
+
+### Data Transformations
+Log: positive data, multiplicative effects become additive, reduces right skew. Square root: count data, Poisson-like. Box-Cox: (x^λ - 1)/λ for λ ≠ 0, log(x) for λ = 0 — finds optimal normality-enhancing transformation. Yeo-Johnson: handles zero and negative values. Standardization (z-score): (x - μ)/σ for comparing coefficients. Normalization (min-max): (x - min)/(max - min), range [0,1].
+
+## Statistical Computing Best Practices
+
+### Reproducibility
+Seed random number generators (set.seed in R, np.random.seed in Python). Version control data processing and analysis code. Use literate programming (Jupyter with clear markdown, R Markdown, Quarto). Dependency management: requirements.txt, renv, conda environment.yml. Output pinning: save processed datasets and results (avoid re-running from scratch).
+
+### Software
+
+| Tool | Strengths | Use Case |
+|---|---|---|
+| R | Comprehensive stats packages, R Markdown | Academic research, exploratory analysis |
+| Python (SciPy, statsmodels) | ML integration, production deployment | Production stats, ML pipelines |
+| Python (scikit-learn) | ML-focused, regression, clustering | Predictive modeling |
+| JASP | GUI-based, Bayesian and frequentist | Non-coders, education |
+| SPSS/SAS | GUI, enterprise, regulatory | Regulated industries (pharma, clinical) |
+| Stan/PyMC | Bayesian modeling, MCMC | Custom Bayesian models |
+| Stata | Panel data, econometrics | Social science, economics |
 
 ## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
-
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Statistical Analysis concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- Visualize data before any statistical testing
+- Check assumptions before choosing a test
+- Power analysis should precede data collection
+- Pre-register analysis plan to prevent specification searching
+- Report effect sizes and CIs, not just p-values
+- Document data inclusion/exclusion criteria
+- Use robust standard errors when assumptions are uncertain
+- Replicate findings on holdout samples
+- Version control analysis code and outputs
+- Always run sensitivity analyses to test assumptions

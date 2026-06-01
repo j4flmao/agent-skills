@@ -1,213 +1,74 @@
-# Ionic Capacitor Fundamentals
+# Ionic & Capacitor Fundamentals
 
 ## Overview
-Ionic Capacitor is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Ionic is a hybrid mobile framework using web technologies (HTML, CSS, JavaScript/TypeScript) wrapped in a native WebView. Capacitor is the modern native bridge that provides access to device APIs. Ionic apps run on iOS, Android, and the web with shared code.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Ionic Capacitor helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### WebView Rendering
+Ionic apps render in a WebView (WKWebView on iOS, Android WebView). UI is built with web components — not native UI controls. Styling with standard CSS. Performance bound by WebView capabilities. Can be enhanced with native UI when needed.
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Ionic Capacitor solutions. These principles help maintain code quality and reduce technical debt.
+### Capacitor Plugins
+Capacitor provides a plugin system for native API access. Official plugins: Camera, Geolocation, Filesystem, Push Notifications, Storage, Network. Community plugins extend functionality. Custom plugins for app-specific native features. Import from `@capacitor/*` packages.
 
-### Concept 3: Data Management
-Proper data management is essential for Ionic Capacitor. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Ionic Components
+Library of pre-built UI components (`ion-button`, `ion-card`, `ion-list`, `ion-modal`). Components are web components (custom elements) built with Stencil compiler. Styled with CSS custom properties for theming. Responsive across mobile and tablet. Accessible by default.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Angular, React, Vue
+Ionic supports framework integrations: @ionic/angular, @ionic/react, @ionic/vue. Use your preferred framework for app logic. Ionic CLI generates framework-specific projects. Same Ionic components, different framework wrappers. Navigation uses framework router integration.
 
 ## Architecture Patterns
 
-### Pattern 1: Standard Architecture
-The standard architecture for Ionic Capacitor follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+### Single Page Application (SPA)
+Ionic apps are SPAs — one HTML page, client-side routing. Navigation stack managed by framework router (Angular Router, React Router, Vue Router). Page transitions use Ionic's built-in animation system. Stack navigation for native-like back button behavior.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### Portals (Web to Native)
+Ionic Portals embeds web content in native apps. Create a Portal (web app URL or local build) and display in native ViewController. Two-way communication via Portals API. Micro-frontend architecture for hybrid teams. Use for gradual migration from web to native.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Offline-First with Capacitor
+Capacitor Storage for key-value persistence. SQLite via `@capacitor-community/sqlite`. Network detection with `@capacitor/network`. Cache API responses using CacheStorage. Sync when online via background tasks. Ionic's native-like UX even offline.
 
-## Implementation Guide
+## Data Management
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Capacitor Preferences
+Simple key-value storage for app settings. Async API, platform-backed (UserDefaults on iOS, SharedPreferences on Android). `Preferences.set({ key, value })` / `Preferences.get({ key })`. Not encrypted — use secure storage for sensitive data. Max capacity: platform-dependent (~6MB on Android).
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### SQLite for Complex Data
+`@capacitor-community/sqlite` provides full SQLite access. Create/query/update databases from JavaScript. Supports migrations and prepared statements. Better than Preferences for structured data. Use `typeorm` or custom query builder for ORM.
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+### Filesystem
+`@capacitor/filesystem` for reading/writing files. Directories: `Documents`, `Cache`, `Data`, `External`. `Filesystem.writeFile({ path, data, directory })`. Read with `Filesystem.readFile()`. Cache directory auto-cleared by OS.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+## Security Fundamentals
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+### HTTPS Requirement
+All network requests must be HTTPS. Configure `allowNavigation` in `capacitor.config.json` for allowed hosts. Content Security Policy (CSP) headers. Disable cleartext traffic on Android via network security config. ATS blocks cleartext on iOS.
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### Secure Storage
+`@capacitor/preferences` wraps UserDefaults/SharedPreferences — not encrypted. Use `@aparajita/capacitor-secure-storage` for iOS Keychain and Android EncryptedSharedPrefs. Store tokens, keys, and PII in secure storage. Never log sensitive values.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+### SSL Pinning
+Capacitor supports SSL pinning via `capacitor-ssl-pinning` plugin or network security config (Android). Pin SHA-256 hash of public key. Include backup pins for rotation. Test by proxying through mitmproxy.
 
-## Best Practices
+## Build & Dependency Management
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+### Ionic CLI
+`ionic start` for project creation. `ionic serve` for web-based development. `ionic build` for production web build. `ionic cap add ios/android` for native project generation. `ionic cap sync` to copy web build to native project. `ionic cap open ios` to open Xcode.
 
-## Common Pitfalls
+### Capacitor Configuration
+`capacitor.config.json` configures app name, bundle ID, server URL. `webDir` points to built web assets. `server.url` for live reload during development. `plugins` section for plugin-specific configuration. `android`/`ios` sections for platform overrides.
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+### E2E Testing
+Cypress or Playwright for web-based testing (most logic in web). Detox for native E2E on real devices/emulators. Appium for cross-platform automated UI testing. Test WebView behavior on both iOS and Android. Focus on native bridge interactions.
 
 ## Key Points
-- Understand core Ionic Capacitor concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- WebView-based (WKWebView on iOS, Android WebView)
+- Capacitor provides native plugin bridge (not Cordova)
+- Framework-agnostic: Angular, React, Vue supported
+- Ionic components are web components (Stencil-based)
+- @capacitor/preferences for simple key-value storage
+- @capacitor-community/sqlite for complex relational data
+- HTTPS required; configure allowNavigation for internal hosts
+- Secure storage plugin for Keychain/EncryptedSharedPrefs support
+- `ionic cap sync` propagates web changes to native projects
+- Portals for embedding web in native micro-frontends

@@ -1,214 +1,192 @@
-# Pm Advanced Topics
+# PM Advanced Topics
 
 ## Introduction
-Advanced Pm topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Advanced project management covers adaptive and hybrid approaches, quantitative risk analysis, earned value management at depth, portfolio management, stakeholder negotiation, and organizational change management.
 
-## Advanced Architecture Patterns
+## Adaptive and Hybrid Approaches
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+### When to Use Hybrid
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+Not all projects fit pure predictive (Waterfall) or pure adaptive (Agile). Hybrid combines both:
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+**Use hybrid when**:
+- Requirements are clear for some parts, uncertain for others
+- Regulatory/compliance elements need upfront documentation
+- Integration with existing systems has known specifications
+- Innovation/exploration elements need iterative approach
+- Team has mixed experience (some Waterfall, some Agile)
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+**Hybrid patterns**:
+- Waterfall at program level, Agile at team level (SAFe-style)
+- Predictive for planning and requirements, adaptive for delivery
+- Agile development with milestone-based governance
+- Fixed-price contract with variable scope (agile delivery)
 
-## Performance Optimization
+### Hybrid Governance Model
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+**Stage gates** for funding and oversight:
+```
+Gate 1 — Feasibility → Gate 2 — Planning → Gate 3 — Execution (iterative) → Gate 4 — Close
+  (charter)            (detailed plan)       (sprint cycles)                  (handoff)
+```
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+Within each stage: iterative delivery, adaptive planning, continuous stakeholder feedback.
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+**Governance board reviews**: at gates. Reviews: business case still valid, budget on track, risks managed, benefits achievable. Within gates: team autonomous.
 
-## Security Hardening
+### Quantitative Risk Analysis
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+### Monte Carlo for Schedule
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+Process:
+1. Identify all tasks with uncertain durations
+2. Assign three-point estimates (optimistic, most likely, pessimistic)
+3. Define task dependencies (predecessors, successors)
+4. Run 10,000+ simulations
+5. Analyze completion date probability distribution
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+**Output**:
+```
+Completion Probability:
+Date            Probability
+March 15        5% (P5 - best case)
+April 1         50% (P50 - median forecast)
+April 15        85% (P85 - commitment target)
+May 1           95% (P95 - worst case)
+```
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+Use P50 for planning, P85 for commitments, P95 for contingency reserves.
 
-## Monitoring and Observability
+### Decision Tree Analysis
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+Evaluate alternative paths with probability-weighted outcomes:
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+**Example: Build vs Buy vs Partner**:
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+```
+Build ($500K)
+├── 60% succeed: $2M value → net $1.5M
+└── 40% delays/bugs: $800K value → net $300K
+Expected value: 0.6 × $1.5M + 0.4 × $300K = $1.02M
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+Buy ($200K license + $100K integration)
+├── 80% integrate: $1.8M value → net $1.5M
+└── 20% rework: $1M value → net $700K
+Expected value: 0.8 × $1.5M + 0.2 × $700K = $1.34M
 
-## Scalability and Reliability
+Partner ($300K + revenue share 20%)
+├── 70% successful: $1.5M value → net $900K
+└── 30% partnership issues: $700K → net $100K
+Expected value: 0.7 × $900K + 0.3 × $100K = $660K
+```
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+Buy option has highest expected value. But also consider risk tolerance and strategic factors.
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+## Advanced Earned Value Management
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+### EVM Deep Dive
 
-## Integration and Interoperability
+**Key metrics**:
+- **BAC** (Budget at Completion): total planned budget
+- **PV** (Planned Value): budgeted cost of work scheduled to date
+- **EV** (Earned Value): budgeted cost of work actually completed
+- **AC** (Actual Cost): actual cost of work completed
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+**Variance analysis**:
+- **SV** (Schedule Variance) = EV - PV (negative = behind schedule)
+- **CV** (Cost Variance) = EV - AC (negative = over budget)
+- **SPI** (Schedule Performance Index) = EV / PV (< 1.0 = behind)
+- **CPI** (Cost Performance Index) = EV / AC (< 1.0 = over budget)
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+**Forecasting**:
+- **EAC** (Estimate at Completion) = BAC / CPI (if trend continues)
+- **EAC** = AC + (BAC - EV) / CPI (if remaining work at current efficiency)
+- **ETC** (Estimate to Complete) = EAC - AC
+- **TCPI** (To Complete Performance Index) = (BAC - EV) / (BAC - AC) (efficiency needed for remaining work)
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+### EVM for Agile
 
-## DevOps and Automation
+Adapt EVM for iterative delivery:
+- Convert story points to budgeted cost
+- PV = planned points per sprint × cost per point
+- EV = completed points × cost per point
+- Track CPI per sprint; investigate downward trends
+- Forecast completion based on historical velocity, not EVM formulas
 
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
+**Agile EVM metrics**:
+- **SPI** = completed points / planned points (> 1.0 = ahead)
+- **CPI** = budgeted cost / actual cost (> 1.0 = under budget)
+- **BAC** = total planned points × planned cost per point
 
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
+## Dependency Management at Scale
 
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+### Dependency Types
 
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
+**Hard dependency**: Task A cannot start until Task B finishes. Fixed sequence.
+**Soft dependency**: Task A could start but it's more efficient after Task B. Schedule optimization.
+**External dependency**: depends on third party outside project control. High risk.
 
-## Data Management
+### Dependency Management Process
 
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
+1. **Identify**: list all cross-team and external dependencies during planning
+2. **Document**: dependency ID, description, type, owner, target date
+3. **Visualize**: dependency board or matrix showing all dependencies
+4. **Track**: review at standup, update dates, escalate blockers
+5. **Mitigate**: parallel work where possible, buffer for external deps
 
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
+### Dependency Risk Mitigation
 
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
+For critical external dependencies:
+- Regular check-ins with external party (weekly)
+- Early warning triggers for delays
+- Fallback plan if dependency fails
+- Buffer in schedule for external delay
+- Escalation path for blocked dependencies
+- Contractual SLAs where feasible
 
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
+## Portfolio Management
 
-## API Design and Management
+### Project Prioritization
 
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
+**Weighted scoring model**:
+```
+Criteria            | Weight | Project A | Project B | Project C
+Strategic alignment | 30%    | 8 (2.4)    | 6 (1.8)    | 9 (2.7)
+ROI                 | 25%    | 7 (1.75)   | 9 (2.25)   | 5 (1.25)
+Risk level          | 20%    | 6 (1.2)    | 5 (1.0)    | 8 (1.6)
+Resource available  | 15%    | 9 (1.35)   | 4 (0.6)     | 7 (1.05)
+Time to market      | 10%    | 8 (0.8)    | 7 (0.7)     | 6 (0.6)
+Total score         | 100%   | 7.5        | 6.35        | 7.2
+```
 
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
+Higher score = higher priority. Review quarterly.
 
 ### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
 
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
+Map demand (project requests) against capacity (available team time):
+- Total team capacity = headcount × available hours × 0.8 (overhead factor)
+- Calculate demand in same units
+- Visualize demand vs capacity over next 2-4 quarters
+- Identify over-allocation periods
+- Make tradeoff decisions: descope, defer, add resources, reduce scope
 
-## Cloud and Infrastructure
+### Benefits Realization
 
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
+Track whether projected benefits actually materialize:
+- Define measurable benefit metrics at project approval
+- Establish baseline measurement before project starts
+- Measure benefits at 6, 12, 24 months post-completion
+- Document variance from projections
+- Feed into future estimates and business case accuracy
 
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+## Key Points
+- Hybrid combines predictive (planning/governance) with adaptive (delivery)
+- Monte Carlo schedule simulation provides probability-based completion forecasts (P50, P85, P95)
+- Decision trees evaluate alternatives with probability-weighted expected values
+- EVM integrates scope, schedule, and cost — CPI < 0.9 needs intervention
+- TCPI tells you the efficiency needed to finish on budget
+- Dependency management: identify, visualize, track, mitigate, have fallback
+- Weighted scoring prioritizes projects across criteria
+- Capacity planning: total demand vs available capacity
+- Benefits realization closes the loop — track actual vs projected
+- Risk reserve = contingency (known risks) + management reserve (unknowns)

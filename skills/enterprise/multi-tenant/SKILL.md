@@ -4,7 +4,7 @@ description: >
   Use this skill when designing or managing multi-tenant SaaS architectures.
   This skill enforces: tenant isolation, lifecycle management, data boundary enforcement.
   Do NOT use for: single-tenant deployments, B2C monoliths, infrastructure provisioning.
-version: "2.0.0"
+version: "3.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -51,6 +51,22 @@ Hybrid: Use different isolation levels for different parts of the application. E
 
 Multi-model: Different customers get different isolation levels based on their compliance needs. Platinum customers get dedicated DB, standard customers get shared schema, basic customers get row-level. This adds complexity but optimizes cost.
 
+### Tenant Hierarchy and Data Residency
+
+Tenant Hierarchy Design Patterns:
+
+Single-level: Tenant -> User. Simplest model. Tenant owns users and data directly. Best for B2B SaaS where each customer is a single organization. Tenant ID maps 1:1 to customer account.
+
+Two-level: Organization -> Workspace/Project -> User. Common in collaboration tools (Slack, GitHub). An organization contains multiple workspaces, each with its own data boundary. Tenant ID at workspace level; organization-level operations (billing, global settings) cross workspace boundaries.
+
+Three-level: Enterprise -> Division -> Team -> User. For large enterprise deployments with complex org structures. Data isolation at the team level, roll-up reporting at division/enterprise level.
+
+Data Residency Requirements:
+
+Regulatory data residency: Some regulations (GDPR, LGPD, China Cybersecurity Law) require data to stay within specific geographic boundaries. Map tenants to regions at provisioning time. Enforce at the storage layer (DB region, S3 bucket region). Block cross-region data movement for regulated tenants.
+
+Opt-in data residency: Tenants can choose their data region during onboarding. Regional routing based on tenant configuration. Data migration between regions must be self-service and asynchronous.
+
 ### Tenant ID Propagation Architecture
 
 Every request must carry tenant context through all layers:
@@ -66,6 +82,56 @@ Every request must carry tenant context through all layers:
 5. Cache: Prefix cache keys with tenant ID. Use Redis key-space per tenant when isolation is critical.
 
 6. Logging: Include tenant ID in all structured log entries. Enable per-tenant log correlation and filtering.
+
+## Decision Trees
+
+### Isolation Model Selection Decision Tree
+
+1. Does the tenant data include regulated data (PHI, PII, PCI)?
+   - YES -> DB per tenant (required for HIPAA, PCI DSS Level 1)
+   - NO -> Go to 2
+
+2. How many tenants do you expect?
+   - < 50 tenants, enterprise -> DB per tenant (operational cost manageable, strongest isolation)
+   - 50-500 tenants -> Schema per tenant (balanced cost and isolation)
+   - 500+ tenants -> Go to 3
+
+3. What is the average data volume per tenant?
+   - > 100GB per tenant -> Schema per tenant (row-level becomes unmanageable at scale)
+   - < 100GB per tenant -> Row-level with RLS (lowest cost, simplest operations)
+
+4. Do you have mixed compliance requirements across tenants?
+   - YES -> Hybrid model: DB per tenant for regulated tenants, row-level for others
+   - NO -> Proceed with the model selected above
+
+### Tenant Migration Decision Tree
+
+1. Are you migrating between isolation models?
+   - DB-per-tenant to row-level: Extract per-tenant DB -> transform to tenant_id columns -> bulk insert into shared DB -> validate parity -> switch routing
+   - Row-level to DB-per-tenant: Extract tenant rows -> create per-tenant DB -> insert data -> validate -> dual-write during cutover
+   - Schema-per-tenant to DB-per-tenant: Dump schema -> restore as separate DB -> update connection routing -> drop shared schema
+
+2. Are you migrating tenants across regions?
+   - Active-passive: Tenant writes to primary region, async replication to secondary. Cutover: promote secondary to primary within maintenance window.
+   - Active-active: Both regions accept writes. Requires conflict resolution (CRDT, last-write-wins). Complex but zero-downtime migration.
+
+3. Are you migrating between infrastructure providers?
+   - Lift-and-shift: Full tenant data export from source, import to target. Requires extended downtime window. Simplest approach.
+   - Parallel run: Run both old and new infrastructure. Dual-write critical data. Validate consistency before cutover. Most complex but safest.
+
+### Tenant Onboarding Decision Tree
+
+1. Is the tenant self-service or sales-assisted?
+   - Self-service: Fully automated provisioning via API/UI. Tenant fills form -> instant provisioning -> welcome email. Target 1-2 minute setup.
+   - Sales-assisted: Provisioning triggered by CRM (Salesforce webhook). Pre-configuration of pricing tier, region, and custom settings. Target 1-hour setup.
+
+2. Does the tenant require custom configuration?
+   - YES -> Provision base infrastructure first, then apply custom config via configuration service. Feature flags for tenant-specific behavior.
+   - NO -> Use standard provisioning template. All settings come from tenant plan defaults.
+
+3. Does the tenant need data migration from an existing system?
+   - YES -> Provision target environment first, then run async data migration pipeline. Support incremental sync during migration window. Validate data parity before cutover.
+   - NO -> Standard provisioning flow. No migration phase needed.
 
 ## Agent Protocol
 
@@ -177,6 +243,35 @@ Backup and restore: Per-tenant backups for DB-per-tenant model. Tenant-tagged ba
 
 Data portability: Build exports as tenant-triggered async jobs. Format as JSON or CSV. Include all tenant-owned data. Compress and provide secure download link with expiration. Target export completion under 24 hours.
 
+## Governance Framework
+
+### Tenant Governance Board
+Establish a cross-functional tenant governance board:
+- Product: Defines tenant tiers and feature eligibility
+- Security: Validates isolation controls and compliance
+- Engineering: Reviews architecture decisions for tenant impact
+- Finance: Approves cost allocation model for shared infrastructure
+
+Meeting cadence: monthly for operational review, quarterly for strategic decisions.
+
+### Tenant Architecture Review Process
+1. New isolation model proposal submitted to architecture review
+2. Impact assessment on existing tenants (migration required?)
+3. Security review of isolation boundaries
+4. Cost analysis for shared vs. dedicated infrastructure
+5. Governance board approval before implementation
+6. Post-implementation validation of isolation controls
+
+### Compliance Mapping for Tenant Isolation
+| Regulation | Isolation Requirement | Minimum Model |
+|------------|----------------------|---------------|
+| HIPAA | PHI separation, BAA required | DB per tenant |
+| PCI DSS | Cardholder data environment isolation | DB per tenant |
+| GDPR | Data portability, right to erasure | Row-level with export capability |
+| SOC 2 | Logical access controls, data separation | Schema per tenant |
+| FedRAMP | Moderate/High impact data separation | DB per tenant |
+| CCPA | Consumer data access/deletion | Row-level with export capability |
+
 ## Common Pitfalls
 
 Pitfall 1: Tenant ID not propagated to all layers. If tenant ID is available at the API layer but not in logs, database queries, or cache keys, isolation is incomplete. Trace tenant ID end-to-end.
@@ -193,6 +288,12 @@ Pitfall 6: Over-isolating adds unnecessary cost. DB per tenant for a B2C app wit
 
 Pitfall 7: Cache pollution. Cache keys without tenant prefix can serve Tenant A data to Tenant B. Always prefix cache keys with tenant ID. Clear tenant cache on suspension/deletion.
 
+Pitfall 8: Tenant provisioning not idempotent. If provisioning fails mid-way, retrying can create duplicate resources. Design every provisioning step to be idempotent. Use state tracking to resume from failure point.
+
+Pitfall 9: Cross-tenant analytics leaking data. Aggregated queries can sometimes be reverse-engineered to infer individual tenant data (differential privacy attacks). Anonymize and aggregate sufficiently before exposing analytics results.
+
+Pitfall 10: Ignoring tenant-level backup and restore. In shared models, a single restore affects all tenants. Build tenant-granular backup/restore capability. Test tenant-specific restore scenarios regularly.
+
 ## Best Practices
 
 Practice 1: Treat tenant context as a security boundary. Every request must have validated tenant context. Every data access must filter by tenant. Treat tenant boundary violations as security incidents.
@@ -206,6 +307,14 @@ Practice 4: Test tenant isolation with security tooling. Automated security test
 Practice 5: Design for smooth tenant migration. Tenants may need to move between regions, isolation models, or instance sizes. Build migration capability into the architecture. Test with real data.
 
 Practice 6: Use structured tenant IDs. Tenant IDs should be immutable, URL-safe, and include a check digit for validation. UUID v5 from domain name is a good pattern.
+
+Practice 7: Implement tenant-level circuit breakers. If one tenant's workload causes downstream service degradation, isolate that tenant's traffic from affecting others. Circuit breaker opens per-tenant, not globally.
+
+Practice 8: Design tenant onboarding as self-service. Reduce time-to-value. Provide API endpoints and admin UI for tenant setup. Include guided setup wizard for complex configurations.
+
+Practice 9: Plan for tenant data growth. A tenant that starts small may grow to need dedicated infrastructure. Build upgrade paths between isolation models. Make migration between models a first-class capability.
+
+Practice 10: Maintain tenant-level audit logs. All access to tenant data must be logged with tenant ID. Enable tenant-specific audit trail for compliance reporting. Support log export per tenant.
 
 ## Templates & Tools
 
@@ -263,6 +372,36 @@ Estimated time: 3-5 minutes
 7. Set tenant state to Deleted
 ```
 
+### Tenant Isolation Testing Checklist
+```
+## Tenant Isolation Test Cases
+
+### API Layer
+- [ ] Tenant A cannot access Tenant B's API endpoints by modifying tenant ID
+- [ ] Tenant A cannot access Tenant B's subdomain URLs
+- [ ] Authentication tokens from Tenant A fail for Tenant B resources
+
+### Database Layer
+- [ ] Row-level security policies prevent cross-tenant queries
+- [ ] Connection routing for DB-per-tenant uses correct credentials per tenant
+- [ ] Schema-per-tenant queries include correct schema prefix
+
+### Cache Layer
+- [ ] Cache keys prefixed with tenant ID do not collide
+- [ ] Cache clear for Tenant A does not affect Tenant B
+- [ ] Cache warming after tenant restore is tenant-scoped
+
+### Storage Layer
+- [ ] Tenant A S3 bucket policies deny Tenant B access
+- [ ] Per-tenant KMS keys encrypt only the correct tenant's data
+- [ ] File upload paths include tenant ID and enforce boundaries
+
+### Export/Backup Layer
+- [ ] Tenant A's export does not include Tenant B data
+- [ ] Tenant B's data not present in Tenant A's backup
+- [ ] Point-in-time restore is scoped to correct tenant
+```
+
 ### Tools Reference
 - Terraform for tenant infrastructure provisioning
 - Kubernetes with tenant namespaces for compute isolation
@@ -284,6 +423,9 @@ A B2B SaaS company started with DB-per-tenant for their initial 50 enterprise cu
 ### Case Study 3: Multi-Tenant Data Breach Near-Miss
 A SaaS company with row-level tenant isolation discovered during a security audit that their GraphQL resolver was not filtering by tenant_id. A malicious tenant could potentially query other tenants data. The vulnerability was caught in audit before exploitation. Remediation: added tenant ID middleware at GraphQL layer, implemented RLS policies as defense-in-depth, and added automated tenant boundary tests to CI/CD. Incident response: treated as security incident, notified affected tenants, accelerated penetration testing schedule.
 
+### Case Study 4: Global Data Residency Implementation
+A SaaS platform expanding into EU and Asia faced data residency requirements (GDPR in EU, data localization in China). They implemented tenant-level region selection during provisioning. EU tenants stored data in Frankfurt, Asian tenants in Singapore, US tenants in Virginia. Data classified by sensitivity: regulated data (PII) stayed in region, anonymized analytics could cross regions. Cross-region data access logged and audited. Compliance validated with annual audits per region.
+
 ## Rules
 - Tenant ID must flow through every request via middleware.
 - Isolation model must match compliance requirements (HIPAA = DB per tenant).
@@ -301,6 +443,10 @@ A SaaS company with row-level tenant isolation discovered during a security audi
 - Noisy neighbor detection alerts configured for shared infrastructure.
 - Tenant boundary testing included in security test suite.
 - Tenant-level metrics monitored and alerting configured.
+- Tenant onboarding supports self-service and sales-assisted flows.
+- Data residency mapped to tenant provisioning region selection.
+- Tenant architecture changes require governance board approval.
+- All tenant isolation models support upgrade/migration paths.
 
 ## References
   - references/multi-tenant-advanced.md -- Multi-Tenant Advanced Topics

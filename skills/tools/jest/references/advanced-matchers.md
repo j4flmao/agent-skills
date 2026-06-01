@@ -274,10 +274,152 @@ test('string matchers', () => {
 });
 ```
 
+## Snapshot Testing Best Practices
+
+### When to Use Snapshots
+- **UI Components**: Verify rendered output doesn't change unexpectedly
+- **Configuration Objects**: Track configuration changes in version control
+- **Error Messages**: Ensure error formatting is consistent
+- **NOT for**: Large API responses, frequently changing data, or trivial values
+
+### Property Matcher Pattern
+```typescript
+// Always use property matchers for dynamic values
+expect(user).toMatchSnapshot({
+  id: expect.any(Number),
+  createdAt: expect.any(String),
+  updatedAt: expect.any(String),
+  token: expect.any(String),
+});
+```
+
+### Inline Snapshot Pattern
+```typescript
+test('configuration', () => {
+  expect(getDefaultConfig()).toMatchInlineSnapshot(`
+    Object {
+      "host": "localhost",
+      "port": 3000,
+      "timeout": 5000,
+    }
+  `);
+});
+```
+
+## Custom Matcher Patterns
+
+### Matcher with Context
+```typescript
+expect.extend({
+  toBeWithinRange(received, floor, ceiling) {
+    const pass = received >= floor && received <= ceiling;
+    return {
+      pass,
+      message: () => {
+        const not = pass ? 'not ' : '';
+        return `${this.utils.matcherHint('toBeWithinRange')}
+
+Received: ${this.utils.printReceived(received)}
+Expected: ${not}within range ${this.utils.printExpected(`${floor} - ${ceiling}`)}`;
+      },
+      // Optional: provide actual/expected for diff view
+      actual: received,
+      expected: `Range: ${floor} - ${ceiling}`,
+    };
+  },
+});
+```
+
+### Async Custom Matcher
+```typescript
+expect.extend({
+  async toResolveWithin(received, maxMs) {
+    const start = Date.now();
+    try {
+      await received;
+      const elapsed = Date.now() - start;
+      const pass = elapsed <= maxMs;
+      return {
+        pass,
+        message: () =>
+          pass
+            ? `Expected promise to resolve within ${maxMs}ms, resolved in ${elapsed}ms`
+            : `Expected promise to resolve within ${maxMs}ms, but it took ${elapsed}ms`,
+      };
+    } catch {
+      return {
+        pass: false,
+        message: () => 'Expected promise to resolve, but it rejected',
+      };
+    }
+  },
+});
+```
+
+## Matcher Selection Decision Tree
+```
+What am I asserting?
+├── Exact value equality → toBe (primitives), toEqual (objects)
+├── Deep equality with type checking → toStrictEqual
+├── Floating point → toBeCloseTo (avoid precision issues)
+├── Object shape (partial match) → expect.objectContaining()
+├── Array contents → expect.arrayContaining()
+├── Any type → expect.any(Number), expect.any(String)
+├── String pattern → toMatch (/regex/) or expect.stringMatching()
+├── Error thrown → toThrow(ErrorClass), toThrow("message"), toThrow(/regex/)
+├── Promise rejected → rejects.toThrow()
+├── Promise resolved → resolves.toEqual()
+├── Spy/mock called → toHaveBeenCalledWith(), toHaveBeenCalledTimes()
+├── DOM element presence → toBeInTheDocument() (@testing-library/jest-dom)
+└── Snapshot → toMatchSnapshot(), toMatchInlineSnapshot()
+```
+
+## Advanced Timer Patterns
+
+### Date/Time Mocking
+```typescript
+beforeEach(() => {
+  jest.useFakeTimers({
+    now: new Date('2025-06-01T12:00:00Z'),
+    advanceTimers: false,  // Don't auto-advance
+    doNotFake: ['nextTick'],  // Don't mock process.nextTick
+  });
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+  jest.setSystemTime();  // Reset system time
+});
+
+test('specific date check', () => {
+  jest.setSystemTime(new Date('2025-12-25'));
+  expect(isChristmas()).toBe(true);
+});
+
+test('advance with tick', () => {
+  const fn = jest.fn();
+  setInterval(fn, 1000);
+  jest.advanceTimersByTime(5000);
+  expect(fn).toHaveBeenCalledTimes(5);
+});
+```
+
+### Performance Timer Mock
+```typescript
+test('performance.now mock', () => {
+  jest.spyOn(performance, 'now').mockImplementation(() => 1000);
+  const start = performance.now();
+  jest.advanceTimersByTime(500);
+  performance.now.mockReturnValue(1500);
+  const end = performance.now();
+  expect(end - start).toBe(500);
+});
+```
+
 ## Key Points
 - expect.extend() creates custom matchers with pass/message return
 - Asymmetric matchers (expect.any, expect.objectContaining) enable partial matching
-- toBeCloseTo handles floating point precision
+- toBeCloseTo handles floating point precision (avoid === for floats)
 - toMatchInlineSnapshot embeds snapshots in test files
 - Property matchers in snapshots handle dynamic values
 - jest.useFakeTimers controls time-dependent code
@@ -297,3 +439,8 @@ test('string matchers', () => {
 - Snapshot property matchers ignore volatile fields
 - Timer mocks support both legacy and modern modes
 - Assertion message customization improves test failure diagnosis
+- Custom matchers should provide both pass and fail messages
+- Use `this.utils.printReceived` and `this.utils.printExpected` for consistent formatting
+- Custom matchers can be async for promise-based assertions
+- Matchers can access `this.equals` for deep equality checks
+- Snapshots should be committed and reviewed like source code

@@ -18,23 +18,20 @@ tags: [management, alerting, phase-8]
 # Alert Rules
 
 ## Purpose
-Design alert rules following the RED/USE method with severity classification,
-threshold tuning, notification routing, and escalation paths. Ensure every alert
-is actionable, documented with a runbook, and tuned to balance detection speed
-against fatigue.
+Design alert rules following the RED/USE method with severity classification, threshold tuning, notification routing, and escalation paths. Ensure every alert is actionable, documented with a runbook, and tuned to balance detection speed against fatigue.
 
 ## Framework and Methodology
 
 ### Alerting Philosophy
 Four principles guide alert rule design:
 
-1. **Actionability** -- if no action can be taken, it belongs on a dashboard, not as an alert.
-2. **Signal over noise** -- every firing alert represents a real issue requiring human intervention.
-3. **Tiered response** -- severity dictates speed of response, not importance of the metric.
-4. **Continuous tuning** -- thresholds degrade over time as systems evolve; review monthly.
+1. **Actionability** — if no action can be taken, it belongs on a dashboard, not as an alert.
+2. **Signal over noise** — every firing alert represents a real issue requiring human intervention.
+3. **Tiered response** — severity dictates speed of response, not importance of the metric.
+4. **Continuous tuning** — thresholds degrade over time as systems evolve; review monthly.
 
 ### RED Method (Applications)
-Rate, Errors, Duration -- the three golden signals for application monitoring.
+Rate, Errors, Duration — the three golden signals for application monitoring.
 
 ```
 Rate: How much traffic is flowing through the system?
@@ -51,7 +48,7 @@ Duration: How long do requests take?
 ```
 
 ### USE Method (Infrastructure)
-Utilization, Saturation, Errors -- resource-focused monitoring.
+Utilization, Saturation, Errors — resource-focused monitoring.
 
 ```
 Utilization: What percentage of capacity is being used?
@@ -81,12 +78,38 @@ Domain-specific alerts on revenue-impacting signals.
 - Cart abandonment rate spike > 20% above baseline
 ```
 
+### Alert Fatigue Calculation
+```
+Alert Fatigue Risk = (Total Alerts / Week) / (Actionable Alerts / Week)
+
+  Healthy: < 3 alerts per actionable alert
+  Warning: 3-10 alerts per actionable (investigate thresholds)
+  Critical: > 10 alerts per actionable (urgent tuning needed)
+
+  Target: < 5 total alerts per on-call person per shift
+  Maximum: 10 alerts per shift before burnout risk
+```
+
+### Decision Tree: Alert or Dashboard?
+
+```
+Will someone take immediate action when this fires?
+  ├── Yes → What action?
+  │   ├── Rollback, restart, failover
+  │   │   └── P0/P1 alert with runbook
+  │   ├── Investigate during business hours
+  │   │   └── P2 alert with runbook
+  │   └── Investigate when someone has time
+  │       └── P3 alert or ticket, not pager
+  └── No → Is it useful for post-mortem analysis?
+      ├── Yes → Dashboard panel + log
+      └── No → Delete the metric or reduce collection frequency
+```
+
 ## Agent Protocol
 
 ### Trigger
-User request includes: `alert rule`, `alertmanager`, `prometheus alert`,
-`grafana alert`, `notification`, `pagerduty`, `on-call`, `escalation`,
-`alert fatigue`, `threshold`.
+User request includes: `alert rule`, `alertmanager`, `prometheus alert`, `grafana alert`, `notification`, `pagerduty`, `on-call`, `escalation`, `alert fatigue`, `threshold`.
 
 ### Input Context
 - Monitoring platform (Prometheus, Grafana, ELK, Datadog, New Relic)
@@ -105,11 +128,10 @@ A markdown document containing:
 
 ### Response Format
 Produce the artifact directly. No preamble. No postamble. No explanations.
-No filler/hedging/transitions. Compress output.
 
 ### Completion Criteria
 - Severity levels defined with clear escalation paths
-- Alert rules cover USE/RED method (Utilization, Saturation, Errors)
+- Alert rules cover USE/RED method
 - Thresholds tuned with tuning guidelines
 - Notification routing defined per severity
 - Runbook template included
@@ -220,31 +242,48 @@ Track alert health metrics and implement improvements.
 - MTTR (mean time to resolve) per alert type.
 ```
 
+### Step 10: On-Call Rotation Design
+Design sustainable on-call rotations to prevent burnout.
+
+```
+- Team size for on-call: minimum 4 people for weekly rotations
+- Rotation length: 1 week (shorter = better, 1 day for high-volume teams)
+- Secondary on-call: always have a backup
+- Follow-the-sun: preferred for global teams
+- Compensation: time off in lieu or on-call pay
+- Handoff: scheduled 30-min overlap on rotation day
+- Escalation path documented in the rotation schedule
+```
+
 ## Common Pitfalls
 
 1. **Alert fatigue from oversensitive thresholds**: Start conservative and tighten gradually.
 2. **Cascading alerts without grouping**: One root cause fires 20 related alerts. Use alert grouping and inhibition rules.
 3. **Missing runbooks**: Teams waste time diagnosing without documented procedures.
 4. **P0 alerts for non-urgent issues**: Devalues severity system. Reserve P0 for actual critical failures.
-5. **Noisy infrastructure alerts**: CPU spikes that self-resolve after minutes add noise. Use longer `for:` durations.
+5. **Noisy infrastructure alerts**: CPU spikes that self-resolve add noise. Use longer `for:` durations.
 6. **Thresholds never reviewed**: Six-month-old thresholds are irrelevant for growing systems.
 7. **Missing `for:` duration**: Single data point flaps cause false alerts.
-8. **Ignoring cardinality**: Labels with unbounded values (user_id, request_id) break Prometheus.
+8. **Ignoring cardinality**: Labels with unbounded values break Prometheus.
 9. **Alerting on symptoms, not causes**: Alert on high latency, not on high CPU that causes high latency.
-10. **No alert on silence**: A silent alert system may mean monitoring is broken. Set up Deadman's switch.
+10. **No alert on silence**: Silent alert system = broken monitoring. Set up Deadman's switch.
+11. **All alerts go to pager**: Every alert is P2+. Fix: route P3+ to dashboard, only page for P0-P1.
+12. **No correlation between alerts**: Same incident fires 5 different alert rules. Fix: use alert grouping and composite rules.
 
 ## Best Practices
 
-- Every alert must have a runbook linked in its annotation.
-- Use `for:` duration equal to at least 2-3 scrape intervals.
-- Group related alerts into a single notification to reduce noise.
-- Define severity by impact, not by metric type.
-- Label every alert with team, service, environment, and severity.
-- Test alerts in staging before deploying to production.
-- Implement Deadman's switch: alert if no data received for expected interval.
-- Review alert rules during monthly SRE retrospectives.
-- Track and trend alert volume by service.
-- Rotate on-call frequently to reduce burnout.
+- Every alert must have a runbook linked in its annotation
+- Use `for:` duration equal to at least 2-3 scrape intervals
+- Group related alerts into a single notification to reduce noise
+- Define severity by impact, not by metric type
+- Label every alert with team, service, environment, and severity
+- Test alerts in staging before deploying to production
+- Implement Deadman's switch: alert if no data received for expected interval
+- Review alert rules during monthly SRE retrospectives
+- Track and trend alert volume by service
+- Rotate on-call frequently to reduce burnout
+- Set up different routing for business hours vs after hours
+- Use composite alerts to reduce noise from correlated symptoms
 
 ## Compared With
 
@@ -254,7 +293,7 @@ Track alert health metrics and implement improvements.
 | USE method (this skill) | Covers resource health | Needs RED for full picture |
 | Four golden signals | Complete coverage (RED + USE) | More alerts to manage |
 | Single metric alerts | Simple to implement | Misses composite conditions |
-| Anomaly detection | Catches unknown unknowns | High false positive rate, complex setup |
+| Anomaly detection | Catches unknown unknowns | High false positive rate |
 | SLO-based alerting | Business-aligned | Requires SLO definition effort |
 | Log-based alerting | Deep context | High volume, slow |
 | Tracing-based alerting | Precise root cause | High overhead, sampling tradeoff |
@@ -263,7 +302,6 @@ Track alert health metrics and implement improvements.
 
 ### Alert Rule Template (Prometheus)
 ```yaml
-# Template for creating new alert rules
 alert: {{ALERT_NAME}}
 expr: {{PROMQL_EXPRESSION}}
 for: {{DURATION}}
@@ -282,16 +320,13 @@ annotations:
 route:
   receiver: "default"
   routes:
-    - match:
-        severity: "P0"
+    - match: {severity: "P0"}
       receiver: "pagerduty-critical"
       repeat_interval: 5m
-    - match:
-        severity: "P1"
+    - match: {severity: "P1"}
       receiver: "pagerduty-high"
       repeat_interval: 30m
-    - match:
-        severity: "P2"
+    - match: {severity: "P2"}
       receiver: "slack-warnings"
       repeat_interval: 4h
 
@@ -306,68 +341,60 @@ receivers:
         title: "{{ .GroupLabels.alertname }}"
 ```
 
-### Runbook Template
-```markdown
-# Runbook: {{alert_name}}
+### Alert Health Dashboard
+```
+Metric              | Current | Target | Status
+Total alerts/week   | 42      | < 25   | Needs tuning
+P0 alerts/month     | 3       | < 5    | Healthy
+False positive rate | 28%     | < 20%  | Review thresholds
+MTTA P0             | 3 min   | < 5 min| Healthy
+MTTR P0             | 25 min  | < 60 min| Healthy
+Alerts per on-call  | 6/shift | < 5    | Near limit
+```
 
-## Severity
-{{P0|P1|P2|P3}}
+### On-Call Rotation Template
+```
+Team: {name} | Week: {date} - {date}
+Primary: {name} (acknowledge within 5 min)
+Secondary: {name} (backup if primary unresponsive)
+Handoff scheduled: Monday 09:00 (30 min overlap)
 
-## Symptoms
-- User impact description
-- Observable behavior
-
-## Check
-1. {{command or URL}}
-2. {{metric to verify}}
-3. {{log source to check}}
-
-## Possible Causes (ordered by likelihood)
-1. {{cause 1}} -- check {{command}}
-2. {{cause 2}} -- check {{command}}
-
-## Resolution
-1. {{step 1}}
-2. {{step 2}}
-
-## Verification
-- {{how to confirm fix worked}}
-
-## Escalation
-- {{who to contact if unresolved}}
+Escalation path:
+  Primary unresponsive > 5 min → Secondary
+  Secondary unresponsive > 5 min → Engineering Manager
+  EM unresponsive > 5 min → CTO
 ```
 
 ## Rules
-- Every alert must be actionable -- if no action can be taken, it is a dashboard metric, not an alert.
-- No alert without a runbook -- every alert routes to a document explaining diagnosis and fix.
-- No duplicate alerts -- group related alerts and suppress cascade alerts.
-- Require minimum `for:` duration before firing to prevent flapping.
-- Review and adjust thresholds monthly as part of seasonal tuning.
-- Scheduled maintenance periods must automatically silence alerts.
-- Alert labels must have bounded cardinality (<100 values per label).
-- P0 alerts go to phone + Slack + PagerDuty with immediate escalation.
-- Severity is defined by user impact, not by metric type.
-- Every alert must have a team label for ownership.
-- Alerts must be tested in staging before production deployment.
-- Deadman's switch alert for metric pipelines that stop producing data.
-- No alert without a clearly documented owner.
-- Acknowledge alert within SLA before investigating root cause.
-- Escalate if first responder does not acknowledge within SLA window.
-- Monthly alert review as part of incident management improvement.
-- Auto-resolve alerts when condition clears (unless configured otherwise).
-- Distinguish between warning (potential issue) and critical (active problem).
-- Alert routing must consider time of day and day of week.
-- On-call shift handover includes alert status review.
+- Every alert must be actionable — if no action can be taken, it is a dashboard metric
+- No alert without a runbook — every alert routes to a document explaining diagnosis and fix
+- No duplicate alerts — group related alerts and suppress cascade alerts
+- Require minimum `for:` duration before firing to prevent flapping
+- Review and adjust thresholds monthly as part of seasonal tuning
+- Scheduled maintenance periods must automatically silence alerts
+- Alert labels must have bounded cardinality
+- P0 alerts go to phone + Slack + PagerDuty with immediate escalation
+- Severity is defined by user impact, not by metric type
+- Every alert must have a team label for ownership
+- Alerts must be tested in staging before production deployment
+- Deadman's switch alert for metric pipelines that stop producing data
+- Acknowledge alert within SLA before investigating root cause
+- Escalate if first responder does not acknowledge within SLA window
+- Monthly alert review as part of incident management improvement
+- Auto-resolve alerts when condition clears
+- Distinguish between warning (potential issue) and critical (active problem)
+- Alert routing must consider time of day and day of week
+- On-call shift handover includes alert status review
 
 ## References
-  - references/alert-rules-catalog.md -- Alert Rules Catalog
-  - references/alert-rules-templates.md -- Alert Rules Templates
-  - references/alerting-advanced.md -- Alerting Advanced Topics
-  - references/alerting-fundamentals.md -- Alerting Fundamentals
-  - references/escalation-policies.md -- Escalation Policies
-  - references/notification-routing.md -- Notification Routing Reference
-  - references/alerting-rule-design.md -- Alert Rule Design Patterns
-  - references/alerting-oncall-rotation.md -- On-Call Rotation Design
+  - references/alert-rules-catalog.md — Alert Rules Catalog
+  - references/alert-rules-templates.md — Alert Rules Templates
+  - references/alerting-advanced.md — Alerting Advanced Topics
+  - references/alerting-fundamentals.md — Alerting Fundamentals
+  - references/escalation-policies.md — Escalation Policies
+  - references/notification-routing.md — Notification Routing Reference
+  - references/alerting-rule-design.md — Alert Rule Design Patterns
+  - references/alerting-oncall-rotation.md — On-Call Rotation Design
 
 ## Handoff
 Hand off to `devops/monitoring/SKILL.md` for monitoring stack setup.

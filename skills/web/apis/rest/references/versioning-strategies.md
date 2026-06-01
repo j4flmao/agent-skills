@@ -235,8 +235,142 @@ app.get('/v2/users/:id', (req, res) => {
 });
 ```
 
+## Decision Trees
+
+### Choose Versioning Strategy
+```
+Is this a public API consumed by external developers?
+├── Yes → Is URL cleanliness important?
+│   ├── Yes → URL path versioning (e.g., /api/v1/users)
+│   └── No → Header versioning (e.g., Accept: application/vnd.api+json;version=1)
+├── No → Is this an internal/microservice API?
+│   ├── Yes → Is it consumed by few services?
+│   │   ├── Yes → Contract-based versioning (tolerant reader / Postel's law)
+│   │   └── No → Header or query parameter versioning
+│   └── No → Is it a mobile-facing API?
+│       ├── Yes → URL path versioning (mobile apps update slowly)
+│       └── No → Feature flags with backward compatibility
+```
+
+### When to Bump Version
+```
+Is the change backward-compatible?
+├── Yes → Is it adding a new field/resource?
+│   ├── Yes → No version bump (additive change)
+│   └── No → Is it a bug fix that matches documented behavior?
+│       ├── Yes → No version bump (patch)
+│       └── No → Is it a performance improvement?
+│           ├── Yes → No version bump (internal change)
+│           └── No → Minor version bump
+└── No → Is it removing a field/endpoint?
+    ├── Yes → Deprecate first, then major version bump
+    └── No → Is it changing a field type/semantics?
+        ├── Yes → Major version bump required
+        └── No → Is it changing authentication/error behavior?
+            ├── Yes → Major version bump required
+            └── No → Minor version bump
+```
+
+## Anti-Patterns
+- **Versioning via request body**: Cannot route or cache based on body
+- **No deprecation period**: Breaking changes without warning break clients
+- **Indefinite old version support**: Infinite maintenance burden
+- **Version in hostname**: CORS, DNS, and certificate overhead
+- **SemVer in URLs**: Use v1, v2, not v1.2.3 (too many versions)
+- **Default to latest without opt-in**: Clients should explicitly request version
+- **No sunset header**: Clients cannot plan migration
+- **Multiple versioning strategies mixed**: Confuses clients and tooling
+- **No version in error responses**: Debugging without version context is hard
+- **No version health metrics**: Cannot make data-driven deprecation decisions
+
+## Implementation Patterns
+
+### Express Version Router
+```javascript
+const express = require('express');
+const app = express();
+
+// Version middleware
+function apiVersion(version) {
+  return (req, res, next) => {
+    req.apiVersion = version;
+    next();
+  };
+}
+
+// Route version via URL
+app.use('/api/v1', apiVersion('v1'), require('./v1/routes'));
+app.use('/api/v2', apiVersion('v2'), require('./v2/routes'));
+
+// Route version via header
+app.use('/api', (req, res, next) => {
+  const version = req.headers['accept-version'] || 'v1';
+  req.apiVersion = version;
+  next();
+});
+
+// Deprecation middleware
+function deprecationCheck(version, sunsetDate) {
+  return (req, res, next) => {
+    res.set('Sunset', sunsetDate);
+    res.set('Deprecation', `version=${version};`);
+    next();
+  };
+}
+
+app.use('/api/v1', deprecationCheck('v1', 'Sat, 31 Dec 2026 23:59:59 GMT'), v1Routes);
+```
+
+### Platform/OS Version-Based Routing
+```javascript
+function platformVersionMiddleware(req, res, next) {
+  const userAgent = req.headers['user-agent'] || '';
+  let platform = 'web';
+  let appVersion = '0.0.0';
+
+  if (userAgent.includes('MyApp-iOS')) {
+    platform = 'ios';
+    appVersion = userAgent.match(/MyApp-iOS\/(\d+\.\d+\.\d+)/)?.[1] || '1.0.0';
+  } else if (userAgent.includes('MyApp-Android')) {
+    platform = 'android';
+    appVersion = userAgent.match(/MyApp-Android\/(\d+\.\d+\.\d+)/)?.[1] || '1.0.0';
+  }
+
+  req.platform = platform;
+  req.appVersion = appVersion;
+  req.apiVersion = resolveApiVersion(platform, appVersion);
+  next();
+}
+
+function resolveApiVersion(platform, appVersion) {
+  const versionMap = {
+    ios: { '1.0.0': 'v1', '1.1.0': 'v1', '2.0.0': 'v2' },
+    android: { '1.0.0': 'v1', '1.5.0': 'v1', '2.0.0': 'v2' },
+    web: { default: 'v2' },
+  };
+  return versionMap[platform]?.[appVersion] || versionMap[platform]?.default || 'v1';
+}
+```
+
+### Parallel Version Deployment
+```javascript
+// API Gateway routes to version-specific services
+// In docker-compose or Kubernetes:
+
+// v1-service: runs old code
+// v2-service: runs new code
+// gateway: routes /api/v1/* -> v1-service, /api/v2/* -> v2-service
+
+// NGINX config block:
+// location /api/v1/ {
+//     proxy_pass http://v1-service:3000/;
+// }
+// location /api/v2/ {
+//     proxy_pass http://v2-service:3000/;
+// }
+```
+
 ## Key Points
-- URI versioning (/v1/, /v2/) is most common and straightforward
 - Header versioning keeps URLs clean but harder to discover
 - Query parameter versioning is simple but clutters URLs
 - Deprecation headers communicate version lifecycle

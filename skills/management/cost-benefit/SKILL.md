@@ -16,9 +16,7 @@ tags: [management, cost-benefit, phase-7]
 # Cost-Benefit Analysis
 
 ## Purpose
-Evaluate technology investments through ROI, TCO, break-even, and NPV analysis
-to support data-driven decision-making. Covers financial modeling, sensitivity
-analysis, strategic alignment, and stakeholder communication.
+Evaluate technology investments through ROI, TCO, break-even, and NPV analysis to support data-driven decision-making. Covers financial modeling, sensitivity analysis, strategic alignment, and stakeholder communication.
 
 ## Framework and Methodology
 
@@ -58,28 +56,62 @@ Phase 5: Decision and communication
 ROI (Return on Investment):
   ROI = (Total Benefit - Total Cost) / Total Cost x 100
   Positive ROI means value > cost.
-  Compare across alternatives to prioritize.
 
 TCO (Total Cost of Ownership):
   Sum of all costs over the investment lifetime.
   Includes acquisition, operation, maintenance, and disposal.
-  Essential for comparing build vs buy vs SaaS.
 
 NPV (Net Present Value):
   NPV = sum(C_t / (1 + r)^t) - C_0
-  C_t = net cash flow at time t
-  r = discount rate (usually WACC or 10-15%)
-  t = time period
+  C_t = net cash flow at time t, r = discount rate, t = time period
   Positive NPV = value-creating investment.
 
 Payback Period:
   Time until cumulative benefits equal cumulative costs.
-  Shorter payback = lower risk.
-  Typically 12-24 months for technology investments.
+  Shorter payback = lower risk. Typically 12-24 months for technology.
 
 Break-Even Point:
   The volume or time at which total revenue equals total cost.
-  Used for pricing decisions and capacity planning.
+```
+
+### Decision Tree: Financial Method Selection
+
+```
+What type of decision is being made?
+  ├── Simple cost comparison (buy vs buy)
+  │   └── TCO — total cost over lifetime, simplest comparison
+  ├── Investment with measurable benefits
+  │   ├── Time horizon < 1 year
+  │   │   └── ROI + Payback Period — quick comparison
+  │   └── Time horizon > 1 year
+  │       └── NPV + IRR — accounts for time value of money
+  ├── Build vs buy decision
+  │   └── TCO + Opportunity Cost + Time-to-Market
+  ├── Volume-dependent decision (pricing, capacity)
+  │   └── Break-Even Analysis — find the volume where costs equal revenue
+  ├── Risk assessment of investment
+  │   └── Sensitivity Analysis + Monte Carlo — test multiple scenarios
+  └── Strategic decision with hard-to-quantify benefits
+      └── Multi-Criteria Analysis + Cost-Effectiveness
+```
+
+### Build vs Buy Decision Framework
+
+```
+Can a commercial solution meet the requirements?
+  ├── Yes, fully
+  │   └── Is the TCO of buying less than building?
+  │       ├── Yes → Buy (SaaS or license)
+  │       └── No → Build
+  ├── Yes, with customization
+  │   └── Is customization cost < 50% of build cost?
+  │       ├── Yes → Buy + customize
+  │       └── No → Build
+  └── No, not available
+      └── Build
+        └── Is this part of core business differentiation?
+            ├── Yes → Build with internal team
+            └── No → Consider outsourcing or partnership
 ```
 
 ### Discounting and Present Value
@@ -95,11 +127,9 @@ Typical discount rates:
   High risk (new market entry): 18-25%
 
 Example:
-  Year 1 benefit: $100,000
-  Discount rate: 12%
+  Year 1 benefit: $100,000 | Discount rate: 12%
   Present value: $100,000 / (1.12 ^ 1) = $89,286
-  Year 2 benefit: $100,000
-  Present value: $100,000 / (1.12 ^ 2) = $79,719
+  Year 2 benefit: $100,000 | Present value: $79,719
 ```
 
 ## Agent Protocol
@@ -111,15 +141,14 @@ Example:
 "build vs buy".
 
 ### Input Context
-- Investment categories (licensing, infrastructure, engineering hours, training, migration)
+- Investment categories (licensing, infrastructure, engineering hours, training)
 - Expected benefits (cost savings, revenue increase, efficiency gains, risk reduction)
 - Time horizon for analysis (1 year, 3 years, 5 years)
 - Current costs for baseline comparison
 - Strategic value (non-financial benefits)
 
 ### Output Artifact
-Cost-benefit analysis with TCO model, ROI calculation, break-even timeline,
-and sensitivity analysis.
+Cost-benefit analysis with TCO model, ROI calculation, break-even timeline, and sensitivity analysis.
 
 ### Response Format
 - Cost table with one-time and recurring categories
@@ -142,39 +171,34 @@ and sensitivity analysis.
 ## Workflow
 
 ### Step 1: Define Scope
-Identify the decision to be made and alternatives.
-Set time horizon appropriate for investment type.
-Determine discount rate based on company cost of capital.
+Identify the decision to be made and alternatives. Set time horizon appropriate for investment type. Determine discount rate based on company cost of capital.
 
 ### Step 2: Identify and Quantify Costs
-List all cost categories. Separate one-time from recurring.
-Estimate engineering hours at loaded cost rate.
-Include training, migration, and transition costs.
+List all cost categories. Separate one-time from recurring. Estimate engineering hours at loaded cost rate. Include training, migration, and transition costs.
 
 ### Step 3: Identify and Quantify Benefits
-Map each benefit to a measurable outcome.
-Use conservative estimates for benefit quantification.
-Separate hard savings (cost reduction) from soft savings (efficiency).
+Map each benefit to a measurable outcome. Use conservative estimates for benefit quantification. Separate hard savings (cost reduction) from soft savings (efficiency).
 
 ### Step 4: Calculate Financial Metrics
-Build cash flow projection for each year.
-Calculate ROI, NPV, payback period, and break-even.
-Compare against company investment thresholds.
+Build cash flow projection for each year. Calculate ROI, NPV, payback period, and break-even. Compare against company investment thresholds.
 
 ### Step 5: Perform Sensitivity Analysis
-Model best case, expected case, worst case scenarios.
-Identify which variables have most impact on outcome.
-Document assumptions and confidence levels.
+Model best case, expected case, worst case scenarios. Identify which variables have most impact on outcome. Document assumptions and confidence levels.
 
 ### Step 6: Document Strategic Factors
-Assess alignment with company strategy and OKRs.
-Identify non-financial benefits and risks.
-Provide recommendation with rationale.
+Assess alignment with company strategy and OKRs. Identify non-financial benefits and risks. Provide recommendation with rationale.
 
 ### Step 7: Present to Stakeholders
-Structure findings for the audience.
-Highlight key numbers and tradeoffs.
-Include risk mitigation recommendations.
+Structure findings for the audience. Highlight key numbers and tradeoffs. Include risk mitigation recommendations.
+
+### Step 8: Monte Carlo Simulation (Advanced)
+For high-stakes decisions, run Monte Carlo simulation: define probability distributions for each input variable (costs, benefits, timeline), run 10,000+ iterations, analyze output distribution for NPV/ROI, calculate probability of positive return, identify key drivers through sensitivity analysis. Use tools like @RISK, Crystal Ball, or Python (numpy).
+
+### Step 9: Intangible Benefit Valuation
+For benefits that are hard to monetize: use shadow pricing (estimate what the benefit would cost to purchase), use willingness-to-pay surveys, apply industry benchmarks for similar benefits, document assumptions transparently. If quantification is too speculative, include as a qualitative factor in the multi-criteria analysis.
+
+### Step 10: Post-Decision Audit
+Track actual costs and benefits after implementation. Compare against projections at 6, 12, and 24 months. Document variance reasons. Use learnings to improve future estimates. Update the business case with actual data for ongoing governance.
 
 ## Common Pitfalls
 
@@ -188,19 +212,23 @@ Include risk mitigation recommendations.
 8. **Sunk cost fallacy**: Past spending should not influence current decisions.
 9. **Forgetting inflation**: Multi-year analysis should account for cost inflation.
 10. **No sensitivity analysis**: Single-point estimates hide risk.
+11. **Ignoring risk-adjusted returns**: Two investments with same ROI may have very different risk profiles.
+12. **Treating soft savings as hard savings**: Efficiency gains may not translate to actual cost reduction.
 
 ## Best Practices
 
-- Use loaded cost rates (salary + benefits + overhead + tooling).
-- Apply a discount rate of at least 10% for technology investments.
-- Model three scenarios: pessimistic, expected, optimistic.
-- Include intangible benefits explicitly (even if hard to quantify).
-- Document all assumptions clearly.
-- Review with finance team before finalizing.
-- Update analysis as new information becomes available.
-- Use NPV for multi-year projects, ROI for quick comparisons.
-- Keep analysis proportional to investment size.
-- Follow up after decision: compare actual vs projected.
+- Use loaded cost rates (salary + benefits + overhead + tooling)
+- Apply a discount rate of at least 10% for technology investments
+- Model three scenarios: pessimistic, expected, optimistic
+- Include intangible benefits explicitly (even if hard to quantify)
+- Document all assumptions clearly
+- Review with finance team before finalizing
+- Update analysis as new information becomes available
+- Use NPV for multi-year projects, ROI for quick comparisons
+- Keep analysis proportional to investment size
+- Follow up after decision: compare actual vs projected
+- Use Monte Carlo for high-stakes decisions
+- Separate hard savings from soft savings in benefit calculations
 
 ## Compared With
 
@@ -213,6 +241,7 @@ Include risk mitigation recommendations.
 | Break-even | Volume-dependent decisions | Limited to cost recovery |
 | Cost-effectiveness | Hard-to-monetize benefits | Doesn't show financial return |
 | Multi-criteria analysis | Strategic decisions | Subjective weight selection |
+| Monte Carlo | High-uncertainty decisions | Complex setup |
 
 ## Templates and Tools
 
@@ -223,6 +252,7 @@ Licensing          | $XX,XXX  | $X,XXX | $X,XXX | $X,XXX | $XX,XXX
 Engineering        | $XX,XXX  | $X,XXX | $X,XXX | $X,XXX | $XX,XXX
 Infrastructure     | $XX,XXX  | $X,XXX | $X,XXX | $X,XXX | $XX,XXX
 Training           | $X,XXX   | $0     | $0     | $0     | $X,XXX
+Transition         | $X,XXX   | $0     | $0     | $0     | $X,XXX
 Total              | $XX,XXX  | $X,XXX | $X,XXX | $X,XXX | $XX,XXX
 ```
 
@@ -244,32 +274,44 @@ Expected      | $300K   | $200K | 50%    | $75K        | 18 months
 Pessimistic   | $200K   | $200K | 0%     | -$25K       | 36 months
 ```
 
+### Build vs Buy Scorecard
+```
+Factor              | Weight | Build Score | Buy Score
+Unique capability   | 30%    | 5           | 2
+Time to market      | 25%    | 2           | 4
+TCO (3-year)        | 20%    | 3           | 4
+Customization       | 15%    | 5           | 3
+Vendor lock-in risk | 10%    | 4           | 2
+Total               | 100%   | 3.8         | 3.0
+```
+
 ## Rules
-- All costs use loaded labor rates (salary + 30% overhead minimum).
-- Benefits use conservative estimates (80% of projected).
-- Time horizon matches investment lifespan, typically 3-5 years.
-- Discount rate applied for multi-year NPV calculation.
-- Sensitivity analysis tests at least 3 scenarios.
-- Alternative comparison includes do-nothing baseline.
-- Non-financial factors documented separately.
-- Assumptions explicitly stated in analysis.
-- ROI calculated on total investment, not marginal.
-- Break-even point expressed in months or years.
-- Sunk costs excluded from forward-looking analysis.
-- Analysis reviewed by finance before finalization.
-- Results presented with confidence intervals, not single numbers.
-- Follow-up review conducted 6-12 months post-decision.
+- All costs use loaded labor rates (salary + 30% overhead minimum)
+- Benefits use conservative estimates (80% of projected)
+- Time horizon matches investment lifespan, typically 3-5 years
+- Discount rate applied for multi-year NPV calculation
+- Sensitivity analysis tests at least 3 scenarios
+- Alternative comparison includes do-nothing baseline
+- Non-financial factors documented separately
+- Assumptions explicitly stated in analysis
+- ROI calculated on total investment, not marginal
+- Break-even point expressed in months or years
+- Sunk costs excluded from forward-looking analysis
+- Analysis reviewed by finance before finalization
+- Results presented with confidence intervals, not single numbers
+- Follow-up review conducted 6-12 months post-decision
+- Separate hard savings from soft savings
+- Risk-adjusted return preferred over single-point ROI
 
 ## References
-  - references/cba-methodology.md -- CBA Methodology
-  - references/cost-benefit-advanced.md -- Cost Benefit Advanced Topics
-  - references/cost-benefit-fundamentals.md -- Cost Benefit Fundamentals
-  - references/roi-framework.md -- ROI Framework
-  - references/roi-frameworks.md -- ROI Frameworks
-  - references/tco-calculation.md -- TCO Calculation
-  - references/tco-modeling.md -- TCO Modeling Across Scenarios
-  - references/cost-benefit-analysis-methods.md -- Cost-Benefit Analysis Methods
-  - references/cost-benefit-presentation-stakeholder.md -- Stakeholder Presentation
+  - references/cba-methodology.md — CBA Methodology
+  - references/cost-benefit-advanced.md — Cost Benefit Advanced Topics
+  - references/cost-benefit-fundamentals.md — Cost Benefit Fundamentals
+  - references/roi-framework.md — ROI Framework
+  - references/tco-calculation.md — TCO Calculation
+  - references/tco-modeling.md — TCO Modeling Across Scenarios
+  - references/cost-benefit-analysis-methods.md — Cost-Benefit Analysis Methods
+  - references/cost-benefit-presentation-stakeholder.md — Stakeholder Presentation
 
 ## Handoff
 `risk-management` for cost-related risk assessment.

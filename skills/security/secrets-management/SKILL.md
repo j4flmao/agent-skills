@@ -340,6 +340,87 @@ Static secrets have infinite lifetime and require manual rotation. Dynamic secre
 ### External Secrets Operator vs Vault CSI Provider vs In-Tree K8s Secrets
 External Secrets Operator is the most flexible (20+ providers, auto-refresh, namespace-scoped). Vault CSI Provider mounts secrets as volumes (no K8s Secret resource, reduces attack surface). In-tree K8s Secrets are base64 encoded only, no rotation, no access audit. Never use in-tree secrets for production.
 
+## Secrets in CI/CD Pipelines
+
+### GitHub Actions Example
+
+```yaml
+# .github/workflows/secret-scan.yml
+name: Secret Scan
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: GitLeaks Scan
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: .gitleaks.toml
+      - name: truffleHog Verified Scan
+        run: |
+          trufflehog git file://. --only-verified --fail \
+            --github-token ${{ secrets.GITHUB_TOKEN }}
+```
+
+### GitLab CI Example
+
+```yaml
+secret-scan:
+  stage: test
+  script:
+    - gitleaks detect --source . --config .gitleaks.toml --verbose
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+```
+
+### Secrets Management in CI/CD
+
+```yaml
+# .github/workflows/deploy.yml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch secrets from Vault
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://vault.example.com
+          method: jwt
+          secrets: |
+            secret/data/prod/db password | DB_PASSWORD;
+            secret/data/prod/api key | API_KEY;
+      - name: Deploy
+        run: ./deploy.sh
+        env:
+          DB_PASSWORD: ${{ steps.secrets.outputs.DB_PASSWORD }}
+```
+
+## Secrets Management Anti-Patterns
+
+### Anti-Pattern 1: .env in Version Control
+Committing `.env` files to Git is the root cause of most credential leaks. `.env` contains production credentials. `.env.example` with placeholder values should be committed instead. Enforce via `.gitignore` and a CI check that rejects PRs containing `.env` or `.env.*` excluding `.env.example`.
+
+### Anti-Pattern 2: Shared Secrets Across Environments
+Using the same database password for dev, staging, and production. A developer with dev access can read production credentials. Compromise of a lower environment exposes production. Each environment must have separate credentials with independent access policies and rotation schedules.
+
+### Anti-Pattern 3: Secrets in Build Artifacts
+Embedding secrets in container images or compiled binaries during build. Anyone with registry access can extract secrets from the image. Always inject secrets at runtime via volume mount, environment injection, or secrets manager SDK. Verify with `docker history` that no secrets are in image layers.
+
+### Anti-Pattern 4: Long-Lived Service Account Keys
+Service account JSON keys with indefinite lifetime and broad permissions stored on developer machines. If the machine is compromised, the key is compromised. Use workload identity federation (OIDC) instead — short-lived tokens with automatic rotation and no static secret material.
+
+### Anti-Pattern 5: Manual Secret Rotation
+Engineers manually rotating secrets via SSH and config file edits. No audit trail, no rollback plan, high error rate. Automate rotation with secrets manager rotation functions or Vault dynamic secrets. Manual rotation must have a documented runbook.
+
+### Anti-Pattern 6: Secrets in Logs and Error Messages
+Application logging framework captures environment variables or request parameters containing secrets. Secrets appear in log aggregation tools with long retention. Implement secret redaction in logging pipeline. Test by searching logs for common secret patterns.
+
 ## Performance Considerations
 
 - Detection speed: GitLeaks (50-100ms per commit), ggshield (150-300ms), truffleHog verified (10-30s). Pre-commit must stay under 500ms total.

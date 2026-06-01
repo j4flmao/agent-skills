@@ -1,213 +1,71 @@
 # Flutter Fundamentals
 
 ## Overview
-Flutter is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Flutter is Google's UI toolkit for building natively compiled applications from a single codebase. It uses Dart, the Skia/Impeller rendering engine, and a widget-based composition model. Flutter supports iOS, Android, web, and desktop from one codebase.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Flutter helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Widgets
+Everything in Flutter is a Widget. Two types: `StatelessWidget` (immutable, describes UI based on constructor params) and `StatefulWidget` (mutable state via `State` object). Widgets compose deeply — complex UIs from simple building blocks. Build method returns a widget tree.
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Flutter solutions. These principles help maintain code quality and reduce technical debt.
+### State Management
+Widgets maintain state via `setState()` for local state. For shared state, use Provider, Riverpod, BLoC, or GetIt. Riverpod is the modern choice: compile-safe, testable, auto-dispose. BLoC uses events and states with Streams. Provider is simplest for small apps.
 
-### Concept 3: Data Management
-Proper data management is essential for Flutter. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Build Process
+Flutter compiles Dart to native code via AOT compilation for release builds. Debug builds use JIT for hot reload. iOS builds require Xcode and macOS. Android builds require Gradle. Web builds to JavaScript/WebAssembly. Desktop builds per platform.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Platform Channels
+Flutter communicates with native code via `MethodChannel`. Dart sends a method name and arguments, native side receives and responds. Use `pigeon` package for type-safe channel definitions. Minimize channel calls for performance.
 
 ## Architecture Patterns
 
-### Pattern 1: Standard Architecture
-The standard architecture for Flutter follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+### Repository Pattern
+Repository abstracts data sources (remote API, local DB, cache). ViewModel/Controller calls repository, never data sources directly. Repositories return `Future` or `Stream` for async data. Handle errors and loading states consistently.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### BLoC Pattern
+Business Logic Component: Events (input) → Bloc (logic) → States (output). `BlocProvider` provides Bloc to widget tree. `BlocBuilder` rebuilds on state change. `BlocListener` for one-shot events (navigation, snackbar). Test with `bloc_test` package.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Riverpod
+Declarative state management with compile-time safety. `Provider` for synchronous values. `FutureProvider` for async data. `StateNotifierProvider` for mutable state. `StreamProvider` for streams. `ref.watch` for reactivity, `ref.read` for one-shot access.
 
-## Implementation Guide
+## Data Management
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Local Database
+`sqflite` for SQLite on mobile. `drift` (formerly moor) for type-safe SQL with code generation. `Isar` for NoSQL document DB with JSON-like queries. `Hive` for lightweight key-value storage. Prefer drift for complex relational data, Isar/Hive for simple data.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Network Requests
+`http` package for simple requests. `dio` for advanced use: interceptors, retry, cancellation, progress tracking. `graphql_flutter` for GraphQL APIs. `chopper` for Retrofit-like generated API clients. Always use `catchError` / try-catch for network calls.
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+### Secure Storage
+`flutter_secure_storage` wraps Keychain (iOS) and EncryptedSharedPreferences (Android). AES encryption with platform key stores. Use for tokens, credentials, and sensitive data. Never use `SharedPreferences` for secrets.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+## Security Fundamentals
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+### SSL Pinning
+Implement certificate pinning in Dio via `BadCertificateCallback` or a custom `HttpOverrides`. For production, pin the public key hash (not full cert). Include backup hashes for cert rotation. Test with both valid and invalid certs.
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### Code Obfuscation
+Enable `--obfuscate` and `--split-debug-info` in release builds. Obfuscation renames symbols to hinder reverse engineering. Keep debug info for crash deobfuscation. Combine with `--tree-shake-icons` for smaller bundle.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+## Build & Dependency Management
 
-## Best Practices
+### pubspec.yaml
+Central configuration: dependencies (from pub.dev or git), dev_dependencies (testing, linting), assets (images, fonts, JSON), plugins (platform-specific packages). Use `^` version constraint for semver compatibility. `dependency_overrides` for conflict resolution.
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+### Build Flavors
+Configure flavors for dev/staging/prod via `--dart-define` and `--flavor`. Android: Gradle product flavors. iOS: Xcode schemes with different bundle IDs. Separate config files per flavor. Firebase per environment.
 
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+### Testing
+`flutter_test` for unit and widget tests. `integration_test` for end-to-end tests. `golden_toolkit` for golden/snapshot tests. `mocktail` for mocking. `coverage` package for code coverage reporting. Run on CI with `flutter test --coverage`.
 
 ## Key Points
-- Understand core Flutter concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- Widget-based composition: everything is a widget (StatelessWidget / StatefulWidget)
+- Riverpod over Provider for modern state management (compile-safe, testable)
+- Drift for type-safe relational DB; Isar/Hive for NoSQL
+- Dio for advanced networking with interceptors
+- flutter_secure_storage for secrets (wraps platform secure storage)
+- `--obfuscate` + `--split-debug-info` for release builds
+- Hot reload in debug (JIT), AOT compilation for release
+- Platform channels for native interop (minimize calls)
+- Build flavors via --dart-define for env-specific config
+- Golden tests for visual regression

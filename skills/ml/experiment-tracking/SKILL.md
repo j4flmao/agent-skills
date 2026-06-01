@@ -39,6 +39,31 @@ Do you need experiment tracking for deep learning specifically?
 Do you need model registry with CI/CD integration?
   |-- YES --> MLflow Model Registry (stages, API, deployment)
   |-- NO --> Platform-specific registry is sufficient
+
+Is cost a primary constraint?
+  |-- YES --> MLflow (free, open-source), DVC (free, git-based)
+  |-- NO --> W&B or Neptune (paid, more features)
+```
+
+### MLflow Tracking Server Deployment
+```
+Self-hosted MLflow
+  ├── Local development → sqlite:///mlflow.db + local artifact dir
+  ├── Team (on-premise) → PostgreSQL + S3/MinIO + Gunicorn
+  │   Deployment: docker-compose with MLflow, Postgres, MinIO, Nginx
+  │   Scaling: multi-worker Gunicorn (>4 workers for >5 team members)
+  └── Enterprise → PostgreSQL (RDS/Aurora) + S3 + Load Balancer + ECS/K8s
+      Auth: OAuth proxy (OAuth2 Proxy, Cloudflare Access)
+      HA: Multi-AZ database, multi-replica MLflow, S3 replication
+```
+
+### Model Registry Stage Flow
+```
+Training → Register Model (None)
+  → Validate → Transition to Staging
+    → A/B Test → OK? → Transition to Production
+      → Monitor → Degraded? → Transition to Archived → Retrain
+    → FAIL → Transition to Archived → Debug and Retrain
 ```
 
 ## Agent Protocol
@@ -102,17 +127,284 @@ experiment_defaults:
 ### Step 2: Run Logging Conventions
 Structured parameter names: `model.learning_rate`, `model.architecture.n_layers`, `data.train_size`. Metric logging: log after every epoch and at the end. Use dictionary logging for grouped metrics. Tags for searchability: `status`, `dataset`, `model_type`, `git_branch`, `gpu_id`.
 
+```python
+import mlflow
+
+mlflow.set_experiment("recommendation-v2")
+with mlflow.start_run(run_name="xgboost-baseline") as run:
+    mlflow.log_params({
+        "model.type": "XGBoost",
+        "model.n_estimators": 500,
+        "model.max_depth": 8,
+        "model.learning_rate": 0.05,
+        "data.source": "s3://data/features/v3/",
+        "data.n_samples": 150000,
+        "data.n_features": 45,
+    })
+    for epoch in range(10):
+        train_metric, val_metric = train_one_epoch()
+        mlflow.log_metrics({
+            "train/log_loss": train_metric,
+            "val/log_loss": val_metric,
+        }, step=epoch)
+    mlflow.log_metrics({
+        "val/auc": 0.89,
+        "val/f1": 0.72,
+        "val/precision": 0.74,
+        "val/recall": 0.70,
+    })
+    mlflow.set_tags({
+        "git_branch": "feature/ensemble-v2",
+        "git_commit": "a1b2c3d",
+        "dataset_version": "2025-03-15",
+        "model_type": "gradient_boosting",
+        "status": "completed",
+    })
+    mlflow.log_artifact("confusion_matrix.png")
+    mlflow.log_artifact("feature_importance.png")
+    mlflow.sklearn.log_model(model, "model")
+```
+
 ### Step 3: Artifact Storage
 Log model files with signature and conda/pip environment. Log plots as PNG/HTML. Log dataset samples and preprocessing config. Structure: `models/`, `plots/`, `data/`, `configs/`, `code/`.
+
+```
+artifacts/
+├── models/
+│   ├── model.pkl                    # Serialized model
+│   ├── MLmodel                      # MLflow metadata
+│   ├── conda.yaml                   # Conda environment
+│   └── requirements.txt             # Pip requirements
+├── plots/
+│   ├── confusion_matrix.png
+│   ├── learning_curves.png
+│   ├── feature_importance.png
+│   ├── roc_curve.png
+│   └── calibration_curve.png
+├── data/
+│   ├── sample_predictions.csv
+│   ├── train_sample.csv
+│   └── data_profile.html
+├── configs/
+│   ├── preprocessing_config.yaml
+│   ├── hyperparameters.json
+│   └── data_schema.yaml
+└── code/
+    └── training_snapshot.py
+```
 
 ### Step 4: Model Registry
 Model versioning: each logged model creates a new version. Stage promotion: None -> Staging -> Production -> Archived. Transition rules: automated via metric thresholds, manual approval for production.
 
+```python
+# Register model with signature
+from mlflow.models import infer_signature
+
+signature = infer_signature(X_train, model.predict(X_train))
+mlflow.sklearn.log_model(
+    model,
+    "model",
+    signature=signature,
+    input_example=X_train[:5],
+    registered_model_name="recommendation_xgb",
+)
+
+# Programmatic stage transitions
+from mlflow.tracking import MlflowClient
+
+client = MlflowClient()
+client.transition_model_version_stage(
+    name="recommendation_xgb",
+    version=3,
+    stage="Staging",
+)
+
+# Query by stage
+latest_staging = client.get_latest_versions("recommendation_xgb", stages=["Staging"])
+
+# Archive old versions
+client.transition_model_version_stage(
+    name="recommendation_xgb",
+    version=2,
+    stage="Archived",
+)
+```
+
 ### Step 5: Experiment Comparison
 Parallel coordinates: compare hyperparameters across runs. Scatter plots: metric vs metric. Table view: sortable columns for params and metrics. Regression detection: compare against baseline, alert on degradation.
 
+```python
+# Compare runs programmatically
+import mlflow
+from mlflow.tracking import MlflowClient
+
+client = MlflowClient()
+experiment = client.get_experiment_by_name("recommendation-v2")
+runs = client.search_runs(
+    experiment_ids=[experiment.experiment_id],
+    filter_string="metrics.val_auc > 0.85",
+    order_by=["metrics.val_auc DESC"],
+    max_results=20,
+)
+
+for run in runs:
+    print(f"Run: {run.info.run_name}, AUC: {run.data.metrics['val_auc']}")
+
+# Load best model
+best_run = runs[0]
+best_model = mlflow.sklearn.load_model(f"runs:/{best_run.info.run_id}/model")
+```
+
 ### Step 6: Reproducibility
 Code: log git commit hash. Data: log dataset hash or DVC version. Environment: log conda/pip environment files. Random seeds: log and control all seeds. Source code: log snapshot of training script.
+
+```python
+import subprocess
+
+def log_reproducibility_info():
+    # Git commit
+    git_hash = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()
+    mlflow.set_tag("git_commit", git_hash)
+
+    # Git branch
+    git_branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).decode().strip()
+    mlflow.set_tag("git_branch", git_branch)
+
+    # DVC data version
+    try:
+        dvc_hash = subprocess.check_output(["dvc", "status", "--sha"]).decode().strip()
+        mlflow.set_tag("dvc_data_version", dvc_hash)
+    except:
+        pass
+
+    # Random seed
+    import random, torch, numpy as np
+    SEED = 42
+    random.seed(SEED)
+    np.random.seed(SEED)
+    torch.manual_seed(SEED)
+    mlflow.log_param("seed", SEED)
+
+# Snapshot training code
+mlflow.log_artifact("train.py")
+mlflow.log_artifact("requirements.txt")
+```
+
+### Step 7: W&B Deep Learning Integration
+```python
+import wandb
+
+wandb.init(
+    project="recommendation-dl",
+    name="transformer-v1",
+    config={
+        "learning_rate": 1e-4,
+        "batch_size": 64,
+        "n_layers": 6,
+        "n_heads": 8,
+        "d_model": 256,
+        "dropout": 0.1,
+        "optimizer": "AdamW",
+        "scheduler": "cosine",
+        "dataset": "user_interactions_v3",
+    },
+)
+
+config = wandb.config
+model = TransformerModel(
+    n_layers=config.n_layers,
+    n_heads=config.n_heads,
+    d_model=config.d_model,
+    dropout=config.dropout,
+)
+
+wandb.watch(model, log_freq=100)
+
+for epoch in range(50):
+    train_loss = train_one_epoch(model, config.batch_size, config.learning_rate)
+    val_loss, val_metrics = validate(model)
+
+    wandb.log({
+        "epoch": epoch,
+        "train/loss": train_loss,
+        "val/loss": val_loss,
+        "val/auc": val_metrics["auc"],
+        "val/ndcg@10": val_metrics["ndcg@10"],
+        "learning_rate": optimizer.param_groups[0]["lr"],
+    })
+
+wandb.log_artifact("model.pt", type="model")
+wandb.finish()
+```
+
+## Anti-Patterns
+
+- **Missing data version**: A model without a data version reference cannot be reproduced.
+- **Environment drift**: Pinning Python version but not package versions → unreproducible runs.
+- **Inconsistent metric names**: Different team members use "val_accuracy" vs "validation_accuracy".
+- **Forgetting to log test metrics**: Logging only training metrics → no overfitting detection.
+- **Not setting random seeds**: Same parameters produce different results across runs.
+- **Overwriting model registry versions**: Registry versions must be immutable; always create a new version.
+- **Logging too many hyperparameters**: Log only what varies between runs, not every environment variable.
+- **Not logging intermediate metrics**: Only logging final metrics loses learning curve data.
+- **Coupled training and tracking code**: Use auto_logging (mlflow.autolog(), wandb.init(autolog=True)) instead.
+- **No tag taxonomy**: Team members use different tag names, making search impossible.
+
+## Production Considerations
+
+### MLflow Server Sizing
+```yaml
+# docker-compose.yml for team MLflow
+version: "3.8"
+services:
+  mlflow:
+    image: mlflow
+    build: .
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri postgresql://mlflow:password@postgres/mlflow
+      --default-artifact-root s3://mlflow-artifacts/
+      --workers 4
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: mlflow
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+```
+
+### Cost Optimization
+- MLflow: self-hosted → infrastructure cost only (EC2/ECS + RDS)
+- W&B: free tier for individuals, paid for teams (per seat pricing)
+- Neptune: free tier (limited), paid for teams
+- DVC: free (git-based, no server needed)
+- Artifact storage: S3/GS lifecycle policies to archive old artifacts after 90 days
+- Database cleanup: periodic deletion of old runs (>1 year) via MLflow API
+
+### Monitoring
+- Track experiment count per week as team velocity metric
+- Monitor tracking server latency (p99 < 500ms for log calls)
+- Alert on model registry promotion failures
+- Track disk usage for artifact store; set lifecycle policies
 
 ## Rules
 - Every run logs params, metrics, tags, and artifacts.
@@ -132,13 +424,14 @@ Code: log git commit hash. Data: log dataset hash or DVC version. Environment: l
 - Tag runs with meaningful attributes (dataset version, branch name, model architecture).
 - Create dashboards for frequently compared experiments.
 - Set up alerts for metric regression after each new run.
+- Use auto-logging where available (mlflow.autolog(), wandb.init(autolog=True)).
 
 ## Common Pitfalls
 - **Missing data version**: A model without a data version reference cannot be reproduced.
 - **Environment drift**: Pinning Python version but not package versions leads to unreproducible runs.
-- **Inconsistent metric names**: Different team members use different names for the same metric (e.g., "val_accuracy" vs "validation_accuracy").
-- **Forgetting to log test metrics**: Logging only training metrics makes it impossible to detect overfitting in the registry.
-- **Not setting random seeds**: Without fixed seeds, the exact same parameters produce different results across runs.
+- **Inconsistent metric names**: Different team members use different names for the same metric.
+- **Forgetting to log test metrics**: Logging only training metrics makes it impossible to detect overfitting.
+- **Not setting random seeds**: Without fixed seeds, the exact same parameters produce different results.
 - **Overwriting model registry versions**: Registry versions must be immutable; always create a new version.
 
 ## Compared With

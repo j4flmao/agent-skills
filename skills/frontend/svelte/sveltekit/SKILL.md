@@ -30,278 +30,373 @@ User request includes: `svelte`, `sveltekit`, `svelte app`, `svelte routing`, `s
 - Auth strategy
 
 ### Output Artifact
-A markdown document containing:
-- Project structure
-- Routing conventions
-- Load functions (page, layout, server)
-- Form actions
-- Server-side vs client-side rendering
-- Stores and state management
-- Deployment configuration
+No file output. Produces route structure, load functions, form actions, and deployment config as text.
 
 ### Response Format
-Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging, no transitions. Strip articles a/an/the where unambiguous. Compress output — why use many token when few do trick.
+Route structure with file tree. Load and action code examples. Deployment config.
+
+No preamble. No postamble. No explanations. No filler/hedging/transitions.
 
 ### Max Response Length
 4096 tokens
 
-## Workflow
+## Component Architecture / Decision Trees
 
-### Step 1: Set Up Project Structure
+### Architecture Options
+
+| Approach | Trade-off | When to Use |
+|----------|-----------|-------------|
+| Server load functions (+page.server.ts) | DB access, secrets, SSR | Private/personalized data |
+| Universal load functions (+page.ts) | Runs on server + client | Public API data, cached |
+| Form actions | Server mutations, progressive enhancement | All form submissions |
+| API endpoints (+server.ts) | REST/JSON endpoints | External API consumption |
+| Hooks (handle) | Per-request processing | Auth, logging, redirects |
+
+### Decision Tree: Load Function
 
 ```
-src/
-├── routes/
-│   ├── +page.svelte           # Home page
-│   ├── +layout.svelte         # Root layout
-│   ├── +layout.server.ts      # Server-side layout data
-│   ├── orders/
-│   │   ├── +page.svelte       # /orders
-│   │   ├── +page.server.ts    # Server load
-│   │   ├── [id]/
-│   │   │   ├── +page.svelte   # /orders/:id
-│   │   │   └── +page.server.ts
-│   │   └── create/
-│   │       └── +page.svelte   # /orders/create
-│   └── api/
-│       └── orders/
-│           └── +server.ts     # API endpoint
-├── lib/
-│   ├── server/
-│   │   ├── db.ts
-│   │   └── auth.ts
-│   ├── components/
-│   │   ├── OrderCard.svelte
-│   │   └── Pagination.svelte
-│   └── types.ts
-├── stores/
-│   ├── cart.ts
-│   └── user.ts
-├── app.html
-├── hooks.server.ts
-└── params.ts
+Is the data user-specific?
+  ├── Yes -> +page.server.ts or +layout.server.ts
+  └── No -> Is the API public?
+       ├── Yes -> +page.ts (universal load)
+       └── No -> +page.server.ts
 ```
 
-### Step 2: Implement Page Load
+### Decision Tree: SSR vs SPA vs Static
+
+```
+How should this route render?
+  ├── Needs SEO + fast initial load -> SSR (default)
+  ├── Fully static content -> export const prerender = true
+  ├── Authenticated dashboard -> SSR + trailing slash
+  └── No SSR needed -> export const ssr = false
+```
+
+## Component Design Patterns
+
+### Server Load with Auth
 
 ```typescript
-// src/routes/orders/+page.server.ts
-import type { PageServerLoad } from './$types';
+// src/routes/dashboard/+page.server.ts
+import type { PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-  const page = Number(url.searchParams.get('page')) || 1;
-  const orders = await db.order.findMany({
-    where: { userId: locals.user.id },
-    skip: (page - 1) * 20,
-    take: 20,
-    orderBy: { createdAt: 'desc' }
-  });
-  const total = await db.order.count({ where: { userId: locals.user.id } });
+  if (!locals.user) throw redirect(302, '/login')
 
-  return { orders, total, page };
-};
+  const page = Number(url.searchParams.get('page')) || 1
+  const [orders, total, notifications] = await Promise.all([
+    db.order.findMany({ where: { userId: locals.user.id }, skip: (page-1)*20, take: 20 }),
+    db.order.count({ where: { userId: locals.user.id } }),
+    db.notification.findMany({ where: { userId: locals.user.id, read: false } }),
+  ])
+  return { user: locals.user, orders, total, page, notifications }
+}
 ```
 
-### Step 3: Implement Form Actions
+### Universal Load with Caching
 
 ```typescript
-// src/routes/orders/create/+page.server.ts
-import type { Actions } from './$types';
-import { fail, redirect } from '@sveltejs/kit';
+// src/routes/products/+page.ts
+import type { PageLoad } from './$types'
+
+export const load: PageLoad = async ({ fetch, url }) => {
+  const res = await fetch(`/api/products?${url.searchParams}`)
+  const products = await res.json()
+  return {
+    products,
+    /** Cache on CDN for 5 minutes, stale-while-revalidate for 1 hour */
+    headers: { 'Cache-Control': 'public, max-age=300, s-maxage=3600' },
+  }
+}
+```
+
+### Form Action with Validation
+
+```typescript
+// src/routes/settings/+page.server.ts
+import type { Actions } from './$types'
+import { fail, redirect } from '@sveltejs/kit'
+import { z } from 'zod'
+
+const schema = z.object({ name: z.string().min(2), email: z.string().email() })
 
 export const actions: Actions = {
   default: async ({ request, locals }) => {
-    const data = await request.formData();
-    const customerId = data.get('customerId');
-    const items = JSON.parse(data.get('items') as string);
-
-    if (!customerId) return fail(422, { error: 'Customer required' });
-
-    const order = await db.order.create({
-      data: { customerId, items: { create: items }, userId: locals.user.id }
-    });
-
-    throw redirect(303, `/orders/${order.id}`);
-  }
-};
+    const data = Object.fromEntries(await request.formData())
+    const result = schema.safeParse(data)
+    if (!result.success) return fail(400, { errors: result.error.flatten().fieldErrors, values: data })
+    await db.user.update({ where: { id: locals.user.id }, data: result.data })
+    return { success: true }
+  },
+  delete: async ({ locals }) => {
+    await db.user.delete({ where: { id: locals.user.id } })
+    throw redirect(302, '/goodbye')
+  },
+}
 ```
 
-### Step 4: Implement API Endpoints
+### API Endpoint
 
 ```typescript
 // src/routes/api/orders/+server.ts
-import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+import { json } from '@sveltejs/kit'
+import type { RequestHandler } from './$types'
 
 export const GET: RequestHandler = async ({ locals, url }) => {
-  const orders = await db.order.findMany({ where: { userId: locals.user.id } });
-  return json(orders);
-};
+  const orders = await db.order.findMany({ where: { userId: locals.user.id } })
+  return json(orders)
+}
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const body = await request.json();
-  const order = await db.order.create({ data: { ...body, userId: locals.user.id } });
-  return json(order, { status: 201 });
-};
+  const body = await request.json()
+  const order = await db.order.create({ data: { ...body, userId: locals.user.id } })
+  return json(order, { status: 201 })
+}
 ```
 
-### Step 5: Shared Load Functions
+## State Management Patterns
 
-```typescript
-// src/routes/+layout.server.ts — runs for every route in the tree
-import type { LayoutServerLoad } from './$types';
+### Loader Data as State (Primary)
 
-export const load: LayoutServerLoad = async ({ locals }) => {
-  return {
-    user: locals.user,
-    notifications: await db.notification.findMany({
-      where: { userId: locals.user.id, read: false }
-    }),
-    cartCount: await db.cartItem.count({ where: { userId: locals.user.id } })
-  };
-};
+```svelte
+<script>
+  let { data } = $props()
+  // data.orders, data.user from load function
+</script>
 ```
 
-### Step 6: Universal Load Functions
+### Form State with use:enhance
 
-```typescript
-// src/routes/products/+page.ts — runs on server (SSR) and client (SPA navigation)
-import type { PageLoad } from './$types';
-
-export const load: PageLoad = async ({ fetch, url }) => {
-  const page = url.searchParams.get('page') || '1';
-  const res = await fetch(`/api/products?page=${page}`);
-  return await res.json();
-};
-```
-
-### Step 7: Error Handling
-
-```typescript
-// src/routes/+error.svelte
-<script lang="ts">
-  import { page } from '$app/stores';
+```svelte
+<script>
+  import { enhance } from '$app/forms'
+  let { form, data } = $props()
 </script>
 
-<h1>{$page.status}</h1>
-<p>{$page.error?.message}</p>
+<form method="POST" use:enhance>
+  <input name="name" bind:value={form?.name} />
+  <button type="submit">Save</button>
+</form>
 ```
 
-### Step 8: Hooks
+### Client State with Stores
 
 ```typescript
-// src/hooks.server.ts
-import type { Handle } from '@sveltejs/kit';
-
-export const handle: Handle = async ({ event, resolve }) => {
-  const token = event.cookies.get('session');
-  event.locals.user = token ? await getUserFromToken(token) : null;
-  return await resolve(event);
-};
+// src/lib/stores/cart.svelte.ts
+import { writable } from 'svelte/store'
+export const cart = writable<CartItem[]>([])
 ```
 
-## Component Architecture
+## Performance Optimization
 
-### Load Function Decision Tree
-```
-Is the data user-specific or server-side only?
-  Yes -> +page.server.ts or +layout.server.ts
-  No  -> Is the data publicly cacheable?
-    Yes -> +page.ts (universal load, runs on server+client)
-    No -> +page.server.ts
+1. Compiles to vanilla JS — no virtual DOM, ~5KB runtime
+2. Per-component hydration reduces initial JS cost
+3. Load functions run on server for SSR, client for SPA navigation
+4. Route-level code splitting by default
+5. `preload` attributes on critical assets
+6. Cache headers via `setHeaders` in load functions
 
-Does the parent route have data the child needs?
-  Yes -> Use parent() in the child load function
-  No -> Independent fetch
+## Build & Bundle Considerations
+
+### Adapter Configuration
+
+```ts
+// svelte.config.js
+import adapter from '@sveltejs/adapter-vercel'  // or -node, -netlify, -cloudflare
+
+export default {
+  kit: {
+    adapter: adapter({
+      runtime: 'edge',             // for adapter-vercel
+      regions: ['iad1'],
+    }),
+    prerender: {
+      entries: ['/', '/about', '/blog/*'],
+    },
+  },
+}
 ```
 
-### Route Structure Patterns
+### Build Commands
+```bash
+npm run build    # adapter-specific build
+npm run preview  # preview production build
+npm run dev      # dev server with HMR
 ```
-src/routes/
-  (app)/                    -- Route group, no path segment
-    +layout.svelte          -- App shell (sidebar + header)
-    +layout.server.ts       -- User data fetch
-    dashboard/+page.svelte
-    settings/+page.svelte
-  (marketing)/
-    +layout.svelte          -- Marketing layout (no auth check)
-    +page.svelte            -- Landing page
-    about/+page.svelte
+
+### Environment Variables
+```typescript
+// Server-only: process.env.DATABASE_URL
+// Public: import { env } from '$env/dynamic/public' or '$env/static/public'
+// Private: import { env } from '$env/dynamic/private' or '$env/static/private'
 ```
+
+## Testing Strategies
+
+### Load Function Tests
+
+```typescript
+import { describe, it, expect } from 'vitest'
+import { load } from './+page.server'
+
+it('returns orders for authenticated user', async () => {
+  const result = await load({ locals: { user: { id: '1' } }, url: new URL('http://localhost'), params: {} })
+  expect(result).toHaveProperty('orders')
+  expect(result).toHaveProperty('user')
+})
+```
+
+### Form Action Tests
+
+```typescript
+it('validates form input', async () => {
+  const formData = new FormData()
+  formData.set('email', 'invalid')
+  const result = await actions.default({ request: new Request('http://localhost', { method: 'POST', body: formData }), locals: { user: { id: '1' } } })
+  expect(result.status).toBe(400)
+})
+```
+
+### E2E Tests
+
+```typescript
+import { test, expect } from '@playwright/test'
+test('submits contact form', async ({ page }) => {
+  await page.goto('/contact')
+  await page.fill('[name="email"]', 'test@test.com')
+  await page.click('button[type="submit"]')
+  await expect(page).toHaveURL(/\/thanks/)
+})
+```
+
+## Migration Patterns
+
+### Svelte 4 Stores to Svelte 5 Runes
+
+```typescript
+// Svelte 4
+import { writable, derived } from 'svelte/store'
+export const count = writable(0)
+
+// Svelte 5
+let count = $state(0)
+```
+
+### Express to SvelteKit
+
+| Express + SPA | SvelteKit |
+|---------------|-----------|
+| Express routes | +page.svelte + +page.server.ts |
+| REST API | +server.ts |
+| Session middleware | hooks.server.ts |
+| Client fetch | load() functions |
+
+## Anti-Patterns
+
+1. Fetching on client for initial data — use load()
+2. Mutating $page.data — read-only
+3. Not throwing redirect — `throw redirect()`, not `return redirect()`
+4. Large layout loads — keep minimal
+5. Missing +error.svelte — every app needs one
+6. Not using fail() for validation — use status 400
 
 ## Common Pitfalls
 
-1. **Fetching on client for initial data**: Initial page data must be loaded in `+page.server.ts`, not in onMount.
-2. **Mutating `$page.data` directly**: It's read-only. Use stores or form actions for mutations.
-3. **Forgetting `throw redirect`**: `redirect` must be thrown, not returned.
-4. **Over-fetching in layout load**: Layout loads run on every navigation — keep them minimal.
-5. **Mixing server and client code**: `$page`, `$app/stores` are client-only. Use `+page.server.ts` for server code.
-6. **Missing error pages**: Every app needs `+error.svelte` and optionally `+error@...` per route group.
-7. **Not using `invalid` for validation**: Use `fail()` (formerly `invalid()`) with field-level error maps.
-
-## Best Practices
-
-1. Colocate server load functions with the page that needs the data.
-2. Use `+layout.server.ts` for shared data (user, notifications) — avoids N+1 load calls.
-3. Prefer `form actions` over API routes + client fetch for mutations.
-4. Use `+page.ts` (universal load) for publicly cacheable data to enable client-side navigation caching.
-5. Validate all form data before passing to database — never trust the client.
-6. Use `locals` for auth and database clients — injected via `hooks.server.ts`.
-7. Keep `+page.svelte` components thin — extract reusable UI into `$lib/components/`.
+1. **Fetching on client for initial data**: Use `+page.server.ts` load(), not onMount.
+2. **Mutating $page.data directly**: Read-only. Use stores or form actions.
+3. **Forgetting `throw redirect`**: Must be thrown, not returned.
+4. **Over-fetching in layout load**: Keep minimal — runs on every navigation.
+5. **Mixing server and client code**: `$page`, `$app/stores` are client-only.
+6. **Missing error pages**: Add `+error.svelte`.
 
 ## Compared With
 
 | Aspect | SvelteKit | Next.js App Router | Nuxt 3 |
 |--------|-----------|-------------------|--------|
-| Data loading | load functions (+page.server.ts) | async component + fetch | useAsyncData / useFetch |
+| Data loading | load functions | async component + fetch | useAsyncData |
 | Mutations | form actions | Server Actions | useFetch with method |
 | API endpoints | +server.ts | route.ts | server/api/ |
-| Stores | writable/derived stores | useState / Zustand | useState / Pinia |
-| Rendering | SSR, SSG, SPA per route | SSR, SSG, ISR per route | SSR, SSG, SPA per route |
 | Bundle size | ~5KB runtime | ~70KB+ (React) | ~40KB (Vue) |
-| Hydration | Per-component (lazy) | Full-page | Full-page |
+| Hydration | Per-component | Full-page | Full-page |
 
-## Performance
+## Ecosystem & Tooling
 
-1. Svelte compiles to vanilla JS — no virtual DOM, smaller bundles (~5KB runtime).
-2. Per-component hydration (Svelte 5 with runes) reduces initial JS cost.
-3. Load functions run on server for SSR, client for SPA navigation — data can be cached.
-4. Image optimization via `@sveltejs/enhanced-img` for automatic AVIF/WebP.
-5. Route-level code splitting by default.
-6. `preload` attributes for critical assets.
-7. Caching headers via `setHeaders` in load functions.
+1. `npm create svelte@latest` — scaffold
+2. `npm run dev` — HMR
+3. `npm run build` — adapter build
+4. `svelte-check` — CLI type checking
+5. `@sveltejs/adapter-auto` — automatic adapter
+6. `svelte-add` — add integrations
 
-## Tooling
+## Workflow
 
-1. `npm create svelte@latest` — scaffold project.
-2. `npm run dev` — HMR dev server.
-3. `npm run build` — production build with adapter.
-4. `npm run preview` — preview production build locally.
-5. `svelte-check` — CLI type checking.
-6. `@sveltejs/adapter-auto` — automatic adapter selection.
-7. `svelte-add` — CLI to add integrations (Tailwind, PostCSS, etc.).
-8. `vite-plugin-svelte-inspector` — inspect component hierarchy in dev.
+### Step 1: Route Structure
+```
+src/routes/
+  +page.svelte            -- /
+  +layout.svelte          -- root layout
+  +layout.server.ts       -- shared data
+  orders/
+    +page.svelte          -- /orders
+    +page.server.ts       -- orders load
+    [id]/
+      +page.svelte        -- /orders/:id
+      +page.server.ts
+  api/
+    orders/
+      +server.ts          -- /api/orders
+```
+
+### Step 2: Page Load
+```typescript
+export const load: PageServerLoad = async ({ locals, url }) => {
+  return { orders: await db.order.findMany({ where: { userId: locals.user.id } }) }
+}
+```
+
+### Step 3: Form Actions
+```typescript
+export const actions: Actions = {
+  default: async ({ request }) => {
+    const data = await request.formData()
+    // validate, process
+    throw redirect(303, '/success')
+  }
+}
+```
+
+### Step 4: API Endpoints
+```typescript
+export const GET: RequestHandler = async () => {
+  return json(await db.product.findMany())
+}
+```
+
+### Step 5: Hooks
+```typescript
+export const handle: Handle = async ({ event, resolve }) => {
+  event.locals.user = await getUser(event.cookies.get('session'))
+  return await resolve(event)
+}
+```
 
 ## Rules
-- All routes follow SvelteKit file-based routing convention with `+page.svelte`, `+layout.svelte`, `+server.ts` naming.
-- Data fetching in `+page.server.ts` load functions — never fetch on client for initial page data.
-- Form mutations use `Actions` with `fail()` for validation errors and `redirect()` for success.
-- API endpoints placed in `routes/api/` directory with `+server.ts` handlers.
-- Server-only code in `lib/server/` — never import in client components.
-- Stores for client-side state only; server state flows through load functions.
-- Parameters validated and parsed before use — never trust URL params directly.
-- Use `+layout.server.ts` for shared data but keep it minimal to avoid unnecessary fetches.
-- Always set appropriate cache headers in load functions for public data.
+- All routes follow file-based naming (+page.svelte, +layout.svelte, +server.ts).
+- Data fetching in load functions, never onMount for initial data.
+- Form mutations use Actions with fail() for errors, redirect() for success.
+- Server-only code in lib/server/ — never import in client.
+- Stores for client state only; server state flows through load functions.
+- Always set cache headers for public data.
 
 ## References
-  - references/endpoints-loading.md — SvelteKit Endpoints and Data Loading
-  - references/stores-context.md — Svelte Stores and Context API
-  - references/sveltekit-auth.md — SvelteKit Auth & Security Patterns
-  - references/sveltekit-data.md — SvelteKit Data Loading Patterns
-  - references/sveltekit-deployment.md — SvelteKit Deployment
-  - references/sveltekit-routing.md — SvelteKit Routing
-  - references/sveltekit-form-actions.md — SvelteKit Form Actions Reference
-  - references/sveltekit-deployment-adapters.md — SvelteKit Deployment Adapters Reference
+  - references/endpoints-loading.md
+  - references/stores-context.md
+  - references/sveltekit-auth.md
+  - references/sveltekit-data.md
+  - references/sveltekit-deployment.md
+  - references/sveltekit-routing.md
+  - references/sveltekit-form-actions.md
+  - references/sveltekit-deployment-adapters.md
 
 ## Handoff
-Hand off to `frontend/universal/state-management/SKILL.md` for store patterns. Hand off to `frontend/universal/performance/SKILL.md` for optimization.
+Hand off to `frontend/universal/state-management/SKILL.md` or `frontend/universal/performance/SKILL.md`.

@@ -2,7 +2,7 @@
 name: frontend-state-management
 description: >
   Use this skill when the user says 'state management', 'global state', 'Redux', 'Zustand', 'Pinia', 'NgRx', 'React Context', 'state architecture', 'where to put state', 'server state vs client state', or when deciding how to manage application state. This skill enforces: server state goes in server state libraries (TanStack Query, SWR, Apollo), local state goes in useState/ref/signals, shared state goes in lightweight stores (Zustand, Pinia, Signal Store), and complex state goes in XState or Redux Toolkit. Works with React, Vue, Angular. Do NOT use for: database design, backend caching, or API design.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -53,6 +53,75 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 Per state decision: 7 lines.
+
+## State Management Architecture / Decision Trees
+
+### State Classification Decision Tree
+```
+Where is the source of truth?
+  |-- On the server (database, API, third-party service) -->
+  |     SERVER STATE
+  |     Library: TanStack Query, SWR, Apollo, RTK Query
+  |     NEVER put in Zustand, Redux, Pinia, or Context
+  |
+  |-- On the client (user interaction, UI state) -->
+  |     Is it shared across multiple components?
+  |     |-- NO -->
+  |     |     LOCAL STATE
+  |     |     React: useState, useReducer
+  |     |     Vue: ref, reactive
+  |     |     Angular: Component-local signal
+  |     |
+  |     |-- YES -->
+  |           |-- Complex (multiple actions, transitions, side effects)? -->
+  |           |     |-- YES -->
+  |           |     |     COMPLEX STATE (state machine)
+  |           |     |     Library: XState, Redux Toolkit (slices + thunks), NgRx
+  |           |     |     Use when: 15+ actions, cross-cutting concerns, middleware needed
+  |           |     |
+  |           |     |-- NO -->
+  |           |           SHARED STATE (simple store)
+  |           |           React: Zustand, Jotai, Valtio
+  |           |           Vue: Pinia
+  |           |           Angular: Signal Store
+  |           |
+  |           |-- Derived / computed from other state?
+  |                 COMPUTED STATE
+  |                 React: useMemo, Zustand selectors, Jotai derived atoms
+  |                 Vue: computed()
+  |                 Angular: computed signal
+  |
+  |-- In the URL (search params, path, hash) -->
+  |     URL STATE
+  |     Read: useSearchParams, useParams, useLocation
+  |     Write: router.push/replace, searchParams set
+  |     NEVER duplicate URL state in component state
+  |
+  |-- On the device (localStorage, IndexedDB, cookies) -->
+        PERSISTED STATE
+        Sync to store on init, write back on change
+        Zod schema validation on read (storage can be tampered)
+```
+
+### Global Store Structure Decision Tree
+```
+How many pieces of state?
+  |-- 1-3 related values (auth: user, token, isAuthenticated) -->
+  |     Single small store is fine
+  |
+  |-- 4-10 related values -->
+  |     Split by domain if they change independently
+  |     |-- auth: user, token, login, logout
+  |     |-- cart: items, total, addItem, removeItem
+  |     |-- ui: sidebarOpen, theme, modalState
+  |
+  |-- 10+ values -->
+        MUST split by domain
+        Each store: max 5-7 state properties + associated actions
+        A store with 20+ properties is a design smell
+```
+
+---
 
 ## Workflow
 
@@ -126,6 +195,142 @@ const orderMachine = createMachine({
 | Real-time data | Server state subscription | useQuery with WebSocket |
 | URL params | URL/search params | useSearchParams |
 | Form validation | Component local or form library | react-hook-form |
+
+### Step 5: Zustand Store Example
+```typescript
+import { create } from 'zustand'
+import { devtools, persist } from 'zustand/middleware'
+
+interface CartStore {
+  items: CartItem[]
+  totalItems: number
+  addItem: (item: CartItem) => void
+  removeItem: (id: string) => void
+  clearCart: () => void
+}
+
+const useCartStore = create<CartStore>()(
+  devtools(
+    persist(
+      (set, get) => ({
+        items: [],
+        totalItems: 0,
+        addItem: (item) => set((state) => ({
+          items: [...state.items, item],
+          totalItems: state.totalItems + 1,
+        })),
+        removeItem: (id) => set((state) => ({
+          items: state.items.filter((i) => i.id !== id),
+          totalItems: state.totalItems - 1,
+        })),
+        clearCart: () => set({ items: [], totalItems: 0 }),
+      }),
+      { name: 'cart-storage' }
+    )
+  )
+)
+```
+
+### Step 6: State Testing Patterns
+```typescript
+// Test Zustand store
+describe('CartStore', () => {
+  beforeEach(() => {
+    useCartStore.setState({ items: [], totalItems: 0 })
+  })
+
+  it('adds item to cart', () => {
+    const item = { id: '1', name: 'Test', price: 10 }
+    useCartStore.getState().addItem(item)
+    expect(useCartStore.getState().items).toHaveLength(1)
+  })
+
+  it('removes item from cart', () => {
+    const item = { id: '1', name: 'Test', price: 10 }
+    useCartStore.getState().addItem(item)
+    useCartStore.getState().removeItem('1')
+    expect(useCartStore.getState().items).toHaveLength(0)
+  })
+})
+```
+
+## Common Pitfalls
+
+### 1. Server State in Global Store
+```typescript
+// BAD -- putting API data in Zustand
+const useUserStore = create((set) => ({
+  user: null,
+  fetchUser: async (id) => {
+    const user = await api.getUser(id)
+    set({ user }) // Manual cache, no dedup, no refetch
+  },
+}))
+
+// GOOD -- use server state library
+function useUser(id: string) {
+  return useQuery({
+    queryKey: ['user', id],
+    queryFn: () => api.getUser(id),
+    staleTime: 30_000,
+  })
+}
+```
+
+### 2. Context for State Management
+Context triggers re-render of all consumers on any value change. For frequently-updated state, use Zustand or Jotai which use subscriptions instead of prop drilling.
+
+### 3. Monolithic Global Store
+A single Redux store with 50+ slices creates unnecessary coupling. Zustand or Pinia encourages multiple small stores by design.
+
+### 4. Duplicating URL State
+Reading search params into useState creates sync issues. Always derive from URL, write to URL.
+
+### 5. Not Normalizing Server State
+Cached server state should be normalized by ID to avoid duplication. TanStack Query handles this with `queryKey`.
+
+## Compared With
+
+| Library | Bundle Size | Boilerplate | Framework | Best For |
+|---------|------------|-------------|-----------|----------|
+| useState | 0KB | Low | React | Local component state |
+| useReducer | 0KB | Medium | React | Local complex state |
+| Zustand | ~1KB | Low | Any | Shared simple state |
+| Jotai | ~3KB | Low | React | Atomic shared state |
+| Redux Toolkit | ~12KB | Medium | React | Complex app state |
+| Pinia | ~1KB | Low | Vue | Vue shared state |
+| NgRx | ~15KB | High | Angular | Complex Angular state |
+| TanStack Query | ~13KB | Low | Any | Server state |
+| XState | ~12KB | Medium | Any | State machines |
+
+## Performance Considerations
+
+### Store Selection Performance Impact
+| Approach | Re-renders on change | Setup cost | Memoization needed |
+|----------|---------------------|------------|-------------------|
+| Context | All consumers | Low | Yes (value memo) |
+| Zustand | Only subscribed components | Low | No (selector-based) |
+| Jotai | Only dependent atoms | Low | No (fine-grained) |
+| Redux | Connected components via selector | Medium | Yes (reselect) |
+| Pinia | Only subscribed components | Low | No |
+| NgRx | Connected components | High | Yes (selectors) |
+
+### Rule of Thumb
+- If state is read > written (theme, locale, auth): Context (with memoized value) is fine
+- If state is written > read (form inputs, UI toggles): Zustand, useState, or ref
+- If state changes rapidly (animations, real-time): Jotai atoms or signals
+
+## Accessibility Considerations
+
+- State changes should trigger appropriate aria-live announcements (loading, error, content updates)
+- Modal/dialog state management must manage focus (trap focus when open, restore on close)
+- Theme state changes should not cause sudden visual changes without user awareness
+
+## Security Considerations
+
+- Persisted stores (localStorage) should validate data with Zod on read — storage can be tampered
+- Auth state should never be persisted to localStorage. Use httpOnly cookies + server state.
+- User data in stores should be sanitized before rendering (avoid XSS via stored state)
 
 ## Rules
 - Server state goes in TanStack Query / SWR / Apollo. Never put server state in Zustand, Redux, or Pinia.

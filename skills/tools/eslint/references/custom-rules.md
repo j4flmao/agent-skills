@@ -276,17 +276,228 @@ module.exports = {
 };
 ```
 
+## Rule Performance Optimization
+
+### Performance Patterns
+```javascript
+// BAD: Expensive — traverses entire AST on every node
+module.exports = {
+  create(context) {
+    return {
+      CallExpression(node) {
+        // This runs for ALL function calls
+        // Expensive check on every call
+      },
+    };
+  },
+};
+
+// GOOD: Use AST selectors to narrow scope
+module.exports = {
+  create(context) {
+    return {
+      'CallExpression[callee.name="dangerousFunction"]'(node) {
+        // Only fires for specific calls
+      },
+    };
+  },
+};
+
+// GOOD: Cache expensive computations
+module.exports = {
+  create(context) {
+    const sourceCode = context.getSourceCode();
+    let importNodes = null;
+
+    return {
+      ImportDeclaration(node) {
+        if (!importNodes) importNodes = [];
+        importNodes.push(node);
+      },
+      'Program:exit'() {
+        // Process all imports at end (single pass)
+        processImports(importNodes);
+      },
+    };
+  },
+};
+```
+
+### Slow Rule Detection
+```bash
+# Profile rule execution time
+TIMING=1 npx eslint src/  # Shows ms per rule
+
+# Debug rule execution order
+npx eslint --debug src/ 2>&1 | grep "rule"
+```
+
+## Rule Categories and Conventions
+
+### Meta Type Decision
+```
+What is the rule's purpose?
+├── Code WILL break or produce wrong results → "problem" (highest priority)
+├── Code could be written better / more maintainable → "suggestion"
+├── Code formatting / style only → "layout" (delegate to Prettier when possible)
+└── Prevents security vulnerabilities → "problem" with security docs
+```
+
+### Rule Naming Convention
+```
+Descriptive, kebab-case:
+  no-console                 # Disallows console usage
+  max-lines-per-function      # Enforces maximum lines
+  prefer-arrow-callback       # Prefers arrow function
+  @typescript-eslint/no-explicit-any  # Scoped rules
+
+Prefix conventions:
+  no-*    → Disallows something
+  prefer-* → Prefers one pattern over another
+  require-* → Requires something to be present
+  enforce-* → Enforces a specific pattern
+```
+
+## Advanced Context APIs
+
+### SourceCode Methods
+```javascript
+module.exports = {
+  create(context) {
+    const sourceCode = context.getSourceCode();
+    return {
+      FunctionDeclaration(node) {
+        // Get full text of node
+        const text = sourceCode.getText(node);
+        // Get text with specific range
+        const firstLine = sourceCode.getText(node, 0, 1);
+        // Get tokens
+        const tokens = sourceCode.getTokens(node);
+        // Get comments
+        const comments = sourceCode.getCommentsInside(node);
+        // Check if node has specific comment
+        const hasJSDoc = comments.some(
+          (c) => c.type === 'Block' && c.value.startsWith('*')
+        );
+      },
+    };
+  },
+};
+```
+
+### Scope Analysis
+```javascript
+module.exports = {
+  create(context) {
+    return {
+      'Program:exit'(node) {
+        const globalScope = context.getScope();
+        const allScopes = [globalScope];
+        let scope = globalScope;
+
+        // Traverse scope chain
+        while (scope.childScopes.length) {
+          allScopes.push(...scope.childScopes);
+          scope = scope.childScopes[0];
+        }
+
+        // Check for undeclared variables
+        globalScope.through.forEach((ref) => {
+          context.report({
+            node: ref.identifier,
+            message: `"${ref.identifier.name}" is not defined.`,
+          });
+        });
+      },
+    };
+  },
+};
+```
+
+## Testing Patterns
+
+### Edge Case Testing
+```javascript
+const ruleTester = new RuleTester({
+  parserOptions: { ecmaVersion: 2020, sourceType: 'module' },
+});
+
+ruleTester.run('my-rule', rule, {
+  valid: [
+    // Boundary cases
+    { code: '', options: [{ max: 0 }] },
+    { code: 'const x = 1;' },
+    { code: '// just a comment', options: [{ allowComments: true }] },
+    // Options edge cases
+    { code: 'const x = 1;', options: [{}] },
+    { code: 'const x = 1;', options: [] },
+  ],
+  invalid: [
+    // Exact error matching
+    {
+      code: 'console.log("test")',
+      errors: [
+        { messageId: 'unexpectedLog', line: 1, column: 1, endLine: 1, endColumn: 20 },
+      ],
+    },
+    // Multiple errors
+    {
+      code: 'console.log("a"); console.log("b");',
+      errors: [{ messageId: 'unexpectedLog' }, { messageId: 'unexpectedLog' }],
+    },
+    // Options validation
+    {
+      code: 'console.log("test")',
+      options: [{ allow: [] }],
+      errors: [{ messageId: 'unexpectedLog' }],
+    },
+  ],
+});
+```
+
+## Common Fix Patterns
+
+### Fixer Utilities
+```javascript
+module.exports = {
+  create(context) {
+    const sourceCode = context.getSourceCode();
+    return {
+      'CallExpression[callee.property.name="forEach"]'(node) {
+        context.report({
+          node,
+          message: 'Use for...of instead of forEach',
+          fix(fixer) {
+            const callee = node.callee.object;
+            const callback = node.arguments[0];
+            const params = callback.params.map((p) => sourceCode.getText(p));
+            const body = sourceCode.getText(callback.body);
+
+            const param = params.length > 0
+              ? params[0]
+              : 'item';
+
+            const forOf = `for (const ${param} of ${sourceCode.getText(callee)}) ${body}`;
+            return fixer.replaceText(node, forOf);
+          },
+        });
+      },
+    };
+  },
+};
+```
+
 ## Key Points
 - Rules use AST visitor pattern with node type handlers
 - meta defines rule metadata: type, docs, schema, messages
 - create returns a visitor object with node handlers
 - context.report() reports violations with message or messageId
 - Fixable rules provide auto-fix functionality via fixer
-- AST selectors enable pattern-based node matching
+- AST selectors enable pattern-based node matching (CSS-like syntax)
 - Schema defines rule options with JSON Schema
 - RuleTester validates rule behavior with valid/invalid cases
 - SourceCode utility accesses token-level information
-- Fixer methods: replaceText, insertTextAfter, removeRange
+- Fixer methods: replaceText, insertTextAfter, removeRange, remove
 - Linter APIs define rule environments
 - Multiple fixes can be applied in one report
 - Use messageId over inline messages for i18n
@@ -299,3 +510,11 @@ module.exports = {
 - ESLint plugins package multiple rules together
 - Test valid cases for allowed patterns
 - Test invalid cases for disallowed patterns
+- Use `Program:exit` for processing collected data after all nodes visited
+- Use `this.meta` in create function for accessing rule metadata
+- Context provides getFilename(), getPhysicalFilename(), getCwd()
+- RuleTester supports parserOptions, globals, and settings
+- Fixer methods work per-report, not per-pass
+- Inline `// eslint-disable-next-line` comments bypass rules
+- Rule schema uses JSON Schema for validation
+- Multiple rules can share a single traversal via composition

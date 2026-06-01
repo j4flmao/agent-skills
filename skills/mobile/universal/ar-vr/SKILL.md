@@ -2,7 +2,7 @@
 name: mobile-ar-vr
 description: >
   Use this skill when the user says 'AR', 'VR', 'augmented reality', 'virtual reality', 'ARKit', 'ARCore', 'Unity AR', '3D rendering', 'SceneView', 'AR scene', 'AR interaction', 'AR performance'. This skill enforces: platform-specific AR configuration (ARKit vs ARCore), scene setup with anchor management, optimal 3D model handling with LODs and compression, interaction patterns for gesture and placement, performance budgets (<60fps, <200MB), and VR integration considerations. Do NOT use for: general mobile UI/UX design, game engine tutorials unrelated to AR/VR, or 3D modeling software usage instructions.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -34,16 +34,6 @@ Design and implement AR/VR experiences for mobile platforms with platform-aware 
 AR/VR integration plan with platform selection, scene architecture, anchor management strategy, 3D model pipeline, interaction model, and performance budget.
 
 ### Response Format
-```
-AR Integration Plan
-Platform: {iOS/Android/Both}
-Framework: {ARKit/ARCore/Unity}
-Scene Setup: {config}
-Anchor Strategy: {type + lifecycle}
-3D Pipeline: {format + LOD + compression}
-Interaction Model: {gesture set + feedback}
-Performance Budget: {FPS target, memory cap}
-```
 No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output.
 
 ### Completion Criteria
@@ -60,7 +50,6 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ## Architecture / Decision Trees
 
 ### AR Framework Decision Tree
-
 ```
 Is the app cross-platform (iOS + Android)?
 ├── Yes → Use ARFoundation (Unity) or SceneView (React Native / Flutter)
@@ -75,7 +64,6 @@ Does the app need LiDAR features?
 ```
 
 ### Tracking Configuration Decision
-
 ```
 What type of AR tracking is needed?
 ├── World tracking (object placement on surfaces)
@@ -91,17 +79,18 @@ What type of AR tracking is needed?
     └── ARObjectScanningConfiguration / ARCore Cloud Anchors
 ```
 
-### 3D Model Format Decision
-
+### 3D Asset Pipeline Decision
 ```
-Need animation support?
-├── Yes → glTF 2.0 (cross-platform best choice)
-│   └── Also supports: USDZ (iOS native with animation)
-├── Need Draco compression?
-│   ├── Yes → glTF with Draco (smallest file size)
-│   └── No → glTF (universal) or USDZ (iOS only)
-└── Static models only
-    └── glTF or OBJ (simple, large files)
+Source format?
+├── Animated → glTF 2.0 (universal) or USDZ (iOS native with animation)
+│   GLTF preferred — broader tool support, Draco compression
+├── Static → glTF or compressed OBJ (Draco compressed for streaming)
+└── CAD/BIM data → USDZ (Pixar USD ecosystem, retains metadata)
+
+Budle target size?
+├── <10MB total → glTF with texture atlases, no LOD needed
+├── 10-50MB → LOD generation (3 levels), Draco compression
+└── >50MB → Streaming (download on demand), not bundled
 ```
 
 ## Workflow
@@ -110,7 +99,7 @@ Need animation support?
 ARKit (iOS 11+): A12 Bionic or later for LiDAR, ARWorldTrackingConfiguration for 6DOF, ARImageTrackingConfiguration for image targets, ARFaceTrackingConfiguration for face AR. ARCore (Android 7+): Google Play Services for AR, supported devices list at developers.google.com/ar/devices, Depth API for occlusion, Augmented Images for image tracking. Cross-platform: use ARFoundation (Unity) or SceneView (React Native / Flutter).
 
 | Capability | ARKit | ARCore |
-|---|---|---|
+|-----------|-------|--------|
 | Plane detection | Horizontal + vertical + LiDAR mesh | Horizontal + vertical |
 | Image tracking | Concurrent, up to 100 images | Up to 20 images |
 | Face tracking | TrueDepth camera (iPhone X+) | Front camera, less precise |
@@ -122,23 +111,13 @@ Configure ARSession. For world tracking: set `ARWorldTrackingConfiguration` (iOS
 
 ```
 ARSession
-├── Configuration
-│   ├── Plane detection (horizontal | vertical | both | none)
-│   ├── Light estimation (ambient intensity, color temperature)
-│   ├── Environment texturing (manual | automatic)
-│   └── Frame semantics (depth, person segmentation)
-├── Anchors
-│   ├── Plane anchors (ARPlaneAnchor / Plane)
-│   ├── Image anchors (ARImageAnchor / AugmentedImage)
-│   └── Object anchors (ARObjectAnchor / CloudAnchor)
-└── State management
-    ├── Running → Paused → Running
-    ├── Limited tracking → Recovery prompt
-    └── Authorization denied → Fallback
+├── Configuration (plane detection, light estimation, environment texturing, frame semantics)
+├── Anchors (Plane anchors, Image anchors, Object anchors)
+└── State management (Running -> Paused -> Running, Limited tracking -> Recovery prompt)
 ```
 
 ### Step 3: 3D Model Handling
-Preferred formats: USDZ (iOS native, animation + materials), glTF 2.0 (cross-platform, Draco compression). Model pipeline: source → optimize (decimate to target poly count) → compress (Draco for glTF) → LOD generation (3 levels at 100%, 60%, 30% detail) → bundle. Texture atlas: combine textures, max 1024x1024 for mobile, ASTC (iOS) or ETC2 (Android).
+Preferred formats: USDZ (iOS native, animation + materials), glTF 2.0 (cross-platform, Draco compression). Model pipeline: source -> optimize (decimate to target poly count) -> compress (Draco for glTF) -> LOD generation (3 levels at 100%, 60%, 30% detail) -> bundle. Texture atlas: combine textures, max 1024x1024 for mobile, ASTC (iOS) or ETC2 (Android).
 
 ### Step 4: Interaction Patterns
 Placement: hit-test against detected planes (raycast), show ghost preview, confirm placement with haptic + animation. Manipulation: one-finger rotate, two-finger scale, long-press drag. Selection: tap to select (visual highlight + bounding box), double-tap for context menu. Feedback: light impact for selection, medium for placement, ripple animation, glow effect.
@@ -148,6 +127,12 @@ GPU instancing for repeated objects. Occlusion culling (LiDAR depth on iOS, Dept
 
 ### Step 6: VR Integration
 VR requires dedicated headset (Meta Quest, Apple Vision Pro). Mobile VR is primarily ARKit or Unity VR build. For Vision Pro: RealityKit, SwiftUI with volumetric windows, immersive spaces. AR: 60fps. VR: 72fps minimum (90fps preferred) to prevent motion sickness.
+
+### Step 7: Session Interruption Handling
+AR sessions are interrupted by: incoming call, app backgrounding, tracking loss (poor lighting, featureless surfaces). Implement session interruption handlers: (a) On interruption: pause AR, save state/snapshot. (b) On resume: check tracking state, reload anchors if needed. (c) If tracking state is limited: check tracking reason (excessive motion, insufficient features, initializing), inform user with action prompt (move device to well-lit area with texture). (d) After prolonged interruption: reset session configuration and re-establish anchors.
+
+### Step 8: Lighting and Environment Texturing
+ARKit: environment texturing (`automatic` or `manual`). Automatic generates environment probes from camera feed for realistic reflections. Manual: provide pre-baked environment maps for consistent lighting. ARCore: Environmental HDR mode with `LightEstimationMode`. Both: ambient light estimation (intensity + color temperature) for consistent virtual object rendering. Enable shadow casting from virtual objects onto real surfaces (ARKit directional shadows, ARCore Depth Occlusion).
 
 ## Common Pitfalls
 
@@ -174,32 +159,19 @@ AR performance on simulators/emulators bears no relation to real-device performa
 
 ## Best Practices
 
-- Check AR capability at app launch, provide graceful fallback (2D mode, web-based AR).
-- Use ARWorldTrackingConfiguration for 6DOF tracking, with plane detection enabled.
-- Set environment texturing to automatic for realistic lighting.
-- Implement session interruption handlers with state recovery.
-- Compress all 3D models — target <50MB total for all models in a scene.
-- Generate 3 LOD levels per model at 100%, 50%, 25% detail.
-- Use texture atlases to reduce draw calls — combine multiple textures into one.
-- Implement hit-testing with raycast for accurate placement.
-- Provide visual + haptic feedback for every user action.
-- Test on real devices with varied conditions: bright sunlight, dim interiors, textured surfaces.
-- Remove unused anchors — limit active anchors to 50 maximum.
-- Use GPU instancing for repeated objects (e.g., furniture in a room).
-
-## Compared With
-
-### ARKit vs ARCore
-ARKit offers better tracking quality and more features (LiDAR, face tracking, world maps). ARCore has broader device support but fewer advanced features. Choose ARKit for iOS-only, ARFoundation for cross-platform.
-
-### ARKit vs ARFoundation
-ARFoundation wraps both ARKit and ARCore in Unity's API. Native ARKit provides more control and better performance. Use ARFoundation for cross-platform Unity projects. Use native ARKit for iOS-only apps needing maximum performance.
-
-### SceneView (React Native) vs ARFoundation (Unity)
-SceneView is lighter weight for React Native apps but has fewer features. ARFoundation provides full AR capabilities but requires Unity. Choose based on existing tech stack.
-
-### Mobile AR vs VR
-Mobile AR leverages the device camera for real-world overlay. VR creates fully immersive environments. AR is accessible (no headset required) but limited by field of view. VR provides full immersion but requires dedicated hardware.
+- Check AR capability at app launch, provide graceful fallback (2D mode, web-based AR)
+- Use ARWorldTrackingConfiguration for 6DOF tracking, with plane detection enabled
+- Set environment texturing to automatic for realistic lighting
+- Implement session interruption handlers with state recovery
+- Compress all 3D models — target <50MB total for all models in a scene
+- Generate 3 LOD levels per model at 100%, 50%, 25% detail
+- Use texture atlases to reduce draw calls — combine multiple textures into one
+- Implement hit-testing with raycast for accurate placement
+- Provide visual + haptic feedback for every user action
+- Test on real devices with varied conditions: bright sunlight, dim interiors, textured surfaces
+- Remove unused anchors — limit active anchors to 50 maximum
+- Use GPU instancing for repeated objects (e.g., furniture in a room)
+- Always reset tracking after session interruption to prevent drift accumulation
 
 ## Performance Considerations
 
@@ -211,7 +183,6 @@ Mobile AR leverages the device camera for real-world overlay. VR creates fully i
 - Texture resolution: max 1024x1024 for mobile. Use compressed formats (ASTC, ETC2).
 - Battery: AR session consumes 300-500mW. Optimize render frequency when battery <20%.
 - Memory: ARKit uses ~200MB baseline. Total app memory should stay under 500MB.
-- Thermal: Sustained AR usage can trigger thermal throttling. Reduce quality after 10 minutes.
 
 ## Rules
 - Always detect device AR capability before activating AR features. Provide graceful fallback.
@@ -225,17 +196,196 @@ Mobile AR leverages the device camera for real-world overlay. VR creates fully i
 - Use GPU instancing for repeated objects.
 - Handle camera authorization denial with clear user messaging.
 - Implement battery-aware rendering quality adjustment.
+- Session interruption handlers must save and restore AR state.
+
+## Multi-User AR & Cloud Anchors
+
+For shared AR experiences where multiple users see the same virtual content at the same location: iOS ARKit supports `ARWorldMap` for saving and sharing AR scene state. Host device exports the world map (`ARSession.createWorldMap`) and sends it to other devices via network (WebSocket, custom signaling server). Receiving devices import the world map (`ARSession.run(with: worldMapConfiguration)`) to align their AR coordinate system. Android ARCore provides Cloud Anchons via `CloudAnchorManager`. Host resolves anchors to the cloud (`ArCoreResolveAndAttachAnchor`), share the cloud anchor ID, guests resolve. For cross-platform: use ARCore Cloud Anchors from both platforms via the ARCore SDK. Multi-user features require: (1) real-time anchor state sync via network, (2) conflict resolution for simultaneous moves, (3) late-joining support (new users see existing content), (4) persistent content across sessions. Network sync should use WebRTC or a lightweight WebSocket protocol (not polling). Sync frequency: position updates at 20Hz, anchor events on change.
+
+## Procedural Content & Dynamic Scene Generation
+
+For AR experiences that need dynamic content without pre-bundled 3D assets, use procedural generation. Generate geometry at runtime using SCNGeometry (iOS SceneKit) or Mesh API (Unity/ARFoundation). Patterns: (a) terrain mesh from depth data — sample LiDAR/Depth API grid, generate vertex buffer, apply surface shader, (b) parametric objects — cylinders, spheres, extrusions with runtime parameter control, (c) text extrusion — convert string to 3D geometry using platform text-to-mesh APIs, (d) particle systems for ambient effects (sparkles, floating particles, smoke). Procedural content reduces bundle size significantly (no 3D assets to ship) at the cost of runtime compute. Use compute shaders (iOS Metal, Android Vulkan) for vertex-heavy generation to avoid GPU stalls.
+
+## AR Session Analytics
+
+Track AR session quality metrics to diagnose user experience issues: (1) tracking state duration — time spent in limited/normal tracking, (2) average light estimation values — too dark reduces tracking quality, (3) anchor count over time — anchor leaks degrade performance, (4) session interruption frequency — correlates with app backgrounding and poor conditions, (5) average frame rate — drop below 30fps causes discomfort, (6) depth data availability — LiDAR vs. no LiDAR session path. Log these as analytics events prefixed with `ar_`. Monitor dashboards for: sessions with >50% time in limited tracking, anchor count >100 sustained, fps consistently below 30. Alerts trigger when any metric exceeds 2 standard deviations from baseline.
+
+## Production Considerations
+
+### AR Failure Modes
+
+| Failure | Symptom | Mitigation |
+|---------|---------|------------|
+| Device not supported | Crash/can't start | Check `ARConfiguration.isSupported` pre-launch |
+| Tracking lost | Content floats | Visual indicator + recovery prompt |
+| Camera permission denied | Black view | Graceful message, redirect to settings |
+| Low light | Poor tracking | Torch prompt, adjust rendering |
+| Memory pressure | App terminated | LOD streaming, texture budget <200MB |
+| Battery drain | Phone hot | Reduce render quality when battery <20% |
+
+### Testing Matrix
+
+| Condition | iOS Checklist | Android Checklist |
+|-----------|---------------|-------------------|
+| Bright sunlight | Tracking stable, shadows | Same + auto-exposure |
+| Dim interior | Low light prompt shows | Same |
+| Featureless surface (white wall) | Tracking limited recovery | Same |
+| Moving object detection | Works within 2s | Same |
+| Multiple planes | 5+ concurrent | Same |
+| App background + resume | Sessions resumes | Same |
+| LiDAR / no LiDAR | Both test paths | Depth API availability |
+
+### Troubleshooting Checklist
+
+- Verify device supports AR: `ARConfiguration.isSupported` / `ArCoreApk.checkAvailability`
+- Check camera permission granted before starting AR session
+- Validate 3D model format and compression (no raw OBJ/FBX)
+- Confirm LOD levels exist for all models >50k polygons
+- Profile memory: ARKit baseline ~200MB, stay under 500MB total
+- Check anchor count doesn't grow unbounded over session lifetime
+- Verify environment texturing enabled for realistic lighting
+- Confirm haptic feedback on placement/selection
+- Test store submission: iOS requires ARKit usage description in Info.plist
+
+### Performance Budget Expansion
+
+```
+Model detail vs frame rate:
+├── fps stable at 60, model count <10 → Add detail (4K textures, more polys)
+├── fps 30-45, model count 10-50 → Enable LOD, GPU instancing, texture compression
+├── fps <30, any count → Reduce render scale, disable shadows, limit draw distance
+└── fps variable with battery → Implement battery-aware quality scaling
+    Battery <20%: reduce render scale to 0.7, disable HDR, lower draw distance
+```
+
+### CI/CD Considerations
+
+- Run AR integration tests on real device farm (Firebase Test Lab, AWS Device Farm)
+- Validate 3D model bundle sizes in CI — fail if total >50MB
+- Verify performance budget with trace capture on each build
+- Test both LiDAR and non-LiDAR device paths
+- Check that all required Info.plist entries are present (iOS)
+- Validate AASA and assetlinks.json for AR web launch links
+
+## Code Examples
+
+### ARKit Swift — Session Configuration
+```swift
+import ARKit
+
+class ARViewController: UIViewController, ARSCNViewDelegate {
+    @IBOutlet var sceneView: ARSCNView!
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        guard ARWorldTrackingConfiguration.isSupported else {
+            showUnsupportedAlert(); return
+        }
+        let config = ARWorldTrackingConfiguration()
+        config.planeDetection = [.horizontal, .vertical]
+        config.environmentTexturing = .automatic
+        config.frameSemantics = [.personSegmentationWithDepth]
+        config.isAutoFocusEnabled = true
+        sceneView.session.run(config, options: [.removeExistingAnchors, .resetTracking])
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        sceneView.session.pause()
+    }
+
+    func session(_ session: ARSession, didFailWithError error: Error) {
+        // App should present recovery UI, not just log
+        showRecoveryPrompt(message: error.localizedDescription)
+    }
+
+    func sessionWasInterrupted(_ session: ARSession) {
+        // Pause rendering, show overlay
+    }
+
+    func sessionInterruptionEnded(_ session: ARSession) {
+        // Reset tracking and reload anchors
+        let config = ARWorldTrackingConfiguration()
+        config.planeDetection = [.horizontal, .vertical]
+        session.run(config, options: [.resetTracking, .removeExistingAnchors])
+    }
+}
+```
+
+### ARCore Kotlin — Session with Depth API
+```kotlin
+class ArActivity : AppCompatActivity() {
+    private lateinit var arFragment: ArFragment
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_ar)
+        arFragment = supportFragmentManager.findFragmentById(R.id.ar_fragment) as ArFragment
+
+        // Check ARCore availability
+        when (ArCoreApk.getInstance().checkAvailability(this)) {
+            ArCoreApk.Availability.UNKNOWN_CHECKING -> { /*wait*/ }
+            ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE -> { showUnsupported() }
+            ArCoreApk.Availability.SUPPORTED_APK_TOO_OLD -> { /*update*/ }
+            ArCoreApk.Availability.SUPPORTED_INSTALLED -> { /*ready*/ }
+        }
+
+        val session = arFragment.arSceneView.session
+        val config = Config(session)
+        config.depthMode = Config.DepthMode.AUTOMATIC
+        config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+        session.configure(config)
+
+        arFragment.setOnTapArPlaneListener { hitResult, _, _ ->
+            // Place anchor
+            val anchor = hitResult.createAnchor()
+            placeModel(anchor)
+        }
+    }
+}
+```
+
+### AR Model Loading with glTF
+```typescript
+// Three.js / React Three Fiber in mobile AR
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
+
+export async function loadARModel(url: string) {
+  const loader = new GLTFLoader();
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath('/draco-gltf/');
+  loader.setDRACOLoader(dracoLoader);
+
+  const gltf = await loader.loadAsync(url);
+  const model = gltf.scene;
+
+  // Apply LOD
+  model.traverse(child => {
+    if (child.isMesh) {
+      child.frustumCulled = true;
+      // Reduce shadow map if on mobile
+      child.receiveShadow = true;
+      child.castShadow = true;
+    }
+  });
+  return model;
+}
+```
 
 ## References
-- `references/ar-core-arkit.md` — ARCore vs ARKit Developer Guide
-- `references/ar-patterns.md` — AR/VR Interaction Patterns
-- `references/ar-platforms.md` — AR Platforms: ARKit vs ARCore
-- `references/arcore-implementation.md` — ARCore Implementation
-- `references/arkit-implementation.md` — ARKit Implementation
-- `references/vr-development.md` — Mobile VR Development
-- `references/ar-vr-rendering-performance.md` — Rendering optimization for AR/VR on mobile
-- `references/ar-vr-interaction-design.md` — Interaction design patterns for AR/VR experiences
+- references/ar-core-arkit.md — ARCore vs ARKit Developer Guide
+- references/ar-patterns.md — AR/VR Interaction Patterns
+- references/ar-platforms.md — AR Platforms: ARKit vs ARCore
+- references/arcore-implementation.md — ARCore Implementation
+- references/arkit-implementation.md — ARKit Implementation
+- references/vr-development.md — Mobile VR Development
+- references/ar-vr-rendering-performance.md — Rendering optimization for AR/VR on mobile
+- references/ar-vr-interaction-design.md — Interaction design patterns for AR/VR experiences
+- references/ar-vr-fundamentals.md — AR/VR Fundamentals
+- references/ar-vr-advanced.md — Advanced AR/VR Patterns
+- references/ar-vr-testing.md — AR/VR Testing Guide
 
 ## Handoff
-`mobile/universal/testing` for AR testing strategy (real device, varied lighting, occlusion scenarios)
-`mobile/universal/performance` for profiling AR-specific performance metrics
+mobile/universal/testing for AR testing strategy (real device, varied lighting, occlusion scenarios)
+mobile/universal/performance for profiling AR-specific performance metrics

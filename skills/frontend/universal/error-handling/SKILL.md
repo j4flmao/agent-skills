@@ -2,7 +2,7 @@
 name: frontend-error-handling
 description: >
   Use this skill when the user says 'error handling', 'error boundary', 'error recovery', 'graceful degradation', 'fallback UI', 'error reporting', 'error logging', 'crash recovery', 'error fallback', 'retry pattern', 'error state', 'error boundary React', 'Vue error handler', 'Angular error handler', 'error boundary Svelte'. This skill enforces error boundary implementation at key UI levels, graceful degradation patterns, error reporting to monitoring services, and user-facing recovery options. Works with any frontend framework (React, Vue, Angular, Svelte). Do NOT use for: API error handling patterns (use data-fetching skill), form validation errors (use form-handling skill), or backend error handling.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -60,6 +60,72 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Max Response Length
 4096 tokens
+
+## Error Handling Architecture / Decision Trees
+
+### Boundary Placement Decision Tree
+```
+Where does the error occur?
+  |-- Root layout / shell -->
+  |     REQUIRE: RootErrorBoundary with full-page fallback + "Reload" button
+  |     FAILSAFE: If RootBoundary itself crashes, show static error.html
+  |
+  |-- Route-level (page component) -->
+  |     REQUIRE: RouteErrorBoundary with page-level fallback
+  |     OPTION: Retry button calls router.push(sameRoute) to remount
+  |
+  |-- Widget / section (sidebar, widget, embedded component) -->
+  |     REQUIRE: WidgetErrorBoundary with inline fallback
+  |     BEHAVIOR: Hide widget, show degraded message, rest of page works
+  |
+  |-- Async operation (fetch, timeout, abort) -->
+  |     REQUIRE: try/catch + throw to boundary OR inline error state
+  |     OPTION: useErrorBoundary hook to throw from async code
+  |
+  |-- Event handler (onClick, onChange) -->
+  |     REQUIRE: try/catch within handler -- boundaries DO NOT catch event handlers
+  |     ACTION: Report error, show toast notification to user
+  |
+  |-- Third-party script (analytics, ads, embeds) -->
+        REQUIRE: Wrap in isolated sandbox (iframe) -- never let third-party JS crash host app
+        ACTION: Log warning, continue without the third-party feature
+```
+
+### Error Recovery Decision Tree
+```
+User sees error state.
+  |-- Is it a transient error? (network timeout, server 503) -->
+  |     |-- YES: Show "Retry" button + auto-retry (up to 3 times with exponential backoff)
+  |     |-- NO: Show "Try again" button, but don't auto-retry
+  |
+  |-- Is the error in a non-critical widget? -->
+  |     |-- YES: Hide widget, degrade gracefully, rest of page works
+  |     |-- NO: Show full-page or route-level fallback
+  |
+  |-- Has the user retried 3+ times without success? -->
+        |-- YES: Show permanent error screen with support contact info
+        |-- NO: Allow another retry
+```
+
+### Error Reporting Triage Decision Tree
+```
+What type of error is this?
+  |-- Network error (fetch failed, timeout, abort) -->
+  |     REPORT? NO -- too noisy, these are expected in poor connectivity
+  |     ACTION: Track count as metric, not individual event
+  |
+  |-- Application error (TypeError, ReferenceError, null access) -->
+  |     REPORT? YES -- with stack trace, component stack, breadcrumbs
+  |     PRIORITY: medium (user-impacting)
+  |
+  |-- Third-party script error -->
+  |     REPORT? CONDITIONAL -- only if it impacts user experience
+  |     FILTER: Known third-party errors should be filtered in beforeSend
+  |
+  |-- AbortError (cancelled requests from rapid navigation) -->
+        REPORT? NO -- this is normal user behavior
+        FILTER: return null in Sentry beforeSend
+```
 
 ## Workflow
 
@@ -156,7 +222,6 @@ Sentry.init({
   tracesSampleRate: 0.1,
   integrations: [Sentry.browserTracingIntegration()],
   beforeSend(event) {
-    // Filter out expected errors
     if (event.exception?.values?.[0]?.type === 'AbortError') return null
     return event
   },
@@ -200,6 +265,151 @@ window.addEventListener('unhandledrejection', (event) => {
   event.preventDefault()
 })
 ```
+
+### 8. Retry with Exponential Backoff
+```typescript
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      if (attempt === maxRetries) throw error
+      const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+  throw new Error('Unreachable')
+}
+```
+
+### 9. Vue Error Handler
+```typescript
+import { createApp } from 'vue'
+
+const app = createApp(App)
+
+app.config.errorHandler = (error, instance, info) => {
+  reportError(error as Error, {
+    componentName: instance?.type?.name,
+    info, // e.g., "render function", "setup function"
+  })
+}
+
+app.config.warnHandler = (msg, instance, trace) => {
+  if (process.env.NODE_ENV === 'production') return
+  console.warn(msg, trace)
+}
+```
+
+### 10. Angular ErrorHandler
+```typescript
+import { ErrorHandler, Injectable } from '@angular/core'
+
+@Injectable()
+export class GlobalErrorHandler implements ErrorHandler {
+  handleError(error: Error) {
+    reportError(error, { source: 'angular-global' })
+    console.error(error)
+  }
+}
+
+// providers: [{ provide: ErrorHandler, useClass: GlobalErrorHandler }]
+```
+
+### 11. Error Tracking Context Enrichment
+```typescript
+function reportError(error: Error, context?: Record<string, unknown>) {
+  const enrichedContext = {
+    ...context,
+    url: window.location.href,
+    userAgent: navigator.userAgent,
+    timestamp: new Date().toISOString(),
+    route: window.location.pathname,
+    // DO NOT include: tokens, passwords, PII, API keys
+  }
+
+  if (window.__SENTRY__) {
+    Sentry.captureException(error, { extra: enrichedContext })
+  } else {
+    console.error('[ErrorReport]', error, enrichedContext)
+  }
+}
+```
+
+## Common Pitfalls
+
+### 1. Catching and Silencing
+```typescript
+// BAD -- silently swallowed error
+try { await fetchData() } catch (e) { /* nothing */ }
+
+// GOOD -- report and show user feedback
+try { await fetchData() } catch (e) {
+  reportError(e)
+  showToast({ type: 'error', message: 'Failed to load data' })
+}
+```
+
+### 2. Not Covering Event Handlers
+Error boundaries do NOT catch errors in event handlers, setTimeout callbacks, or async/await (without the throw-in-render pattern). Always wrap event handlers in try/catch.
+
+### 3. Infinite Retry Loops
+```typescript
+// BAD -- infinite retry
+<button onClick={() => boundary.reset()}>Retry</button>
+// Component crashes again immediately -> boundary catches -> user clicks retry -> infinite
+
+// GOOD -- count retries
+const [retryCount, setRetryCount] = useState(0)
+if (retryCount >= 3) return <PermanentError />
+```
+
+### 4. Leaking Sensitive Data in Error Reports
+Strip tokens, passwords, and PII before sending error reports. Use Sentry's `beforeSend` to sanitize.
+
+### 5. Blank Screen Fallback
+Never let a boundary render nothing. Always provide a meaningful fallback UI with recovery options.
+
+## Compared With
+
+| Approach | Rendering Impact | Recovery UX | Reporting | Setup Complexity |
+|----------|-----------------|-------------|-----------|------------------|
+| Error Boundaries (React) | Full subtree replaced | Retry/reset within boundary | Manual | Low (class component) |
+| Sentry ErrorBoundary | Full subtree replaced | Retry, feedback button | Automatic | Low (add wrapper) |
+| Vue errorHandler | Global catch | Manual recovery in handler | Manual | Very low (config) |
+| Angular ErrorHandler | Global catch | Manual recovery | Manual | Very low (provider) |
+| Try/catch per component | No re-render | Inline error state | Manual | Medium (per-component) |
+| Zustand/Vuex error store | Reactive state | Global error state | Manual | Medium |
+
+## Performance Considerations
+
+### Error Boundary Cost
+Error boundaries use a class component wrapper which adds minimal overhead (~0.1KB per boundary). The heavy cost is the component stack trace generation in development. In production builds, component stack traces are not available.
+
+### Error Reporting Cost
+Sentry's `captureException` is async and non-blocking. It does not affect rendering performance. However, breadcrumb collection adds ~50ms per interaction tracked. Configure breadcrumb limits to avoid memory growth.
+
+### Retry Frequency
+Automatic retry should use exponential backoff. Retrying every 1s for 30 retries creates 30 failed requests. With backoff: 1s, 2s, 4s, 8s, 16s = only 5 retries in 31 seconds.
+
+## Accessibility Considerations
+
+- Fallback UIs must be reachable via keyboard navigation
+- Error messages use `role="alert"` for screen reader announcement
+- Retry buttons must have accessible labels and focus management
+- After error boundary reset, focus must move to the recovered content
+- Permanent errors should provide contact/support information
+
+## Security Considerations
+
+- Never expose stack traces to users in production
+- Strip sensitive context from error reports (passwords, tokens, session IDs)
+- Sanitize error messages before displaying them to users
+- Be careful with `window.onerror` -- it can leak cross-origin script details
 
 ## Rules
 1. Error boundaries never catch errors in event handlers, async code, or SSR — use try/catch for those.

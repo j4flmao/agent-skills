@@ -352,11 +352,230 @@ class HealthMonitor {
 }
 ```
 
+## Decision Trees
+
+### Choose Reconnection Strategy
+```
+Is the disconnection expected (server restart)?
+├── Yes → Immediate reconnect with full state restoration
+└── No → Is it a transient network issue?
+    ├── Yes → Exponential backoff with jitter (0.5s → 30s max)
+    ├── No → Is the server unhealthy?
+    │   ├── Yes → Circuit breaker (stop reconnecting, check health endpoint)
+    │   └── No → Is it a client-side issue (offline)?
+    │       └── Yes → Linear retry with online detection (navigator.onLine)
+```
+
+### Choose Scaling Strategy
+```
+How many concurrent connections expected?
+├── < 1,000 → Single server, no special scaling needed
+├── 1,000 - 10,000 → Single server + async message broker
+├── 10,000 - 100,000 → Multi-server with sticky sessions + Redis Pub/Sub
+└── > 100,000 → Horizontal auto-scaling + consistent hashing + Redis Cluster
+```
+
+## Anti-Patterns
+- **Infinite reconnection loops**: Floods server with connection attempts
+- **No backoff**: Constant retry rate amplifies server load during outages
+- **All clients reconnect simultaneously**: Thundering herd problem — stagger reconnects
+- **Reconnecting without state check**: Client reconnects but misses missed messages
+- **No sticky sessions**: Messages routed to wrong server instance
+- **Single point of failure in message broker**: Redis must be clustered
+- **Binary data sent as text**: Increases bandwidth 33% (base64)
+- **No connection draining during deploy**: Clients experience sudden disconnect
+- **Reconnecting without exponential backoff**: Wastes bandwidth and CPU
+
+## Implementation Patterns
+
+### Client-Side Reconnect with Exponential Backoff
+```javascript
+class WebSocketClient {
+  constructor(url, options = {}) {
+    this.url = url;
+    this.reconnectAttempts = 0;
+    this.maxAttempts = options.maxAttempts || 10;
+    this.baseDelay = options.baseDelay || 1000;
+    this.maxDelay = options.maxDelay || 30000;
+    this.ws = null;
+    this.listeners = {};
+    this.pendingMessages = [];
+    this.connect();
+  }
+
+  connect() {
+    this.ws = new WebSocket(this.url);
+
+    this.ws.onopen = () => {
+      this.reconnectAttempts = 0;
+      this.flushPendingMessages();
+    };
+
+    this.ws.onclose = (event) => {
+      if (!event.wasClean) {
+        this.scheduleReconnect();
+      }
+    };
+
+    this.ws.onerror = () => {
+      this.ws.close();
+    };
+
+    this.ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (this.listeners[msg.type]) {
+        this.listeners[msg.type](msg.payload);
+      }
+    };
+  }
+
+  scheduleReconnect() {
+    if (this.reconnectAttempts >= this.maxAttempts) return;
+    const delay = Math.min(
+      this.baseDelay * 2 ** this.reconnectAttempts + Math.random() * 1000,
+      this.maxDelay
+    );
+    this.reconnectAttempts++;
+    setTimeout(() => this.connect(), delay);
+  }
+
+  send(type, payload) {
+    const msg = JSON.stringify({ type, payload, id: crypto.randomUUID() });
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(msg);
+    } else {
+      this.pendingMessages.push(msg);
+    }
+  }
+
+  flushPendingMessages() {
+    while (this.pendingMessages.length) {
+      this.ws.send(this.pendingMessages.shift());
+    }
+  }
+
+  on(type, callback) {
+    this.listeners[type] = callback;
+  }
+
+  disconnect() {
+    this.maxAttempts = 0;
+    this.ws.close(1000, 'Client disconnect');
+  }
+}
+```
+
+### Server-Side Connection Pooling with Redis
+```javascript
+const WebSocket = require('ws');
+const Redis = require('ioredis');
+const http = require('http');
+
+class WebSocketServer {
+  constructor(port) {
+    this.port = port;
+    this.clients = new Map(); // clientId -> ws connection
+    this.sub = new Redis();   // subscriber (read-only)
+    this.pub = new Redis();   // publisher
+    this.server = http.createServer();
+    this.wss = new WebSocket.Server({ server: this.server });
+    this.setupRedisListener();
+    this.setupWebSocket();
+    this.server.listen(port);
+  }
+
+  setupRedisListener() {
+    this.sub.on('message', (channel, message) => {
+      const { targetClientId, payload } = JSON.parse(message);
+      if (targetClientId && this.clients.has(targetClientId)) {
+        this.clients.get(targetClientId).send(JSON.stringify(payload));
+      } else if (!targetClientId) {
+        // Broadcast to all connected clients on this server
+        for (const ws of this.clients.values()) {
+          ws.send(JSON.stringify(payload));
+        }
+      }
+    });
+    this.sub.subscribe('chat:messages', 'chat:broadcast');
+  }
+
+  setupWebSocket() {
+    this.wss.on('connection', (ws, req) => {
+      const clientId = req.url.split('?clientId=')[1] || crypto.randomUUID();
+      ws.clientId = clientId;
+      this.clients.set(clientId, ws);
+      console.log(`Client ${clientId} connected (total: ${this.clients.size})`);
+
+      ws.on('message', (data) => {
+        const msg = JSON.parse(data.toString());
+        // Publish to Redis for routing to other servers
+        this.pub.publish('chat:messages', JSON.stringify({
+          targetClientId: msg.to,
+          payload: { from: clientId, text: msg.text, timestamp: Date.now() },
+        }));
+      });
+
+      ws.on('close', () => {
+        this.clients.delete(clientId);
+        console.log(`Client ${clientId} disconnected (total: ${this.clients.size})`);
+      });
+
+      ws.on('error', (err) => {
+        console.error(`Client ${clientId} error:`, err.message);
+        this.clients.delete(clientId);
+      });
+
+      // Send welcome message with client ID
+      ws.send(JSON.stringify({ type: 'welcome', clientId }));
+    });
+  }
+
+  getMetrics() {
+    return { activeConnections: this.clients.size, port: this.port };
+  }
+
+  shutdown() {
+    console.log('Shutting down...');
+    for (const [id, ws] of this.clients) {
+      ws.close(1001, 'Server restart');
+    }
+    this.sub.quit();
+    this.pub.quit();
+    this.wss.close();
+    this.server.close();
+  }
+}
+```
+
+### Sticky Session Load Balancer Configuration
+```nginx
+# NGINX WebSocket sticky sessions
+upstream websocket_backend {
+    least_conn;
+    ip_hash;  # Sticky sessions based on client IP
+    server ws1.example.com:8080 max_fails=3 fail_timeout=30s;
+    server ws2.example.com:8080 max_fails=3 fail_timeout=30s;
+    server ws3.example.com:8080 max_fails=3 fail_timeout=30s;
+}
+
+server {
+    listen 443 ssl;
+    server_name ws.example.com;
+
+    location /ws {
+        proxy_pass http://websocket_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+}
+```
+
 ## Key Points
-- Exponential backoff prevents reconnection storms
-- Jitter avoids synchronized reconnection attempts
-- State recovery resubscribes and catches up on missed messages
-- Pending message queue ensures delivery during reconnection
 - Redis Pub/Sub broadcasts messages across server instances
 - Sticky sessions route users to the same instance
 - Consistent hashing distributes connections evenly

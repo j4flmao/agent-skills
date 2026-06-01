@@ -4,7 +4,7 @@ description: >
   Use this skill when establishing or operating architecture governance including review boards, decision rights, and architecture principles.
   This skill enforces: ARB charter, architecture reviews, decision rights framework, principle compliance.
   Do NOT use for: enterprise architecture method, solution design, technology implementation.
-version: "2.0.0"
+version: "2.1.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -58,6 +58,22 @@ Tier 2 - Standard (Domain-level): For changes affecting a single domain but outs
 Tier 3 - Major (ARB-level): For cross-domain changes, new technology introduction, significant architecture changes, or principle exceptions. Full ARB review with presentation. 2-4 week turnaround.
 
 Tier 4 - Strategic (Executive-level): For enterprise-wide architecture changes, technology platform shifts, or high-investment decisions. ARB review + CTO approval. 4-8 week turnaround with phased approach.
+
+## Architecture / Decision Trees
+
+### Governance Model Selection
+| Model | Decision Authority | Best For |
+|-------|-------------------|----------|
+| Centralized | Single ARB for all decisions | <500 employees, single business unit |
+| Federated | Domain ARBs + Enterprise ARB for cross-domain | 500-5000 employees, multiple business units |
+| Hybrid | Domain ARBs with delegated authority, Enterprise ARB for exceptions | >5000 employees, regulated industries |
+
+### Exception Severity Classification
+| Severity | Impact | Approval Authority | Max Duration |
+|----------|--------|-------------------|-------------|
+| Minor | Single team, no cross-domain impact | Domain Architect | 6 months |
+| Major | Cross-domain, standard deviation | ARB | 12 months |
+| Critical | Principle violation, security impact | CTO/CIO | 6 months, non-renewable |
 
 ## Agent Protocol
 
@@ -189,6 +205,36 @@ Governance metrics:
 - Decision quality: post-implementation review satisfaction, rework rate
 - Governance velocity: time from submission to decision
 
+### Governance Maturity Model
+| Level | Characteristics | Practices |
+|-------|----------------|-----------|
+| 1 - Initial | Ad-hoc decisions, no formal ARB | No governance process |
+| 2 - Reactive | ARB exists but reviews only major issues | Basic review checklist |
+| 3 - Proactive | Tiered reviews, principles defined, exceptions tracked | RACI matrix, metrics |
+| 4 - Measured | Quantitative governance, compliance SLAs, automated gates | Fitness functions in CI/CD |
+| 5 - Optimizing | Predictive governance, continuous improvement, automated policy enforcement | AI-assisted review, self-healing |
+
+### Governance Automation Patterns
+Architecture fitness functions in CI/CD:
+```yaml
+# Example: GitHub Action for architecture compliance
+name: architecture-compliance
+on: pull_request
+jobs:
+  check-architecture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check dependency direction
+        run: ./scripts/check-dependency-rules.sh
+      - name: Verify API contract compatibility
+        run: ./scripts/check-api-compatibility.sh
+      - name: Validate cloud resource naming
+        run: ./scripts/check-naming-convention.sh
+      - name: Check principle compliance
+        run: ./scripts/check-principles.sh
+```
+
 ## Common Pitfalls
 
 Pitfall 1: ARB as a rubber stamp. If every submission is approved without discussion, the ARB provides no value. Encourage debate. Challenge assumptions. Require alternatives to be considered.
@@ -220,6 +266,16 @@ Practice 4: Implement architecture fitness functions. Automated tests that verif
 Practice 5: Hold ARB office hours. Regular open sessions where teams can ask questions, get early feedback, and navigate governance requirements. Reduces surprises at formal review.
 
 Practice 6: Publish governance metrics transparently. Share ARB decisions, exception trends, and compliance rates with the organization. Transparency builds trust and encourages compliance.
+
+## Standards Alignment
+
+| Standard | Governance Requirement | Mapping |
+|----------|----------------------|---------|
+| COBIT 5 | EDM03 - Ensure Risk Optimization | ARB risk assessment in reviews |
+| COBIT 5 | APO07 - Manage Human Resources | RACI matrix, decision rights |
+| ISO 38500 | Evaluate, Direct, Monitor | Governance framework oversight |
+| TOGAF | Architecture Board, Compliance | ADM Phase G - Implementation Governance |
+| SAFe | Enterprise Architect, Guardrails | ARB as architectural runway governance |
 
 ## Templates & Tools
 
@@ -296,6 +352,13 @@ Practice 6: Publish governance metrics transparently. Share ARB decisions, excep
 - Documentation: Confluence, Backstage, Hugo/static site for architecture catalog
 - Fitness functions: ArchUnit (Java), NetArchTest (.NET), custom linters
 - Diagramming: Draw.io, Lucidchart, Mermaid, PlantUML
+
+### Exception Register Template
+```
+| ID | Exception Description | Principle/Standard | Severity | Owner | Approval Date | Expiry | Status | Remediation Plan |
+|----|----------------------|-------------------|----------|-------|--------------|--------|--------|-----------------|
+| EX-001 | Use of MongoDB instead of RDS | Prefer managed SQL databases | Minor | Team A | 2025-01-15 | 2025-07-15 | Active | Migrate to Aurora by expiry |
+```
 
 ## Case Studies
 

@@ -227,6 +227,177 @@ jobs:
       - run: npm test -- --coverage
 ```
 
+## Advanced Hook Patterns
+
+### prepare-commit-msg: Auto-append Issue Number
+```bash
+#!/bin/sh
+# .git/hooks/prepare-commit-msg
+# Auto-appends issue/ticket number from branch name
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+ISSUE_REGEX="(feature|fix|bugfix|hotfix)\/([A-Z]+-[0-9]+)"
+
+if [[ $BRANCH_NAME =~ $ISSUE_REGEX ]]; then
+  ISSUE="${BASH_REMATCH[2]}"
+  COMMIT_MSG=$(cat "$1")
+  if [[ ! "$COMMIT_MSG" == *"$ISSUE"* ]]; then
+    echo "[$ISSUE] $COMMIT_MSG" > "$1"
+  fi
+fi
+```
+
+### post-commit: Trigger CI
+```bash
+#!/bin/sh
+# .git/hooks/post-commit
+# Trigger CI pipeline after commit (optional)
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" = "main" ]; then
+  curl -X POST https://ci.example.com/api/trigger \
+    -H "Authorization: Bearer $CI_TOKEN" \
+    -d "{\"branch\": \"$BRANCH\", \"commit\": \"$(git rev-parse HEAD)\"}"
+fi
+```
+
+### post-merge: Auto-update Dependencies
+```bash
+#!/bin/sh
+# .git/hooks/post-merge
+# Check if package.json changed and auto-update
+changed=$(git diff HEAD@{1} --name-only | grep -E "^(package\.json|yarn\.lock|pnpm-lock\.yaml)")
+if [ -n "$changed" ]; then
+  if [ -f "pnpm-lock.yaml" ]; then
+    pnpm install
+  elif [ -f "yarn.lock" ]; then
+    yarn install
+  else
+    npm install
+  fi
+fi
+```
+
+### post-checkout: Environment Setup
+```bash
+#!/bin/sh
+# .git/hooks/post-checkout
+if [ "$3" = "1" ]; then
+  # Full branch checkout
+  BRANCH=$(git rev-parse --abbrev-ref HEAD)
+  case "$BRANCH" in
+    main|develop)
+      npm run build
+      ;;
+    feature/*)
+      npm install
+      npm run generate
+      ;;
+  esac
+fi
+```
+
+## Pre-commit Optimization
+
+### Performance-Focused Hook
+```bash
+#!/bin/sh
+# .husky/pre-commit — optimized for speed
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+# Run linters only on staged files (fast)
+if [ -n "$STAGED_FILES" ]; then
+  # TypeScript check (fast, scoped)
+  echo "$STAGED_FILES" | grep "\.ts$" | xargs npx tsc --noEmit 2>/dev/null
+
+  # ESLint (fast, staged only)
+  echo "$STAGED_FILES" | grep -E "\.(js|ts|tsx)$" | xargs npx eslint --quiet
+
+  # Prettier (fast, staged only)
+  echo "$STAGED_FILES" | grep -E "\.(js|ts|json|css|md)$" | xargs npx prettier --check
+fi
+
+# Performance tips:
+# - Use lint-staged (only checks changed files)
+# - Use --quiet to reduce output overhead
+# - Use --no-verify for emergency commits
+# - Time your hooks: measure execution and optimize slow ones
+```
+
+## Server-Side Hook: Pre-Receive Policy Enforcement
+```bash
+#!/bin/sh
+# Server-side hook
+ZERO_COMMIT="0000000000000000000000000000000000000000"
+MAX_SIZE=10485760  # 10MB
+
+while read oldrev newrev refname; do
+  # Branch naming enforcement
+  if [[ $refname =~ ^refs/heads/ ]]; then
+    branch=${refname#refs/heads/}
+    case "$branch" in
+      main|develop) ;;
+      feature/*|fix/*|hotfix/*|release/*|chore/*) ;;
+      *)
+        echo "ERROR: Invalid branch name '$branch'"
+        echo "Allowed: main, develop, feature/*, fix/*, hotfix/*, release/*, chore/*"
+        exit 1
+        ;;
+    esac
+  fi
+
+  # File size check
+  if [ "$oldrev" != "$ZERO_COMMIT" ]; then
+    git rev-list "$oldrev..$newrev" | while read commit; do
+      git ls-tree -r "$commit" | awk '{print $3, $4}' | while read hash name; do
+        size=$(git cat-file -s "$hash")
+        if [ "$size" -gt "$MAX_SIZE" ]; then
+          echo "ERROR: File '$name' exceeds 10MB in commit $commit"
+          exit 1
+        fi
+      done
+    done
+  fi
+done
+```
+
+## Hook Debugging
+```bash
+# Enable verbose hook output
+GIT_HOOKS_VERBOSE=1 git commit
+
+# Test hook manually
+.sh/hooks/pre-commit  # Run directly
+
+# Check hook exit codes
+echo $?  # Should be 0 for pass, non-zero for fail
+
+# View hook environment
+env | grep GIT_
+# GIT_DIR, GIT_INDEX_FILE, GIT_WORK_TREE, GIT_PREFIX
+```
+
+## Git LFS Hooks
+```bash
+# Install LFS hooks (auto-managed by git lfs install)
+git lfs install  # Installs smudge/clean filters and pre-push hook
+
+# Manual LFS pre-push
+#!/bin/sh
+# .git/hooks/pre-push — Git LFS
+git lfs pre-push "$@"
+```
+
+## Key Anti-Patterns
+- **Slow hooks that frustrate developers**: Keep pre-commit under 2 seconds
+- **Running full test suite in pre-commit**: Use pre-push or CI for full suite
+- **Hooks that modify committed files**: Can cause infinite commit loops
+- **No skip mechanism**: Always document how to bypass in emergencies
+- **Hooks without output**: Developers need to know why a hook failed
+- **Not testing hooks locally**: Broken hooks block all commits
+- **Hooks in one developer's `.git/hooks` only**: Use Husky or shared template
+- **Non-idempotent hooks**: Running twice should produce same result
+- **Overly strict commit-msg hooks**: Allow scope to be optional
+- **Hooks that rely on global tooling**: Should work from repo's devDependencies
+
 ## Key Points
 - pre-commit runs before commit creation, ideal for linting/formatting
 - commit-msg validates commit message format
@@ -250,3 +421,5 @@ jobs:
 - pre-push hooks catch issues before PR creation
 - Git LFS hooks manage large file handling
 - Performance matters - slow hooks frustrate developers
+- Use `exit 0` for optional hooks, `exit 1` for required ones
+- Parallelize independent checks in pre-commit for speed
