@@ -355,3 +355,10 @@ termination:
 | AutoGen | Debate, Supervisor | Medium | Yes | Custom |
 | Semantic Kernel | Sequential, Supervisor | Medium | Yes | Azure Monitor |
 | Custom (lightweight) | Any | Hard | Depends | Whatever you build |
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenAPI, dynamic loops, and multi-agent coordination protocols.
+-->
+

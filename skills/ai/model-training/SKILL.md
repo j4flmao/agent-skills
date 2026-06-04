@@ -7,6 +7,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -752,3 +753,10 @@ def estimate_training_cost(gpu_type, gpu_count, hours, cloud_rate_per_hour=None)
 
 ## Handoff
 For model evaluation and testing, hand off to `ai-ai-testing`. For serving the fine-tuned model, hand off to `ml-model-serving`. For embedding model training, hand off to `ai-embeddings`. For data labeling / curation, hand off to `ai-data-engineering`.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive SFT, LoRA/QLoRA & RLHF/DPO training methodologies)
+Strict compliance with distributed data loading, optimization schedules, and loss evaluation.
+-->
+

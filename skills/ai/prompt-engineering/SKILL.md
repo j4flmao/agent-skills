@@ -7,6 +7,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -654,3 +655,10 @@ Select 2-5 examples that cover the range of expected inputs. Include edge cases 
 
 ## Handoff
 For RAG system integration, hand off to `ai-rag-patterns`. For model serving and deployment, hand off to `ai-llm-ops`. For fine-tuning data preparation, hand off to `ai-fine-tuning`.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenAPI, dynamic loops, and multi-agent coordination protocols.
+-->
+

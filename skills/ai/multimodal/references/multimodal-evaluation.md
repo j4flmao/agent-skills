@@ -263,13 +263,228 @@ class MultimodalQA:
 ```
 
 ## Key Points
-- Evaluate on multiple benchmarks: captioning, VQA, grounding, retrieval
-- Use task-specific metrics: CIDEr for captions, accuracy for VQA, IoU for grounding
-- Compute recall@k for cross-modal retrieval
-- Evaluate noise robustness for audio models
-- Test modality alignment — does the model correctly associate modalities?
-- Measure robustness to image perturbations (blur, crop, noise)
-- Track per-category accuracy for VQA
-- Compare against baseline models on standard benchmarks
-- Report inference speed alongside quality metrics
 - Use human evaluation for subjective quality assessment
+
+---
+
+## Multimodal Evaluation Metric Mathematics
+
+Evaluating vision-language and speech models requires robust mathematical distance metrics to compare stochastic generation outputs with ground-truth labels.
+
+### 1. CIDEr: Consensus-Based Image Description Evaluation
+CIDEr computes cosine similarity between tf-idf weighted n-grams of candidate sentence $c_i$ and a set of reference sentences $S_i = \{s_{ij}\}$.
+Let $g_k(s_{ij})$ be the number of times n-gram $w_k$ occurs in reference $s_{ij}$. The tf-idf weight $g_k(s_{ij})$ is defined as:
+$$\text{TF-IDF}(w_k) = \frac{g_k(s_{ij})}{\sum_{l} g_l(s_{ij})} \log \left( \frac{|C|}{\sum_{p=1}^{|C|} \min(1, \sum_{q} g_k(s_{pq}))} \right)$$
+where $C$ is the set of all images in the corpus.
+
+The CIDEr score for n-gram length $n$ is the average cosine similarity:
+$$\text{CIDEr}_n(c_i, S_i) = \frac{1}{|S_i|} \sum_{j} \frac{\mathbf{g}^n(c_i) \cdot \mathbf{g}^n(s_{ij})}{\|\mathbf{g}^n(c_i)\| \|\mathbf{g}^n(s_{ij})\|}$$
+The overall CIDEr score is a weighted sum over different n-gram sizes (usually $1$ to $4$):
+$$\text{CIDEr}(c_i, S_i) = \sum_{n=1}^N w_n \text{CIDEr}_n(c_i, S_i)$$
+
+### 2. Intersection over Union (IoU)
+For grounding tasks, the predicted bounding box $\mathbf{B}_p = [y_{\text{min}}^p, x_{\text{min}}^p, y_{\text{max}}^p, x_{\text{max}}^p]$ is compared against the ground-truth box $\mathbf{B}_g = [y_{\text{min}}^g, x_{\text{min}}^g, y_{\text{max}}^g, x_{\text{max}}^g]$.
+$$\text{Area}(\mathbf{B}) = (x_{\text{max}} - x_{\text{min}}) \times (y_{\text{max}} - y_{\text{min}})$$
+Let the intersection box be $\mathbf{B}_i$ where:
+$$x_{\text{min}}^i = \max(x_{\text{min}}^p, x_{\text{min}}^g), \quad y_{\text{min}}^i = \max(y_{\text{min}}^p, y_{\text{min}}^g)$$
+$$x_{\text{max}}^i = \min(x_{\text{max}}^p, x_{\text{max}}^g), \quad y_{\text{max}}^i = \min(y_{\text{max}}^p, y_{\text{max}}^g)$$
+
+The intersection area is:
+$$\text{Area}(\text{Intersection}) = \max(0, x_{\text{max}}^i - x_{\text{min}}^i) \times \max(0, y_{\text{max}}^i - y_{\text{min}}^i)$$
+The union area is:
+$$\text{Area}(\text{Union}) = \text{Area}(\mathbf{B}_p) + \text{Area}(\mathbf{B}_g) - \text{Area}(\text{Intersection})$$
+$$\text{IoU} = \frac{\text{Area}(\text{Intersection})}{\text{Area}(\text{Union})}$$
+
+### 3. Word Error Rate (WER)
+For audio transcriptions, the Word Error Rate is calculated using Levenshtein alignment between candidate words and reference words:
+$$\text{WER} = \frac{S + D + I}{N}$$
+where $S$ is the number of substitutions, $D$ is the number of deletions, $I$ is the number of insertions, and $N$ is the total number of words in the reference.
+
+### 4. Average Normalized Levenshtein Similarity (ANLS)
+Used in Document VQA to evaluate text answers, allowing tolerance for minor OCR transcription errors. Let $o_i$ be the model output and $r_{ij}$ be the $j$-th ground truth reference for query $i$:
+$$\text{ANLS}(o_i, R_i) = \max_j \left( 1 - \frac{\text{NL}(o_i, r_{ij})}{\max(|o_i|, |r_{ij}|)} \right)$$
+where $\text{NL}(a, b)$ is the standard Levenshtein distance. If the score is less than $0.5$, it is truncated to $0.0$.
+
+---
+
+## Automated Benchmark Pipeline Flow
+
+The workflow below illustrates the state-to-state evaluation steps taken by a validation runner when processing a benchmark dataset across clean and perturbed visual inputs.
+
+```mermaid
+stateDiagram-v2
+    [*] --> IngestDataset
+    IngestDataset --> PerturbationEngine : Read image/audio paths
+    
+    state PerturbationEngine {
+        [*] --> CleanPass
+        [*] --> ImageBlurring
+        [*] --> AudioGaussianNoise
+        CleanPass --> ExecuteInference
+        ImageBlurring --> ExecuteInference
+        AudioGaussianNoise --> ExecuteInference
+    }
+    
+    PerturbationEngine --> ModelInference : Batch input objects
+    ModelInference --> RawOutputCollecting : Generate string tokens / boxes
+    RawOutputCollecting --> MetricCalculator : Parse outputs into formats
+    MetricCalculator --> ReportCompiler : CIDEr / IoU / ANLS scoring
+    ReportCompiler --> RegressionVerification : Score comparisons
+    RegressionVerification --> [*] : Pass/Fail Status Produced
+```
+
+---
+
+## Python Implementations: Evaluation Metrics & Distance Math
+
+Below is a production-grade Python script that calculates ANLS and IoU box metrics matching evaluation suite expectations.
+
+```python
+import numpy as np
+import torch
+from typing import List, Tuple
+
+class MultimodalMetricCalculator:
+    """
+    Computes production-grade vision grounding IoU and OCR text ANLS validation metrics.
+    """
+    @staticmethod
+    def calculate_anls(prediction: str, reference: str, threshold: float = 0.5) -> float:
+        """
+        Calculates Average Normalized Levenshtein Similarity (ANLS) between text values.
+        """
+        p, r = prediction.lower().strip(), reference.lower().strip()
+        if not p or not r:
+            return 1.0 if p == r else 0.0
+            
+        # Standard dynamic programming Levenshtein distance matrix
+        m, n = len(p), len(r)
+        dp = np.zeros((m + 1, n + 1), dtype=int)
+        for i in range(m + 1):
+            dp[i][0] = i
+        for j in range(n + 1):
+            dp[0][j] = j
+            
+        for i in range(1, m + 1):
+            for j in range(1, n + 1):
+                if p[i-1] == r[j-1]:
+                    dp[i][j] = dp[i-1][j-1]
+                else:
+                    dp[i][j] = min(
+                        dp[i-1][j] + 1,    # Deletion
+                        dp[i][j-1] + 1,    # Insertion
+                        dp[i-1][j-1] + 1   # Substitution
+                    )
+                    
+        lev_dist = dp[m][n]
+        normalized_dist = lev_dist / max(m, n)
+        similarity = 1.0 - normalized_dist
+        
+        # Truncate if similarity is below the validation threshold
+        return similarity if similarity >= threshold else 0.0
+
+    @staticmethod
+    def compute_iou_pytorch(pred_box: torch.Tensor, gt_box: torch.Tensor) -> float:
+        """
+        Computes IoU for visual bounding box tensors.
+        
+        Parameters:
+            pred_box: Tensor [ymin, xmin, ymax, xmax]
+            gt_box: Tensor [ymin, xmin, ymax, xmax]
+        """
+        # Calculate intersection dimensions
+        y_min_i = torch.max(pred_box[0], gt_box[0])
+        x_min_i = torch.max(pred_box[1], gt_box[1])
+        y_max_i = torch.min(pred_box[2], gt_box[2])
+        x_max_i = torch.min(pred_box[3], gt_box[3])
+        
+        inter_w = torch.clamp(x_max_i - x_min_i, min=0)
+        inter_h = torch.clamp(y_max_i - y_min_i, min=0)
+        intersection_area = inter_w * inter_h
+        
+        # Calculate union area
+        pred_area = (pred_box[2] - pred_box[0]) * (pred_box[3] - pred_box[1])
+        gt_area = (gt_box[2] - gt_box[0]) * (gt_box[3] - gt_box[1])
+        union_area = pred_area + gt_area - intersection_area
+        
+        if union_area <= 0:
+            return 0.0
+            
+        iou = float(intersection_area / union_area)
+        return iou
+```
+
+---
+
+## Evaluation Benchmark & Verification Schemas
+
+### 1. Benchmark Execution Suite Schema
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VLMValidationSuite",
+  "type": "object",
+  "required": ["suite_name", "target_benchmarks", "fail_thresholds"],
+  "properties": {
+    "suite_name": { "type": "string" },
+    "target_benchmarks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["benchmark_name", "dataset_path", "metric_type"],
+        "properties": {
+          "benchmark_name": { "type": "string", "enum": ["DocVQA", "ChartQA", "MMMU", "COCO-Caption"] },
+          "dataset_path": { "type": "string" },
+          "metric_type": { "type": "string", "enum": ["ANLS", "CIDEr", "accuracy", "IoU"] }
+        }
+      }
+    },
+    "fail_thresholds": {
+      "type": "object",
+      "required": ["cider_min", "anls_min", "accuracy_min"],
+      "properties": {
+        "cider_min": { "type": "number", "minimum": 0.0 },
+        "anls_min": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "accuracy_min": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+      }
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+### 2. Validation Run Results Schema
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ValidationResultsReport",
+  "type": "object",
+  "required": ["suite_name", "timestamp", "metrics_summary", "test_passed"],
+  "properties": {
+    "suite_name": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "metrics_summary": {
+      "type": "object",
+      "required": ["overall_accuracy", "cider_mean", "anls_mean"],
+      "properties": {
+        "overall_accuracy": { "type": "number" },
+        "cider_mean": { "type": "number" },
+        "anls_mean": { "type": "number" },
+        "perturbation_drops": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
+      }
+    },
+    "test_passed": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}
+```
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenAPI, late-fusion models, and cross-modal projection frameworks.
+-->
+

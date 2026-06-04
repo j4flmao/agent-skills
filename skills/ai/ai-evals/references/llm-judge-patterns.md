@@ -549,3 +549,9 @@ class JudgeMonitor:
 - Run calibration studies with human annotators quarterly to maintain quality.
 - Log all judge decisions with scores, latency, and model version for audit trails.
 - Consider cost-quality tradeoffs when selecting judge models for different evaluation tiers.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with Langchain-OpenAI, self-consistency scoring, and bias calibration.
+-->

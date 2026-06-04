@@ -7,6 +7,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -886,3 +887,9 @@ Use decision trees above. Document rationale for each choice.
 
 ## Handoff
 For embedding model selection before index creation, hand off to `ai-rag-patterns`. For ML infrastructure around vector DB, hand off to `ai-llm-ops`. For security hardening, hand off to `ai-security`.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with HNSW parameters, distance metrics, sharding/replication topology, and vector DB scaling guidelines.
+-->

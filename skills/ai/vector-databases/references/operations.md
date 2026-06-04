@@ -266,3 +266,9 @@ Row 5: Error rate and node status — single stat
 - Scaling: vertical only (more RAM on single node).
 - Backups: filesystem-level (SQLite + Parquet files).
 - Monitoring: basic logging, no native metrics.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with HNSW parameters, distance metrics, sharding/replication topology, and vector DB scaling guidelines.
+-->

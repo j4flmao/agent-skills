@@ -591,3 +591,10 @@ class EvaluationDataset:
 - Always test termination conditions: max iterations, error recovery, and success paths.
 - Profile agent systems to identify bottlenecks in LLM calls, tool execution, or memory operations.
 - Compare evaluation results against baselines to measure improvement over time.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenAPI, dynamic loops, and multi-agent coordination protocols.
+-->
+

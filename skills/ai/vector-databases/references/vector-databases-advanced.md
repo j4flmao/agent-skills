@@ -431,3 +431,9 @@ class ReEmbedScheduler:
 - **Real-time feature store**: Redis, Cassandra (higher throughput, lower latency)
 
 The best search system often combines vector DB with a traditional search engine (Elasticsearch, Solr) for hybrid retrieval.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with HNSW parameters, distance metrics, sharding/replication topology, and vector DB scaling guidelines.
+-->

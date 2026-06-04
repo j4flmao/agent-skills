@@ -203,6 +203,94 @@ Deploy compute closer to data sources for reduced latency. Use edge devices for 
 ### Platform Engineering
 Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
 
+## Unified Multimodal Training Formulations
+
+State-of-the-art multimodal training optimizes a joint loss function combining generative language modeling (autoregressive) and contrastive representation learning (alignment):
+
+$$\mathcal{L}_{\text{total}} = \alpha \mathcal{L}_{\text{gen}} + \beta \mathcal{L}_{\text{contrastive}}$$
+
+### Autoregressive Generative Loss ($\mathcal{L}_{\text{gen}}$)
+For a text target sequence $Y = (y_1, y_2, \dots, y_m)$ conditioned on input visual patches $X = (x_1, x_2, \dots, x_p)$:
+
+$$\mathcal{L}_{\text{gen}} = -\sum_{t=1}^{m} \log P(y_t \mid y_{<t}, X; \theta)$$
+
+Where the probability is modeled via a cross-attention layer mapping visual features $H_{\text{vision}}$ to the language space:
+
+$$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{Q K^T}{\sqrt{d_k}}\right) V$$
+$$Q = W_q H_{\text{text}}, \quad K = W_k H_{\text{vision}}, \quad V = W_v H_{\text{vision}}$$
+
+### Contrastive Alignment Loss ($\mathcal{L}_{\text{contrastive}}$)
+For a batch of $B$ image-text pairs, the InfoNCE loss aligns text representations $z^t_i$ and vision representations $z^v_i$ using temperature $\tau$:
+
+$$\mathcal{L}_{\text{contrastive}} = -\frac{1}{2B} \sum_{i=1}^{B} \left[ \log \frac{e^{\text{sim}(z^v_i, z^t_i)/\tau}}{\sum_{j=1}^{B} e^{\text{sim}(z^v_i, z^t_j)/\tau}} + \log \frac{e^{\text{sim}(z^t_i, z^v_i)/\tau}}{\sum_{j=1}^{B} e^{\text{sim}(z^t_i, z^v_j)/\tau}} \right]$$
+
+---
+
+## Sequence-to-Sequence Audio/Video Generation Architectures
+
+Generative multimodal architectures transition from discrete tokenizers (VQ-GAN for video, EnCodec for audio) to continuous diffusion models.
+
+### Multi-Scale Tokenization State Machine
+```mermaid
+stateDiagram-v2
+    [*] --> RawWaveform
+    RawWaveform --> STFT : Short-Time Fourier Transform
+    STFT --> VectorQuantizer : Latent Compression
+    VectorQuantizer --> DiscreteTokens : Quantized Codebook Indices
+    DiscreteTokens --> Decoder : Autoregressive Generation
+    Decoder --> [*] : Synthesized Output
+```
+
+---
+
+## PyTorch Temporal Alignment via Dynamic Time Warping (DTW)
+
+Temporal alignment synchronizes mismatched modalities (e.g., video lip movements and audio streams). The class below implements differentiable soft-DTW for alignment scoring in PyTorch.
+
+```python
+import torch
+import torch.nn as nn
+
+class SoftDTWAlignment(nn.Module):
+    def __init__(self, use_cuda: bool = True, gamma: float = 0.1):
+        super(SoftDTWAlignment, self).__init__()
+        self.gamma = gamma
+        self.use_cuda = use_cuda
+
+    def forward(self, X: torch.Tensor, Y: torch.Tensor) -> torch.Tensor:
+        # X: [B, N, D] - First sequence (e.g. video features)
+        # Y: [B, M, D] - Second sequence (e.g. audio features)
+        B, N, D = X.size()
+        _, M, _ = Y.size()
+
+        # Compute pairwise squared Euclidean distances
+        dist = torch.cdist(X, Y, p=2) ** 2 # [B, N, M]
+
+        # Initialize DP table
+        # We add 2 to dimension size to accommodate padding bounds
+        dp = torch.zeros(B, N + 2, M + 2, device=X.device) + 1e9
+        dp[:, 0, 0] = 0.0
+
+        for i in range(1, N + 1):
+            for j in range(1, M + 1):
+                # Retrieve matching cost
+                cost = dist[:, i - 1, j - 1]
+                # Dynamic programming transition step
+                v = torch.stack([
+                    dp[:, i - 1, j],     # Insertion
+                    dp[:, i, j - 1],     # Deletion
+                    dp[:, i - 1, j - 1]  # Match
+                ], dim=-1)
+                
+                # Softmin formulation to retain differentiability
+                softmin = -self.gamma * torch.logsumexp(-v / self.gamma, dim=-1)
+                dp[:, i, j] = cost + softmin
+
+        return dp[:, N, M]
+```
+
+---
+
 ## Key Points (Continued)
 - Implement cost governance with FinOps practices and continuous optimization
 - Foster cross-functional collaboration and DevOps culture for operational excellence
@@ -212,3 +300,10 @@ Build internal developer platforms (IDP) for self-service infrastructure. Use ba
 - Build internal developer platforms to accelerate delivery and reduce cognitive load
 - Measure and improve using DORA metrics and team health surveys
 - Balance innovation with stability through proper governance and risk management
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with Soft-DTW dynamic programming pipelines and InfoNCE loss equations.
+-->
+

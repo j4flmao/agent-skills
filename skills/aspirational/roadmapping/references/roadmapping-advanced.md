@@ -483,3 +483,10 @@ tool_selection:
 - Audience-specific views: executive 1-pager, engineering milestones, customer themes
 - Trade-off communication uses "If we do X, then we gain Y, but cannot do Z"
 - Tool selection depends on team size, maturity, and primary use case
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with strategic roadmapping, dependency sorting, multitrack scenario planning, and integration schemas.
+-->
+

@@ -7,6 +7,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -1009,3 +1010,9 @@ Without allocating costs, teams have no incentive to optimize.
 
 ## Handoff
 For model selection for routing, hand off to `ml-model-serving`. For embedding model for semantic cache, hand off to `ai-embeddings`. For testing cost-quality tradeoffs, hand off to `ai-ai-testing`. For self-hosted model deployment, hand off to `ai-inference-serving`. For training distillation models, hand off to `ai-training`.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenAPI, dynamic routing, caching, and token budgeting.
+-->

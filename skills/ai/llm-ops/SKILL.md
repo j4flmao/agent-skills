@@ -7,6 +7,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -618,3 +619,10 @@ Rank selection: r=8 for style adaptation, r=16 for task-specific, r=32 for domai
 
 ## Handoff
 For serving infrastructure scaling (HPA, node pools, cluster management), hand off to `ai-vector-databases`. For evaluation pipelines and LLM-as-judge infrastructure, hand off to `ai-evals`. For data labeling and training dataset curation, hand off to `ai-data-engineering`.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive LLMOps lifecycle & system engineering standards)
+Strict compliance with serving infrastructure setups, distributed FSDP code execution, and telemetry.
+-->
+

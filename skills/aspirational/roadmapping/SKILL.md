@@ -5,6 +5,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -734,8 +735,17 @@ traceability_matrix:
 ```
 
 ## References
-- `references/roadmapping-fundamentals.md` — Core frameworks, data model, horizon planning, quarterly process
-- `references/roadmapping-advanced.md` — Advanced prioritization (MCDA, CD3), OKR cascades, dependency management
-- `references/roadmapping-prioritization.md` — Prioritization models deep dive: RICE, WSJF, MoSCoW, Kano, ICE
-- `references/roadmapping-communication.md` — Audience-specific views, stakeholder alignment, trade-off communication
-- `references/technology-roadmapping.md` — (Deprecated — see roadmapping-fundamentals.md)
+- [Roadmapping Fundamentals](references/roadmapping-fundamentals.md) — Core frameworks, data model, horizon planning, quarterly process
+- [Roadmapping Advanced](references/roadmapping-advanced.md) — Advanced prioritization (MCDA, CD3), OKR cascades, dependency management
+- [Roadmapping Prioritization](references/roadmapping-prioritization.md) — Prioritization models deep dive: RICE, WSJF, MoSCoW, Kano, ICE
+- [Roadmapping Communication](references/roadmapping-communication.md) — Audience-specific views, stakeholder alignment, trade-off communication
+- [Roadmapping Tools & Integrations](references/roadmapping-tools-integrations.md) — Jira/Linear automated syncing webhooks and APIs
+- [Roadmapping Dependency & Risk Management](references/roadmapping-dependency-risk.md) — Dependency graph DAG, topological sorting, risk matrix and statistical buffers
+- [Roadmapping Scenario Planning](references/roadmapping-scenario-planning.md) — Multitrack planning (pessimistic, target, optimistic), scenario decision trees, and pivot triggers
+- [Roadmapping Metrics & Outcomes](references/roadmapping-metrics-outcomes.md) — OKR alignment schemas, accuracy tracking, closed-loop priority tuning feedback
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with strategic roadmapping, dependency sorting, multitrack scenario planning, and integration schemas.
+-->

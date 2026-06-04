@@ -267,3 +267,9 @@ class CompressionABTest:
 - Always preserve key entities, numbers, and relationships
 - Monitor for quality degradation per compression strategy
 - Different tasks tolerate different compression levels
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with LLMLingua, selective context, and manual pruning criteria.
+-->

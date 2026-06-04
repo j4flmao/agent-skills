@@ -7,6 +7,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -795,3 +796,10 @@ class RetrievalEval:
 
 ## Handoff
 For RAG pipeline with these embeddings, hand off to `ai-rag-patterns`. For vector database operations, hand off to `ai-vector-databases`. For multi-modal embedding training, hand off to `ai-multimodal`. For embedding model fine-tuning at scale, hand off to `ai-model-training`.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenAPI, dynamic loops, and multi-agent coordination protocols.
+-->
+

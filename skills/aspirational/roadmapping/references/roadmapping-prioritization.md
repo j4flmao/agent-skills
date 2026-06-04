@@ -395,3 +395,10 @@ class HybridPrioritizer:
 - Anti-patterns (HiPPO, recency bias, confirmation bias) undermine prioritization rigor
 - Model selection depends on data availability, decision frequency, and organizational maturity
 - All models require calibration: anchor scores with concrete examples to reduce bias
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with strategic roadmapping, dependency sorting, multitrack scenario planning, and integration schemas.
+-->
+

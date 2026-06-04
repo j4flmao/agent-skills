@@ -7,6 +7,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -950,3 +951,9 @@ jobs:
 
 ## Handoff
 For prompt optimization to improve eval scores, hand off to `ai-prompt-engineering`. For RAG pipeline changes evaluated by this skill, hand off to `ai-rag-patterns`. For production deployment of eval infrastructure, hand off to `platform-engineering`. For human eval study design, hand off to `ux-research`.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenAPI, evaluation pipelines, LLM-as-a-judge, and metrics.
+-->

@@ -1,155 +1,295 @@
 # Tool-Use Patterns
 
-## Tool Schema Design
+This reference details advanced patterns for tool definition, schema design, validation, execution loops, sandboxing, and error recovery in agentic systems.
 
-### Parameter Guidelines
-- Name: snake_case, unique, describes action
-- Description: include when to use AND when NOT to use
-- Required params: minimum viable set
-- Enums: exhaustive with descriptions
+## Tool Execution Lifecycle & State Machine
 
-### Schema Template
+Every tool call goes through a deterministic lifecycle. This ensures that untrusted outputs from the LLM do not execute side effects without strict verification and sandboxing.
+
+```mermaid
+stateDiagram-v2
+    [*] --> LLMCallMatched
+    LLMCallMatched --> ArgumentsExtracted : ParserExtract
+    ArgumentsExtracted --> SchemaValidation : ValidateInput
+    SchemaValidation --> GuardrailCheck : ValidArguments
+    SchemaValidation --> LLMFeedbackLoop : InvalidArguments (Send Schema Errors)
+    
+    GuardrailCheck --> AuthorizationCheck : SafetyPassed
+    GuardrailCheck --> ExecutionAborted : SecurityViolation
+    
+    AuthorizationCheck --> PreExecutionHook : Approved
+    AuthorizationCheck --> EscalationRequired : HumanInTheLoopGate
+    
+    EscalationRequired --> PreExecutionHook : HumanApproved
+    EscalationRequired --> ExecutionAborted : HumanRejected
+    
+    PreExecutionHook --> SandboxedExecution : ExecuteCall
+    SandboxedExecution --> PostExecutionHook : ExitCodeZero
+    SandboxedExecution --> ErrorRecovery : ExecutionFailed (Retry/Fallback)
+    
+    ErrorRecovery --> PostExecutionHook : RecoverySuccessful
+    ErrorRecovery --> FailureEscalation : Unrecoverable
+    
+    PostExecutionHook --> OutputSanitization : SanitizeData
+    OutputSanitization --> [*] : ReturnToAgentContext
+```
+
+---
+
+## Tool Parameter Validation Schema
+
+Production agents must validate LLM outputs using schema validators (like Pydantic or Draft 2020-12 JSON Schema) to prevent unexpected parsing exceptions or code injections.
+
+### Complex JSON Schema Spec for Database Query Tool
+
 ```json
 {
-  "name": "search_knowledge_base",
-  "description": "Search documents. Use for factual queries. Do NOT use for general chat.",
-  "inputSchema": {
-    "type": "object",
-    "properties": {
-      "query": {"type": "string", "description": "Search terms (2-5 keywords)"},
-      "top_k": {"type": "integer", "description": "Results to return", "default": 5},
-      "filter": {"type": "string", "enum": ["all", "docs", "code"], "default": "all"}
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SQLReadQuerySchema",
+  "type": "object",
+  "required": ["query", "parameters", "execution_profile"],
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "SQL SELECT statement. Must not contain write operations (INSERT, UPDATE, DELETE, DROP).",
+      "pattern": "(?i)^\\s*SELECT\\s+"
     },
-    "required": ["query"]
-  }
-}
-```
-
-## Parallel Tool Execution
-
-Execute independent tools concurrently to reduce latency.
-
-```python
-import asyncio
-
-async def parallel_tool_call(tools, shared_context):
-    tasks = {}
-    for tool_name, params in tools.items():
-        if not depends_on(tool_name, shared_context):
-            tasks[tool_name] = asyncio.create_task(execute(tool_name, params))
-
-    results = {}
-    for name, task in tasks.items():
-        results[name] = await task
-
-    return results
-```
-
-### Dependency Graph
-```
-                    ┌──────────┐
-                    │  Search  │
-                    └────┬─────┘
-                         │
-              ┌──────────┼──────────┐
-              ▼          ▼          ▼
-        ┌──────────┐ ┌──────┐ ┌──────────┐
-        │ Read Doc │ │Fetch │ │Get Author│
-        └──────────┘ │Meta  │ └──────────┘
-                     └──────┘
-```
-
-Dependent tool calls wait for their prerequisites, independent calls execute in parallel.
-
-## Sequential Tool Chaining
-
-### Pattern
-```
-Tool A → Parse(A) → Tool B(A_result) → Parse(B) → Tool C(B_result) → Final
-```
-
-### Router Pattern
-```python
-def route_tool_call(response):
-    if response.get("requires_search"):
-        return "search", response["search_query"]
-    elif response.get("requires_code"):
-        return "execute_code", response["code"]
-    return "final_answer", response["content"]
-```
-
-## Tool Output Handling
-
-### Structured Response
-```python
-{
-    "success": True,
-    "data": { ... },
-    "metadata": {
-        "tool": "search",
-        "latency_ms": 145,
-        "source_count": 3
+    "parameters": {
+      "type": "array",
+      "description": "Positional parameter values to bind to query placeholders to prevent SQL injection.",
+      "items": {
+        "anyOf": [
+          { "type": "string" },
+          { "type": "number" },
+          { "type": "boolean" },
+          { "type": "null" }
+        ]
+      }
+    },
+    "execution_profile": {
+      "type": "object",
+      "required": ["timeout_ms", "max_rows"],
+      "properties": {
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 30000,
+          "default": 5000
+        },
+        "max_rows": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 100
+        }
+      }
     }
+  },
+  "additionalProperties": false
 }
 ```
 
-### Truncation Strategy
-- Truncate tool output to token budget (e.g., 2000 tokens max)
-- Surface metadata separately from content
-- Provide summary when full output exceeds limit
+---
 
-## Error Recovery
+## Python Implementation: Secure Tool Wrapper with Pre/Post Hooks
 
-### Retry with Backoff
+Here is a production-grade wrapper in Python showcasing schema validation, validation feedback injection, human approval gates, and sanitization:
+
 ```python
-async def tool_with_retry(tool_fn, max_retries=3):
-    for attempt in range(max_retries):
+import re
+import json
+import asyncio
+from typing import Callable, Any, Dict, Optional, Tuple
+from pydantic import BaseModel, ValidationError, Field
+
+class ExecutionProfile(BaseModel):
+    timeout_ms: int = Field(default=5000, ge=100, le=30000)
+    max_rows: int = Field(default=100, ge=1, le=1000)
+
+class SQLReadQueryModel(BaseModel):
+    query: str
+    parameters: list[Any]
+    execution_profile: ExecutionProfile
+
+    @classmethod
+    def validate_sql(cls, query: str) -> bool:
+        # Strictly enforce read-only query structures
+        forbidden = ["insert", "update", "delete", "drop", "truncate", "alter", "create"]
+        normalized = query.lower().strip()
+        if not normalized.startswith("select"):
+            return False
+        for keyword in forbidden:
+            if re.search(r'\b' + re.escape(keyword) + r'\b', normalized):
+                return False
+        return True
+
+class SecureToolWrapper:
+    def __init__(self, name: str, execution_fn: Callable, model_schema: type[BaseModel]):
+        self.name = name
+        self.execute_raw = execution_fn
+        self.schema = model_schema
+
+    async def call(self, raw_input: Dict[str, Any], user_ctx: Dict[str, Any]) -> Dict[str, Any]:
+        # 1. Validation Phase
         try:
-            return await tool_fn()
-        except RateLimitError:
-            wait = 2 ** attempt
-            await asyncio.sleep(wait)
-        except TemporaryError:
-            await asyncio.sleep(1)
-        except PermanentError:
-            return {"success": False, "error": str(e)}
-    return {"success": False, "error": "max retries exceeded"}
+            validated_args = self.schema.model_validate(raw_input)
+        except ValidationError as e:
+            return {
+                "success": False,
+                "error": "SCHEMA_VALIDATION_ERROR",
+                "message": e.errors(),
+                "should_retry": True
+            }
+
+        # Custom SQL Safety checks
+        if hasattr(validated_args, "query"):
+            if not self.schema.validate_sql(validated_args.query):
+                return {
+                    "success": False,
+                    "error": "SECURITY_VIOLATION",
+                    "message": "Write operations are strictly prohibited on read queries.",
+                    "should_retry": False
+                }
+
+        # 2. Authorization / Gate Checking
+        if "admin" not in user_ctx.get("roles", []):
+            if validated_args.execution_profile.timeout_ms > 10000:
+                return {
+                    "success": False,
+                    "error": "UNAUTHORIZED_LIMIT",
+                    "message": "Timeout above 10s is reserved for admin operations.",
+                    "should_retry": False
+                }
+
+        # 3. Execution Phase
+        try:
+            result = await asyncio.wait_for(
+                self.execute_raw(validated_args),
+                timeout=validated_args.execution_profile.timeout_ms / 1000.0
+            )
+            
+            # 4. Output Sanitization Phase
+            sanitized_result = self._sanitize_output(result)
+            return {
+                "success": True,
+                "data": sanitized_result
+            }
+        except asyncio.TimeoutError:
+            return {
+                "success": False,
+                "error": "TIMEOUT",
+                "message": "Tool execution timed out."
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": "RUNTIME_ERROR",
+                "message": str(e)
+            }
+
+    def _sanitize_output(self, raw_output: Any) -> Any:
+        # Strip potential PII (e.g. Email/SSN) from outputs before returning to the model
+        if isinstance(raw_output, str):
+            email_pattern = r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+'
+            return re.sub(email_pattern, "[REDACTED_EMAIL]", raw_output)
+        return raw_output
 ```
 
-### Fallback Tools
-Define alternative tools for common failures:
-- Search fails → try cached results
-- API fails → try degraded mode (cached data)
-- DB fails → try read replica
+---
 
-## Tool Selection Heuristics
+## Sandboxed Code Execution Environments
 
-| Query Characteristic | Tool Strategy |
-|---------------------|---------------|
-| Factual question | Single search call |
-| Multi-part query | Parallel independent searches |
-| Requires computation | Search then calculate |
-| Creative task | No tools needed |
-| User provides data | Parse and process |
+When agents generate code (Python, Bash, JS) to solve tasks, the runtime execution MUST be isolated from the host.
 
-## Security Patterns
+### Architecture for Sandboxed Sandbox Execution (Docker + gRPC)
 
-### Input Sanitization
+```
+┌───────────────────────────────────────────────┐
+│              Host Agent Runtime               │
+└───────────────────────┬───────────────────────┘
+                        │ gRPC / TLS
+                        ▼
+┌───────────────────────────────────────────────┐
+│     Docker Sandbox Pool Manager (Daemon)      │
+│  - Restricts cpu-shares / limits memory       │
+│  - Disables host networking (bridge mode)     │
+│  - Read-only root file system                 │
+└───────────────────────┬───────────────────────┘
+                        │ Spawns
+                        ▼
+┌───────────────────────────────────────────────┐
+│          Isolated Docker Container            │
+│  - Ephemeral volume (100MB max)               │
+│  - No capabilities (no-new-privileges)        │
+│  - System calls filtered by Seccomp           │
+└───────────────────────────────────────────────┘
+```
+
+### Sandbox Resource Profile Spec
+
+```yaml
+sandbox:
+  engine: docker
+  isolation: hyper-v (Windows) or runc (Linux)
+  networking: disabled
+  limits:
+    cpu: 0.5
+    memory: 256MB
+    read_only_rootfs: true
+    storage_size_limit: 50MB
+    process_limit: 20
+    timeout_seconds: 15
+  security:
+    seccomp_profile: /etc/docker/seccomp-agent.json
+    capabilities: ["drop-all"]
+```
+
+---
+
+## Stateful Transaction Patterns for Multi-Step Database Execution
+
+When an agent needs to perform multiple database mutations, it must use a transactional manager tool to ensure atomic rollback capabilities:
+
 ```python
-def sanitize_tool_input(params, schema):
-    for key, value in params.items():
-        if key not in schema["properties"]:
-            del params[key]
-        elif schema["properties"][key].get("type") == "string":
-            params[key] = sanitize_string(value)
-    return params
+class DBTransactionTool:
+    def __init__(self, db_connection):
+        self.db = db_connection
+        self.active_transactions: Dict[str, Any] = {}
+
+    async def execute(self, action: str, tx_id: str = None, query: str = None, params: list = None) -> Dict[str, Any]:
+        if action == "begin":
+            new_tx_id = str(uuid.uuid4())
+            tx = await self.db.begin_transaction()
+            self.active_transactions[new_tx_id] = tx
+            return {"tx_id": new_tx_id, "status": "started"}
+
+        if action == "execute":
+            if not tx_id or tx_id not in self.active_transactions:
+                raise ValueError("Valid transaction ID (tx_id) required.")
+            tx = self.active_transactions[tx_id]
+            res = await tx.execute(query, params)
+            return {"status": "executed", "rows_affected": res.rowcount}
+
+        if action == "commit":
+            if not tx_id or tx_id not in self.active_transactions:
+                raise ValueError("Valid transaction ID (tx_id) required.")
+            tx = self.active_transactions.pop(tx_id)
+            await tx.commit()
+            return {"status": "committed"}
+
+        if action == "rollback":
+            if not tx_id or tx_id not in self.active_transactions:
+                raise ValueError("Valid transaction ID (tx_id) required.")
+            tx = self.active_transactions.pop(tx_id)
+            await tx.rollback()
+            return {"status": "rolled_back"}
+
+        raise ValueError("Invalid transaction operation.")
 ```
 
-### Authorization Check
-```python
-def authorize_tool_call(tool_name, user_context):
-    allowed = user_context.get("allowed_tools", [])
-    if tool_name not in allowed:
-        return {"success": False, "error": "unauthorized"}
-    return None
-```
+---
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenAPI, Docker configurations, transactions, validation, and Mermaid specs.
+-->

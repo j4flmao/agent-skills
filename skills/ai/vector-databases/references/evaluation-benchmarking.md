@@ -310,3 +310,9 @@ def confidence_interval(recalls, confidence=0.95):
 | 1M | 8ms | 18ms | 6 GB | 2min |
 | 10M | 35ms | 80ms | 60 GB | 30min |
 | 100M | 250ms | 600ms | 600 GB | N/A (needs sharding) |
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with HNSW parameters, distance metrics, sharding/replication topology, and vector DB scaling guidelines.
+-->

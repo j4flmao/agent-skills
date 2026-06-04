@@ -7,6 +7,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -1086,3 +1087,9 @@ class ComplianceDocumenter:
   - references/safety-testing-automation.md — Safety Testing Automation
 ## Handoff
 For model training with alignment, hand off to `ai-model-training`. For testing safety measures, hand off to `ai-ai-testing`. For cost-optimized guardrail deployment, hand off to `ai-ai-cost-optimization`.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OWASP LLM Top 10, prompt injection mitigation strategies, and safety guardrail frameworks.
+-->

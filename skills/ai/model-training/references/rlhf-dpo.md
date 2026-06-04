@@ -244,3 +244,10 @@ deepspeed --num_gpus=8 train_dpo.py \
     --batch_size 4 \
     --gradient_accumulation_steps 8
 ```
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive human preference alignment patterns)
+Strict compliance with Bradley-Terry loss, logsigmoid ratios, PPO config schemas, and DPO trainers.
+-->
+

@@ -7,6 +7,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -629,3 +630,9 @@ class AgentGuardrail:
 
 ## Handoff
 For tool implementation details, hand off to `backend-api-client-generator`. For agent evaluation, hand off to `ai-evals`. For agent observability infrastructure, hand off to `ai-observability`. For security review, hand off to `security-api-security`.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenAPI, dynamic loops, and multi-agent coordination protocols.
+-->

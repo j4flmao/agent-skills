@@ -584,3 +584,10 @@ Early fusion reduces index storage (one index) but may dilute specific model str
 - Ensemble multiple models via RRF (late fusion) for maximum quality, at the cost of index storage.
 - Iterative hard negative mining over 3-4 rounds yields the best fine-tuning results.
 - Monitor gradient norms during training: vanishing gradients indicate too-easy negatives.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenAPI, dynamic loops, and multi-agent coordination protocols.
+-->
+

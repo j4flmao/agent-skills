@@ -170,3 +170,144 @@ Respond in JSON format:
 }
 Always output valid JSON. No markdown. No code fences.
 ```
+
+---
+
+## Dynamic Few-Shot Example Selection Pattern
+
+Instead of static examples, dynamic few-shot selection retrieves the most semantically relevant examples from a vector database at runtime.
+
+```python
+import numpy as np
+from typing import List, Dict
+
+class DynamicFewShotSelector:
+    def __init__(self, examples: List[Dict[str, str]], embedding_client):
+        self.examples = examples
+        self.client = embedding_client
+        self._build_index()
+
+    def _build_index(self):
+        # Precompute embeddings for all example inputs
+        self.example_inputs = [ex["input"] for ex in self.examples]
+        self.embeddings = np.array(self.client.embed(self.example_inputs))
+
+    def select(self, query: str, k: int = 3) -> List[Dict[str, str]]:
+        query_vector = np.array(self.client.embed([query])[0])
+        # Cosine similarity calculation
+        norms = np.linalg.norm(self.embeddings, axis=1) * np.linalg.norm(query_vector)
+        similarities = np.dot(self.embeddings, query_vector) / (norms + 1e-9)
+        
+        # Get top-k indices
+        top_k_indices = np.argsort(similarities)[::-1][:k]
+        return [self.examples[idx] for idx in top_k_indices]
+```
+
+---
+
+## Chain-of-Thought Self-Consistency State Machine
+
+The self-consistency pattern generates multiple reasoning paths (chains) and finds the consensus output by performing a majority vote on the parsed answer.
+
+```mermaid
+graph TD
+    A[Question] --> B[Generate N Parallel Chains]
+    B --> C1[Chain 1]
+    B --> C2[Chain 2]
+    B --> CN[Chain N]
+    C1 --> D[Parse Answers]
+    C2 --> D
+    CN --> D
+    D --> E{Majority Vote}
+    E -- Consensus Found --> F[Return Answer]
+    E -- Tie/No Consensus --> G[Fallback to Highest Likelihood]
+```
+
+### Differentiable Self-Consistency Implementation
+
+```python
+from collections import Counter
+
+class SelfConsistencyEvaluator:
+    def __init__(self, llm_client, temperature: float = 0.7):
+        self.client = llm_client
+        self.temp = temperature
+
+    def run_consistency(self, system_prompt: str, question: str, num_samples: int = 5) -> str:
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": question}
+        ]
+        
+        answers = []
+        for _ in range(num_samples):
+            # Sample with temperature to generate diverse reasoning paths
+            response = self.client.generate(messages, temperature=self.temp)
+            parsed_ans = self._extract_final_answer(response)
+            if parsed_ans:
+                answers.append(parsed_ans)
+
+        if not answers:
+            return "Failed to resolve consistency."
+
+        # Majority vote
+        counts = Counter(answers)
+        consensus, count = counts.most_common(1)[0]
+        return consensus
+
+    def _extract_final_answer(self, response: str) -> str:
+        # Expected format: "Therefore, the final answer is: [value]"
+        marker = "the final answer is:"
+        if marker in response.lower():
+            parts = response.lower().split(marker)
+            return parts[-1].strip(". \n\t")
+        return response.strip()
+```
+
+---
+
+## DSPy-Style Optimization with Programmatic Assertions
+
+DSPy shifts prompt engineering to compiling pipelines. It leverages optimizer modules to bootstrap few-shot examples and refine prompts dynamically based on assertions.
+
+```python
+class DSPyAssertionError(Exception):
+    pass
+
+class DSPyModule:
+    """Represents a structured signature constraint for an LLM node."""
+    def __init__(self, signature: str, llm):
+        self.signature = signature
+        self.llm = llm
+
+    def forward(self, input_data: str) -> str:
+        prompt = f"Signature: {self.signature}\nInput: {input_data}\nOutput:"
+        return self.llm.invoke(prompt)
+
+class AssertiveVLMCompiler:
+    def __init__(self, module: DSPyModule, max_retries: int = 3):
+        self.module = module
+        self.max_retries = max_retries
+
+    def compile_with_assertions(self, input_data: str, constraint_fn) -> str:
+        for attempt in range(self.max_retries):
+            output = self.module.forward(input_data)
+            try:
+                # Assert constraint (e.g. output must contain JSON or stay under length)
+                if not constraint_fn(output):
+                    raise DSPyAssertionError("Output violated programmatic assertion constraints.")
+                return output
+            except DSPyAssertionError as e:
+                print(f"Assertion failed on attempt {attempt+1}: {e}")
+                # Backpropagate error context into feedforward loop
+                input_data = f"{input_data}\n[Feedback: Output was rejected due to: {str(e)}. Correct your formatting.]"
+        
+        raise RuntimeError("Failed to compile output satisfying assertions.")
+```
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with cosine dynamic selectors, Self-Consistency voting, and DSPy signatures.
+-->
+

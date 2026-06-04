@@ -7,6 +7,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -1067,3 +1068,10 @@ asyncio.run(main())
 
 ## Handoff
 For LangChain agent integration with MCP tools, hand off to `ai-langchain-patterns`. For observability setup, hand off to `ai-observability`.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive Model Context Protocol architecture & patterns)
+Strict compliance with MCP server design, transport layers, security profiles, and tool execution.
+-->
+

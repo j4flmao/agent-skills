@@ -229,3 +229,177 @@ print(answer)
 | Medical imaging | CLIP image + expert text | LLaVA (fine-tuned) |
 | E-commerce catalog | CLIP unified | BLIP (captioning) |
 | Video search | CLIP frame embeddings | Video-LLaVA |
+
+---
+
+## Late-Fusion & Multi-Vector Math
+
+Production multimodal RAG systems combine textual evidence and visual evidence through mathematical fusion algorithms or preserve layout topologies using multi-vector representations.
+
+### 1. Reciprocal Rank Fusion (RRF)
+Given a query $q$, we search a text index $I_t$ and an image index $I_v$, producing ranked lists $R_t(q)$ and $R_v(q)$. The RRF score for document $d$ across both rank-lists is defined as:
+$$\text{RRF\_Score}(d) = \sum_{m \in \{t, v\}} \frac{1}{k + r_m(d)}$$
+where $r_m(d)$ is the rank index of document $d$ in the retrieved list $R_m(q)$ (indexed from $1$), and $k$ is a constant regularization parameter (typically $k=60$).
+
+### 2. ColPali Multi-Vector Late-Fusion (MaxSim)
+Traditional models extract a single global embedding for an image page, losing local text layout and chart details. ColPali preserves sequence tokens from both the query and the layout-aware document image using a multi-vector matching paradigm.
+
+Let query tokens be encoded as $\mathbf{Q} = [\mathbf{q}_1, \mathbf{q}_2, \dots, \mathbf{q}_{L_q}] \in \mathbb{R}^{L_q \times D}$ and document image patch tokens be encoded as $\mathbf{D} = [\mathbf{d}_1, \mathbf{d}_2, \dots, \mathbf{d}_{L_d}] \in \mathbb{R}^{L_d \times D}$ using a vision-language model like SigLIP.
+
+The late-fusion similarity score is computed using the **MaxSim** operator:
+$$\text{MaxSim}(\mathbf{Q}, \mathbf{D}) = \sum_{i=1}^{L_q} \max_{j=1}^{L_d} \left( \mathbf{q}_i \cdot \mathbf{d}_j^T \right)$$
+where each query token embedding is aligned with the document image patch token that yields the highest dot-product similarity, and these maximums are summed.
+
+---
+
+## Multimodal Retrieval Pipeline Execution Flow
+
+The flow below represents a complete pipeline that accepts a PDF page, generates page screenshot representations, performs ColPali indexing, processes queries, performs late-fusion MaxSim scoring, and formats inputs for generation.
+
+```mermaid
+stateDiagram-v2
+    [*] --> IngestDocument
+    IngestDocument --> PageRasterization : Convert PDF to 150 DPI Images
+    PageRasterization --> ColPaliEncoding : Forward pass (SigLIP Encoder)
+    ColPaliEncoding --> MultiVectorStorage : Save patch embeddings (L_d x D)
+    
+    state RetrievalQueryEngine {
+        [*] --> QueryTokenization
+        QueryTokenization --> QueryEmbedding : Extract text token vectors (L_q x D)
+        QueryEmbedding --> MaxSimScoring : Compute cross-modal dot product matrix
+        MaxSimScoring --> CandidatesSorting : Rank pages by sum-max score
+    }
+    
+    MultiVectorStorage --> RetrievalQueryEngine : Indexed Patch Embeddings
+    RetrievalQueryEngine --> ContextAssembly : Top-K Page Screenshots + Text
+    ContextAssembly --> VLMInference : Autoregressive Generation
+    VLMInference --> [*]
+```
+
+---
+
+## Python Implementation: Late-Fusion & MaxSim Operations
+
+Below is a production-grade Python implementation of RRF scoring and the ColPali MaxSim operator using PyTorch.
+
+```python
+import torch
+import numpy as np
+from typing import List, Dict, Any
+
+class LateFusionRanker:
+    """
+    Fuses rankings from heterogeneous vector indexes using Reciprocal Rank Fusion (RRF).
+    """
+    def __init__(self, k_const: int = 60):
+        self.k = k_const
+
+    def compute_rrf(self, text_rankings: List[str], image_rankings: List[str]) -> List[Dict[str, Any]]:
+        scores = {}
+        
+        # Process text rankings
+        for rank, doc_id in enumerate(text_rankings, start=1):
+            scores[doc_id] = scores.get(doc_id, 0.0) + (1.0 / (self.k + rank))
+            
+        # Process image rankings
+        for rank, doc_id in enumerate(image_rankings, start=1):
+            scores[doc_id] = scores.get(doc_id, 0.0) + (1.0 / (self.k + rank))
+            
+        # Sort docs by descending score
+        sorted_docs = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        return [{"document_id": doc_id, "rrf_score": score} for doc_id, score in sorted_docs]
+
+
+class ColPaliMaxSimEvaluator:
+    """
+    Implements multi-vector MaxSim calculations using PyTorch for late-fusion document retrieval.
+    """
+    @staticmethod
+    def compute_maxsim(query_embeds: torch.Tensor, document_embeds: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the MaxSim score for a batch of query and document tokens.
+        
+        Parameters:
+            query_embeds: Shape [L_q, D] - Multi-vector text query representations.
+            document_embeds: Shape [L_d, D] - Multi-vector image page patch representations.
+            
+        Returns:
+            Scalar similarity score.
+        """
+        # Step 1: Normalize embeddings along the vector dimension D
+        q_norm = torch.nn.functional.normalize(query_embeds, p=2, dim=-1)
+        d_norm = torch.nn.functional.normalize(document_embeds, p=2, dim=-1)
+        
+        # Step 2: Compute dense similarity matrix [L_q, L_d]
+        sim_matrix = torch.matmul(q_norm, d_norm.T)  # Shape: [L_q, L_d]
+        
+        # Step 3: Compute maximum similarity for each query token
+        max_per_query_token, _ = torch.max(sim_matrix, dim=-1)  # Shape: [L_q]
+        
+        # Step 4: Sum all maximums
+        maxsim_score = torch.sum(max_per_query_token)
+        return maxsim_score
+```
+
+---
+
+## Multimodal RAG Payload Schemas
+
+### 1. Document Page Index Meta-Data Contract
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MultimodalPageMetadata",
+  "type": "object",
+  "required": ["document_id", "page_number", "image_resolution", "extracted_text"],
+  "properties": {
+    "document_id": { "type": "string", "format": "uuid" },
+    "page_number": { "type": "integer", "minimum": 1 },
+    "image_resolution": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "integer" }
+    },
+    "extracted_text": { "type": "string" },
+    "contains_tables": { "type": "boolean" },
+    "contains_charts": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}
+```
+
+### 2. Retrieval Search Response Contract
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MultimodalRetrievalResponse",
+  "type": "object",
+  "required": ["results", "query_latency_ms"],
+  "properties": {
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["document_id", "page_number", "similarity_score", "image_payload_base64"],
+        "properties": {
+          "document_id": { "type": "string", "format": "uuid" },
+          "page_number": { "type": "integer" },
+          "similarity_score": { "type": "number" },
+          "image_payload_base64": { "type": "string" },
+          "source_metadata": { "type": "object" }
+        }
+      }
+    },
+    "query_latency_ms": { "type": "number" }
+  },
+  "additionalProperties": false
+}
+```
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenAPI, late-fusion models, and cross-modal projection frameworks.
+-->
+

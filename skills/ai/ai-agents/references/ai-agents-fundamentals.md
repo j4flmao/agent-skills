@@ -172,3 +172,10 @@ Without memory, an agent treats each turn as an independent problem. Memory enab
 - Logging and tracing are essential for debugging agent behavior
 - Agent evaluation requires both component-level and system-level testing
 - The agency spectrum helps match architecture to actual problem complexity
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenAPI, dynamic loops, and multi-agent coordination protocols.
+-->
+

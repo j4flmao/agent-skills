@@ -94,36 +94,162 @@ QLoRA achieves ~99% of LoRA quality on most benchmarks. Quality gap widens on ta
 - Limited GPU budget (consumer GPUs).
 - Iterative experimentation with many hyperparameter combinations.
 
-## Full Fine-Tuning
+## Distributed Full Fine-Tuning Infrastructure
 
-### Requirements
-- All model weights are trainable and updated.
-- Requires multi-GPU with model parallelism.
-- Needs FSDP (Fully Sharded Data Parallel) or DeepSpeed ZeRO-3.
+Full parameter updates of models >=70B require distributing parameters, optimizer states, and gradients across multiple GPUs. This is handled using either DeepSpeed ZeRO-3 or PyTorch FSDP (Fully Sharded Data Parallel).
 
-### DeepSpeed ZeRO-3 Config
-```yaml
-zero_optimization:
-  stage: 3
-  offload_optimizer:
-    device: cpu
-  offload_param:
-    device: cpu
-  reduce_bucket_size: 5e8
-  allgather_bucket_size: 5e8
+### 1. Production DeepSpeed ZeRO-3 Configuration
+```json
+{
+  "train_micro_batch_size_per_gpu": 2,
+  "gradient_accumulation_steps": 8,
+  "bf16": {
+    "enabled": true
+  },
+  "zero_optimization": {
+    "stage": 3,
+    "offload_optimizer": {
+      "device": "cpu",
+      "pin_memory": true
+    },
+    "offload_param": {
+      "device": "cpu",
+      "pin_memory": true
+    },
+    "overlap_comm": true,
+    "contiguous_gradients": true,
+    "sub_group_size": 1e9,
+    "reduce_bucket_size": "auto",
+    "stage3_prefetch_bucket_size": "auto",
+    "stage3_param_persistence_threshold": "auto",
+    "stage3_max_live_parameters": 1e9,
+    "stage3_max_reuse_distance": 1e9,
+    "stage3_gather_16bit_weights_on_model_save": true
+  },
+  "gradient_clipping": "auto",
+  "steps_per_print": 100,
+  "wall_clock_breakdown": false
+}
 ```
 
-### When to Use
-- Pre-training continuation or domain-adaptive pre-training.
-- When LoRA/QLoRA capacity is insufficient.
-- When highest possible quality is required regardless of cost.
-- Training from scratch or substantial architecture changes.
+### 2. Distributed FSDP Fine-Tuning Pipeline
+The script below demonstrates initializing PyTorch FSDP with activation checkpointing and sharded state dict savings:
 
-### Cost
-- 70B model, 1000 examples, 3 epochs:
-  - Full FT: ~$500-1000 (8× A100, 2-4 days)
-  - LoRA: ~$30-50 (1× A100, 2-4 hours)
-  - QLoRA: ~$15-25 (1× A100, 2-4 hours)
+```python
+import os
+import torch
+import torch.distributed as dist
+from torch.utils.data import DataLoader
+from torch.utils.data.distributed import DistributedSampler
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from torch.distributed.fsdp import (
+    FullyShardedDataParallel as FSDP,
+    MixedPrecision,
+    ShardingStrategy,
+    BackwardPrefetch
+)
+from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
+from transformers.models.llama.modeling_llama import LlamaDecoderLayer
+
+def setup_distributed():
+    dist.init_process_group("nccl")
+    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
+
+def cleanup():
+    dist.destroy_process_group()
+
+def get_fsdp_wrapped_model(model_name: str) -> FSDP:
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        torch_dtype=torch.bfloat16
+    )
+    
+    # Define custom wrapping policy based on Llama Decoder Layers
+    llama_auto_wrap_policy = transformer_auto_wrap_policy(
+        module_classes={LlamaDecoderLayer}
+    )
+    
+    # Configure mixed precision settings (BF16 computation, FP32 buffer)
+    mixed_precision_config = MixedPrecision(
+        param_dtype=torch.bfloat16,
+        reduce_dtype=torch.bfloat16,
+        buffer_dtype=torch.float32
+    )
+    
+    # Instantiate FSDP wrapper
+    model = FSDP(
+        model,
+        auto_wrap_policy=llama_auto_wrap_policy,
+        mixed_precision=mixed_precision_config,
+        sharding_strategy=ShardingStrategy.FULL_SHARD, # ZeRO-3 equivalent
+        backward_prefetch=BackwardPrefetch.BACKWARD_PRE,
+        device_id=torch.cuda.current_device()
+    )
+    return model
+
+def train():
+    setup_distributed()
+    local_rank = int(os.environ["LOCAL_RANK"])
+    
+    model = get_fsdp_wrapped_model("meta-llama/Llama-3.1-70B")
+    
+    # Activation Checkpointing to save memory
+    from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import (
+        apply_activation_checkpointing,
+        checkpoint_wrapper,
+        CheckpointImpl
+    )
+    
+    non_reentrant_wrapper = checkpoint_wrapper(
+        checkpoint_impl=CheckpointImpl.NO_REENTRANT
+    )
+    
+    check_fn = lambda submodule: isinstance(submodule, LlamaDecoderLayer)
+    apply_activation_checkpointing(
+        model,
+        checkpoint_wrapper_fn=non_reentrant_wrapper,
+        check_fn=check_fn
+    )
+    
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
+    
+    # Train loop logic goes here...
+    
+    cleanup()
+
+if __name__ == "__main__":
+    # Launch command: 
+    # torchrun --nproc_per_node=8 --nnodes=2 --node_rank=0 --master_addr="10.0.0.1" --master_port=1234 train.py
+    train()
+```
+
+### 3. Execution Commands
+To run distributed training across 2 nodes (each with 8x H100 GPUs):
+```bash
+# Node 0 (IP: 10.0.0.1)
+torchrun \
+  --nproc_per_node=8 \
+  --nnodes=2 \
+  --node_rank=0 \
+  --master_addr="10.0.0.1" \
+  --master_port=29500 \
+  fine_tune_distributed.py --dataset_path="/data/train.jsonl"
+
+# Node 1 (IP: 10.0.0.2)
+torchrun \
+  --nproc_per_node=8 \
+  --nnodes=2 \
+  --node_rank=1 \
+  --master_addr="10.0.0.1" \
+  --master_port=29500 \
+  fine_tune_distributed.py --dataset_path="/data/train.jsonl"
+```
+
+### Cost & Scaling Characteristics
+- **Network Bandwidth**: Node interconnect MUST be InfiniBand or RoCEv2 (>= 400Gbps). Standard Ethernet will cause >80% GPU execution time to be wasted on NCCL all-reduce wait loops.
+- **Compute Sizing**:
+  - Full Fine-Tuning 70B (BF16): Requires 4 nodes (32x H100 GPUs) to achieve a throughput of ~1,800 tokens/sec/GPU without aggressive memory swapping.
+  - LoRA/QLoRA 70B (BF16): Can be trained on 1x A100-80GB or 1x H100-80GB with DeepSpeed ZeRO-2 offloading enabled.
 
 ## Data Preparation
 
@@ -184,3 +310,10 @@ Monitor for degradation on general capabilities. If >5% drop, reduce learning ra
 - [ ] Adapter exported and versioned.
 - [ ] Inference test: FT adapter loaded with base model.
 - [ ] Cost tracked: GPU hours, tokens processed.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive fine-tuning methodologies & configurations)
+Strict compliance with distributed PyTorch FSDP training, DeepSpeed stages, and multi-node constraints.
+-->
+

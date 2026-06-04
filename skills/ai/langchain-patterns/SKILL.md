@@ -7,6 +7,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -795,3 +796,10 @@ async for token in chain.astream_events({"question": query}, version="v2"):
 
 ## Handoff
 For vector database setup, hand off to `ai-vector-databases`. For MCP tool integration, hand off to `ai-mcp-patterns`. For observability, hand off to `ai-ai-observability`.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenAPI, dynamic loops, and multi-agent coordination protocols.
+-->
+

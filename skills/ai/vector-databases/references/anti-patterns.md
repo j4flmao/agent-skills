@@ -158,3 +158,9 @@ Creating indexes on all metadata fields without selectivity analysis.
 | Synthetic eval | Misleading | Production recall failure | Real data eval |
 | Oversized M parameter | Memory waste | 4× budget for 1% gain | Tune M |
 | No golden queries | Unknown quality | Regression unnoticed | Curate + automate |
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with HNSW parameters, distance metrics, sharding/replication topology, and vector DB scaling guidelines.
+-->

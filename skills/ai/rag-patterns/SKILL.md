@@ -7,6 +7,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -754,3 +755,10 @@ Add caching, async pipeline, streaming, monitoring dashboard, alerts, circuit br
 
 ## Handoff
 For vector database deployment, hand off to `ai-vector-databases`. For prompt integration with retrieved context, hand off to `ai-prompt-engineering`. For fine-tuning embedding models, hand off to `ai-fine-tuning`.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with BM25 + Dense Hybrid search, RRF scaling, and parent-child retrieval.
+-->
+

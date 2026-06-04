@@ -85,3 +85,9 @@ Need vector search?
 - Index parameter portability (HNSW M, ef)
 - API compatibility (REST, gRPC, client SDKs)
 - Data format compatibility (JSON, Parquet, CSV)
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with HNSW parameters, distance metrics, sharding/replication topology, and vector DB scaling guidelines.
+-->

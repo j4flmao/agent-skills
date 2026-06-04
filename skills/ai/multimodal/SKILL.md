@@ -7,6 +7,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -165,3 +166,10 @@ class MultimodalRAG:
   - references/vision-models.md — Vision Models
 ## Handoff
 For text-only RAG, hand off to `ai-rag-patterns`. For embedding model selection, hand off to `ai-embeddings`. For fine-tuning vision-language models, hand off to `ai-model-training`.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenAPI, late-fusion models, and cross-modal projection frameworks.
+-->
+

@@ -5,6 +5,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -739,17 +740,23 @@ const resolvers = {
 ```
 
 ## References
-- `references/graphql-federation-fundamentals.md` — Federation v2 core concepts, directives, entity types, subgraph design
-- `references/graphql-federation-advanced.md` — Advanced topics: cost analysis, contract testing, migration strategies, multi-region
-- `references/entity-resolution.md` — Entity resolution patterns, __resolveReference, @requires, @provides flow
-- `references/federation-architecture.md` — Subgraph design principles, Fed 1 vs Fed 2 comparison
-- `references/federation-deployment.md` — Production deployment, CI/CD, rollback procedures
-- `references/federation-performance.md` — Query planning, caching, DataLoader, performance budgets
-- `references/federation-security.md` — AuthN at router, authZ at subgraph, rate limiting, DoS protection
-- `references/federation-testing.md` — Unit, integration, contract testing patterns
-- `references/supergraph-composition.md` — Composition pipeline, directives, CI/CD
-- `references/supergraph-config.md` — Router configuration, traffic shaping, query plans
-- `references/federation-vs-mesh.md` — Apollo Federation vs GraphQL Mesh comparison
-- `references/federated-tracing.md` — OpenTelemetry, Studio integration, distributed tracing
-- `references/federation-migration-monolith.md` — Migrating from monolithic GraphQL to federation (Strangler Fig)
-- `references/federation-cost-management.md` — Cost analysis, demand control, entity resolution cost optimization
+- [GraphQL Federation Fundamentals](references/graphql-federation-fundamentals.md) — Federation v2 core concepts, directives, entity types, subgraph design
+- [GraphQL Federation Advanced](references/graphql-federation-advanced.md) — Advanced topics: cost analysis, contract testing, migration strategies, multi-region
+- [Entity Resolution](references/entity-resolution.md) — Entity resolution patterns, __resolveReference, @requires, @provides flow
+- [Federation Architecture](references/federation-architecture.md) — Subgraph design principles, Fed 1 vs Fed 2 comparison
+- [Federation Deployment](references/federation-deployment.md) — Production deployment, CI/CD, rollback procedures
+- [Federation Performance](references/federation-performance.md) — Query planning, caching, DataLoader, performance budgets
+- [Federation Security](references/federation-security.md) — AuthN at router, authZ at subgraph, rate limiting, DoS protection
+- [Federation Testing](references/federation-testing.md) — Unit, integration, contract testing patterns
+- [Supergraph Composition](references/supergraph-composition.md) — Composition pipeline, directives, CI/CD
+- [Supergraph Config](references/supergraph-config.md) — Router configuration, traffic shaping, query plans
+- [Federation vs Mesh](references/federation-vs-mesh.md) — Apollo Federation vs GraphQL Mesh comparison
+- [Federated Tracing](references/federated-tracing.md) — OpenTelemetry, Studio integration, distributed tracing
+- [Federation Migration Monolith](references/federation-migration-monolith.md) — Migrating from monolithic GraphQL to federation (Strangler Fig)
+- [Federation Cost Management](references/federation-cost-management.md) — Cost analysis, demand control, entity resolution cost optimization
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with Apollo Federation v2 directives, supergraph schema compositions, query planning, and entity resolution patterns.
+-->

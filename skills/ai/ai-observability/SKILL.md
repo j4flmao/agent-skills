@@ -7,6 +7,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+type: skill
 compatibility:
   claude-code: true
   cursor: true
@@ -676,3 +677,9 @@ When using multiple LLM providers:
 
 ## Handoff
 For LangChain-specific observability, hand off to `ai-langchain-patterns`. For MCP server observability, hand off to `ai-mcp-patterns`. For model evaluation workflows, hand off to `ai-model-evaluation`. For agent tracing and monitoring, hand off to `ai-agent-patterns`.
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with OpenTelemetry, LLM tracing conventions, and real-time observability pipelines.
+-->

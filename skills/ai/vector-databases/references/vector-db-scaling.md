@@ -249,3 +249,9 @@ class VectorDBScalingMonitor:
 - Add read replicas before adding shards for read-heavy workloads
 - Use IVF for >10M vectors, HNSW for <10M
 - Plan for 3x data growth when designing initial cluster size
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with HNSW parameters, distance metrics, sharding/replication topology, and vector DB scaling guidelines.
+-->

@@ -238,3 +238,9 @@ Latency budget (P99)?
 ├── <50ms → HNSW (M=16, efSearch=256)
 └── <200ms → HNSW (M=32, efSearch=512) or DiskANN
 ```
+
+<!-- COMPRESSION FOOTER -->
+<!--
+Compression Level: 5 (Comprehensive architectural references & code details preserved)
+Strict compliance with HNSW parameters, distance metrics, sharding/replication topology, and vector DB scaling guidelines.
+-->
