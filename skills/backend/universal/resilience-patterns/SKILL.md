@@ -372,3 +372,174 @@ Each layer must timeout before the layer above it. Otherwise, useless waiting oc
 No artifact produced unless requested.
 Next skill: openapi-documentation — document the resilient API endpoints.
 Carry forward: timeout values, retry configuration, circuit breaker thresholds.
+
+## Implementation Patterns
+
+### Circuit Breaker
+
+```python
+from typing import Callable, Any, Optional, Dict
+from enum import Enum
+from datetime import datetime, timedelta
+import asyncio
+import logging
+
+logger = logging.getLogger("circuit-breaker")
+
+class CircuitState(Enum):
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
+class CircuitBreaker:
+    def __init__(self, name: str, failure_threshold: int = 5, recovery_timeout: float = 30.0):
+        self.name = name
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.state = CircuitState.CLOSED
+        self.failure_count = 0
+        self.success_count = 0
+        self.last_failure_time: Optional[datetime] = None
+        self.last_state_change: datetime = datetime.now()
+
+    async def call(self, func: Callable, fallback: Optional[Callable] = None) -> Any:
+        if self.state == CircuitState.OPEN:
+            if self._should_attempt_recovery():
+                self.state = CircuitState.HALF_OPEN
+                logger.info(f"Circuit {self.name} → HALF_OPEN")
+            else:
+                logger.warning(f"Circuit {self.name} is OPEN, using fallback")
+                return await self._call_fallback(fallback) if fallback else None
+
+        try:
+            result = await func()
+            self._on_success()
+            return result
+        except Exception as e:
+            self._on_failure()
+            if self.state == CircuitState.HALF_OPEN:
+                self.state = CircuitState.OPEN
+                logger.error(f"Circuit {self.name} → OPEN (half-open test failed)")
+            logger.error(f"Circuit {self.name} failure: {e}")
+            return await self._call_fallback(fallback) if fallback else None
+
+    def _on_success(self):
+        if self.state == CircuitState.HALF_OPEN:
+            self.success_count += 1
+            if self.success_count >= 2:
+                self.state = CircuitState.CLOSED
+                self.failure_count = 0
+                self.success_count = 0
+                logger.info(f"Circuit {self.name} → CLOSED (recovered)")
+        else:
+            self.failure_count = 0
+
+    def _on_failure(self):
+        self.failure_count += 1
+        self.last_failure_time = datetime.now()
+        if self.state == CircuitState.CLOSED and self.failure_count >= self.failure_threshold:
+            self.state = CircuitState.OPEN
+            self.last_state_change = datetime.now()
+            logger.warning(f"Circuit {self.name} → OPEN ({self.failure_count} failures)")
+
+    def _should_attempt_recovery(self) -> bool:
+        if not self.last_failure_time:
+            return True
+        elapsed = (datetime.now() - self.last_failure_time).total_seconds()
+        return elapsed >= self.recovery_timeout
+
+    async def _call_fallback(self, fallback: Callable) -> Any:
+        try:
+            return await fallback()
+        except Exception as e:
+            logger.error(f"Fallback for {self.name} failed: {e}")
+            return None
+
+    def get_state(self) -> Dict:
+        return {
+            "name": self.name,
+            "state": self.state.value,
+            "failure_count": self.failure_count,
+            "failure_threshold": self.failure_threshold,
+            "recovery_timeout": self.recovery_timeout,
+            "last_failure": self.last_failure_time.isoformat() if self.last_failure_time else None,
+        }
+```
+
+### Retry with Exponential Backoff
+
+```python
+import asyncio
+import random
+from typing import Callable, Any, List, Optional
+
+class RetryHandler:
+    def __init__(self, max_retries: int = 3, base_delay: float = 1.0, max_delay: float = 30.0, jitter: bool = True):
+        self.max_retries = max_retries
+        self.base_delay = base_delay
+        self.max_delay = max_delay
+        self.jitter = jitter
+
+    async def execute(self, func: Callable, retryable_exceptions: Optional[List[type]] = None) -> Any:
+        last_exception = None
+        for attempt in range(self.max_retries + 1):
+            try:
+                return await func()
+            except Exception as e:
+                last_exception = e
+                if retryable_exceptions and not any(isinstance(e, exc) for exc in retryable_exceptions):
+                    raise
+                if attempt < self.max_retries:
+                    delay = self._calculate_delay(attempt)
+                    logger.warning(f"Retry {attempt + 1}/{self.max_retries} after {delay:.2f}s: {e}")
+                    await asyncio.sleep(delay)
+        raise last_exception
+
+    def _calculate_delay(self, attempt: int) -> float:
+        delay = min(self.base_delay * (2 ** attempt), self.max_delay)
+        if self.jitter:
+            delay *= 0.5 + random.random() * 0.5
+        return delay
+```
+
+## Architecture Decision Trees
+
+### Resilience Pattern Selection
+
+```
+What's the failure mode?
+├── Upstream is slow (not failing)
+│   └── Timeout + Circuit Breaker
+│       ├── Set timeout < upstream's timeout
+│       └── Open circuit when timeouts exceed threshold
+│
+├── Upstream returns errors
+│   ├── Transient (network, 503, timeout)
+│   │   └── Retry with exponential backoff + jitter
+│   └── Permanent (400, 404, 422)
+│       └── Don't retry — fail fast
+│
+├── Upstream is unavailable
+│   └── Circuit Breaker + Fallback
+│       ├── Open circuit after N failures
+│       └── Return cached/stale/default response
+│
+└── Resource exhaustion
+    ├── Connection pool starvation → Bulkhead
+    └── Memory/cpu saturation → Bulkhead + shedding
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Infinite retries with no backoff | Overwhelms failing system | Fixed max retries + exponential backoff + jitter |
+| Circuit breaker without fallback | User sees error despite CB open | Provide cached/stale/default response |
+| Same timeout for all operations | Slow ops time out, fast ops wait too long | Per-operation timeout based on historical p99 |
+| Bulkhead without monitoring | Can't tell when bulkhead is saturated | Monitor pool utilization, queue depth, rejections |
+| Retry without idempotency safety | Duplicate writes on retry | Idempotency keys for all retried operations |
+
+## Performance Optimization
+
+- **Exponential backoff with jitter**: Use `min(base * 2^attempt + jitter, max_delay)` to prevent thundering herd. jitter = random(0, delay) spreads retries across time.
+- **Circuit breaker state caching**: Cache circuit state in Redis for distributed systems. All service instances see the same state. Invalidate cache on state change event.

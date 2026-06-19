@@ -1,152 +1,43 @@
 # Identity-First Security
 
-## BeyondCorp Model (Google)
+## Identity as the New Perimeter
+In Zero Trust, identity is the primary security boundary. Traditional network perimeter controls are insufficient in cloud, mobile, and remote-work environments.
 
-BeyondCorp removes the concept of a privileged corporate network. Access is based entirely on identity and device context, not network location.
+### Key Elements
+- **SSO (Single Sign-On)**: Centralize authentication with SAML/OIDC
+- **MFA (Multi-Factor Authentication)**: Require at least 2 factors for all access
+- **Conditional Access**: Policies based on user, device, location, application, risk
+- **Passwordless**: Transition to FIDO2, Windows Hello, biometric auth
+- **PIM (Privileged Identity Management)**: JIT elevation for admin roles
 
-### Core Principles
-- **No VPN**: All access goes through identity-aware proxies
-- **Device inventory**: Every device is cataloged and tracked
-- **Device trust**: Devices must meet security posture requirements
-- **Contextual access**: Policy evaluated per request, per resource
-
-### BeyondCorp Architecture
-```
-User → Device → Certificate Validation → Access Proxy → Resource
-         ↓                                    ↓
-    Device Inventory                  Policy Engine
-                                    (User + Device + Context)
-```
-
-### Access Proxy Flow
-1. User authenticates via SSO (OIDC/SAML)
-2. Device presents certificate proving enrollment
-3. Access proxy validates device posture (OS, patch, EDR)
-4. Policy engine evaluates: user role + device + resource sensitivity
-5. Access granted or denied; session logged
-6. Continuous re-evaluation during session
-
-## Cloudflare Access Model
-
-Cloudflare Access replaces VPNs with identity-based access.
-
-### Architecture
-```
-User → Cloudflare Network → Access Application → Origin
-         ↓                                        ↓
-    Global Network                           Cloudflare Tunnel
-    (200+ edge locations)                    (no public IPs)
+### Conditional Access Policies
+```json
+{
+  "name": "Block Unmanaged Device Access",
+  "conditions": {
+    "applications": ["All cloud apps"],
+    "platforms": ["iOS", "Android", "Windows", "macOS"],
+    "deviceStates": {"compliance": false}
+  },
+  "grantControls": {
+    "operator": "AND",
+    "builtInControls": ["block"]
+  }
+}
 ```
 
-### Key Components
-- **Cloudflare Tunnel**: Creates encrypted outbound-only tunnels from origin servers
-- **Access Application**: Per-app identity enforcement
-- **Argo Tunnel**: Outbound-only connections, no open ports
-- **Gateway**: DNS-level filtering for device posture
+## Identity Governance
+- Access certifications: Periodic review of user access
+- Role-based provisioning: Auto-assign roles from HR system
+- Segregation of duties: Prevent conflicting access combinations
+- Entitlement reporting: Who has access to what?
+- Lifecycle management: Disable access when employee leaves
 
-### Configuration Example
-```
-# Access Policy — Admin App
-Policy Name: Admin Panel
-Application: admin.internal.com
-Session Duration: 8h
-
-Rules:
-  - Include: Everyone → Requires Gateway
-  - Require: Country = US
-  - Require: Device Posture → Disk Encrypted
-  - Require: Device Posture → OS Version > 11.0
-  - Exclude: IP Range = 10.0.0.0/8
-
-# Device Posture Checks
-  - OS Version: minimum macOS 14, Windows 11, Ubuntu 22.04
-  - Disk Encryption: FileVault, BitLocker, LUKS enabled
-  - Anti-Virus: EDR process running
-  - Firewall: Enabled
-```
-
-## JIT (Just-In-Time) Access
-
-### Implementation Patterns
-
-**Time-Bound Approvals:**
-```yaml
-# JIT access policy
-access_rules:
-  - role: devops
-    resource: production-ssh
-    approval: manager
-    max_duration: 4h
-    justification_required: true
-    auto_revoke: true
-  - role: dba
-    resource: production-database
-    approval: dba-lead + security
-    max_duration: 2h
-    mfa_required: true
-```
-
-**Self-Service Elevation:**
-```yaml
-# PAM elevation rules
-elevation_policies:
-  - name: "Temporary Admin Access"
-    users: [developer-*, operator-*]
-    groups: [on-call]
-    run_as: domain-admins
-    approval: workflow
-    ttl: 3600
-    session_audit: record
-    commands_allowed: [useradd, usermod, passwd, groupmod]
-    commands_blocked: [rm -rf /, chmod -R 777]
-```
-
-### Session Security
-
-**Token Best Practices:**
-- Access tokens: 15-minute expiry (OIDC)
-- Refresh tokens: 24-hour rotation
-- Session tokens: Bound to device fingerprint
-- Never store tokens in localStorage (use httpOnly cookies)
-- Implement refresh token rotation and reuse detection
-
-**Session Monitoring:**
-- Log session start, end, and duration
-- Record commands executed (for SSH/RDP sessions)
-- Flag anomalous behavior (unusual time, location, resource access)
-- Auto-terminate idle sessions after 15 minutes
-- Alert on concurrent sessions from different geographies
-
-## Device Posture Checks
-
-### Minimum Posture Requirements
-| Check | Requirement | Enforcement |
-|-------|-------------|-------------|
-| OS Patch Level | Patches within 30 days | Block if behind |
-| Disk Encryption | FileVault/BitLocker/LUKS | Block if off |
-| EDR Running | Approved EDR agent active | Block if not |
-| Screen Lock | Required with < 5min timeout | Warn/Block |
-| Firewall | Active | Block if off |
-| Disk Encryption | Full disk | Block if partial |
-| Jailbreak/Root | Not detected | Block if detected |
-
-### Posture Verification Flow
-```
-1. User authenticates → IdP issues OIDC token
-2. Device agent collects posture telemetry
-3. Posture data sent to verification service
-4. Policy engine evaluates posture + identity
-5. Token issued with posture claims
-6. Proxy re-verifies posture every session refresh
-```
-
-## Enterprise Deployment Checklist
-
-- [ ] SSO/IdP configured with all applications
-- [ ] Device management (MDM/MEM/Intune) deployed
-- [ ] Device certificate authority established
-- [ ] Identity-aware proxy deployed (Pomerium, Cloudflare, Teleport)
-- [ ] Device posture check service operational
-- [ ] JIT access workflows defined and tested
-- [ ] Session recording for privileged access
-- [ ] Logging pipeline sending to SIEM
+## Key Points
+- Identity is the primary security boundary in Zero Trust
+- SSO + MFA for all access — no exceptions
+- Conditional access policies enforce context-aware decisions
+- PIM enables JIT elevation for privileged roles
+- Passwordless authentication improves security and user experience
+- Identity governance ensures appropriate access over time
+- Continuous verification detects compromised sessions and anomalies

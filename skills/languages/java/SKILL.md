@@ -357,6 +357,82 @@ Java version for new project?
 
 Springdoc: generate OpenAPI 3.0 spec from Spring Boot controllers via `springdoc-openapi-starter-webmvc-ui`. API-first: write OpenAPI spec first, generate server interfaces and client libraries with OpenAPI Generator. Annotations: `@Operation(summary, description)`, `@ApiResponse(...)`, `@Schema(description)`. Group endpoints by tags. Generate Spring Boot interfaces: `openapi-generator generate -g spring -i spec.yaml -o api/`. The generated interfaces have the request mapping annotations; your implementation classes implement these interfaces — guarantees spec compliance.
 
+### Testing Strategy Decision Tree
+```
+What layer are you testing?
+├── Unit (pure logic) → JUnit 5 + AssertJ
+│   Fast (<100ms per test), no infrastructure
+│   Test: validation, calculations, transformation, business rules
+├── Service (business logic) → JUnit 5 + Mockito
+│   Mock repositories, external clients, messaging
+│   Verify: service methods, exception handling, transaction boundaries
+├── Repository (data access) → @DataJpaTest + Testcontainers
+│   Real PostgreSQL/MySQL in Docker, not H2
+│   Test: queries, projections, pagination, native queries
+├── Controller (HTTP) → @WebMvcTest + MockMvc
+│   Slice test: only web layer, mock services
+│   Test: serialization, validation, status codes, error responses
+└── Integration → @SpringBootTest + Testcontainers + @RestClientTest
+    Full context, real DB, real message broker
+    Test: end-to-end flows, transaction rollback, async operations
+```
+
+### Error Handling Pattern Comparison
+```
+How to return errors to client?
+├── @ControllerAdvice (Spring) → Centralized exception handler
+│   @ExceptionHandler per exception type
+│   Returns ErrorResponse: code, message, timestamp, path, fieldErrors
+├── ExceptionMapper (JAX-RS) → Same concept for Jakarta REST
+│   ExceptionMapper<WebApplicationException> implementation
+├── Result type (functional, no exceptions) → sealed interface Result<T, E>
+│   Match on Success/Error cases, no try/catch branches
+│   Good for: domain-driven design, functional modules
+└── Problem+JSON (RFC 9457) → Standard error format for HTTP APIs
+    type, title, status, detail, instance, errors (custom)
+    Spring 6+ / Micronaut have built-in support
+```
+
+### Error Response Schema (RFC 9457 Problem+JSON)
+```json
+{
+  "type": "https://api.example.com/errors/order-not-found",
+  "title": "Order Not Found",
+  "status": 404,
+  "detail": "Order with ID 12345 does not exist",
+  "instance": "/api/orders/12345",
+  "errors": {
+    "orderId": "must be a positive integer"
+  }
+}
+```
+
+### Performance Optimization (Expanded)
+
+- **`record` for DTOs**: Immutable, no boilerplate, value-based equality. 40% less bytecode than equivalent POJO.
+- **Stream API overhead**: For small collections (<100), traditional for-loop is 2-3x faster. Use streams for readability at scale.
+- **`StringBuilder` in loops**: `a + b + c` compiles to `new StringBuilder().append(a).append(b).append(c)` — fine for 2-3 concats. Use explicit `StringBuilder` for loops.
+- **`ConcurrentHashMap.computeIfAbsent`**: Thread-safe memoization pattern. More efficient than `putIfAbsent` for expensive computations.
+- **Connection pooling**: HikariCP (default Spring Boot) — set `maximumPoolSize=10-20` for most apps. Benchmark to find optimal.
+- **`byte[]` vs `List<Byte>`**: Primitive arrays are 8x more memory efficient than boxed collections.
+- **`ThreadLocal` for non-thread-safe resources**: `SimpleDateFormat`, `Random`, `DateTimeFormatter` — reuse instances via ThreadLocal instead of creating per-call.
+- **`-XX:+UseZGC` for low latency**: Sub-millisecond GC pauses. Best for latency-sensitive services. Slightly more CPU than G1GC.
+- **`-XX:+AlwaysPreTouch`**: Pre-allocate and touch all heap pages at startup. Slower startup but consistent runtime performance.
+- **Record classes as DTOs**: Endorsed by Spring/Jackson — no special config needed for serialization.
+
+### Anti-Patterns (Expanded)
+
+- **`@Autowired` field injection**: Makes testing with Mockito difficult (final fields, no constructor). Use constructor injection.
+- **`@Data` on JPA entities**: Lombok `@Data` generates `equals()`/`hashCode()` based on all fields — causes issues with lazy loading proxies and bidirectional relationships.
+- **Spring `@Transactional` on private methods**: Spring applies transaction via proxy — private methods bypass the proxy. Only public methods can be `@Transactional`.
+- **`Thread.sleep()` for async coordination**: Fragile, slow, flaky. Use `CountDownLatch`, `CompletableFuture`, or `Awaitility`.
+- **Handling `InterruptedException` poorly**: Swallowing or `Thread.currentThread().interrupt()` incorrectly. Restore interrupt flag: `Thread.currentThread().interrupt()` and re-throw or return.
+- **`instanceof` checks after pattern matching (Java 16+)**: Switch pattern matching and `if (x instanceof Foo f)` eliminate most `instanceof` chains. Use them.
+- **`java.util.Date` and `java.util.Calendar`**: Legacy, mutable, confusing. Use `java.time.*` API (Java 8+): `Instant`, `LocalDate`, `ZonedDateTime`, `Duration`.
+- **`@RequestMapping` on field instead of method**: Controller field-level mapping is confusing. Each method should have explicit `@GetMapping`/`@PostMapping`.
+- **Reading `InputStream` without closing**: Always use try-with-resources for `InputStream`, `Connection`, `Statement`, `ResultSet`.
+- **Static utility classes calling Spring beans**: Static methods can't be mocked. Make utility classes injectable beans or pass dependencies as parameters.
+
 ## Reactive Programming (Spring WebFlux)
 
 For high-throughput, low-latency services, use WebFlux with Project Reactor. Key types: `Mono<T>` (0-1 items) and `Flux<T>` (0-N items). Operators: `.map()`, `.flatMap()`, `.filter()`, `.zipWith()`, `.retry()`, `.timeout()`. Backpressure: subscriber controls data flow rate. Database: R2DBC (reactive SQL), MongoDB Reactive Streams, Redis Reactive. Anti-patterns: (a) blocking call in reactive pipeline (`.block()` defeats the purpose), (b) not subscribing (nothing happens without subscriber), (c) shared mutable state, (d) long computations on the event loop (use `.publishOn(Schedulers.boundedElastic())`). WebClient over RestTemplate for all HTTP calls. Trace with `reactor.core.publisher.Hooks.onOperatorDebug()`.

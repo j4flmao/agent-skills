@@ -234,6 +234,246 @@ Below are links to the reference guides detailing the algorithms, data schemas, 
 ## Handoff
 For projects requiring vector database management, hand off to `ai-vector-databases`. For systems implementing core orchestrator loops, hand off to `core-master-orchestrator`. For general prompt styling guidelines, hand off to `ai-prompt-engineering`.
 
+## Implementation Patterns
+
+### Token Budget Calculator
+
+```python
+import tiktoken
+from typing import List, Dict
+
+class TokenBudgetManager:
+    def __init__(self, model: str = "gpt-4", max_tokens: int = 8192):
+        self.encoder = tiktoken.encoding_for_model(model)
+        self.max_tokens = max_tokens
+        self.system_prompt_tokens = 0
+        self.output_buffer = 2048
+
+    def count_tokens(self, text: str) -> int:
+        return len(self.encoder.encode(text))
+
+    def calculate_budget(self, system_prompt: str, messages: List[Dict]) -> dict:
+        system_cost = self.count_tokens(system_prompt)
+        messages_cost = sum(self.count_tokens(m["content"]) for m in messages)
+        overhead = len(messages) * 4
+        total_input = system_cost + messages_cost + overhead
+        available = self.max_tokens - total_input - self.output_buffer
+        return {
+            "total_input_tokens": total_input,
+            "output_buffer": self.output_buffer,
+            "available_context_tokens": max(0, available),
+            "budget_exceeded": available <= 0,
+            "overflow_tokens": abs(min(0, available)),
+        }
+
+    def prune_to_budget(self, context_chunks: List[str], budget: int) -> List[str]:
+        pruned = []
+        used = 0
+        for chunk in context_chunks:
+            chunk_tokens = self.count_tokens(chunk)
+            if used + chunk_tokens <= budget:
+                pruned.append(chunk)
+                used += chunk_tokens
+            else:
+                break
+        return pruned
+```
+
+### Priority Scoring Engine
+
+```python
+import numpy as np
+from typing import List, Tuple
+import math
+
+class PriorityScorer:
+    def __init__(self, recency_weight: float = 0.4, semantic_weight: float = 0.4,
+                 length_penalty: float = 0.2, decay_rate: float = 0.1):
+        self.recency_weight = recency_weight
+        self.semantic_weight = semantic_weight
+        self.length_penalty = length_penalty
+        self.decay_rate = decay_rate
+
+    def score_recency(self, age_turns: int) -> float:
+        return math.exp(-self.decay_rate * age_turns)
+
+    def score_semantic(self, similarity: float) -> float:
+        return similarity
+
+    def score_length(self, token_count: int, optimal: int = 500) -> float:
+        ratio = token_count / optimal
+        if ratio <= 1:
+            return ratio
+        return max(0, 1 - (ratio - 1) * 0.5)
+
+    def compute(self, chunks: List[dict]) -> List[Tuple[int, float]]:
+        scored = []
+        for i, chunk in enumerate(chunks):
+            recency = self.score_recency(chunk.get("age_turns", 0))
+            semantic = self.score_semantic(chunk.get("similarity", 0))
+            length = self.score_length(chunk.get("token_count", 0))
+            final_score = (
+                self.recency_weight * recency +
+                self.semantic_weight * semantic +
+                self.length_penalty * length
+            )
+            scored.append((i, final_score))
+        return sorted(scored, key=lambda x: -x[1])
+```
+
+### Sliding Window with Token Awareness
+
+```python
+from collections import deque
+from typing import List, Dict, Optional
+
+class TokenAwareSlidingWindow:
+    def __init__(self, max_tokens: int, encoder):
+        self.max_tokens = max_tokens
+        self.encoder = encoder
+        self.window = deque()
+        self.current_tokens = 0
+
+    def add_message(self, message: Dict) -> bool:
+        msg_tokens = len(self.encoder.encode(message["content"])) + 4
+        if self.current_tokens + msg_tokens <= self.max_tokens:
+            self.window.append(message)
+            self.current_tokens += msg_tokens
+            return True
+        while self.window and self.current_tokens + msg_tokens > self.max_tokens:
+            evicted = self.window.popleft()
+            evicted_tokens = len(self.encoder.encode(evicted["content"])) + 4
+            self.current_tokens -= evicted_tokens
+        self.window.append(message)
+        self.current_tokens += msg_tokens
+        return True
+
+    def get_context(self) -> List[Dict]:
+        return list(self.window)
+
+    def trim_to_budget(self, budget_tokens: int) -> List[Dict]:
+        result = []
+        used = 0
+        for msg in reversed(list(self.window)):
+            msg_tokens = len(self.encoder.encode(msg["content"])) + 4
+            if used + msg_tokens <= budget_tokens:
+                result.insert(0, msg)
+                used += msg_tokens
+        return result
+```
+
+### Semantic Drift Detector
+
+```python
+from sentence_transformers import SentenceTransformer
+import numpy as np
+from typing import List
+
+class DriftDetector:
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2", threshold: float = 0.3):
+        self.model = SentenceTransformer(model_name)
+        self.threshold = threshold
+        self.anchor_embedding: np.ndarray = None
+
+    def set_anchor(self, text: str):
+        self.anchor_embedding = self.model.encode(text, normalize_embeddings=True)
+
+    def detect_drift(self, current_text: str) -> dict:
+        if self.anchor_embedding is None:
+            return {"drift_score": 0.0, "drifted": False, "message": "No anchor set"}
+        current_emb = self.model.encode(current_text, normalize_embeddings=True)
+        similarity = float(np.dot(self.anchor_embedding, current_emb))
+        drift = 1 - similarity
+        return {
+            "drift_score": round(drift, 4),
+            "drifted": drift > self.threshold,
+            "similarity": round(similarity, 4),
+            "threshold": self.threshold,
+        }
+
+    def detect_drift_sequence(self, texts: List[str]) -> List[dict]:
+        return [self.detect_drift(t) for t in texts]
+```
+
+## Architecture Decision Trees
+
+### Context Loading Strategy
+
+```
+Agent is starting a task?
+├── Task needs full codebase understanding
+│   ├── Repo < 100 files → Load AGENTS.md + ARCHITECTURE.md
+│   ├── Repo 100-500 files → Load AGENTS.md + module summaries
+│   └── Repo > 500 files → Vector search for relevant files only
+│
+├── Task is a conversation follow-up
+│   ├── < 10 turns → Keep full history with FIFO window
+│   ├── 10-50 turns → Summarize early turns, keep recent verbatim
+│   └── > 50 turns → Full history reset, inject summary only
+│
+└── Task involves large data (logs, traces)
+    ├── Structured data → Extract schema + row count + sample
+    ├── Unstructured text → Summarize key sections, truncate per token budget
+    └── Code output → Keep only errors, truncate successful output
+```
+
+### Compression Strategy Selection
+
+```
+Context exceeds budget?
+├── Chat history too long
+│   ├── Recent turns relevant → Sliding window (FIFO evict oldest)
+│   └── All turns relevant → Hierarchical summarization
+│       ├── Summarize every 5 turns → Keep summaries + last 5 turns
+│       └── Extremely long (>100 turns) → Multi-level summarization
+│
+├── Code/file content too large
+│   ├── File is a dependency → Just path + interface signature
+│   ├── File is being modified → Full content (must read/write)
+│   └── File is reference → Import/export signatures only
+│
+├── Documentation too large
+│   ├── Has table of contents → Load relevant sections only
+│   ├── No TOC → Search for keywords, load matching paragraphs
+│   └── API docs → Load function signatures + key examples only
+│
+└── Multiple large contexts → Use priority scoring, keep top-N
+```
+
+## Production Considerations
+
+- **Context window monitoring**: Instrument every prompt to track token usage. Alert when context utilization exceeds 90% to prevent silent truncation.
+- **Budget allocation per task type**: Reserve 60% of context for task input, 20% for instructions, 10% for examples, 10% for output buffer. Adjust based on task type.
+- **Cache embeddings for static documents**: Pre-compute and cache embeddings for documentation, README files, and codebase structure. Reduces latency by 200-500ms per query.
+- **Rate limit aware retrieval**: When using external vector DBs, implement circuit breakers and fallback to keyword search during outages.
+
+## Security Considerations
+
+- **Context injection prevention**: Sanitize user-provided content before injecting into context. Strip prompt injection patterns (e.g., "ignore previous instructions").
+- **PII in context traces**: User messages may contain PII. Apply PII masking before writing context traces to persistent storage.
+- **Context access control**: Restrict which agents can access which context stores. Use per-namespace vector DB collections for multi-tenant isolation.
+- **Drift detection for safety**: Monitor semantic drift from safety instructions. Re-inject safety system prompts when drift exceeds threshold.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Shoving everything into context | Overflows budget, increases cost, degrades quality | Use selective retrieval + priority scoring |
+| Never pruning conversation history | Model loses track of current task | Apply sliding window with token-aware eviction |
+| Relying on model to remember state | LLMs have no inherent memory | Persist state externally between turns |
+| Symmetric summarization of all turns | Recent turns are more important | Exponentially decay older content weight |
+| Not accounting for overhead tokens | 4-8 tokens per message for ChatML format | Add safety buffer of 200 tokens |
+| Using single embedding for all retrieval | Different query types need different strategies | Use MMR diversity for broad queries, similarity for specific |
+| No output budget reservation | Response gets truncated mid-sentence | Reserve 1024-4096 tokens for output based on task |
+
+## Performance Optimization
+
+- **Chunk documents at semantic boundaries**: Split on paragraph breaks, not arbitrary token counts. Improves retrieval relevance by 25-40%.
+- **Pre-compute summaries**: For long-running agents, pre-summarize common documents and cache results. Reduces per-turn latency by 30-50%.
+- **Async embedding generation**: Generate embeddings for new content in background threads while the agent processes other tasks.
+- **Use HNSW indexes**: For vector DB queries, use HNSW (Hierarchical Navigable Small World) indexes for 10-100x faster approximate nearest neighbor search.
+- **Batch context requests**: When loading multiple documents, batch the read operations into a single tool call to reduce round trips.
+
 <!-- COMPRESSION FOOTER -->
 <!--
 Compression Level: 5 (Comprehensive architectural references & code details preserved)

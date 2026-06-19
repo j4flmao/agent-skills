@@ -339,6 +339,225 @@ priority_matrix:
   - references/security-auditor-api.md — API Security Testing Reference
   - references/security-auditor-fundamentals.md — Security Auditor Fundamentals
   - references/security-auditor-remediation.md — Security Remediation Reference
-  - references/security-auditor-tools.md — Security Tools Reference
+   - references/security-auditor-tools.md — Security Tools Reference
+
+## Implementation Patterns
+
+### Dependency Vulnerability Scanner
+
+```python
+import json
+import subprocess
+from typing import Dict, List, Optional
+from dataclasses import dataclass
+from datetime import datetime
+
+@dataclass
+class Vulnerability:
+    id: str
+    package: str
+    severity: str
+    cvss_score: float
+    description: str
+    fix_version: Optional[str]
+    introduced_via: List[str]
+    published_date: Optional[str]
+
+class DependencyScanner:
+    def __init__(self):
+        self.vulnerabilities: List[Vulnerability] = []
+        self.allowed_licenses = {"MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Unlicense"}
+
+    def scan_npm(self, project_path: str = ".") -> List[Vulnerability]:
+        try:
+            result = subprocess.run(
+                ["npm", "audit", "--json"], capture_output=True, text=True, cwd=project_path
+            )
+            data = json.loads(result.stdout)
+            for advisory_id, advisory in data.get("advisories", {}).items():
+                vuln = Vulnerability(
+                    id=advisory_id,
+                    package=advisory["module_name"],
+                    severity=advisory["severity"],
+                    cvss_score=advisory.get("cvss", {}).get("score", 0),
+                    description=advisory["overview"][:200],
+                    fix_version=advisory.get("patched_versions", ""),
+                    introduced_via=advisory.get("findings", [{}])[0].get("paths", []) if advisory.get("findings") else [],
+                    published_date=str(datetime.fromtimestamp(advisory.get("updated_at", 0))),
+                )
+                self.vulnerabilities.append(vuln)
+            return self.vulnerabilities
+        except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
+            print(f"Scan failed: {e}")
+            return []
+
+    def scan_python(self, requirements_file: str = "requirements.txt") -> List[Vulnerability]:
+        try:
+            result = subprocess.run(
+                ["pip-audit", "--requirement", requirements_file, "--format", "json"],
+                capture_output=True, text=True
+            )
+            data = json.loads(result.stdout)
+            for dep in data.get("dependencies", []):
+                for vuln in dep.get("vulnerabilities", []):
+                    v = Vulnerability(
+                        id=vuln.get("id", "unknown"),
+                        package=dep["name"],
+                        severity=vuln.get("severity", "unknown"),
+                        cvss_score=vuln.get("cvssv3", {}).get("base_score", 0) if vuln.get("cvssv3") else 0,
+                        description=vuln.get("description", "")[:200],
+                        fix_version=vuln.get("fix_versions", [None])[0],
+                        introduced_via=[dep["name"]],
+                        published_date=None,
+                    )
+                    self.vulnerabilities.append(v)
+            return self.vulnerabilities
+        except (subprocess.CalledProcessError, json.JSONDecodeError, FileNotFoundError):
+            print("pip-audit not available or requirements file not found")
+            return []
+
+    def filter_critical(self) -> List[Vulnerability]:
+        return [v for v in self.vulnerabilities if v.severity in ("critical", "high")]
+
+    def group_by_severity(self) -> Dict[str, List[Vulnerability]]:
+        groups = {"critical": [], "high": [], "medium": [], "low": []}
+        for v in self.vulnerabilities:
+            sev = v.severity if v.severity in groups else "medium"
+            groups[sev].append(v)
+        return groups
+
+    def generate_report(self) -> str:
+        groups = self.group_by_severity()
+        lines = ["## Security Audit Report\n"]
+        total = sum(len(g) for g in groups.values())
+        lines.append(f"**Total Vulnerabilities**: {total}")
+        for sev in ["critical", "high", "medium", "low"]:
+            count = len(groups[sev])
+            icon = {"critical": "CRITICAL", "high": "HIGH", "medium": "MEDIUM", "low": "LOW"}[sev]
+            lines.append(f"- **{icon}**: {count}")
+        if groups["critical"]:
+            lines.append("\n### Critical Vulnerabilities")
+            for v in groups["critical"][:10]:
+                lines.append(f"- {v.id} in {v.package} (CVSS: {v.cvss_score})")
+                lines.append(f"  {v.description[:100]}")
+                if v.fix_version:
+                    lines.append(f"  Fix: {v.fix_version}")
+        if groups["high"]:
+            lines.append("\n### High Vulnerabilities")
+            for v in groups["high"][:10]:
+                lines.append(f"- {v.id} in {v.package}")
+        return "\n".join(lines)
+
+
+class SecretsScanner:
+    def __init__(self):
+        self.patterns = {
+            "AWS Access Key": r"AKIA[0-9A-Z]{16}",
+            "GitHub Token": r"gh[pousr]_[A-Za-z0-9_]{36,}",
+            "Private Key": r"-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----",
+            "JWT Token": r"eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+",
+            "Generic Secret": r"(secret|password|token|api.?key)\s*[:=]\s*['\"][A-Za-z0-9_!@#$%^&*()=+]{16,}['\"]",
+            "Slack Token": r"xox[baprs]-[A-Za-z0-9\-]{12,}",
+            "Google API Key": r"AIza[0-9A-Za-z\-_]{35}",
+            "Heroku API Key": r"[hH][eE][rR][oO][kK][uU].*[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}",
+            "SSH Private Key": r"-----BEGIN OPENSSH PRIVATE KEY-----",
+        }
+
+    def scan_file(self, filepath: str) -> List[Dict]:
+        findings = []
+        try:
+            with open(filepath, "r", errors="ignore") as f:
+                content = f.read()
+            for name, pattern in self.patterns.items():
+                import re
+                for match in re.finditer(pattern, content):
+                    line_num = content[:match.start()].count("\n") + 1
+                    findings.append({
+                        "type": name,
+                        "file": filepath,
+                        "line": line_num,
+                        "match": match.group()[:20] + "...",
+                    })
+        except (IOError, UnicodeDecodeError):
+            pass
+        return findings
+```
+
+## Architecture Decision Trees
+
+### Vulnerability Response Flow
+
+```
+What severity is the vulnerability?
+├── Critical (CVSS 9.0-10.0)
+│   ├── Is there a public exploit?
+│   │   ├── Yes → Fix within 24 hours, consider hotfix
+│   │   └── No → Fix within 48 hours, patch ASAP
+│   └── Is the vulnerable dependency reachable?
+│       ├── Yes → Emergency patch, deploy immediately
+│       └── No → Document as not exploitable, fix next sprint
+│
+├── High (CVSS 7.0-8.9)
+│   ├── Affects production data?
+│   │   ├── Yes → Fix within 7 days, prioritize in sprint
+│   │   └── No → Fix within current sprint
+│   └── Can a WAF rule mitigate?
+│       ├── Yes → Apply WAF rule, fix within 30 days
+│       └── No → Standard remediation timeline
+│
+├── Medium (CVSS 4.0-6.9)
+│   └── Fix within 30 days, include in regular backlog
+│
+└── Low (CVSS 0.1-3.9)
+    └── Acknowledge, fix within 90 days or next release
+```
+
+### SAST vs DAST Decision
+
+```
+What do you need to test?
+├── Source code vulnerabilities (before deploy)
+│   ├── Static analysis (SAST) → Semgrep, CodeQL, SonarQube
+│   ├── Secrets detection → TruffleHog, GitLeaks, detect-secrets
+│   └── Dependency scanning → npm audit, Dependabot, Snyk
+│
+├── Running application vulnerabilities (after deploy)
+│   ├── Dynamic analysis (DAST) → OWASP ZAP, Burp Suite
+│   ├── API testing → Postman, Bruno with security assertions
+│   └── Fuzzing → AFL, libFuzzer, RESTler
+│
+└── Infrastructure vulnerabilities
+    ├── Container scanning → Trivy, Clair, Docker Scout
+    ├── IaC scanning → Checkov, tfsec, cfn-nag
+    └── Cloud posture → Prowler, ScoutSuite
+```
+
+## Production Considerations
+
+- **Secrets rotation policy**: Rotate all secrets on a 90-day cadence. Immediately rotate on any suspected leak. Use automated rotation where the platform supports it (AWS Secrets Manager, GCP Secret Manager).
+- **Dependency freeze before release**: Lock all dependency versions 1 week before major release. Run full security scan on the frozen set. No dependency updates during freeze period without security exception.
+- **Bug bounty program**: Establish a clear vulnerability disclosure policy. Provide a `security.txt` file at the well-known location. Define scope, rewards, and response SLAs.
+- **Security champions program**: Designate a security champion per team. Champions receive additional security training and review PRs for security concerns. They act as the bridge between engineering and security teams.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Scanning only before release | Vulnerabilities introduced mid-cycle | Scan every PR + weekly full scan |
+| Ignoring transitive dependencies | Direct deps clean, sub-deps vulnerable | Use recursive scanning, SBOM analysis |
+| Relying solely on automated scanners | Miss business logic flaws, auth issues | Automated scan + manual pen testing |
+| No severity-based triage | Everything gets equal urgency | Severity-gated SLA for remediation |
+| Running outdated scanner versions | Misses new vulnerability signatures | Pin scanner version, update weekly |
+| No lock files | Non-deterministic installs, different vulns | Commit all lock files (package-lock, Cargo.lock, go.sum) |
+| One-size-fits-all security policy | Different services have different risk profiles | Risk-classify services, apply proportional controls |
+| Not monitoring for new CVEs | Vulnerabilities discovered after scan | Subscribe to GHSA, NVD feeds, Dependabot alerts |
+
+## Performance Optimization
+
+- **Incremental scanning**: Use diff-aware scanning to only analyze changed files in PRs. Reduces scan time from minutes to seconds for large repositories.
+- **Caching scan results**: Cache vulnerability scan results per dependency file hash. Skip re-scanning if hash hasn't changed. Recheck only expired cache entries (>24h).
+- **Parallel scanning layers**: Run SAST, secrets, and dependency scans in parallel. Fail fast on critical findings. Merge results into a single report.
+- **SBOM generation**: Generate a Software Bill of Materials (SPDX or CycloneDX format) after each build. Use SBOM for post-deployment vulnerability correlation without re-scanning.
+
 ## Handoff
 Hand off to `dev-loop-code-review` for secure code review. Hand off to `dev-loop-tech-debt-tracker` for security debt tracking.

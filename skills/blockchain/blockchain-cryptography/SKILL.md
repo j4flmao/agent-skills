@@ -359,6 +359,269 @@ Decide: Hash Function
 24. Cross-chain signature verification must prevent chain ID replay using domain separation
 25. ZK proof verification on-chain must check all public inputs against contract state
 
+## Implementation Examples
+
+### ECDSA Signing (Rust — libsecp256k1)
+```rust
+use secp256k1::{Secp256k1, Message, SecretKey, PublicKey, Signature};
+use sha3::{Keccak256, Digest};
+
+fn sign_message(secret_key_bytes: &[u8; 32], message_bytes: &[u8]) -> Result<Vec<u8>, Error> {
+    let secp = Secp256k1::new();
+    let secret_key = SecretKey::from_slice(secret_key_bytes)?;
+    let message = Message::from_slice(&Keccak256::digest(message_bytes))?;
+
+    // Deterministic nonce per RFC 6979 (handled by libsecp256k1)
+    let signature: Signature = secp.sign_ecdsa(&message, &secret_key);
+
+    // Serialize as 65-byte [r || s || v] (Ethereum format)
+    let mut serialized = signature.serialize_compact().to_vec();
+    let rec_id = signature.serialize_der(); // recoverable signature
+    serialized.push(rec_id[0]); // v = 27/28 or 35+chain_id*2
+
+    Ok(serialized)
+}
+
+fn verify_signature(
+    public_key_bytes: &[u8; 64], // uncompressed x || y
+    message_bytes: &[u8],
+    signature_bytes: &[u8; 65],  // r || s || v
+) -> Result<bool, Error> {
+    let secp = Secp256k1::new();
+    let public_key = PublicKey::from_slice(&[0x04; public_key_bytes].concat())?;
+    let message = Message::from_slice(&Keccak256::digest(message_bytes))?;
+    let signature = Signature::from_compact(&signature_bytes[..64])?;
+
+    // Additionally: verify low-s form (BIP-62/BIP-146)
+    // Verify s <= n/2 (curve order / 2)
+    let s = signature.serialize_compact()[32..64].to_vec();
+    let n = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141";
+
+    Ok(secp.verify_ecdsa(&message, &signature, &public_key).is_ok())
+}
+```
+
+### BLS Signature Aggregation (Rust — blst)
+```rust
+use blst::min_pk::*;
+
+fn aggregate_and_verify(
+    public_keys: &[PublicKey],
+    message: &[u8],
+    signatures: &[Signature],
+) -> bool {
+    // Step 1: Verify proof of possession for each public key
+    for pk in public_keys {
+        let pop = pk.sign_pop(); // PoP is required for rogue-key defense
+        if !pk.verify_pop(&pop) {
+            return false;
+        }
+    }
+
+    // Step 2: Aggregate public keys and signatures
+    let aggregated_pk: AggregatePublicKey = AggregatePublicKey::aggregate(public_keys, false);
+    let aggregated_sig: AggregateSignature = AggregateSignature::aggregate(signatures, false);
+
+    // Step 3: Fast aggregate verification
+    // This is ~10x faster than verifying N signatures individually
+    aggregated_sig.verify(true, message, &[], &aggregated_pk.to_public_key(), false)
+}
+```
+
+### Merkle Proof Verification (Solidity)
+```solidity
+contract MerkleVerifier {
+    // Verify a Merkle inclusion proof
+    // leaf: hash of leaf data
+    // merkleRoot: expected root
+    // proof: sibling hashes from leaf to root
+    // flags: bitmask indicating left (0) or right (1) position per level
+    function verify(
+        bytes32 leaf,
+        bytes32 merkleRoot,
+        bytes32[] calldata proof,
+        uint256 flags
+    ) external pure returns (bool) {
+        bytes32 computed = leaf;
+
+        for (uint256 i = 0; i < proof.length; i++) {
+            if ((flags >> i) & 1 == 0) {
+                // Sibling is on the right: hash(left || right)
+                computed = keccak256(abi.encodePacked(computed, proof[i]));
+            } else {
+                // Sibling is on the left: hash(sibling || computed)
+                computed = keccak256(abi.encodePacked(proof[i], computed));
+            }
+        }
+
+        return computed == merkleRoot;
+    }
+}
+```
+
+### EIP-712 Typed Data Signing (TypeScript + Solidity)
+```typescript
+// Off-chain signing (TypeScript — viem + ethers)
+const domain = {
+  name: "MyProtocol",
+  version: "1",
+  chainId: 1,
+  verifyingContract: "0x1234..." as const,
+};
+
+const types = {
+  Transfer: [
+    { name: "to", type: "address" },
+    { name: "amount", type: "uint256" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint256" },
+  ],
+};
+
+const message = {
+  to: "0x5678...",
+  amount: 100n,
+  nonce: 0n,
+  deadline: 1700000000n,
+};
+
+// Sign with wallet
+const signature = await wallet.signTypedData(domain, types, message);
+```
+
+```solidity
+// On-chain verification (Solidity)
+contract EIP712Verifier is EIP712 {
+    bytes32 private constant TRANSFER_TYPEHASH = keccak256(
+        "Transfer(address to,uint256 amount,uint256 nonce,uint256 deadline)"
+    );
+
+    mapping(address => mapping(uint256 => bool)) public usedNonces;
+
+    function executeTransfer(
+        address to,
+        uint256 amount,
+        uint256 nonce,
+        uint256 deadline,
+        bytes calldata signature
+    ) external {
+        require(block.timestamp <= deadline, "Signature expired");
+        require(!usedNonces[msg.sender][nonce], "Nonce used");
+
+        bytes32 structHash = keccak256(
+            abi.encode(TRANSFER_TYPEHASH, to, amount, nonce, deadline)
+        );
+        bytes32 digest = _hashTypedDataV4(structHash);
+
+        address signer = ECDSA.recover(digest, signature);
+        require(signer == msg.sender, "Invalid signer");
+
+        usedNonces[msg.sender][nonce] = true;
+        // Execute transfer...
+    }
+}
+```
+
+### Hash-to-Curve (BLS12-381 — Rust)
+```rust
+use blst::*;
+use sha2::{Sha256, Digest};
+
+fn hash_to_curve(message: &[u8], dst: &[u8]) -> Result<Vec<u8>, String> {
+    // IETF hash-to-curve (draft-irtf-cfrg-hash-to-curve v16)
+    // Domain separation tag MUST be unique per protocol context
+    let point = blst_p1_hash_to::hash_to(message, dst, &[]);
+
+    // Compressed form: 48 bytes for BLS12-381 G1
+    let mut compressed = [0u8; 48];
+    point.compress(&mut compressed);
+    Ok(compressed.to_vec())
+}
+
+// Example DST usage:
+// Nonce signature DST: "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+// Proof of possession DST: "BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+```
+
+### BIP-32 HD Wallet Derivation (TypeScript)
+```typescript
+import { secp256k1 } from '@noble/curves/secp256k1';
+import { hmac } from '@noble/hashes/hmac';
+import { sha512 } from '@noble/hashes/sha512';
+
+interface HDKey {
+  privateKey?: Uint8Array;
+  publicKey: Uint8Array;
+  chainCode: Uint8Array;
+  depth: number;
+  index: number;
+  parentFingerprint: number;
+}
+
+function ckdPriv(parent: HDKey, index: number): HDKey {
+  const isHardened = index >= 0x80000000;
+
+  // Hardened: serP(parent.publicKey) || ser32(index)
+  // Non-hardened: serP(parent.publicKey) || ser32(index)
+  const data = isHardened
+    ? new Uint8Array([0x00, ...parent.privateKey!, ...toBytes32(index)])
+    : new Uint8Array([...parent.publicKey, ...toBytes32(index)]);
+
+  const I = hmac(sha512, parent.chainCode, data);
+  const IL = I.slice(0, 32);
+  const IR = I.slice(32, 64);
+
+  // IL + parent private key (mod n)
+  const childPriv = secp256k1.utils.addPrivateKeys(
+    hexlify(parent.privateKey!),
+    hexlify(IL)
+  );
+
+  return {
+    privateKey: hexToBytes(childPriv),
+    publicKey: secp256k1.getPublicKey(childPriv, true),
+    chainCode: IR,
+    depth: parent.depth + 1,
+    index,
+    parentFingerprint: fingerprint(parent.publicKey),
+  };
+}
+
+// Derivation path: m/44'/60'/0'/0/0 (Ethereum account)
+function derivePath(master: HDKey, path: string): HDKey {
+  const parts = path.replace(/^m\//, '').split('/');
+  let key = master;
+  for (const part of parts) {
+    const isHardened = part.endsWith("'");
+    const index = parseInt(part) + (isHardened ? 0x80000000 : 0);
+    key = ckdPriv(key, index);
+  }
+  return key;
+}
+```
+
+### Post-Quantum Migration Path Strategy
+```
+Phase 1 (2024-2026): Hybrid signatures
+  - Combine ECDSA + Dilithium in transaction authentication
+  - Both signatures must validate for the transaction to be valid
+  - Library: liboqs (C/Rust), pqcrypto-dilithium (Rust)
+
+Phase 2 (2027-2032): NIST PQC standardization
+  - CRYSTALS-Dilithium for general signatures (balanced size/speed)
+  - FALCON for compact signatures (smaller proofs, slower verification)
+  - SPHINCS+ for stateless hash-based (largest, but most trusted)
+
+Phase 3 (2032+): Full quantum transition
+  - Longer blocks (PQC signatures: 2-5KB vs 64-96 bytes classical)
+  - Different UTXO/lock script models for quantum-safe addresses
+  - Merkle-tree-based signature aggregation (reduce per-tx overhead)
+
+Key concern: Harvest now, decrypt later attacks
+  - Encrypting on-chain data that will be decrypted with quantum computers
+  - High-value contracts (bridges, DAO treasuries) should use hybrid encryption
+```
+
 ## References
 - references/blockchain-cryptography-advanced.md — Blockchain Cryptography Advanced Topics
 - references/blockchain-cryptography-fundamentals.md — Blockchain Cryptography Fundamentals

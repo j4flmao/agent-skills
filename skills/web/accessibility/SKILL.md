@@ -336,3 +336,242 @@ Visual Testing:
   <!-- chart content -->
 </svg>
 ```
+
+## Testing Accessibility
+
+### Automated Test Setup (Vitest + Testing Library)
+```typescript
+// a11y.test.tsx
+import { render } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
+
+expect.extend(toHaveNoViolations);
+
+test('Login page has no accessibility violations', async () => {
+  const { container } = render(<LoginPage />);
+  const results = await axe(container);
+  expect(results).toHaveNoViolations();
+});
+
+// Testing specific role queries
+test('navigation has correct landmark roles', () => {
+  render(<App />);
+  expect(screen.getByRole('navigation')).toBeInTheDocument();
+  expect(screen.getByRole('main')).toBeInTheDocument();
+  expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+});
+
+// Focus management tests
+test('modal traps focus on open', async () => {
+  const { user } = setup(<Modal />);
+  await user.click(screen.getByText('Open'));
+
+  // First focusable element should be focused
+  expect(screen.getByRole('dialog')).toHaveFocus();
+
+  // Tab should cycle within modal
+  await user.tab();
+  expect(screen.getByRole('button', { name: /close/i })).toHaveFocus();
+});
+```
+
+### E2E Accessibility Testing (Playwright)
+```typescript
+// e2e/a11y.spec.ts
+import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+
+test('homepage should not have automatically detectable issues', async ({ page }) => {
+  await page.goto('/');
+  const accessibilityScanResults = await new AxeBuilder({ page }).analyze();
+  expect(accessibilityScanResults.violations).toEqual([]);
+});
+
+// Filter known issues
+test('filter out false positives', async ({ page }) => {
+  await page.goto('/form');
+  const results = await new AxeBuilder({ page })
+    .withRules(['color-contrast', 'label', 'aria-valid-attr'])
+    .analyze();
+  expect(results.violations).toEqual([]);
+});
+```
+
+### Manual Testing Checklist
+Test with real assistive technology before shipping:
+- [ ] Navigate entire page with Tab key only — can you reach everything?
+- [ ] Screen reader (VoiceOver/NVDA/JAWS) reads page in logical order
+- [ ] All images have meaningful alt text (or `role="presentation"`)
+- [ ] Dynamic content changes are announced via `aria-live`
+- [ ] Forms: error messages associated via `aria-describedby`
+- [ ] Touch targets ≥ 44x44px on mobile
+- [ ] Text can be zoomed to 200% without loss of functionality
+- [ ] Custom components have correct ARIA roles, states, and properties
+
+### Accessibility Audit Tools
+
+| Tool | Type | What It Checks | Integration |
+|------|------|---------------|-------------|
+| axe-core | Library | 50+ WCAG rules | Testing library, Playwright, Cypress |
+| Lighthouse | Browser | Automated audit + suggestions | CI, local dev, PageSpeed Insights |
+| WAVE | Browser extension | Visual overlay of issues | Manual testing |
+| Accessibility Insights | Desktop tool | FastPass + manual tests | Guided manual testing |
+| NVDA/JAWS | Screen reader | Full screen reader experience | Manual testing |
+| Colour Contrast Analyser | Desktop tool | WCAG AA/AAA contrast | Design review |
+| Pa11y | CLI | Continuous integration | CI pipeline |
+| Chrome DevTools | Built-in | Issues tab, rendering tab | Quick checks during development |
+
+### CI Pipeline Integration
+```yaml
+# .github/workflows/a11y.yml
+name: Accessibility
+on: [pull_request]
+jobs:
+  a11y:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pnpm install
+      - run: pnpm build
+      - run: npx pa11y-ci --sitemap https://staging.example.com/sitemap.xml
+        env:
+          PA11Y_SITEMAP_URL: https://staging.example.com
+      - run: pnpm test -- --testPathPattern="a11y"
+```
+
+## Mobile Accessibility Patterns
+
+### Touch Target Sizing
+```css
+/* Minimum 44x44px touch target */
+.button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 12px;
+}
+
+/* Increase spacing between touch targets */
+.nav-item + .nav-item {
+  margin-top: 8px;
+}
+```
+
+### Screen Reader Announcements
+```typescript
+// React Native
+import { AccessibilityInfo, announceForAccessibility } from 'react-native';
+
+// Announce dynamic content
+announceForAccessibility('Item added to cart');
+
+// Group related elements
+<View accessible={true} accessibilityLabel="Order summary: 2 items, $45.00 total">
+  <Text>2 items</Text>
+  <Text>$45.00</Text>
+</View>;
+```
+
+### Reduced Motion
+```css
+/* Respect OS-level motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mobile-specific */
+@media (prefers-reduced-motion: reduce) and (max-width: 768px) {
+  .slide-in {
+    animation: none;
+    transform: none;
+  }
+}
+```
+
+### Orientation & Gesture Alternatives
+```typescript
+// Provide alternatives to gesture-based interactions
+// Swipe to delete → also show delete button
+function SwipeableRow({ onDelete, children }) {
+  const [showDelete, setShowDelete] = useState(false);
+
+  return (
+    <div>
+      {children}
+      {showDelete && (
+        <button
+          onClick={onDelete}
+          aria-label="Delete item"
+        >
+          Delete
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+## Production Monitoring & Compliance
+
+### Accessibility Statement
+Generate and publish an accessibility statement:
+```markdown
+# Accessibility Statement for [App Name]
+
+We are committed to ensuring digital accessibility for people with disabilities.
+We are continually improving the user experience for everyone.
+
+## Conformance status
+The Web Content Accessibility Guidelines (WCAG) define requirements for designers
+and developers. [App Name] aims for WCAG 2.2 Level AA conformance.
+
+## Date
+This statement was last updated on [Date].
+
+## Assessment approach
+[Organization] assessed the accessibility of [App Name] using:
+- Automated testing (axe-core in CI)
+- Manual testing with screen readers
+- User testing with people with disabilities
+
+## Feedback
+We welcome your feedback. Contact us at [email] or [phone].
+```
+
+### Monitoring Regressions
+- Add a11y tests to CI pipeline — fail PRs that introduce violations
+- Run Lighthouse CI on every PR and track score in PR comment
+- Schedule weekly automated scan with Pa11y or axe-core
+- Log screen reader bugs in issue tracker with `a11y` label
+- Include a11y review in definition of done for all features
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Better Approach |
+|---|---|---|
+| ARIA overuse | "ARIA is only a contract" — misuse creates worse experience | Native HTML first. ARIA only when no HTML equivalent exists. |
+| Alt text on decorative images | Screen reader noise | `alt=""` or `role="presentation"` for decorative images |
+| Focus outline removal | Keyboard users can't see focus position | Custom focus styles with high contrast `:focus-visible` |
+| Color-only indicators | Red-green colorblind users can't distinguish | Add icons, patterns, or text labels alongside color |
+| Auto-playing media | Disorienting for screen reader users | No auto-play. If necessary, provide pause button. |
+| Infinite scroll without load-more | Keyboard users can't reach footer content | Add "Load more" button or pagination with skip links |
+| Hover-only interactions | Touch and keyboard users can't hover | Make interactions available on click/focus too |
+| Complex tables without headers | Screen readers can't associate data | Use `<th>` with `scope` attributes. Test with screen reader. |
+| Relying solely on automated tools | Only 30-40% of issues found automatically | Automated + manual + user testing required |
+| Adding a11y late | Retrofitting costs 10x more than building accessible | Include in design system, component library, and MVP scope |
+
+## Quick Reference: Common WCAG Violations
+
+| WCAG Criterion | Description | Fix |
+|----------------|-------------|-----|
+| 1.1.1 Non-text Content | Missing alt text | Add `alt` attributes to all images |
+| 1.3.1 Info and Relationships | Headings not semantic | Use `<h1>`-`<h6>` hierarchy, not styled `<div>`s |
+| 1.4.3 Contrast Minimum | Text color too light | AA: 4.5:1 (normal), 3:1 (large). AAA: 7:1 (normal). |
+| 2.1.1 Keyboard | Function not keyboard accessible | Add tabindex, keydown handlers |
+| 2.4.3 Focus Order | Tab order doesn't match visual | Logical DOM order, no positive tabindex values |
+| 2.4.6 Headings and Labels | Unclear form labels | Explicit `<label>` for every form control |
+| 3.3.1 Error Identification | Error not associated with field | `aria-describedby` linking error to input |
+| 4.1.2 Name, Role, Value | Custom widget lacks ARIA | `role`, `aria-*` properties on custom components |

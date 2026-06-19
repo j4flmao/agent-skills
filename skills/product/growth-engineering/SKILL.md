@@ -380,6 +380,238 @@ A collaborative document platform integrated viral mechanics into the core produ
 
 Key design decisions: no separate referral program — sharing was the core product mechanic. New collaborators could use the product immediately without signup (they signed up when they wanted to create their own document). Deep links preserved document context. Results: 68% of new users came through collaborator invites. K-factor stabilized at 0.85. Viral cycle time: 4 hours (invite to collaborator activation).
 
+## Expanded Decision Trees
+
+### Growth Loop Selection Decision Tree
+```
+What is the primary way users get value from your product?
+  |-- Collaboration (users working together) → Viral loop (invite to collaborate)
+  |-- Content creation (users making things) → Content loop (sharing attracts new users)
+  |-- Data aggregation (users contribute data) → Network effects loop (more users = more value)
+  |-- Transactional (users buying/selling) → Marketplace loop (liquidity attracts both sides)
+  |-- Individual utility (users alone) → SEO loop (public pages attract search traffic)
+
+Does the product have inherent sharing mechanics?
+  |-- YES (documents, projects, lists are naturally shareable) → Optimize existing sharing
+  |-- NO (utility tool, single-user experience) → Create sharing incentives or build SEO loop
+
+What is your growth efficiency target?
+  |-- High efficiency (low CAC, organic focus) → Invest in viral + content loops
+  |-- Balanced (paid + organic) → Build multiple loops, optimize paid channel efficiency
+  |-- Scale fast (high budget) → Paid acquisition loops + viral mechanics
+```
+
+### Channel Prioritization Decision Tree
+```
+What is your current growth stage?
+  |-- 0-100 users (idea stage) → Focus on 1 channel that works, ignore others
+  |-- 100-10K users (traction) → Double down on working channel, experiment with 1 more
+  |-- 10K-100K users (growth) → 2-3 working channels, systematic experimentation
+  |-- 100K+ users (scale) → Diversified channels, optimization focus
+
+What is your CAC by channel?
+  |-- CAC < $10 → High-efficiency channel, maximize investment
+  |-- CAC $10-$100 → Moderate efficiency, optimize further
+  |-- CAC $100-$500 → Low efficiency, improve targeting or test new channels
+  |-- CAC > $500 → Validate LTV/CAC > 3x before scaling
+```
+
+### Retention Strategy Decision Tree
+```
+What is your D30 retention rate?
+  |-- <20% → Core product value not being delivered. Fix activation and core experience first.
+  |-- 20-40% → Retention needs improvement. Focus on habit formation and engagement loops.
+  |-- 40-60% → Healthy retention. Optimize and add retention features (notifications, content).
+  |-- >60% → Excellent retention. Focus on expansion revenue and referrals.
+
+What is the primary churn reason?
+  |-- Not enough value → Improve activation and onboarding
+  |-- Not enough engagement → Add notifications, email sequences, content updates
+  |-- Competitive switch → Improve product moat, consider pricing adjustment
+  |-- No longer need → Accept natural churn, focus on acquisition
+```
+
+## Templates
+
+### Retention Analysis Template
+```
+# Retention Analysis: {Cohort}
+Period: {start} to {end}
+
+## Overall Retention
+| Period | D1 | D7 | D14 | D30 | D60 | D90 |
+|--------|----|----|-----|-----|-----|-----|
+| Week 1 |    |    |     |     |     |     |
+| Week 2 |    |    |     |     |     |     |
+| Week 3 |    |    |     |     |     |     |
+
+## Retention by Activation Status
+| Group | D1 | D7 | D30 | D90 |
+|-------|----|----|-----|-----|
+| Activated (hit aha moment) | | | | |
+| Not activated | | | | |
+
+## Retention by Acquisition Channel
+| Channel | D1 | D7 | D30 | D90 |
+|---------|----|----|-----|-----|
+
+## Churn Reasons (Top 5)
+| Reason | % of Churned | Common Segment |
+|--------|-------------|----------------|
+| {reason} | {X%} | {segment} |
+
+## Retention Improvement Opportunities
+1. {opportunity} — Expected retention lift: {X%}
+2. {opportunity} — Expected retention lift: {X%}
+```
+
+### Cohort Analysis Template
+```
+# Cohort Analysis: {Period}
+
+## Weekly Cohort Retention
+| Cohort | Size | W1 | W2 | W3 | W4 | W8 | W12 |
+|--------|------|----|----|----|----|----|-----|
+| 2026-W01 | | | | | | | |
+| 2026-W02 | | | | | | | |
+| 2026-W03 | | | | | | | |
+
+## Monthly Cohort Retention
+| Cohort | Size | M1 | M2 | M3 | M6 | M12 |
+|--------|------|----|----|----|----|-----|
+| 2026-01 | | | | | | |
+| 2026-02 | | | | | | |
+
+## Key Insights
+- {insight}
+- {insight}
+- {insight}
+```
+
+### Experiment Pipeline Dashboard Template
+```
+# Experiment Pipeline: {Quarter}
+
+## Running Experiments
+| # | Name | Hypothesis | Start | Duration | Primary Metric | Status |
+|---|------|-----------|-------|----------|---------------|--------|
+
+## Queued Experiments
+| # | Name | ICE Score | Impact | Confidence | Ease | Owner |
+|---|------|-----------|--------|-----------|------|-------|
+
+## Completed This Quarter
+| Name | Result | Decision | Learnings |
+|------|--------|----------|-----------|
+
+## Experiment Velocity
+Target: {X} experiments/week
+Actual: {X} experiments/week
+Win rate: {X%}
+Average impact per experiment: {X%}
+```
+
+### Growth Efficiency Report Template
+```
+# Growth Efficiency Report: {Month/Quarter}
+
+## Growth Breakdown
+| Source | New Users | % of Total | CAC | Trend |
+|--------|-----------|-----------|-----|-------|
+| Organic (viral) | {n} | {%} | $0 | {direction} |
+| Organic (content) | {n} | {%} | $0 | {direction} |
+| Organic (SEO) | {n} | {%} | $0 | {direction} |
+| Paid (ads) | {n} | {%} | ${cac} | {direction} |
+| Paid (partnerships) | {n} | {%} | ${cac} | {direction} |
+
+Growth Efficiency = (Organic + Product) / Total = {X%}
+Target: >70%
+
+## Trend (Last 6 Months)
+| Month | Total Users | Organic % | Paid % | Growth Efficiency |
+|-------|------------|-----------|--------|-------------------|
+
+## Recommendations
+1. {recommendation} — Expected efficiency improvement: {X%}
+2. {recommendation} — Expected efficiency improvement: {X%}
+```
+
+### PLG Readiness Checklist
+```
+## Product Assessment
+- [ ] Core value can be experienced without human assistance
+- [ ] Time-to-first-value is <5 minutes
+- [ ] Self-serve signup requires only email (no sales intervention)
+- [ ] Free tier or trial provides genuine value (not crippled)
+- [ ] Upgrade path is clear and frictionless
+- [ ] In-app conversion/purchase flow exists
+- [ ] Product analytics track activation, usage, conversion
+
+## Organization Assessment
+- [ ] Team has autonomy to iterate on product experience
+- [ ] Product has dedicated growth engineering resources
+- [ ] Experimentation infrastructure exists
+- [ ] Leadership understands PLG metrics (activation, TTV, self-serve conversion)
+- [ ] Customer success is prepared for self-serve users (no hand-holding)
+
+## Readiness Score
+Score = (answered yes / total questions) × 100
+- >80%: Ready for PLG
+- 50-80%: Partial readiness, address gaps
+- <50%: Focus on product-led fundamentals first
+```
+
+## Expanded Anti-Patterns
+
+### 7. Vanity Metric Dashboard
+Building dashboards that show impressive-looking numbers with no actionable insight. Total registered users (includes inactive), total page views (includes bots), total downloads (includes never-opened). Mitigation: every metric on the dashboard must drive a decision. If you can't answer "what will I do differently based on this number?" remove the metric.
+
+### 8. Experiment Fatigue
+Running too many experiments simultaneously. Overlapping experiments create interaction effects that invalidate results. Teams can't keep up with analysis. Experiments run for too long or are abandoned. Mitigation: limit concurrent experiments per funnel stage. Set a maximum of 3-5 concurrent experiments. Define experiment duration upfront. Kill underperforming experiments early.
+
+### 9. Copycat Growth Tactics
+Implementing growth mechanics that worked for other companies without adaptation. Dropbox-style referral program for a B2B enterprise tool. Gaming leaderboards for a productivity app. Mitigation: growth mechanics must align with natural product usage patterns. Test growth mechanics for your specific product and user base, don't assume transferability.
+
+### 10. Over-Optimization Before Product-Market Fit
+Optimizing growth mechanics before the product delivers core value. Spending engineering time on referral programs when activation is broken. A leaky bucket can't be filled by pouring more water. Mitigation: achieve product-market fit first (retention >40% D30). Then invest in growth mechanics. Activation optimization is always the first growth investment.
+
+### 11. Ignoring Segment Dynamics
+Optimizing growth metrics in aggregate while masking segment-level problems. Overall activation rate looks healthy but a key segment has 10% activation. Mitigation: segment every growth metric by acquisition channel, plan, user role, device, and region. Set targets per segment based on segment importance.
+
+### 12. Growth Without Guardrails
+Running growth experiments that improve one metric at the expense of another. Increasing signups by lowering quality bar, which increases churn. Increasing referral incentives which attract reward-seekers not product-lovers. Mitigation: every experiment must have guardrail metrics. Monitor core experience metrics during growth experiments. Kill experiments that improve growth metrics but degrade retention or satisfaction.
+
+## Expanded Best Practices
+
+### Growth Loop Optimization Cadence
+| Frequency | Activity | Focus |
+|-----------|----------|-------|
+| Daily | Check leading indicators dashboard | Activation rate, K-factor, experiment results |
+| Weekly | Experiment review meeting | Results, learnings, new experiment prioritization |
+| Bi-weekly | Growth metric deep dive | Segments, trends, anomalies |
+| Monthly | Full growth review | Loop performance, channel analysis, strategy adjustment |
+| Quarterly | Growth strategy reset | New loops, channel exploration, resource allocation |
+
+### Experiment Design Quality Checklist
+- [ ] Hypothesis follows format: "If {change} then {metric} will {direction} by {amount} because {reason}"
+- [ ] Primary metric is a single, measurable number
+- [ ] Guardrail metrics defined to prevent sub-optimization
+- [ ] Minimum detectable effect calculated
+- [ ] Sample size calculated before experiment starts
+- [ ] Duration determined by sample size (not calendar)
+- [ ] Segment analysis planned (not just aggregate)
+- [ ] Risks and edge cases considered
+- [ ] Learning documented regardless of outcome
+
+### Growth Team Rhythm
+| Day | Activity | Output |
+|-----|----------|--------|
+| Monday | Review running experiments, check metrics | Status update |
+| Tuesday | Analyze completed experiments | Results document |
+| Wednesday | Ideation and prioritization | Experiment backlog update |
+| Thursday | Design and launch new experiments | Experiment specs |
+| Friday | Share learnings, plan next week | Weekly growth brief |
+
 ## References
   - references/activation-metrics.md — Activation Metrics
   - references/growth-engineering-advanced.md — Growth Engineering Advanced Topics

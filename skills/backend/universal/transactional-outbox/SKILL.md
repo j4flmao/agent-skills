@@ -331,6 +331,222 @@ DELETE FROM outbox_messages
 - Always include correlationId in metadata for distributed tracing.
 - Never skip the outbox pattern for "simple" cases — dual-write always has failure scenarios.
 
+## Outbox Variants
+
+### Minimal Outbox (No Separate Relay Table)
+```sql
+-- Embed event publication fields directly in business table
+-- Useful when events are tightly coupled to the entity lifecycle
+CREATE TABLE orders (
+  id UUID PRIMARY KEY,
+  customer_id UUID NOT NULL,
+  status TEXT NOT NULL,
+  -- Embedded outbox fields
+  event_published BOOLEAN NOT NULL DEFAULT false,
+  event_type TEXT,
+  event_payload JSONB,
+  event_created_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_orders_unpublished ON orders(event_published)
+  WHERE event_published = false;
+-- Pros: simpler schema, no join needed
+-- Cons: tight coupling, harder to add multiple event types per entity
+```
+
+### Transactional Outbox with Message Ordering
+```sql
+-- Guarantee event ordering within an aggregate
+CREATE TABLE outbox_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  aggregate_type VARCHAR(100) NOT NULL,
+  aggregate_id VARCHAR(100) NOT NULL,
+  -- Sequence number for order guarantee
+  sequence_number BIGINT NOT NULL,
+  event_type VARCHAR(200) NOT NULL,
+  event_data JSONB NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  processed_at TIMESTAMP WITH TIME ZONE,
+  retry_count INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT,
+
+  UNIQUE(aggregate_type, aggregate_id, sequence_number)
+);
+
+-- Relay must process in sequence_number order per aggregate
+-- Enforces: events for same aggregate are published in order
+```
+
+## PostgreSQL LISTEN/NOTIFY as Lightweight Relay
+
+```typescript
+// Hybrid approach: NOTIFY for low latency, polling as fallback
+class HybridOutboxRelay {
+  private db: Database;
+  private relay: OutboxRelay;
+
+  async start(): Promise<void> {
+    // Start polling relay as fallback
+    this.relay.start(5000); // poll every 5s
+
+    // Listen for immediate notifications
+    await this.db.query('LISTEN outbox_events');
+    this.db.on('notification', async (msg: any) => {
+      // Trigger immediate poll on notification
+      await this.relay.poll();
+    });
+  }
+}
+
+-- Trigger to notify on outbox insert
+CREATE OR REPLACE FUNCTION notify_outbox_event()
+RETURNS trigger AS $$
+BEGIN
+  PERFORM pg_notify('outbox_events', NEW.id::text);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER outbox_notify
+  AFTER INSERT ON outbox_messages
+  FOR EACH ROW
+  EXECUTE FUNCTION notify_outbox_event();
+```
+
+## Error Recovery and Dead Letter Queue
+
+```typescript
+class OutboxDLQ {
+  private deadLetterStore: Map<string, DeadLetterEntry> = new Map();
+
+  async handleDeadLetter(message: OutboxMessage): Promise<void> {
+    const entry: DeadLetterEntry = {
+      message,
+      failedAt: new Date(),
+      failureCount: message.retryCount,
+      lastError: message.lastError,
+    };
+
+    // Store for manual review
+    await this.deadLetterStore.set(message.id, entry);
+
+    // Alert operations team
+    await this.alerter.send({
+      type: 'outbox_dead_letter',
+      messageId: message.id,
+      eventType: message.eventType,
+      retryCount: message.retryCount,
+      lastError: message.lastError,
+    });
+
+    // Optionally route to dead letter topic
+    await this.messageBus.publish('outbox-dead-letter', {
+      messageId: message.id,
+      eventType: message.eventType,
+      originalPayload: message.eventData,
+      failureReason: message.lastError,
+    });
+  }
+
+  async manualRetry(messageId: string): Promise<void> {
+    // Allow ops to manually retry dead-lettered messages
+    await this.db.outbox.resetRetry(messageId);
+  }
+}
+```
+
+## Kafka Producer Integration
+
+```typescript
+class KafkaOutboxRelay {
+  private producer: Producer;
+  private db: Database;
+
+  async poll(): Promise<void> {
+    const messages = await this.db.outbox.findUnprocessed(100);
+
+    for (const message of messages) {
+      try {
+        await this.producer.send({
+          topic: this.eventTypeToTopic(message.eventType),
+          messages: [{
+            key: message.aggregateId,
+            value: JSON.stringify({
+              eventId: message.id,
+              eventType: message.eventType,
+              aggregateType: message.aggregateType,
+              aggregateId: message.aggregateId,
+              data: message.eventData,
+              metadata: message.metadata,
+              createdAt: message.createdAt.toISOString(),
+            }),
+            headers: {
+              'event-type': message.eventType,
+              'event-id': message.id,
+              'content-type': 'application/json',
+            },
+          }],
+        });
+
+        await this.db.outbox.markProcessed(message.id);
+      } catch (err) {
+        await this.db.outbox.incrementRetry(message.id, err.message);
+      }
+    }
+  }
+}
+```
+
+## Deduplication and Idempotency Strategies
+
+```typescript
+// Consumer-side deduplication
+// Option 1: Database-backed dedup
+const processedEvents = new Set<string>(); // or Redis set with TTL
+
+async function handleEvent(event: OutboxEvent): Promise<void> {
+  // Check if already processed (idempotency check)
+  const alreadyProcessed = await checkProcessedEvent(event.eventId);
+  if (alreadyProcessed) {
+    logger.info('Skipping already processed event', { eventId: event.eventId });
+    return;
+  }
+
+  try {
+    await processEvent(event);
+    await markEventProcessed(event.eventId);
+  } catch (err) {
+    // Transactional: writing result + marking processed in same transaction
+    await db.transaction(async (tx) => {
+      await processEventInTx(tx, event);
+      await markEventProcessedInTx(tx, event.eventId);
+    });
+  }
+}
+
+// Option 2: Idempotent processing (no explicit dedup store)
+// Design handlers so processing the same event twice produces same result
+// Example: UPSERT instead of INSERT
+async function handleOrderCreated(event: OutboxEvent): Promise<void> {
+  await db.query(`
+    INSERT INTO orders (id, customer_id, status, total)
+    VALUES ($1, $2, 'pending', $3)
+    ON CONFLICT (id) DO NOTHING
+  `, [event.data.orderId, event.data.customerId, event.data.total]);
+}
+```
+
+## Performance Benchmarks
+
+| Relay Type | Throughput | Latency (p50) | Latency (p99) | Operational Cost |
+|-----------|-----------|---------------|---------------|------------------|
+| Polling (1s interval, batch 50) | ~50 msg/s | 500ms | 2000ms | Low |
+| Polling (100ms interval, batch 100) | ~500 msg/s | 50ms | 500ms | Medium |
+| CDC (Debezium, WAL) | ~10K msg/s | 10ms | 100ms | High |
+| LISTEN/NOTIFY + polling | ~200 msg/s | 20ms | 500ms | Low |
+| CDC (Debezium, optimized) | ~100K msg/s | 5ms | 50ms | High |
+
 ## References
   - references/deduplication-idempotency.md — Deduplication & Idempotency
   - references/message-relay-strategies.md — Message Relay Strategies

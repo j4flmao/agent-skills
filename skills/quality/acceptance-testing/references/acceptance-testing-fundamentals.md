@@ -1,213 +1,128 @@
 # Acceptance Testing Fundamentals
 
 ## Overview
-Acceptance Testing is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Acceptance Testing validates that a system meets business requirements, user needs, and acceptance criteria. It bridges the gap between technical implementation and business value, ensuring stakeholders get what they asked for. This covers UAT, alpha/beta testing, Gherkin/BDD, business scenario testing, and sign-off processes.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Acceptance Testing helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Concept 1: Acceptance Criteria
+Acceptance criteria define the conditions a feature must satisfy to be accepted. Follow the INVEST principle: Independent, Negotiable, Valuable, Estimable, Small, Testable. Write criteria as Given-When-Then scenarios before development begins.
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Acceptance Testing solutions. These principles help maintain code quality and reduce technical debt.
+### Concept 2: Gherkin/BDD
+Behavior-Driven Development uses Gherkin language for executable specifications. Structure: `Feature` describes the capability, `Scenario` describes a specific example, `Given` sets up context, `When` performs actions, `Then` asserts outcomes. Use `Scenario Outline` with `Examples` tables for data-driven scenarios.
 
-### Concept 3: Data Management
-Proper data management is essential for Acceptance Testing. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Concept 3: UAT Process
+User Acceptance Testing involves real users validating the system against real-world scenarios. Includes: session planning (2-hour max duration), test data preparation, facilitator-led execution, structured feedback collection, defect triage, and sign-off decision.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+### Concept 4: Alpha vs Beta Testing
+Alpha testing: internal testing by employees and invited stakeholders in a controlled environment. Beta testing: external testing by real users in production or near-production environments. Alpha finds critical bugs early; beta reveals real-world usage patterns and edge cases.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Concept 5: Traceability
+Every acceptance test scenario must trace back to a specific requirement or user story. Maintain a traceability matrix linking requirements → scenarios → test results. This proves coverage and enables impact analysis of requirement changes.
 
-## Architecture Patterns
+## Acceptance Criteria Patterns
 
-### Pattern 1: Standard Architecture
-The standard architecture for Acceptance Testing follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+### Positive Criteria
+```gherkin
+Scenario: Successful checkout with valid payment
+  Given I have items in my cart totaling $50.00
+  And I am logged in with a valid account
+  When I proceed to checkout
+  And I enter valid credit card details
+  Then I should see an order confirmation
+  And I should receive a confirmation email
+```
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### Negative Criteria
+```gherkin
+Scenario: Checkout fails with expired card
+  Given I have items in my cart totaling $50.00
+  When I proceed to checkout
+  And I enter an expired credit card
+  Then I should see "Card expired" error
+  And I should remain on the payment page
+```
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Business Rule Criteria
+```gherkin
+Scenario Outline: Discount applied by order value
+  Given I am a standard-tier customer
+  When I place an order worth <value>
+  Then the discount applied should be <discount>
+
+  Examples:
+    | value | discount |
+    | 30.00 | 0.00     |
+    | 75.00 | 7.50     |
+    | 150.00| 22.50    |
+    | 300.00| 60.00    |
+```
+
+## BDD Framework Selection
+
+| Feature | pytest-bdd | behave (Python) | Cucumber (JS) | SpecFlow (.NET) |
+|---------|-----------|----------------|---------------|-----------------|
+| Language | Python | Python | JS/TS | C# |
+| Gherkin parser | Native | Native | Native | Native |
+| Scenario outlines | Yes | Yes | Yes | Yes |
+| Background steps | Yes | Yes | Yes | Yes |
+| Tag filtering | Yes | Yes | Yes | Yes |
+| Parallel execution | pytest-xdist | Limited | @jest/parallel | SpecFlow+ |
+| Report formats | JUnit, JSON, HTML | JUnit, JSON | JSON, HTML | TRX, HTML |
+| CI integration | Native pytest | Native | Jest/Cucumber | VSTest |
+| Best for | Python projects | Quick BDD | JS/TS full-stack | .NET ecosystem |
 
 ## Implementation Guide
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Step 1: Define Acceptance Criteria
+Extract acceptance criteria from user stories during sprint planning. Write Gherkin scenarios for each criterion. Review with PO, BA, and developers before development starts. Store scenarios in feature files under version control.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Step 2: Automate Critical Paths
+Automate acceptance tests for critical business flows using BDD frameworks. Run automated acceptance tests in CI on every PR. Target < 10 minutes for the full automated acceptance suite. Use parallel execution for larger suites.
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+### Step 3: Plan UAT Sessions
+Schedule UAT sessions with real end users (not developers or QA). Limit sessions to 2 hours. Prepare test data and environment. Assign a facilitator. Define session scenarios aligned to sprint goals.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+### Step 4: Execute and Collect Feedback
+Run UAT sessions with structured scenario walkthroughs. Collect feedback via: pass/fail per scenario, defect reports, usability observations, and satisfaction scores. Record session results in a traceability matrix.
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
-
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+### Step 5: Triage and Sign-Off
+Classify defects by severity: P0 (blocks sign-off), P1 (must fix), P2 (should fix), P3 (nice to have). Present results to stakeholders. Obtain formal sign-off or document conditional acceptance with known deviations.
 
 ## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+- Write acceptance criteria BEFORE development starts — not during testing
+- One scenario per business rule — avoid testing multiple rules in one scenario
+- Use Scenario Outlines for data-driven acceptance tests
+- Include negative scenarios for every positive scenario
+- Keep Gherkin scenarios implementation-agnostic — don't reference UI elements
+- Use Background sections for shared context across scenarios
+- Tag scenarios by priority, sprint, and feature for filtering
+- Run automated acceptance tests in CI but keep human UAT for exploratory validation
+- Maintain a traceability matrix linking requirements → scenarios → test results
+- Review and update acceptance criteria when requirements change
 
 ## Common Pitfalls
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+### Pitfall 1: Testing Without Defined Criteria
+Starting acceptance testing without measurable criteria leads to subjective pass/fail decisions. Define criteria during sprint planning with specific, testable conditions.
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+### Pitfall 2: Developers as UAT Users
+Developers know the system too well and subconsciously avoid problematic paths. UAT must use real end users from customer-facing teams or customer panels.
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+### Pitfall 3: No Negative Testing
+Testing only happy paths misses most real-world issues. Every acceptance criterion needs at least one negative test. "What happens when it fails?" is as important as "Does it work?"
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+### Pitfall 4: One-Time UAT Event
+Running UAT only at sprint end instead of continuous validation. Issues found late are expensive. Demo incrementally throughout the sprint. Involve stakeholders in reviews.
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+### Pitfall 5: Ignoring Non-Functional Criteria
+Acceptance focused only on function while ignoring performance, accessibility, security, and usability. "Page loads under 3 seconds" is a valid acceptance criterion.
 
 ## Key Points
-- Understand core Acceptance Testing concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- Acceptance criteria must be defined, measurable, and testable before development starts
+- Gherkin/BDD bridges communication gap between business and technical stakeholders
+- UAT requires real end users, structured sessions, and facilitator guidance
+- Traceability from requirements to test results is essential for audit and coverage
+- Automate regression acceptance tests; keep human UAT for exploratory validation
+- Classify defects by severity and only block sign-off for P0/P1 issues
+- Include non-functional acceptance criteria alongside functional ones

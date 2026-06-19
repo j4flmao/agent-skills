@@ -267,6 +267,297 @@ Below are links to the reference guides detailing the algorithms, patterns, and 
 ## Handoff
 For projects requiring post-execution verification and correction, hand off to `feedback-loops`. For systems implementing core orchestrator loops, hand off to `core-master-orchestrator`. For context window optimization within plans, hand off to `context-engineering`.
 
+## Implementation Patterns
+
+### OODA Loop Implementation
+
+```python
+from dataclasses import dataclass, field
+from typing import List, Dict, Optional, Callable
+import json
+
+@dataclass
+class OODAState:
+    observation: Dict = field(default_factory=dict)
+    orientation: Dict = field(default_factory=dict)
+    decision: Dict = field(default_factory=dict)
+    action: Dict = field(default_factory=dict)
+    iteration: int = 0
+
+class OODALoop:
+    def __init__(self, observe_fn: Callable, orient_fn: Callable,
+                 decide_fn: Callable, act_fn: Callable):
+        self.observe_fn = observe_fn
+        self.orient_fn = orient_fn
+        self.decide_fn = decide_fn
+        self.act_fn = act_fn
+        self.state = OODAState()
+
+    async def execute(self, goal: str, context: Dict) -> Dict:
+        self.state.iteration += 1
+        self.state.observation = await self.observe_fn(goal, context)
+        self.state.orientation = await self.orient_fn(
+            self.state.observation
+        )
+        self.state.decision = await self.decide_fn(
+            self.state.orientation
+        )
+        self.state.action = await self.act_fn(
+            self.state.decision
+        )
+        return {
+            "iteration": self.state.iteration,
+            "observation": self.state.observation,
+            "orientation": self.state.orientation,
+            "decision": self.state.decision,
+            "action": self.state.action,
+        }
+
+class PlanExecutor:
+    def __init__(self, max_retries: int = 2):
+        self.max_retries = max_retries
+
+    def decompose_goal(self, goal: str, depth: int = 0, max_depth: int = 4) -> Dict:
+        if depth >= max_depth:
+            return {"type": "atomic", "description": goal}
+        return {
+            "type": "composite",
+            "description": goal,
+            "children": [
+                self.decompose_goal(sub_goal, depth + 1, max_depth)
+                for sub_goal in self._split_goal(goal)
+            ],
+        }
+
+    def _split_goal(self, goal: str) -> List[str]:
+        if " and " in goal.lower():
+            parts = goal.split(" and ")
+        elif " then " in goal.lower():
+            parts = goal.split(" then ")
+        else:
+            return [goal]
+        return [p.strip() for p in parts if p.strip()]
+
+    def build_dependency_graph(self, tasks: List[Dict]) -> Dict[str, List[str]]:
+        graph = {}
+        for i, task in enumerate(tasks):
+            deps = []
+            task_name = task.get("name", f"task_{i}")
+            for j in range(i):
+                prev_name = tasks[j].get("name", f"task_{j}")
+                if self._depends_on(task, tasks[j]):
+                    deps.append(prev_name)
+            graph[task_name] = deps
+        return graph
+
+    def _depends_on(self, task: Dict, potential_dep: Dict) -> bool:
+        task_targets = set(task.get("targets", []))
+        dep_targets = set(potential_dep.get("outputs", []))
+        return len(task_targets & dep_targets) > 0
+
+    def validate_plan(self, plan: Dict) -> Dict:
+        errors = []
+        warnings = []
+        dep_graph = plan.get("dependency_graph", {})
+        all_tasks = set(dep_graph.keys())
+        for task, deps in dep_graph.items():
+            for dep in deps:
+                if dep not in all_tasks:
+                    errors.append(f"Task '{task}' depends on unknown task '{dep}'")
+        visited = set()
+        path = []
+
+        def dfs(node):
+            if node in path:
+                cycle_start = path[path.index(node):]
+                errors.append(f"Circular dependency detected: {' → '.join(cycle_start + [node])}")
+                return
+            if node in visited:
+                return
+            visited.add(node)
+            path.append(node)
+            for dep in dep_graph.get(node, []):
+                dfs(dep)
+            path.pop()
+
+        for task in all_tasks:
+            dfs(task)
+        return {
+            "valid": len(errors) == 0,
+            "errors": errors,
+            "warnings": warnings,
+        }
+
+class IntentClassifier:
+    def __init__(self, confidence_threshold: float = 0.75):
+        self.threshold = confidence_threshold
+        self.categories = {
+            "create": ["create", "generate", "write", "implement", "build", "add"],
+            "modify": ["change", "update", "modify", "edit", "refactor", "fix"],
+            "analyze": ["analyze", "review", "check", "inspect", "audit", "debug"],
+            "explain": ["explain", "describe", "document", "summarize", "clarify"],
+            "deploy": ["deploy", "release", "publish", "push", "ship", "launch"],
+            "delete": ["delete", "remove", "destroy", "clean", "erase"],
+        }
+
+    def classify(self, user_request: str) -> Dict:
+        request_lower = user_request.lower()
+        scores = {}
+        for category, keywords in self.categories.items():
+            score = sum(1 for kw in keywords if kw in request_lower)
+            scores[category] = score / max(len(request_lower.split()), 1)
+        primary = max(scores, key=scores.get)
+        return {
+            "primary_class": primary,
+            "confidence": scores[primary] * 5,
+            "all_scores": scores,
+            "needs_clarification": (scores[primary] * 5) < self.threshold,
+        }
+
+class ConstraintEngine:
+    def __init__(self):
+        self.hard_constraints: List[Dict] = []
+        self.soft_constraints: List[Dict] = []
+
+    def add_constraint(self, constraint: Dict, is_hard: bool = True):
+        target = self.hard_constraints if is_hard else self.soft_constraints
+        target.append(constraint)
+
+    def propagate(self, plan_tree: Dict) -> Dict:
+        violations = []
+        self._check_node(plan_tree, violations, [])
+        return {
+            "all_satisfied": len(violations) == 0,
+            "hard_violations": [v for v in violations if v["is_hard"]],
+            "soft_violations": [v for v in violations if not v["is_hard"]],
+        }
+
+    def _check_node(self, node: Dict, violations: List, path: List[str]):
+        current_path = path + [node.get("description", "unknown")]
+        for constraint in self.hard_constraints:
+            if not self._satisfies(node, constraint):
+                violations.append({
+                    "path": current_path,
+                    "constraint": constraint["name"],
+                    "is_hard": True,
+                })
+        for child in node.get("children", []):
+            self._check_node(child, violations, current_path)
+
+    def _satisfies(self, node: Dict, constraint: Dict) -> bool:
+        node_props = set(node.get("properties", {}).keys())
+        required = set(constraint.get("requires", []))
+        return required.issubset(node_props)
+
+class PreflightValidator:
+    def __init__(self):
+        self.checks: List[Callable] = []
+
+    def add_check(self, check_fn: Callable, name: str):
+        self.checks.append((check_fn, name))
+
+    def run_all(self, plan: Dict) -> Dict:
+        results = {}
+        all_passed = True
+        for check_fn, name in self.checks:
+            try:
+                result = check_fn(plan)
+                passed = result if isinstance(result, bool) else result.get("passed", False)
+                results[name] = {"passed": passed, "error": None}
+                all_passed = all_passed and passed
+            except Exception as e:
+                results[name] = {"passed": False, "error": str(e)}
+                all_passed = False
+        return {"passed": all_passed, "check_results": results}
+```
+
+## Architecture Decision Trees
+
+### Feedforward Control Strategy
+
+```
+Is the task complex enough to warrant planning?
+├── Single atomic step
+│   └── Yes → Direct execution with pre-flight validation
+│
+├── 2-8 steps with clear ordering
+│   └── Yes → Plan-and-Execute with dependency graph
+│       ├── Validate DAG for cycles
+│       └── Execute in topological order
+│
+├── 9+ steps or multi-domain
+│   └── Yes → Hierarchical goal decomposition
+│       ├── Break into phases (max 4 levels deep)
+│       ├── Propagate constraints between phases
+│       └── Add checkpoints between phases
+│
+└── Task has high failure cost
+    └── Full OODA loop
+        ├── Observe: gather environment state
+        ├── Orient: classify intent, assess risk
+        ├── Decide: build and validate plan
+        └── Act: execute with monitoring
+```
+
+### Pre-Flight Check Selection
+
+```
+What type of execution?
+├── File modification
+│   ├── File exists? → Continue
+│   ├── File is writable? → Continue
+│   ├── File is not locked? → Continue
+│   └── Backup exists? → Continue
+│
+├── API call
+│   ├── Endpoint is reachable? → Continue
+│   ├── Rate limit not exceeded? → Continue
+│   ├── Auth token valid? → Continue
+│   └── Request schema valid? → Continue
+│
+├── Database operation
+│   ├── Connection works? → Continue
+│   ├── Migration state compatible? → Continue
+│   └── Transaction safe (no long locks)? → Continue
+│
+└── Deployment
+    ├── All tests pass? → Continue
+    ├── No secrets in code? → Continue
+    ├── Version bumped? → Continue
+    └── Rollback plan exists? → Continue
+```
+
+## Production Considerations
+
+- **Plan serialization for audit**: Serialize every plan artifact with version, timestamp, and agent ID. Store for post-hoc analysis of planning failures.
+- **Adaptive decomposition depth**: Start with shallow decomposition (2 levels). If execution fails due to underspecified steps, increase depth on the next attempt.
+- **Constraint caching**: Cache constraint satisfaction results for sub-plans that are reused across tasks. Invalidates on environment state change.
+- **Plan cost estimation**: Maintain historical cost data (token usage, API calls, execution time) per task type. Use to pre-allocate budgets and detect anomalous patterns early.
+
+## Security Considerations
+
+- **Intent classification bypass**: Malicious requests may disguise intent (e.g., "analyze" that is actually "delete"). Use secondary classification and constraint overlap checking.
+- **Plan injection**: Never serialize plans from untrusted sources without validation. A crafted plan could encode dangerous operations that look benign in structure.
+- **Pre-flight validation as security gate**: Treat pre-flight as a security boundary. Operations that fail validation should be logged with full context for security auditing.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Planning without resource constraints | Generated plans exceed available budget | Always pass resource budgets to planner |
+| Symmetric decomposition depth | Simple tasks get over-planned, complex tasks under-planned | Use complexity scoring to dynamically set depth |
+| Ignoring soft constraints | Users become dissatisfied with rigid execution | Report soft violations with impact assessment, not hard failures |
+| Single-pass planning without re-evaluation | Mid-execution context changes invalidate original plan | Add re-planning checkpoints for long-running plans |
+| Stale observation data | File contents change between planning and execution | Force fresh reads before each execution step |
+| No plan cost estimation | Over-planning wastes tokens, under-planning wastes retries | Track and publish execution costs per task type |
+
+## Performance Optimization
+
+- **Parallel goal decomposition**: Decompose independent sub-goals in parallel using async task trees. Merges results at constraint propagation stage.
+- **Plan caching**: Cache plan structures for identical or similar task requests. Hash by task description + file context. 30-50% of coding tasks have similar structure.
+- **Lazy constraint evaluation**: Only evaluate constraints for tasks on the critical path first. Defer non-critical constraint checks to execution time.
+- **Constraint compilation**: Compile constraint expressions into predicate functions at plan time rather than evaluating trees at runtime. Provides 10-100x faster constraint checking.
+
 <!-- COMPRESSION FOOTER -->
 <!--
 Compression Level: 5 (Comprehensive architectural references & code details preserved)

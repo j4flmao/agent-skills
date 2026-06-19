@@ -266,6 +266,182 @@ export default defineConfig({
 7. **No offline fallback**: Users see browser's generic offline page. Provide a branded offline page.
 8. **Over-caching**: Caching too much data leads to quota exceeded errors.
 
+## Service Worker Lifecycle Deep Dive
+
+```javascript
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_VERSION)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((names) =>
+      Promise.all(names.filter((n) => n !== CACHE_VERSION).map((n) => caches.delete(n)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+// New SW detected → waiting → user accepts → skipWaiting → activate → reload
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').then((reg) => {
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          showUpdateToast(() => newWorker.postMessage({ type: 'SKIP_WAITING' }));
+        }
+      });
+    });
+  });
+}
+```
+
+## Advanced Caching Strategies
+
+```javascript
+// Network-first with timeout and stale fallback
+async function networkFirstWithTimeout(request, timeoutMs) {
+  try {
+    const response = await Promise.race([
+      fetch(request),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), timeoutMs)),
+    ]);
+    if (response.ok) {
+      const cache = await caches.open('api-v1');
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    return cached || new Response(JSON.stringify({ error: 'offline' }), {
+      status: 503, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+```
+
+## Cache Strategy Decision Tree
+```
+Request URL matches?
+  |-- Same-origin static asset (.js, .css, .png, .woff2) -->
+  |     CacheFirst — precached in install, instant load
+  |     No network request needed
+  |
+  |-- Same-origin API (/api/*) -->
+  |     |-- GET requests (read data) -->
+  |     |     NetworkFirst with timeout (3s) — fresh data, stale fallback
+  |     |
+  |     |-- POST/PUT/DELETE (write data) -->
+  |           NetworkOnly — never cache mutations
+  |
+  |-- Third-party CDN (fonts, analytics) -->
+  |     StaleWhileRevalidate — serve cached quickly, update in background
+  |
+  |-- Navigation requests (HTML pages) -->
+  |     NetworkFirst — always try network first, fall back to offline page
+  |
+  |-- Image requests -->
+        CacheFirst with maxEntries (50) + maxAge (30d)
+        LRU eviction when limit reached
+```
+
+## Background Sync
+
+```javascript
+// App: queue data when offline
+async function submitOrder(data) {
+  if (!navigator.onLine) {
+    await saveToIndexedDB('pending-orders', data);
+    const reg = await navigator.serviceWorker.ready;
+    await reg.sync.register('sync-orders');
+    return { queued: true };
+  }
+  return fetch('/api/orders', { method: 'POST', body: JSON.stringify(data) }).then(r => r.json());
+}
+
+// SW: process queue when online
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-orders') {
+    event.waitUntil(processPendingOrders());
+  }
+});
+
+async function processPendingOrders() {
+  const orders = await getAllFromIndexedDB('pending-orders');
+  for (const order of orders) {
+    try {
+      await fetch('/api/orders', { method: 'POST', body: JSON.stringify(order.data) });
+      await removeFromIndexedDB('pending-orders', order.id);
+    } catch { /* will retry on next sync event */ }
+  }
+}
+```
+
+## Push Notification Pattern
+```javascript
+// Request permission and subscribe
+async function subscribeToPush() {
+  const registration = await navigator.serviceWorker.ready;
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(process.env.VAPID_PUBLIC_KEY),
+  });
+
+  await fetch('/api/push/subscribe', {
+    method: 'POST',
+    body: JSON.stringify(subscription),
+  });
+}
+
+// Service worker: show notification
+self.addEventListener('push', (event) => {
+  const data = event.data.json();
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icon-192.png',
+      badge: '/badge.png',
+      data: { url: data.url },
+      actions: [
+        { action: 'view', title: 'View' },
+        { action: 'dismiss', title: 'Dismiss' },
+      ],
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  if (event.action === 'view' || !event.action) {
+    clients.openWindow(event.notification.data.url);
+  }
+});
+```
+
+## Web App Manifest Configuration
+```json
+{
+  "name": "My App",
+  "short_name": "App",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["productivity"],
+  "description": "Does the thing, offline.",
+  "scope": "/app/",
+  "orientation": "portrait-primary"
+}
+```
+
 ## Compared With
 
 | Aspect | Raw SW | Workbox | vite-plugin-pwa |
@@ -276,6 +452,8 @@ export default defineConfig({
 | TypeScript support | Manual | Good | Excellent |
 | Update management | Manual | Manual | Built-in |
 | Dev tools | Browser DevTools | Browser + Workbox | Browser + Vite |
+| Caching strategies | Manual | Precise control | Good defaults |
+| Offline analytics | Manual | via workbox-google-analytics | Built-in |
 
 ## Performance Considerations
 
@@ -286,6 +464,8 @@ export default defineConfig({
 - SW runs in separate thread — no main thread blocking
 - Cache storage quota: ~6% of available disk space per origin
 - Lighthouse PWA score impact: passing all audits requires SW, manifest, HTTPS, and 200 offline
+- Precache size should stay under 5MB to avoid install timeout on mobile 3G
+- Runtime cache entries limited via maxEntries/maxAgeSeconds to prevent quota exceeded
 
 ## Accessibility Considerations
 
@@ -293,6 +473,8 @@ export default defineConfig({
 - Push notifications must provide meaningful information, not just "New update"
 - Update toasts need keyboard-dismissible and screen-reader-announceable patterns
 - Install prompts should have proper focus management
+- Offline indicator (banner/icon) must be detectable by screen readers via aria-live
+- Push notification actions should be keyboard accessible
 
 ## Security Considerations
 
@@ -301,6 +483,8 @@ export default defineConfig({
 - Always use HTTPS for SW registration (required by spec)
 - Push notification data must be encrypted end-to-end
 - Background sync should not expose user data without authentication
+- Never cache authenticated API responses — use NetworkOnly for auth endpoints
+- SW scope: `/` controls all paths, `/app/` only under /app/ — keep scope minimal
 
 ## Rules
 - Never cache user-specific or sensitive data (auth tokens, personal info) in the service worker.
@@ -311,6 +495,8 @@ export default defineConfig({
 - Never use eval or new Function inside a service worker (Content Security Policy restriction).
 - Always purge unused caches in the activate event to prevent storage quota issues.
 - Always check navigator.serviceWorker availability before registering.
+- Use Background Sync for offline mutations — never rely on periodic polling.
+- Keep SW scope as narrow as possible — never use `/` unless the whole app is a PWA.
 
 ## References
   - references/caching-strategies.md — Caching Strategies Reference

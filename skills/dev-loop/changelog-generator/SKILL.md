@@ -374,3 +374,228 @@ conventionalChangelog(config)
   - references/release-workflow.md — Release Workflow Reference
 ## Handoff
 Hand off to `dev-loop-git-workflow` for version tagging strategy. Hand off to `dev-loop-code-review` for PR-based changelog entries.
+
+## Implementation Patterns
+
+### Changelog Generator (Python)
+
+```python
+import subprocess
+import re
+from typing import List, Dict, Optional
+from datetime import datetime
+
+class ChangelogGenerator:
+    def __init__(self, repo_path: str = "."):
+        self.repo_path = repo_path
+        self.commit_types = {
+            "feat": "Features",
+            "fix": "Bug Fixes",
+            "docs": "Documentation",
+            "refactor": "Refactoring",
+            "perf": "Performance Improvements",
+            "test": "Tests",
+            "chore": "Chores",
+            "ci": "CI/CD",
+        }
+
+    def generate_from_tags(self, from_tag: Optional[str] = None, to_ref: str = "HEAD") -> str:
+        if not from_tag:
+            tags = self._get_tags()
+            if len(tags) < 1:
+                tag1 = self._get_initial_commit()
+                tag2 = None
+                if not tag1:
+                    return "No tags or commits found."
+            else:
+                tag1 = tags[-1] if len(tags) > 0 else None
+                tag2 = tags[-2] if len(tags) > 1 else None
+        else:
+            tag1 = from_tag
+            tag2 = None
+
+        scope = f"{tag2}..{tag1}" if tag2 else tag1 if tag1 else to_ref
+        commits = self._get_commits(scope)
+
+        if not commits and tag1:
+            commits = self._get_commits(tag1)
+
+        return self._format_changelog(tag1 or "Unreleased", commits)
+
+    def _get_tags(self) -> List[str]:
+        try:
+            result = subprocess.run(
+                ["git", "tag", "--sort=-creatordate"],
+                capture_output=True, text=True, cwd=self.repo_path
+            )
+            tags = [t.strip() for t in result.stdout.split("\n") if t.strip()]
+            return [t for t in tags if re.match(r"^v?\d+\.\d+\.\d+", t)]
+        except subprocess.CalledProcessError:
+            return []
+
+    def _get_initial_commit(self) -> Optional[str]:
+        try:
+            result = subprocess.run(
+                ["git", "rev-list", "--max-parents=0", "HEAD"],
+                capture_output=True, text=True, cwd=self.repo_path
+            )
+            return result.stdout.strip() or None
+        except subprocess.CalledProcessError:
+            return None
+
+    def _get_commits(self, scope: str) -> List[Dict]:
+        try:
+            result = subprocess.run(
+                ["git", "log", scope, "--oneline", "--format=%H|%s|%an|%ad", "--date=short"],
+                capture_output=True, text=True, cwd=self.repo_path
+            )
+            commits = []
+            for line in result.stdout.strip().split("\n"):
+                if not line:
+                    continue
+                parts = line.split("|", 3)
+                if len(parts) < 2:
+                    continue
+                hash_val = parts[0][:7]
+                msg = parts[1]
+                author = parts[2] if len(parts) > 2 else ""
+                date = parts[3] if len(parts) > 3 else ""
+
+                parsed = self._parse_conventional_commit(msg)
+                commits.append({
+                    "hash": hash_val,
+                    "message": msg,
+                    "raw_message": parsed["message"],
+                    "type": parsed["type"],
+                    "scope": parsed["scope"],
+                    "breaking": parsed["breaking"],
+                    "author": author,
+                    "date": date,
+                })
+            return commits
+        except subprocess.CalledProcessError:
+            return []
+
+    def _parse_conventional_commit(self, message: str) -> Dict:
+        pattern = r"^(feat|fix|docs|refactor|perf|test|chore|ci|build|style|revert)(\((.+?)\))?(!)?:\s*(.+)"
+        match = re.match(pattern, message)
+        if match:
+            return {
+                "type": match.group(1),
+                "scope": match.group(3),
+                "breaking": match.group(4) == "!" or "BREAKING CHANGE" in message,
+                "message": match.group(5),
+            }
+        return {"type": "other", "scope": None, "breaking": False, "message": message}
+
+    def _format_changelog(self, version: str, commits: List[Dict]) -> str:
+        grouped = {}
+        for c in commits:
+            ctype = c["type"]
+            section = self.commit_types.get(ctype, "Other")
+            if c["breaking"]:
+                section = "Breaking Changes"
+            if section not in grouped:
+                grouped[section] = []
+            grouped[section].append(c)
+
+        section_order = ["Breaking Changes", "Features", "Bug Fixes", "Performance Improvements",
+                         "Refactoring", "Documentation", "Tests", "CI/CD", "Chores", "Other"]
+
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        lines = [f"## [{version}] - {date_str}\n"]
+
+        for section in section_order:
+            if section in grouped and grouped[section]:
+                lines.append(f"### {section}")
+                for c in grouped[section]:
+                    scope = f"**{c['scope']}:** " if c["scope"] else ""
+                    lines.append(f"- {scope}{c['raw_message']} ({c['hash']})")
+                lines.append("")
+
+        if not any(c["breaking"] for c in commits):
+            pass
+
+        return "\n".join(lines)
+
+    def generate_unreleased(self) -> str:
+        try:
+            result = subprocess.run(
+                ["git", "describe", "--tags", "--abbrev=0"],
+                capture_output=True, text=True, cwd=self.repo_path
+            )
+            latest_tag = result.stdout.strip() if result.returncode == 0 else None
+        except subprocess.CalledProcessError:
+            latest_tag = None
+
+        return self.generate_from_tags(from_tag=latest_tag)
+```
+
+## Architecture Decision Trees
+
+### Version Bump Strategy
+
+```
+Given the commits since last release:
+├── Has any commit with BREAKING CHANGE or feat!
+│   └── MAJOR bump (1.0.0 → 2.0.0)
+│       └── Update all consumers for breaking API changes
+│
+├── Has any commit with feat (and no breaking)
+│   └── MINOR bump (1.0.0 → 1.1.0)
+│       └── New features, backward compatible
+│
+├── Has any commit with fix, perf, refactor
+│   └── PATCH bump (1.0.0 → 1.0.1)
+│       └── Bug fixes, performance improvements
+│
+├── Has only docs, test, chore, ci
+│   └── No version bump needed (or PATCH if desired)
+│       └── No user-facing changes
+│
+└── Pre-release (before stable 1.0.0)
+    └── Use 0.x.y — no automated semver, manual decision
+```
+
+### Changelog Section Selection
+
+```
+What type is the commit?
+├── feat → "Features" section
+├── fix → "Bug Fixes" section
+├── perf → "Performance Improvements" section
+├── refactor → "Refactoring" section
+├── docs → "Documentation" section
+├── test → "Tests" section
+├── chore → "Chores" section
+├── ci → "CI/CD" section
+├── BREAKING CHANGE → "Breaking Changes" section
+└── anything else → "Other" section
+```
+
+## Production Considerations
+
+- **Release automation pipeline**: Generate changelog automatically as part of the release CI pipeline. Tag the release commit, generate changelog, create GitHub Release with changelog content. Never manual.
+- **Changelog linting**: Validate changelog format in CI using `changelog-lint` or similar. Ensure all required sections exist. Verify links to releases are valid.
+- **Monorepo changelogs**: Use package-scoped changelogs (one per package) plus an overall monorepo changelog. Tools like `lerna-changelog` or `changesets` handle this well.
+- **Dependency update visibility**: Group automated dependency updates (Dependabot, Renovate) into a "Dependencies" section. Prevents noise from hiding in "Chores" or "Other".
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Manual changelog writing | Gets skipped or outdated | Auto-generate from commits |
+| Only changelog at release | Users want to see what's coming | Always maintain Unreleased section |
+| No version tags | Can't generate diff-based changelog | Git tag every release with semver |
+| Ignoring Conventional Commits | Changelog is a mess of random messages | Enforce commit convention in CI |
+| Single changelog for monorepo | Hard to see per-package changes | Per-package changelogs + summary |
+| Breaking changes not highlighted | Users upgrade and things break | Breaking changes as first section |
+| No migration notes | Users don't know how to migrate | Include migration guide for breaking changes |
+| Stale generated file | Doesn't reflect current state | Generate on CI, not committed manually |
+
+## Performance Optimization
+
+- **Limit commit history depth**: When generating changelog for large repos, limit to last 1000 commits. Use `git log --max-count=1000` to avoid slow full-history traversal.
+- **Cache tag-to-commit mapping**: Cache the tag-to-commit hash mapping. Avoids repeated git operations when rendering multiple changelogs (e.g., per-package in monorepo).
+- **Incremental generation**: Only process commits since the last generated changelog entry. Append new entries at the top of the Unreleased section.
+- **Parallel monorepo generation**: Generate per-package changelogs in parallel. Use a thread pool for repos with 10+ packages. Recombine into a summary changelog.

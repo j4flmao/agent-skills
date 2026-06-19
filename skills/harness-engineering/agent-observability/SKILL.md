@@ -388,3 +388,148 @@ User Request: "Summarize the Q3 financial report and compare to Q2"
 - **safety-guardrails**: Anomaly detection feeds into safety monitoring systems
 
 <!-- COMPRESSION: agent-observability | reasoning-traces + otel + distributed-tracing + audit-logs + anomaly-detection + cost-tracking | v2.0.0 -->
+
+## Implementation Patterns
+
+### Agent Trace Collector
+
+```python
+from typing import Dict, List, Optional, Any
+from datetime import datetime
+import json
+import uuid
+
+class AgentTrace:
+    def __init__(self, agent_id: str, session_id: str):
+        self.trace_id = str(uuid.uuid4())
+        self.agent_id = agent_id
+        self.session_id = session_id
+        self.spans: List[Dict] = []
+        self.start_time = datetime.utcnow()
+
+    def start_span(self, name: str, parent_span_id: Optional[str] = None) -> str:
+        span_id = str(uuid.uuid4())[:16]
+        span = {
+            "span_id": span_id,
+            "trace_id": self.trace_id,
+            "parent_span_id": parent_span_id,
+            "name": name,
+            "start_time": datetime.utcnow().isoformat() + "Z",
+            "attributes": {},
+            "events": [],
+            "status": "ok",
+        }
+        self.spans.append(span)
+        return span_id
+
+    def end_span(self, span_id: str, status: str = "ok", attributes: Optional[Dict] = None):
+        for span in self.spans:
+            if span["span_id"] == span_id:
+                span["end_time"] = datetime.utcnow().isoformat() + "Z"
+                span["status"] = status
+                if attributes:
+                    span["attributes"].update(attributes)
+
+    def add_event(self, span_id: str, name: str, attributes: Optional[Dict] = None):
+        for span in self.spans:
+            if span["span_id"] == span_id:
+                span["events"].append({
+                    "name": name,
+                    "timestamp": datetime.utcnow().isoformat() + "Z",
+                    "attributes": attributes or {},
+                })
+
+    def to_dict(self) -> Dict:
+        return {
+            "trace_id": self.trace_id,
+            "agent_id": self.agent_id,
+            "session_id": self.session_id,
+            "duration_ms": (datetime.utcnow() - self.start_time).total_seconds() * 1000,
+            "spans": self.spans,
+        }
+
+
+class CostTracker:
+    def __init__(self):
+        self.entries: List[Dict] = []
+        self.pricing = {
+            "gpt-4": {"input": 0.03, "output": 0.06},
+            "gpt-3.5-turbo": {"input": 0.0015, "output": 0.002},
+            "claude-3": {"input": 0.015, "output": 0.075},
+        }
+
+    def track_call(self, model: str, input_tokens: int, output_tokens: int, agent_id: str):
+        pricing = self.pricing.get(model, {"input": 0.01, "output": 0.03})
+        cost = (input_tokens / 1000 * pricing["input"]) + (output_tokens / 1000 * pricing["output"])
+        self.entries.append({
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "agent_id": agent_id,
+            "model": model,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "cost": round(cost, 6),
+        })
+
+    def get_total_cost(self, agent_id: Optional[str] = None) -> float:
+        entries = self.entries
+        if agent_id:
+            entries = [e for e in entries if e["agent_id"] == agent_id]
+        return round(sum(e["cost"] for e in entries), 4)
+
+    def get_report(self) -> str:
+        total = sum(e["cost"] for e in self.entries)
+        by_model = {}
+        for e in self.entries:
+            by_model[e["model"]] = by_model.get(e["model"], 0) + e["cost"]
+        lines = ["## Cost Report"]
+        lines.append(f"Total Cost: ${total:.4f}")
+        for model, cost in sorted(by_model.items(), key=lambda x: -x[1]):
+            lines.append(f"  {model}: ${cost:.4f}")
+        lines.append(f"Total Calls: {len(self.entries)}")
+        return "\n".join(lines)
+```
+
+## Architecture Decision Trees
+
+### Observability Signal Selection for Agents
+
+```
+What aspect of agent behavior to observe?
+├── Reasoning path (what the agent thought)
+│   └── Reasoning traces: span per reasoning step with input/output
+│       ├── Debug incorrect decisions
+│       ├── Validate safety constraints
+│       └── Optimize prompt chains
+│
+├── Tool usage (what tools were called)
+│   └── Tool call spans: arguments, results, duration
+│       ├── Track tool success/failure rates
+│       ├── Detect tool misuse patterns
+│       └── Measure tool latency impact
+│
+├── Cost (how much each interaction costs)
+│   └── Token tracking per model call
+│       ├── Attribution to user/agent/session
+│       ├── Budget enforcement
+│       └── Cost optimization
+│
+└── Safety (did the agent violate policies)
+    └── Audit events: policy checks, guardrail triggers, violations
+        ├── Immutable audit log
+        ├── Violation rate trending
+        └── Root cause investigation
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Not tracing agent reasoning | Can't debug why agent made wrong decision | Trace every LLM call with input/output |
+| Cost tracking with stale pricing | Budget reports are inaccurate | Update pricing table on model/version change |
+| No audit log immutability | Tampered logs can't be used for compliance | Cryptographic hash chain on audit entries |
+| Alerting on absence without baseline | Too many false positives | Establish baseline metrics, alert on deviation |
+
+## Performance Optimization
+
+- **Sampled reasoning trace storage**: Store full reasoning traces for 1% of sessions. Store abbreviated traces (metadata only) for the rest. Reconstruct full trace on demand via log aggregation.
+- **Async cost computation**: Compute cost asynchronously via message queue. Don't block the main agent loop for cost tracking. Batch cost entries for efficient storage.

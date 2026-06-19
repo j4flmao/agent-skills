@@ -152,6 +152,45 @@ Modern mobile apps can detect documents in camera preview and auto-capture them.
 
 Live filters during camera preview require GPU-accelerated processing via Metal (iOS) or OpenGL ES/Vulkan (Android). Approach: (a) capture frame as `CVPixelBuffer` (iOS) or `Image` (Android) from camera output, (b) apply GPU shader pipeline: color matrix adjustment → lookup table (LUT) → bloom → vignette, (c) render filtered result to preview layer. For iOS: `AVCaptureVideoDataOutputSampleBufferDelegate` + `MetalPerformanceShaders` or `CIFilter` chain. For Android: `CameraX ImageAnalysis` + `RenderScript` or `AGSL` (Android GPU Shading Language) shaders. Avoid CPU-side pixel processing at 30fps — always use GPU pipeline. Common filters: beauty (skin smoothing, tone adjustment), vintage (sepia, grain), cinematic (color grading LUT), bokeh (portrait mode with depth). Performance budget: filter processing must complete in <16ms for 60fps preview. Downscale preview to 720p for filter processing, keep full resolution only for capture.
 
+### Video Encoding Format Comparison
+
+| Format | Compression | Quality | Encoding Speed | Decode Support |
+|--------|------------|---------|---------------|----------------|
+| H.264 (AVC) | Good (1x) | Good | Fast | Universal — all devices |
+| H.265 (HEVC) | Better (2x H.264) | Better | Slower | iOS 11+, Android 5+ hardware |
+| VP9 | Better (1.5x H.264) | Good | Slow | Android native, iOS via software |
+| AV1 | Best (3x H.264) | Best | Very slow (real-time encoding limited) | Google Pixel 7+, iOS 17+ |
+| ProRes | Uncompressed | Lossless | Fast | iOS 15+ (iPhone 13 Pro+)
+
+For most mobile apps: use H.265 on devices that support it (hardware encoder), fallback to H.264 on older devices. AV1 encoding is not yet practical for real-time mobile capture but is the future. Always test encode/decode speed vs file size tradeoff for your use case.
+
+### Video Recording Quality Decision
+```
+Target use for recorded video?
+├── Social media share (TikTok, Instagram, Stories)
+│   → 1080p@30fps, H.264, 8Mbps bitrate, stereo audio
+├── Professional/editing → 4K@60fps, H.265, 50Mbps, ProRes log
+│   Only on devices with hardware encoding support
+├── Preview/thumbnail only → 720p@30fps, H.264, 4Mbps
+├── Video call / streaming → 720p@30fps, H.264, 2Mbps, adaptive bitrate
+└── Document/archive → 1080p@30fps, H.265, 12Mbps, keep original
+```
+
+### Image Format Selection Decision
+```
+Primary platform?
+├── iOS-only → HEIF (HEIC) — 50% smaller than JPEG, same quality
+│   iOS 11+, hardware encode/decode, preserves depth data
+├── Android-only → WebP — 25-35% smaller than JPEG
+│   Android 4.0+ (decode), 4.3+ (encode), support varies by API
+├── Cross-platform upload → JPEG (most compatible, widely supported)
+│   Quality 80-85 for photos, 70-75 for thumbnails
+├── Cross-platform with progressive → AVIF (next-gen)
+│   50% smaller than JPEG, limited device support, slower encode
+└── Lossless needed → PNG (never use for photos, use for screenshots/ui)
+    Huge file size, acceptable only for UI assets
+```
+
 ## Camera Benchmark Decision Tree
 
 ```
@@ -181,6 +220,23 @@ Camera performance concern?
 | iCloud photo not downloaded | PHPicker blank entries | Wait for download or show placeholder |
 | QR scan in low light | No detection | Torch toggle, manual entry fallback |
 | Front camera orientation wrong | Mirrored selfie | Mirror output for front camera, respect EXIF orientation |
+
+### Video Compression & Transcoding Pipeline
+
+For upload-ready video, implement a compression pipeline that balances quality and file size. Steps: (1) check device capabilities — prefer hardware encoder (iOS `AVAssetWriter` with `AVVideoCodecTypeHEVC`, Android `MediaCodec` with `MIME_TYPE_HEVC`), fallback to software if unavailable, (2) set target resolution — never upscale, always downscale (4K→1080p for most uploads), (3) configure bitrate — variable bitrate (VBR) for quality efficiency, constant bitrate (CBR) for predictable file size, (4) set keyframe interval — every 2 seconds (60 frames at 30fps) for seekability, (5) set frame rate — 30fps for general video, 60fps only if action/motion critical, (6) apply audio coding — AAC at 128kbps stereo, downmix multichannel to stereo. Implementation: Android uses `MediaMuxer` with `MediaCodec` encoder. iOS uses `AVAssetWriter` with `AVAssetWriterInput`. For cross-platform: use FFmpeg via mobile bindings (`mobile-ffmpeg`), but prefer platform-native encoders for battery efficiency and speed.
+
+### Trimming & Editing Patterns
+```
+Video editing capability needed?
+├── Trim only → AVPlayer (iOS) / VideoView (Android) with range slider
+│   Use CMTimeRange / MediaMetadataRetriever for frame extraction
+├── Combine clips → AVMutableComposition / MediaMuxer sequential concatenation
+│   Re-encode needed if codecs differ between clips
+├── Add overlay → AVVideoComposition (iOS) / MediaCodec with GPU shader (Android)
+│   Overlay images, text, watermarks — GPU pipeline for performance
+└── Audio replace → AVMutableComposition track insertion / AudioTrack mixing
+    Maintain sync with original video timeline via CMTime mapping
+```
 
 ### Troubleshooting Checklist
 
@@ -318,6 +374,96 @@ class CameraController: NSObject {
 }
 ```
 
+### Video Capture with AVFoundation (iOS)
+```swift
+extension CameraController: AVCaptureFileOutputRecordingDelegate {
+    func startVideoRecording() {
+        guard let videoOutput = videoOutput as? AVCaptureMovieFileOutput else { return }
+        let outputPath = NSTemporaryDirectory().appending("video_\(Date().timeIntervalSince1970).mp4")
+        let outputURL = URL(fileURLWithPath: outputPath)
+        videoOutput.startRecording(to: outputURL, recordingDelegate: self)
+    }
+
+    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo url: URL,
+                    from connections: [AVCaptureConnection], error: Error?) {
+        if let error = error {
+            print("Recording error: \(error.localizedDescription)")
+            return
+        }
+        compressVideo(inputURL: url) { compressedURL in
+            // Upload compressed video
+            uploadVideo(compressedURL)
+        }
+    }
+
+    func compressVideo(inputURL: URL, completion: @escaping (URL) -> Void) {
+        let asset = AVAsset(url: inputURL)
+        guard let exportSession = AVAssetExportSession(
+            asset: asset, presetName: AVAssetExportPreset1920x1080
+        ) else { return }
+        let outputURL = URL(fileURLWithPath: NSTemporaryDirectory()
+            .appending("compressed_\(Date().timeIntervalSince1970).mp4"))
+        exportSession.outputURL = outputURL
+        exportSession.outputFileType = .mp4
+        exportSession.shouldOptimizeForNetworkUse = true
+        exportSession.exportAsynchronously {
+            DispatchQueue.main.async {
+                completion(outputURL)
+            }
+        }
+    }
+}
+```
+
+### Android CameraX Video Capture
+```kotlin
+class VideoCaptureFragment : Fragment() {
+    private var videoCapture: VideoCapture? = null
+    private var isRecording = false
+
+    private fun startCamera() {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
+        cameraProviderFuture.addListener({
+            val cameraProvider = cameraProviderFuture.get()
+            val preview = Preview.Builder().build().also {
+                it.setSurfaceProvider(viewFinder.surfaceProvider)
+            }
+            videoCapture = VideoCapture.Builder()
+                .setVideoFrameRate(30)
+                .setBitRate(8_000_000) // 8 Mbps for 1080p
+                .setTargetResolution(Size(1920, 1080))
+                .build()
+
+            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+            cameraProvider.bindToLifecycle(this, cameraSelector, preview, videoCapture)
+        }, ContextCompat.getMainExecutor(requireContext()))
+    }
+
+    fun toggleRecording() {
+        if (isRecording) {
+            videoCapture?.stopRecording()
+            isRecording = false
+        } else {
+            val file = File(requireContext().cacheDir, "video_${System.currentTimeMillis()}.mp4")
+            val outputOptions = VideoCapture.OutputFileOptions.Builder(file).build()
+            videoCapture?.startRecording(
+                outputOptions,
+                ContextCompat.getMainExecutor(requireContext()),
+                object : VideoCapture.OnVideoSavedCallback {
+                    override fun onVideoSaved(output: VideoCapture.OutputFileResults) {
+                        compressAndUpload(Uri.fromFile(file))
+                    }
+                    override fun onError(videoCaptureError: Int, message: String, cause: Throwable?) {
+                        showError("Video recording failed: $message")
+                    }
+                }
+            )
+            isRecording = true
+        }
+    }
+}
+```
+
 ### React Native Vision Camera — QR Scanner
 ```typescript
 import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
@@ -347,6 +493,58 @@ export function QRScanner({ onCodeScanned }: { onCodeScanned: (value: string) =>
     />
   );
 }
+```
+
+### Camera Hardware Feature Detection
+```
+Camera features needed?
+├── Flash / Torch → Check hasFlash (iOS) / isFlashSupported (Android)
+│   Torch for video light, flash for still photo
+│   Never assume flash is available — always check
+├── Optical zoom (hardware) → device.activeFormat.videoZoomFactor (iOS)
+│   Optical zoom range: typically 1x-3x (iPhone Pro: 1x-5x)
+│   Digital zoom beyond optical range degrades quality
+├── HDR capture → supportsHighResolutionPhoto (iOS) / isHdrSupported (Android)
+│   HDR merges multiple exposures — better dynamic range
+│   Increases processing time and file size
+├── Portrait mode / Depth → isDepthDataDeliverySupported (iOS) / Depth API (Android)
+│   Requires dual camera (iOS) or time-of-flight sensor (Android)
+│   Depth data enables bokeh effect and AR occlusion
+├── Night mode → Camera2 AUTO mode (Android) / AVCapturePhotoOutput.isAppleProRAWSupported (iOS)
+│   Automatically activates in low light (<10 lux)
+│   Longer exposure — warn user to hold steady
+└── Macro photography → minFocusDistance (iOS) / isAutoFocusSupported near range
+    Requires ultra-wide camera with macro focus
+    Closest focus distance typically 2cm (iPhone 13 Pro+)
+```
+
+### Performance Measurement & Budget Table
+
+| Metric | Budget | Measurement Tool |
+|--------|--------|-----------------|
+| Shutter-to-preview latency | <500ms | `AVCapturePhotoOutput` delegate timing |
+| Frame processing (30fps) | <33ms per frame | `CADisplayLink` / `Choreographer` |
+| Capture memory | <200MB | Xcode Memory Gauge / Android Profiler |
+| Video encode (1080p) | <100ms per GOP | `AVAssetWriter` delegate timing |
+| Battery during capture | <400mW | Xcode Energy Log / BatteryManager |
+| Image compression | <500ms per 12MP | Measure before/after compression call |
+| QR detection latency | <200ms | `AVCaptureMetadataOutput` timing |
+| App termination rate | <0.1% on camera screen | Crash reporting provider |
+
+### Multi-Camera Switching Patterns
+```
+Seamless camera switching (front/back/ultrawide/tele)?
+├── Single-camera device → Simple switch, pause session, reconfigure input
+│   Brief black frame during switch is acceptable
+├── Multi-camera device (iPhone Pro, Pixel Pro) → Simultaneous camera streaming
+│   iOS: AVCaptureMultiCamSession (up to 4 concurrent inputs)
+│   Android: CameraX concurrent camera (API 30+)
+│   Pre-warm inactive camera to eliminate switch latency
+│   Cross-fade between camera feeds during switch
+└── Zoom-dependent camera switch → Auto-switch at focal length thresholds
+    1x → Main camera (wide), 2x → Telephoto, <1x → Ultra-wide
+    Show a smooth zoom transition (not a hard cut)
+    Disable auto-switch if user is recording video (avoid mid-recording camera change)
 ```
 
 ## References

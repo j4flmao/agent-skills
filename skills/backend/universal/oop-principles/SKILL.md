@@ -339,6 +339,169 @@ Target: High cohesion, loose coupling. Measure: a change in module A should affe
 | Copy-pasted code blocks | DRY | Extract method/class |
 | Unused parameters, abstract base classes with one subclass | YAGNI | Remove them |
 
+## Design Patterns by Principle
+
+### Patterns That Enforce SRP
+| Pattern | Description | When |
+|---------|-------------|------|
+| **Facade** | Simplified interface to complex subsystem | Complex subsystem access |
+| **Command** | Encapsulate request as object | Undoable operations, queuing |
+| **Strategy** | Encapsulate interchangeable algorithms | Varying behavior by context |
+| **Specification** | Business rules as composable objects | Complex validation logic |
+
+### Patterns That Enforce OCP
+| Pattern | Description | When |
+|---------|-------------|------|
+| **Strategy** | New algorithms via new implementations | Adding payment types, sort orders |
+| **Template Method** | Skeleton in base, steps in subclasses | Algorithm with invariant steps |
+| **Decorator** | Add behavior without modifying class | Cross-cutting concerns (logging, caching) |
+| **Visitor** | New operations on existing hierarchy | Adding reporting to stable types |
+
+### Patterns That Support DIP
+| Pattern | Description | When |
+|---------|-------------|------|
+| **Dependency Injection** | Inject dependencies via constructor | All service classes |
+| **Factory** | Abstract object creation | Conditional or complex construction |
+| **Service Locator** | Centralized service registry | Legacy code migration (use DI preferrably) |
+| **Abstract Factory** | Families of related objects | Cross-platform or theme-aware creation |
+
+## Code Smell Detection in Practice
+
+```typescript
+// Heuristic-based code smell detection
+
+interface CodeSmell {
+  name: string;
+  pattern: RegExp;
+  severity: 'low' | 'medium' | 'high';
+  principle: string;
+  fix: string;
+}
+
+const codeSmells: CodeSmell[] = [
+  {
+    name: 'Primitive Obsession',
+    pattern: /: string\s*\n/,
+    severity: 'medium',
+    principle: 'Encapsulation',
+    fix: 'Wrap primitive in value object (Email, PhoneNumber, Money)',
+  },
+  {
+    name: 'Data Clump',
+    pattern: /\(.*address.*city.*zip.*\)/i,
+    severity: 'medium',
+    principle: 'DRY / High Cohesion',
+    fix: 'Extract clump into Address value object',
+  },
+  {
+    name: 'Switch Statement Smell',
+    pattern: /switch\s*\(.*type|switch\s*\(.*kind/,
+    severity: 'high',
+    principle: 'OCP',
+    fix: 'Replace with polymorphism / Strategy pattern',
+  },
+  {
+    name: 'Feature Envy',
+    pattern: /\w+\.get\w+\(\)\.\w+|get\w+\(\)\.get\w+\(\)/,
+    severity: 'medium',
+    principle: 'Information Expert / Low Coupling',
+    fix: 'Move method to the class that has the data',
+  },
+  {
+    name: 'Message Chain',
+    pattern: /\.\w+\(\)\.\w+\(\)\.\w+\(\)/,
+    severity: 'medium',
+    principle: 'Law of Demeter',
+    fix: 'Add delegating method to intermediate object',
+  },
+];
+```
+
+## Refactoring Plan Template
+
+```typescript
+// Ordered refactoring plan for a hypothetical OrderService
+const refactoringPlan = [
+  {
+    step: 1,
+    action: 'Extract OrderValidator from OrderService',
+    files: ['src/orders/OrderService.ts', 'src/orders/OrderValidator.ts'],
+    principle: 'SRP',
+    risk: 'low',
+    testCoverage: 'required before',
+  },
+  {
+    step: 2,
+    action: 'Replace payment switch statement with PaymentProcessorStrategy',
+    files: ['src/orders/OrderService.ts', 'src/payments/PaymentProcessor.ts'],
+    principle: 'OCP',
+    risk: 'medium',
+    testCoverage: 'required before and after',
+  },
+  {
+    step: 3,
+    action: 'Introduce OrderRepository interface for Database dependency inversion',
+    files: ['src/orders/OrderService.ts', 'src/orders/OrderRepository.ts', 'src/orders/PostgresOrderRepository.ts'],
+    principle: 'DIP',
+    risk: 'medium',
+    testCoverage: 'required after',
+  },
+  {
+    step: 4,
+    action: 'Replace boolean flags with discriminated union for order status',
+    files: ['src/orders/Order.ts', 'src/orders/OrderStatus.ts'],
+    principle: 'Encapsulation / OCP',
+    risk: 'low',
+    testCoverage: 'existing coverage sufficient',
+  },
+]; // Each step is reversible — can rollback independently
+```
+
+## Production Considerations
+
+| Concern | Practice |
+|---------|----------|
+| Over-abstraction | AHA principle: wait for 3+ duplications before extracting |
+| Performance vs purity | Pragmatic: violate principles for performance when measured, document the tradeoff |
+| Team consistency | Use linters (eslint-plugin-sonarjs, tslint-sonarts) to enforce rules |
+| Migration cost | Refactor in small, testable increments. Never big-bang refactor |
+| Principle conflict | SRP vs Performance: sometimes a single class is faster. Choose based on measured need |
+| Legacy code focus | Apply strangler pattern: write new code following principles, leave old code alone |
+| YAGNI vs extensibility | Build for current needs only. Extract when patterns emerge, not when anticipated |
+
+## Security Considerations
+
+| Concern | Principle | Practice |
+|---------|-----------|----------|
+| Data exposure | Encapsulation | Never expose internal collections — use defensive copies |
+| Injection | DIP | Validate all inputs before passing to dependencies |
+| Authorization | SRP | Authorization logic belongs in dedicated guard classes, not mixed with business logic |
+| Secret leakage | DIP | Inject secrets via config, never hardcode. Use Vault integration |
+| Immutability | Encapsulation | Prefer readonly/immutable objects for data transfer — prevents accidental mutation |
+
+## Performance Considerations
+
+| Concern | Principle | Practice |
+|---------|-----------|----------|
+| Inline vs extracted | DRY | Hot path code may benefit from inlining despite DRY violation — document why |
+| Polymorphism overhead | OCP | Virtual dispatch is cheap (<1µs). Profile before optimizing |
+| Indirection cost | DIP | DI container overhead is ~10-100µs per resolution. Singleton scoping reduces it |
+| Small objects | Encapsulation | Value objects create GC pressure. Pool or cache frequently created types |
+| Defensive copying | Encapsulation | Copy-on-read can be expensive for large collections. Use ReadonlyCollection wrapper instead |
+
+## Anti-Patterns
+
+| Anti-Pattern | Why | Fix |
+|---|---|---|
+| God Class | One class does everything — violates SRP | Decompose into focused classes |
+| Shotgun Surgery | One change affects many classes — low cohesion | Group related behavior together |
+| Divergent Change | One class changed for different reasons — SRP violation | Split by change reason |
+| Feature Envy | Method more interested in another class | Move method to the class it envies |
+| Inappropriate Intimacy | Classes too familiar with each other's internals | Reduce coupling, use mediator |
+| Lazy Class | Class does too little | Inline into client or merge with related class |
+| Speculative Generality | Unused abstractions — YAGNI violation | Remove unused interfaces/classes |
+| Message Chains | a.getB().getC().doSomething() — Law of Demeter | Add delegating methods |
+
 ## Rules
 - No `Manager`, `Util`, or `Helper` classes — they indicate SRP violations.
 - No `switch`/`if-else` on type codes — use polymorphism instead.
@@ -349,6 +512,9 @@ Target: High cohesion, loose coupling. Measure: a change in module A should affe
 - No speculatively generic code — build only for current requirements.
 - DRY within a bounded context; OK to duplicate across contexts.
 - Test for behavior, not implementation — tests should not break on refactor.
+- Principle violations are acceptable when measured performance demands it — document the tradeoff.
+- Code smell detection is automated (CI linting) for PR review.
+- Refactoring without test coverage is not refactoring — it's rewriting.
 
 ## References
   - references/composition-vs-inheritance.md — Composition over Inheritance

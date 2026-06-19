@@ -355,3 +355,206 @@ class FlagEvaluator {
   - references/flag-strategies.md — Flag Strategies
 ## Handoff
 `backend-testing` for flag toggle testing and integration test patterns
+
+## Implementation Patterns
+
+### Feature Flag Client
+
+```typescript
+// Type-safe feature flag evaluator
+interface FlagConfig {
+  key: string;
+  type: 'boolean' | 'string' | 'number' | 'json';
+  defaultValue: boolean | string | number | Record<string, unknown>;
+  rules?: FlagRule[];
+}
+
+interface FlagRule {
+  condition: (context: FlagContext) => boolean;
+  value: boolean | string | number | Record<string, unknown>;
+}
+
+interface FlagContext {
+  userId?: string;
+  tenantId?: string;
+  region?: string;
+  plan?: string;
+  percentage?: number;
+  [key: string]: unknown;
+}
+
+class FeatureFlagClient {
+  private flags: Map<string, FlagConfig> = new Map();
+  private cache: Map<string, CachedEvaluation> = new Map();
+  private cacheTTL = 30_000; // 30 seconds
+
+  constructor(private sdkEndpoint?: string) {}
+
+  loadFlags(configs: FlagConfig[]): void {
+    for (const config of configs) {
+      this.flags.set(config.key, config);
+    }
+  }
+
+  isEnabled(key: string, context?: FlagContext): boolean {
+    const value = this.evaluate(key, context);
+    return Boolean(value);
+  }
+
+  getValue<T>(key: string, context?: FlagContext): T {
+    return this.evaluate(key, context) as T;
+  }
+
+  private evaluate(key: string, context?: FlagContext): unknown {
+    const cacheKey = this.cacheKey(key, context);
+    const cached = this.cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
+      return cached.value;
+    }
+
+    const config = this.flags.get(key);
+    if (!config) {
+      return undefined;
+    }
+
+    // Check rules in order — first match wins
+    if (config.rules && context) {
+      for (const rule of config.rules) {
+        try {
+          if (rule.condition(context)) {
+            this.setCache(cacheKey, rule.value);
+            return rule.value;
+          }
+        } catch {
+          continue;
+        }
+      }
+    }
+
+    // Percentage rollout
+    if (context?.userId && config.type === 'boolean') {
+      const hash = this.hashUserId(key, context.userId);
+      const defaultVal = config.defaultValue as boolean;
+      if (context.percentage !== undefined) {
+        const pct = typeof context.percentage === 'number' ? context.percentage : 0;
+        const inPercentage = (hash % 100) < pct;
+        if (inPercentage) return !defaultVal;
+      }
+    }
+
+    this.setCache(cacheKey, config.defaultValue);
+    return config.defaultValue;
+  }
+
+  private hashUserId(flagKey: string, userId: string): number {
+    let hash = 0;
+    const str = `${flagKey}:${userId}`;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash);
+  }
+
+  private cacheKey(key: string, context?: FlagContext): string {
+    if (!context?.userId) return key;
+    return `${key}:${context.userId}`;
+  }
+
+  private setCache(key: string, value: unknown): void {
+    this.cache.set(key, { value, timestamp: Date.now() });
+    // Evict stale entries
+    if (this.cache.size > 1000) {
+      const now = Date.now();
+      for (const [k, v] of this.cache) {
+        if (now - v.timestamp > this.cacheTTL * 2) {
+          this.cache.delete(k);
+        }
+      }
+    }
+  }
+
+  invalidateCache(): void {
+    this.cache.clear();
+  }
+}
+
+// Usage
+const flags = new FeatureFlagClient();
+flags.loadFlags([
+  {
+    key: 'new-checkout-flow',
+    type: 'boolean',
+    defaultValue: false,
+    rules: [
+      {
+        condition: (ctx) => ctx.plan === 'enterprise',
+        value: true,
+      },
+      {
+        condition: (ctx) => ctx.userId === 'internal-test-user',
+        value: true,
+      },
+    ],
+  },
+  {
+    key: 'max-upload-size',
+    type: 'number',
+    defaultValue: 10,
+    rules: [
+      {
+        condition: (ctx) => ctx.plan === 'enterprise',
+        value: 100,
+      },
+      {
+        condition: (ctx) => ctx.plan === 'pro',
+        value: 50,
+      },
+    ],
+  },
+]);
+```
+
+## Architecture Decision Trees
+
+### Flag Management Strategy
+
+```
+What's the flag's lifecycle stage?
+├── Development (building new feature)
+│   └── Local/dev flag: hardcoded true in dev env
+│
+├── Testing (QA, staging validation)
+│   └── Environment-specific flag: enabled in staging
+│
+├── Canary/Beta (limited production rollout)
+│   └── Percentage flag: 1% → 5% → 25% → 50%
+│       ├── Monitor error rates after each increase
+│       └── Roll back immediately on issues
+│
+├── Full release (GA)
+│   └── Fully rolled out: 100% of users
+│       └── Schedule cleanup: remove flag code within 2 sprints
+│
+└── Decommissioned
+    └── Code cleanup + flag deleted from system
+        └── Verify no code references remain
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Flags as permanent config | Flag system used as featureless config | Remove flags after full rollout |
+| No owner or removal date | Flags accumulate indefinitely | Every flag has owner + expiry date |
+| Deeply nested flag checks | Code becomes unreadable | One flag per concern, flat evaluation |
+| No kill switch per critical feature | Bad deployment requires rollback | Every critical feature has kill switch |
+| Flag in hot path without caching | Adds 50-200ms per request | Cache evaluations with 30-60s TTL |
+| No logging of flag changes | Can't audit who changed what | Audit log: old value, new value, actor, timestamp |
+
+## Performance Optimization
+
+- **Local evaluation SDK**: Use client-side flag evaluation SDK with streaming updates. Avoids HTTP round-trip for each flag check. Sub-millisecond evaluation for local SDKs.
+- **Batch evaluation**: Evaluate all flags for a context in one call. Avoids per-flag SDK calls. Reduces overhead for pages with 10+ flag checks.
+- **Flag evaluation tree pruning**: For boolean flags with percentage rollouts, skip evaluation for users outside the percentage. Uses hashing for deterministic bucketing.

@@ -1,213 +1,200 @@
 # Smoke Testing Fundamentals
 
 ## Overview
-Smoke Testing is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Smoke testing (also called build verification testing or BVT) runs a minimal set of critical tests to validate that the system is functional enough for further testing. Smoke tests are fast, shallow, and check the most important paths. They act as a gate — if smoke tests fail, the build is rejected without further testing.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Smoke Testing helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Concept 1: Smoke Test Characteristics
+- **Fast**: Complete in under 5 minutes (ideally under 2 minutes)
+- **Critical**: Test only the most important user flows
+- **Shallow**: Verify top-level functionality, not detailed behavior
+- **Stable**: Non-flaky, deterministic, run on every deploy
+- **Early**: Run first in the CI/CD pipeline, before other tests
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Smoke Testing solutions. These principles help maintain code quality and reduce technical debt.
+### Concept 2: Build Verification Testing (BVT)
+BVT validates that a new build is functional enough to deploy. BVT checks: service starts successfully, health endpoints respond, database migrations run, core API returns 200, and static assets load. BVT runs before any other testing.
 
-### Concept 3: Data Management
-Proper data management is essential for Smoke Testing. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Concept 3: Deployment Health Checks
+Post-deployment smoke tests verify the deployed system is healthy. These run after deployment completes and before traffic is routed. Health checks include: HTTP 200 on health endpoint, database connectivity, message queue connectivity, external service connectivity, TLS certificate validity.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+### Concept 4: Canary Smoke Tests
+In canary deployments, smoke tests run against the canary instance before promoting to full production. Canary tests verify: new version handles requests correctly, no increase in error rate, response times within thresholds, and no data integrity issues.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+## Framework Selection
 
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Smoke Testing follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+| Feature | Custom script | Playwright | k6 | curl + bash |
+|---------|--------------|-----------|-----|-------------|
+| Speed | Fast (< 1s) | Moderate (2-5s per page) | Fast (< 1s per request) | Fastest |
+| Depth | Basic HTTP | Full browser | HTTP/gRPC | Basic HTTP |
+| Maintainability | Medium | High | High | Low |
+| Reporting | Custom | Built-in | Built-in | Parse output |
+| CI integration | Custom | Native | Native | Native |
+| Best for | Simple health checks | Full UI smoke | API smoke | Quick ad-hoc checks |
 
 ## Implementation Guide
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Step 1: Define Smoke Test Scope
+Critical paths that should always work:
+```yaml
+smoke_tests:
+  health:
+    - "GET /health — returns 200"
+    - "GET /health/ready — indicates database connectivity"
+    - "GET /health/live — indicates service is alive"
+  core_api:
+    - "POST /api/auth/login — authentication works"
+    - "GET /api/products — product catalog loads"
+    - "POST /api/checkout — checkout initializes"
+    - "GET /api/health/db — database migrations complete"
+  static:
+    - "GET / — homepage loads without errors"
+    - "GET /favicon.ico — static assets served"
+    - "GET /robots.txt — basic routing works"
+```
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Step 2: Write Smoke Tests
+```python
+# tests/smoke/test_deployment_smoke.py
+"""Smoke tests — run immediately after deployment."""
+import httpx
+import pytest
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+class TestDeploymentSmoke:
+    """Fast health and availability checks."""
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+    BASE_URL = "https://staging.example.com"
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+    async def test_health_endpoint(self):
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{self.BASE_URL}/health", timeout=5)
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "healthy"
+            assert "version" in data
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+    async def test_database_connectivity(self):
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{self.BASE_URL}/health/db", timeout=5)
+            assert response.status_code == 200
+            assert response.json()["db_connected"] is True
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+    async def test_core_api_response(self):
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{self.BASE_URL}/api/products?limit=1", timeout=5)
+            assert response.status_code == 200
+            assert "products" in response.json()
+
+    async def test_homepage_loads(self):
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{self.BASE_URL}/", timeout=5)
+            assert response.status_code == 200
+            assert "text/html" in response.headers["content-type"]
+```
+
+### Step 3: Playwright UI Smoke Test
+```typescript
+// tests/smoke/homepage.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Deployment smoke tests', () => {
+  test('homepage loads without console errors', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') errors.push(msg.text());
+    });
+
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    expect(errors).toHaveLength(0);
+    await expect(page.locator('h1')).toBeVisible();
+    await expect(page.locator('[data-testid="nav-bar"]')).toBeVisible();
+  });
+
+  test('login page loads correctly', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.locator('[data-testid="email-input"]')).toBeVisible();
+    await expect(page.locator('[data-testid="login-button"]')).toBeVisible();
+  });
+});
+```
+
+### Step 4: CI Pipeline Integration
+```yaml
+name: CI
+on: [pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm run build
+
+  smoke-test:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - name: Start application
+        run: npm start &
+      - name: Wait for app to be ready
+        run: timeout 30 bash -c 'while ! curl -s http://localhost:3000/health; do sleep 1; done'
+      - name: Run smoke tests
+        run: npx playwright test --project=smoke
+        env:
+          BASE_URL: http://localhost:3000
+
+  full-test-suite:
+    needs: smoke-test
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm test  # Only runs if smoke tests pass
+```
 
 ## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+- Keep smoke tests under 5 minutes total execution time
+- Test only the most critical paths (less than 10 scenarios)
+- Run smoke tests before integration, E2E, or regression tests
+- Include health endpoint, database connectivity, and core API
+- Use fast HTTP-level tests, not full browser tests for basic health
+- Add UI smoke tests for critical page renders
+- Fail the pipeline immediately if any smoke test fails
+- Monitor smoke test execution time — increases indicate problems
+- Run post-deployment smoke tests in production on deployed instances
+- Include version verification in smoke tests
 
 ## Common Pitfalls
+- Smoke tests that take too long (> 10 minutes defeats the purpose)
+- Testing implementation details instead of functionality
+- Including flaky or non-deterministic checks in the smoke suite
+- Not testing database connectivity (migrations can fail silently)
+- Over-testing — smoke tests are shallow by design
+- Ignoring smoke test failures (they should be critical alarms)
+- No version verification (deployed the wrong build)
+- Running smoke tests after other tests (defeats the gating purpose)
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+## Smoke Testing Anti-Patterns
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+### The Drifting Smoke Suite
+Smoke tests that gradually accumulate scenarios until they take 30+ minutes. Keep the smoke suite ruthlessly minimal. When you find yourself adding "just one more" scenario, ask: "Is this truly a build-blocker?"
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+### The Brittle Health Check
+Health endpoints that require database, cache, queue, and 5 external services all to be healthy. In distributed systems, transient failures on non-critical dependencies shouldn't fail the build. Health checks should report dependency status without necessarily failing.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+### The Post-Deployment Blind Spot
+Deployments that pass CI smoke tests but fail in production because of production-specific configuration (environment variables, secrets, service discovery). Run smoke tests against the actual deployed instances, not just CI artifacts.
 
 ## Key Points
-- Understand core Smoke Testing concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- Smoke tests validate the build is functional enough for further testing
+- Complete in under 5 minutes with fewer than 10 critical scenarios
+- Run first in CI/CD pipeline — gate for all further testing
+- Include health endpoint, database connectivity, core API, and basic UI
+- Run post-deployment smoke tests against actual deployed instances
+- Keep the smoke suite minimal — resist scope creep
+- Smoke test failures are build-blocking and require immediate attention
+- Use fast HTTP-level checks for speed; add browser checks selectively

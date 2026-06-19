@@ -382,6 +382,254 @@ Impact: 22% increase in Pro plan conversion, 12% increase in overall revenue
 - Monitor competitor pricing quarterly but do not automatically match.
 - Pricing page must include FAQ section addressing common objections.
 
+## Expanded Decision Trees
+
+### Price Change Strategy Decision Tree
+```
+Why are you changing prices?
+  |-- Costs increased → Communicate cost-based justification; consider modest increase
+  |-- Product value increased → Value-based increase with feature/improvement narrative
+  |-- Competitive repositioning → Strategic change with clear positioning message
+  |-- Revenue growth needed → Segment-sensitive increase; test before rolling out
+
+Who is affected by the price change?
+  |-- New customers only → Implement immediately; no grandfathering needed
+  |-- Existing customers → Grandfather current customers for X months
+  |     |-- Voluntary migration → Offer incentive to switch to new pricing
+  |     |-- Forced migration → Communicate with value justification; set effective date
+
+What is the magnitude of change?
+  |-- <10% increase → Communicate as routine adjustment
+  |-- 10-25% increase → Segment rollout with clear value messaging
+  |-- >25% increase → Staged rollout with grandfathering; expect churn
+  |-- Price decrease → Use as competitive move; time-limited to create urgency
+```
+
+### Discount Strategy Decision Tree
+```
+What is the customer's situation?
+  |-- New customer, first purchase → New customer discount (10-20% first term)
+  |-- Annual commitment → Standard annual discount (15-20%)
+  |-- Competitive threat → Competitive discount (match or slightly beat competitor price)
+  |-- Expansion / upsell → Volume discount or multi-year commitment discount
+  |-- Non-profit / education → Pre-defined discount tier (25-50%)
+  |-- Churn risk → Retention discount (must be time-limited)
+
+Is the discount pre-approved in the discount matrix?
+  |-- YES → Apply within approved limits
+  |-- NO → Does it meet exception criteria?
+        |-- YES → Escalate with business justification
+        |-- NO → Do not offer; hold at standard price
+```
+
+### Packaging Tiers Strategy Decision Tree
+```
+How many customer segments do you serve?
+  |-- 1 segment → Single plan (flat-rate or usage-based) with clear value metric
+  |-- 2-3 segments → 3 tiers (Good-Better-Best with distinct segments per tier)
+  |-- 4+ segments → 3-4 tiers with clear segment targeting; consider custom for largest
+
+What is the price sensitivity across segments?
+  |-- High variance (SMB vs Enterprise) → Tiered with large price jumps between tiers
+  |-- Low variance (all similar size) → Usage-based or flat-rate with minimal tiers
+
+Is there a clear upgrade path?
+  |-- YES (features naturally graduate) → Feature-based tiering with clear limits
+  |-- NO (usage scales independently) → Usage-based pricing with tiered limits
+```
+
+## Templates
+
+### Discount Matrix Template
+```
+# Discount Matrix: {Product}
+
+| Scenario | Discount % | Approval Required | Documentation Needed |
+|----------|-----------|-------------------|---------------------|
+| Annual commitment | 15-20% | None (standard) | N/A |
+| First-year introductory | 10-15% | Sales manager | Customer type |
+| Competitive win-back | 20-30% | Sales director | Competitor quote |
+| Volume (50+ seats) | 15-25% | Sales manager | Seat count |
+| Non-profit / Education | 25-50% | Account manager | Tax-exempt status |
+| Multi-year (2yr+) | 20-30% | Sales director | Contract length |
+| Churn retention | 10-25% | CS manager | Churn risk assessment |
+| Strategic partnership | Custom | VP Sales | Business case |
+
+## Discount Rules
+- No discount >50% without CEO approval
+- Discounts must be documented in CRM
+- Max 20% discount without a time limit (all high discounts must expire)
+- Discounts cannot be stacked (only one discount per transaction)
+```
+
+### Pricing Calculator Template
+```
+# Pricing Calculator: {Product}
+
+## Inputs
+| Input | Value | Notes |
+|-------|-------|-------|
+| Target segments | {segments} | |
+| Users per segment | {count} | |
+| WTP (P50) | ${amount}/mo | From market research |
+| WTP (P25 / P75) | ${amount} / ${amount} | Sensitivity range |
+| COGS per user | ${amount}/mo | Infrastructure + support + payment fees |
+| CAC (average) | ${amount} | Blended across channels |
+| Monthly churn rate | {%} | Current or target |
+| Discount rate | {%} | For LTV calculation |
+
+## Outputs
+| Tier | Price | Users | Revenue | Gross Margin | LTV | LTV/CAC |
+|------|-------|-------|---------|-------------|-----|---------|
+| Free | $0 | {n} | $0 | — | — | — |
+| Pro | ${X} | {n} | ${rev} | {%} | ${ltv} | {ratio} |
+| Enterprise | ${Y} | {n} | ${rev} | {%} | ${ltv} | {ratio} |
+
+## Scenario Analysis
+| Scenario | Price | Users | Revenue | LTV/CAC |
+|----------|-------|-------|---------|---------|
+| Base case | {price} | {n} | ${rev} | {ratio} |
+| Price +20% | {price} | {n-adj} | ${rev} | {ratio} |
+| Price -20% | {price} | {n+adj} | ${rev} | {ratio} |
+| Churn +20% | {price} | {n} | ${rev} | {ratio} |
+
+## Breakeven Analysis
+Months to recover pricing change costs: {months}
+Volume needed to offset price decrease: {% increase}
+```
+
+### Pricing Page A/B Test Plan Template
+```
+# Pricing Page Test: {Test Name}
+
+## Hypothesis
+If we {change} on the pricing page, then {metric} will {direction} by {amount} because {reason}.
+
+## Variants
+Control: {current pricing page description}
+Variant A: {change A}
+Variant B: {change B (optional)}
+
+## Primary Metrics
+- Conversion rate (visitor → trial/purchase)
+- Average revenue per visitor
+- Plan mix (% choosing each tier)
+
+## Secondary Metrics
+- Bounce rate on pricing page
+- Time on pricing page
+- FAQ section engagement
+- Support tickets about pricing
+
+## Guardrail Metrics
+- Trial-to-paid conversion rate (should not decrease)
+- Churn rate (30d after signup — should not increase)
+- Support volume related to billing (should not increase)
+
+## Duration
+Minimum: 2 weeks (or until statistical significance reached)
+Maximum: 4 weeks
+
+## Segmentation
+- New visitors vs returning
+- By traffic source
+- By device type
+```
+
+### Grandfathering Communication Template
+```
+# Pricing Change Communication Plan
+
+## Customers Affected
+{segment description}
+
+## Messages
+
+### New Customers
+"We've updated our pricing to reflect new features: [features]. New pricing effective [date]."
+
+### Existing Customers (Grandfathered)
+"No action needed. You'll continue at your current rate for [time period]. Upgrade anytime to access new features at new pricing."
+
+### Voluntary Migration Offer
+"Switch to our new plans and get [incentive: 3 months at current rate, extra feature, dedicated support]."
+
+## Timeline
+| Date | Action | Owner |
+|------|--------|-------|
+| {date} | Announce to internal teams | Product |
+| {date} | Email existing customers | Customer success |
+| {date} | Update public pricing page | Marketing |
+| {date} | New pricing effective | Engineering |
+
+## Risk Mitigation
+- Monitor churn rate daily during transition (2 weeks before, 2 weeks after)
+- Set up alert for >20% increase in billing-related support tickets
+- Have escalation path for customer complaints
+- Prepare retention discount for churn-risk customers
+```
+
+## Expanded Case Studies
+
+### Case Study 4: Usage-Based Pricing in B2B SaaS
+A B2B document generation API had flat-rate pricing at $199/month with a 5-document limit. Analysis showed: 60% of customers used 1-2 documents/month (overpaying), 30% used 3-5 (good fit), 10% exceeded the limit monthly (frustrated). Customer feedback indicated the flat fee was a barrier for evaluation.
+
+New model: $29/month base + $10 per document. Light users saw 50-85% savings. Heavy users paid more but usage was predictable with a price cap at $199/month for unlimited. Results: signups increased 140% (low barrier). Light user churn reduced 45%. Heavy user revenue increased 35%. Overall revenue increased 28% due to volume growth.
+
+### Case Study 5: Enterprise Tier as Growth Driver
+A B2B collaboration tool had two tiers: Free ($0) and Pro ($12/user/month). Enterprise sales were ad-hoc with no published pricing. The team created a published Enterprise tier at $35/user/month with SSO, advanced admin, audit logs, and SLA. Enterprise tier was positioned as the anchor.
+
+Impact: Pro tier conversion increased 18% (decoy effect). Enterprise direct sales increased 40% (published pricing reduced sales friction). 15% of new Pro signups came from organizations that would eventually upgrade to Enterprise. The Enterprise anchor made Pro feel like a safe, reasonable choice.
+
+### Case Study 6: Annual vs Monthly Optimization
+A SaaS analytics company tested annual vs monthly billing presentation. Control: monthly shown first with annual toggle. Variant A: annual shown first with monthly toggle. Variant B: both shown side-by-side with "save 20%" callout on annual.
+
+Results: Variant A (annual first) increased annual adoption from 28% to 47%. This improved cash flow (12 months upfront) and reduced churn (annual customers churn 40% less). Total LTV increased 23% despite the 20% discount. Key learning: annual billing is not just a discount — it's a commitment mechanism that improves retention.
+
+## Expanded Economic Model
+
+### Unit Economics Sensitivity Table
+| Variable | Base | +10% | -10% | Impact on ARPU |
+|----------|------|------|------|----------------|
+| Price | $29 | $32 | $26 | ±10% |
+| Conversion rate | 5% | 5.5% | 4.5% | ±10% |
+| Churn rate | 5%/mo | 4.5%/mo | 5.5%/mo | ∓10% on LTV |
+| CAC | $150 | $135 | $165 | ±10% on payback |
+| Free-to-paid conversion | 4% | 4.4% | 3.6% | ±10% on paying users |
+
+### Pricing Viability Scorecard
+| Factor | Weight | Score (1-5) | Weighted | Notes |
+|--------|--------|-------------|----------|-------|
+| Value metric alignment | 20% | | | Does price scale with value? |
+| Customer affordability | 15% | | | Is price within WTP range? |
+| Competitive position | 15% | | | Is price competitive? |
+| Margin adequacy | 15% | | | Is gross margin >70%? |
+| Simplicity/comprehension | 15% | | | Can customers understand pricing? |
+| Upgrade path clarity | 10% | | | Is upgrade path obvious? |
+| LTV/CAC health | 10% | | | Is LTV/CAC >3x? |
+
+Threshold: >4.0 = Ready to launch, 3.0-4.0 = Revise, <3.0 = Redesign pricing
+
+## Pricing Governance
+
+### Pricing Review Cadence
+| Frequency | Activity | Participants | Output |
+|-----------|----------|--------------|--------|
+| Monthly | Competitor pricing check | Product marketing | Competitive pricing update |
+| Quarterly | Pricing performance review | Product + Finance + Sales | Pricing adjustment recommendations |
+| Annually | Full pricing strategy review | Leadership + Product | Pricing strategy refresh or confirmation |
+| Event-driven | Response to market change | Product + Leadership | Reactive pricing adjustment plan |
+
+### Pricing Change Approval Matrix
+| Change Type | Approval Needed | Notice Period | Customer Communication |
+|------------|----------------|---------------|----------------------|
+| New tier added | Product lead | Immediate | Optional |
+| Price increase <10% | Product + Finance | 30 days | Email + in-app |
+| Price increase 10-25% | VP Product + CFO | 60 days | Email + in-app + blog |
+| Price increase >25% | CEO + Board | 90 days | Full communication plan |
+| Price decrease | Product + Finance | Immediate | Marketing campaign |
+| Discount policy change | Sales + Finance | 30 days | Sales team training |
+
 ## References
   - references/packaging-tiers.md — Packaging and Tiers
   - references/pricing-experimentation.md — Pricing Experimentation

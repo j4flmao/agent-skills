@@ -387,6 +387,224 @@ See workflow steps 2-7 combined.
 - Every spec must include a context section explaining the problem being solved.
 - Include security considerations for every endpoint and data model.
 
+## Expanded Decision Trees
+
+### Error Handling Strategy Decision Tree
+```
+What type of error is this?
+  |-- Validation error (bad input from client)
+  |     |-- YES --> Return 400 with field-level error messages
+  |-- Authentication/Authorization error
+  |     |-- YES --> Return 401 (missing/invalid auth) or 403 (insufficient permissions)
+  |-- Not found error
+  |     |-- YES --> Return 404 with resource identifier in error message
+  |-- State conflict error (wrong state for operation)
+  |     |-- YES --> Return 409 with current state and expected state
+  |-- Business rule violation (semantic error)
+  |     |-- YES --> Return 422 with details about which rule was violated
+  |-- Rate limit error
+  |     |-- YES --> Return 429 with Retry-After header
+  |-- Downstream dependency error
+        |-- YES --> Is the dependency critical to this operation?
+              |-- YES --> Return 502 (bad gateway) or 503 (service unavailable)
+              |-- NO --> Return degraded response with partial data
+```
+
+### Migration Strategy Decision Tree
+```
+Is the new schema backward-compatible with the old schema?
+  |-- YES --> Expand-contract migration: add new fields, deploy, backfill, remove old fields
+  |-- NO --> Does the data need to be available during migration?
+        |-- YES --> Blue-green or parallel run strategy
+        |-- NO --> Maintenance window with downtime migration
+
+What is the data volume?
+  |-- <10K records --> Simple migration in one deploy
+  |-- 10K-1M records --> Batch migration with progress tracking
+  |-- >1M records --> Parallel migration with validation + switchover
+
+Is this a zero-downtime requirement?
+  |-- YES --> Use feature flags to gradually shift traffic to new schema
+  |-- NO --> Standard deploy with maintenance window
+```
+
+### Deployment Strategy Decision Tree
+```
+What is the risk of this deployment?
+  |-- Low risk (minor change, no schema change)
+  |     |-- YES --> Rolling deploy or direct deploy
+  |-- Medium risk (new feature, schema change with backward compatibility)
+  |     |-- YES --> Feature flag + rolling deploy
+  |-- High risk (breaking change, migration, external API change)
+        |-- YES --> Blue-green deploy or canary release
+
+How many instances are in production?
+  |-- 1 instance --> Blue-green (must have two environments)
+  |-- 2+ instances --> Rolling deploy (one at a time)
+  |-- Auto-scaling group --> Canary (route small % traffic to new version)
+```
+
+## Templates
+
+### Observability Specification Template
+```markdown
+## Observability
+
+### Logging
+| Event | Log Level | Fields | PII |
+|-------|-----------|--------|-----|
+| Request received | INFO | method, path, requestId | No |
+| Validation failed | WARN | field, reason | No |
+| Operation succeeded | INFO | resourceId, duration_ms | No |
+| Downstream failure | ERROR | downstream, status, error | No |
+
+### Metrics
+| Metric | Type | Tags | Alert Threshold |
+|--------|------|------|-----------------|
+| request_duration_ms | Histogram | endpoint, status | P99 > 500ms |
+| request_count | Counter | endpoint, status | N/A |
+| error_rate | Gauge | endpoint | > 1% over 5min |
+
+### Tracing
+- Trace every request end-to-end with correlation ID
+- Include: requestId, spanId, parentSpanId, duration, tags
+- Propagate tracing context to downstream services via headers
+- Sampling rate: 100% for errors, 10% for success
+```
+
+### Security Review Checklist Template
+```
+## Security Considerations
+
+### Authentication
+- [ ] Auth mechanism defined (JWT / API Key / OAuth / Session)
+- [ ] Token expiration and refresh strategy
+- [ ] Password policy (min length, complexity, hashing algorithm)
+- [ ] MFA support (if applicable)
+
+### Authorization
+- [ ] Role/permission model defined for each endpoint
+- [ ] Access control tested for each role
+- [ ] Principle of least privilege applied
+- [ ] Admin endpoints restricted to admin role
+
+### Data Protection
+- [ ] PII fields identified and classified
+- [ ] Encryption at rest (AES-256)
+- [ ] Encryption in transit (TLS 1.2+)
+- [ ] Data retention policy
+- [ ] GDPR/CCPA compliance (data export, deletion)
+
+### API Security
+- [ ] Rate limiting implemented
+- [ ] Input validation on all fields
+- [ ] SQL injection prevention (parameterized queries)
+- [ ] XSS prevention (output encoding)
+- [ ] CSRF protection (state-changing endpoints)
+- [ ] CORS policy configured
+
+### Audit Trail
+- [ ] All state-changing operations logged
+- [ ] Audit log includes: who, what, when, result
+- [ ] Audit logs are immutable
+- [ ] Audit log retention policy
+```
+
+### Integration Contract Template
+```markdown
+## Integration: {External System Name}
+
+### Authentication
+- Method: {API Key / OAuth2 / Basic Auth / Mutual TLS}
+- Credential storage: {vault / environment variable / secret manager}
+- Rotation policy: {frequency}
+
+### Endpoints
+| Method | Path | Request | Response | Rate Limit |
+|--------|------|---------|----------|------------|
+| GET | /api/v1/resource | {params} | {schema} | 100/min |
+
+### Retry Strategy
+- Max retries: 3
+- Backoff: exponential (1s, 4s, 16s)
+- Retry on: 5xx, timeout, network error
+- Do not retry on: 4xx (client error)
+
+### Circuit Breaker
+- Failure threshold: 50% over 30s window
+- Open duration: 60s
+- Half-open: after 60s, allow 1 request to test recovery
+- Fallback: {cached response / error message / queue for later}
+
+### Error Mapping
+| External Error | Mapped Error | Our Response |
+|---------------|--------------|--------------|
+| 400 Bad Request | INVALID_INPUT | 422 with details |
+| 401 Unauthorized | AUTH_FAILED | 502 (downstream issue) |
+| 429 Rate Limited | RATE_LIMITED | 503 with retry-after |
+```
+
+## Expanded Process Patterns
+
+### Pattern 5: Migration Spec
+**When**: Changing existing data model schema
+**Process**: Current schema, target schema, migration SQL, backfill strategy, rollback plan, validation query, performance impact assessment, downtime estimate
+**Output**: Migration plan with forward and rollback scripts
+
+### Pattern 6: Security-Focused Spec
+**When**: Feature handling sensitive data, authentication, authorization, or PII
+**Process**: Cover data classification, encryption requirements, access control model, audit logging, compliance requirements (GDPR, SOC2, HIPAA), penetration testing scope, dependency vulnerability assessment
+**Output**: Spec with security review sign-off required before implementation
+
+### Pattern 7: Performance-Critical Spec
+**When**: Feature with throughput, latency, or scale requirements
+**Process**: Baseline performance numbers, target performance numbers, query plan analysis, caching strategy (CDN, application cache, database cache), connection pooling, batch processing vs real-time, load test plan with scenarios, benchmark comparison against current implementation
+**Output**: Spec with performance test results required before go-live
+
+## Expanded Anti-Patterns
+
+### 7. Spec Without Review
+Writing a spec and sending it straight to implementation without review. Design issues are discovered during implementation or worse — in production. Fix: every spec must go through a review process: technical review (architecture, correctness), security review (auth, data protection), and review against PRD requirements.
+
+### 8. Analysis Paralysis
+Spec is so detailed that it takes longer to write than to implement. Pages of edge case documentation for a simple CRUD endpoint. Fix: match spec depth to feature complexity. Simple change → light spec. Complex feature → full spec. Use the decision tree at the top to calibrate.
+
+### 9. Ignoring the "Why"
+Spec describes what to build but not why the decision was made. Future developers change the implementation because they don't understand the constraints that drove the design. Fix: document design decisions with rationale. "We chose X over Y because Z." Link to relevant ADRs.
+
+### 10. Monolithic Spec
+Writing one giant spec for an epic that should be broken into multiple features. The spec is 20+ pages and nobody reads it all. Fix: one spec per feature (a shippable unit of value). Compose epics from multiple specs. Each spec should be implementable by one team in one sprint.
+
+### 11. No Consideration of Alternatives
+The spec describes one solution as if it's the only option. No mention of alternatives considered or why they were rejected. Fix: include an "Alternatives Considered" section for non-trivial decisions. Document the trade-offs. This helps reviewers understand the full context and catches missed alternatives.
+
+## Expanded Success Metrics
+
+| Metric | Target | How to Measure | Remediation |
+|--------|--------|----------------|-------------|
+| Implementation without questions | >80% of specs | Developer survey after implementation | Review clarity; fill gaps |
+| Spec review time | <2 business days | PR-to-approval time | Reduce spec size; parallel reviews |
+| Design issues caught in review | >50% of issues | Review feedback vs post-impl issues | Strengthen review checklist |
+| Implementation deviation | <15% of specs | Post-impl comparison | Improve spec accuracy; enforce spec adherence |
+| Rollback rate | <5% of migrations | Migration tracking | Better migration testing |
+| Security issues found in review | >90% before code | Security review findings | Add security review step |
+| Time from spec to implementation start | <5 business days | Work tracking | Right-size spec to complexity |
+| Developer satisfaction with spec | >4/5 | Survey after implementation | Solicit feedback; iterate format |
+
+## Spec Review Checklist
+- [ ] Context explains the problem being solved (not just the solution)
+- [ ] API contracts include auth, request schema, response schema, error codes
+- [ ] Data models include all fields with types, constraints, defaults
+- [ ] Migration plan includes rollback
+- [ ] Performance targets are numeric
+- [ ] Error handling defined for every endpoint
+- [ ] Testing plan covers unit, integration, E2E scope
+- [ ] Security considerations documented
+- [ ] Observability (logging, metrics, tracing) defined
+- [ ] Alternatives considered for non-trivial decisions
+- [ ] Spec is implementable as described (no open questions)
+- [ ] Spec size is proportional to feature complexity
+
 ## References
   - references/create-tech-spec-fundamentals.md — Tech Spec Fundamentals
   - references/create-tech-spec-advanced.md — Tech Spec Advanced Topics

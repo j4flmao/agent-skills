@@ -358,5 +358,266 @@ describe('processOrder', () => {
   - references/refactor-guide-code-smells.md — Code Smells Reference
   - references/refactor-guide-fundamentals.md — Refactoring Fundamentals
   - references/refactor-guide-techniques.md — Refactoring Techniques Reference
+## Implementation Patterns
+
+### Code Smell Detector
+
+```python
+import ast
+import re
+from typing import List, Dict, Optional
+from dataclasses import dataclass
+
+@dataclass
+class CodeSmell:
+    type: str
+    location: str
+    description: str
+    severity: str
+    suggestion: str
+
+class PythonSmellDetector:
+    def __init__(self, source_code: str, filepath: str = "<unknown>"):
+        self.source = source_code
+        self.filepath = filepath
+        self.tree = ast.parse(source_code)
+        self.smells: List[CodeSmell] = []
+
+    def detect_all(self) -> List[CodeSmell]:
+        self.detect_long_function()
+        self.detect_too_many_params()
+        self.detect_god_class()
+        self.detect_duplicated_code()
+        self.detect_magic_numbers()
+        self.detect_dead_code()
+        return self.smells
+
+    def detect_long_function(self, max_lines: int = 50):
+        for node in ast.walk(self.tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                lines = node.end_lineno - node.lineno if hasattr(node, 'end_lineno') else 0
+                if lines > max_lines:
+                    self.smells.append(CodeSmell(
+                        type="long_function",
+                        location=f"{self.filepath}:{node.lineno} in {node.name}()",
+                        description=f"Function {node.name}() is {lines} lines (max: {max_lines})",
+                        severity="medium",
+                        suggestion=f"Extract {lines - max_lines} lines into helper functions. "
+                                   f"Look for groups of related logic (validation, formatting, I/O).",
+                    ))
+
+    def detect_too_many_params(self, max_params: int = 5):
+        for node in ast.walk(self.tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                params = [a for a in node.args.args if a.arg != 'self']
+                if len(params) > max_params:
+                    self.smells.append(CodeSmell(
+                        type="too_many_parameters",
+                        location=f"{self.filepath}:{node.lineno} in {node.name}()",
+                        description=f"{node.name}() has {len(params)} parameters (max: {max_params})",
+                        severity="medium",
+                        suggestion="Group related parameters into a dataclass or configuration object. "
+                                   f"Params: {', '.join(p.arg for p in params)}",
+                    ))
+
+    def detect_god_class(self, max_methods: int = 20):
+        for node in ast.walk(self.tree):
+            if isinstance(node, ast.ClassDef):
+                methods = [n for n in ast.walk(node) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+                if len(methods) > max_methods:
+                    self.smells.append(CodeSmell(
+                        type="god_class",
+                        location=f"{self.filepath}:{node.lineno} in class {node.name}",
+                        description=f"Class {node.name} has {len(methods)} methods (max: {max_methods})",
+                        severity="high",
+                        suggestion=f"Split into {len(methods) // 10 + 1} focused classes. "
+                                   f"Group methods by responsibility.",
+                    ))
+
+    def detect_magic_numbers(self):
+        for node in ast.walk(self.tree):
+            if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+                if node.value not in (0, 1, -1, 100) and node.col_offset is not None:
+                    # Check if it's used in a comparison or assignment
+                    parent = self._find_parent(node)
+                    if parent and not isinstance(parent, ast.Assign):
+                        self.smells.append(CodeSmell(
+                            type="magic_number",
+                            location=f"{self.filepath}:{node.lineno}",
+                            description=f"Magic number {node.value}",
+                            severity="low",
+                            suggestion=f"Replace {node.value} with a named constant.",
+                        ))
+
+    def detect_dead_code(self):
+        for node in ast.walk(self.tree):
+            if isinstance(node, ast.FunctionDef):
+                # Check if function has no calls anywhere
+                name = node.name
+                if name.startswith('_') and not self._is_called(name):
+                    pass  # Private methods may be unused — flag only for public
+                elif not name.startswith('_') and not self._is_called(name):
+                    self.smells.append(CodeSmell(
+                        type="dead_code",
+                        location=f"{self.filepath}:{node.lineno}",
+                        description=f"Public function {name}() appears to be unused",
+                        severity="low",
+                        suggestion=f"Remove {name}() or add a caller. If it's a public API, add a usage comment.",
+                    ))
+
+    def detect_duplicated_code(self):
+        lines = self.source.split("\n")
+        seen_blocks: Dict[str, List[int]] = {}
+        for i in range(len(lines) - 4):
+            # Check 4-line blocks for similarity
+            block = "\n".join(lines[i:i+4])
+            # Normalize whitespace
+            normalized = re.sub(r'\s+', ' ', block.strip())
+            if len(normalized) > 40:
+                if normalized not in seen_blocks:
+                    seen_blocks[normalized] = []
+                seen_blocks[normalized].append(i + 1)
+        for block, locations in seen_blocks.items():
+            if len(locations) > 1:
+                self.smells.append(CodeSmell(
+                    type="duplicated_code",
+                    location=f"{self.filepath}:{locations[0]}",
+                    description=f"Duplicated block found at lines {locations}",
+                    severity="medium",
+                    suggestion="Extract the duplicated block into a shared function.",
+                ))
+
+    def _find_parent(self, target_node) -> Optional[ast.AST]:
+        for node in ast.walk(self.tree):
+            for child in ast.iter_child_nodes(node):
+                if child is target_node:
+                    return node
+        return None
+
+    def _is_called(self, name: str) -> bool:
+        for node in ast.walk(self.tree):
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Name) and node.func.id == name:
+                    return True
+                if isinstance(node.func, ast.Attribute) and node.func.attr == name:
+                    return True
+        return False
+```
+
+### Strangler Fig Pattern Implementation
+
+```python
+from typing import Dict, Any, Callable, Optional
+import re
+
+class StranglerFigRouter:
+    """
+    Route traffic to new or legacy implementation based on migration state.
+    Gradually replaces legacy code with new implementation.
+    """
+    def __init__(self):
+        self.routes: Dict[str, Dict] = {}
+
+    def register_route(
+        self,
+        pattern: str,
+        new_impl: Callable,
+        legacy_impl: Callable,
+        migration_pct: float = 0.0,
+    ):
+        self.routes[pattern] = {
+            "new": new_impl,
+            "legacy": legacy_impl,
+            "migration_pct": migration_pct,
+            "active": False,
+        }
+
+    def set_migration_percentage(self, pattern: str, pct: float):
+        if pattern in self.routes:
+            self.routes[pattern]["migration_pct"] = pct
+            self.routes[pattern]["active"] = pct > 0
+
+    def route(self, request_path: str, context: Dict[str, Any] = None) -> Any:
+        for pattern, route in self.routes.items():
+            if re.match(pattern, request_path):
+                if self._should_route_to_new(route, context):
+                    return route["new"](context)
+                return route["legacy"](context)
+        raise ValueError(f"No route for {request_path}")
+
+    def _should_route_to_new(self, route: Dict, context: Dict = None) -> bool:
+        if route["migration_pct"] >= 100:
+            return True
+        if route["migration_pct"] <= 0:
+            return False
+        # Use request ID or user ID for deterministic routing
+        identifier = str(context.get("request_id", context.get("user_id", "")))
+        hash_val = sum(ord(c) for c in identifier)
+        return (hash_val % 100) < route["migration_pct"]
+
+    def get_migration_status(self) -> Dict[str, float]:
+        return {
+            pattern: route["migration_pct"]
+            for pattern, route in self.routes.items()
+        }
+```
+
+## Architecture Decision Trees
+
+### Refactoring Approach Selection
+
+```
+What's the goal and risk level?
+├── Improve readability (low risk)
+│   └── Micro-refactoring: rename, extract, inline
+│       ├── Works within a single function
+│       ├── No behavior change
+│       ├── Safe to do during feature work
+│       └── Review: quick scan, no behavioral testing needed
+│
+├── Improve structure (medium risk)
+│   ├── Extract class/module → Strangler Fig
+│   ├── Split god function → Facade + delegates
+│   ├── Replace conditional with polymorphism → Strategy pattern
+│   └── Review: behavioral tests must pass, feature parity check
+│
+├── Improve performance (high risk)
+│   ├── Algorithm replacement → Dual implementation with comparison
+│   ├── Caching layer → Strangler Fig with shadow read
+│   ├── Database optimization → Migration with rollback plan
+│   └── Review: performance tests + behavioral tests + canary
+│
+└── Architecture change (very high risk)
+    └── Strangler Fig Pattern
+        ├── Monolith → Microservice
+        ├── Synchronous → Async/event-driven
+        ├── Old DB → New DB (dual-write + compare)
+        └── Review: full integration tests, canary, rollback plan
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Big bang rewrite | Extremely high risk, months with no value | Incremental refactoring with Strangler Fig |
+| Mixing refactor with feature | Can't distinguish bug in refactor vs feature | Separate PRs: refactor first, feature second |
+| No tests before refactoring | Can't verify behavior preserved | Write characterization tests first |
+| Over-engineering during refactor | Replacing simple with "clean" but complex | Keep it simple — refactor for clarity, not purity |
+| Refactoring without business value | Wasted effort on code nobody touches | Refactor code that changes frequently |
+| Changing public API without deprecation | Breaks all consumers | Deprecate, migration period, then remove |
+| Ignoring the "why" | Team doesn't understand the motivation | Document motivation in PR description |
+| One massive refactoring PR | Impossible to review | Multiple small PRs, each independently deployable |
+
+## Performance Optimization
+
+- **Characterization test generation**: Use AST analysis to auto-generate tests that capture current behavior. Run generated tests before and after refactoring to verify no behavioral change.
+- **Incremental type annotation**: Use gradual type checking (e.g., mypy in non-strict mode). Add types to functions being refactored first. Let type checker catch regressions during refactoring.
+
+## References
+  - references/refactor-guide-advanced.md — Refactoring Advanced Topics
+  - references/refactor-guide-code-smells.md — Code Smells Reference
+  - references/refactor-guide-fundamentals.md — Refactoring Fundamentals
+  - references/refactor-guide-techniques.md — Refactoring Techniques Reference
+
 ## Handoff
 Hand off to `dev-loop-code-review` for refactoring PR review. Hand off to `dev-loop-tech-debt-tracker` for debt tracking.

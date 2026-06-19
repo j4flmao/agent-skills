@@ -372,3 +372,116 @@ test('signal computed values', () => {
 No artifact produced.
 Next skill: preact-ssr (if SSR needed) or frontend-testing.
 Carry forward: signal-based reactivity, hooks conventions, tiny-bundle mindset.
+
+## Implementation Patterns
+
+### Signal-Based State
+
+```typescript
+import { signal, computed, effect, Signal } from '@preact/signals';
+
+// Reactive state
+const count = signal(0);
+const name = signal('world');
+
+// Computed values (auto-derived)
+const greeting = computed(() => `Hello, ${name.value}!`);
+const doubled = computed(() => count.value * 2);
+
+// Effects (reactions to state changes)
+effect(() => {
+  console.log(`Count changed to: ${count.value}`);
+});
+
+// In a component
+function Counter() {
+  return (
+    <div>
+      <p>{greeting.value}</p>
+      <p>Count: {count.value} (doubled: {doubled.value})</p>
+      <button onClick={() => count.value++}>+</button>
+      <button onClick={() => count.value--}>-</button>
+    </div>
+  );
+}
+```
+
+### Optimized Component Pattern
+
+```typescript
+import { h, Fragment, ComponentChildren } from 'preact';
+import { useRef, useCallback, useEffect } from 'preact/hooks';
+
+// Use memo for expensive renders
+import { memo } from 'preact/compat';
+
+interface ListItemProps {
+  id: string;
+  label: string;
+  onSelect: (id: string) => void;
+}
+
+const ListItem = memo(({ id, label, onSelect }: ListItemProps) => {
+  const handleClick = useCallback(() => onSelect(id), [id, onSelect]);
+  return <li onClick={handleClick}>{label}</li>;
+});
+
+// Portal integration
+import { createPortal } from 'preact/compat';
+
+function Modal({ children }: { children: ComponentChildren }) {
+  const container = useRef(document.getElementById('modal-root')!);
+  return createPortal(<div class="modal-overlay">{children}</div>, container.current);
+}
+
+// Suspense-compatible lazy loading
+import { lazy, Suspense } from 'preact/compat';
+
+const HeavyComponent = lazy(() => import('./heavy-component'));
+
+function App() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HeavyComponent />
+    </Suspense>
+  );
+}
+```
+
+## Architecture Decision Trees
+
+### Preact vs React Decision
+
+```
+Should you use Preact instead of React?
+├── Bundle size is critical (under 10kB budget)
+│   └── Preact (3kB vs React 42kB)
+│
+├── Need full React ecosystem (React Router, Framer Motion)
+│   └── Use Preact compat layer — most libraries work
+│
+├── Need React-specific features (Suspense with concurrent mode)
+│   └── Stick with React — Preact may not match behavior
+│
+├── Building a micro-frontend or widget for embedding
+│   └── Preact — smaller footprint for third-party embedding
+│
+└── New project, no existing React dependency
+    └── Preact is a good default — switch to React later if needed
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Using compat for everything | Bundle grows to React size | Use Preact APIs directly, compat for exceptions |
+| Signals everywhere | Overkill for simple local state | useState for component-local, signals for shared |
+| Not aliasing in bundler | Importing react instead of preact | Configure resolve.alias in bundler |
+| Class components with compat | Unnecessary weight | Functional components + hooks |
+| Mixing preact/compat and preact/hooks | Hook compatibility issues | Consistently use one or the other |
+
+## Performance Optimization
+
+- **Signal-based reactivity over re-renders**: Signals only re-render the specific DOM nodes that depend on them. No virtual DOM diff for the parent component. 10x faster for fine-grained updates.
+- **Aliasing react to preact/compat**: Configure in bundler (vite, webpack) to redirect `react` imports to `preact/compat`. Enables using React ecosystem with Preact's small bundle size.
+- **No synthetic event pooling**: Preact doesn't pool events like React does. No nullification of event properties after callback. Improves performance for event-heavy components.

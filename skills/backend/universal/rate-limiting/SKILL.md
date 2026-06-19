@@ -386,3 +386,92 @@ Rule: Include resource granularity to avoid one slow endpoint
 No artifact produced unless requested.
 Next skill: backend-load-testing — to verify rate limits under traffic.
 Carry forward: rate limit tiers, algorithm choice, key conventions, error response format.
+
+## Implementation Patterns
+
+### Token Bucket Rate Limiter
+
+```python
+import time
+import redis
+from typing import Optional
+
+class TokenBucketRateLimiter:
+    def __init__(self, redis_client: redis.Redis, key_prefix: str = "rate_limit"):
+        self.redis = redis_client
+        self.key_prefix = key_prefix
+
+    def check(self, key: str, max_burst: int, refill_rate: float, tokens: int = 1) -> bool:
+        cache_key = f"{self.key_prefix}:{key}"
+        now = time.time()
+
+        allowed = self._check_lua(cache_key, max_burst, refill_rate, now, tokens)
+        return allowed
+
+    def _check_lua(self, key: str, max_burst: int, refill_rate: float, now: float, tokens: int) -> bool:
+        lua_script = """
+        local key = KEYS[1]
+        local max_burst = tonumber(ARGV[1])
+        local refill_rate = tonumber(ARGV[2])
+        local now = tonumber(ARGV[3])
+        local tokens_needed = tonumber(ARGV[4])
+
+        local bucket = redis.call("HMGET", key, "tokens", "last_refill")
+        local tokens = tonumber(bucket[1] or max_burst)
+        local last_refill = tonumber(bucket[2] or now)
+
+        local elapsed = math.max(0, now - last_refill)
+        local refill = math.min(max_burst, tokens + elapsed * refill_rate)
+
+        if refill >= tokens_needed then
+            local new_tokens = refill - tokens_needed
+            redis.call("HMSET", key, "tokens", new_tokens, "last_refill", now)
+            redis.call("EXPIRE", key, 60)
+            return 1
+        else
+            redis.call("HMSET", key, "tokens", refill, "last_refill", now)
+            redis.call("EXPIRE", key, 60)
+            return 0
+        end
+        """
+        return bool(self.redis.eval(lua_script, 1, key, max_burst, refill_rate, now, tokens))
+```
+
+## Architecture Decision Trees
+
+### Algorithm Selection
+
+```
+What's the traffic pattern?
+├── Steady, predictable traffic
+│   └── Token Bucket
+│       ├── Smooths traffic, allows bursts
+│       └── Good for APIs with occasional spikes
+│
+├── Strict per-second limits
+│   └── Sliding Window Log
+│       ├── Prevent abuse (login, signup)
+│       └── Most accurate, most memory
+│
+├── Simple, low-traffic
+│   └── Fixed Window
+│       └── Simple but allows burst at window boundary
+│
+└── Need both rate and concurrency limits
+    └── Token Bucket + Semaphore
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| In-memory rate limiting for multi-node | Each node has different state | Use Redis for distributed rate limiting |
+| No Retry-After header | Clients can't implement backoff | Always include Retry-After with 429 |
+| Same limit for all endpoints | Heavy endpoints crash under normal load | Per-endpoint limits based on cost |
+| No burst allowance | Perfectly valid traffic gets rejected | Allow 2-5x burst over sustained rate |
+| Global limit only | Single user can exhaust all capacity | Per-user + per-endpoint + global limits |
+
+## Performance Optimization
+
+- **Redis pipelining for batch checks**: Pipeline rate limit checks for requests that hit multiple rate limits. Reduces round-trips from N to 1. Each check is a fast O(1) Lua script.
+- **Local cache for low-rate limits**: Cache rate limit state in local memory for limits with low refill rates (>1s). Write-through to Redis for global consistency. Invalidate on refill event.

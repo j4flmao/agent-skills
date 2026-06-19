@@ -1,213 +1,173 @@
 # Visual Testing Fundamentals
 
 ## Overview
-Visual Testing is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Visual testing verifies that the user interface renders correctly by comparing screenshots against baselines. It catches visual regressions that functional tests miss: CSS changes, layout shifts, font changes, color mismatches, responsive breakpoint issues, and cross-browser rendering differences.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Visual Testing helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Concept 1: Visual Regression Testing
+Compare screenshots of UI components across versions. A baseline screenshot is captured when the UI is known to be correct. Subsequent tests compare new screenshots against the baseline. Differences are flagged as potential regressions for human review.
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Visual Testing solutions. These principles help maintain code quality and reduce technical debt.
+### Concept 2: Baseline Management
+Baselines are the "truth" — correct renderings to compare against. Store baselines in version control alongside test code. Update baselines when visual changes are intentional. Strategies: per-component baselines, per-page baselines, per-viewport baselines.
 
-### Concept 3: Data Management
-Proper data management is essential for Visual Testing. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Concept 3: Diff Thresholds
+Not all pixel differences are bugs. Anti-aliasing, font rendering, and OS-level differences cause minor pixel variations. Set thresholds: max diff pixels (e.g., 100 pixels), max diff ratio (e.g., 0.1%), and color difference tolerance (e.g., 0.2 on a 0-1 scale).
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+### Concept 4: Screenshot Strategies
+- **Full page**: Capture entire scrollable page. Good for comprehensive checks. Slow for long pages.
+- **Viewport**: Capture visible area at specific viewport sizes. Good for responsive testing.
+- **Element**: Capture specific component or element. Fast, focused, good for component libraries.
+- **Story**: Capture individual component states from Storybook. Excellent for design system testing.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+## Framework Comparison
 
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Visual Testing follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+| Feature | Playwright | Cypress + Percy | Chromatic | Applitools | Loki |
+|---------|-----------|----------------|-----------|------------|------|
+| Integration | Built-in | Plugin | Storybook | SDK | Standalone |
+| Hosting | Self-hosted | Percy Cloud | Chromatic Cloud | Applitools Cloud | Self-hosted |
+| Pricing | Free (OSS) | Freemium | Freemium | Paid | Free |
+| Diff detection | Pixel comparison | Smart (Percy CSS) | Smart (Chromatic) | AI-powered (Eyes) | Pixel comparison |
+| Cross-browser | Yes (Chromium, FF, WebKit) | Limited | Limited | Yes | Chromium only |
+| Responsive testing | Built-in viewports | Manual screenshots | Built-in | Built-in | Manual |
+| Baseline storage | Git LFS / file system | Percy Cloud | Chromatic | Applitools | File system |
+| CI integration | Native | GitHub/GitLab | GitHub/GitLab | GitHub/GitLab | GitHub Actions |
+| Best for | Full project visual testing | E2E + visual | Design system / Storybook | Enterprise visual AI | Open-source projects |
 
 ## Implementation Guide
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Step 1: Set Up Playwright Screenshot Tests
+```typescript
+// tests/visual/homepage.spec.ts
+import { test, expect } from '@playwright/test';
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+test.describe('Homepage visual regression', () => {
+  test('homepage matches baseline — desktop', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveSapshot('homepage-desktop.png', {
+      maxDiffPixels: 200,
+      threshold: 0.2,
+    });
+  });
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+  test('homepage matches baseline — mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveSapshot('homepage-mobile.png', {
+      maxDiffPixels: 200,
+      threshold: 0.2,
+    });
+  });
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+  test('login form matches baseline', async ({ page }) => {
+    await page.goto('/login');
+    await page.waitForSelector('[data-testid="login-form"]');
+    const form = page.locator('[data-testid="login-form"]');
+    await expect(form).toHaveSapshot('login-form.png');
+  });
+});
+```
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+### Step 2: Playwright Visual Test Configuration
+```typescript
+// playwright.config.ts
+import { defineConfig } from '@playwright/test';
+export default defineConfig({
+  snapshotDir: './visual-snapshots',
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixels: 500,
+      threshold: 0.2,
+      animations: 'disabled',
+      scale: 'device',
+    },
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { browserName: 'chromium', viewport: { width: 1280, height: 720 } },
+    },
+    {
+      name: 'firefox',
+      use: { browserName: 'firefox', viewport: { width: 1280, height: 720 } },
+    },
+  ],
+});
+```
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### Step 3: CI Integration
+```yaml
+name: Visual Regression Tests
+on: [pull_request]
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Generate screenshots
+        run: npx playwright test --project=chromium
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-diffs
+          path: test-results/
+```
+
+## Baseline Management
+
+### When to Update Baselines
+- New feature adds or changes UI
+- Design system update (button styles, spacing, typography)
+- Intentional layout change
+- Content update (accepted with stakeholders)
+
+### Baseline Update Workflow
+```bash
+# Update baselines locally
+npx playwright test --update-snapshots
+
+# Verify changes are intentional
+# Review diff images in test-results/
+
+# Commit new baselines
+git add visual-snapshots/
+git commit -m "test(visual): update baselines for new header design"
+```
 
 ## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+- Use element-level screenshots (not full page) for component-focused testing
+- Disable animations and transitions for consistent screenshots
+- Set appropriate diff thresholds based on your tolerance for false positives
+- Test at multiple viewport sizes for responsive design coverage
+- Store baselines in version control alongside test code
+- Review visual diffs manually before accepting new baselines
+- Run visual tests in CI on every PR but only fail on meaningful differences
+- Use data-testid attributes to mask dynamic content (dates, user names, ads)
+- Combine visual testing with functional assertions for comprehensive coverage
 
 ## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+- High false positive rate from dynamic content (dates, timers, ads)
+- Baselines that are never updated (accumulate outdated references)
+- Full-page screenshots for every test (slow, high false positives)
+- Ignoring anti-aliasing differences between operating systems
+- Testing on headless vs headed browser (rendering differences)
+- No element isolation — testing pages with too many dynamic elements
+- Running visual tests on every commit (expensive, can be slower)
+- Not masking dynamic content (counters, timestamps, user-specific data)
 
 ## Key Points
-- Understand core Visual Testing concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- Visual testing catches CSS/layout bugs that functional tests miss
+- Playwright has built-in screenshot comparison (no third-party needed)
+- Use element-level screenshots for component-focused testing
+- Set appropriate diff thresholds to balance sensitivity and false positives
+- Store baselines in version control; update intentionally
+- Mask dynamic content with data-testid or fixed values
+- Test at multiple viewports for responsive design confidence
+- Disable animations for consistent screenshots

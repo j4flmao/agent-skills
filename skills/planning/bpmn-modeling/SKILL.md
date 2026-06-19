@@ -372,6 +372,207 @@ Hit Policy: UNIQUE (only one rule matches)
 - Event subprocesses for error handling at the process level
 - Validate BPMN diagrams with process participants before publishing
 
+## Expanded Decision Trees
+
+### Process Automation Priority Decision Tree
+```
+Which processes should be automated first?
+  Is the process high-volume (>100 executions/month)?
+    |-- YES --> Is it deterministic (rules-based)?
+    |     |-- YES --> Priority 1: Automate (high ROI, low risk)
+    |     |-- NO --> Is the human judgment bounded by clear rules?
+    |           |-- YES --> Priority 2: Automate with DMN + human review
+    |           |-- NO --> Priority 3: Keep manual, optimize process
+    |-- NO --> Is the process error-prone in current state?
+          |-- YES --> Priority 2: Automate to reduce errors
+          |-- NO --> Is the process slow (>2 days cycle)?
+                |-- YES --> Priority 3: Automate for speed
+                |-- NO --> Low priority: document and monitor
+```
+
+### Error Handling Strategy Decision Tree
+```
+What type of error can occur at this task?
+  |-- Transient (timeout, network glitch, rate limit)
+  |     |-- YES --> Retry with exponential backoff (max 3 retries)
+  |-- Business rule violation (validation failure, constraint)
+  |     |-- YES --> Boundary error event → route to manual review
+  |-- System unavailable (downstream dependency down)
+  |     |-- YES --> Does an alternative service exist?
+  |     |     |-- YES --> Circuit breaker, fallback to alternative
+  |     |     |-- NO --> Defer with escalation + retry later
+  |-- Data quality issue (missing fields, format error)
+        |-- YES --> Escalation user task with error context
+```
+
+### DMN Hit Policy Selection Decision Tree
+```
+Can multiple rules match the same input?
+  |-- NO --> UNIQUE hit policy (one rule matches)
+  |-- YES --> Do all matching rules produce the same output?
+        |-- YES --> ANY hit policy (consistent classification)
+        |-- NO --> What behavior do you need?
+              |-- First rule by priority order → FIRST
+              |-- Collect all matching outputs → COLLECT
+              |-- Collect and sort results → OUTPUT ORDER
+              |-- Sequential evaluation → RULE ORDER
+```
+
+## Templates
+
+### AS-IS Process Discovery Template
+```
+# Process Discovery: {Process Name}
+
+## Scope
+- Start trigger: {event that initiates the process}
+- End outcome: {what signals completion}
+- In scope: {activities, decisions, roles included}
+- Out of scope: {explicitly excluded boundaries}
+
+## Current State Flow
+{textual or table-based description of the current process}
+
+## Pain Points
+| # | Pain Point | Stage | Frequency | Impact | Current Workaround | Root Cause |
+|---|------------|-------|-----------|--------|-------------------|------------|
+
+## Metrics (Current State)
+- Average cycle time: {time}
+- Error rate: {%
+- Rework rate: {%
+- Handoff count: {number}
+- Automation level: {manual / partially automated / fully automated}
+```
+
+### Process Analysis Report Template
+```
+# Process Analysis: {Process Name}
+
+## Executive Summary
+{1-2 paragraph summary of findings and recommendations}
+
+## AS-IS Process Overview
+{level L2 or L3 diagram description + metrics}
+
+## Pain Point Analysis
+{top 5 pain points with quantification}
+
+## Automation Opportunities
+| Activity | Type | Automation Approach | ROI Estimate | Priority |
+|----------|------|-------------------|-------------|----------|
+
+## TO-BE Process Overview
+{level L4 diagram description + expected metrics}
+
+## Implementation Roadmap
+| Phase | Activities | Timeline | Dependencies |
+|-------|-----------|----------|-------------|
+
+## DMN Decisions
+{decisions identified with hit policies}
+
+## Risk Assessment
+{risks in the TO-BE design with mitigation}
+```
+
+### Process Discovery Interview Script
+```
+Opening (2 min):
+  "Walk me through your day when [process trigger] happens."
+  "What is the first thing you do?"
+
+Process Flow (15 min):
+  "What happens next?"
+  "Who else gets involved?"
+  "What systems do you use at this step?"
+  "What information do you need and where does it come from?"
+
+Decisions (10 min):
+  "What decisions do you make during this process?"
+  "How do you decide between option A vs option B?"
+  "What would make you change your decision?"
+
+Pain Points (10 min):
+  "What frustrates you about this process?"
+  "What goes wrong and how often?"
+  "What workaround have you developed?"
+
+Automation (5 min):
+  "If you could wave a magic wand, what would change?"
+  "What repetitive tasks would you eliminate?"
+
+Closing (3 min):
+  "Who else should I talk to?"
+  "Is there anything we missed?"
+```
+
+## Expanded Process Patterns
+
+### Pattern: Escalation and SLA Management
+Model escalation paths using boundary timer events on user tasks. When a task exceeds its SLA, trigger an escalation: notify supervisor, reassign task, or automatically approve/reject based on rules. Use multiple escalation levels with increasing severity. Document escalation matrix clearly: Level 1 (2hr → team lead), Level 2 (4hr → department manager), Level 3 (8hr → director).
+
+### Pattern: Parallel Approval Workflow
+Use parallel gateway to send approval requests simultaneously to multiple approvers. Combine with inclusive gateway if not all approvals are required. Implement the "majority approval" pattern: N out of M approvers must approve. Use DMN to determine which approvals are needed based on request characteristics (amount, risk, department).
+
+### Pattern: Saga Compensation for Long-Running Transactions
+When a process spans multiple systems, implement compensating transactions for rollback. Each service task must have a corresponding compensation handler. If the process fails at step N, trigger compensation for steps N-1 through 1 in reverse order. Use event subprocesses for compensation logic. Important: compensation handlers must be idempotent and logged.
+
+### Pattern: Case Management with BPMN
+For processes that are ad-hoc and knowledge-worker driven (not sequential), use Case Management Model and Notation (CMMN) concepts within BPMN. Model milestones instead of sequential steps. Allow workers to choose the order of tasks. Use event subprocesses for unplanned work. Plan items can be discretionary — available but not required.
+
+## Expanded Anti-Patterns
+
+### 9. Process Over-Engineering
+Modeling every possible variation and exception path on a single diagram. The diagram becomes unreadable and impossible to maintain. Fix: use subprocesses aggressively. Keep each diagram to max 20 activities. Model exception paths in separate subprocesses or event subprocesses.
+
+### 10. Ignoring Non-Functional Requirements
+Designing the process flow without considering performance, security, or compliance requirements. The automated process may work functionally but fail under load, expose data, or violate regulations. Fix: document non-functional requirements alongside the BPMN model. Add performance targets to service tasks. Include security and compliance review in model validation.
+
+### 11. Manual-First Modeling
+Designing the TO-BE process by simply automating the AS-IS process without rethinking the flow. You automate inefficiency. Fix: after documenting AS-IS, step back and redesign the process from scratch. Remove unnecessary steps. Change the order. Eliminate handoffs. Then add automation.
+
+### 12. Missing Process Governance
+No ownership, no monitoring, no version control for process models. BPMN diagrams become outdated within weeks. Nobody knows which version is deployed. Fix: assign a process owner for each major process. Store BPMN files in version control. Define a review cadence. Link process metrics to dashboards.
+
+### 13. Data Flow Neglect
+Modeling activity flow without specifying data flow. Service tasks have no defined inputs or outputs. The process works in theory but breaks in practice because data isn't available when needed. Fix: add data objects and data stores to every diagram. Define data mapping for each service task. Validate data flow end-to-end before implementation.
+
+## Process Simulation Guidance
+
+### When to Simulate
+Run process simulation when: estimating capacity needs, evaluating "what-if" scenarios, validating TO-BE design before implementation, identifying bottlenecks and resource constraints, or building a business case for automation investment.
+
+### Simulation Parameters
+| Parameter | Definition | Data Source |
+|-----------|------------|-------------|
+| Arrival rate | How often does the process trigger? | Historical logs |
+| Processing time | How long does each activity take? | Time tracking, estimates |
+| Resource pool | Who or what performs each activity? | Org chart, system capacity |
+| Cost per resource | Hourly cost of each resource | Finance data |
+| Rule probabilities | Which path is taken at each gateway? | Historical data |
+| Error rate | How often does each activity fail? | Incident logs |
+
+### Simulation Output Analysis
+| Output | What It Tells You | Decision |
+|--------|-------------------|----------|
+| Cycle time distribution | P50, P90, P99 cycle times | SLA feasibility |
+| Resource utilization | % of time resources are busy | Staffing decisions |
+| Queue lengths | Where work piles up | Bottleneck identification |
+| Cost per process instance | Total cost breakdown | Automation ROI |
+| Throughput | Completed instances per time period | Capacity planning |
+
+## BPMN Collaboration Patterns
+
+### Partner Communication
+Use message flows between pools to model B2B or B2C communication. Each pool represents an independent participant with its own process. Never use sequence flows across pool boundaries — only message flows. Document the message contract (payload schema, protocol, SLA) for each message flow.
+
+### Event-Based Collaboration
+Use start message events and intermediate message events to model event-driven communication between participants. One participant's end event triggers another participant's start event via message. Use correlation keys to match related messages across processes. This pattern is essential for microservice orchestration.
+
+### Shared Data Visibility
+Use data stores visible to multiple pools when participants share data. Define read/write permissions per pool. Use data associations to show which data is read or written by each activity. This pattern helps identify data ownership and access control requirements before implementation.
+
 ## References
   - references/bpmn-elements.md — BPMN 2.0 Elements
   - references/bpmn-patterns.md — BPMN Patterns

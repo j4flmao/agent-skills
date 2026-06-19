@@ -206,6 +206,51 @@ For shared AR experiences where multiple users see the same virtual content at t
 
 For AR experiences that need dynamic content without pre-bundled 3D assets, use procedural generation. Generate geometry at runtime using SCNGeometry (iOS SceneKit) or Mesh API (Unity/ARFoundation). Patterns: (a) terrain mesh from depth data — sample LiDAR/Depth API grid, generate vertex buffer, apply surface shader, (b) parametric objects — cylinders, spheres, extrusions with runtime parameter control, (c) text extrusion — convert string to 3D geometry using platform text-to-mesh APIs, (d) particle systems for ambient effects (sparkles, floating particles, smoke). Procedural content reduces bundle size significantly (no 3D assets to ship) at the cost of runtime compute. Use compute shaders (iOS Metal, Android Vulkan) for vertex-heavy generation to avoid GPU stalls.
 
+### Rendering Pipeline Decision Tree
+```
+Rendering complexity for AR scene?
+├── Simple (static models, flat lighting) → SceneKit (iOS) / Sceneform (Android)
+│   Built-in rendering, PBR materials, shadows — good for most product placement
+├── Medium (animated models, environment lighting) → RealityKit (iOS) / ARCore + Filament (Android)
+│   RealityKit: entity-component, animations, physics, environment probes
+│   Filament: PBR renderer from Google, used by ARCore internally
+├── Complex (custom shaders, post-processing, 50k+ polys)
+│   → Metal (iOS) / Vulkan (Android) — full GPU control
+│   Significant engineering cost, only for specialized rendering apps
+└── Cross-platform 3D → Unity ARFoundation with Universal Render Pipeline
+    Write once, render on both platforms with URP feature sets
+```
+
+### Lighting Model Comparison
+
+| Technique | Quality | Performance | Use Case |
+|-----------|---------|-------------|----------|
+| Ambient light estimation | Low | Free | Quick placeholder, matches scene brightness |
+| Directional light from environment | Medium | Cheap | Product placement, single shadow cast |
+| Environment texturing (automatic) | High | Moderate | Realistic reflections on glossy objects |
+| Image-based lighting (IBL) | High | Moderate | Pre-baked HDR environment maps |
+| Real-time shadow casting | High | Expensive | Ground contact shadows for virtual objects |
+| LiDAR mesh with occlusion | Best | Heavy | Physical interaction, object occlusion behind real surfaces |
+
+### Animations & Interactions Expansion
+```
+AR interaction type?
+├── Tap to place → Hit-test against detected planes
+│   Show ghost preview (transparent model at hit location)
+│   Confirm on tap with haptic feedback and scale animation
+├── Drag to move → Continuous hit-test while dragging
+│   Constrain to detected plane surface (Y-axis locked)
+│   Show position indicator, snap to grid if needed
+├── Pinch to scale → Two-finger gesture with uniform or axis-locked scaling
+│   Clamp scale: min 0.1x, max 10x — prevent impossibly small/large
+├── Rotate → One or two-finger rotation gesture
+│   Snap rotation by 45° increments for structured placement
+├── Long-press context → Show action menu: delete, info, share
+│   Use radial menu or bottom sheet for consistent UX
+└── Gaze-based (hands-free AR glasses) → Eye tracking + dwell time
+    Look at object for 1.5s to select, blink to confirm
+```
+
 ## AR Session Analytics
 
 Track AR session quality metrics to diagnose user experience issues: (1) tracking state duration — time spent in limited/normal tracking, (2) average light estimation values — too dark reduces tracking quality, (3) anchor count over time — anchor leaks degrade performance, (4) session interruption frequency — correlates with app backgrounding and poor conditions, (5) average frame rate — drop below 30fps causes discomfort, (6) depth data availability — LiDAR vs. no LiDAR session path. Log these as analytics events prefixed with `ar_`. Monitor dashboards for: sessions with >50% time in limited tracking, anchor count >100 sustained, fps consistently below 30. Alerts trigger when any metric exceeds 2 standard deviations from baseline.
@@ -371,6 +416,36 @@ export async function loadARModel(url: string) {
   });
   return model;
 }
+```
+
+### AR Anti-Patterns (Expanded)
+- **Loading all models at session start**: Pre-loading every 3D asset at launch uses unnecessary memory. Load models on demand as user places them, stream LOD levels incrementally.
+- **No session state persistence**: User places furniture in AR, backgrounds app, comes back — everything is gone. Save `ARWorldMap` (iOS) or Cloud Anchors (Android) for session restoration.
+- **Ignoring `NSPhotoLibraryUsageDescription`**: AR apps that save photos/videos of AR scenes need photo library permission. Missing description = App Store rejection.
+- **Single-threaded model loading**: Loading glTF files on main thread blocks 60fps rendering. Use background thread with progress indicator.
+- **Over-reliance on GPS accuracy**: Outdoor AR with GPS drifts without visual-inertial odometry (VIO). ARKit GeoTracking uses VIO + GPS for ~1m accuracy. Pure GPS is 5-15m.
+- **No accessibility for AR**: Users with visual impairments can't use AR placement. Provide alternative: manual coordinate entry, text-based descriptions, voice-guided placement.
+- **Using opaque shadows**: Virtual objects with hard black shadows on a moving real-world background cause motion sickness. Use soft transluscent shadows.
+- **Too many simultaneous tracked images**: ARKit supports up to 100 tracked images, but resource cost increases with each. Limit to 20 unless necessary.
+
+### AR/VR Production Readiness Checklist
+```
+App ready for AR release?
+├── [ ] Device capability check at first launch (graceful fallback if unsupported)
+├── [ ] Camera permission requested in context with rationale
+├── [ ] All 3D models compressed (Draco/USDZ) and LOD levels generated
+├── [ ] Session interruption handlers save/restore AR state
+├── [ ] Performance profiled: 60fps sustained, <500MB total memory
+├── [ ] Tested on: bright sunlight, dim interior, featureless surfaces
+├── [ ] Tested on: LiDAR devices and non-LiDAR devices (both paths)
+├── [ ] Anchor count never exceeds 50 per session (remove unused)
+├── [ ] Battery-aware rendering: reduce quality at <20% battery
+├── [ ] Analytics: AR session tracking events implemented
+├── [ ] Haptic + visual feedback on every user action
+├── [ ] Low-light detection triggers torch suggestion
+├── [ ] Accessibility: voice-guided or manual placement fallback
+├── [ ] App Store info.plist: ARKit usage description, camera usage
+├── [ ] CI/CD: model size check, performance trace capture, real device test
 ```
 
 ## References

@@ -201,6 +201,43 @@ Deep links are an attack vector — malicious apps can register URL schemes, cra
 
 Test on real devices with: (a) app installed and not installed (fallback), (b) app in all lifecycle states (foreground, background, terminated), (c) with and without network connectivity, (d) across app versions (old app, same app, updated app), (e) with complex paths and query parameters.
 
+### Deep Link Parameter Strategy
+```
+What data should the deep link carry?
+├── Navigation parameters (path segments, query params)
+│   Safe: user_id (number), product_id, screen_name, tab
+│   NEVER: auth tokens, session IDs, API keys, passwords
+├── Analytics parameters (utm_source, utm_medium, utm_campaign, utm_content)
+│   Standard UTM params — compatible with all analytics platforms
+│   Pass through to analytics SDK on link resolution
+├── Attribution parameters (referrer_id, click_id, ad_id)
+│   Used by attribution SDK (Branch, Adjust) — opaque to app
+│   Resolved by SDK callback on first launch
+├── Experiment parameters (variant_id, experiment_name)
+│   A/B test assignment from the link itself
+│   Override server-side experiment assignment if present
+└── Custom app parameters (deep_link_version, feature_flags)
+    Future-proof: include a version param for link schema evolution
+    Always validate all params before using them
+```
+
+### Deep Link Retry & Queue Strategy
+```
+Deep link received but app not ready?
+├── App not installed → Store redirect (App Store / Play Store)
+│   Deferred deep link (Branch/Adjust) captures click, resolves post-install
+├── App installed but not logged in → Queue link, route after auth
+│   Store URL + params in UserDefaults/SharedPreferences
+│   On login completion: check queue → navigate to stored link
+│   Clear queue after successful navigation
+├── App in onboarding flow → Wait for onboarding to complete
+│   Onboarding screens shouldn't be interrupted by deep links
+│   Complete onboarding → check deep link queue → navigate
+└── Feature not available in current app version → Show upgrade prompt
+    Server returns min version for each deep link path
+    If app version < min version, show "Update required" dialog → App Store
+```
+
 ## Dynamic Link Strategy
 
 Rather than hardcoding deep link URLs, generate them dynamically from server-side. This enables: (a) changing the target destination without app update (use server-side URL routing), (b) A/B testing link destinations, (c) adding analytics tracking parameters dynamically, (d) geo-targeting (different content for different regions), (e) personalization (different landing pages per user segment). Implementation: app sends a link creation request to server with target route + params, server validates, generates a short code or signed URL, returns it to app for sharing. When the link is tapped, server decodes the short URL, enriches with analytics params, and redirects to the actual deep link or fallback web page. Use server-side redirect `302` to track click-through before routing to app or store.

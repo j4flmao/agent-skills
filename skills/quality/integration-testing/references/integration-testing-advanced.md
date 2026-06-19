@@ -1,214 +1,176 @@
 # Integration Testing Advanced Topics
 
 ## Introduction
-Advanced Integration Testing topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Advanced integration testing covers contract-driven integration (consumer-driven contracts + integration), containerized integration test architecture, messaging integration with exactly-once semantics, database test optimization, and integration testing in event-driven architectures.
 
-## Advanced Architecture Patterns
+## Contract-Driven Integration Testing
+Combine contract testing with integration tests for a comprehensive strategy:
+- Contract tests verify API shape compatibility (fast, deterministic, isolated)
+- Integration tests verify real behavior with production-like dependencies (slower, realistic)
+- Use contract tests as the fast CI gate; integration tests as the deployment gate
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+```python
+# Integration test that validates against real service with contract awareness
+class TestPaymentIntegration:
+    """Integration tests that validate behavior, not just contract shape."""
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+    async def test_full_payment_lifecycle(self, wiremock, payment_client):
+        # This tests real behavior beyond what contract tests verify
+        wiremock.stub_for_post("/api/charge")
+            .with_body({"charge_id": "ch_123", "status": "succeeded", "amount": 5000})
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+        result = await payment_client.charge(5000, "tok_visa")
+        assert result.charge_id == "ch_123"
+        assert result.status == "succeeded"
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+        # Verify full lifecycle — refund
+        wiremock.stub_for_post("/api/refund")
+            .with_body({"refund_id": "rf_123", "status": "succeeded"})
+        refund = await payment_client.refund(result.charge_id)
+        assert refund.status == "succeeded"
 
-## Performance Optimization
+    async def test_duplicate_charge_idempotency(self, payment_client):
+        """Real providers typically have 24-hour idempotency keys."""
+        # First attempt succeeds
+        result1 = await payment_client.charge(5000, "tok_visa", idempotency_key="key-123")
+        assert result1.status == "succeeded"
+        # Duplicate with same key returns same result (idempotent)
+        result2 = await payment_client.charge(5000, "tok_visa", idempotency_key="key-123")
+        assert result2.charge_id == result1.charge_id
+```
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+## Containerized Integration Test Architecture
+```yaml
+# docker-compose.test.yml
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: testdb
+      POSTGRES_PASSWORD: testpass
+    tmpfs: /var/lib/postgresql/data
+    ports:
+      - "5433:5432"
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+  kafka-test:
+    image: confluentinc/cp-kafka:latest
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9093
+    ports:
+      - "9093:9092"
+```
 
-## Security Hardening
+## Database Integration Optimization
+### Test Data Factories with SQLAlchemy
+```python
+# tests/factories.py
+import factory
+from src.models import Order, OrderItem, Customer
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+class CustomerFactory(factory.alchemy.SQLAlchemyModelFactory):
+    class Meta:
+        model = Customer
+        sqlalchemy_session_persistence = "commit"
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+    id = factory.Sequence(lambda n: f"cust-{n:04d}")
+    name = factory.Faker("name")
+    email = factory.Faker("email")
+    tier = "standard"
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+class OrderFactory(factory.alchemy.SQLAlchemyModelFactory):
+    class Meta:
+        model = Order
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+    id = factory.Sequence(lambda n: n)
+    customer = factory.SubFactory(CustomerFactory)
+    total = factory.Faker("pydecimal", left_digits=4, right_digits=2)
+    status = "pending"
+```
 
-## Monitoring and Observability
+## Messaging Integration Testing
+### Kafka Consumer/Producer Testing
+```python
+# tests/integration/test_order_events.py
+from testcontainers.kafka import KafkaContainer
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+class TestOrderEventProcessing:
+    @pytest.fixture(scope="class")
+    def kafka(self):
+        with KafkaContainer() as kc:
+            yield kc
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+    def test_order_created_event_consumed(self, kafka, order_service):
+        producer = kafka.get_producer()
+        producer.send("orders", {
+            "event": "order.created",
+            "order_id": "ord-123",
+            "customer_id": "cust-456",
+            "total": 99.99,
+        })
+        producer.flush()
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+        consumer = kafka.get_consumer("order-processor")
+        msg = consumer.poll(timeout=5.0)
+        assert msg is not None
+        assert msg.value()["event"] == "order.created"
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+    def test_dead_letter_on_processing_failure(self, kafka, order_service):
+        # Send malformed event that processor will fail to handle
+        producer = kafka.get_producer()
+        producer.send("orders", {"event": "order.created", "bad_field": "..."})
+        producer.flush()
 
-## Scalability and Reliability
+        # Verify event ends up in DLQ after retries exhausted
+        dlq_consumer = kafka.get_consumer("orders-dlq")
+        msg = dlq_consumer.poll(timeout=10.0)
+        assert msg is not None
+        assert msg.headers()["error"] is not None
+```
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+## Integration Test Anti-Patterns
+### Testing Through the Wrong Interface
+```python
+# BAD — testing database through the web layer (slow, complex)
+def test_customer_save_through_api(client):
+    response = client.post("/api/customers", json={"name": "John"})
+    # Then a GET to verify... slow path for simple DB validation
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+# GOOD — test database through repository layer (direct, fast)
+def test_customer_repository(db_session):
+    repo = CustomerRepository(db_session)
+    customer = repo.create({"name": "John"})
+    assert repo.find_by_id(customer.id).name == "John"
+```
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+### State Leak Between Tests
+```python
+# BAD — test data accumulates
+def test_first_order(db_session):
+    repo = OrderRepository(db_session)
+    repo.create({"customer_id": "c1"})
+    assert len(repo.find_all()) == 1  # Works
 
-## Integration and Interoperability
+def test_second_order(db_session):
+    repo = OrderRepository(db_session)
+    assert len(repo.find_all()) == 0  # FAILS — still has data from first test
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+# GOOD — each test gets fresh database
+@pytest.fixture(autouse=True)
+def clean_db(db_connection):
+    yield
+    db_connection.execute("TRUNCATE orders, customers CASCADE")
+```
 
 ## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- Combine contract tests for API shape + integration tests for real behavior
+- Use Testcontainers for disposable, production-like test infrastructure
+- Database factories (Factory Boy) simplify test data creation
+- Message integration tests verify produce-consume cycles and dead letter handling
+- Test through the appropriate layer — database through repository, not API
+- Clean up test data between tests for isolation
+- Make integration tests as fast as possible to encourage frequent execution

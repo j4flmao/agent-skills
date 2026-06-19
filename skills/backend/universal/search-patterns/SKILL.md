@@ -267,6 +267,133 @@ curl -X PATCH 'http://localhost:7700/indexes/products/settings' \
     "sortableAttributes": ["price", "createdAt"],
     "rankingRules": ["words", "typo", "proximity", "attribute", "sort", "exactness"]
   }'
+
+# Meilisearch — Node.js client
+import { MeiliSearch } from 'meilisearch';
+
+const client = new MeiliSearch({ host: 'http://localhost:7700', apiKey: 'masterKey' });
+await client.index('products').updateSettings({
+  searchableAttributes: ['title', 'description', 'brand'],
+  filterableAttributes: ['category', 'price', 'inStock'],
+  sortableAttributes: ['price', 'createdAt'],
+});
+
+// Search
+const results = await client.index('products').search('wireless', {
+  filter: ['price > 10 AND price < 500', 'inStock = true'],
+  sort: ['price:asc'],
+});
+```
+
+## Query Performance Optimization
+
+### Profiling Slow Queries
+```json
+// Elasticsearch Query Profiler
+{
+  "profile": true,
+  "query": {
+    "bool": {
+      "must": [{ "match": { "title": "wireless headphones" } }],
+      "filter": [{ "term": { "category": "electronics" } }]
+    }
+  }
+}
+// Returns breakdown: which clause took the most time, lucene rewrite time
+// Common issues: wildcard queries, regex queries, script_score on large datasets
+```
+
+### Index Sorting for Faster Range Queries
+```json
+{
+  "settings": {
+    "index": {
+      "sort.field": ["created_at", "price"],
+      "sort.order": ["desc", "asc"]
+    }
+  }
+}
+// Pre-sorts segments for faster range queries on created_at
+// Benefits: 2-5x faster range + sort queries, smaller segment merges
+// Cost: slightly slower indexing
+```
+
+## Multi-Language Search
+
+```json
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "multi_language": {
+          "type": "standard",
+          "filter": ["lowercase", "asciifolding"]
+        },
+        "vietnamese_analyzer": {
+          "type": "custom",
+          "tokenizer": "icu_tokenizer",
+          "filter": ["icu_folding", "icu_normalizer"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "title": {
+        "type": "text",
+        "analyzer": "standard",
+        "fields": {
+          "vi": { "type": "text", "analyzer": "vietnamese_analyzer" },
+          "ja": { "type": "text", "analyzer": "kuromoji" },
+          "en": { "type": "text", "analyzer": "english" }
+        }
+      }
+    }
+  }
+}
+```
+
+## Search-as-You-Type / Autocomplete Patterns
+
+```typescript
+// 1. Edge n-gram (best for "prefix search")
+// Index time: tokenizes "wireless" -> "wi", "wir", "wire", "wirel", "wirele", "wireles", "wireless"
+// Query: match against same analyzer
+// Pros: fast at query time, works with any query DSL
+// Cons: larger index, more disk space
+
+// 2. Completion suggester (best for "search suggestions")
+// Index time: stores prefix tree (FST) in memory
+// Query: suggest endpoint, prefix-based lookup
+// Pros: very fast (>100K QPS), returns full documents
+// Cons: in-memory only, limited to prefix matching
+const suggestQuery = {
+  suggest: {
+    product_suggest: {
+      prefix: 'wire',
+      completion: {
+        field: 'title_suggest',
+        size: 5,
+        skip_duplicates: true,
+        fuzzy: { fuzziness: 2 },
+      },
+    },
+  },
+};
+
+// 3. Search-as-you-type field type (ES 7.7+)
+// Combines both approaches with automatic n-gram generation
+{
+  "mappings": {
+    "properties": {
+      "title": {
+        "type": "search_as_you_type",
+        "analyzer": "standard"
+      }
+    }
+  }
+}
+// Supports: n-gram, shingle, prefix matching in single field type
 ```
 
 ## Production Considerations
@@ -279,6 +406,10 @@ curl -X PATCH 'http://localhost:7700/indexes/products/settings' \
 | Slow queries | Use query profiler. Common fix: too many shards, missing filters, large aggregations |
 | Disk space | Guardrail: trigger alert at 85% disk usage. ES stops allocating at 95% |
 | Security | Enable auth, use TLS, restrict to VPC/private network |
+| Bulk indexing rate | Throttle bulk requests. Use `refresh_interval: -1` during reindex, restore after |
+| Shard rebalancing | Hot spots from uneven shard distribution. Use `_rebalance` API or ILM |
+| Snapshot/restore | Daily snapshots to S3. Test restore monthly. Snapshot before upgrade |
+| Cross-cluster search | For multi-region deployments. Manages 10+ remote clusters |
 
 ## Security
 
@@ -289,6 +420,8 @@ curl -X PATCH 'http://localhost:7700/indexes/products/settings' \
 | Injection via query parameters | Never pass raw user input to search DSL without sanitization |
 | Cluster hijacking | Disable public access, use mTLS or VPN |
 | Index deletion | Snapshot before any destructive operation, RBAC to restrict delete |
+| Data exfiltration via scroll API | Rate-limit scroll requests, restrict scroll API to service accounts |
+| Audit trail | Enable audit logging for all cluster operations |
 
 ## Anti-Patterns
 
@@ -301,6 +434,8 @@ curl -X PATCH 'http://localhost:7700/indexes/products/settings' \
 | Over-sharding | Too many small shards = poor performance | 20-40GB per shard |
 | Ignoring analyzers | Wrong stemming, bad relevance for language | Set language-specific analyzers per field |
 | No synonyms | Users search 'laptop' but data says 'notebook' | Configure synonym filter |
+| Everything filterable | Too many filterableAttributes hurts indexing performance | Only make attributes filterable if used in queries |
+| Ignoring typos | Users make typos — search should handle them | Enable fuzziness (AUTO) or typo tolerance |
 
 ## Rules
 - Search index is derived data — rebuildable from source of truth
@@ -314,6 +449,9 @@ curl -X PATCH 'http://localhost:7700/indexes/products/settings' \
 - Always use field-level doc_values for aggregation/sorting fields
 - Test relevance changes with A/B testing before rolling to all users
 - Snapshot indices daily for disaster recovery
+- Set language-specific analyzers per field for multi-language search
+- Never allow raw query DSL from user input — wrap in parameterized template
+- Use search-as-you-type or completion suggester for autocomplete, not wildcard prefix queries
 
 ## References
   - references/indexing-strategies.md — Indexing Strategies and Relevance

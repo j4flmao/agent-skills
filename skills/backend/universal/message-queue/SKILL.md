@@ -382,3 +382,132 @@ async function checkConsumerLag(admin: Admin, groupId: string): Promise<void> {
 No artifact produced unless requested.
 Next skill: backend-caching — if the event-driven system needs to cache materialized views or read models.
 Carry forward: topic/queue topology, message schemas, consumer group configs, retry/DLQ policies.
+
+## Implementation Patterns
+
+### Kafka Producer/Consumer
+
+```python
+from typing import Dict, Callable, Any, Optional
+import json
+import asyncio
+from confluent_kafka import Producer, Consumer, KafkaError
+
+class KafkaMessageProducer:
+    def __init__(self, bootstrap_servers: str, client_id: str = "producer-1"):
+        self.producer = Producer({
+            "bootstrap.servers": bootstrap_servers,
+            "client.id": client_id,
+            "acks": "all",
+            "enable.idempotence": True,
+            "compression.type": "snappy",
+        })
+
+    def produce(self, topic: str, key: str, value: Dict, headers: Optional[Dict] = None):
+        headers_list = [("content-type", "application/json")]
+        if headers:
+            headers_list.extend((k, v.encode()) for k, v in headers.items())
+
+        self.producer.produce(
+            topic=topic,
+            key=key.encode(),
+            value=json.dumps(value).encode(),
+            headers=headers_list,
+            callback=self._delivery_report,
+        )
+        self.producer.poll(0)
+
+    def flush(self):
+        self.producer.flush()
+
+    def _delivery_report(self, err, msg):
+        if err:
+            print(f"Delivery failed: {err}")
+        else:
+            print(f"Delivered to {msg.topic()}[{msg.partition()}] @ {msg.offset()}")
+
+
+class KafkaMessageConsumer:
+    def __init__(self, bootstrap_servers: str, group_id: str, topics: list[str]):
+        self.consumer = Consumer({
+            "bootstrap.servers": bootstrap_servers,
+            "group.id": group_id,
+            "auto.offset.reset": "earliest",
+            "enable.auto.commit": False,
+            "max.poll.interval.ms": 300000,
+        })
+        self.consumer.subscribe(topics)
+
+    def process_messages(self, handler: Callable, timeout: float = 1.0):
+        try:
+            while True:
+                msg = self.consumer.poll(timeout)
+                if msg is None:
+                    continue
+                if msg.error():
+                    if msg.error().code() == KafkaError._PARTITION_EOF:
+                        continue
+                    print(f"Consumer error: {msg.error()}")
+                    continue
+
+                try:
+                    value = json.loads(msg.value().decode())
+                    handler(value, msg.key().decode() if msg.key() else None, msg.headers() or [])
+                    self.consumer.commit(msg)
+                except Exception as e:
+                    print(f"Processing error: {e}")
+                    # Send to DLQ
+                    self._send_to_dlq(msg)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self.consumer.close()
+
+    def _send_to_dlq(self, msg):
+        dlq_topic = f"{msg.topic()}.dlq"
+        self.consumer.produce(dlq_topic, key=msg.key(), value=msg.value())
+        self.consumer.commit(msg)
+```
+
+## Architecture Decision Trees
+
+### Broker Selection
+
+```
+What are the requirements?
+├── High throughput (>100K msg/s), replay, long retention
+│   └── Apache Kafka
+│       ├── Persistent, replayable, ordered within partition
+│       ├── Consumer group scaling
+│       └── Schema Registry required
+│
+├── Simple messaging, lower throughput
+│   └── RabbitMQ
+│       ├── Direct, topic, fanout exchanges
+│       ├── Priority queues, TTL, DLX
+│       └── Good for RPC and work queues
+│
+├── Serverless, fully managed, no ops
+│   └── AWS SQS / SNS or GCP Pub/Sub
+│       ├── Automatic scaling
+│       ├── No broker management
+│       └── Pay per request, not per throughput
+│
+└── Exactly once, ordered delivery
+    └── Kafka with idempotent producer + transactional API
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Infinite retention | Storage explosion, slow rebalances | Set retention by time (7d default) and size |
+| No DLQ monitoring | Silent data loss | Alert on DLQ message production |
+| Committing offset before processing | Lost messages on crash | Commit after processing (at-least-once) |
+| Too many partitions | Rebalance overhead, connection overhead | Partitions = consumers x 2-3 max |
+
+## Performance Optimization
+
+- **Batched production**: Use `produce()` with `flush()` at intervals or count. Reduces network round-trips by 10x compared to per-message flush.
+- **Compression**: Use Snappy or Zstd compression at the producer. Reduces storage and network by 60-70% for text-based messages.
+- **Partition-aware consumers**: Match consumer count to partition count. Avoid idle partitions and rebalance overhead. Use cooperative rebalancing for sticky partition assignment.

@@ -368,10 +368,120 @@ additionalProperties:
   isGoSubmodule: true
 ```
 
-## References
-  - references/api-client-generator-advanced.md — API Client Generator Advanced Topics
-  - references/api-client-generator-fundamentals.md — API Client Generator Fundamentals
-  - references/api-client-testing.md — API Client Testing Reference
-  - references/openapi-spec-best-practices.md — OpenAPI Spec Best Practices Reference
-## Handoff
-Hand off to `dev-loop-code-review` for generated code review. Hand off to `dev-loop-security-auditor` for auth/token security.
+## Implementation Patterns
+
+### OpenAPI Client Generator
+
+```python
+from typing import Dict, List, Optional
+import json
+import subprocess
+from pathlib import Path
+
+class OpenAPIClientGenerator:
+    def __init__(self, spec_path: str, output_dir: str):
+        self.spec_path = spec_path
+        self.output_dir = output_dir
+        self.generators = {
+            "typescript": {
+                "npm_package": "@openapitools/openapi-generator-cli",
+                "command": "npx @openapitools/openapi-generator-cli generate",
+            },
+            "python": {
+                "pip_package": "openapi-generator-cli",
+                "command": "openapi-generator generate",
+            },
+        }
+
+    def generate_typescript(self, options: Optional[Dict] = None) -> bool:
+        opts = options or {}
+        cmd = [
+            "npx", "@openapitools/openapi-generator-cli", "generate",
+            "-i", self.spec_path,
+            "-g", "typescript-axios",
+            "-o", f"{self.output_dir}/typescript",
+            "--additional-properties=supportsES6=true,withInterfaces=true,useSingleRequestParameter=true",
+        ]
+        if opts.get("npm_name"):
+            cmd.append(f"--additional-properties=npmName={opts['npm_name']}")
+        return self._run(cmd)
+
+    def generate_python(self, options: Optional[Dict] = None) -> bool:
+        opts = options or {}
+        cmd = [
+            "openapi-generator", "generate",
+            "-i", self.spec_path,
+            "-g", "python",
+            "-o", f"{self.output_dir}/python",
+            "--additional-properties=packageName=api_client",
+        ]
+        if opts.get("package_name"):
+            cmd.append(f"--additional-properties=packageName={opts['package_name']}")
+        return self._run(cmd)
+
+    def generate_go(self, options: Optional[Dict] = None) -> bool:
+        opts = options or {}
+        cmd = [
+            "openapi-generator", "generate",
+            "-i", self.spec_path,
+            "-g", "go",
+            "-o", f"{self.output_dir}/go",
+            "--additional-properties=packageName=apiclient,isGoSubmodule=true",
+        ]
+        if opts.get("package_name"):
+            cmd.append(f"--additional-properties=packageName={opts['package_name']}")
+        return self._run(cmd)
+
+    def _run(self, cmd: List[str]) -> bool:
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"Generated client at {self.output_dir}")
+                return True
+            print(f"Generation failed: {result.stderr[:200]}")
+            return False
+        except FileNotFoundError as e:
+            print(f"Generator not found: {e}")
+            return False
+```
+
+## Architecture Decision Trees
+
+### Client Generation Strategy
+
+```
+What language/framework?
+├── TypeScript
+│   ├── axios-based → @openapitools/typescript-axios
+│   ├── fetch-based → @openapitools/typescript-fetch
+│   ├── Angular → @openapitools/typescript-angular
+│   └── Node.js → @openapitools/typescript-node
+│
+├── Python
+│   └── httpx/requests → openapi-generator python
+│
+├── Go
+│   └── net/http → openapi-generator go
+│
+├── Java
+│   ├── Spring → openapi-generator spring
+│   └── Retrofit → openapi-generator retrofit
+│
+└── Custom framework
+    └── Use openapi-generator with custom template
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Hand-writing API clients | Inconsistent with spec, manual sync needed | Generate from OpenAPI spec |
+| Modifying generated code | Changes lost on regeneration | Extend generated client, never modify |
+| No spec validation before generation | Generated client mirrors spec bugs | Validate spec with spectral before generation |
+| Stale generated clients | Client doesn't reflect current API | CI pipeline regenerates on spec change |
+| Ignoring breaking changes in spec | Production breakage on deployment | Contract testing between client and spec |
+
+## Performance Optimization
+
+- **Tree-shake generated clients**: Use tree-shaking to remove unused endpoints from generated clients. Reduces bundle size by up to 60% for apps using only a subset of the API.
+- **Lazy client initialization**: Generate client code in lazy-loaded chunks for large APIs. Dynamically import endpoint modules on first use.

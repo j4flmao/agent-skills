@@ -66,7 +66,7 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ### Severity Matrix
 | Severity | Definition | Response Time | Escalation | Page |
-|----------|------------|---------------|------------|------|
+|---|---|---|---|---|
 | SEV1 | Complete outage, data loss, security breach, SLA-impacting | 5 min | Full team + management + exec | PagerDuty high-urgency |
 | SEV2 | Major feature degraded, partial outage, >5% errors | 15 min | Primary + secondary on-call | PagerDuty high-urgency |
 | SEV3 | Minor feature issue, single-user impact, non-critical bug | 1 business hour | Slack + ticket | PagerDuty low-urgency |
@@ -156,7 +156,7 @@ Disable feature [name] via [flag management tool]
 
 ## Timeline
 | Time (UTC) | Event |
-|------------|-------|
+|---|---|
 | T+0 | [Detection] |
 | T+X | [Action taken] |
 | T+Y | [Mitigation applied] |
@@ -180,7 +180,7 @@ Disable feature [name] via [flag management tool]
 
 ## Action Items
 | # | Action | Owner | Due Date | Status |
-|---|--------|-------|----------|--------|
+|---|---|---|---|---|
 | 1 | [action] | [name] | YYYY-MM-DD | [open/closed] |
 | 2 | [action] | [name] | YYYY-MM-DD | [open/closed] |
 
@@ -287,7 +287,7 @@ Next update: {time}
 
 ## Timeline (Facilitator)
 | Time | Event | Expected Response |
-|------|-------|-------------------|
+|---|---|---|
 | T+0 | Alert fires: database connection pool exhausted | IC declares incident |
 | T+5 | Pagers fire | On-call acknowledges |
 | T+10 | [New info] | Team investigates |
@@ -316,6 +316,144 @@ We have identified the issue as [root cause] and are working on mitigation. [Pro
 The issue has been resolved. [Service] is operating normally. A postmortem will be published within [timeline].
 ```
 
+## Tool Comparison: Incident Management Platforms
+
+| Feature | PagerDuty | OpsGenie | incident.io | Grafana OnCall |
+|---|---|---|---|---|
+| Alert routing | Yes (intelligent) | Yes (team-based) | Yes | Yes |
+| On-call scheduling | Yes (advanced) | Yes | Yes | Yes |
+| Incident tracking | Via integrations | Yes (built-in) | Yes (native) | Yes (native) |
+| Status page | Via integrations | Via integrations | Built-in | Via Grafana |
+| Postmortem tool | No (add-on) | No | Built-in | No |
+| War room | No (Slack add-on) | No | Yes (Slack-native) | No |
+| Runbook automation | Yes (via Actions) | Yes (via Rules) | Yes (via Playbooks) | Yes (via webhooks) |
+| Pricing | $$$ | $$ | $$$ | Free (OSS) |
+| Best for | Large orgs, complex routing | Mid-size, Atlassian stack | Modern incident platform | Grafana ecosystem |
+
+## Security Incident Response Addendum
+
+### Security Severity Classification
+| Severity | Definition | Examples | Response |
+|---|---|---|---|
+| SEV1-SEC | Active breach, data exfiltration, ransomware | Unauthorized access, crypto mining, CVE exploitation | Full security team + legal + exec within 5 min |
+| SEV2-SEC | Vulnerability with exploitation evidence | XSS found in production, exposed secrets | Security team within 15 min |
+| SEV3-SEC | Vulnerability without exploitation | Dependency CVE, misconfigured S3 bucket | Patch within SLA (72h) |
+| SEV4-SEC | Best practice gap | Over-permissioned IAM role, missing WAF rule | Next sprint |
+
+### Security Incident Response Steps
+1. Isolate affected systems immediately — do not investigate before containment
+2. Preserve forensic evidence: snapshot instances, capture logs, dump memory
+3. Rotate all credentials that may have been exposed
+4. Engage legal team before any external communication
+5. Document chain of custody for any forensic data
+6. Do not reimage or rebuild compromised instances until forensics complete
+7. Coordinate disclosure with security team and legal — never disclose without approval
+
+### Runbook Automation Script
+```python
+# runbook_automation/auto_responder.py
+"""Automated incident response actions."""
+import boto3
+import requests
+import json
+from datetime import datetime
+
+class IncidentAutoResponder:
+    def __init__(self, pagerduty_token, slack_webhook):
+        self.pd_token = pagerduty_token
+        self.slack_webhook = slack_webhook
+
+    def create_pagerduty_incident(self, title, severity, service_id, escalation_policy_id):
+        headers = {
+            "Authorization": f"Token token={self.pd_token}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "incident": {
+                "type": "incident",
+                "title": title,
+                "service": {"id": service_id, "type": "service_reference"},
+                "escalation_policy": {"id": escalation_policy_id, "type": "escalation_policy_reference"},
+                "urgency": "high" if severity in ("SEV1", "SEV2") else "low",
+                "body": {
+                    "type": "incident_body",
+                    "details": f"Auto-created by {self.__class__.__name__} at {datetime.utcnow().isoformat()}",
+                },
+            }
+        }
+        resp = requests.post(
+            "https://api.pagerduty.com/incidents",
+            headers=headers,
+            json=payload,
+        )
+        resp.raise_for_status()
+        return resp.json()["incident"]
+
+    def notify_slack_channel(self, channel, message):
+        payload = {"channel": channel, "text": message, "mrkdwn": True}
+        resp = requests.post(self.slack_webhook, json=payload)
+        resp.raise_for_status()
+
+    def stop_unhealthy_deployment(self, namespace, deployment):
+        """Auto-rollback deployment if health check fails."""
+        # This would use kubernetes client in practice
+        print(f"[{datetime.utcnow().isoformat()}] Rolling back {namespace}/{deployment}")
+
+    def tag_instance_for_forensics(self, instance_id):
+        """Tag EC2 instance for forensic preservation."""
+        ec2 = boto3.client("ec2")
+        ec2.create_tags(
+            Resources=[instance_id],
+            Tags=[{"Key": "IncidentForensics", "Value": "Preserve"},
+                  {"Key": "PreservedAt", "Value": datetime.utcnow().isoformat()}],
+        )
+```
+
+### Incident Metrics Collector
+```python
+# metrics/collect_incident_metrics.py
+"""Collect and report incident response metrics."""
+from datetime import datetime, timedelta
+
+def calculate_mttd(detection_time, incident_start_time):
+    """Mean Time to Detect in minutes."""
+    delta = detection_time - incident_start_time
+    return delta.total_seconds() / 60
+
+def calculate_mttr(resolution_time, detection_time):
+    """Mean Time to Resolve in minutes."""
+    delta = resolution_time - detection_time
+    return delta.total_seconds() / 60
+
+def track_weekly_metrics(incidents):
+    """Aggregate incident metrics for weekly review."""
+    total = len(incidents)
+    if total == 0:
+        return {"total": 0, "avg_mttd": 0, "avg_mttr": 0, "by_severity": {}}
+
+    avg_mttd = sum(i["mttd_min"] for i in incidents) / total
+    avg_mttr = sum(i["mttr_min"] for i in incidents) / total
+
+    by_severity = {}
+    for incident in incidents:
+        sev = incident["severity"]
+        if sev not in by_severity:
+            by_severity[sev] = {"count": 0, "total_mttr": 0}
+        by_severity[sev]["count"] += 1
+        by_severity[sev]["total_mttr"] += incident["mttr_min"]
+
+    for sev in by_severity:
+        count = by_severity[sev]["count"]
+        by_severity[sev]["avg_mttr"] = by_severity[sev]["total_mttr"] / count
+
+    return {
+        "total": total,
+        "avg_mttd_min": round(avg_mttd, 1),
+        "avg_mttr_min": round(avg_mttr, 1),
+        "by_severity": by_severity,
+    }
+```
+
 ## Rules
 - IC does not touch the keyboard — IC delegates and coordinates
 - Scribe documents in real-time — memory is unreliable under pressure
@@ -328,6 +466,8 @@ The issue has been resolved. [Service] is operating normally. A postmortem will 
 - MTTD/MTTR tracked weekly and reviewed in team retro
 - On-call shifts max 7 days to prevent burnout
 - Postmortem action items have single owners and due dates
+- SEV1 postmortem must be published within 48 hours
+- Postmortem action items must be tracked to closure in a visible board
 
 ## Production Considerations
 - Automate incident creation: PagerDuty + Slack integration fires channel creation automatically.
@@ -338,6 +478,11 @@ The issue has been resolved. [Service] is operating normally. A postmortem will 
 - Read-only Friday: avoid production changes that could trigger incidents before weekend.
 - Blameless culture: frame postmortems as system improvements, not individual failures.
 - Incident taxonomy: tag incidents by type (deploy, dependency, capacity, security) for trend analysis.
+- Rate-limit PagerDuty alerts during major events to prevent alert fatigue.
+- Maintain a "Incident Commander handbook" with escalation contacts and common runbook links.
+- Use a dedicated Slack channel for live incident feed vs. a separate channel for coordination.
+- Cross-train on-call engineers so any team member can handle any service's runbook.
+- Run postmortem action item review in every sprint retro until all items are closed.
 
 ## Anti-Patterns
 - IC also debugging — loses situational awareness, misses escalation triggers.

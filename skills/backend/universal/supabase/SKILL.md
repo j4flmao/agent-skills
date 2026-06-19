@@ -242,6 +242,224 @@ serve(async (req) => {
 });
 ```
 
+## Architecture Decision Trees
+
+### Schema Design Decision Tree
+```
+What type of data are you storing?
+  ├── User profiles, settings (per-user)
+  │   └── Extends auth.users via profiles table with FK + ON DELETE CASCADE
+  ├── Content with ownership (posts, comments)
+  │   └── Has author_id FK to profiles, RLS filters by auth.uid()
+  ├── Multi-tenant data
+  │   └── Every table has tenant_id, RLS checks tenant membership
+  ├── Time-series / logs
+  │   └── Partitioned tables, no RLS (service-role only), retention policies
+  ├── Vector embeddings (AI / semantic search)
+  │   └── pgvector extension, IVFFlat or HNSW index, RLS on metadata
+  └── File metadata / storage references
+      └── References storage objects, path-based RLS using storage extension
+```
+
+### RLS Policy Decision Tree
+```
+Who can access the data?
+  ├── Public read (blog posts, products)
+  │   └── FOR SELECT USING (true) — no auth check
+  ├── Authenticated users only
+  │   └── FOR SELECT USING (auth.role() = 'authenticated')
+  ├── Owner only (user's own data)
+  │   └── FOR SELECT USING (auth.uid() = user_id)
+  ├── Owner + admin
+  │   └── FOR SELECT USING (auth.uid() = user_id OR is_admin(auth.uid()))
+  ├── Team / organization
+  │   └── FOR SELECT USING (exists(select 1 from team_members where user_id = auth.uid() and team_id = team_id))
+  ├── Role-based (RBAC)
+  │   └── FOR SELECT USING (auth.jwt() ->> 'role' IN ('admin', 'moderator'))
+  └── Hierarchical (parent-child)
+      └── FOR SELECT USING (exists(select 1 from parent_table where id = parent_id and owner_id = auth.uid()))
+```
+
+### Realtime Decision Tree
+```
+What kind of real-time updates do you need?
+  ├── Database changes (INSERT/UPDATE/DELETE)
+  │   └── postgres_changes channel — replication slot on specific table
+  │   └── Cost: WAL overhead, ~5-10% write performance hit
+  ├── Presence (who's online)
+  │   └── Broadcast channel with presence tracking — no DB overhead
+  ├── Typing indicators, cursor positions
+  │   └── Broadcast channel — ephemeral, no persistence
+  │   └── Use with rate limiting (max 5 updates/sec per user)
+  └── Multiplayer state sync
+      └── Broadcast + presence — merge server state with client state
+```
+
+### Advanced RLS Patterns with Roles
+```sql
+-- Custom role-checking function (avoids duplicating JWT checks)
+CREATE OR REPLACE FUNCTION auth.user_role()
+RETURNS text AS $$
+  SELECT COALESCE(
+    current_setting('request.jwt.claims', true)::json->>'user_role',
+    'anonymous'
+  );
+$$ LANGUAGE sql STABLE;
+
+-- Multi-role policy for organization data
+CREATE POLICY org_data_access ON documents FOR ALL
+USING (
+  EXISTS (
+    SELECT 1 FROM org_members
+    WHERE org_members.org_id = documents.org_id
+    AND org_members.user_id = auth.uid()
+    AND (
+      org_members.role = 'owner' -- owners see everything
+      OR (
+        org_members.role = 'editor'
+        AND documents.status != 'archived'
+      )
+      OR (
+        org_members.role = 'viewer'
+        AND documents.visibility = 'public'
+      )
+    )
+  )
+);
+
+-- Row-level update restrictions based on status
+CREATE POLICY prevent_archived_updates ON documents FOR UPDATE
+USING (status != 'archived')
+WITH CHECK (status != 'archived');
+```
+
+```typescript
+// Client: subscribe with role-aware filters
+const channel = supabase.channel('documents')
+  .on('postgres_changes',
+    {
+      event: '*',
+      schema: 'public',
+      table: 'documents',
+      filter: `org_id=eq.${userOrgId}`,
+    },
+    (payload) => {
+      // RLS already filtered — only authorized events arrive
+      updateDocumentList(payload.new);
+    }
+  )
+  .subscribe();
+```
+
+## Performance Considerations
+
+| Concern | Practice |
+|---------|----------|
+| Query performance | Use EXPLAIN ANALYZE, add indexes for WHERE/JOIN/ORDER BY columns |
+| N+1 queries | Supabase JS client supports select with joins: `select(*, orders(*))` |
+| Connection pooling | Supabase uses PgBouncer for transaction pooling — avoid prepared statements |
+| Large datasets | Add LIMIT + OFFSET for pagination, never SELECT * on big tables |
+| Realtime overhead | Enable replication only on tables that need it — each table adds WAL overhead |
+| Edge Function cold starts | ~200ms-2s for Deno runtime. Keep frequently-used functions warm with pings |
+| Storage performance | Large files (>5MB) use S3 multipart upload. Server-side resizing for images |
+| pgvector performance | IVFFlat for approximate (faster). HNSW for exact (slower insert, faster query) |
+
+## Security Patterns
+
+```sql
+-- Row-Level Security: Multi-tenant isolation
+CREATE TABLE tenant_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id),
+  data TEXT NOT NULL
+);
+
+ALTER TABLE tenant_data ENABLE ROW LEVEL SECURITY;
+
+-- Users can only see their tenant's data
+CREATE POLICY tenant_isolation ON tenant_data
+  FOR ALL USING (
+    tenant_id IN (
+      SELECT tenant_id FROM tenant_members
+      WHERE user_id = auth.uid()
+    )
+  );
+
+-- Admin bypass
+CREATE POLICY admin_access ON tenant_data
+  FOR ALL USING (
+    auth.jwt() ->> 'role' = 'admin'
+  );
+```
+
+```typescript
+// Server-side only: service role operations
+// Use for admin tasks, background jobs, webhooks
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
+
+// Admin-only operations bypass RLS
+async function deleteUserAccount(userId: string) {
+  // Delete auth user (service role required)
+  await supabaseAdmin.auth.admin.deleteUser(userId);
+  // Profile deleted via CASCADE from auth.users
+}
+
+// Database webhooks for async processing
+-- Enable webhook on insert
+CREATE OR REPLACE FUNCTION notify_new_order()
+RETURNS trigger AS $$
+BEGIN
+  PERFORM pg_notify('new_order', row_to_json(NEW)::text);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER order_created_trigger
+  AFTER INSERT ON orders
+  FOR EACH ROW EXECUTE FUNCTION notify_new_order();
+```
+
+## Cost Optimization
+
+| Feature | Cost Driver | Optimization |
+|---------|------------|--------------|
+| Database | Compute hours, storage, egress | Use read replicas for reporting. Archive old data to cold storage |
+| Storage | Storage size, data transfer | Use CDN for public files. Set lifecycle rules. Compress images |
+| Realtime | Active connections | Disable replication on unused tables. Use broadcast instead of DB changes |
+| Edge Functions | Invocations, duration | Cache responses. Batch operations. Use warm-start friendly code |
+| Bandwidth | Data transfer out | Enable CDN. Optimize image sizes. Compress API responses |
+| PITR | Storage (WAL files) | Disable for non-production projects. Set retention to minimum (7 days) |
+
+## Production Considerations
+
+| Concern | Practice |
+|---------|----------|
+| Schema migrations | Use `supabase migration new` + `supabase db push`. Never edit via dashboard |
+| Backup strategy | PITR + daily database dumps. Test restore monthly |
+| Rate limiting | Implement at application level (Supabase doesn't have built-in rate limiting) |
+| Connection limits | Free tier: 2 concurrent connections. Pro: 60. Team: 120. Plan accordingly |
+| Monitoring | Supabase dashboard for DB metrics + custom health checks on Edge Functions |
+| Staging environment | Separate Supabase project for staging with anonymized production data |
+| CI/CD integration | `supabase db push` in CI pipeline. Test migrations against staging first |
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It's Bad | Fix |
+|-------------|-------------|-----|
+| RLS on every query even when not needed | Adds overhead on queries that bypass auth | RLS is free on indexed lookups, but avoid complex function calls in RLS |
+| Service role key in client code | Exposes full DB access to users | Service role is server-only. Use anon key + RLS for client |
+| Fat tables with no normalization | JSONB overload, hard to maintain | Use normalized tables with foreign keys. JSONB only for true schemaless data |
+| Too many indexes | Slows writes. Each index adds ~10% write overhead | Index only WHERE/JOIN/ORDER BY columns. Remove unused indexes |
+| Row-level security with recursive policies | Recursive policies timeout (5s limit) | Use materialized paths or denormalized membership for recursive checks |
+| Edge Functions doing heavy computation | Deno has 5-30s timeout, 128MB memory limit | Offload heavy processing to worker service, use EF only as thin API layer |
+| Storing files >5MB in DB | Blows up DB size, slow queries | Use Supabase Storage with presigned URLs, store only URL in DB |
+
 ## Rules
 - Every table must have RLS enabled — no exceptions.
 - Service role key is for server-side/admin operations — never expose to client.
@@ -252,6 +470,14 @@ serve(async (req) => {
 - Use `migration` workflow for production schema changes, never modify via dashboard.
 - Enable PITR for production projects (additional cost).
 - Set up database webhooks for async workflows instead of triggers when possible.
+- Use `EXPLAIN ANALYZE` before adding any new index — verify it's actually used.
+- Never expose service_role_key in client-side code or version control.
+- Keep Edge Functions stateless and < 50ms execution time (cold start excluded).
+- Use `auth.uid()` in RLS policies, not `current_user` or `current_setting`.
+- Limit Realtime subscriptions to 100 concurrent channels per client.
+- Test RLS policies with `supabase test` or by simulating auth.uid() values.
+- Set up database webhooks for async workflows instead of triggers when possible.
+- Enable branching for development workflows (`supabase branches`).
 
 ## References
   - references/edge-functions.md — Edge Functions

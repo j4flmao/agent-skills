@@ -255,6 +255,172 @@ export const Empty: Story = {
 | Bundle size (SB) | Large | Small | Small | Minimal |
 | MSW integration | Yes | Yes | No | No |
 
+## Theming in Storybook
+
+```tsx
+// .storybook/preview.ts — theme switching
+import { withThemeFromJSXProvider } from '@storybook/addon-themes';
+import { ThemeProvider } from '../src/lib/ThemeProvider';
+import { lightTheme, darkTheme } from '../src/lib/themes';
+
+export const decorators = [
+  withThemeFromJSXProvider({
+    themes: {
+      light: lightTheme,
+      dark: darkTheme,
+    },
+    defaultTheme: 'light',
+    Provider: ThemeProvider,
+    GlobalStyles: () => null,
+  }),
+];
+```
+
+## Story Composition and Reuse
+
+```tsx
+// Composing stories from other stories
+import { Primary as ButtonPrimary } from '../Button/Button.stories';
+
+const meta = {
+  title: 'Components/Dialog',
+  component: Dialog,
+} satisfies Meta<typeof Dialog>;
+
+// Reuse Button story inside Dialog story
+export const WithButton: Story = {
+  args: {
+    title: 'Confirm',
+    children: <Button {...ButtonPrimary.args}>OK</Button>,
+    onClose: fn(),
+  },
+};
+
+// Args composition for complex components
+export const WithForm: Story = {
+  args: {
+    ...Default.args,
+    children: (
+      <Form>
+        <TextField label="Name" />
+        <Button {...ButtonPrimary.args}>Submit</Button>
+      </Form>
+    ),
+  },
+};
+```
+
+## Design System Integration
+
+```tsx
+// Theming with design tokens
+// .storybook/preview.ts
+import { globalTypes } from '@storybook/addons';
+
+export const globalTypes = {
+  theme: {
+    name: 'Theme',
+    description: 'Global theme for components',
+    defaultValue: 'light',
+    toolbar: {
+      icon: 'circlehue',
+      items: ['light', 'dark', 'high-contrast'],
+      showName: true,
+      dynamicTitle: true,
+    },
+  },
+  locale: {
+    name: 'Locale',
+    description: 'Internationalization locale',
+    defaultValue: 'en-US',
+    toolbar: {
+      icon: 'globe',
+      items: ['en-US', 'de-DE', 'vi-VN', 'ja-JP'],
+      showName: true,
+    },
+  },
+};
+
+// With Figma design specs
+export const ButtonStory = {
+  parameters: {
+    design: {
+      type: 'figma',
+      url: 'https://www.figma.com/file/.../Button',
+    },
+  },
+};
+```
+
+## Visual Regression Testing with Chromatic
+
+```yaml
+# .github/workflows/chromatic.yml
+name: Chromatic
+on: [pull_request]
+
+jobs:
+  chromatic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for Chromatic to detect changed stories
+      - run: npm ci
+      - uses: chromaui/action@v1
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          onlyChanged: true  # Only snapshot changed stories
+          exitOnceUploaded: true
+          buildScriptName: build-storybook
+          # Auto-accept changes from dependabot
+          autoAcceptChanges: 'dependabot/**'
+          # Prevent false positives for specific branches
+          skip: '@(renovate/**|docs/**)'
+```
+
+```typescript
+// Chromatic mode: only globally accessible styles
+// Prevent Chromatic from crashing on theme provider issues
+export const decorators = [
+  (Story) => (
+    <div style={{ padding: '1rem', fontFamily: 'sans-serif' }}>
+      <Story />
+    </div>
+  ),
+];
+```
+
+## Storybook Test Runner
+
+```typescript
+// .storybook/test-runner.ts
+// Custom test runner for a11y and interaction testing
+import { getStoryContext, type TestRunnerConfig } from '@storybook/test-runner';
+import { checkA11y, injectAxe } from 'axe-playwright';
+
+const config: TestRunnerConfig = {
+  async preVisit(page) {
+    await injectAxe(page);
+  },
+  async postVisit(page, context) {
+    const storyContext = await getStoryContext(page, context);
+    
+    // Skip a11y tests for stories that opt out
+    if (storyContext.parameters?.a11y?.disable) return;
+
+    // Run aXe and fail on critical violations
+    const results = await checkA11y(page, 'storybook-root', {
+      detailedReport: false,
+      includedImpacts: ['critical', 'serious'],
+    });
+    expect(results).toHaveNoViolations();
+  },
+};
+
+export default config;
+```
+
 ## Performance Considerations
 
 - Storybook dev server can be slow for large component libraries (500+ stories). Use `storyStoreV7: true` for lazy compilation
@@ -262,6 +428,8 @@ export const Empty: Story = {
 - MSW handlers intercept API calls in stories — no real network requests during testing
 - Bundle size of Storybook itself is irrelevant to production (dev-only tool)
 - `@storybook/test` package is small (~3KB) and only used in story files
+- Lazy compilation: `storyStoreV7: true` reduces dev startup time by 60% for large libraries
+- Chromatic `onlyChanged: true` reduces snapshot time by 80%+ on typical PRs
 
 ## Accessibility Considerations
 
@@ -270,6 +438,36 @@ export const Empty: Story = {
 - Ensure color contrast passes WCAG AA (4.5:1) for all stories
 - Test focus management in interactive stories (play functions)
 - Verify ARIA labels and roles in the Accessibility panel
+- Add a11y-focused stories: LongText, MissingAltText, FocusTrap, ReducedMotion
+
+```tsx
+// Accessibility-focused stories
+export const A11yViolations: Story = {
+  name: 'Accessibility Check',
+  parameters: {
+    a11y: {
+      config: { rules: [{ id: 'color-contrast', enabled: true }] },
+      element: '#storybook-root',
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const results = await axe(canvasElement);
+    expect(results).toHaveNoViolations();
+  },
+};
+```
+
+## Storybook Anti-Patterns
+
+| Anti-Pattern | Problem | Fix |
+|---|---|---|
+| No stories for empty/loading states | Missing test coverage for edge cases | Add stories for every component state |
+| Stories that make real API calls | Flaky, slow, require network | Use MSW to mock all API calls |
+| Using `storiesOf` API (CSF 2.x) | Deprecated, removed in SB 8 | Use CSF 3.x `const meta = { ... }` |
+| Hardcoded viewports in stories | Inconsistent across components | Use `parameters.viewport` with named viewports |
+| Skipping a11y addon | Accessibility issues caught late | Add `@storybook/addon-a11y` to every project |
+| Too many stories per component | Maintenance burden | Cover: default, loading, error, edge cases. Not every prop combination |
+| Missing `autodocs` tag | Docs tab not generated | Add `tags: ['autodocs']` to meta |
 
 ## Rules
 - Always use CSF 3.x syntax — never CSF 2.x `storiesOf` API
@@ -280,6 +478,9 @@ export const Empty: Story = {
 - Keep stories co-located with the component (`Button.stories.tsx` next to `Button.tsx`) unless the project centralizes them
 - Always test at minimum 3 viewports: mobile (375px), tablet (768px), desktop (1280px)
 - Always wrap async interactions in `play` with `await` — missing await = flaky tests
+- Every component has: default, loading (if applicable), error (if applicable), empty (if applicable), and edge case stories
+- Use Chromatic `onlyChanged: true` in CI to minimize snapshot time
+- Run aXe on every story — fail CI on critical/serious violations
 
 ## References
   - references/addons-testing.md — Addons & Testing Reference
@@ -292,5 +493,3 @@ export const Empty: Story = {
 No artifact produced unless requested.
 Next skill: `frontend-pwa` (if the component needs offline support or a service worker)
 Carry forward: Component prop types, existing story examples, addon list from config
-
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.

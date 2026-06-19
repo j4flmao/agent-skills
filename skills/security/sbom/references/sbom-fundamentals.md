@@ -1,213 +1,235 @@
-# Sbom Fundamentals
+# SBOM Fundamentals
 
 ## Overview
-Sbom is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+A Software Bill of Materials (SBOM) is a formal inventory of all components, libraries, dependencies, and their metadata in a software product. SBOMs enable vulnerability management, license compliance, and supply chain risk assessment. They are increasingly mandated by regulations (EO 14028, CISA guidance, EU Cyber Resilience Act).
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Sbom helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Concept 1: SBOM Formats
+- **SPDX** (ISO/IEC 5962): The international standard — supports licenses, security, and provenance
+- **CycloneDX**: OWASP project — designed for security use cases, supports vulnerabilities, pedigree
+- **SWID**: ISO/IEC 19770-2 — primarily for software inventory and license management
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Sbom solutions. These principles help maintain code quality and reduce technical debt.
+### Concept 2: SBOM Essential Elements
+- **Component name** and **version**: The specific software package
+- **Supplier**: Creator or maintainer of the component
+- **Dependencies**: Relationships between components (direct and transitive)
+- **License information**: SPDX license identifiers
+- **Hash** (SHA-256/512): Cryptographic identifier for integrity verification
+- **Author**: Entity that created the SBOM
 
-### Concept 3: Data Management
-Proper data management is essential for Sbom. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Concept 3: SBOM Types by Depth
+- **Build-time (source)**: Generated from package manager manifests during build
+- **Runtime**: Captures dependencies loaded at runtime (includes dynamic linking)
+- **Design**: Created during architecture phase (planned dependencies)
+- **Analyzed**: Produced from binary analysis of compiled artifacts
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
-
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Sbom follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Concept 4: Vulnerability Correlation
+SBOM enables automated vulnerability scanning by correlating components with known vulnerability databases:
+- NVD (National Vulnerability Database)
+- OSV (Open Source Vulnerabilities)
+- GitHub Advisory Database
+- Snyk, Sonatype, Black Duck databases
 
 ## Implementation Guide
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Step 1: Generate SBOM at Build Time
+```yaml
+# CycloneDX SBOM generation (GitHub Actions)
+name: Generate SBOM
+on:
+  push:
+    branches: [main]
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+      # Node.js dependencies
+      - name: Generate CycloneDX SBOM (Node)
+        run: |
+          npm install -g @cyclonedx/cyclonedx-npm
+          cyclonedx-npm --output-format JSON --output-file sbom.node.json
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+      # Python dependencies
+      - name: Generate CycloneDX SBOM (Python)
+        run: |
+          pip install cyclonedx-bom
+          cyclonedx-py --format json --output sbom.python.json
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+      # Go dependencies
+      - name: Generate CycloneDX SBOM (Go)
+        uses: CycloneDX/gh-gomod-generate-sbom@v1
+        with:
+          version: v1
+          output: ./sbom.go.json
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+      # Merge all SBOMs
+      - name: Merge SBOMs
+        run: |
+          pip install cyclonedx-bom-merge
+          cyclonedx-merge --input-files sbom.*.json --output-format json --output-file sbom.merged.json
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.merged.json
+```
+
+### Step 2: SBOM Vulnerability Scan
+```yaml
+name: SBOM Vulnerability Scan
+on:
+  schedule:
+    - cron: '0 6 * * *'  # Daily
+
+jobs:
+  vuln-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download latest SBOM
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom
+          path: .
+
+      - name: Scan with Grype
+        run: |
+          grype sbom:./sbom.merged.json --output json > vuln_report.json
+
+      - name: Scan with Trivy
+        run: |
+          trivy sbom ./sbom.merged.json --format json --output trivy_report.json
+
+      - name: Check for critical vulnerabilities
+        run: |
+          critical_count=$(grep -c '"Critical"' vuln_report.json || true)
+          if [ $critical_count -gt 0 ]; then
+            echo "CRITICAL: $critical_count critical vulnerabilities found!"
+            exit 1
+          fi
+```
+
+### Step 3: SBOM JSON Example (CycloneDX)
+```json
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-06-19T10:00:00Z",
+    "tools": [{
+      "vendor": "CycloneDX",
+      "name": "cyclonedx-npm",
+      "version": "1.16.0"
+    }],
+    "component": {
+      "type": "application",
+      "name": "my-app",
+      "version": "2.1.0",
+      "swid": {
+        "tagId": "my-app-2.1.0",
+        "name": "my-app"
+      }
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "express",
+      "version": "4.18.2",
+      "purl": "pkg:npm/express@4.18.2",
+      "supplier": {
+        "name": "OpenJS Foundation"
+      },
+      "licenses": [{
+        "license": {
+          "id": "MIT"
+        }
+      }],
+      "hashes": [{
+        "alg": "SHA-512",
+        "content": "f6ea6426c5b2a5a2d1c3e8b7c9d0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8"
+      }],
+      "externalReferences": [
+        {"url": "https://expressjs.com/", "type": "website"},
+        {"url": "https://github.com/expressjs/express", "type": "vcs"}
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/my-app@2.1.0",
+      "dependsOn": ["pkg:npm/express@4.18.2"]
+    }
+  ],
+  "vulnerabilities": []
+}
+```
+
+### Step 4: SBOM Attestation
+```yaml
+# Sign and attest SBOM with Sigstore/Cosign
+name: SBOM Attestation
+on:
+  release:
+    types: [published]
+
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate SBOM
+        run: cyclonedx-npm --output-file sbom.json
+      - name: Sign SBOM with Cosign
+        run: |
+          cosign sign-blob --key cosign.key sbom.json > sbom.json.sig
+      - name: Attest with in-toto
+        uses: in-toto/attest@v1
+        with:
+          subject: sbom.json
+          predicate-type: "https://cyclonedx.org/predicate/v1"
+          predicate: sbom.json
+```
 
 ## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+- Generate SBOMs at build time — attach to every release artifact
+- Include both direct and transitive dependencies
+- Use a standard format (SPDX or CycloneDX) — avoid proprietary formats
+- Include component hashes for integrity verification
+- Automate vulnerability scanning of SBOMs (continuous, not just at release)
+- Sign SBOMs to ensure authenticity and integrity
+- Update SBOM on every release — version control SBOMs
+- Include SBOMs in container images as metadata labels
+- Exceed minimum regulatory requirements — include license, supplier, and provenance data
+- Integrate SBOM generation into CI/CD pipeline — not a manual process
 
 ## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+- SBOM generated only at release (not continuous) — security gaps between releases
+- Missing transitive dependencies — undercounting true component count
+- No hash for components — can't verify integrity
+- Proprietary format — incompatible with tools and regulations
+- No SBOM signing — authenticity can't be verified
+- SBOM generated after build (not from build-time) — may not match deployed artifact
+- SBOM for source but not container image — runtime dependencies missing
+- No automated vulnerability scanning — SBOM is just a list without analysis
+- Ignoring transitive dependency vulnerabilities — majority of risk is in transitive deps
+- Not versioning SBOMs — can't track what changed between releases
 
 ## Key Points
-- Understand core Sbom concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- SBOM: inventory of all components, dependencies, and metadata in software
+- Standard formats: SPDX (ISO 5962) and CycloneDX (OWASP)
+- Essential elements: component name, version, supplier, license, hash, dependencies
+- Generate SBOM at build time in CI/CD pipeline
+- Automate vulnerability scanning of SBOMs continuously
+- Sign SBOMs for authenticity and integrity
+- Include SBOMs in release artifacts and container images
+- Cover both direct and transitive dependencies
+- Exceed minimum regulatory requirements
+- Version control SBOMs to track changes between releases

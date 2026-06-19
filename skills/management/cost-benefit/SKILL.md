@@ -303,6 +303,209 @@ Total               | 100%   | 3.8         | 3.0
 - Separate hard savings from soft savings
 - Risk-adjusted return preferred over single-point ROI
 
+## TCO Calculation Template — Technology Investment
+
+```
+## Total Cost of Ownership — {Project Name}
+Time Horizon: {3-5 years} | Discount Rate: {n}%
+
+### Direct Costs
+| Category | Year 1 | Year 2 | Year 3 | Year 4 | Year 5 | Total |
+|----------|--------|--------|--------|--------|--------|-------|
+| Software licenses | $ | $ | $ | $ | $ | $ |
+| Hardware/infrastructure | $ | $ | $ | $ | $ | $ |
+| Implementation | $ | $ | $ | $ | $ | $ |
+| Integration | $ | $ | $ | $ | $ | $ |
+| Training | $ | $ | $ | $ | $ | $ |
+| **Direct Total** | $ | $ | $ | $ | $ | $ |
+
+### Indirect Costs
+| Category | Year 1 | Year 2 | Year 3 | Year 4 | Year 5 | Total |
+|----------|--------|--------|--------|--------|--------|-------|
+| Internal staffing | $ | $ | $ | $ | $ | $ |
+| Maintenance & support | $ | $ | $ | $ | $ | $ |
+| Downtime/transition | $ | $ | $ | $ | $ | $ |
+| Opportunity cost | $ | $ | $ | $ | $ | $ |
+| **Indirect Total** | $ | $ | $ | $ | $ | $ |
+
+### Total Cost: sum of Direct + Indirect
+### Discounted Total (NPV): PV of all cash flows at discount rate
+```
+
+## ROI Calculation Template
+
+```
+## Return on Investment — {Project Name}
+Time Horizon: {3-5 years}
+
+### Investment (denominator)
+Initial investment: {total upfront costs}
+Ongoing investment (discounted): {NPV of ongoing costs}
+Total Investment: $X
+
+### Returns (numerator)
+Cost savings:
+  - Labor efficiency: {hours saved x hourly rate} per year
+  - Infrastructure savings: {difference vs. current solution}
+  - Process improvement: {reduction in cycle time x cost per unit}
+
+Revenue impact:
+  - Additional revenue: {estimated from increased capability}
+  - Customer retention: {reduced churn x LTV x impacted customers}
+  - Time-to-market improvement: {faster delivery x revenue per unit time}
+
+Total Annual Return (Year 1): $Y1
+Total Annual Return (Year 2): $Y2
+Total Annual Return (Year 3): $Y3
+
+### ROI Calculation
+Simple ROI: (Total Returns - Total Investment) / Total Investment x 100%
+Discounted ROI: (NPV of Returns - NPV of Investment) / NPV of Investment x 100%
+Break-even: {X months} (when cumulative returns = total investment)
+```
+
+## Sensitivity Analysis Template
+
+```
+## Sensitivity Analysis — {Project Name}
+Base Case Scenario: {most likely assumptions}
+
+### Variable Ranges
+| Variable | Pessimistic | Base Case | Optimistic |
+|----------|-------------|-----------|------------|
+| Implementation cost | +30% | Budgeted | -10% |
+| Adoption rate | 40% | 65% | 85% |
+| Efficiency gain | 10% | 25% | 40% |
+| Maintenance cost/year | +25% | Budgeted | -10% |
+| Revenue impact | 50% of base | Base | 150% of base |
+
+### Scenario Results
+| Metric | Pessimistic | Base Case | Optimistic |
+|--------|-------------|-----------|------------|
+| Total Investment | $ | $ | $ |
+| 3-Year Returns | $ | $ | $ |
+| ROI | X% | Y% | Z% |
+| Break-even | {n} months | {n} months | {n} months |
+| NPV at {n}% discount | $ | $ | $ |
+
+### Key Sensitivity Drivers
+1. {Variable with highest impact on outcome} — {magnitude of effect}
+2. {Second most sensitive variable} — {magnitude of effect}
+3. {Third most sensitive variable} — {magnitude of effect}
+
+### Conclusion
+The analysis is MOST sensitive to changes in {key variable}.
+At {pessimistic value}, ROI drops to {X}% but remains positive/negative.
+The investment is robust/sensitive to scenario variations.
+Recommended confidence level for go decision: {Low | Medium | High}
+```
+
+## Scenario Modeling — Decision Tree
+
+```
+Investment Decision
+├── Do Nothing (baseline)
+│   ├── Cost: $0
+│   ├── Current cost continues: ${n}/year
+│   └── Outcome: No improvement, risk of falling behind
+│
+├── Buy Commercial Solution
+│   ├── Upfront: ${n}
+│   ├── Annual: ${n}
+│   ├── P(success): 80% to ROI = {X%}
+│   ├── P(failure): 20% to ROI = {-Y%}
+│   └── Weighted ROI: calculation
+│
+├── Build In-House
+│   ├── Upfront: ${n (higher than buy)}
+│   ├── Annual: ${n (lower than buy)}
+│   ├── P(success): 60% to ROI = {X%}
+│   ├── P(failure): 40% to ROI = {-Y%}
+│   └── Weighted ROI: calculation
+│
+└── Hybrid (buy + customize)
+    ├── Upfront: ${mid}
+    ├── Annual: ${mid}
+    ├── P(success): 75% to ROI = {X%}
+    ├── P(failure): 25% to ROI = {-Y%}
+    └── Weighted ROI: calculation
+
+Recommendation: {decision with rationale}
+```
+
+## Non-Financial Factors Assessment Template
+
+```
+## Qualitative Assessment — {Project Name}
+
+| Factor | Rating (1-5) | Weight | Weighted Score | Notes |
+|--------|-------------|--------|---------------|-------|
+| Strategic alignment | /5 | x 0.20 | | |
+| Competitive advantage | /5 | x 0.15 | | |
+| Technical feasibility | /5 | x 0.15 | | |
+| Organizational readiness | /5 | x 0.10 | | |
+| Regulatory compliance | /5 | x 0.10 | | |
+| User satisfaction impact | /5 | x 0.10 | | |
+| Team morale/retention | /5 | x 0.10 | | |
+| Long-term flexibility | /5 | x 0.10 | | |
+| **Total** | | **1.0** | | |
+
+Threshold: >= 3.5 = proceed, 2.5-3.5 = conditional, < 2.5 = reconsider
+
+### Risk-Adjusted Recommendation
+- NPV of base scenario: ${n}
+- NPV weighted by scenario probabilities: ${n}
+- Qualitative score: {n}/5
+- **Final recommendation:** {Go | No-go | Conditional}
+```
+
+## Cost-Benefit Analysis — Full Template
+
+```
+## Cost-Benefit Analysis — {Decision Title}
+Date: {date} | Prepared by: {name}
+
+### Executive Summary
+One-paragraph summary of the decision, key financials, and recommendation.
+
+### Options Analyzed
+1. {Option A} — {brief description}
+2. {Option B} — {brief description}
+3. Do nothing — {current state baseline}
+
+### Quantitative Analysis
+| Line Item | Option A | Option B | Do Nothing |
+|-----------|----------|----------|------------|
+| Initial investment | $ | $ | $0 |
+| Annual operating cost | $ | $ | $ |
+| Total 3-year cost | $ | $ | $ |
+| Annual benefit year 1 | $ | $ | $0 |
+| Annual benefit year 2 | $ | $ | $0 |
+| Annual benefit year 3 | $ | $ | $0 |
+| Total 3-year benefit | $ | $ | $0 |
+| Net benefit (3-year) | $ | $ | $0 |
+| ROI | % | % | --- |
+| Break-even | {n} months | {n} months | --- |
+| NPV (3yr @ {n}% discount) | $ | $ | $0 |
+
+### Sensitivity Analysis
+- Best case NPV: ${A} vs ${B}
+- Base case NPV: ${A} vs ${B}
+- Worst case NPV: ${A} vs ${B}
+- Key driver: {variable}
+
+### Non-Financial Assessment
+- Strategic alignment: Option {x} is better because {reason}
+- Risk profile: Option {x} has {higher/lower} risk because {reason}
+- Implementation complexity: Option {x} is {simpler/more complex}
+
+### Recommendation
+**Recommended Option:** {Option X}
+**Rationale:** {2-3 sentence justification}
+**Risk mitigation:** {actions before proceeding}
+**Approval required:** {role or level}
+```
+
 ## References
   - references/cba-methodology.md — CBA Methodology
   - references/cost-benefit-advanced.md — Cost Benefit Advanced Topics

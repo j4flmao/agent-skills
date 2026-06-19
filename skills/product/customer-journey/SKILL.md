@@ -368,6 +368,193 @@ A healthcare provider mapped the patient intake journey across appointment booki
 
 Optimization: automated insurance pre-verification at booking time, integrated lab order system with EMR, created cancellation recovery process, implemented automated follow-up for abnormal results. Reduced backstage actions from 14 to 7. Patient satisfaction improved from 3.8 to 4.5. No-show rate decreased 31%.
 
+## Expanded Decision Trees
+
+### Journey Optimization Prioritization Decision Tree
+```
+What is the current journey health score?
+  |-- <0.6 (Red) --> Focus on fixing broken steps first
+  |     |-- Highest drop-off step → Fix usability issues
+  |     |-- Lowest CSAT step → Reduce friction
+  |-- 0.6-0.8 (Yellow) --> Focus on high-impact improvements
+  |     |-- High effort + low satisfaction → Reduce effort
+  |     |-- High drop-off → Optimize funnel step
+  |-- >0.8 (Green) --> Focus on delight and differentiation
+        |-- Moments of truth → Enhance and protect
+        |-- New channels → Expand reach and convenience
+
+What is the primary constraint?
+  |-- Engineering capacity → Prioritize low-effort high-impact changes
+  |-- Data availability → Run discovery/measurement experiments first
+  |-- Org alignment → Start with journey health workshop for alignment
+  |-- Budget → Focus on no-cost changes (process, messaging, UX copy)
+```
+
+### Research Method Selection Decision Tree
+```
+Do you have quantitative data for this journey stage?
+  |-- YES --> Is the data sufficient to identify the problem?
+  |     |-- YES --> Jump to solution design and experimentation
+  |     |-- NO --> Add qualitative research (interviews, session replays)
+  |-- NO --> Do you have a hypothesis about the problem?
+        |-- YES --> Run a targeted survey or micro-survey at the step
+        |-- NO --> Conduct exploratory interviews (5-8 users)
+
+What is the confidence in your understanding of customer needs?
+  |-- High ({data from 3+ sources converge}) --> Design solution and test
+  |-- Medium ({data from 1-2 sources}) --> Validate with additional research
+  |-- Low ({assumptions only}) --> Start with generative research (interviews, diary studies)
+```
+
+### Channel Integration Decision Tree
+```
+Does the customer switch between channels during this journey?
+  |-- YES --> Is context preserved across channels?
+  |     |-- YES --> Ensure seamless handoff timing and communication
+  |     |-- NO --> Prioritize context preservation (single customer view)
+  |-- NO --> Is the journey completed in one channel?
+        |-- YES --> Optimize within-channel experience
+        |-- NO --> Consider adding cross-channel options
+
+What channels are available for this journey stage?
+  |-- Digital only → Optimize digital experience; consider adding human touchpoint
+  |-- Human only → Consider adding digital option for convenience
+  |-- Both → Map where each channel performs best; optimize channel routing
+```
+
+## Templates
+
+### CSAT Survey Template (Micro-Survey)
+```
+After journey step completion:
+  "How satisfied were you with [specific experience]?"
+  Scale: 1 (Very Dissatisfied) — 5 (Very Satisfied)
+  
+  Follow-up (if score < 4):
+  "What could we improve?" [open text]
+  
+  Follow-up (if score = 5):
+  "What did you like most?" [open text]
+```
+
+### Journey Diagnostics Report Template
+```
+# Journey Diagnostics: {Journey Name}
+Period: {start} to {end}
+
+## Overall Health
+Health Score: {value} — {Green/Yellow/Red}
+Trend: {improving/stable/declining} — {X% change vs previous period}
+
+## Funnel Performance
+| Step | Entrants | Completion | Drop-off | vs Target | Trend |
+|------|---------|-----------|---------|-----------|-------|
+| {step} | {n} | {%} | {%} | {±X%} | {direction} |
+
+## Pain Points (Top 5 by Score)
+| Pain Point | Stage | Severity | Frequency | Score | Churn Impact |
+|-----------|-------|---------|----------|-------|-------------|
+
+## Moments of Truth Assessment
+| Moment | Impact | Satisfaction | Status | Action |
+|--------|--------|-------------|--------|--------|
+
+## CSAT by Stage
+| Stage | Score | Responses | vs Previous | Target Met? |
+|-------|-------|-----------|-------------|-------------|
+
+## Recommendations
+1. {recommendation} — Expected impact: {estimation}
+2. {recommendation} — Expected impact: {estimation}
+
+## Action Items
+| Action | Owner | Priority | Timeline | Status |
+|--------|-------|----------|----------|--------|
+```
+
+### Abandonment Recovery Playbook Template
+```
+# Abandonment Recovery: {Journey Step}
+
+## Triggers
+{What specific abandonment event triggers recovery}
+Detection method: {analytics event / timeout / exit intent}
+
+## Recovery Channels (Ranked by Effectiveness)
+| Channel | Conversion Rate | Timing | Message Type |
+|---------|----------------|--------|--------------|
+| {channel} | {X%} | {timing} | {email/push/SMS} |
+
+## Message Templates
+### Immediate Recovery (within 5 min)
+Subject: {subject}
+Body: {value reminder + link to resume}
+
+### Follow-up (24 hours)
+Subject: {subject}
+Body: {social proof + limited-time incentive if applicable}
+
+### Final Attempt (72 hours)
+Subject: {subject}
+Body: {urgency signal + clear CTA}
+
+## Success Metrics
+- Recovery contact rate: {%}
+- Recovery conversion rate: {%}
+- Revenue recovered: ${amount}
+- Time-to-recovery: {average}
+```
+
+## Expanded Governance Model
+
+### Journey Ownership Charter
+Each journey owner's responsibilities:
+- **Maintain journey map**: Update when product or market changes. Review quarterly with cross-functional team.
+- **Monitor journey metrics**: Weekly health check against targets. Alert stakeholders when metrics drop below threshold.
+- **Identify opportunities**: Continuous analysis of funnel data, CSAT trends, support tickets, and user research.
+- **Run experiments**: Prioritize, design, run, and evaluate experiments on journey touchpoints.
+- **Coordinate improvements**: Work across product, design, engineering, marketing, sales, and support to implement changes.
+- **Report to leadership**: Monthly journey health report with metrics, improvements, and recommendations.
+
+Journey owner authority: can block changes that negatively impact journey metrics, can request resources for journey improvements, has decision rights on journey-level prioritization.
+
+### Cross-Functional Journey Team Structure
+| Role | Responsibility | Time Allocation |
+|------|---------------|-----------------|
+| Journey Owner | End-to-end accountability | 100% |
+| Product Manager | Feature prioritization for journey | 25-50% |
+| UX Designer | Journey map maintenance, research | 25-50% |
+| Data Analyst | Funnel analysis, metric tracking | 25% |
+| Engineering Lead | Technical feasibility, implementation | 25% |
+| Customer Support Rep | Pain point insights, CSAT data | 10% |
+| Marketing/Sales Rep | Acquisition touchpoints | 10% |
+
+### Journey Maturity Model
+| Level | Name | Characteristics | Practices |
+|-------|------|----------------|-----------|
+| 1 | Initial | No journey maps, ad-hoc optimization | Reactive fixes, no measurement |
+| 2 | Defined | Journey maps exist, basic funnel tracking | Quarterly reviews, pain point lists |
+| 3 | Managed | Service blueprints, segment analysis | Monthly reviews, experimentation |
+| 4 | Optimized | Journey health score, predictive analytics | Weekly monitoring, automated alerts |
+| 5 | Leading | AI-driven personalization, real-time optimization | Continuous experimentation, proactive |
+
+## Expanded Case Studies
+
+### B2B SaaS Trial Journey Overhaul
+A B2B data analytics platform discovered through journey mapping that their 14-day free trial had a 4% conversion rate. The journey map revealed: day 1-3 had high engagement, day 4-7 had a steep drop-off as users encountered complex setup, and less than 15% of users completed the setup wizard.
+
+Optimization: restructured the 14-day trial into a guided 7-day program with daily email prompts and milestone celebrations. Simplified setup to 3 steps with template-based data import. Added a "success coordinator" touchpoint on day 3. Results: setup completion increased from 15% to 62%. Trial-to-paid conversion increased from 4% to 14%. The journey health score improved from 0.42 to 0.71.
+
+### Mobile App Onboarding Friction Reduction
+A consumer mobile app had 55% drop-off during onboarding between download and first core action. Journey analytics segmented by acquisition source and device type. Found that organic users had 25% higher completion than paid users, and Android users had 18% higher drop-off than iOS.
+
+Optimization: reduced onboarding steps from 7 to 3 for all users (permission requests delayed to point of need). Added skip option for tutorial. Personalized first-experience content based on acquisition source. Results: onboarding completion increased from 45% to 78%. D7 retention increased from 22% to 41%. The emotional journey timeline showed satisfaction improved at every step.
+
+### Financial Services Cross-Channel Journey
+A bank mapped the mortgage application journey across web, mobile, phone, and in-branch. Found that 67% of applicants used 3+ channels during the process and 82% had to repeat information during channel switches. Average application completion time: 23 days.
+
+Optimization: single customer profile across all channels with real-time sync. Implemented channel-aware design (save progress, resume on any channel). Added document upload via mobile during phone calls. Results: average completion time reduced to 8 days. Abandonment rate decreased from 45% to 22%. CSAT improved from 3.2 to 4.1.
+
 ## References
   - references/customer-journey-advanced.md — Customer Journey Advanced Topics
   - references/customer-journey-fundamentals.md — Customer Journey Fundamentals

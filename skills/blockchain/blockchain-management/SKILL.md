@@ -330,6 +330,362 @@ Decide: DAO Legal Structure
 24. Multisig transaction hashes must be verified against Tenderly simulation before signing
 25. Token launches must have anti-bot protection (weighted LBP, Merkle-whitelist, or Proof-of-Humanity)
 
+## Implementation Examples
+
+### Governor Contract (OpenZeppelin — Minimal)
+```solidity
+contract MyGovernor is
+    Governor,
+    GovernorSettings,
+    GovernorCompatibilityBravo,
+    GovernorVotesQuorumFraction,
+    GovernorTimelockControl,
+    GovernorPreventLateQuorum
+{
+    constructor(
+        IVotes _token,
+        TimelockController _timelock,
+        uint256 _votingDelay,   // blocks before voting starts
+        uint256 _votingPeriod,  // duration in blocks
+        uint256 _quorumPercent  // e.g., 4 = 4% of supply
+    )
+        Governor("MyGovernor")
+        GovernorSettings(_votingDelay, _votingPeriod, 0) // proposal threshold = 0
+        GovernorVotesQuorumFraction(_quorumPercent)
+        GovernorPreventLateQuorum(1 days)
+        GovernorTimelockControl(_timelock)
+    {}
+
+    // Required overrides
+    function votingDelay() public view override(IGovernor, GovernorSettings) returns (uint256) {
+        return super.votingDelay();
+    }
+    function votingPeriod() public view override(IGovernor, GovernorSettings) returns (uint256) {
+        return super.votingPeriod();
+    }
+    function quorum(uint256 blockNumber) public view override(IGovernor, GovernorVotesQuorumFraction) returns (uint256) {
+        return super.quorum(blockNumber);
+    }
+    function _executor() internal view override(Governor, GovernorTimelockControl) returns (address) {
+        return super._executor();
+    }
+    function supportsInterface(bytes4 interfaceId) public view override(Governor, GovernorTimelockControl) returns (bool) {
+        return super.supportsInterface(interfaceId);
+    }
+    function proposalNeedsQueuing(uint256 proposalId) public view override(Governor, GovernorTimelockControl) returns (bool) {
+        return super.proposalNeedsQueuing(proposalId);
+    }
+}
+```
+
+### Timelock Controller with Multi-Sig Guardian
+```solidity
+// Timelock with guardian override for emergency pause
+contract ProtectedTimelock is TimelockController {
+    address public guardian;
+
+    modifier onlyGuardian() {
+        require(msg.sender == guardian, "Not guardian");
+        _;
+    }
+
+    constructor(
+        uint256 minDelay,
+        address[] memory proposers,
+        address[] memory executors,
+        address _guardian
+    ) TimelockController(minDelay, proposers, executors, _guardian) {
+        guardian = _guardian;
+    }
+
+    // Guardian can cancel malicious proposals before delay expires
+    // But CANNOT execute arbitrary code
+    function guardianCancel(bytes32 id) external onlyGuardian {
+        _cancel(id);
+    }
+
+    // Guardian can pause all operations
+    bool public paused;
+    function pause() external onlyGuardian { paused = true; }
+    function unpause() external onlyGuardian { paused = false; }
+
+    function execute(
+        address target,
+        uint256 value,
+        bytes calldata data,
+        bytes32 predecessor,
+        bytes32 salt
+    ) public payable override {
+        require(!paused, "System paused");
+        super.execute(target, value, data, predecessor, salt);
+    }
+}
+```
+
+### Vesting Contract (Team/Investor Tokens)
+```solidity
+contract VestingEscrow {
+    IERC20 public token;
+    address public beneficiary;
+    uint256 public totalAmount;
+    uint256 public startTime;
+    uint256 public cliffDuration;
+    uint256 public totalDuration;
+
+    uint256 public released;
+
+    constructor(
+        address _token,
+        address _beneficiary,
+        uint256 _totalAmount,
+        uint256 _startTime,
+        uint256 _cliffDuration,
+        uint256 _totalDuration
+    ) {
+        token = IERC20(_token);
+        beneficiary = _beneficiary;
+        totalAmount = _totalAmount;
+        startTime = _startTime;
+        cliffDuration = _cliffDuration;
+        totalDuration = _totalDuration;
+    }
+
+    // Computable vesting schedule — transparent and immutable
+    function releasableAmount() public view returns (uint256) {
+        if (block.timestamp < startTime + cliffDuration) return 0;
+        if (block.timestamp >= startTime + totalDuration) return totalAmount - released;
+
+        uint256 elapsed = block.timestamp - startTime;
+        return (totalAmount * elapsed) / totalDuration - released;
+    }
+
+    function release() external {
+        uint256 amount = releasableAmount();
+        require(amount > 0, "No tokens to release");
+        released += amount;
+        token.safeTransfer(beneficiary, amount);
+        emit Released(beneficiary, amount);
+    }
+
+    event Released(address indexed beneficiary, uint256 amount);
+}
+```
+
+### Treasury Rebalancing Strategy
+```solidity
+contract TreasuryManager {
+    using SafeERC20 for IERC20;
+
+    // Target allocation: 40% stablecoin, 30% ETH/BTC, 20% LP, 10% yield
+    struct Allocation {
+        uint256 stablePercent;   // e.g., 4000 = 40.00%
+        uint256 blueChipPercent; // e.g., 3000 = 30.00%
+        uint256 lpPercent;       // e.g., 2000 = 20.00%
+        uint256 yieldPercent;    // e.g., 1000 = 10.00%
+    }
+
+    Allocation public targetAllocation;
+    uint256 public rebalanceThreshold = 500; // 5% deviation triggers rebalance
+
+    // Yield positions across protocols for diversification
+    IYieldProvider[] public yieldProviders;
+
+    function rebalance() external onlyRole(GOVERNOR_ROLE) {
+        uint256 totalUSD = getTotalUSD();
+        uint256 stableValue = getStableValue();
+        uint256 blueChipValue = getBlueChipValue();
+        uint256 lpValue = getLPValue();
+        uint256 yieldValue = getYieldValue();
+
+        // Check deviation from target
+        uint256 stablePct = stableValue * 10000 / totalUSD;
+        require(
+            absDiff(stablePct, targetAllocation.stablePercent) > rebalanceThreshold ||
+            absDiff(blueChipValue * 10000 / totalUSD, targetAllocation.blueChipPercent) > rebalanceThreshold,
+            "Within threshold"
+        );
+
+        // Execute rebalancing swaps via DEX aggregator (1inch/Paraswap)
+        _executeSwaps();
+    }
+
+    function absDiff(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a > b ? a - b : b - a;
+    }
+}
+```
+
+### Delegate Voting System
+```solidity
+contract DelegateVoting is ERC20Votes {
+    // Token holders can delegate voting power to any address
+    function delegateTo(address delegatee) external {
+        _delegate(msg.sender, delegatee);
+    }
+
+    // Snapshot voting power at a specific block
+    function getVotingPower(address account, uint256 blockNumber) public view returns (uint256) {
+        return getPastVotes(account, blockNumber);
+    }
+
+    // Prevent flash loan attacks — uses block snapshot, not current balance
+    // This is enforced by ERC20Votes: getPastVotes reads from checkpoint at blockNumber
+}
+
+// Combined with Governor:
+// Governor uses token.getPastVotes(account, proposalSnapshot(proposalId))
+// This ensures voting power was locked at proposal block — flash loan cannot influence it
+```
+
+### Cross-Chain Governance (Hub-and-Spoke)
+```solidity
+// Hub chain (L1): Governor + Timelock
+// Spoke chains (L2, sidechains): Bridge adapters
+
+contract CrossChainGovernor is Governor {
+    using CrossChainEnabled for address;
+
+    // Execute governance actions on spoke chains via bridge
+    function proposeAndExecuteCrossChain(
+        address target,
+        uint256 value,
+        bytes memory data,
+        uint256 dstChainId,
+        bytes memory adapterParams
+    ) external onlyGovernance {
+        // Queue on hub timelock
+        _queueOperation(target, value, data, bytes32(0), bytes32(dstChainId));
+
+        // Send cross-chain message to spoke
+        ILayerZeroEndpoint(endpoint).send{value: msg.value}(
+            dstChainId,
+            trustedRemoteLookup[dstChainId],
+            abi.encode(target, value, data),
+            payable(msg.sender),
+            address(0x0),
+            adapterParams
+        );
+    }
+
+    // Received from spoke chain: execute with hub governance approval
+    function receiveFromSpoke(bytes memory message) external {
+        (address target, uint256 value, bytes memory data) = abi.decode(message, (address, uint256, bytes));
+
+        // Verify spoke chain message carries hub governance weight
+        // Only execute if corresponding hub proposal passed and timelock expired
+        _execute(target, value, data);
+    }
+}
+```
+
+### Airdrop Merkle Distributor
+```solidity
+contract AirdropDistributor {
+    IERC20 public token;
+    bytes32 public merkleRoot;
+    uint256 public claimStart;
+    uint256 public claimEnd;
+
+    // Tracks claimed addresses
+    mapping(address => bool) public isClaimed;
+
+    constructor(
+        address _token,
+        bytes32 _merkleRoot,
+        uint256 _claimStart,
+        uint256 _claimEnd
+    ) {
+        token = IERC20(_token);
+        merkleRoot = _merkleRoot;
+        claimStart = _claimStart;
+        claimEnd = _claimEnd;
+    }
+
+    function claim(
+        uint256 amount,
+        bytes32[] calldata merkleProof
+    ) external {
+        require(block.timestamp >= claimStart, "Claim not started");
+        require(block.timestamp <= claimEnd, "Claim ended");
+        require(!isClaimed[msg.sender], "Already claimed");
+
+        // Verify Merkle proof
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, amount));
+        require(MerkleProof.verify(merkleProof, merkleRoot, leaf), "Invalid proof");
+
+        isClaimed[msg.sender] = true;
+        require(token.transfer(msg.sender, amount), "Transfer failed");
+        emit Claimed(msg.sender, amount);
+    }
+
+    event Claimed(address indexed claimant, uint256 amount);
+}
+```
+
+### Contributor Payment Streaming (Sablier-style)
+```solidity
+contract PaymentStream {
+    IERC20 public token;
+    address public sender;
+    address public recipient;
+    uint256 public totalAmount;
+    uint256 public startTime;
+    uint256 public stopTime;
+    uint256 public withdrawn;
+
+    modifier onlySender() { require(msg.sender == sender, "Not sender"); _; }
+    modifier onlyRecipient() { require(msg.sender == recipient, "Not recipient"); _; }
+
+    constructor(
+        address _token,
+        address _recipient,
+        uint256 _totalAmount,
+        uint256 _duration
+    ) {
+        token = IERC20(_token);
+        sender = msg.sender;
+        recipient = _recipient;
+        totalAmount = _totalAmount;
+        startTime = block.timestamp;
+        stopTime = block.timestamp + _duration;
+
+        token.safeTransferFrom(msg.sender, address(this), _totalAmount);
+    }
+
+    function withdrawable() public view returns (uint256) {
+        if (block.timestamp <= startTime) return 0;
+        if (block.timestamp >= stopTime) return totalAmount - withdrawn;
+
+        uint256 elapsed = block.timestamp - startTime;
+        uint256 duration = stopTime - startTime;
+        return (totalAmount * elapsed) / duration - withdrawn;
+    }
+
+    function withdraw() external onlyRecipient {
+        uint256 amount = withdrawable();
+        require(amount > 0, "Nothing to withdraw");
+        withdrawn += amount;
+        token.safeTransfer(recipient, amount);
+    }
+
+    function cancel() external onlySender {
+        token.safeTransfer(sender, totalAmount - withdrawn);
+    }
+
+    // Governance: % of tokens with streaming creates predictable sell pressure
+    // Calculate daily sell volume = totalStreamingAmount / averageStreamDuration
+}
+```
+
+## Performance Considerations
+
+- **Governance gas costs**: Each vote cast costs ~50-100k gas. With 10,000 voters, a single proposal cycle costs 0.5-1 ETH in gas
+- **Optimization**: Batch vote casting with EIP-712 signatures and delegated relayer
+- **Snapshot for signaling**: Off-chain voting reduces costs by 1000x for non-binding votes
+- **L2 deployment**: Deploy governance on L2 (Arbitrum/Optimism) with cross-chain message relay to L1 for execution
+- **Proposer bond recovery**: Gas for executing cancelation should be recoverable from bond
+- **Timelock gas**: A single timelock execute can cost 200k-500k gas depending on action count
+
 ## References
 - references/blockchain-management-advanced.md — Blockchain Management Advanced Topics
 - references/blockchain-management-fundamentals.md — Blockchain Management Fundamentals

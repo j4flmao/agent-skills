@@ -391,4 +391,130 @@ No artifact produced unless requested.
 Next skill: `frontend-storybook` (if component documentation is needed next)
 Carry forward: Tailwind theme config tokens (colors, spacing, fonts, breakpoints)
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output.
+## Implementation Patterns
+
+### Design Token Integration
+
+```typescript
+// tailwind.config.ts with design tokens
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  content: ['./src/**/*.{ts,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
+        },
+        surface: {
+          primary: 'var(--color-surface-primary)',
+          secondary: 'var(--color-surface-secondary)',
+          elevated: 'var(--color-surface-elevated)',
+        },
+      },
+      spacing: {
+        '4.5': '1.125rem',
+        '18': '4.5rem',
+        '68': '17rem',
+        '88': '22rem',
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Playfair Display', 'serif'],
+      },
+      fontSize: {
+        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.2s ease-out',
+        'slide-up': 'slideUp 0.3s ease-out',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+      },
+    },
+  },
+  plugins: [],
+};
+
+export default config;
+```
+
+### Responsive Component with Tailwind
+
+```tsx
+function DashboardCard({ title, children, className }: Props) {
+  return (
+    <div className={[
+      'rounded-lg border border-gray-200 bg-white p-4 shadow-sm',
+      '@container flex flex-col',
+      'dark:border-gray-700 dark:bg-gray-800',
+      'transition-shadow hover:shadow-md',
+      className,
+    ].join(' ')}>
+      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+        {title}
+      </h3>
+      <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">
+        {children}
+      </div>
+    </div>
+  );
+}
+```
+
+## Architecture Decision Trees
+
+### Tailwind Strategy
+
+```
+What project type?
+├── New project with design system
+│   └── Tailwind v4 with @theme
+│       ├── Design tokens as CSS variables
+│       ├── Component patterns for reuse
+│       └── @apply only for component libraries
+│
+├── Existing project migration
+│   └── Incremental Tailwind adoption
+│       ├── Add alongside existing CSS
+│       ├── New components in Tailwind
+│       └── Refactor old CSS when touching files
+│
+└── Design system / component library
+    └── Tailwind as base, add @layer components
+        ├── Extract common patterns
+        ├── Publish as npm package
+        └── Document in Storybook
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| @apply for everything | Loses utility-first benefits | Use utilities directly, @apply only for component libs |
+| Custom theme without extend | Loses Tailwind defaults | Always use extend or @theme, never replace |
+| Missing content paths | Classes removed in production | Explicit content glob patterns |
+| Overusing arbitrary values | No consistency, no design system | Define as theme tokens, use arbitrary sparingly |
+
+## Performance Optimization
+
+- **JIT compilation in production**: Tailwind v4 generates only used CSS. Average output 10-50KB gzipped. Enable `@source` for optimizing across multiple entry points.
+- **CSS logical properties for RTL**: Use `ps` (padding-inline-start) instead of `pl`. Tailwind v4 supports logical properties natively. Single CSS bundle for both LTR and RTL.

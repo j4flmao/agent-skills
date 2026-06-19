@@ -345,6 +345,118 @@ Server Components by default, Client Components when you need interactivity. Dat
 
 Client Component optimization: (a) push state management down, (b) use `useMemo`/`useCallback` sparingly (Server Components make these often unnecessary), (c) bundle size — use `next/dynamic` for heavy client components. Forms: Server Actions with `useActionState` (React 19) for progressive enhancement.
 
+### Testing Framework Comparison
+
+| Feature | Vitest | Jest | Bun:test | Mocha |
+|---------|--------|------|----------|-------|
+| Speed | Fast (esbuild transform) | Medium | Fastest | Slow |
+| TypeScript native | Yes | Via babel/ts-jest | Yes | Yes |
+| Type testing | `expectTypeOf` | `expect` with jest-extended | `expectTypeOf` | Third-party |
+| Browser testing | Playwright | jsdom/Playwright | Limited | jsdom |
+| ESM support | Native | Experimental | Native | Good |
+| Watch mode | Built-in, fast | Built-in | Yes | Chokidar |
+| Snapshot | Built-in | Built-in | Built-in | Third-party |
+
+Recommendation: Vitest for all TypeScript projects — fastest, native TS, compatible with Jest ecosystem plugins.
+
+### Module Resolution Decision Tree
+```
+How are modules resolved?
+├── Node.js app, modern → moduleResolution: "NodeNext"
+│   Requires explicit .js/.mjs extensions in imports: `import "./utils.js"`
+├── Bundler (esbuild, Vite, tsup) → moduleResolution: "bundler"
+│   No extensions needed in imports, fastest resolution
+│   Must set `allowImportingTsExtensions: true` for direct TS imports
+├── Library for Node.js consumers → Dual: "NodeNext" for ESM, "node16" for CJS
+│   Test both paths in CI
+└── Deno / Bun → "NodeNext" + `--experimental-specifier-resolution=node` or native
+```
+
+### Type Safety at System Boundaries
+```
+External data entering the TypeScript system?
+├── API response (JSON.parse / fetch) → Zod schema at fetch call site
+│   const schema = z.object({...});
+│   const data = schema.parse(response);  // throws if invalid
+├── localStorage / AsyncStorage → Zod parse on read, toJSON on write
+│   Storage is unstructured — validate every read
+├── URL query params (searchParams) → Zod schema per route
+│   Query params are strings — coerce to correct type
+├── Form data (user input) → Zod schema at submit handler
+│   Validate on submit, display field-level errors
+└── WebSocket / Server-Sent Events → Zod discrimated union
+    Parse each message type, dispatch to typed handlers
+```
+
+### State Management Decision Tree
+```
+Type of application state?
+├── Server data (API results, entity cache) → TanStack Query / RTK Query
+│   Automatic cache invalidation, refetch, optimistic updates
+│   Type-safe via Zod → QueryResult<Order[]>
+├── Client state (UI state, form, modals) → Zustand / Jotai
+│   Minimal boilerplate, TypeScript native
+│   Zustand: single store with selectors, Jotai: atomic signals
+├── URL state (route params, query strings) → React Router / Next.js navigation
+│   Source of truth in URL — persist/resume state via navigation
+├── Form state → React Hook Form + Zod resolver
+│   Type-safe form validation, dirty tracking, error mapping
+└── Global shared state → Context API (small apps) or Zustand
+    Context triggers re-render on all consumers. Zustand only re-renders on selected slices.
+```
+
+### Anti-Patterns & Patterns (Expanded)
+
+- **`as` casting API responses**: `response.data as Order` assumes valid data at compile time — runtime may differ. Use Zod `.parse()`.
+- **`// @ts-expect-error` without comment**: Future maintainers won't know why the error is suppressed. Always add a reason.
+- **`namespace`**: Legacy TypeScript pre-ESM feature. Use ES modules (`import`/`export`) for all code organization.
+- **Mixing `default` and named exports**: Causes import confusion. Stick to named exports exclusively for better tree-shaking.
+- **Large barrel files (`index.ts`)**: Re-exporting everything creates circular import risks and slows down type checking.
+- **`enum` with computed values**: Loses type safety. Define with string literals: `type Status = "active" | "inactive"`.
+- **`typeof` checks on runtime values**: TypeScript types are erased. Use Zod `.safeParse()` or user-defined type guards.
+- **Ignoring `strictNullChecks`**: The single most impactful setting. Without it, `null` and `undefined` pass through silently.
+- **`as any` escape hatch**: Propagates silently through your type system. Use `satisfies` or `@ts-expect-error` with intent.
+- **Not using `declarationMap`**: Consumers of your library can't "Go to Definition" into source. Always include `.d.ts.map`.
+
+### Performance Optimization (Expanded)
+
+- **Bundle size**: Use `tsup` for tree-shaking — `tsup --treeshake` removes unused exports. Analyze with `bundle-buddy` or `analyze`.
+- **Type checking speed**: Use `tsc --noEmit` exclusively for type checking (not for compilation). `--incremental` caches `.tsbuildinfo`.
+- **`skipLibCheck: true`**: Library type resolution takes 60%+ of total type checking time. Keep enabled for app projects.
+- **`isolatedModules: true`**: Required for esbuild/Vite transpilation. Ensures each file is independently transformable.
+- **`verbatimModuleSyntax`** (TS 5.0+): Prevents type-only imports without `type` prefix — ensures they're elided at runtime.
+- **`noEmit: true` + `tsc --noEmit`**: Use `tsc` only for type checking, let bundler handle emit. Faster than `tsc` for both.
+- **`const` assertions**: `"hello" as const` gives literal type `"hello"` (not `string`). Use for discriminant values, config objects.
+- **`declare` for ambient types**: Declare module augmentations, global types, `declare module "*.module.css"`. Reduces type-checking load.
+
+### Code Examples — Type-Safe Event Bus
+```typescript
+type EventMap = {
+  "order:created": { orderId: string; total: number };
+  "user:login": { userId: string; method: "email" | "oauth" };
+  "payment:failed": { orderId: string; reason: string; code: number };
+};
+
+class TypedEventBus {
+  private handlers = new Map<string, Set<Function>>();
+
+  on<K extends keyof EventMap>(event: K, handler: (data: EventMap[K]) => void) {
+    if (!this.handlers.has(event as string)) {
+      this.handlers.set(event as string, new Set());
+    }
+    this.handlers.get(event as string)!.add(handler);
+  }
+
+  emit<K extends keyof EventMap>(event: K, data: EventMap[K]) {
+    this.handlers.get(event as string)?.forEach(h => h(data));
+  }
+
+  off<K extends keyof EventMap>(event: K, handler: (data: EventMap[K]) => void) {
+    this.handlers.get(event as string)?.delete(handler);
+  }
+}
+```
+
 ## Hono for Lightweight APIs
 
 Hono is a TypeScript-first web framework for Cloudflare Workers, Deno, Bun, and Node.js. Benefits: ultralight (14KB), fast, native TypeScript with typed routes. Pattern:

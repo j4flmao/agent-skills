@@ -319,6 +319,248 @@ Inflating ROI by using unrealistic discount rates or excluding certain costs. Mi
 - Intangible benefits must be noted separately, not folded into numeric estimates
 - Do-nothing baseline must be documented — "no investment" is a valid scenario
 
+## Expanded Decision Trees
+
+### Sensitivity Analysis Method Decision Tree
+```
+How many uncertain variables do you have?
+  |-- 1-3 variables --> One-at-a-time sensitivity (tornado chart)
+  |-- 4-10 variables --> Scenario analysis (optimistic/base/pessimistic)
+  |-- >10 variables --> Monte Carlo simulation with probability distributions
+
+What is the investment size?
+  |-- <$50K --> Simple what-if on 3 key variables
+  |-- $50K-$500K --> Tornado chart + scenario analysis
+  |-- >$500K --> Full Monte Carlo with probability distributions
+
+What is stakeholder risk tolerance?
+  |-- Risk-averse --> Include worst-case scenario + probability of negative NPV
+  |-- Risk-neutral --> Base case + sensitivity range
+  |-- Risk-seeking --> Focus on upside scenarios
+```
+
+### Cost Allocation Decision Tree
+```
+Can costs be directly attributed to this project?
+  |-- YES --> Direct cost (labor, licenses, infrastructure)
+  |-- NO --> Is the cost shared across multiple projects?
+        |-- YES --> Allocate proportionally (by usage, headcount, or revenue)
+        |-- NO --> Is this an overhead cost?
+              |-- YES --> Exclude from project CBA or note separately
+              |-- NO --> Include as indirect cost with allocation basis
+
+Is this a sunk cost?
+  |-- YES --> Exclude from forward-looking CBA decision
+  |-- NO --> Include in cost estimate
+```
+
+### Investment Appraisal Method Decision Tree
+```
+What is the primary decision criterion?
+  |-- Profitability --> Use ROI (simple) or IRR (time-adjusted)
+  |-- Value creation --> Use NPV
+  |-- Payback speed --> Use Payback Period or Discounted Payback
+  |-- Risk-adjusted return --> Use Risk-Adjusted NPV or Monte Carlo
+
+Does the investment have uncertain timing of returns?
+  |-- YES --> Use NPV with sensitivity analysis
+  |-- NO --> Simple ROI may suffice
+
+Are there multiple investment options competing?
+  |-- YES --> Use NPV ranking + Payback Period for tie-breaker
+  |-- NO --> Use ROI with payback threshold
+```
+
+## Templates
+
+### Business Case Executive Summary Template
+```
+# Business Case: {Project Name}
+
+## Recommendation
+{Proceed / Reject / Conditional on {condition}}
+
+## Investment Summary
+| Item | Value |
+|------|-------|
+| Total Investment | ${amount} |
+| Time Horizon | {years} |
+| Net Benefit (5yr) | ${amount} |
+| ROI | {percentage} |
+| NPV (@ {discount}%) | ${amount} |
+| Payback Period | {years} |
+| Risk-Adjusted NPV | ${amount} |
+
+## Key Assumptions
+1. {assumption} — {sensitivity impact if wrong}
+2. {assumption} — {sensitivity impact if wrong}
+3. {assumption} — {sensitivity impact if wrong}
+
+## Risk Assessment
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| {risk} | {H/M/L} | {H/M/L} | {mitigation} |
+
+## Decision Required By
+{date} — {consequence of delay}
+```
+
+### Stakeholder Communication Template
+```
+# CBA Review: {Project Name}
+
+## Audience
+{executive / investment committee / team}
+
+## Key Message
+{the one thing they need to know}
+
+## What We're Asking
+{approval / feedback / decision}
+
+## Supporting Data (1 page)
+- Cost breakdown summary
+- Benefit quantification highlights
+- Sensitivity ranges
+- Risk assessment
+- Recommendation
+
+## Appendix
+- Full cost breakdown
+- Full benefit analysis
+- Sensitivity analysis details
+- References and methodology
+```
+
+### CBA Presentation Structure (5 slides)
+```
+Slide 1: Title + Recommendation (30 seconds)
+Slide 2: The Problem & Solution (60 seconds)
+  - What we're investing in and why
+  - Baseline (do nothing) scenario
+Slide 3: The Numbers (90 seconds)
+  - Cost breakdown (build vs buy if applicable)
+  - Benefit quantification
+  - ROI, NPV, Payback
+Slide 4: Risk & Sensitivity (60 seconds)
+  - Key risk factors
+  - Sensitivity range (tornado chart)
+  - Worst/base/optimistic scenarios
+Slide 5: Decision & Next Steps (30 seconds)
+  - Clear recommendation
+  - Conditions/triggers
+  - Timeline for decision
+```
+
+## Expanded Financial Models
+
+### Discounted Payback Period
+Unlike simple payback, discounted payback accounts for the time value of money. Calculate the cumulative discounted cash flow and find when it turns positive.
+
+```
+Year 0: -$500,000 (discounted: -$500,000)
+Year 1: $200,000 / 1.10 = $181,818 (cumulative: -$318,182)
+Year 2: $350,000 / 1.10^2 = $289,256 (cumulative: -$28,926)
+Year 3: $500,000 / 1.10^3 = $375,657 (cumulative: $346,731)
+
+Discounted payback: 2 + ($28,926 / $375,657) = 2.08 years
+```
+
+### Internal Rate of Return (IRR)
+IRR is the discount rate that makes NPV = 0. It represents the effective return rate of the investment. Compare IRR against the company's cost of capital (WACC) or hurdle rate.
+
+```
+Investment: -$500,000
+Cash flows: $200K (Y1), $350K (Y2), $500K (Y3)
+IRR: Find r where NPV = 0
+  0 = -500K + 200K/(1+r) + 350K/(1+r)^2 + 500K/(1+r)^3
+  IRR ≈ 38%
+
+Decision rule: IRR > WACC → Proceed (38% > 10% → Proceed)
+```
+
+### Profitability Index (PI)
+PI = NPV / Initial Investment. Measures value created per dollar invested. Useful for comparing projects of different sizes.
+
+```
+Project A: NPV = $346K, Investment = $500K, PI = 0.69
+Project B: NPV = $200K, Investment = $200K, PI = 1.00
+Project B creates more value per dollar invested despite lower absolute NPV.
+Capital-constrained: rank by PI, select highest first.
+```
+
+### Tornado Chart Construction
+Rank variables by impact on NPV. The variable with the widest range is the most sensitive.
+
+```
+Variable            -20%    Base    +20%    Range
+Adoption rate       $180K   $346K   $514K   $334K ← Most sensitive
+Labor cost          $420K   $346K   $272K   $148K
+Timeline            $310K   $346K   $382K   $72K
+Discount rate       $389K   $346K   $305K   $84K
+
+Priority: Adoption rate needs the most accurate estimate.
+```
+
+## Expanded Anti-Patterns
+
+### 8. Sunk Cost Fallacy
+Including past spending in the forward-looking investment decision. "We've already spent $200K on this project, so we have to continue." The $200K is gone and irrelevant to the decision. Only future costs and benefits matter. Mitigation: clearly separate sunk costs from forward costs in the analysis. Make the decision based on incremental ROI.
+
+### 9. Ignoring Opportunity Cost
+Not accounting for what the team could be doing instead of this project. The opportunity cost of allocating 5 engineers to Project A is the value they would create on Project B. Mitigation: include team allocation as an explicit cost. Run a quick CBA on the next-best alternative use of resources.
+
+### 10. Confirmation Bias in Assumptions
+Selecting assumptions that support the desired outcome. "We assume 50% market adoption because we need it for a positive NPV." No basis in data. Mitigation: use reference class forecasting. Find analogous projects and their actual outcomes. Base assumptions on data, not targets.
+
+### 11. Scope Creep in CBA
+The CBA evaluates Option A (Minimal Viable) but the team builds Option B (Full Feature). Costs overrun and benefits don't match the analysis. Mitigation: clearly define scope boundaries in the CBA. If scope changes, re-run the analysis. Every scope assumption is a sensitivity variable.
+
+### 12. Ignoring Implementation Risk
+Assuming the project will be delivered on time and on budget. No contingency. No risk adjustment. Most large IT projects overrun by 20-50%. Mitigation: apply a contingency factor based on project complexity and team track record. Use three-point estimates (optimistic/most likely/pessimistic).
+
+### 13. False Precision in Long-Term Projections
+Showing 5-year projections with dollar precision when year 5 estimates are essentially guesses. Presents a false sense of accuracy. Mitigation: use ranges instead of single numbers. Show declining confidence bands over time. Year 1 should be precise, year 5 should show ±50% range.
+
+## Expanded Success Metrics
+
+| Metric | Target | Measurement | Remediation |
+|--------|--------|-------------|-------------|
+| NPV > $0 | Positive at target discount | Calculation verification | Reduce costs or increase scope |
+| ROI | > 100% | Net benefit / total cost | Re-evaluate build vs buy |
+| Payback period | < 3 years | Cumulative cash flow | Focus on quicker wins |
+| Sensitivity pass | NPV positive at ±20% | Sensitivity table | Strengthen business case |
+| Build vs buy delta | > 20% advantage | Compare TCO options | Re-evaluate both options |
+| Assumption accuracy | Within 20% of actual 1yr | Post-implementation audit | Improve estimation process |
+| Stakeholder confidence | > 80% agree with recommendation | Survey reviewers | Address concerns in analysis |
+
+## CBA Quality Checklist
+- [ ] All costs are in monetary terms with loaded labor rates
+- [ ] Benefits are quantified with methodology stated
+- [ ] Discount rate is documented with justification
+- [ ] Sensitivity analysis covers 3+ key variables
+- [ ] Build vs buy comparison included (if applicable)
+- [ ] Do-nothing baseline documented
+- [ ] Sunk costs excluded from forward-looking analysis
+- [ ] Opportunity cost considered
+- [ ] Intangible benefits noted separately
+- [ ] Assumptions have data sources
+- [ ] Three-point estimates used (not single points)
+- [ ] Scope boundaries clearly defined
+- [ ] Post-implementation review plan documented
+
+## Business Case Quality Scoring
+| Criterion | Weight | Score (1-5) | Weighted |
+|-----------|--------|-------------|----------|
+| Problem clarity | 15% | | |
+| Data quality | 20% | | |
+| Options analyzed | 15% | | |
+| Quantification rigor | 20% | | |
+| Risk assessment | 15% | | |
+| Recommendation logic | 15% | | |
+
+Threshold: > 4.0 — Proceed. 3.0-4.0 — Revise. < 3.0 — Reject.
+
 ## References
   - references/benefit-analysis.md — Benefit Analysis
   - references/cba-templates.md — CBA Templates

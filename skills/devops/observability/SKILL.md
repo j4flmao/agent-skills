@@ -65,6 +65,24 @@ Three pillars: logs (what happened), metrics (how often/how much), traces (where
 - Compliance-heavy environment (PCI/HIPAA) → Structured logging with PII redaction, audit trails, trace sampling + attribute filtering
 - Serverless/event-driven → Distributed context propagation, structured logs with correlation IDs, metrics on function duration
 
+### Logging vs Metrics vs Traces Decision
+```
+What do you need to understand?
+├── What happened? → Logs (structured, searchable, correlated)
+├── How often / how much? → Metrics (counters, gauges, histograms)
+├── Where did it happen in the request path? → Traces (span tree, timing)
+└── All three → OpenTelemetry SDK + log correlation (traceId in logs)
+```
+
+### Sampling Strategy Decision
+```
+What is the request rate?
+├── < 100 req/s → 100% sampling (cheap enough to keep everything)
+├── 100-1000 req/s → 10% head-based probabilistic
+├── 1000-10000 req/s → 1% head-based + tail-based for errors/slow
+└── > 10000 req/s → Rate-limited (100 traces/sec) + tail-based for errors
+```
+
 ## Core Workflow
 
 ### Step 1: Structured Logging
@@ -94,14 +112,14 @@ Three pillars: logs (what happened), metrics (how often/how much), traces (where
 
 ### Step 2: Metrics — RED Method (for services)
 | Metric | Type | Example |
-|--------|------|---------|
+|---|---|---|
 | **Rate** | Counter | `http_requests_total{method, path, status}` |
 | **Errors** | Counter | `http_requests_errors_total{method, path, status}` |
 | **Duration** | Histogram | `http_request_duration_seconds{method, path}` |
 
 ### Step 3: Metrics — USE Method (for infrastructure)
 | Metric | Type | Example |
-|--------|------|---------|
+|---|---|---|
 | **Utilization** | Gauge | `cpu_usage_ratio`, `memory_usage_bytes` |
 | **Saturation** | Gauge | `queue_depth`, `disk_io_wait_seconds` |
 | **Errors** | Counter | `disk_io_errors_total`, `network_drops_total` |
@@ -194,7 +212,7 @@ groups:
 
 ### Step 7: Distributed Tracing with Sampling
 | Strategy | Sampling Rate | Use Case |
-|----------|--------------|----------|
+|---|---|---|
 | Head-based probabilistic | 1-10% | High-traffic services |
 | Tail-based | Keep errors + slow | Production critical paths |
 | Rate limiting | 100 traces/sec | Budget-constrained |
@@ -333,24 +351,152 @@ metric_relabel_configs:
   target_label: path
 ```
 
-### Step 12: Observability Maturity Model
+### Step 12: OpenTelemetry Collector Configuration
+```yaml
+# otel-collector-config.yaml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+  attributes:
+    actions:
+      - key: environment
+        value: production
+        action: upsert
+  filter:
+    error_mode: ignore
+    traces:
+      span:
+        - 'attributes["http.target"] == "/health"'
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+  otlp:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, attributes, filter]
+      exporters: [otlp]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, attributes]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, attributes]
+      exporters: [loki]
+```
+
+### Step 13: Business Metrics — Custom Instrumentation
+```python
+# metrics/business_metrics.py
+from prometheus_client import Counter, Histogram, Gauge
+import time
+
+# Business counters
+orders_created = Counter('orders_created_total', 'Total orders created', ['region', 'currency'])
+orders_cancelled = Counter('orders_cancelled_total', 'Orders cancelled', ['reason'])
+payment_success = Counter('payment_success_total', 'Successful payments', ['provider'])
+payment_failed = Counter('payment_failed_total', 'Failed payments', ['provider', 'error_code'])
+
+# Business histograms
+order_value = Histogram('order_value_dollars', 'Order value distribution',
+                         buckets=[10, 25, 50, 100, 250, 500, 1000, 2500, 5000])
+checkout_duration = Histogram('checkout_duration_seconds', 'Checkout flow duration',
+                               buckets=[1, 2, 5, 10, 30, 60, 120])
+
+# Business gauges
+active_users = Gauge('active_users', 'Currently active users', ['tier'])
+cart_abandonment = Gauge('cart_abandonment_rate', 'Cart abandonment rate')
+
+def track_order(region, currency, value):
+    orders_created.labels(region=region, currency=currency).inc()
+    order_value.observe(value)
+
+def track_checkout(user_id, duration):
+    checkout_duration.observe(duration)
+    # Example: track user in business context
+    active_users.layers(tier='premium').inc()
+```
+
+### Step 14: SLO Definition Template
+```yaml
+# slo-definitions.yaml
+slos:
+  - name: "API Availability"
+    sli: "ratio of successful requests to total requests"
+    measurement: "sum(rate(http_requests_total{status!~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))"
+    target: 99.9%
+    window: 30d
+    burn_rate_alerts:
+      - window: 1h
+        threshold: 2x  # Exhaust SLO budget in 15 days
+      - window: 5m
+        threshold: 10x  # Exhaust SLO budget in 3 days
+
+  - name: "API Latency"
+    sli: "P99 response time"
+    measurement: "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))"
+    target: "< 500ms"
+    window: 30d
+
+  - name: "API Throughput"
+    sli: "requests per second"
+    measurement: "sum(rate(http_requests_total[5m]))"
+    target: ">= 100 req/s at P99"
+    window: 7d
+```
+
+### Step 15: Observability Maturity Model
 | Level | Logs | Metrics | Traces | Alerts |
-|-------|------|---------|--------|--------|
+|---|---|---|---|---|
 | 1: Crawl | Unstructured, grep-based | CPU/memory only | None | Basic threshold |
 | 2: Walk | Structured JSON, aggregated | RED method per service | Head-based sampling | Symptom-based |
 | 3: Run | Correlation IDs, PII redacted | USE + RED + business metrics | Tail-based + consistent | SLO burn-rate |
 | 4: Fly | Auto-instrumented, real-time | Custom business metrics | 100% error traces | Predictive ML-based |
 
-## Rules & Constraints
-- All logs are structured JSON — no plain text or printf-style logging
-- Every log line includes `traceId` for correlation
-- Alert on symptoms (user impact), not causes — or you'll drown in alerts
-- Metrics are cheap, traces are expensive — sample traces at 1-10% for high-traffic services
-- Never log sensitive data (passwords, tokens, PII) — even in error messages
-- SLOs are aspirational targets — don't set them so tight they cause alert fatigue
-- Cardinality: never use unbounded values (user IDs, emails) as metric labels
-- Use recording rules for expensive PromQL queries — don't compute p99 on every dashboard refresh
-- Configure metric_relabel_configs to manage cardinality in Prometheus
+## Tool Comparison: Observability Platforms
+
+| Feature | Grafana + Prometheus + Loki | Datadog | New Relic | Honeycomb |
+|---|---|---|---|---|
+| Logs | Loki (OSS, S3-backed) | Log Management | Logs | Log integration |
+| Metrics | Prometheus (OSS, pull) | Datadog Agent | NRDB | Custom events |
+| Traces | Tempo (OSS) | APM | Distributed Tracing | Events (no spans) |
+| SLOs | Grafana SLO app | SLO management | SLOs | SLOs |
+| Cost | OSS (infra cost only) | $$$ (per host + data) | $$$ (per GB) | $$$ (per event) |
+| Cardinality | Limited by TSDB | High (no limit) | High | Unlimited |
+| Best for | OSS-first, K8s-native | All-in-one, ease of use | Full-stack observability | Debugging, high-cardinality |
+| Self-hosted | Yes | No | No | No |
+
+## Security Considerations
+- Never log credentials, tokens, PII, or PCI data — use log scrubbing / redaction pipelines
+- OpenTelemetry collector should run in a trusted network zone with mTLS for gRPC
+- Grafana authentication via OAuth/OIDC — never share dashboards publicly
+- Loki log retention must comply with data privacy requirements (GDPR: 30d default)
+- Trace attributes may contain sensitive query parameters — filter in OTel collector
+- Prometheus remote write should use TLS + basic auth or mTLS
+- Audit log access: who viewed what, when, and from where
+- Rate-limit Grafana query API to prevent denial of service via expensive queries
+- Encrypt Prometheus TSDB at rest if storing on persistent volumes
 
 ## Production Considerations
 - Set log retention: 7-30 days for standard, 90+ days for audit compliance.
@@ -362,6 +508,10 @@ metric_relabel_configs:
 - Monitor observability pipeline itself: collector queue depth, export latency.
 - Set up silent test alerts to verify alert pipeline end-to-end weekly.
 - Use aggregation windows appropriate to pager load: 5m for paging, 15m for dashboards.
+- Configure OTel collector memory limiter to prevent OOM on traffic spikes.
+- Use `metric_relabel_configs` to drop high-cardinality labels before ingestion.
+- Set up Prometheus `max_samples_per_send` to prevent rejected remote write batches.
+- Tiered storage: hot (SSD) for 7d, warm (HDD) for 30d, cold (S3) for 90d+.
 
 ## Anti-Patterns
 - Alerting on CPU/memory — these are causes, not symptoms of user impact.

@@ -249,6 +249,200 @@ function JsonLd({ data }: { data: Record<string, unknown> }) {
 />
 ```
 
+### Step 11: Dynamic OG Image Generation (Next.js)
+```typescript
+// app/api/og/route.tsx — serverless OG image
+import { ImageResponse } from 'next/og'
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const title = searchParams.get('title') || 'Default Title'
+
+  return new ImageResponse(
+    (
+      <div style={{
+        width: 1200, height: 630,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      }}>
+        <h1 style={{ fontSize: 64, color: 'white', textAlign: 'center' }}>
+          {title}
+        </h1>
+        <p style={{ fontSize: 32, color: 'rgba(255,255,255,0.8)' }}>
+          example.com
+        </p>
+      </div>
+    ),
+    { width: 1200, height: 630 }
+  )
+}
+
+// Use in metadata
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  return {
+    openGraph: {
+      images: [{ url: `/api/og?title=${encodeURIComponent(post.title)}` }],
+    },
+  }
+}
+```
+
+### Step 12: Core Web Vitals Optimization for SEO
+```typescript
+// 1. Inline critical CSS for above-the-fold content
+// app/layout.tsx
+import { readFileSync } from 'fs'
+import { join } from 'path'
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const criticalCss = readFileSync(join(process.cwd(), 'public/critical.css'), 'utf-8')
+  return (
+    <html>
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
+      </head>
+      <body>{children}</body>
+    </html>
+  )
+}
+
+// 2. LCP optimization — preload hero image
+<link rel="preload" href="/hero.webp" as="image" fetchpriority="high" />
+
+// 3. CLS prevention — set dimensions on all images
+<img src={post.image} width={800} height={450} alt={post.title} />
+
+// 4. INP optimization — avoid long tasks
+// Defer non-critical interactions
+function SearchButton() {
+  const handleClick = async () => {
+    await new Promise(requestIdleCallback)
+    // heavy search operation
+  }
+  return <button onClick={handleClick}>Search</button>
+}
+```
+
+### Step 13: SEO Monitoring & CI Integration
+```yaml
+# .github/workflows/seo-audit.yml
+name: SEO Audit
+on: [deployment]
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npx lhci collect --url=${{ github.event.deployment.payload.url }}
+      - run: npx lhci assert --preset=lighthouse:recommended
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: .lighthouseci/
+```
+
+```bash
+# Crawl and validate structured data
+npx structured-data-testing-tool crawl https://example.com --max-urls=50
+
+# Check for broken links
+npx broken-link-checker https://example.com --recursive
+
+# Validate sitemap
+curl -s https://example.com/sitemap.xml | xmllint --noout -
+```
+
+### Step 14: Headless CMS SEO Patterns
+```typescript
+// Generate metadata from CMS content (Sanity, Contentful, Strapi)
+interface SEOMetadata {
+  title: string
+  description: string
+  ogImage?: { url: string }
+  canonicalOverride?: string
+  noindex?: boolean
+  structuredData?: Record<string, unknown>
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const page = await getPageFromCMS(params.slug)
+
+  return {
+    title: `${page.seo.title} | Site`,
+    description: page.seo.description,
+    robots: page.seo.noindex ? { index: false } : { index: true },
+    alternates: { canonical: page.seo.canonicalOverride || undefined },
+    openGraph: page.seo.ogImage ? {
+      images: [{ url: page.seo.ogImage.url, width: 1200, height: 630 }],
+    } : undefined,
+  }
+}
+
+// BreadcrumbList from CMS navigation
+// app/breadcrumb-jsonld.tsx
+function BreadcrumbJsonLd({ path }: { path: { name: string; slug: string }[] }) {
+  return (
+    <JsonLd data={{
+      '@type': 'BreadcrumbList',
+      itemListElement: path.map((item, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: item.name,
+        item: `https://example.com/${item.slug}`,
+      })),
+    }} />
+  )
+}
+```
+
+### Step 15: Advanced Structured Data Patterns
+```html
+<!-- FAQ Schema (rich snippet with expandable Q&A) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [{
+    "@type": "Question",
+    "name": "How do I reset my password?",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Go to Settings > Security > Reset Password."
+    }
+  }]
+}
+</script>
+
+<!-- HowTo Schema (step-by-step, shown in search results) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Install Widget",
+  "step": [{
+    "@type": "HowToStep",
+    "position": 1,
+    "text": "Download the package.",
+    "url": "https://example.com/guide#step1"
+  }]
+}
+</script>
+
+<!-- LocalBusiness Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "Example Store",
+  "address": { "@type": "PostalAddress", "streetAddress": "123 Main St", "addressLocality": "City" },
+  "telephone": "+1-123-456-7890",
+  "openingHours": "Mo-Fr 09:00-17:00",
+  "priceRange": "$$"
+}
+</script>
+```
+
 ## Common Pitfalls
 
 1. **Duplicate titles/descriptions**: Every page must have unique values.
@@ -270,6 +464,8 @@ function JsonLd({ data }: { data: Record<string, unknown> }) {
 | Core Web Vitals | Good (fast FCP) | Variable | Good |
 | Complexity | Higher | Lower | Medium |
 | Use case | Content sites | Apps | Both |
+| Structured data | Server-side | Client injection | Server-side |
+| Hreflang | Framework API | Manual | Framework API |
 
 ## Performance Considerations
 
@@ -279,6 +475,9 @@ function JsonLd({ data }: { data: Record<string, unknown> }) {
 - Preconnect to CDN for OG images reduces LCP font/hero image delay
 - Inline critical CSS for above-the-fold content improves FCP
 - Proper cache headers on SSG pages enables CDN caching (s-maxage)
+- Dynamic OG images via serverless functions add ~100-200ms to first request (warm)
+- Sitemap index for sites with >50K URLs prevents timeout on crawlers
+- robots.txt should be static (generated at build) — dynamic adds latency for every crawler request
 
 ## Accessibility Considerations
 
@@ -286,6 +485,8 @@ function JsonLd({ data }: { data: Record<string, unknown> }) {
 - Structured data does not affect visual accessibility but helps users find content
 - Descriptive page titles help screen reader users navigate between tabs
 - Skip-to-content links improve both accessibility and SEO (content reachable)
+- Heading hierarchy (h1→h2→h3) is a ranking factor and screen reader navigation aid
+- ARIA landmarks (nav, main, footer) help crawlers understand page structure
 
 ## Security Considerations
 
@@ -293,6 +494,8 @@ function JsonLd({ data }: { data: Record<string, unknown> }) {
 - Meta tags cannot be exploited for XSS (they are HTML-encoded by default)
 - Sitemap URLs should not expose unpublished or sensitive content
 - Noindex is a crawl directive, not a security measure — use authentication for private pages
+- Dynamic OG image endpoints must sanitize input to prevent SSRF
+- Revalidation tokens for ISR sitemaps must be kept secret
 
 ## Rules
 - Never use `noindex` on public pages unless explicitly requested.
@@ -303,6 +506,9 @@ function JsonLd({ data }: { data: Record<string, unknown> }) {
 - Always use `application/ld+json` for structured data.
 - Never include session IDs or tracking params in canonical URLs.
 - Always validate JSON-LD with Google Rich Results Test before deploying.
+- Generate sitemaps at build time for SSG sites — dynamic sitemaps add latency and cost.
+- Use sitemap index files (>50K URLs) to respect crawler limits.
+- Set `lastmod` on every sitemap URL to help crawlers prioritize recrawl.
 
 ## References
   - references/meta-tags.md — Meta Tags Reference

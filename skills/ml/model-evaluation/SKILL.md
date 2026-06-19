@@ -309,6 +309,166 @@ def find_optimal_threshold(y_val, y_prob, metric="f1"):
 - Compare new models against production baseline with significance tests.
 - Set up automated evaluation gates in CI/CD.
 
+## Metric Catalog — When to Use Which
+
+### Classification Metrics
+
+| Metric | Formula | Range | Best For | Caution |
+|--------|---------|-------|----------|---------|
+| Accuracy | (TP + TN) / (TP+TN+FP+FN) | [0,1] | Balanced classes | Misleading on imbalanced data |
+| Precision | TP / (TP + FP) | [0,1] | Minimizing false positives | Ignores false negatives |
+| Recall | TP / (TP + FN) | [0,1] | Minimizing false negatives | Ignores false positives |
+| F1 Score | 2 * P * R / (P + R) | [0,1] | Balancing P and R | Equal weight to both |
+| F-beta | (1+b^2)*P*R/(b^2*P+R) | [0,1] | Asymmetric cost | Need to choose beta |
+| ROC AUC | Area under TPR vs FPR curve | [0.5, 1] | Overall ranking quality | Misleading on imbalanced |
+| PR AUC | Area under P vs R curve | [0, 1] | Imbalanced classes | Harder to interpret |
+| Log Loss | -sum(y*log(p)+(1-y)*log(1-p)) | [0, inf) | Probabilistic calibration | Punishes confident errors |
+| MCC | Matthew's correlation coefficient | [-1, 1] | Single metric for binary | Hard to interpret intuitively |
+| Cohen's Kappa | (P_obs - P_exp) / (1 - P_exp) | [-1, 1] | Inter-rater agreement | Assumes random baseline |
+
+### Regression Metrics
+
+| Metric | Formula | Range | Best For | Caution |
+|--------|---------|-------|----------|---------|
+| MSE | (1/n)*sum(y - y_hat)^2 | [0, inf) | Gaussian errors | Sensitive to outliers |
+| RMSE | sqrt(MSE) | [0, inf) | Same unit as target | Same as MSE |
+| MAE | (1/n)*sum(|y - y_hat|) | [0, inf) | Robust to outliers | Not differentiable at 0 |
+| MAPE | (100/n)*sum(|y-y_hat|/|y|) | [0, inf) | Relative error | Undefined when y=0 |
+| SMAPE | (200/n)*sum(|y-y_hat|/(|y|+|y_hat|)) | [0, 200] | Symmetric relative | Biased when y or y_hat near 0 |
+| R-squared | 1 - SS_res / SS_tot | (-inf, 1] | Variance explained | Increases with features |
+| Adjusted R2 | 1 - (1-R^2)*(n-1)/(n-p-1) | (-inf, 1] | Penalized R-squared | More complex selection |
+| Explained Variance | 1 - Var(y-y_hat)/Var(y) | (-inf, 1] | Variance explained | Different from R2 |
+
+### Ranking Metrics
+
+| Metric | Range | Best For | Key Property |
+|--------|-------|----------|-------------|
+| NDCG@k | [0, 1] | Graded relevance | Discounts rank position |
+| MRR | [0, 1] | First relevant position | Only cares about rank 1 |
+| Hit Rate@k | [0, 1] | Binary relevance | Simple, interpretable |
+| MAP@k | [0, 1] | Multiple relevant items | Average precision at k |
+| AUC | [0.5, 1] | Overall ranking quality | P(positive ranked above negative) |
+
+## Cross-Validation Strategies — When to Use
+
+| Strategy | Data Pattern | When to Use | Pitfall |
+|----------|-------------|-------------|---------|
+| K-Fold (k=5 or 10) | IID data | Default for most tasks | Not for time series or groups |
+| Stratified K-Fold | Imbalanced | Classification on imbalanced | Preserves class proportion |
+| Group K-Fold | Grouped data | Multiple rows per user/hospital | Test group seen in train -> leakage |
+| Time Series Split | Temporal | Forecasting, time-dependent | Shuffling leaks future into past |
+| Leave-One-Out | Very small data (n < 100) | Maximize training data | Expensive (n models), high variance |
+| Repeated K-Fold | Small data | Reduce variance of estimate | Correlated runs |
+| Purged CV | Financial time series | Prevent leakage from adjacent points | Requires gap between train/test |
+| Stratified Group K-Fold | Grouped + imbalanced | Medical, user-level classification | Rare combinations hard to find |
+
+### CV Implementation — Time Series Split
+```python
+from sklearn.model_selection import TimeSeriesSplit
+
+def evaluate_timeseries(X, y, model_fn, n_splits=5):
+    tscv = TimeSeriesSplit(n_splits=n_splits)
+    scores = []
+    for train_idx, test_idx in tscv.split(X):
+        X_train, X_test = X[train_idx], X[test_idx]
+        y_train, y_test = y[train_idx], y[test_idx]
+
+        # IMPORTANT: no standardization fitted on future data
+        model = model_fn()
+        model.fit(X_train, y_train)
+        scores.append(model.score(X_test, y_test))
+
+    return {"mean_score": np.mean(scores), "scores": scores,
+            "std": np.std(scores)}
+```
+
+## Statistical Significance for Model Comparison
+
+### McNemar's Test (paired, classification)
+```python
+from scipy.stats import chi2
+
+def mcnemar_test(y_true, y_model_a, y_model_b):
+    # Contingency table
+    n01 = sum((y_model_a == y_true) & (y_model_b != y_true))
+    n10 = sum((y_model_a != y_true) & (y_model_b == y_true))
+
+    # McNemar's chi-squared (with continuity correction)
+    chi2_stat = (abs(n01 - n10) - 1)**2 / (n01 + n10 + 1e-10)
+    p_value = 1 - chi2.cdf(chi2_stat, df=1)
+
+    return {"statistic": chi2_stat, "p_value": p_value,
+            "model_a_better": n10 < n01}
+```
+
+### Paired Bootstrap (any metric)
+```python
+def paired_bootstrap_test(y_true, pred_a, pred_b, metric_fn,
+                          n_bootstrap=10000, alpha=0.05):
+    """Test if model A is significantly different from model B."""
+    n = len(y_true)
+    diffs = []
+    for _ in range(n_bootstrap):
+        idx = np.random.choice(n, n, replace=True)
+        score_a = metric_fn(y_true[idx], pred_a[idx])
+        score_b = metric_fn(y_true[idx], pred_b[idx])
+        diffs.append(score_a - score_b)
+
+    # Confidence interval of the difference
+    ci = np.percentile(diffs, [alpha/2*100, (1-alpha/2)*100])
+    significant = (ci[0] > 0) or (ci[1] < 0)
+
+    return {
+        "mean_diff": np.mean(diffs),
+        "ci": ci,
+        "significant": significant,
+        "p_value": np.mean(np.array(diffs) <= 0),
+    }
+```
+
+## Learning Curve Template
+
+```python
+import matplotlib.pyplot as plt
+from sklearn.model_selection import learning_curve
+
+def plot_learning_curve(model, X, y, train_sizes=np.linspace(0.1, 1.0, 10)):
+    train_sizes, train_scores, test_scores = learning_curve(
+        model, X, y, cv=5, train_sizes=train_sizes,
+        scoring="f1", n_jobs=-1,
+    )
+
+    train_mean = np.mean(train_scores, axis=1)
+    train_std = np.std(train_scores, axis=1)
+    test_mean = np.mean(test_scores, axis=1)
+    test_std = np.std(test_scores, axis=1)
+
+    plt.plot(train_sizes, train_mean, label="Training score")
+    plt.fill_between(train_sizes, train_mean - train_std,
+                     train_mean + train_std, alpha=0.2)
+    plt.plot(train_sizes, test_mean, label="Cross-validation score")
+    plt.fill_between(train_sizes, test_mean - test_std,
+                     test_mean + test_std, alpha=0.2)
+
+    # Interpretation:
+    # High train, low test = high variance (overfitting) -> more data or regularization
+    # Low train, low test = high bias (underfitting) -> more complex model
+    # Gap closing with more data = model benefits from more data
+```
+
+## Model Evaluation Anti-Patterns
+
+1. **Accuracy on imbalanced data**: 99% accuracy when 99% of samples are class A
+   Fix: Use PR AUC, F1, MCC, or balanced accuracy
+2. **Leaky CV**: Random instead of grouped or temporal splits
+   Fix: Match CV strategy to data dependencies
+3. **Peeking at test set**: Selecting model based on test set performance
+   Fix: Hold-out test set until final evaluation only
+4. **Multiple comparisons**: Testing 100 models, declaring the best significant
+   Fix: Bonferroni correction or hold-out set for final comparison
+5. **No confidence intervals**: Reporting single metric without uncertainty
+   Fix: Bootstrap confidence intervals for all reported metrics
+
 ## Rules
 - ROC AUC misleading on highly imbalanced data → prefer PR AUC.
 - Never use accuracy on imbalanced datasets.

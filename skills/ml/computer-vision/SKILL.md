@@ -355,6 +355,60 @@ def optimize_tensorrt(onnx_path, engine_path, precision="fp16"):
 - Monitor input image statistics: resolution, brightness, blur score.
 - Log prediction metadata: class confidences, bbox counts, inference time.
 
+## Model Architecture Comparison Table
+
+| Family | Architecture | Parameters | mAP COCO | Speed (ms) | FPS (batch=1) | Best For |
+|--------|-------------|------------|----------|------------|---------------|----------|
+| One-Stage | YOLOv8m | 25.9M | 50.2 | 4.7 | 212 | Real-time detection |
+| One-Stage | YOLOv8x | 68.2M | 53.9 | 11.2 | 89 | High-accuracy detection |
+| One-Stage | RetinaNet-R50 | 37.7M | 39.1 | 32 | 31 | General detection |
+| Two-Stage | Faster R-CNN-R50 | 41.3M | 37.9 | 48 | 21 | Slower but accurate |
+| Two-Stage | Mask R-CNN-R50 | 44.2M | 38.5 (box) / 35.2 (mask) | 53 | 19 | Instance segmentation |
+| Transformer | DETR-R50 | 41.5M | 42.0 | 43 | 23 | End-to-end detection |
+| Transformer | DINO-R50 | 47.0M | 49.0 | 45 | 22 | SOTA detection |
+| Segment Anything | SAM-B | 91.0M | — | 54 | 18 | Promptable segmentation |
+| EfficientDet | EfficientDet-D3 | 12.0M | 45.8 | 12.1 | 83 | Efficient detection |
+
+## Augmentation Strategy Catalog
+
+| Augmentation | Type | Intensity | When to Use | Impact |
+|-------------|------|-----------|-------------|--------|
+| RandomHorizontalFlip | Geometric | p=0.5 | Default for most tasks | Significant |
+| RandomRotation | Geometric | +/- 10 degrees | Objects not always upright | Moderate |
+| RandomResizedCrop | Geometric | scale=[0.08, 1.0] | Default for classification | Significant |
+| ColorJitter | Photometric | brightness=0.2, contrast=0.2, saturation=0.2 | Robust to lighting variation | Moderate |
+| RandomGrayscale | Photometric | p=0.1 | Invariance to color, reduce overfitting | Small |
+| GaussianBlur | Noise | kernel=3, sigma=[0.1, 2.0] | Deblurring robustness | Small |
+| Cutout / RandomErasing | Masking | p=0.2, size=(0.2, 0.33) | Occlusion robustness | Moderate |
+| Mixup | Mixing | alpha=0.2 | Regularization, data-limited | Significant |
+| CutMix | Mixing | alpha=1.0 | Regularization, detection | Significant |
+| Mosaic | Composition | — | Small object detection (YOLO) | Significant |
+| RandAugment | Auto | N=2, M=9 | When no domain-specific augs | Significant |
+| AutoAugment | Learned | policy=imagenet | When compute budget for search | Moderate |
+
+## CV Task — Model Selection Decision Tree
+
+```
+What task?
+├── Image Classification
+│   ├── Small dataset (< 10k) -> Fine-tune ResNet-50 or EfficientNet-B0
+│   └── Large dataset -> ViT-B/16 or Swin-T
+├── Object Detection
+│   ├── Real-time needed?
+│   │   ├── Yes -> YOLOv8m or NanoDet
+│   │   └── No -> DINO or Faster R-CNN
+│   ├── Many small objects?
+│   │   └── DINO with high-res input or YOLOv8 with mosaic
+│   └── Instance segmentation needed?
+│       └── Mask R-CNN, YOLOv8-seg, or SAM (if promptable)
+├── Semantic Segmentation
+│   ├── Speed critical -> DeepLabV3+ with MobileNet backbone
+│   └── Accuracy critical -> SegFormer-B3 or UPerNet with Swin-B
+└── Video / Tracking
+    ├── Real-time -> YOLOv8 + BoT-SORT or DeepSORT
+    └── Offline -> Trackformer or CenterTrack
+```
+
 ## Rules
 - Always normalize with dataset-specific mean/std.
 - Use the same input size for training and inference.

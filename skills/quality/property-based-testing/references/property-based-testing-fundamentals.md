@@ -1,213 +1,197 @@
-# Property Based Testing Fundamentals
+# Property-Based Testing Fundamentals
 
 ## Overview
-Property Based Testing is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Property-based testing (PBT) generates random inputs to test invariants — properties that should always hold true. Unlike example-based testing where you write specific input-output pairs, PBT defines properties and lets the computer find counterexamples. It discovers edge cases you didn't think to test.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Property Based Testing helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Concept 1: Properties
+A property is a statement that should always be true for any valid input. Property types:
+- **Invariant**: A condition that always holds (e.g., `sort(x).length == x.length`)
+- **Idempotent**: Applying an operation twice gives the same result (e.g., `uniq(uniq(x)) == uniq(x)`)
+- **Round-trip**: Serialize then deserialize returns the original (e.g., `parse(serialize(x)) == x`)
+- **Metamorphic**: A relationship between related operations (e.g., `reverse(reverse(x)) == x`)
+- **Oracle**: Result compared against a trusted implementation (e.g., `fast_sort(x) == known_good_sort(x)`)
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Property Based Testing solutions. These principles help maintain code quality and reduce technical debt.
+### Concept 2: Generators
+Generators produce random values of a specific type with controlled distributions. Built-in generators: integers, strings, arrays, booleans, dates, enums. Custom generators combine and transform built-in ones. Good generators produce valid domain inputs with edge cases (empty, null, extreme values).
 
-### Concept 3: Data Management
-Proper data management is essential for Property Based Testing. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Concept 3: Shrinking
+When a property fails, the framework automatically finds the minimal failing input by reducing the counterexample. For example, if a function fails on an array of 1000 elements, shrinking might find it fails on just [0]. Shrinking produces minimal, human-readable counterexamples for debugging.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+### Concept 4: Coverage and Statistics
+PBT frameworks provide statistics about generated values: how many tests passed, distribution of inputs, and coverage metrics. Use `.examples()` or equivalent to see generated values. Use `assume()` to guide generation toward relevant cases.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+## Framework Comparison
 
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Property Based Testing follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+| Feature | Hypothesis (Python) | fast-check (JS/TS) | ScalaCheck | jqwik (Java) | FsCheck (.NET) |
+|---------|-------------------|-------------------|------------|-------------|----------------|
+| Language | Python | JS/TS | Scala | Java | .NET |
+| Generators | Strategies | Arbitraries | Gen | Arbitrary | Gen |
+| Shrinking | Automatic, optimal | Automatic, default | Automatic | Automatic | Automatic |
+| Stateful testing | Yes (stateful) | Yes (commands) | Yes (commands) | Yes | Yes |
+| Custom generators | `@composite` | `.map()`, `.chain()` | Gen combinators | `@Provide` | Gen operators |
+| Statistics | `.stat()` | `.statistics()` | `.collect()` | `@Statistics` | `label()` |
+| Assumptions | `assume()` | `.filter()` | `when()` | `@Assume` | `==>` |
+| Integration | pytest | Jest, Vitest | ScalaTest | JUnit 5 | xUnit, NUnit |
+| Best for | Python data pipelines | JS/TS validation logic | Scala functional code | Java backend | .NET applications |
 
 ## Implementation Guide
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Step 1: Identify Testable Properties
+Look for functions with clear invariants:
+- **Pure functions**: Same input → same output (most properties apply)
+- **Serialization/deserialization**: Round-trip property
+- **Validation**: Error cases (throw for bad input, pass for good input)
+- **Sorting, filtering, transformation**: Idempotence, length preservation
+- **Math/statistics**: Algebraic properties (commutative, associative)
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Step 2: Write Python/Hypothesis Tests
+```python
+# tests/property/test_pricing.py
+from hypothesis import given, assume, strategies as st
+from decimal import Decimal
+from src.pricing import calculate_discount, calculate_total, PriceBreak
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+# Strategy for valid price breaks
+price_breaks = st.lists(
+    st.builds(PriceBreak,
+        quantity=st.integers(min_value=1, max_value=100),
+        discount_percent=st.decimals(min_value=0, max_value=100, places=2),
+    ),
+    min_size=1, max_size=10,
+)
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+class TestCalculateDiscount:
+    @given(quantity=st.integers(min_value=0, max_value=1000),
+           breaks=price_breaks)
+    def test_discount_is_non_negative(self, quantity, breaks):
+        """Invariant: discount percentage is never negative."""
+        result = calculate_discount(quantity, breaks)
+        assert result >= Decimal("0")
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+    @given(quantity=st.integers(min_value=0, max_value=1000),
+           breaks=price_breaks)
+    def test_discount_never_exceeds_100(self, quantity, breaks):
+        """Invariant: discount percentage never exceeds 100%."""
+        result = calculate_discount(quantity, breaks)
+        assert result <= Decimal("100")
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+    @given(quantity=st.integers(min_value=0, max_value=1000),
+           breaks=price_breaks)
+    def test_more_items_never_less_discount(self, quantity, breaks):
+        """Monotonic property: more items → discount >= same for fewer items."""
+        discount_here = calculate_discount(quantity, breaks)
+        if quantity > 0:
+            discount_below = calculate_discount(quantity - 1, breaks)
+            assert discount_here >= discount_below
+```
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+### Step 3: Write JS/fast-check Tests
+```javascript
+// tests/property/pricing.test.ts
+import * as fc from 'fast-check';
+import { calculateDiscount, calculateTotal } from '../src/pricing';
+
+describe('calculateDiscount', () => {
+  it('should never return negative discount', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 1000 }),
+        fc.array(
+          fc.record({
+            quantity: fc.integer({ min: 1, max: 100 }),
+            discountPercent: fc.double({ min: 0, max: 100 }),
+          }),
+          { minLength: 1, maxLength: 10 }
+        ),
+        (quantity, breaks) => {
+          const result = calculateDiscount(quantity, breaks);
+          return result >= 0;
+        }
+      )
+    );
+  });
+
+  it('should return 0 when no breaks apply', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 1000 }),
+        fc.constant([] as PriceBreak[]),
+        (quantity, breaks) => {
+          const result = calculateDiscount(quantity, breaks);
+          return result === 0;
+        }
+      )
+    );
+  });
+});
+```
+
+### Step 4: Write Stateful Tests
+```python
+# tests/property/test_user_service.py
+from hypothesis import given, strategies as st
+from hypothesis.stateful import RuleBasedStateMachine, rule, invariant
+
+class UserServiceStateMachine(RuleBasedStateMachine):
+    def __init__(self):
+        super().__init__()
+        self.users = {}
+
+    @rule(name=st.text(min_size=1, max_size=50))
+    def add_user(self, name):
+        """Adding a user should succeed."""
+        user_id = len(self.users) + 1
+        self.users[user_id] = {"name": name, "active": True}
+
+    @rule(user_id=st.integers(min_value=1, max_value=10))
+    def remove_user(self, user_id):
+        """Removing a user removes them from the system."""
+        if user_id in self.users:
+            del self.users[user_id]
+
+    @invariant()
+    def no_duplicate_names(self):
+        """Invariant: no two active users have the same name."""
+        names = [u["name"] for u in self.users.values() if u["active"]]
+        assert len(names) == len(set(names))
+
+    @invariant()
+    def user_count_non_negative(self):
+        """Invariant: user count is never negative."""
+        assert len(self.users) >= 0
+
+TestUserService = UserServiceStateMachine.TestCase
+```
 
 ## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+- Start with simple invariants (non-negative, type preservation, length preservation)
+- Use `assume()` or `.filter()` to skip invalid inputs (but minimize rejection rate)
+- Add failing examples from shrinking as regression tests
+- Use custom generators for domain-specific types (valid emails, IP addresses, etc.)
+- Profile test execution — PBT can be slow with complex generators
+- Combine with example-based tests for known edge cases
+- Run PBT with higher iterations in CI (1000+), fewer during development (100)
+- Use statistics to understand what values are being generated
+- Test pure functions first — stateful testing is more complex
+- Save and replay failing seeds for debugging
 
 ## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+- Testing properties that are always true by construction (tautologies)
+- Insufficient iteration count — running only 100 tests may miss rare edge cases
+- Overly permissive generators producing mostly invalid inputs (high rejection rate)
+- Forgetting to shrink — complex generators without good shrink strategies
+- Testing side-effectful code without proper isolation
+- Not adding shrunk examples as regression tests (losing discovered edge cases)
+- Properties that pass with example-based data but fail with random data
 
 ## Key Points
-- Understand core Property Based Testing concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- PBT finds edge cases example-based testing misses
+- Define properties: invariants, idempotence, round-trips, metamorphic relations
+- Hypothesis (Python) and fast-check (JS) are the leading frameworks
+- Generators produce random values; shrinking finds minimal counterexamples
+- Stateful testing models sequences of operations with invariants
+- Save failing seeds as regression tests
+- Run more iterations in CI, fewer during development
+- Profile PBT execution time and optimize slow generators

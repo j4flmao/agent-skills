@@ -347,6 +347,52 @@ export class AmplitudeService {
 }
 ```
 
+### Event Taxonomy Decision Tree
+```
+Event type?
+├── User action → `{domain}_{verb}_{object}`
+│   e.g., `cart_add_item`, `profile_edit_photo`, `search_submit_query`
+│   Properties: object_id, object_type, result_count, duration_ms
+├── Screen view → `screen_{name}`
+│   e.g., `screen_home`, `screen_product_detail`, `screen_checkout_payment`
+│   Properties: referrer, previous_screen, route
+├── System event → `{domain}_{event}`
+│   e.g., `session_start`, `push_received`, `sync_completed`
+│   Properties: source, trigger, duration_ms, success
+├── Error / non-fatal → `error_{domain}`
+│   e.g., `error_network_timeout`, `error_api_validation`, `error_ui_render`
+│   Properties: error_code, error_message, screen, retry_count
+└── Performance → `perf_{metric}`
+    e.g., `perf_screen_load`, `perf_api_latency`, `perf_db_query`
+    Properties: duration_ms, byte_size, endpoint, cache_hit
+```
+
+### Event Naming Convention Comparison
+
+| Convention | Example | Pros | Cons |
+|------------|---------|------|------|
+| `snake_case` | `cart_add_item` | Readable, standard in SQL/analytics DBs | Requires conversion for JS clients |
+| `camelCase` | `cartAddItem` | Matches JS/TS code style | Awkward in SQL queries |
+| `SCREAMING_SNAKE` | `CART_ADD_ITEM` | Clearly separates from code | Verbose, looks like constants |
+| dot-notation | `cart.add.item` | Hierarchical, good for grouping | Special handling in BigQuery column names |
+| `{object}:{action}` | `cart:add_item` | Clear domain boundary | Colon requires escaping in some systems |
+
+Recommendation: `snake_case` for all analytics events — it's SQL-friendly, readable, and consistent across platforms.
+
+### Anonymous Event Identity Strategy
+```
+User state at event time?
+├── No user ID available → Log with device_id + session_id
+│   device_id: vendor identifier (iOS) or Advertising ID (Android with ATT)
+│   session_id: generated on each app launch, rotated on background >30min
+├── User logs in mid-session → Call identify() with user_id
+│   Server aliases anonymous session to user_id for stitching
+├── User logs out → Reset analytics user ID
+│   Generate new anonymous ID, do NOT reuse previous
+└── Multi-account → Each login creates a new analytics identity chain
+    Previous account events retain old user_id, no cross-account linking
+```
+
 ## Analytics Implementation Checklist
 
 - [ ] Provider SDK initialized before app root renders (async init)
@@ -367,6 +413,40 @@ export class AmplitudeService {
 - [ ] Data retention configured per provider
 - [ ] User deletion API integrated
 - [ ] Debug mode verifies events reach dashboard
+
+### Analytics Implementation Anti-Patterns & Patterns
+
+- **Tracking plan as an afterthought**: Without a documented tracking plan, events drift within weeks. Write the plan before instrumenting any code.
+- **Server-side events duplicated as client events**: Payment confirmation fires both from server and client. Server events are authoritative for revenue; client events provide UX context.
+- **Funnel analysis without time boundaries**: "Users who do X and Y" without time constraints includes users who did Y weeks after X. Set a session window (same session) or time window (7 days).
+- **Sampling before understanding volume**: Many providers sample by default at the free tier. Know your sample rate — 10% of events means 10x confidence interval on metrics.
+- **One massive tracking plan document**: A single doc for 500 events becomes unmanageable. Split by domain area (Orders, Accounts, Content) with separate event tables.
+- **Not tracking property type information**: "event properties are strings" loses numeric/boolean type data in analytics warehouses. Enforce types with schema validation.
+- **Events on every scroll/keystroke**: At scale, high-frequency events cause data quality issues and cost. Debounce scroll events (every 3s, not every frame). Batch input events.
+- **Notification events without delivery status**: Track `push_sent`, `push_delivered`, `push_opened` — the gap between sent and delivered reveals delivery issues.
+
+### Analytics Cost Optimization
+
+Analytics costs grow linearly with tracked users. Strategies to manage cost:
+- **Event sampling**: Sample low-value events (scroll, hover) at 10% rate. Keep high-value (purchase, login) at 100%. Adjust sample rate per event type in the tracking plan.
+- **Property pruning**: Remove unused properties from events after 30 days. Each property adds to storage and query cost.
+- **User property limits**: Firebase allows 500 user properties — stay under 200 to leave room for growth. Purge unused properties quarterly.
+- **Data retention**: Set retention to 12 months for event data, 24 months for user properties. Raw event data older than retention is expensive to store and rarely queried.
+- **Batch export**: Use BigQuery export (Firebase) or warehouse sync (Mixpanel/Amplitude) for deep analysis. Avoid expensive live queries on large datasets.
+- **Cold storage**: Archive event data older than 6 months to cold storage (S3 Glacier, GCS Archive). Reheat only when needed for specific analysis.
+
+### Diagnostic Decision Tree for Missing Events
+```
+Event not appearing in dashboard?
+├── Was the SDK initialized? → Check initialization log, verify API key
+├── Is consent granted? → Check consent manager status for the event category
+├── Is the event being filtered? → Check debug/release build config, environment tag
+├── Was the device offline? → Check offline queue flush on reconnection
+├── Is the event name correct? → Verify exact string matches tracking plan
+├── Are properties within limits? → Max 25 properties, values <100 chars, no PII filter
+├── Is the user rate limited? → Check per-user event rate limits (100/s typical)
+└── Is the provider experiencing an outage? → Check status dashboard
+```
 
 ## References
   - references/analytics-privacy.md — Analytics Privacy

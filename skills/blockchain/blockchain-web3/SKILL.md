@@ -2,7 +2,7 @@
 name: blockchain-web3
 description: >
   Use this skill when asked about web3 frontend development, ethers.js, viem, wagmi, web3.js, wallet integration (MetaMask, Phantom, WalletConnect), dApp architecture, RPC providers (Alchemy, Infura), and TypeScript blockchain SDKs. Language: TypeScript. Covers reading blockchain state, sending transactions, wallet connection flows, contract interaction patterns, event subscription, gas estimation, multicall patterns, and account abstraction (ERC-4337). Do NOT use for: smart contract development (use blockchain-application), core protocol (use blockchain-core), or blockchain testing (use blockchain-testing).
-version: "1.1.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 tags: [blockchain, web3, typescript, dapp, wallet, phase-blockchain]
@@ -170,6 +170,46 @@ function TransferForm() {
 }
 ```
 
+### Sign Typed Data (EIP-712)
+```typescript
+import { useSignTypedData } from 'wagmi'
+import { domain, types } from './eip712-types'
+
+function SignOrder() {
+  const { signTypedData, data: signature, isPending } = useSignTypedData()
+
+  const handleSign = () => {
+    signTypedData({
+      domain: {
+        name: 'Exchange',
+        version: '1',
+        chainId: 1,
+        verifyingContract: '0x...',
+      },
+      types: {
+        Order: [
+          { name: 'maker', type: 'address' },
+          { name: 'taker', type: 'address' },
+          { name: 'amount', type: 'uint256' },
+          { name: 'nonce', type: 'uint256' },
+          { name: 'deadline', type: 'uint256' },
+        ],
+      },
+      primaryType: 'Order',
+      message: {
+        maker: '0x...',
+        taker: '0x...',
+        amount: 1000n,
+        nonce: 1n,
+        deadline: 1700000000n,
+      },
+    })
+  }
+
+  return <button onClick={handleSign}>Sign Order</button>
+}
+```
+
 ### Multicall Pattern
 ```typescript
 import { useMulticall } from 'wagmi'
@@ -211,6 +251,98 @@ function TransferMonitor() {
 }
 ```
 
+### Transaction Flow with Error Handling
+```typescript
+import { useSendTransaction, useWaitForTransactionReceipt } from 'wagmi'
+import { parseEther } from 'viem'
+
+function SendTransaction() {
+  const {
+    sendTransaction,
+    data: hash,
+    isPending,
+    error: sendError,
+  } = useSendTransaction()
+
+  const {
+    isLoading: isConfirming,
+    isSuccess: isConfirmed,
+    error: receiptError,
+  } = useWaitForTransactionReceipt({ hash })
+
+  async function handleSend(amount: string) {
+    try {
+      sendTransaction({
+        to: '0x...',
+        value: parseEther(amount),
+      })
+    } catch (e) {
+      // User rejected in wallet
+      if ((e as any)?.code === 'ACTION_REJECTED' || (e as any)?.code === 4001) {
+        console.log('User rejected transaction')
+        return
+      }
+      // Insufficient funds
+      if ((e as any)?.message?.includes('insufficient funds')) {
+        console.log('Insufficient balance')
+        return
+      }
+      console.error('Transaction error:', e)
+    }
+  }
+
+  // Transaction states
+  if (isPending) return <div>Please confirm in wallet...</div>
+  if (isConfirming) return <div>Waiting for confirmation...</div>
+  if (isConfirmed) return <div>Transaction confirmed! Hash: {hash}</div>
+
+  return (
+    <div>
+      <button onClick={() => handleSend('0.1')}>Send 0.1 ETH</button>
+      {sendError && <div>Error: {sendError.message}</div>}
+    </div>
+  )
+}
+```
+
+### Viem Client (Non-React)
+```typescript
+import { createPublicClient, createWalletClient, http } from 'viem'
+import { mainnet } from 'viem/chains'
+import { privateKeyToAccount } from 'viem/accounts'
+
+// Public client (reads)
+const publicClient = createPublicClient({
+  chain: mainnet,
+  transport: http('https://eth-mainnet.g.alchemy.com/v2/...'),
+})
+
+// Wallet client (writes)
+const account = privateKeyToAccount('0x...')
+const walletClient = createWalletClient({
+  account,
+  chain: mainnet,
+  transport: http(),
+})
+
+// Read example
+const balance = await publicClient.readContract({
+  address: '0x...',
+  abi,
+  functionName: 'balanceOf',
+  args: ['0x...'],
+})
+
+// Write example
+const hash = await walletClient.writeContract({
+  address: '0x...',
+  abi,
+  functionName: 'transfer',
+  args: ['0x...', 1000n],
+})
+const receipt = await publicClient.waitForTransactionReceipt({ hash })
+```
+
 ## Account Abstraction (ERC-4337)
 
 ### User Operation Flow
@@ -244,6 +376,76 @@ async function sendUserOp() {
 }
 ```
 
+### Session Keys (Ephemeral Signing)
+```typescript
+// ERC-4337 supports session keys for automated transactions
+// 1. Deploy smart account
+// 2. Approve session key with specific permissions
+// 3. Session key signs UserOps without main key
+
+// Session key permissions:
+interface SessionKeyPermission {
+    target: string           // Allowed contract
+    functionSelector: string // Allowed function (bytes4)
+    valueLimit: bigint       // Max ETH value
+    expiry: number           // Unix timestamp
+}
+
+// Use cases:
+// - Gaming: auto-approve in-game transactions
+// - DeFi: scheduled DCA without manual signing each time
+// - Subscriptions: recurring payments
+```
+
+## Error Handling Patterns
+
+### Common Web3 Errors
+```typescript
+type Web3Error = {
+  code: number | string
+  message: string
+  data?: string
+}
+
+const ErrorHandler = {
+  // User rejected in wallet
+  USER_REJECTED: (e: Web3Error) => e.code === 4001 || e.code === 'ACTION_REJECTED',
+
+  // Insufficient funds
+  INSUFFICIENT_FUNDS: (e: Web3Error) => e.message.includes('insufficient funds'),
+
+  // Gas estimation failed
+  GAS_ESTIMATION_FAILED: (e: Web3Error) => e.message.includes('gas required exceeds'),
+
+  // Network error
+  NETWORK_ERROR: (e: Web3Error) => e.message.includes('network error') || e.code === 'NETWORK_ERROR',
+
+  // Rate limited
+  RATE_LIMITED: (e: Web3Error) => e.message.includes('rate limit') || e.message.includes('429'),
+
+  // Nonce too low
+  NONCE_TOO_LOW: (e: Web3Error) => e.message.includes('nonce too low'),
+
+  // Contract revert
+  CONTRACT_REVERT: (e: Web3Error) => e.message.includes('revert') || e.data !== undefined,
+}
+
+// Usage
+function handleError(error: unknown) {
+  const e = error as Web3Error
+  if (ErrorHandler.USER_REJECTED(e)) {
+    return { type: 'warning', message: 'Transaction cancelled' }
+  }
+  if (ErrorHandler.INSUFFICIENT_FUNDS(e)) {
+    return { type: 'error', message: 'Insufficient balance for gas' }
+  }
+  if (ErrorHandler.RATE_LIMITED(e)) {
+    return { type: 'error', message: 'Too many requests, please wait' }
+  }
+  return { type: 'error', message: 'Transaction failed: ' + e.message }
+}
+```
+
 ## Rules
 1. Use viem + wagmi as default TypeScript stack (modern, type-safe, lightweight)
 2. Use ethers.js v6 for projects requiring broader ecosystem compatibility
@@ -255,6 +457,11 @@ async function sendUserOp() {
 8. Never expose private keys in frontend code — always use wallet signatures
 9. Use multicall for batched reads to reduce RPC calls
 10. Implement proper loading/error/success states for all transaction flows
+11. EIP-712 typed data should include chain ID to prevent cross-chain replay
+12. WC v2 is required for mobile dApp compatibility (WC v1 deprecated)
+13. Use batch HTTP transport in viem for automatic request batching
+14. Transaction monitoring should track block confirmations, not just mempool acceptance
+15. Gas estimation should include 10-20% buffer to prevent out-of-gas errors
 
 ## References
   - references/blockchain-web3-advanced.md — Blockchain Web3 Advanced Topics
@@ -269,6 +476,7 @@ async function sendUserOp() {
   - references/web3-react-patterns.md — Web3 React Integration
   - references/account-abstraction-web3.md — Account Abstraction for Web3 Frontends
   - references/web3-error-handling.md — Web3 Error Handling Patterns
+  - references/multicall-batching.md — Multicall & RPC Batching
 
 ## Phase
 blockchain → blockchain-web3

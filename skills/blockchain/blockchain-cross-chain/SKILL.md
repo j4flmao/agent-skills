@@ -2,7 +2,7 @@
 name: blockchain-cross-chain
 description: >
   Cross-chain protocols, IBC, LayerZero, Wormhole, Axelar, CCIP, bridges, atomic composability, shared sequencer, cross-chain message passing. Covers trust models (light clients, external validators, ZK proofs), bridge security, token representation (canonical, wrapped, native), relayer economics, and cross-chain application design. Do NOT use for: single-chain application development (use blockchain-application), general blockchain patterns (use blockchain-patterns), or core protocol design (use blockchain-core).
-version: 1.1.0
+version: 2.0.0
 author: j4flmao
 license: MIT
 tags: [blockchain, cross-chain, bridge, interoperability, phase-blockchain]
@@ -121,11 +121,31 @@ Bridge type:
     └── Best for: Maximum security, large batched transfers
 ```
 
+### Finality Divergence Handling
+```
+Source finality model:
+├── Instant finality (Cosmos, Solana, Avalanche)
+│   ├── Confirm immediately after block
+│   └── No reorg risk → no confirmation delay needed
+├── Probabilistic finality (Ethereum PoW → PoS merge)
+│   ├── PoS: 1-2 epochs (~6-13 min) for economic finality
+│   ├── Configure: 32-64 slots for safe relay
+│   └── Risk: reorgs of 1-3 slots are possible
+├── Weak finality (rollups with challenge period)
+│   ├── Optimistic: 7d challenge window (absolute finality)
+│   ├── Fast bridge mode: assume no fraud (trusts not challenged)
+│   └── Defense: decentralized watchers monitor challenge period
+└── Adaptive confirmation (most bridges)
+    ├── Low-value: 1-6 confirmations
+    ├── High-value: finalization
+    └── Emergency: finalization + additional delay
+```
+
 ## Bridge Security
 
 ### Common Attack Vectors
 | Attack | Description | Mitigation |
-|---|---|---|
+|--------|-------------|------------|
 | Validator compromise | Bridge validators collude to sign fraudulent message | Distributed validator set, slashing, threshold signatures |
 | Replay attack | Same message replayed on different chains/destinations | Nonce + chain ID + contract address in message |
 | Reorg exploit | Chain reorganization invalidates source chain confirmation | Wait for finality (or risk threshold confirmations) |
@@ -133,6 +153,19 @@ Bridge type:
 | Oracle manipulation | Price feed manipulation during bridge operation | Redundant oracles, TWAP pricing |
 | Griefing | Relayer stops processing messages | Permissionless relayer set, economic incentives |
 | MEV extraction | Sandwiching bridge transactions | Commit-reveal, slippage protection |
+| Bridge draining | Flash loan + oracle manipulation to drain bridge | Rate limits, tiered withdrawal, circuit breakers |
+| Phantom token | Attacker creates fake representation token | Verified token registry, canonical token lists |
+| Governance attack | Bridge governance taken over | Timelock, multi-sig, progressive decentralization |
+
+### Historical Bridge Exploits
+| Incident | Bridge | Loss | Cause | Date |
+|----------|--------|------|-------|------|
+| Wormhole | Wormhole | $326M | Guardian signature compromise | Feb 2022 |
+| Ronin | Ronin | $624M | Private key compromise of 5/9 validators | Mar 2022 |
+| BNB Chain | BSC Token Hub | $570M | Light client proof verification bug | Oct 2022 |
+| Nomad | Nomad | $190M | Trusted root not initialized (default = zero) | Aug 2022 |
+| Multichain | Multichain | $1.5B | Private key compromise, bridge halted | Jul 2023 |
+| Orbit Bridge | Orbit | $81M | Smart contract vulnerability | Jan 2024 |
 
 ### Message Format Security
 ```solidity
@@ -146,6 +179,39 @@ struct CrossChainMessage {
     uint256 deadline;           // Prevent time-dilated execution
     bytes payload;              // Encoded function call
     bytes32 sourceHash;         // Bind to source transaction
+}
+```
+
+### Rate Limiting Implementation
+```solidity
+contract RateLimiter {
+    // Per-asset rate limits
+    mapping(address => uint256) public maxWithdrawPerPeriod;
+    mapping(address => uint256) public withdrawnThisPeriod;
+    mapping(address => uint256) public periodStart;
+
+    uint256 public constant PERIOD = 1 hours;
+
+    function checkRateLimit(address token, uint256 amount) internal {
+        if (block.timestamp >= periodStart[token] + PERIOD) {
+            withdrawnThisPeriod[token] = 0;
+            periodStart[token] = block.timestamp;
+        }
+        uint256 newTotal = withdrawnThisPeriod[token] + amount;
+        require(newTotal <= maxWithdrawPerPeriod[token], "rate limit exceeded");
+        withdrawnThisPeriod[token] = newTotal;
+    }
+
+    // Tiered security: lower limits for fast path, higher for slow path
+    function withdraw(bytes calldata message, uint256 amount, bool useFastPath) external {
+        if (useFastPath) {
+            require(amount <= fastPathLimit[token], "fast path limit");
+            // Fast: relayer observed, less confirmations
+        } else {
+            checkRateLimit(token, amount);
+            // Slow: full finality, higher limit
+        }
+    }
 }
 ```
 
@@ -170,6 +236,12 @@ type Packet struct {
     TimeoutHeight      Height
     TimeoutTimestamp   uint64
 }
+
+// ICS-20 (fungible token transfer):
+// - Source chain: escrow tokens
+// - IBC packet: { amount, denom, sender, receiver }
+// - Destination chain: mint voucher tokens
+// - Return flow: burn voucher, release escrowed tokens
 ```
 
 ### LayerZero ULN (Ultra Light Node)
@@ -186,20 +258,112 @@ function lzReceive(
     uint64 _nonce,
     bytes calldata _payload
 ) external {
-    // Validate oracle and relayer independently confirmed
     require(oracleConfirmed[_srcChainId][_nonce], "oracle not confirmed");
     require(relayerConfirmed[_srcChainId][_nonce], "relayer not confirmed");
     _executeMessage(_srcChainId, _srcAddress, _payload);
 }
 ```
 
-### Token Representation Patterns
+### Wormhole Guardian Quorum
+```typescript
+// Wormhole uses 19 guardians (N=19, threshold=13/19)
+// Each guardian observes emitted messages on each chain
+// Guardian signs verified Observation → VAAs (Verified Action Approval)
+
+interface VAA {
+    version: number;        // Current: 1
+    guardianSetIndex: number;
+    signatures: GuardianSignature[]; // 13 of 19 guardian signatures
+    timestamp: number;
+    nonce: number;
+    emitterChain: number;
+    emitterAddress: string;
+    sequence: number;
+    consistencyLevel: number;  // Confirmations waited before observation
+    payload: bytes;
+}
+```
+
+### Axelar GMP (General Message Passing)
+```solidity
+// Axelar cross-chain contract call
+// 1. Call gateway.callContract() on source chain
+// 2. Axelar validators confirm via PoS consensus
+// 3. Relayer executes on destination via gateway.execute()
+
+contract CrossChainMessenger {
+    IAxelarGateway public gateway;
+    IAxelarGasService public gasService;
+
+    function sendMessage(
+        string calldata destChain,
+        string calldata destContract,
+        bytes calldata payload
+    ) external payable {
+        gasService.payNativeGasForContractCall{value: msg.value}(
+            address(this), destChain, destContract, payload, msg.sender
+        );
+        gateway.callContract(destChain, destContract, payload);
+    }
+
+    function execute(
+        bytes32 commandId,
+        string calldata sourceChain,
+        string calldata sourceAddress,
+        bytes calldata payload
+    ) external {
+        require(gateway.validateContractCall(commandId, sourceChain, sourceAddress, payload));
+        // Process the cross-chain message
+    }
+}
+```
+
+## Token Representation Patterns
 | Pattern | Description | Example |
-|---|---|---|
+|---------|-------------|---------|
 | Canonical | Native bridge (L1 → L2 standard bridge) | Arbitrum/OP canonical bridge |
 | Wrapped | Mint-burn on destination (locked on source) | wBTC, wETH |
 | Synthetic | Minted on destination, backed by collateral | stETH on L2 |
 | Native | Deployed natively on both chains | USDC on multiple chains |
+
+### Canonical vs Synthetic Comparison
+```
+├── Canonical (native L1↔L2 bridge)
+│   ├── Pros: Simple, well-audited, built-in by rollup
+│   ├── Cons: Only works for that specific L1↔L2 pair, 7d withdrawal (optimistic)
+│   └── Flow: L1 deposit → bridge contract → L2 mint → L2 → bridge → L1 release
+├── Third-party bridge
+│   ├── Pros: Fast (external validator), multi-chain support
+│   ├── Cons: Trust in third-party, bridge hack risk
+│   └── Flow: L1 → bridge contract (lock) → bridge validators → L2 → bridge contract (mint)
+└── Native cross-chain (USDC CCTP)
+    ├── Pros: First-party, no wrapped token, burn-mint
+    ├── Cons: Only works for USDC, requires Circle infrastructure
+    └── Flow: L1 → burn USDC → CCTP message → L2 → mint USDC
+```
+
+## Relayer Economics
+
+### Incentive Model
+```
+Relayer costs:
+├── Source chain: gas for observing events (read operations, cheap)
+├── Destination chain: gas for submitting messages (write operations)
+├── Infrastructure: node operation, monitoring, alerting
+└── Capital: pre-funded gas on destination chains
+
+Revenue models:
+├── Fixed fee per message (Bridge protocol sets)
+├── Dynamic fee based on destination gas price
+├── Subscription: users pay recurring fee for relay access
+└── Fee market: relayers bid for message execution, user picks
+
+Relayer sustainability:
+├── Multi-asset gas management (keep balance on each chain)
+├── MEV extraction from message ordering
+├── Batch submission: multiple messages in one tx (lower avg cost)
+└── Cross-subsidization: profitable routes subsidize unprofitable ones
+```
 
 ## Rules
 1. **Identify the cross-chain problem first**: asset transfer, message passing, data query, or atomic execution determines protocol choice
@@ -212,6 +376,11 @@ function lzReceive(
 8. **Use tiered security**: Low-value messages (fast, cheap), high-value messages (slow, secure)
 9. **Handle token representation correctly**: Understand canonical vs wrapped vs synthetic implications
 10. **Monitor bridge health**: Relayer uptime, pending message queue, timeout expiry, rate limit proximity
+11. **Rate limits should be adaptive**: Reduce limits during periods of high volatility or suspicious activity
+12. **Message timeout must exceed max finality time**: Prevent premature timeout during slow finality
+13. **Bridge governance changes must have extended timelock**: 7+ days for guardian/verifier set changes
+14. **Never use single hash for bridge security**: Always include nonce, chain ID, and contract address in signed message
+15. **Token pairs on bridges must be verified**: Only allow canonical + verified wrapped token lists
 
 ## References
   - references/atomic-composability.md — Atomic Composability Across Chains
@@ -226,5 +395,6 @@ function lzReceive(
   - references/message-replay-protection.md — Message Replay Protection
   - references/shared-sequencer.md — Shared Sequencing
   - references/cross-chain-token-representation.md — Cross-Chain Token Standards & Representation
+  - references/bridge-fee-models.md — Bridge Fee Models & Relayer Economics
 
 ## Phase: blockchain → blockchain-cross-chain

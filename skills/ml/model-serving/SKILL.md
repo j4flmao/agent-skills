@@ -300,6 +300,218 @@ class ABTestRouter:
 - Cache frequent predictions (response cache).
 - Right-size instances: profile before deploying.
 
+## Deployment Patterns — Detailed
+
+### Pattern: Canary Deployment
+```
+Goal: Gradually shift traffic to new model version with automatic rollback.
+
+Implementation steps:
+1. Deploy model v2 alongside v1 (both serving)
+2. Route 5% of traffic to v2
+3. Monitor: latency p99, error rate, prediction distribution
+4. If metrics stable for 30 min, increase to 25%
+5. If stable for 1 hour, increase to 50%
+6. If stable for 2 hours, increase to 100%
+7. Keep v1 running for 24 hours for rollback
+
+Platform config (KServe):
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: my-model
+spec:
+  canary:
+    trafficPercent: 5
+  predictor:
+    canaryTrafficPercent: 5
+    containers:
+      - image: my-model:v2
+  predictor-v1:
+    containers:
+      - image: my-model:v1
+```
+
+### Pattern: Blue-Green Deployment
+```
+Goal: Swap entire traffic between two model versions.
+
+Implementation steps:
+1. Deploy v2 (green) alongside v1 (blue)
+2. Run validation suite against green endpoint
+3. All tests pass -> switch router to green
+4. Keep blue running for 24 hours
+5. After 24 hours, tear down blue
+
+Pros: Instant rollback, simple
+Cons: 2x resource usage during transition
+Best for: Models that can't handle mixed traffic
+```
+
+### Pattern: Shadow Deployment
+```
+Goal: Test new model against production traffic without affecting users.
+
+Implementation:
+1. Deploy v2 as shadow (receives all requests, results discarded)
+2. Compare v1 vs v2 outputs for offline analysis
+3. Validate: mean prediction difference < 5%, latency OK, no errors
+4. Promote v2 to canary or blue-green
+
+Pros: Zero user impact, can test with full production load
+Cons: 2x compute cost, no real user feedback
+Best for: High-risk model changes, validating new architecture
+```
+
+### Pattern: Multi-Model Serving
+```
+Goal: Serve multiple models on shared infrastructure.
+
+Strategies:
+1. Sidecar per model: each model in its own container, shared sidecar
+2. Model multiplexing: single server loads multiple models, routes by header
+3. Model mesh: dedicated infrastructure for model routing (e.g., Seldon Core)
+
+Config (Seldon Core):
+apiVersion: machinelearning.seldon.io/v1
+kind: SeldonDeployment
+metadata:
+  name: model-mesh
+spec:
+  predictors:
+    - componentSpecs:
+        - spec:
+            containers:
+              - image: model-a-server
+              - image: model-b-server
+              - image: model-c-server
+```
+
+## Autoscaling Configuration — Production Ready
+
+### KServe with Knative Autoscaling
+```yaml
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+spec:
+  predictor:
+    minReplicas: 2         # minimum for availability
+    maxReplicas: 20        # upper bound for cost control
+    scaleMetric: concurrency
+    scaleTarget: 5          # target requests in-flight per replica
+    scaleMetric: concurrency  # options: concurrency, rps, cpu, memory
+    scaleTarget: 5
+    scaleDownDelay: 10m    # wait before scaling down to avoid thrashing
+    containers:
+      - image: model:v1
+        resources:
+          requests:
+            cpu: "1"
+            memory: 2Gi
+          limits:
+            cpu: "2"
+            memory: 4Gi
+```
+
+### Autoscaling Decision Table
+| Workload Pattern | Metric | Scale Target | Strategy |
+|-----------------|--------|-------------|----------|
+| Real-time API, steady | Concurrency | 5-10 | HPA with concurrency |
+| Real-time API, bursty | RPS | 50-100 | KPA (Knative) |
+| Batch processing | CPU | 70% | HPA with CPU |
+| GPU inference | GPU utilization | 60% | Custom metrics |
+| Variable load | Request latency p99 | < 500ms | Custom HPA |
+
+### HPA with Custom Metrics
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: model-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: model-server
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+    - type: Pods
+      pods:
+        metric:
+          name: inference_requests_inflight
+        target:
+          type: AverageValue
+          averageValue: 10
+    - type: Pods
+      pods:
+        metric:
+          name: inference_latency_p99_ms
+        target:
+          type: AverageValue
+          averageValue: 300
+```
+
+## Response Caching Strategy
+
+```python
+class PredictionCache:
+    """LRU cache for frequent prediction requests."""
+
+    def __init__(self, max_size: int = 10000, ttl_seconds: int = 300):
+        self.cache = lru.LRU(max_size)
+        self.ttl = ttl_seconds
+
+    def get_or_predict(self, request_id: str, model_fn, fallback=None):
+        if request_id in self.cache:
+            entry = self.cache[request_id]
+            if time.time() - entry["timestamp"] < self.ttl:
+                return entry["prediction"]
+        prediction = model_fn()
+        self.cache[request_id] = {
+            "prediction": prediction,
+            "timestamp": time.time(),
+        }
+        return prediction
+```
+
+## Optimization for Latency vs. Throughput
+
+| Strategy | Reduces | Cost | Complexity |
+|----------|---------|------|------------|
+| FP16/INT8 quantization | Latency + memory | Accuracy loss | Low (ONNX, TensorRT) |
+| Batch inference | Throughput ++ | Latency per item | Low |
+| Knowledge distillation | Latency + size | Training cost | High |
+| Model pruning | Latency + size | Accuracy loss | Medium |
+| ONNX Runtime | Latency | Setup | Low |
+| TensorRT (NVIDIA) | Latency ++ | GPU only | Medium |
+| vLLM (LLMs) | Throughput ++ | GPU only | Medium |
+| Response caching | Latency for cache hits | Staleness | Low |
+
+## Model Serving Anti-Patterns
+1. **No traffic splitting**: Every deploy is a full cutover, no gradual rollout
+   Fix: Always use canary or blue-green for model changes
+2. **CPU-based autoscaling for models**: CPU is a poor proxy for inference load
+   Fix: Scale on concurrency or RPS
+3. **No request batching**: Every prediction is a separate HTTP call
+   Fix: Smart batching with max latency budget
+4. **One-size-fits-all instance type**: CPU/GPU for all models regardless of size
+   Fix: Right-size per model; use GPU only for large models
+5. **No model warmup**: First request is slow due to cold start
+   Fix: Pre-warm model on startup, keep min replicas
+
+## Serving Framework Comparison
+
+| Framework | GPU Support | Autoscaling | Batching | Model Versioning | Community |
+|-----------|-------------|-------------|----------|-----------------|-----------|
+| KServe | Yes | Knative | Smart batch | Multiple strategies | Large |
+| Seldon Core | Yes | Custom HPA | Custom | Graph-based | Medium |
+| TorchServe | Yes | Custom | Yes | Yes | Medium |
+| TF Serving | Yes | Custom | Yes | Yes (+ lifecycle) | Large |
+| Triton | Yes (best) | Custom | Dynamic batching | Yes | Large |
+| BentoML | Yes | Custom | Yes | Yes | Growing |
+| FastAPI custom | Yes | HPA | Custom | Custom | N/A |
+
 ## Rules
 - Serving framework matches model framework.
 - Deployment strategy uses traffic splitting.

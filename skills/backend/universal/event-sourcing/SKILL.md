@@ -380,3 +380,127 @@ interface OrderCancelled {
 No artifact produced.
 Next skill: cqrs-patterns — to separate read/write models for event-sourced aggregates.
 Carry forward: event definitions, aggregate design, projection rebuild strategy.
+
+## Implementation Patterns
+
+### Event Store Client
+
+```python
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass, field
+from datetime import datetime
+import json
+import uuid
+
+@dataclass
+class DomainEvent:
+    event_id: str
+    aggregate_id: str
+    event_type: str
+    data: Dict
+    version: int
+    timestamp: str
+    correlation_id: str
+    causation_id: str
+
+class EventStore:
+    def __init__(self):
+        self.events: List[DomainEvent] = []
+        self.snapshots: Dict[str, Dict] = {}
+
+    def append(self, aggregate_id: str, events: List[Dict], expected_version: int) -> bool:
+        current = self._get_current_version(aggregate_id)
+        if current != expected_version:
+            raise ConcurrencyError(f"Expected version {expected_version}, got {current}")
+
+        for event_data in events:
+            event = DomainEvent(
+                event_id=str(uuid.uuid4()),
+                aggregate_id=aggregate_id,
+                event_type=event_data["type"],
+                data=event_data["data"],
+                version=current + 1,
+                timestamp=datetime.utcnow().isoformat() + "Z",
+                correlation_id=event_data.get("correlation_id", ""),
+                causation_id=event_data.get("causation_id", ""),
+            )
+            self.events.append(event)
+            current += 1
+        return True
+
+    def get_events(self, aggregate_id: str, from_version: int = 0) -> List[DomainEvent]:
+        return [e for e in self.events if e.aggregate_id == aggregate_id and e.version > from_version]
+
+    def get_all_events(self, event_types: Optional[List[str]] = None) -> List[DomainEvent]:
+        if not event_types:
+            return self.events
+        return [e for e in self.events if e.event_type in event_types]
+
+    def save_snapshot(self, aggregate_id: str, state: Dict, version: int):
+        self.snapshots[aggregate_id] = {"state": state, "version": version, "timestamp": datetime.utcnow().isoformat()}
+
+    def get_snapshot(self, aggregate_id: str) -> Optional[Dict]:
+        return self.snapshots.get(aggregate_id)
+
+    def _get_current_version(self, aggregate_id: str) -> int:
+        events = self.get_events(aggregate_id)
+        return max((e.version for e in events), default=0)
+
+    def rebuild_aggregate(self, aggregate_id: str, apply_fn) -> Any:
+        snapshot = self.get_snapshot(aggregate_id)
+        if snapshot:
+            state = snapshot["state"]
+            from_version = snapshot["version"]
+        else:
+            state = {}
+            from_version = 0
+
+        events = self.get_events(aggregate_id, from_version)
+        for event in events:
+            state = apply_fn(state, event)
+        return state
+
+
+class ConcurrencyError(Exception):
+    pass
+
+
+class ProjectionRebuilder:
+    def __init__(self, event_store: EventStore):
+        self.event_store = event_store
+
+    def rebuild(self, projection_name: str, event_types: List[str], apply_fn) -> Any:
+        state = {}
+        events = self.event_store.get_all_events(event_types)
+        for event in sorted(events, key=lambda e: e.timestamp):
+            state = apply_fn(state, event)
+        return state
+```
+
+## Architecture Decision Trees
+
+### Snapshot Strategy
+
+```
+When to take snapshots?
+├── After N events (N=100 for most, N=1000 for simple)
+├── When aggregate rebuild time exceeds 100ms
+├── On schedule (every hour for high-traffic aggregates)
+└── After specific business events (e.g., order completed, account closed)
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Events as DTOs reflecting DB columns | No business meaning | Events capture business intent (OrderPlaced, not StatusSetToPlaced) |
+| Deleting events for data privacy | Breaks event stream integrity | Anonymize PII in events, don't delete |
+| No upcasting strategy | Old events break new code | Upcast on read, keep old events unchanged |
+| Projections with business logic | Duplicating aggregate rules | Projections are data transformations, aggregates have business logic |
+| Too many event types | Event explosion, hard to reason about | Group related changes, use event metadata for details |
+
+## Performance Optimization
+
+- **Snapshot-based aggregate rebuild**: Use snapshots to avoid replaying all events from origin. Rebuild from last snapshot + events since snapshot. Reduces rebuild time by 100x for old aggregates.
+- **Parallel projection rebuild**: Rebuild independent projections in parallel. Each projection processes all events but maintains separate state. Use thread pools for I/O-bound projections.
+- **Batch event writing**: Buffer events in memory and flush in batches. Use transactional batch writes for atomic multi-event appends. Reduces write amplification for high-throughput aggregates.

@@ -355,3 +355,196 @@ class TenantAwareWorker {
 No artifact produced unless requested.
 Next skill: bff-pattern — create tenant-specific BFFs for different client types.
 Carry forward: isolation strategy, tenant context mechanism, provisioning pipeline.
+
+## Implementation Patterns
+
+### Tenant Context Middleware
+
+```javascript
+// Express.js tenant context middleware
+const asyncLocalStorage = require('async_hooks').AsyncLocalStorage;
+const tenantStorage = new AsyncLocalStorage();
+
+function tenantMiddleware(req, res, next) {
+  const tenantId = extractTenantId(req);
+  const tenantConfig = getTenantConfig(tenantId);
+
+  if (!tenantConfig) {
+    return res.status(401).json({ error: 'Invalid tenant' });
+  }
+
+  const context = {
+    tenantId,
+    tenantConfig,
+    userId: req.user?.id,
+    requestId: req.id,
+  };
+
+  tenantStorage.run(context, () => {
+    req.tenant = context;
+    next();
+  });
+}
+
+function extractTenantId(req) {
+  // Priority: header > subdomain > query param
+  return req.headers['x-tenant-id']
+    || req.subdomains[0]
+    || req.query.tenant_id;
+}
+
+function getCurrentTenant() {
+  return tenantStorage.getStore();
+}
+
+function requireTenantAccess(requiredRoles = []) {
+  return (req, res, next) => {
+    const tenant = getCurrentTenant();
+    if (!tenant) {
+      return res.status(401).json({ error: 'No tenant context' });
+    }
+    if (requiredRoles.length > 0) {
+      const userRoles = tenant.tenantConfig.roles?.[tenant.userId] || [];
+      const hasRole = requiredRoles.some(r => userRoles.includes(r));
+      if (!hasRole) {
+        return res.status(403).json({ error: 'Insufficient permissions for this tenant' });
+      }
+    }
+    next();
+  };
+}
+```
+
+### Row-Level Security (PostgreSQL)
+
+```sql
+-- Enable RLS on tables
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+
+-- Create a secure function to get current tenant
+CREATE OR REPLACE FUNCTION current_tenant_id()
+RETURNS TEXT
+LANGUAGE SQL STABLE
+AS $$
+  SELECT current_setting('app.tenant_id', TRUE)::TEXT;
+$$;
+
+-- Row-level security policies
+CREATE POLICY tenant_isolation_orders ON orders
+  FOR ALL
+  USING (tenant_id = current_tenant_id());
+
+CREATE POLICY tenant_isolation_customers ON customers
+  FOR ALL
+  USING (tenant_id = current_tenant_id());
+
+-- Set tenant context per session
+-- Called from connection pool middleware
+SELECT set_config('app.tenant_id', 'tenant-123', TRUE);
+```
+
+### Schema-Per-Tenant Migration Runner
+
+```python
+from typing import List
+import psycopg2
+
+class TenantMigrationRunner:
+    def __init__(self, conn_string: str):
+        self.conn_string = conn_string
+
+    def get_all_tenants(self) -> List[str]:
+        conn = psycopg2.connect(self.conn_string)
+        cur = conn.cursor()
+        cur.execute("SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE 'tenant_%'")
+        tenants = [row[0] for row in cur.fetchall()]
+        cur.close()
+        conn.close()
+        return tenants
+
+    def run_migration_for_tenant(self, tenant_schema: str, migration_sql: str):
+        conn = psycopg2.connect(self.conn_string)
+        cur = conn.cursor()
+        cur.execute(f"SET search_path TO {tenant_schema}")
+        cur.execute(migration_sql)
+        conn.commit()
+        cur.close()
+        conn.close()
+
+    def run_migration_all(self, migration_sql: str, tenants: List[str] = None):
+        if not tenants:
+            tenants = self.get_all_tenants()
+        for tenant in tenants:
+            print(f"Running migration on {tenant}")
+            self.run_migration_for_tenant(tenant, migration_sql)
+
+    def add_new_tenant(self, tenant_id: str, base_schema: str = "public"):
+        conn = psycopg2.connect(self.conn_string)
+        cur = conn.cursor()
+        schema_name = f"tenant_{tenant_id}"
+        cur.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
+        cur.execute(f"SET search_path TO {schema_name}")
+        # Clone base schema tables
+        cur.execute(f"""
+            SELECT table_name FROM information_schema.tables
+            WHERE table_schema = '{base_schema}' AND table_type = 'BASE TABLE'
+        """)
+        tables = cur.fetchall()
+        for (table,) in tables:
+            cur.execute(f"CREATE TABLE {schema_name}.{table} (LIKE {base_schema}.{table} INCLUDING ALL)")
+        conn.commit()
+        cur.close()
+        conn.close()
+        print(f"Tenant {tenant_id} provisioned in schema {schema_name}")
+```
+
+## Architecture Decision Trees
+
+### Isolation Strategy Selection
+
+```
+What are the tenant requirements?
+├── Small tenants (< 100 users), simple needs
+│   └── Shared database with RLS
+│       ├── Lowest cost, simplest operations
+│       ├── Tenants share DB resources
+│       └── RLS ensures data separation
+│
+├── Medium tenants, compliance needs (SOC2, HIPAA)
+│   └── Schema-per-tenant
+│       ├── Full data isolation in separate schemas
+│       ├── Common migration per tenant
+│       ├── Separate backups per tenant
+│       └── More complex connection management
+│
+├── Large/enterprise tenants
+│   └── Database-per-tenant
+│       ├── Complete resource isolation
+│       ├── Independent scaling and backup
+│       ├── Highest cost due to per-DB overhead
+│       └── Suitable for multi-region deployment
+│
+└── Mixed tenant tiers
+    └── Hybrid: RLS for small, schema for medium, DB for large
+        ├── Migrate tenants to higher isolation on tier upgrade
+        ├── Monitoring-driven isolation decisions
+        └── Unified tenant management across tiers
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Tenant ID from user input | Tampering allows cross-tenant access | Extract from auth token only |
+| Application-level isolation only | Single bug exposes all tenant data | Defense-in-depth: app + DB-level isolation |
+| Shared sequences across tenants | Predictable IDs reveal other tenant data | UUIDs or per-tenant sequences |
+| Global rate limiting | One noisy tenant DoS-es all others | Per-tenant rate limits + global cap |
+| One-size backup strategy | Enterprise tenants need faster RPO | Tiered backup policies per tenant plan |
+| No tenant-aware connection pooling | Connections grow linearly with tenants | Use pgbouncer with pool size per tenant |
+
+## Performance Optimization
+
+- **Tenant-aware connection pooling**: Use PgBouncer with per-tenant connection pools. Prevents one tenant's queries from starving others. Configure pool sizes based on tenant tier.
+- **Read replica per tenant group**: Route read queries to tenant-group-specific replicas. Isolates read load. Replicas can be scaled independently for high-traffic tenants.
+- **Per-tenant query monitoring**: Track query performance metrics per tenant. Identify and throttle tenants with runaway queries. Alert on tenant-level performance degradation.

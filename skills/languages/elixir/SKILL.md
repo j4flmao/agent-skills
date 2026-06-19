@@ -394,7 +394,62 @@ defmodule MyApp.HttpClient do
 end
 ```
 
-## Phoenix PubSub & Presence
+### Testing Strategy Decision Tree
+```
+What are you testing?
+├── Unit (pure functions, module logic) → ExUnit with `async: true`
+│   Fast, no DB, no side effects
+│   Test: validation, business rules, data transformation
+├── Context (business logic with Ecto) → DataCase with sandbox DB
+│   `async: true` — Ecto sandbox isolates per test
+│   Use `insert(:order)` factory (ExMachina) for test data
+├── Web (controllers, views, LiveView) → ConnCase or Phoenix.ConnTest
+│   Test: HTTP status, redirect, assigns, LiveView render/mount
+├── Integration (multi-context flows) → DataCase with async: false
+│   Test: order → payment → notification chain
+│   Use `setup` to orchestrate test data and verify side effects
+└── Property-based → StreamData / PropCheck
+    Test: encoding/decoding, sorting, state machine invariants
+    Run 100 iterations per test to find edge cases
+```
+
+### Context Boundary Decision Tree
+```
+Where does this code belong?
+├── Database query with business rules → Context module (Accounts, Orders)
+│   Context calls Repo, applies filtering/validation, returns results
+├── Schema definition → Ecto schema module
+│   Field types, validations, associations, virtual fields
+│   NO business logic, NO Repo calls
+├── External service → Dedicated context (Billing, Email, SMS)
+│   Wraps third-party API, handles retry/auth/response parsing
+├── Cross-context orchestration → Parent context or pipeline
+│   Order checkout: Accounts -> Orders -> Billing -> Notifications
+│   Each step calls the next context's public API
+└── Shared data transformation → Utility module (MyApp.Utils)
+    No side effects, no Repo, no GenServer calls — pure functions only
+```
+
+### Deployment Strategy Decision Tree
+```
+Production hosting choice?
+├── Bare metal / VPS → mix release + systemd service
+│   Build: mix release on CI, scp to server, restart
+│   Monitoring: Prometheus (telemetry_metrics_prometheus) + Grafana
+│   Logs: JSON logger -> journald -> Loki
+├── Docker / Kubernetes → Multi-stage Dockerfile with distroless runtime
+│   Builder: elixir:1.17-slim → deps.get → compile → release
+│   Runtime: gcr.io/distroless/cc-debian12
+│   Config: environment variables at deploy time (not build time)
+├── Fly.io → fly.toml with release_command for migrations
+│   `fly deploy` with `--ha` for multi-region
+│   Postgres: Fly Postgres with read replicas per region
+└── Gigalixir / Render → Git-push deployment
+    Config: runtime.exs reads DATABASE_URL env var
+    Migrations: release command step in dashboard
+```
+
+### Phoenix PubSub & Presence
 ```elixir
 # Broadcasting to all connected users
 Phoenix.PubSub.broadcast(MyApp.PubSub, "room:lobby", {:new_message, message})

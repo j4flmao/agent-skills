@@ -285,6 +285,163 @@ Store the user's CHOICE (light/dark/system), not the resolved value. Otherwise, 
 ### 5. Not Syncing with SSR
 If the server renders HTML with the light theme but the user prefers dark, the mismatch causes a flicker. Use a cookie for server-side theme detection.
 
+## Tailwind CSS Dark Mode Integration
+
+```typescript
+// tailwind.config.ts
+export default {
+  darkMode: 'class', // Use class-based dark mode
+  // or: 'media' for OS-preference only (no manual toggle)
+  theme: {
+    extend: {
+      colors: {
+        surface: {
+          primary: 'var(--color-surface-primary)',
+          secondary: 'var(--color-surface-secondary)',
+        },
+        text: {
+          primary: 'var(--color-text-primary)',
+          secondary: 'var(--color-text-secondary)',
+        },
+      },
+    },
+  },
+};
+
+// Usage:
+// <div className="bg-surface-primary text-text-primary">
+//   <h1 className="dark:text-white">Content</h1>
+// </div>
+```
+
+## Multi-Theme Architecture (3+ Themes)
+
+```typescript
+// For apps needing >2 themes (light, dark, high-contrast, sepia)
+// Strategy: class-based with data attribute on <html>
+
+// Theme definitions
+const themes = {
+  light: {
+    'color-surface-primary': '#ffffff',
+    'color-text-primary': '#111827',
+    'color-brand': '#2563eb',
+    'shadow-card': '0 1px 3px rgba(0,0,0,0.1)',
+  },
+  dark: {
+    'color-surface-primary': '#111827',
+    'color-text-primary': '#f9fafb',
+    'color-brand': '#60a5fa',
+    'shadow-card': '0 1px 3px rgba(0,0,0,0.4)',
+  },
+  'high-contrast': {
+    'color-surface-primary': '#000000',
+    'color-text-primary': '#ffffff',
+    'color-brand': '#ffff00',
+    'shadow-card': 'none',
+  },
+  sepia: {
+    'color-surface-primary': '#fbf0d9',
+    'color-text-primary': '#433422',
+    'color-brand': '#8b4513',
+    'shadow-card': '0 1px 3px rgba(0,0,0,0.15)',
+  },
+};
+
+function applyTheme(themeName: keyof typeof themes) {
+  const root = document.documentElement;
+  const vars = themes[themeName];
+  Object.entries(vars).forEach(([key, value]) => {
+    root.style.setProperty(`--${key}`, value);
+  });
+  root.setAttribute('data-theme', themeName);
+}
+```
+
+## Style Dictionary Integration (Design Token Management)
+
+```json
+{
+  // tokens/color.json
+  "color": {
+    "surface": {
+      "primary": { "value": "{color.base.white}", "type": "color" },
+      "secondary": { "value": "{color.base.gray.100}", "type": "color" }
+    },
+    "text": {
+      "primary": { "value": "{color.base.gray.900}", "type": "color" },
+      "secondary": { "value": "{color.base.gray.500}", "type": "color" }
+    }
+  },
+  "spacing": {
+    "xs": { "value": "0.25rem", "type": "dimension" },
+    "sm": { "value": "0.5rem", "type": "dimension" },
+    "md": { "value": "1rem", "type": "dimension" },
+    "lg": { "value": "1.5rem", "type": "dimension" },
+    "xl": { "value": "2rem", "type": "dimension" }
+  }
+}
+```
+
+```typescript
+// style-dictionary.config.js
+module.exports = {
+  source: ['tokens/**/*.json'],
+  platforms: {
+    css: {
+      transformGroup: 'css',
+      buildPath: 'src/styles/',
+      files: [{
+        destination: 'tokens.css',
+        format: 'css/variables',
+      }],
+    },
+    ts: {
+      transformGroup: 'js',
+      buildPath: 'src/',
+      files: [{
+        format: 'typescript/es6-declarations',
+        destination: 'tokens.ts',
+      }],
+    },
+  },
+};
+```
+
+## Testing Theming
+
+```typescript
+// Theme switching unit tests
+describe('ThemeProvider', () => {
+  afterEach(() => {
+    localStorage.clear();
+    document.documentElement.removeAttribute('data-theme');
+  });
+
+  it('should apply system preference as default', () => {
+    window.matchMedia = vi.fn().mockImplementation((query) => ({
+      matches: query.includes('dark'),
+      addEventListener: vi.fn(),
+    }));
+    render(<ThemeProvider><div /></ThemeProvider>);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+  });
+
+  it('should persist manual choice and override system', () => {
+    localStorage.setItem('theme', 'dark');
+    render(<ThemeProvider><div /></ThemeProvider>);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(localStorage.getItem('theme')).toBe('dark');
+  });
+
+  it('should toggle between themes', async () => {
+    render(<TestApp />);
+    await userEvent.click(screen.getByRole('button', { name: /toggle/i }));
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+  });
+});
+```
+
 ## Compared With
 
 | Approach | Bundle Size | Flicker-Free | SSR Support | Complexity |
@@ -294,6 +451,7 @@ If the server renders HTML with the light theme but the user prefers dark, the m
 | styled-components ThemeProvider | ~2KB | Yes | Yes | Medium |
 | next-themes | ~3KB | Yes | Yes (built-in) | Low |
 | CSS prefers-color-scheme only | 0KB | Yes | Yes | Minimal (no toggle) |
+| Style Dictionary + tokens | ~1KB runtime | Yes | Yes | Medium (build step) |
 
 ## Performance Considerations
 
@@ -302,6 +460,8 @@ If the server renders HTML with the light theme but the user prefers dark, the m
 - `prefers-color-scheme` media query evaluation is instant
 - Transition on all properties can cause jank on slow devices — limit to `background-color`, `color`, `border-color`, `box-shadow`
 - localStorage read is synchronous but fast (< 1ms)
+- Style Dictionary generates static CSS — no runtime token resolution cost
+- For 3+ themes, consider generating separate CSS files and toggling via `disabled` attribute on `<link>` for zero recalculation
 
 ## Accessibility Considerations
 
@@ -311,12 +471,15 @@ If the server renders HTML with the light theme but the user prefers dark, the m
 - Announce theme change to screen readers using aria-live region
 - Respect `prefers-reduced-motion` for theme transitions
 - Provide a high-contrast theme option if the app targets accessibility-sensitive users
+- Test all themes with WCAG contrast checker — don't assume dark mode automatically passes
+- Theme-aware focus indicators: ensure focus ring is visible in all themes
 
 ## Security Considerations
 
 - Inline `<script>` for anti-flicker must be CSP-compatible (use nonce or hash)
 - localStorage theme preference is not sensitive data (no security concern)
 - Cookie-based theme should be a simple preference, never contain session data
+- Style Dictionary build process runs at build time — no runtime code injection risk
 
 ## Rules
 

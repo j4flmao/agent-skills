@@ -280,6 +280,136 @@ Without `animation-fill-mode: forwards` or WAAPI `fill: "forwards"`, the animate
 
 ---
 
+## Advanced Gesture Animations
+
+```typescript
+// Framer Motion — complex gesture composition
+import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
+
+function Card3D({ children }: { children: React.ReactNode }) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [10, -10]), {
+    stiffness: 300, damping: 30,
+  });
+  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-10, 10]), {
+    stiffness: 300, damping: 30,
+  });
+
+  function handleMouseMove(event: React.MouseEvent) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const xPos = (event.clientX - rect.left) / rect.width - 0.5;
+    const yPos = (event.clientY - rect.top) / rect.height - 0.5;
+    x.set(xPos); y.set(yPos);
+  }
+
+  function handleMouseLeave() { x.set(0); y.set(0); }
+
+  return (
+    <motion.div onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}
+      style={{ rotateX, rotateY, transformStyle: 'preserve-3d' }}>
+      {children}
+    </motion.div>
+  );
+}
+```
+
+## Spring Physics Reference
+
+| Feel | Stiffness | Damping | Mass | Use Case |
+|------|-----------|---------|------|----------|
+| Snappy UI | 300 | 25 | 0.5 | Buttons, toggles, micro-interactions |
+| Gentle UI | 200 | 20 | 1.0 | Cards, modals, sheets |
+| Bouncy | 150 | 10 | 1.0 | Fun reveal, celebration animations |
+| Heavy | 500 | 40 | 2.0 | Drag constraints, large elements |
+| Fluid | 100 | 15 | 1.0 | Page transitions, parallax |
+| Stiff (no bounce) | 400 | 40 | 1.0 | Progress bars, loading indicators |
+
+```typescript
+const uiSpring = { type: 'spring', stiffness: 300, damping: 20, mass: 0.5 };
+const gestureSpring = { type: 'spring', stiffness: 500, damping: 30, mass: 1 };
+```
+
+## Layout Animations (FLIP)
+
+```tsx
+function ReorderList() {
+  const [items, setItems] = useState(['A', 'B', 'C', 'D']);
+  return (
+    <div>
+      <button onClick={() => setItems([...items].sort(() => Math.random() - 0.5))}>Shuffle</button>
+      <ul>
+        {items.map((item) => (
+          <motion.li key={item} layout transition={{ type: 'spring', stiffness: 300, damping: 25 }}>
+            {item}
+          </motion.li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+## Shared Element Transitions
+
+```tsx
+// Shared layoutId enables cross-page element transitions
+// Page A: <motion.img layoutId={`product-image-${id}`} src={product.image} />
+// Page B: <motion.img layoutId={`product-image-${id}`} src={product.image} style={{ width: '100%', height: 400 }} />
+// Framer Motion animates the transition between the two layouts automatically
+```
+
+## CSS-Driven Animations (Zero JS)
+```css
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out both;
+}
+
+.animate-stagger > * {
+  opacity: 0;
+  animation: fadeIn 0.3s ease-out both;
+}
+
+.animate-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.animate-stagger > *:nth-child(2) { animation-delay: 75ms; }
+.animate-stagger > *:nth-child(3) { animation-delay: 150ms; }
+.animate-stagger > *:nth-child(4) { animation-delay: 225ms; }
+```
+
+```tsx
+// View Transition API (Chrome 111+) — instant cross-page morphing
+// app/layout.tsx
+function navigateWithTransition(path: string) {
+  if (document.startViewTransition) {
+    document.startViewTransition(() => {
+      router.push(path);
+    });
+  } else {
+    router.push(path);
+  }
+}
+
+// Set view-transition-name on shared elements
+// <img style={{ viewTransitionName: 'product-image' }} />
+```
+
+## Performance Budget by Animation Type
+
+| Animation Type | Max Elements | Max Duration | Frame Budget |
+|---------------|-------------|-------------|--------------|
+| Micro-interaction (hover, tap) | 1-2 | 300ms | < 4ms JS |
+| Page transition | 5-10 | 400ms | < 8ms JS |
+| Scroll reveal | 10-20 | 600ms | < 6ms JS |
+| Parallax | 3-5 | Continuous | < 2ms JS |
+| Particle (DOM) | 5-8 | 2s | < 8ms JS |
+| Particle (Canvas) | 100-1000 | 5s | < 10ms JS |
+
 ## Performance Considerations
 
 ### Frame Budget Breakdown
@@ -294,6 +424,26 @@ The browser promotes elements to GPU compositor layers when `will-change`, 3D tr
 - `requestAnimationFrame` callback timestamps: monitor frame spacing (delta > 20ms indicates jank)
 - Lighthouse: "animations are smooth" audit
 - Web Vitals: Cumulative Layout Shift (CLS) must stay below 0.1
+
+## Security Considerations
+
+- Animated content should not convey time-sensitive information (e.g., "press within 3 seconds") — users may have animations disabled
+- `will-change` is purely cosmetic — does not introduce security concerns
+- Lottie JSON files from untrusted sources may contain malicious payloads — validate before rendering
+- Third-party animation libraries loaded from CDNs increase supply chain risk — use SRI hashes and lock versions
+- GSAP's `scrollTrigger` does not introduce XSS vectors when used with static selectors
+- Avoid interpolating user-generated content into animation props (e.g., CSS-in-JS dynamic values) without sanitization
+
+## Accessibility Considerations (Expanded)
+
+- `prefers-reduced-motion`: use `@media (prefers-reduced-motion: reduce)` to disable or simplify animations
+- Framer Motion: `MotionConfig reducedMotion="user"` auto-handles the media query
+- GSAP: `gsap.ticker.lagSmoothing(0)` and manually check `window.matchMedia('(prefers-reduced-motion: reduce)')`
+- Flashing/strobing animations (over 3 flashes/second) can trigger seizures — avoid entirely
+- Provide a user-facing toggle to disable motion even if the user hasn't set OS-level preference
+- Animations that convey meaning (e.g., a loading spinner) must have a text equivalent visible when motion is reduced
+- Focus indicators should not be animated — `:focus-visible` styles must be instant
+- Tooltip/popover animations must respect reduced motion without breaking usability
 
 ---
 
@@ -337,6 +487,8 @@ The browser promotes elements to GPU compositor layers when `will-change`, 3D tr
 12. Avoid animating `box-shadow` -- prefer pseudo-element opacity trick for performance.
 13. Test on a mid-range Android device (Moto G4 equivalent) before shipping.
 14. GSAP ScrollTrigger animations must use `scrub: 1` or `toggleActions` for smooth scroll-linked motion.
+15. Never animate elements that are currently being measured by ResizeObserver or IntersectionObserver.
+16. Validate Lottie JSON from untrusted sources before rendering with `lotti-web`.
 
 ---
 

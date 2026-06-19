@@ -390,3 +390,275 @@ npx jest --testNamePattern="should handle edge case" --runInBand
 # Verbose output for setup/teardown issues
 npx jest --verbose --detectOpenHandles
 ```
+
+## Advanced Patterns
+
+### Test Structure Decision Tree
+```
+What are you testing?
+├── Unit (single function/module)
+│   ├── Pure function: test(input → expected output)
+│   ├── Side-effect: spy on calls, test interactions
+│   │   └── jest.spyOn(service, 'sendEmail').mockResolvedValue(true)
+│   └── Error handling: test throws/rejects
+│       └── expect(() => parse(null)).toThrow('Invalid input')
+├── Integration (module + dependencies)
+│   ├── Database: use testcontainers or in-memory DB
+│   │   └── Setup DB connection in beforeAll, teardown in afterAll
+│   ├── HTTP API: use supertest
+│   │   └── request(app).post('/users').send(body).expect(201)
+│   └── File system: use memfs or temp dirs
+│       └── mkdtempSync, write in test, cleanup in afterEach
+├── Component (React/Vue component)
+│   ├── Render test: snapshots or screen queries
+│   ├── Interaction: fireEvent → assert DOM change
+│   ├── Async: waitFor, findBy queries
+│   └── Error state: test fallback UI
+└── E2E (whole system)
+    ├── Use Cypress/Playwright, not Jest
+    └── Jest unit tests for business logic, e2e for user flows
+```
+
+### Snapshot Testing Best Practices
+```javascript
+// Good: small, focused snapshots
+test('renders user avatar', () => {
+  const { container } = render(<Avatar user={mockUser} />);
+  expect(container.firstChild).toMatchSnapshot();
+});
+
+// Bad: large, comprehensive snapshots hiding real bugs
+test('renders entire dashboard', () => {
+  const { container } = render(<Dashboard />);
+  expect(container).toMatchSnapshot(); // 2000+ line snapshot
+});
+
+// Inline snapshots (no external file needed)
+test('formats date correctly', () => {
+  expect(formatDate('2024-01-15')).toMatchInlineSnapshot(`"Jan 15, 2024"`);
+});
+
+// Property-based snapshots — match only specific attributes
+test('button has correct variant', () => {
+  const { container } = render(<Button variant="primary" />);
+  expect(container.querySelector('button')).toMatchSnapshot({
+    className: expect.stringMatching(/btn-primary/)
+  });
+});
+```
+
+### Mocking Strategies by Context
+
+**API calls**:
+```javascript
+// Mock at module level (automatic)
+jest.mock('../api/users');
+import { fetchUsers } from '../api/users';
+
+// Mock return value
+fetchUsers.mockResolvedValue([{ id: 1, name: 'Alice' }]);
+
+// Mock implementation once
+fetchUsers.mockImplementationOnce(() =>
+  Promise.resolve([{ id: 2, name: 'Bob' }])
+);
+
+// Mock module partially
+jest.mock('../api/config', () => ({
+  ...jest.requireActual('../api/config'),
+  API_KEY: 'test-key',
+}));
+```
+
+**Timers (setTimeout, setInterval)**:
+```javascript
+jest.useFakeTimers();
+
+test('debounce delays execution', () => {
+  const fn = jest.fn();
+  debounce(fn, 300)();
+  expect(fn).not.toHaveBeenCalled();
+
+  jest.advanceTimersByTime(300);
+  expect(fn).toHaveBeenCalledTimes(1);
+});
+
+// If your code uses Date.now():
+jest.setSystemTime(new Date('2024-06-15T10:00:00Z'));
+```
+
+**Network requests (nock)** — for HTTP-level mocking:
+```javascript
+const nock = require('nock');
+
+afterEach(() => nock.cleanAll());
+
+test('handles 503 from payment gateway', async () => {
+  nock('https://api.stripe.com')
+    .post('/v1/charges')
+    .reply(503, { error: 'service_unavailable' });
+
+  await expect(processPayment({ amount: 100 }))
+    .rejects
+    .toThrow('Payment service unavailable');
+});
+```
+
+### Parameterized Tests
+```javascript
+// Data-driven tests with test.each
+test.each([
+  [1, 1, 2],
+  [2, 3, 5],
+  [5, 7, 12],
+])('add(%i, %i) = %i', (a, b, expected) => {
+  expect(add(a, b)).toBe(expected);
+});
+
+// Named test table
+test.each([
+  { input: 'racecar', expected: true },
+  { input: 'hello',   expected: false },
+  { input: '',        expected: true },
+])('isPalindrome("$input") returns $expected', ({ input, expected }) => {
+  expect(isPalindrome(input)).toBe(expected);
+});
+
+// Only + skip variants
+test.each([1, 2, 3])('value is %i', (val) => {
+  expect(val).toBeGreaterThan(0);
+});
+```
+
+### CI Integration Patterns
+
+**GitHub Actions** (parallel sharding for speed):
+```yaml
+jobs:
+  test:
+    strategy:
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - run: npx jest --shard=${{ matrix.shard }}/4
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npx jest --config jest.lint.config.js --coverage
+```
+
+**CircleCI** (test splitting by timing):
+```yaml
+- run: npx jest --listTests --json > test_files.json
+- run: npx jest --shard=$(circleci tests split test_files.json)
+```
+
+**Coverage thresholds** in `jest.config.js`:
+```javascript
+module.exports = {
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+    './src/core/**/*.js': {
+      branches: 95,
+      functions: 95,
+    },
+    './src/legacy/**/*.js': {
+      branches: 60, // legacy code
+    },
+  },
+};
+```
+
+### Debugging Failing Tests
+
+**Common failures and fixes:**
+
+| Symptom | Likely Cause | Fix |
+|---------|-------------|-----|
+| Test passes locally, fails in CI | Environment differences | Check Node version, locale, timezone. Use `--ci` flag. |
+| `Cannot find module` | Module resolution mismatch | Check `moduleNameMapper` in config. Verify import paths. |
+| `received: serializes to the same string` | Snapshot updated intentionally | `npx jest --updateSnapshot` or `-u` flag. Commit new snapshots. |
+| Test timeout (5000ms) | Async not completing | Check `done()` called, no missing `await`, no unhandled promise rejections. Increase timeout with `jest.setTimeout(10000)`. |
+| `jest.mock` doesn't work | Hoisting issue or wrong scope | `jest.mock` calls are hoisted to top of file. Can't use variables — use `jest.fn()` instead. |
+| Memory leak in tests | Unclosed handles in test | Use `--detectOpenHandles` to find unclosed DB/network connections. Add `afterAll(cleanup)`. |
+
+**Running specific test subsets:**
+```bash
+# By file pattern
+npx jest --testPathPattern="auth|user" --coverage
+
+# By test name
+npx jest --testNamePattern="(integration|e2e)" --runInBand
+
+# Changed files only (needs jest-changed-files or lint-staged)
+npx jest --onlyChanged
+npx jest --changedSince=origin/main
+
+# Fail fast on first error
+npx jest --bail
+
+# Run tests in order without concurrency
+npx jest --runInBand
+
+# Repeat tests to find flaky ones
+npx jest --repeatEach 10 --testNamePattern="flaky-test"
+```
+
+### Custom Jest Matchers (jest-extended alternatives)
+```javascript
+// Custom matcher for array order
+expect.extend({
+  toBeSortedBy(received, field, order = 'asc') {
+    const sorted = [...received].sort((a, b) =>
+      order === 'asc'
+        ? a[field] > b[field] ? 1 : -1
+        : a[field] < b[field] ? 1 : -1
+    );
+    const pass = JSON.stringify(received.map(r => r[field]))
+                === JSON.stringify(sorted.map(r => r[field]));
+    return {
+      pass,
+      message: () =>
+        `expected ${JSON.stringify(received)} to be sorted by ${field} ${order}`,
+    };
+  },
+});
+
+test('users sorted by age ascending', () => {
+  expect(users).toBeSortedBy('age', 'asc');
+});
+```
+
+### Performance Testing with Jest
+```javascript
+// Measure execution time (from Jest 27+)
+test('processes 10k records under 100ms', () => {
+  const start = performance.now();
+  processRecords(generateMockData(10000));
+  const elapsed = performance.now() - start;
+  expect(elapsed).toBeLessThan(100);
+});
+
+// Benchmark mode with jest-bench
+// jest.config.js
+{
+  testMatch: ['**/benchmarks/**/*.bench.js'],
+}
+```
+
+### Migrating from Other Test Frameworks
+
+| Framework | Jest Equivalent | Migration Notes |
+|-----------|----------------|-----------------|
+| Mocha + Chai | Built-in `describe/it/expect` | Use `jest-codemods` for auto-migration |
+| Jasmine | Built-in | Direct replacement — same API |
+| AVA | `test.each` + `jest.fn()` | Parallel execution by default in Jest too |
+| Tape | `test()` + `t.plan()` | Jest auto-detects assertion count |
+| Sinon | `jest.fn()` / `jest.spyOn()` | Built-in mocking — no sinon needed |

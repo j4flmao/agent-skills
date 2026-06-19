@@ -351,3 +351,184 @@ Cached server state should be normalized by ID to avoid duplication. TanStack Qu
 No artifact produced.
 Next skill: frontend-performance — optimize rendering and bundle size.
 Carry forward: state architecture decisions, store structure, server state configuration.
+
+## Implementation Patterns
+
+### State Store Factory
+
+```typescript
+// Generic store factory for Zustand
+import { create } from 'zustand';
+import { devtools, persist } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+
+interface StoreConfig<T> {
+  name: string;
+  initialState: T;
+  persist?: boolean;
+  devtools?: boolean;
+}
+
+export function createStore<T extends Record<string, unknown>>(
+  config: StoreConfig<T>,
+  actions: (set: any, get: any) => Record<string, (...args: any[]) => void>
+) {
+  const middlewares: any[] = [];
+
+  if (config.devtools) {
+    middlewares.push(devtools);
+  }
+
+  if (config.persist) {
+    middlewares.push(persist);
+  }
+
+  middlewares.push(immer);
+
+  const base = (set: any, get: any) => ({
+    ...config.initialState,
+    ...actions(set, get),
+  });
+
+  const composed = middlewares.reduce((fn, middleware) => middleware(fn), base);
+  return create(composed, { name: config.name });
+}
+
+// Usage example
+interface UIState {
+  sidebarOpen: boolean;
+  theme: 'light' | 'dark';
+  modalId: string | null;
+}
+
+const useUIStore = createStore<UIState>(
+  {
+    name: 'ui-store',
+    initialState: {
+      sidebarOpen: true,
+      theme: 'light',
+      modalId: null,
+    },
+    persist: true,
+    devtools: true,
+  },
+  (set) => ({
+    toggleSidebar: () =>
+      set((state: UIState) => {
+        state.sidebarOpen = !state.sidebarOpen;
+      }),
+    setTheme: (theme: 'light' | 'dark') =>
+      set((state: UIState) => {
+        state.theme = theme;
+      }),
+    openModal: (id: string) =>
+      set((state: UIState) => {
+        state.modalId = id;
+      }),
+    closeModal: () =>
+      set((state: UIState) => {
+        state.modalId = null;
+      }),
+  })
+);
+```
+
+### Selector Utilities
+
+```typescript
+// createSelector with memoization
+import { createSelector } from 'reselect';
+
+interface Todo {
+  id: string;
+  text: string;
+  completed: boolean;
+  userId: string;
+}
+
+interface RootState {
+  todos: Todo[];
+  filter: 'all' | 'active' | 'completed';
+}
+
+const selectTodos = (state: RootState) => state.todos;
+const selectFilter = (state: RootState) => state.filter;
+
+export const selectFilteredTodos = createSelector(
+  [selectTodos, selectFilter],
+  (todos, filter) => {
+    switch (filter) {
+      case 'active':
+        return todos.filter(t => !t.completed);
+      case 'completed':
+        return todos.filter(t => t.completed);
+      default:
+        return todos;
+    }
+  }
+);
+
+export const selectTodoStats = createSelector(
+  [selectTodos],
+  (todos) => ({
+    total: todos.length,
+    completed: todos.filter(t => t.completed).length,
+    active: todos.filter(t => !t.completed).length,
+    completionRate: todos.length > 0
+      ? Math.round((todos.filter(t => t.completed).length / todos.length) * 100)
+      : 0,
+  })
+);
+
+// Partial state subscription — only re-render on relevant changes
+export const useTodoById = (id: string) => {
+  return useTodoStore((state) => state.todos.find(t => t.id === id));
+};
+```
+
+## Architecture Decision Trees
+
+### State Management Selection
+
+```
+What type of state?
+├── Server state (API data, database)
+│   └── TanStack Query / SWR / RTK Query
+│       ├── Automatic caching, refetching, pagination
+│       ├── Optimistic updates for mutations
+│       └── Cache invalidation via query keys
+│
+├── Client state (UI, form inputs)
+│   ├── Simple component state → useState / useReducer
+│   ├── Shared UI state (sidebar, modals) → Zustand / Jotai
+│   └── Complex form state → React Hook Form / Formik
+│
+├── URL state (filters, search, pagination)
+│   └── URLSearchParams + next/navigation or react-router
+│       ├── Bookmarkable, shareable URLs
+│       └── Back/forward navigation works
+│
+└── Persistent state (preferences, theme)
+    └── Zustand persist middleware / localStorage
+        ├── Automatic serialization
+        └── Validation on read (handle tampered storage)
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Putting everything in global store | Component-specific state pollutes global scope | Component state for UI, global for shared |
+| Mutating server state in client store | Stale data, inconsistency with backend | Server state tools handle synchronization |
+| No selected pattern | Different patterns in every file | Pick one approach per state type |
+| React Context for everything | Performance issues from re-renders | Context for DI (theme, locale), not state |
+| Storing derived data | Inconsistency when source changes | Compute with selectors/memoization |
+| Over-normalized state | Complex selectors for simple reads | Keep denormalized where practical |
+| Ignoring stale-while-revalidate | UI shows stale data indefinitely | SWR pattern: show cached, refresh in background |
+
+## Performance Optimization
+
+- **Zustand shallow comparison**: Use `useStore(state => ({...}), shallow)` to avoid unnecessary re-renders when selecting multiple values. Shallow compare checks reference equality for each property.
+- **Jotai atom splitting**: Split large atoms into small focused atoms. Only re-render subscribers of the changed atom. 10 small atoms outperform 1 large store for independent values.
+- **TanStack Query stale time**: Set `staleTime` to avoid refetching data that doesn't change often. Use `cacheTime` to control GC of unused query results.
+- **Memoized selectors**: Use `createSelector` (Reselect) for derived data. Avoids recomputation unless input selectors change. Essential for expensive computations.

@@ -372,6 +372,224 @@ Impact: Reduced prioritization cycle from 3 months to 2 hours for the Must Have 
 - P0 capacity must not exceed 60% of available team capacity.
 - Simple features must have a 20% uncertainty buffer in effort estimates.
 
+## Expanded Decision Trees
+
+### Effort Estimation Approach Decision Tree
+```
+What is the team's estimation maturity?
+  |-- Low (new team, no historical data) --> Use T-shirt sizing (S/M/L/XL) with ranges
+  |-- Medium (some data, experienced team) --> Use Planning Poker or PERT (3-point)
+  |-- High (strong data, stable team) --> Use historical velocity + PERT
+
+How well-defined is the feature?
+  |-- Well-defined (clear requirements, similar to past work) --> Point estimate with 10% buffer
+  |-- Partially defined (some unknowns, new area) --> Range estimate (best/worst) with 25% buffer
+  |-- Poorly defined (research needed, experimental) --> T-shirt size with 50% buffer; spike first
+
+Is there historical data for similar features?
+  |-- YES --> Use historical data as primary estimate; adjust for differences
+  |-- NO --> Use relative estimation (compare to known features); calibrate after first delivery
+```
+
+### Stakeholder Alignment Strategy Decision Tree
+```
+What is the stakeholder's primary concern?
+  |-- Revenue/profit focus → Present prioritization in terms of revenue impact and ROI
+  |-- Customer focus → Present prioritization in terms of customer satisfaction and retention
+  |-- Technical focus → Present prioritization in terms of architecture quality and debt reduction
+  |-- Strategic focus → Present prioritization in terms of OKR alignment and competitive position
+
+What is the stakeholder's influence level?
+  |-- High influence + High opposition → Private meeting before workshop; address concerns 1:1
+  |-- High influence + Neutral / Supportive → Use as advocate in workshop
+  |-- Low influence + High opposition → Document concerns; allocate time for discussion
+  |-- Low influence + Supportive → No special action needed
+
+How much disagreement exists?
+  |-- Low (minor differences) → Group discussion, quick consensus
+  |-- Medium (disagreement on 2-3 items) → Structured debate with scoring
+  |-- High (fundamental disagreement) → Escalate to leadership with documented options
+```
+
+### Re-prioritization Trigger Decision Tree
+```
+Has the business strategy changed?
+  |-- YES --> Full re-prioritization against new strategy
+  |-- NO --> Has new data emerged that changes confidence?
+        |-- YES --> Re-score affected features; update prioritization
+        |-- NO --> Has the competitive landscape shifted?
+              |-- YES --> Re-assess competitive features; re-prioritize accordingly
+              |-- NO --> Has team capacity changed significantly?
+                    |-- YES --> Adjust scope of current cycle
+                    |-- NO --> Stick with current priorities; review at next cadence
+```
+
+## Templates
+
+### Weighted Scoring Template (Strategy-Aligned)
+```
+Feature: {feature name}
+Scoring Date: {date}
+Scorer: {name}
+
+| Criterion | Weight (%) | Score (1-5) | Weighted Score |
+|-----------|-----------|-------------|----------------|
+| OKR alignment | 30% | {score} | {weight × score} |
+| Revenue impact | 20% | {score} | {weight × score} |
+| Customer satisfaction | 20% | {score} | {weight × score} |
+| Strategic importance | 15% | {score} | {weight × score} |
+| Technical feasibility | 10% | {score} | {weight × score} |
+| Risk reduction | 5% | {score} | {weight × score} |
+
+Total Weighted Score: {sum of weighted scores}
+
+Confidence in scores: {low / medium / high}
+Key assumptions: {list}
+```
+
+### Cost of Delay / WSJF Calculation Template
+```
+Feature: {feature name}
+Date: {date}
+
+## Cost of Delay Components (Score 1-13, Fibonacci)
+
+### User-Business Value
+- How much revenue or cost savings does this generate?
+- How many customers are affected?
+- What is the competitive advantage?
+Score: {1-13}
+
+### Time Criticality
+- Is there a fixed deadline?
+- Does value decay over time?
+- Is there a market window?
+Score: {1-13}
+
+### Risk Reduction / Opportunity Enablement
+- Does this unlock other features?
+- Does this reduce technical risk?
+- Does this enable future revenue?
+Score: {1-13}
+
+### Total Cost of Delay
+{value + criticality + opportunity} = {total}
+
+### Job Duration
+Estimated effort in weeks: {weeks}
+
+### WSJF Score
+{total CoD} / {effort weeks} = {WSJF score}
+```
+
+### Prioritization Decision Record Template
+```
+# Prioritization Decision Record
+
+## Decision
+{features selected for current cycle}
+
+## Date
+{date}
+
+## Participants
+{list of stakeholders}
+
+## Framework Used
+{framework name with rationale}
+
+## Key Scores
+| Feature | Score | Priority Bucket | Rationale |
+|---------|-------|----------------|-----------|
+| {feature} | {score} | {bucket} | {key rationale} |
+
+## Features Explicitly Not Selected (P3)
+| Feature | Reason for Deprioritization | When to Revisit |
+|---------|---------------------------|-----------------|
+
+## Dissenting Opinions
+{stakeholder disagreements and how they were addressed}
+
+## Next Review Date
+{date}
+```
+
+### Prioritization Presentation Template (5 slides)
+```
+Slide 1: Context (strategy refresh, goals, capacity)
+Slide 2: Candidate Features (list of candidates with brief descriptions)
+Slide 3: Scoring Results (sorted table with scores and rationale)
+Slide 4: Priority Buckets (P0/P1/P2/P3 with totals)
+Slide 5: Next Steps (ownership, timeline, next review date)
+```
+
+## Expanded Anti-Patterns
+
+### 11. False Consensus
+Assuming agreement because nobody spoke up. In group prioritization, silence does not mean consent — it means people are not comfortable raising objections. Mitigation: use anonymous scoring. Require explicit agreement. Create a safe space for disagreement.
+
+### 12. Priority Inflation
+Everything gradually becomes P0 because teams don't push back on scope. P0 loses its meaning. Eventually everything is urgent and nothing is truly prioritized. Mitigation: enforce strict P0 criteria. Limit P0 to <5 items or <50% of capacity. Audit P0 rationale quarterly.
+
+### 13. Tech Debt Neglect
+Prioritizing only new features and never paying down technical debt. Technical debt accumulates until it slows delivery to a crawl. Mitigation: allocate 20% of each cycle to tech debt. Treat tech debt as features with their own user stories and acceptance criteria. Score tech debt items in the same prioritization framework.
+
+### 14. Segment Bias
+Prioritizing for the most vocal customer segment rather than the highest-value segment. Power users and enterprise customers may be louder but not representative. Mitigation: segment scoring by customer type. Weight scores by segment strategic value. Include "voice of the non-vocal" through analytics data.
+
+### 15. Analysis Paralysis in Framework Selection
+Spending more time debating which framework to use than actually prioritizing features. Teams jump between RICE, MoSCoW, and Kano without completing any single pass. Mitigation: pick the simplest framework that fits your data availability. Use it consistently for at least 3 cycles before evaluating a change.
+
+## Expanded Success Metrics
+
+| Metric | Target | How to Measure | Remediation |
+|--------|--------|----------------|-------------|
+| P0 delivery rate | >80% of P0 items ship on time | Cycle completion tracking | Reduce P0 count; improve estimation |
+| Quick win identification | 2+ per cycle | Count in output | Add quick win flag to scoring |
+| Stakeholder agreement | >80% of items agreed | Post-workshop survey | Address disagreements before closing |
+| Re-prioritization cadence | Quarterly | Calendar check | Schedule next session at closing |
+| Framework consistency | Same framework for 3+ cycles | Audit | Resist framework-hopping |
+| Time to prioritize | <1 week for standard cycle | Work tracking | Streamline scoring process |
+| Post-decision satisfaction | >4/5 stakeholder satisfaction | Stakeholder survey after cycle | Improve process, communication |
+| Deprioritized items tracked | 100% of P3 items documented | Audit output | Add P3 tracking to process |
+
+## Prioritization Workshop Facilitation Guide
+
+### Before the Workshop
+1. Collect all candidate features with descriptions 1 week before
+2. Ask feature owners to prepare: problem statement, expected impact, effort estimate
+3. Share strategy context and OKRs with all participants
+4. Pre-score features (optional): ask stakeholders to score independently
+5. Prepare scoring framework and templates
+
+### During the Workshop
+1. Start with strategy refresh — align on goals
+2. Review each feature briefly (2 min per feature)
+3. Score features as a group or reveal pre-scored results
+4. Focus debate on items with the widest score disagreement
+5. Assign priority buckets based on scores and capacity
+6. Explicitly document P3 (won't do) items
+7. Identify dependencies and quick wins
+8. Agree on next review date
+
+### After the Workshop
+1. Publish prioritization decision record within 24 hours
+2. Communicate results to all stakeholders (not just participants)
+3. Update backlog with priority buckets
+4. Schedule next re-prioritization session
+5. Track delivery against priorities during the cycle
+
+## Framework Calibration Guidelines
+
+### When RICE Scores Mislead
+RICE can deprioritize high-value strategic items that have low reach or high effort. Calibration: add a strategic multiplier (1.0-1.5x) for features that directly support OKRs. Score strategic alignment separately and combine with RICE in a weighted formula.
+
+### When Kano Gets Stale
+Kano classifications change over time. A delightful feature becomes a performance need, then a basic need. Survey annually to re-classify. Features that were delightful 2 years ago are now table stakes. Don't invest in what was once delightful — invest in what is currently delightful.
+
+### When MoSCoW Creates Conflict
+MoSCoW can become a battleground where everyone fights to get their items into "Must Have." Mitigation: define clear Must Have criteria upfront (e.g., "without this feature, the cycle goal cannot be achieved"). Limit Must Have to 40% of capacity. Force trade-off conversations: "If this is Must Have, what becomes Won't Have?"
+
 ## References
   - references/feature-prioritization-advanced.md — Feature Prioritization Advanced Topics
   - references/feature-prioritization-fundamentals.md — Feature Prioritization Fundamentals

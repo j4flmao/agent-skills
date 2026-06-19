@@ -268,6 +268,383 @@ Below are links to the reference guides detailing the patterns, templates, and i
 ## Handoff
 For projects requiring tool orchestration within agent-legible codebases, hand off to `tool-orchestration`. For context window optimization when agents load codebase documentation, hand off to `context-engineering`. For architectural constraint enforcement referenced in AGENTS.md, hand off to `architectural-constraints`.
 
+## Implementation Patterns
+
+### AGENTS.md Generator
+
+```python
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+@dataclass
+class AgentDocsConfig:
+    project_name: str
+    tech_stack: List[str]
+    architecture_style: str
+    constraint_rules: List[str] = field(default_factory=list)
+    navigation_map: dict = field(default_factory=dict)
+    workflow_steps: dict = field(default_factory=dict)
+
+class AgentsMDGenerator:
+    def __init__(self, config: AgentDocsConfig):
+        self.config = config
+
+    def generate(self) -> str:
+        sections = [
+            self._identity_block(),
+            self._architecture_section(),
+            self._constraints_section(),
+            self._navigation_section(),
+            self._workflows_section(),
+            self._conventions_section(),
+        ]
+        return "\n\n".join(sections)
+
+    def _identity_block(self) -> str:
+        stack = ", ".join(self.config.tech_stack)
+        return (
+            f"# {self.config.project_name}\n\n"
+            f"**Stack**: {stack}\n\n"
+            f"**Architecture**: {self.config.architecture_style}\n\n"
+            f"## Identity\n"
+            f"- Primary language: {self.config.tech_stack[0] if self.config.tech_stack else 'Unknown'}\n"
+            f"- Framework: {self.config.tech_stack[1] if len(self.config.tech_stack) > 1 else 'N/A'}\n"
+            f"- Package manager: {self._detect_package_manager()}\n"
+        )
+
+    def _detect_package_manager(self) -> str:
+        managers = {"node": "npm/pnpm/yarn", "python": "pip/poetry", "go": "go mod",
+                     "rust": "cargo", "ruby": "bundler"}
+        for tech in self.config.tech_stack:
+            tech_lower = tech.lower()
+            for key, val in managers.items():
+                if key in tech_lower:
+                    return val
+        return "unknown"
+
+    def _constraints_section(self) -> str:
+        rules = self.config.constraint_rules
+        if not rules:
+            return "## Constraints\nNo specific constraints defined."
+        lines = ["## Constraints\n"]
+        for rule in rules:
+            if rule.startswith("DO NOT") or rule.startswith("Never"):
+                lines.append(f"- ❌ **{rule}**")
+            elif rule.startswith("DO") or rule.startswith("Always"):
+                lines.append(f"- ✅ **{rule}**")
+            else:
+                lines.append(f"- {rule}")
+        return "\n".join(lines)
+
+    def _navigation_section(self) -> str:
+        if not self.config.navigation_map:
+            return "## Navigation\nNo navigation map defined."
+        lines = ["## Navigation\n"]
+        lines.append("| Directory | Purpose | Key Files |")
+        lines.append("|---|---|---|")
+        for path, info in self.config.navigation_map.items():
+            files = ", ".join(info.get("key_files", []))
+            lines.append(f"| `{path}` | {info.get('purpose', '')} | {files} |")
+        return "\n".join(lines)
+
+    def _workflows_section(self) -> str:
+        if not self.config.workflow_steps:
+            return "## Workflows\nNo workflows defined."
+        lines = ["## Common Workflows\n"]
+        for name, steps in self.config.workflow_steps.items():
+            lines.append(f"### {name}")
+            for i, step in enumerate(steps, 1):
+                lines.append(f"{i}. {step}")
+            lines.append("")
+        return "\n".join(lines)
+
+    def _conventions_section(self) -> str:
+        return (
+            "## Code Conventions\n\n"
+            "- **Imports**: Group by stdlib → third-party → local. Alphabetical within groups.\n"
+            "- **Naming**: snake_case for files/functions, PascalCase for classes, UPPER_CASE for constants.\n"
+            "- **Types**: Every function must have typed parameters and return type annotation.\n"
+            "- **Error handling**: Use early returns for error cases. Log at point of failure.\n"
+            "- **Testing**: One test file per source file. Test files mirror source directory structure.\n"
+        )
+```
+
+### Navigation Map Builder
+
+```python
+from pathlib import Path
+from typing import Dict, List
+
+class NavigationMapBuilder:
+    def __init__(self, root_dir: Path):
+        self.root = root_dir
+
+    def build_map(self) -> Dict[str, dict]:
+        result = {}
+        for path in sorted(self.root.rglob("*")):
+            if not path.is_dir() or path.name.startswith(".") or path.name == "__pycache__":
+                continue
+            rel_path = path.relative_to(self.root)
+            key_files = self._get_key_files(path)
+            purpose = self._infer_purpose(path)
+            if key_files or purpose:
+                result[str(rel_path)] = {
+                    "purpose": purpose,
+                    "key_files": [str(f.relative_to(self.root)) for f in key_files],
+                    "child_count": len(list(path.iterdir())),
+                }
+        return result
+
+    def _get_key_files(self, directory: Path) -> List[Path]:
+        key_files = []
+        for ext in [".py", ".ts", ".js", ".tsx", ".jsx", ".go", ".rs", ".rb"]:
+            key_files.extend(directory.glob(f"*{ext}"))
+        return sorted(key_files)[:5]
+
+    def _infer_purpose(self, path: Path) -> str:
+        name = path.name.lower()
+        if name in ("src", "lib", "app"):
+            return "Application source code"
+        if name in ("tests", "__tests__", "spec"):
+            return "Test suite"
+        if name in ("docs", "documentation"):
+            return "Documentation"
+        if name in ("api", "routes", "endpoints"):
+            return "API layer"
+        if name in ("models", "entities", "schemas"):
+            return "Data models"
+        if name in ("middleware",):
+            return "Middleware layer"
+        if name in ("config", "configuration"):
+            return "Configuration"
+        if name in ("migrations",):
+            return "Database migrations"
+        if name in ("scripts", "bin"):
+            return "Utility scripts"
+        if name in ("docker", "deploy", "k8s"):
+            return "Deployment configuration"
+        return "Module"
+```
+
+### Progressive Context Disclosure Layers
+
+```python
+from typing import List, Optional
+
+class ContextLayer:
+    def __init__(self, level: int, name: str, content: str, token_cost: int):
+        self.level = level
+        self.name = name
+        self.content = content
+        self.token_cost = token_cost
+
+class ProgressiveDisclosure:
+    LAYERS = {
+        0: "Project Identity",
+        1: "Architecture Overview",
+        2: "Coding Conventions",
+        3: "Module Details",
+        4: "Implementation Details",
+    }
+
+    def __init__(self, agent_context_budget: int = 8000):
+        self.budget = agent_context_budget
+        self.layers: List[ContextLayer] = []
+
+    def add_layer(self, level: int, name: str, content: str):
+        import tiktoken
+        enc = tiktoken.get_encoding("cl100k_base")
+        tokens = len(enc.encode(content))
+        self.layers.append(ContextLayer(level, name, content, tokens))
+
+    def load_for_task(self, task_type: str) -> List[ContextLayer]:
+        loaded = []
+        budget_remaining = self.budget
+
+        # Always load identity layer
+        for layer in sorted(self.layers, key=lambda l: l.level):
+            if layer.level == 0:
+                loaded.append(layer)
+                budget_remaining -= layer.token_cost
+                break
+
+        if task_type in ("simple_fix", "read_only", "minor_change"):
+            for layer in sorted(self.layers, key=lambda l: l.level):
+                if layer.level <= 2 and layer.token_cost <= budget_remaining:
+                    loaded.append(layer)
+                    budget_remaining -= layer.token_cost
+        elif task_type in ("add_feature", "refactor"):
+            for layer in sorted(self.layers, key=lambda l: l.level):
+                if layer.level <= 3 and layer.token_cost <= budget_remaining:
+                    loaded.append(layer)
+                    budget_remaining -= layer.token_cost
+        else:
+            for layer in sorted(self.layers, key=lambda l: l.level):
+                if layer.token_cost <= budget_remaining:
+                    loaded.append(layer)
+                    budget_remaining -= layer.token_cost
+
+        return loaded
+```
+
+### Convention File Parser
+
+```python
+import re
+from typing import List, Dict, Optional
+
+class ConventionParser:
+    def __init__(self):
+        self.rules: List[Dict] = []
+
+    def parse_file(self, content: str) -> List[Dict]:
+        rules = []
+        lines = content.split("\n")
+        current_section = "general"
+
+        for line in lines:
+            if line.startswith("## "):
+                current_section = line.strip("# ")
+                continue
+            rule = self._parse_rule(line)
+            if rule:
+                rule["section"] = current_section
+                rules.append(rule)
+
+        self.rules = rules
+        return rules
+
+    def _parse_rule(self, line: str) -> Optional[Dict]:
+        line = line.strip()
+        if not line or line.startswith("#"):
+            return None
+        if line.startswith("- ") or line.startswith("* "):
+            content = line[2:]
+        elif line.startswith("-"):
+            content = line[1:]
+        else:
+            return None
+
+        rule_type = "info"
+        if any(kw in content.upper() for kw in ["DO NOT", "NEVER", "DON'T", "AVOID", "FORBIDDEN"]):
+            rule_type = "negative"
+        elif any(kw in content.upper() for kw in ["DO ", "ALWAYS", "MUST", "REQUIRED", "SHOULD"]):
+            rule_type = "positive"
+
+        return {"type": rule_type, "text": content}
+
+    def find_conflicts(self, other_parser: "ConventionParser") -> List[str]:
+        conflicts = []
+        for rule in self.rules:
+            if rule["type"] == "positive":
+                for other in other_parser.rules:
+                    if other["type"] == "negative":
+                        if self._texts_overlap(rule["text"], other["text"]):
+                            conflicts.append(
+                                f"'{rule['text'][:50]}' conflicts with '{other['text'][:50]}'"
+                            )
+        return conflicts
+
+    def _texts_overlap(self, a: str, b: str) -> bool:
+        words_a = set(a.lower().split())
+        words_b = set(b.lower().split())
+        common = words_a & words_b
+        return len(common) >= 3
+```
+
+## Architecture Decision Trees
+
+### Documentation Structure Decision
+
+```
+How large is the project?
+├── Small (< 50 files, single module)
+│   ├── Single AGENTS.md at root
+│   ├── Inline conventions
+│   └── No module-level READMEs needed
+│
+├── Medium (50-500 files, multi-module)
+│   ├── AGENTS.md + ARCHITECTURE.md
+│   ├── CONVENTIONS.md shared
+│   ├── Module-level READMEs in key dirs
+│   └── Navigation map in AGENTS.md
+│
+├── Large (500-5000 files, monorepo)
+│   ├── AGENTS.md per top-level package
+│   ├── Shared ARCHITECTURE.md + CONSTRAINTS.md
+│   ├── Per-module READMEs mandatory
+│   ├── Navigation index file at root
+│   └── Task-specific docs in docs/agent-tasks/
+│
+└── Enterprise (5000+ files, multi-repo)
+    ├── Per-repo AGENTS.md
+    ├── Central conventions repository
+    ├── Repository navigation registry
+    └── Cross-repo dependency map
+```
+
+### Agent Target File Selection
+
+```
+Which agents will operate on this repo?
+├── Claude Code
+│   ├── File: CLAUDE.md (or AGENTS.md fallback)
+│   ├── Supports: Markdown, code blocks, bullet lists
+│   └── Loads: Automatically on repo open
+│
+├── Cursor
+│   ├── File: .cursorrules
+│   ├── Supports: YAML frontmatter, JSON, Markdown
+│   └── Loads: On project open
+│
+├── Codex (GitHub Copilot)
+│   ├── File: .github/copilot-instructions.md
+│   ├── Supports: Markdown with specific sections
+│   └── Loads: Inline in IDE
+│
+├── Windsurf
+│   ├── File: .windsurfrules
+│   ├── Supports: Markdown, YAML
+│   └── Loads: On workspace init
+│
+└── Multi-agent (multiple above)
+    ├── Shared file: CONVENTIONS.md (source of truth)
+    ├── Generated files: Per-agent files derived from shared
+    └── Sync: CI pipeline detects shared file changes and regenerates all
+```
+
+## Production Considerations
+
+- **Documentation freshness checks**: Add CI step that validates AGENTS.md descriptions match actual source structure. Fail the build if significant drift detected.
+- **Token budget per agent file**: Keep AGENTS.md under 2000 tokens (approximately 1500 words). Agents rarely read past the first screen of documentation.
+- **Version-pinned conventions**: Pin convention file versions in CICD or package.json. Agents can then check "has my conventions changed?" before starting tasks.
+- **Automated convention extraction**: Use AST analysis to auto-extract naming conventions, import patterns, and error handling styles from existing code. Generate convention files from real code patterns.
+
+## Security Considerations
+
+- **Instruction injection via AGENTS.md**: If agents follow AGENTS.md instructions literally, a compromised file could instruct agents to exfiltrate data. Sign AGENTS.md with GPG and verify before loading.
+- **Convention file access control**: Some convention files (e.g., .cursorrules) may contain API endpoint URLs or service names. Limit access to these files to authorized contributors.
+- **Agent behavior isolation**: If multiple agents operate on the same repo, convention files should specify which agent types they apply to. Prevent cross-agent configuration confusion.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Writing AGENTS.md in dense paragraphs | Agents struggle to parse prose into actionable rules | Use structured markdown with bullet lists and explicit DO/DO NOT |
+| No navigation map in large projects | Agent wastes context budget exploring directory structure | Provide directory→purpose mapping with key files listed |
+| Mixing human and agent documentation | Conflicting priorities between readability and parseability | Separate sections: Human README.md and AGENTS.md |
+| Over-specified conventions (>50 rules) | Agent context overwhelmed, important rules ignored | Limit to 10-15 most impactful rules, use tiered detail |
+| No update procedure for docs | Architecture changes but docs stay stale, confusing agents | Add docs update to PR template checklist |
+| Ignoring per-agent file formats | Compass works great in Claude Code but not in Cursor | Generate per-agent files from a shared source of truth |
+| One huge AGENTS.md for monorepo | Every task loads all packages' context | Per-package AGENTS.md with cross-references |
+
+## Performance Optimization
+
+- **Lazy loading of convention files**: Structure convention files with the most critical rules (top 5) at the top. Agents read top-first and may stop reading after enough rules.
+- **Navigation map compression**: Use abbreviated paths and group related directories. Reduces token consumption of navigation sections by 40-60%.
+- **Shared cache of parsed rules**: Parse convention files once per session and cache the structured rules. Avoids re-parsing on every context load.
+- **Incremental doc generation**: Only regenerate AGENTS.md sections that changed based on git diff. Full regeneration is unnecessary for single-file changes.
+
 <!-- COMPRESSION FOOTER -->
 <!--
 Compression Level: 5 (Comprehensive architectural references & code details preserved)

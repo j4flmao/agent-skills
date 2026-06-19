@@ -37,20 +37,27 @@ Optimize cloud costs through visibility, allocation, right-sizing, commitment di
 | Compute | Auto-scaling | 20-50% | Medium |
 | Storage | Lifecycle policies | 40-70% | Low |
 | Storage | Delete unused volumes/snapshots | 10-30% | Low |
+| Storage | Object storage tiering | 30-60% | Low |
 | Network | CDN + compression | 20-60% | Medium |
 | Network | Data transfer optimization | 10-40% | Medium |
+| Network | NAT gateway consolidation | 5-15% | Low |
 | Database | Right-size + reserved | 30-60% | Low |
 | Database | Serverless (Aurora/Cosmos) | 20-50% | Medium |
+| Database | Read replicas for analytics | 10-30% | Medium |
 | Overall | Tagging + governance | Prevent waste | Low |
+| Overall | Anomaly detection | Catch spikes early | Medium |
+| Overall | Commitments + volume discounts | 15-50% | Low |
 
 ### Reserved Instance / Savings Plan Comparison
 | Purchase Option | Discount | Commitment | Flexibility | Best For |
 |---|---|---|---|---|
 | AWS Savings Plan | 30-72% | 1 or 3 years | High (any compute) | Predictable compute |
 | AWS Reserved Instances | 30-75% | 1 or 3 years | Low (specific instance) | Known instance types |
+| AWS Convertible RI | 30-54% | 1 or 3 years | Medium (change family) | Evolving workloads |
 | Azure Reservations | 20-60% | 1 or 3 years | Low (specific VM size) | Stable VMs |
 | Azure Savings Plan | 20-55% | 1 or 3 years | High (any compute) | Mixed compute |
-| GCP CUD | 20-70% | 1 or 3 years | Resource-specific | Known consumption |
+| GCP CUD (resource) | 20-70% | 1 or 3 years | Resource-specific | Known consumption |
+| GCP CUD (spend-based) | 10-30% | 1 year | High (any) | Variable workloads |
 
 ### Rightsizing Decision Tree
 ```
@@ -65,6 +72,19 @@ Is CPU utilization < 20%?
     └── No → Auto-scaling + spot
 ```
 
+### Compute Selection Decision Tree
+```
+Is workload stateless and fault-tolerant?
+├── Yes → Can use spot/preemptible?
+│   ├── Yes → Spot instance (60-90% savings)
+│   └── No → On-demand + Savings Plan
+└── No → Is workload predictable (>70% utilization)?
+    ├── Yes → Reserved Instance (30-75% savings)
+    └── No → Is workload bursty/spiky?
+        ├── Yes → Auto-scaling group + mix of on-demand/spot
+        └── No → Serverless (Lambda/Cloud Functions)
+```
+
 ### Storage Tier Decision
 | Access Pattern | AWS | Azure | GCP | Cost/GB |
 |---|---|---|---|---|
@@ -73,6 +93,18 @@ Is CPU utilization < 20%?
 | Monthly | Glacier IR | Blob Cold | Coldline | ~$0.0045 |
 | Quarterly | Glacier | Archive | Archive | ~$0.001 |
 | Yearly+ | DEEP Archive | Cool (blob) | Archive | ~$0.0005 |
+| Critical | S3 One Zone IA | Blob Hot (LRS) | Standard (regional) | ~$0.01 |
+
+### Anomaly Detection Decision Tree
+```
+Cost spike detected (>20% above baseline)?
+├── Yes → Check by service:
+│   ├── Compute → Check new instances, instance type changes, scaling events
+│   ├── Network → Check data transfer (NAT gateway, cross-region, CDN egress)
+│   ├── Storage → Check new volumes, snapshot frequency, lifecycle compliance
+│   └── Database → Check IOPS burst, storage scaling, read replica count
+└── No → Compare actual vs budget at category level
+```
 
 ## Core Workflow
 
@@ -287,6 +319,199 @@ resource "aws_eks_node_group" "spot" {
 }
 ```
 
+### Step 7: Anomaly Detection with CloudWatch
+```python
+# anomaly/cost_anomaly_detection.py
+import boto3
+import json
+from datetime import datetime, timedelta
+
+def setup_cost_anomaly_monitor():
+    """Create AWS Cost Anomaly Detection monitor."""
+    ce = boto3.client('ce')
+
+    monitor = ce.create_anomaly_monitor(
+        anomalyMonitor={
+            'MonitorName': 'Daily-Spend-Monitor',
+            'MonitorType': 'CUSTOM',
+            'MonitorSpecification': json.dumps({
+                "And": [
+                    {"Dimensions": {"Key": "SERVICE", "Values": ["Amazon EC2", "Amazon RDS", "Amazon S3"]}},
+                    {"Tags": {"Key": "Environment", "Values": ["production"]}}
+                ]
+            })
+        }
+    )
+
+    subscription = ce.create_anomaly_subscription(
+        anomalySubscription={
+            'SubscriptionName': 'FinOps-Alerts',
+            'Frequency': 'DAILY',
+            'ThresholdExpression': {
+                "And": [
+                    {"Dimensions": {"Key": "ANOMALY_TOTAL_IMPACT_ABSOLUTE", "Values": ["100"]}}
+                ]
+            }
+        },
+        monitorArnList=[monitor['anomalyMonitor']['MonitorArn']]
+    )
+    return monitor, subscription
+
+def get_recent_anomalies(hours_back=48):
+    """Fetch recent cost anomalies."""
+    ce = boto3.client('ce')
+    now = datetime.utcnow()
+    start = now - timedelta(hours=hours_back)
+
+    anomalies = ce.get_anomalies(
+        dateInterval={
+            'Start': start.strftime('%Y-%m-%d'),
+            'End': now.strftime('%Y-%m-%d')
+        },
+        impactType='TOTAL_IMPACT'
+    )
+    return anomalies.get('anomalies', [])
+```
+
+### Step 8: Showback / Chargeback Report
+```python
+# showback/generate_report.py
+"""Generate showback report by cost center."""
+import boto3
+from datetime import datetime, timedelta
+from collections import defaultdict
+
+def get_costs_by_tag(tag_key="CostCenter", days_back=30):
+    """Query AWS Cost Explorer by tag for showback."""
+    ce = boto3.client('ce')
+    end = datetime.utcnow().date()
+    start = end - timedelta(days=days_back)
+
+    response = ce.get_cost_and_usage(
+        TimePeriod={'Start': start.isoformat(), 'End': end.isoformat()},
+        Granularity='DAILY',
+        Metrics=['UnblendedCost'],
+        GroupBy=[{'Type': 'TAG', 'Key': tag_key}]
+    )
+
+    cost_centers = defaultdict(float)
+    for day in response['ResultsByTime']:
+        for group in day['Groups']:
+            tag_value = group['Keys'][0].split('$')[-1] if '$' in group['Keys'][0] else 'untagged'
+            amount = float(group['Metrics']['UnblendedCost']['Amount'])
+            cost_centers[tag_value] += amount
+
+    print(f"{'Cost Center':<20} {'Total Cost':>12}")
+    print("-" * 32)
+    for cc, cost in sorted(cost_centers.items(), key=lambda x: -x[1]):
+        print(f"{cc:<20} ${cost:>9.2f}")
+    print("-" * 32)
+    print(f"{'TOTAL':<20} ${sum(cost_centers.values()):>9.2f}")
+
+    return cost_centers
+```
+
+### Step 9: Azure Cost Management Export
+```bash
+# Create Azure cost export to storage account
+az costmanagement export create \
+  --name "monthly-cost-export" \
+  --scope "/subscriptions/$SUBSCRIPTION_ID" \
+  --storage-account-id "$STORAGE_ACCOUNT_ID" \
+  --storage-container "cost-exports" \
+  --type "MonthlyCost" \
+  --data-set "ActualCost" \
+  --schedule-frequency "Monthly" \
+  --schedule-recurrence-period "Monthly" \
+  --schedule-status "Active"
+
+# Query Azure cost by resource group
+az consumption pricesheet show \
+  --billing-period-name "$PERIOD" \
+  --output table
+
+# Azure cost by tag
+az consumption usage list \
+  --billing-period-name "$PERIOD" \
+  --query "[].{Department: tags.Department, Cost: pretaxCost}" \
+  --output table
+```
+
+### Step 10: GCP Cost Optimization with Recommender
+```bash
+# List recommender insights for Compute
+gcloud recommender insights list \
+  --insight-type=google.compute.instance.MachineTypeInsight \
+  --project=$PROJECT_ID \
+  --location=us-central1 \
+  --format="json"
+
+# Apply recommender for rightsizing
+gcloud recommender recommendations list \
+  --recommender=google.compute.instance.MachineTypeRecommender \
+  --project=$PROJECT_ID \
+  --location=us-central1 \
+  --format="table(name,primaryImpact.category,recommendedProjections)"
+
+# List committed use discounts
+gcloud billing accounts committed-use-discounts list \
+  --billing-account=$BILLING_ACCOUNT_ID
+
+# GCP budget alert
+gcloud billing budgets create \
+  --billing-account=$BILLING_ACCOUNT_ID \
+  --display-name="monthly-production" \
+  --budget-amount=50000 \
+  --threshold-rule=percent=0.5 \
+  --threshold-rule=percent=0.8 \
+  --threshold-rule=percent=1.0 \
+  --notification-channel=projects/$PROJECT_ID/notificationChannels/$CHANNEL
+```
+
+### Step 11: Kubernetes Cost Optimization
+```bash
+# Install Kubecost
+helm repo add kubecost https://kubecost.github.io/cost-analyzer/
+helm upgrade --install kubecost kubecost/cost-analyzer \
+  --namespace kubecost \
+  --create-namespace \
+  --set kubecostToken="token"
+
+# Kubectl cost plugin
+kubectl cost --namespace default \
+  --show-usage \
+  --show-allocations
+
+# Karpenter for cost-effective node provisioning
+helm upgrade --install karpenter oci://public.ecr.aws/karpenter/karpenter \
+  --namespace karpenter \
+  --create-namespace \
+  --set "settings.interruptionQueueName=karpenter" \
+  --set "nodeSelector.role=compute"
+
+# Karpenter provisioner preferring spot
+cat <<EOF | kubectl apply -f -
+apiVersion: karpenter.sh/v1beta1
+kind: NodePool
+metadata:
+  name: default
+spec:
+  template:
+    spec:
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+      nodeClassRef:
+        name: default
+  limits:
+    cpu: 1000
+  disruption:
+    consolidationPolicy: WhenUnderutilized
+    expireAfter: 720h
+EOF
+```
+
 ## FinOps Maturity Model
 | Level | Name | Characteristics | Automation |
 |---|---|---|---|
@@ -295,6 +520,80 @@ resource "aws_eks_node_group" "spot" {
 | 3 | Run | Showback/chargeback, rightsizing | Auto-scaling, reservations |
 | 4 | Fly | Unit economics, anomaly detection | Auto-stop, spot by default |
 | 5 | Optimize | Continuous optimization culture | Fully automated governance |
+
+## Tool Comparison: Cloud Cost Management
+
+| Tool | Provider | Features | Pricing | Best For |
+|---|---|---|---|---|
+| **AWS Cost Explorer** | AWS | CUR, budgets, anomaly detection, RI recommendations | Free | AWS-native cost analysis |
+| **AWS Compute Optimizer** | AWS | Rightsizing, GPU optimization, license insights | Free | EC2/Lambda rightsizing |
+| **Azure Cost Management** | Azure | Budgets, exports, advisor recommendations | Free | Azure-native cost analysis |
+| **GCP Recommender** | GCP | Rightsizing, CUD recommendations, idle resources | Free | GCP-native optimization |
+| **CloudHealth** | VMware | Multi-cloud, policy engine, showback | Per asset | Multi-cloud enterprises |
+| **Vantage** | Third-party | Multi-cloud, HCM, anomaly alerts | Free tier + per spend | Startups to mid-market |
+| **Kubecost** | Stackwatch | Kubernetes cost allocation, right-sizing | Free tier + per node | Kubernetes cost visibility |
+| **Infracost** | Infracost | Terraform cost estimation in CI/CD | Free tier + team | IaC cost guardrails |
+
+## Showback vs Chargeback Models
+| Model | Description | When to Use | Implementation |
+|---|---|---|---|
+| **Showback** | Display costs per team/project without charging | Teams need visibility, no cross-charging required | Tag-based cost reports, dashboards |
+| **Chargeback** | Bill teams for their actual cloud consumption | Budget accountability, decentralized spend control | Cost allocation tags + accounting integration |
+| **Shadow IT Prevention** | Auto-approve with budget, alert on overage | Large organizations with many teams | SCP policies + budget actions |
+
+## CI/CD Cost Guardrails with Infracost
+```yaml
+# .github/workflows/cost-check.yml
+name: Cost Check
+on: pull_request
+jobs:
+  cost-estimate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Infracost
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+      - run: infracost breakdown --path=. --format=diff
+      - name: Post comment
+        uses: infracost/actions/comment@v3
+        with:
+          path: /tmp/infracost.json
+          behavior: update
+```
+
+## Security Considerations for Cost Data
+- Cost data reveals business activity patterns — restrict access to need-to-know roles
+- AWS CUR data in S3 must use SSE-S3 or SSE-KMS encryption
+- Budget alert webhooks can leak if not using HTTPS destinations
+- Cost allocation tags containing PII (e.g., CostCenter=legal-case-123) can leak sensitive metadata
+- Use least-privilege IAM for cost explorer access: `ce:GetCostAndUsage`, `ce:GetAnomalies` only
+- Audit cost-related API calls with CloudTrail for unauthorized access attempts
+- Mask cost data in shared dashboards by using IAM conditions on `ce:GetPreferences`
+
+## Multi-Cloud Cost Comparison Framework
+| Factor | AWS | Azure | GCP | Notes |
+|---|---|---|---|---|
+| Compute (4 vCPU, 16GB) | ~$140/mo (m6i.xlarge) | ~$140/mo (D4s v5) | ~$130/mo (n2-standard-4) | On-demand, us-east |
+| Spot discount | 60-90% | 50-90% | 60-91% | Varies by instance/region |
+| Egress (1TB/mo) | ~$90 | ~$85 | ~$80 | Internet transfer |
+| Object storage (1TB) | ~$23/mo (S3 Std) | ~$20/mo (Blob Hot) | ~$20/mo (Standard) | First TB, us-east |
+| K8s management | ~$73/mo (EKS) | ~$73/mo (AKS) | ~$73/mo (GKE) | Per cluster |
+| Support (Developer) | ~$30/mo | Free | Free | Included in GCP/Azure |
+
+## Production Considerations
+- Enable CUR (Cost and Usage Report) in AWS on day one — backfill is not possible
+- Tag all resources at creation time — retroactive tagging is painful and incomplete
+- Set up anomaly detection monitors for 10%+ daily spend increases
+- Review spot instance termination rates per instance family before committing
+- Use spending limits for sandbox/dev accounts via AWS Budgets actions
+- Automate RI/Savings Plan purchases for steady-state capacity
+- Implement HCM (Hierarchical Cost Models) in Vantage or similar for multi-level allocation
+- Right-size quarterly — never assume last quarter's sizing is optimal
+- Enable S3 Intelligent-Tiering for unpredictable access patterns
+- Monitor NAT gateway costs — they are the #1 hidden network cost
+- Consolidate small workloads into fewer instances to reduce licensing costs
 
 ## Anti-Patterns
 
@@ -313,6 +612,15 @@ Data transfer between regions and to internet can exceed compute costs. Design f
 ### Anti-Pattern 5: On-Demand Everything
 Running everything on-demand without reservations. Purchase RIs/Savings Plans for baseline capacity (30-60% discount).
 
+### Anti-Pattern 6: Tag Hoarding
+Creating hundreds of tag keys without a governance model. Stick to 5-10 standard tag keys with documented values.
+
+### Anti-Pattern 7: Premature Rightsizing
+Downgrading instances before verifying performance impact. Always rightsize during low-traffic windows with rollback plan.
+
+### Anti-Pattern 8: Ignoring Kubernetes Overhead
+Running 20 microservices on 20 separate pods each with 1 CPU request. Consolidate and right-size resource requests/limits.
+
 ## Rules & Constraints
 - Tag all resources with Environment, Project, CostCenter, Owner.
 - Set budget alerts at 50%, 80%, 100%, 150% for every project.
@@ -321,6 +629,10 @@ Running everything on-demand without reservations. Purchase RIs/Savings Plans fo
 - Review unused resources monthly; automate cleanup where possible.
 - Right-size instances quarterly using Cloud Health/Compute Optimizer.
 - Purchase reservations for >70% utilized baseline capacity.
+- Cost allocation tags must be enforced via SCP/policy at account creation.
+- Never deploy untagged resources to production (CI/CD gate).
+- CloudTrail must be enabled on all accounts for cost anomaly forensics.
+- Review and reconcile CUR data monthly for billing accuracy.
 
 ## References
   - references/cloud-cost-optimization-advanced.md

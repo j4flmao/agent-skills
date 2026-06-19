@@ -217,3 +217,253 @@ map.on('locationfound', (e) => {
 - **Ignoring map tile attribution**: Required by OpenStreetMap terms
 - **No map region limits**: Prevents users from getting lost in empty areas
 - **Accessing location on main thread**: Always use async location APIs
+
+## Implementation Patterns
+
+### Reactive Location Provider (Swift)
+
+```swift
+import CoreLocation
+import Combine
+
+class ReactiveLocationProvider: NSObject {
+    private let manager = CLLocationManager()
+    private let subject = PassthroughSubject<CLLocation, Error>()
+    
+    var publisher: AnyPublisher<CLLocation, Error> {
+        subject.eraseToAnyPublisher()
+    }
+    
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.distanceFilter = 10
+    }
+    
+    func start(background: Bool = false) {
+        let status = manager.authorizationStatus
+        switch status {
+        case .notDetermined:
+            manager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse where background:
+            manager.requestAlwaysAuthorization()
+        case .authorizedAlways, .authorizedWhenInUse:
+            manager.startUpdatingLocation()
+        case .denied, .restricted:
+            subject.send(completion: .failure(LocationError.denied))
+        @unknown default:
+            break
+        }
+    }
+    
+    func stop() {
+        manager.stopUpdatingLocation()
+    }
+}
+
+extension ReactiveLocationProvider: CLLocationManagerDelegate {
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+        subject.send(location)
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        subject.send(completion: .failure(error))
+    }
+}
+```
+
+### Geocoding Service (Cross-Platform)
+
+```python
+from typing import Optional, Tuple
+import aiohttp
+import asyncio
+
+class GeocodingService:
+    def __init__(self, provider: str = "nominatim", api_key: Optional[str] = None):
+        self.provider = provider
+        self.api_key = api_key
+        self.session: Optional[aiohttp.ClientSession] = None
+
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+        return self
+
+    async def __aexit__(self, *args):
+        await self.session.close()
+
+    async def geocode(self, address: str) -> Optional[Tuple[float, float]]:
+        if self.provider == "nominatim":
+            url = "https://nominatim.openstreetmap.org/search"
+            params = {"q": address, "format": "json", "limit": 1}
+            headers = {"User-Agent": "LocationSkill/1.0"}
+        elif self.provider == "google":
+            url = "https://maps.googleapis.com/maps/api/geocode/json"
+            params = {"address": address, "key": self.api_key}
+            headers = {}
+        else:
+            raise ValueError(f"Unknown provider: {self.provider}")
+
+        async with self.session.get(url, params=params, headers=headers) as resp:
+            data = await resp.json()
+            if self.provider == "nominatim" and data:
+                return (float(data[0]["lat"]), float(data[0]["lon"]))
+            elif self.provider == "google" and data.get("results"):
+                loc = data["results"][0]["geometry"]["location"]
+                return (loc["lat"], loc["lng"])
+            return None
+
+    async def reverse_geocode(self, lat: float, lng: float) -> Optional[str]:
+        if self.provider == "nominatim":
+            url = "https://nominatim.openstreetmap.org/reverse"
+            params = {"lat": lat, "lon": lng, "format": "json"}
+        elif self.provider == "google":
+            url = "https://maps.googleapis.com/maps/api/geocode/json"
+            params = {"latlng": f"{lat},{lng}", "key": self.api_key}
+        else:
+            raise ValueError(f"Unknown provider: {self.provider}")
+
+        async with self.session.get(url, params=params) as resp:
+            data = await resp.json()
+            if self.provider == "nominatim" and data:
+                return data.get("display_address")
+            elif self.provider == "google" and data.get("results"):
+                return data["results"][0]["formatted_address"]
+            return None
+```
+
+### Marker Clustering Algorithm
+
+```typescript
+interface MapPoint {
+  lat: number;
+  lng: number;
+  data: any;
+}
+
+class MarkerCluster {
+  private grid: Map<string, MapPoint[]> = new Map();
+  private gridSize: number;
+
+  constructor(gridSize: number = 0.01) {
+    this.gridSize = gridSize;
+  }
+
+  addMarker(point: MapPoint): void {
+    const key = this.getGridKey(point.lat, point.lng);
+    const cluster = this.grid.get(key) || [];
+    cluster.push(point);
+    this.grid.set(key, cluster);
+  }
+
+  private getGridKey(lat: number, lng: number): string {
+    const latIdx = Math.floor(lat / this.gridSize);
+    const lngIdx = Math.floor(lng / this.gridSize);
+    return `${latIdx}:${lngIdx}`;
+  }
+
+  getClusters(zoom: number): Array<{ center: MapPoint; count: number }> {
+    const adjustedSize = this.gridSize * Math.pow(2, 15 - zoom);
+    const clusters: Array<{ center: MapPoint; count: number }> = [];
+
+    for (const [, points] of this.grid) {
+      if (points.length === 1) {
+        clusters.push({ center: points[0], count: 1 });
+      } else {
+        const avgLat = points.reduce((s, p) => s + p.lat, 0) / points.length;
+        const avgLng = points.reduce((s, p) => s + p.lng, 0) / points.length;
+        clusters.push({
+          center: { lat: avgLat, lng: avgLng, data: null },
+          count: points.length,
+        });
+      }
+    }
+    return clusters;
+  }
+}
+```
+
+### Route Optimization (TSP Solver)
+
+```typescript
+interface LatLng {
+  lat: number;
+  lng: number;
+}
+
+function haversineDistance(a: LatLng, b: LatLng): number {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLng = Math.sin(dLng / 2);
+  const aVal = sinDLat * sinDLat +
+    Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) *
+    sinDLng * sinDLng;
+  return R * 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1 - aVal));
+}
+
+function optimizeRoute(points: LatLng[], startIndex: number = 0): LatLng[] {
+  const remaining = [...points];
+  const route: LatLng[] = [remaining.splice(startIndex, 1)[0]];
+  
+  while (remaining.length > 0) {
+    const last = route[route.length - 1];
+    let nearestIdx = 0;
+    let minDist = Infinity;
+    
+    for (let i = 0; i < remaining.length; i++) {
+      const dist = haversineDistance(last, remaining[i]);
+      if (dist < minDist) {
+        minDist = dist;
+        nearestIdx = i;
+      }
+    }
+    route.push(remaining.splice(nearestIdx, 1)[0]);
+  }
+  return route;
+}
+```
+
+## Production Considerations
+
+- **Map tile caching**: Cache map tiles locally (LRU cache of 500MB max) to reduce network requests by 60-80% on repeated views. Set appropriate cache-control headers on tile server responses.
+- **Location accuracy vs. battery**: Use significant-change location service for non-navigation apps. For navigation, reduce update frequency to 1 update per 5 seconds when moving, stop updates when stationary.
+- **Offline maps strategy**: Download map regions at 2 zoom levels above minimum required. Use vector tiles (MBTiles format) for efficient offline storage. Pre-cache geocoding results for common queries.
+- **Map load performance**: Lazy-load map SDKs (dynamic import) to avoid impacting initial page load. Pre-initialize the map view with a low-zoom default before animating to user location.
+- **API rate limiting**: Geocoding APIs have strict rate limits (2-50 req/s). Implement a client-side token bucket and queue requests during rapid pan operations.
+
+## Security Considerations
+
+- **API key protection**: Never embed map API keys in client-side code. Use proxy endpoints or key restriction by HTTP referrer/application bundle ID.
+- **Location data privacy**: User location is PII in GDPR/CCPA. Anonymize location data by reducing precision (round to 3 decimal places ~111m) before storing or transmitting.
+- **Geofencing consent**: Implement explicit user consent flows for geofencing features. Store consent receipts with timestamps for compliance audits.
+- **Map data attribution**: Map data (OpenStreetMap, etc.) requires attribution. Display attribution in a non-removable location on the map view.
+- **Reverse geocoding data exposure**: Reverse geocoding can reveal home addresses from coordinates. Cache results server-side to avoid leaking address patterns through timing attacks.
+
+## Anti-Patterns Expanded
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Hardcoding API keys in source code | Keys committed to git, exposed in compiled apps | Use environment variables or secure keychain services |
+| Requesting location on app launch without context | Users deny permissions when unsure why needed | Request location when a specific feature requires it, with explanation |
+| Not handling permission denial gracefully | App crashes or shows blank map | Show explanation card with settings deep-link |
+| Too many markers without clustering | Browser/device freezes beyond ~500 markers | Use clustering (grid-based or distance-based) for >100 markers |
+| No offline fallback for maps | Blank screen when network is unavailable | Cache tile data and show stale tiles with freshness indicator |
+| Excessive location polling | Battery drain (GPS uses 300mW+ continuous) | Use significant-change or region monitoring for most use cases |
+| Not setting map bounds and max zoom | Users can pan into empty ocean areas | Constrain visible region and zoom levels (min/max) |
+| Accessing location APIs on main thread | UI freezes during location lookup | Always use async methods and delegate callbacks |
+| No throttle on map region change handlers | Performance degradation during rapid panning | Debounce region change handlers by 300-500ms |
+| Ignoring tile usage limits | Unexpected billing from tile provider | Set tile request budget and use caching aggressively |
+
+## Performance Optimization
+
+- **Vector tiles over raster tiles**: Vector tiles are 60-80% smaller than raster tiles and render faster on GPU-accelerated devices.
+- **Viewport-based rendering**: Only render markers and overlays within the current visible viewport. Cull objects more than 2x the viewport extent.
+- **Canvas rendering for heatmaps**: Use Canvas API (not DOM markers) for data visualizations with >1000 points. Enable hardware acceleration.
+- **Prefetch tiles at lower zoom**: When user stops panning, prefetch tiles at 1-2 zoom levels higher for smooth zoom-in experience.
+- **Cluster on the server**: For large datasets (>10K markers), pre-compute clusters on the server and return clustered data based on viewport bounds.
+- **Simplify polylines**: Use the Ramer-Douglas-Peucker algorithm to reduce polyline vertex count by 70-90% without visible quality loss.
+- **Lazy-load POI details**: Show marker popups with placeholder data first, then fetch details asynchronously. Cache POI responses in local storage.

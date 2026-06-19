@@ -270,6 +270,338 @@ Below are links to the reference guides detailing the protocols, schemas, algori
 ## Handoff
 For projects requiring context window optimization when passing tool results, hand off to `context-engineering`. For enforcing architectural constraints on tool implementations, hand off to `architectural-constraints`. For prompt design that structures tool call instructions, hand off to `prompt-engineering`.
 
+## Implementation Patterns
+
+### MCP Client Implementation
+
+```python
+import json
+import asyncio
+from typing import Dict, Any, Optional, Callable
+from dataclasses import dataclass
+
+@dataclass
+class MCPTool:
+    name: str
+    version: str
+    description: str
+    input_schema: Dict
+    output_schema: Dict
+
+class MCPClient:
+    def __init__(self, transport: str = "stdio", endpoint: Optional[str] = None):
+        self.transport = transport
+        self.endpoint = endpoint
+        self.tools: Dict[str, MCPTool] = {}
+        self.capabilities: Dict = {}
+
+    async def initialize(self):
+        if self.transport == "stdio":
+            self.process = await asyncio.create_subprocess_exec(
+                *self.endpoint.split() if self.endpoint else ["python", "-m", "mcp_server"],
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        init_msg = self._build_request("initialize", {
+            "protocolVersion": "0.1.0",
+            "capabilities": {},
+            "clientInfo": {"name": "agent-tool-orchestrator", "version": "2.0.0"},
+        })
+        response = await self._send(init_msg)
+        self.capabilities = response.get("capabilities", {})
+        return response
+
+    async def list_tools(self) -> Dict[str, MCPTool]:
+        msg = self._build_request("tools/list", {})
+        response = await self._send(msg)
+        tools = {}
+        for t in response.get("tools", []):
+            tools[t["name"]] = MCPTool(
+                name=t["name"],
+                version=t.get("version", "1.0.0"),
+                description=t.get("description", ""),
+                input_schema=t.get("inputSchema", {}),
+                output_schema=t.get("outputSchema", {}),
+            )
+        self.tools = tools
+        return tools
+
+    async def call_tool(self, name: str, params: Dict, idempotency_key: str) -> Dict:
+        self._validate_params(name, params)
+        msg = self._build_request("tools/call", {
+            "name": name,
+            "arguments": params,
+            "meta": {"idempotencyKey": idempotency_key},
+        })
+        return await self._send(msg)
+
+    def _validate_params(self, tool_name: str, params: Dict):
+        if tool_name not in self.tools:
+            raise ValueError(f"Unknown tool: {tool_name}")
+        schema = self.tools[tool_name].input_schema
+        required = schema.get("required", [])
+        for field in required:
+            if field not in params:
+                raise ValueError(f"Missing required parameter: {field}")
+
+    def _build_request(self, method: str, params: Dict) -> str:
+        return json.dumps({
+            "jsonrpc": "2.0",
+            "id": id(self),
+            "method": method,
+            "params": params,
+        })
+
+    async def _send(self, msg: str) -> Dict:
+        if self.transport == "stdio":
+            self.process.stdin.write((msg + "\n").encode())
+            await self.process.stdin.drain()
+            line = await asyncio.wait_for(
+                self.process.stdout.readline(), timeout=30
+            )
+            return json.loads(line)
+        return {}
+```
+
+### Idempotency Manager
+
+```python
+import hashlib
+import json
+import time
+from typing import Dict, Optional, Any
+
+class IdempotencyManager:
+    def __init__(self, store: Optional[Dict] = None, ttl: int = 86400):
+        self.store = store or {}
+        self.ttl = ttl
+
+    def generate_key(self, agent_id: str, task_id: str, step_index: int, params: Dict) -> str:
+        param_hash = hashlib.sha256(
+            json.dumps(params, sort_keys=True).encode()
+        ).hexdigest()[:12]
+        return f"idem_{agent_id}_{task_id}_s{step_index}_{param_hash}"
+
+    def get_result(self, key: str) -> Optional[Dict]:
+        entry = self.store.get(key)
+        if entry is None:
+            return None
+        if time.time() - entry["timestamp"] > self.ttl:
+            del self.store[key]
+            return None
+        return entry["result"]
+
+    def store_result(self, key: str, result: Dict):
+        self.store[key] = {
+            "result": result,
+            "timestamp": time.time(),
+        }
+
+    def cleanup_expired(self):
+        now = time.time()
+        expired = [k for k, v in self.store.items() if now - v["timestamp"] > self.ttl]
+        for k in expired:
+            del self.store[k]
+
+class SchemaValidator:
+    def __init__(self):
+        self.validators = {}
+
+    def compile_schema(self, schema: Dict) -> Callable:
+        import jsonschema
+        return lambda data: jsonschema.validate(data, schema)
+
+    def validate(self, data: Any, schema: Dict) -> Dict:
+        import jsonschema
+        try:
+            jsonschema.validate(data, schema)
+            return {"valid": True, "errors": []}
+        except jsonschema.ValidationError as e:
+            return {"valid": False, "errors": [str(e)]}
+```
+
+### Permission Evaluator
+
+```python
+import fnmatch
+import time
+from typing import List, Dict, Optional
+from dataclasses import dataclass
+
+@dataclass
+class PermissionGrant:
+    agent_id: str
+    scope: str
+    granted_at: float
+    expires_at: float
+
+class PermissionEvaluator:
+    def __init__(self):
+        self.grants: Dict[str, List[PermissionGrant]] = {}
+
+    def grant_permission(self, agent_id: str, scope: str, duration_sec: int = 3600):
+        now = time.time()
+        grant = PermissionGrant(
+            agent_id=agent_id,
+            scope=scope,
+            granted_at=now,
+            expires_at=now + duration_sec,
+        )
+        if agent_id not in self.grants:
+            self.grants[agent_id] = []
+        self.grants[agent_id].append(grant)
+
+    def check_permission(self, agent_id: str, required_scope: str) -> Dict:
+        now = time.time()
+        agent_grants = self.grants.get(agent_id, [])
+        active_grants = [g for g in agent_grants if g.expires_at > now]
+        for grant in active_grants:
+            if fnmatch.fnmatch(required_scope, grant.scope):
+                return {
+                    "granted": True,
+                    "matching_grant": grant.scope,
+                    "expires_at": grant.expires_at,
+                }
+        return {
+            "granted": False,
+            "required_scope": required_scope,
+            "active_grants": [g.scope for g in active_grants],
+        }
+
+    def revoke_expired(self):
+        now = time.time()
+        for agent_id in self.grants:
+            self.grants[agent_id] = [g for g in self.grants[agent_id] if g.expires_at > now]
+```
+
+### Circuit Breaker
+
+```python
+import time
+from typing import Dict, Optional
+from enum import Enum
+
+class CircuitState(Enum):
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
+class CircuitBreaker:
+    def __init__(self, failure_threshold: int = 5, recovery_timeout: float = 30.0):
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.state = CircuitState.CLOSED
+        self.failure_count = 0
+        self.last_failure_time = 0.0
+
+    def record_success(self):
+        self.failure_count = 0
+        if self.state == CircuitState.HALF_OPEN:
+            self.state = CircuitState.CLOSED
+
+    def record_failure(self):
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        if self.failure_count >= self.failure_threshold:
+            self.state = CircuitState.OPEN
+
+    def allow_request(self) -> bool:
+        if self.state == CircuitState.CLOSED:
+            return True
+        if self.state == CircuitState.OPEN:
+            if time.time() - self.last_failure_time >= self.recovery_timeout:
+                self.state = CircuitState.HALF_OPEN
+                return True
+            return False
+        return True
+
+    def get_state(self) -> Dict:
+        return {
+            "state": self.state.value,
+            "failures": self.failure_count,
+            "threshold": self.failure_threshold,
+            "remaining_recovery": max(0, self.recovery_timeout - (time.time() - self.last_failure_time)),
+        }
+```
+
+## Architecture Decision Trees
+
+### Tool Communication Transport Selection
+
+```
+What's the deployment context?
+├── Local agent (same machine)
+│   ├── Low latency needed → stdio transport (pipe)
+│   ├── Multiple concurrent tools → SSE transport
+│   └── Simple tool set → stdio (easiest to debug)
+│
+├── Remote agent (different machine)
+│   ├── Within same network → SSE over HTTP
+│   ├── Across networks → Streamable HTTP with auth
+│   └── High throughput needed → gRPC streaming
+│
+└── Hybrid (some local, some remote)
+    ├── Local tools via stdio, remote via SSE
+    └── Unified routing layer with transport abstraction
+```
+
+### Error Handling Strategy Selection
+
+```
+What type of tool failure?
+├── Transient (timeout, rate limit, service unavailable)
+│   ├── Retry with backoff → Up to N=3 attempts
+│   ├── Circuit breaker opens after N failures
+│   └── Fallback to cached result if available
+│
+├── Client error (400, 404, validation error)
+│   ├── Is input fixable? → Auto-correct + retry once
+│   └── Not fixable → Return structured error to agent
+│
+├── Auth error (401, 403)
+│   ├── Token expired? → Refresh + retry once
+│   └── Insufficient scope → Return PermissionDenied
+│
+└── Server error (500+)
+    ├── Retry with backoff (up to 3)
+    └── All retries exhausted → Return 503 equivalent to agent
+```
+
+## Production Considerations
+
+- **Tool discovery caching**: Cache tool registry responses with a 5-minute TTL. Full re-discovery on every tool call adds 50-500ms latency per call.
+- **Idempotency store sizing**: Monitor idempotency store growth. Set TTL based on maximum expected retry window (typically 24-48 hours). Use Redis with eviction policy for automatic pruning.
+- **Permission audit frequency**: Batch permission audit log writes (every 100 calls or 5 seconds) to reduce storage I/O. Store in append-only format for compliance.
+- **Tool health probes**: Implement tool health check endpoints (/health, /ready) separate from tool invocation. Poll every 30 seconds for availability monitoring.
+
+## Security Considerations
+
+- **Tool parameter injection**: Never pass agent-generated parameters directly to shell commands or eval() functions without strict schema validation and sanitization.
+- **Idempotency key reuse attack**: An attacker with access to idempotency keys could replay operations. Include agent authentication in key derivation.
+- **Permission scope glob expansion**: Use `**` in scope patterns cautiously. A scope of `file:read:/workspace/**` allows reading all files, while `file:read:/workspace/*` only top-level.
+- **MCP transport authentication**: stdio transport inherits the parent process permissions. SSE/HTTP transports must authenticate every request with bearer tokens.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Storing idempotency key after execution completes | Race condition allows duplicate execution on retry | Use write-ahead log: mark as pending before execution |
+| Schema validation after permission check | Agent learns parameter structure of unauthorized tools | Check permissions first, deny before revealing parameter schemas |
+| Hardcoding timeout values per tool | Different operations need different timeouts | Configure per-tool timeout in tool manifest |
+| Ignoring tool output schema validation | Malformed tool outputs crash downstream processing | Validate output against schema before returning to agent |
+| Single circuit breaker for all tools | One failing tool isolates all tool access | Per-tool or per-category circuit breakers |
+| Not version-pinning MCP protocol | Protocol changes between updates break communication | Negotiate protocol version at init, fail on mismatch |
+| Exposing agent ID in MCP responses | Leaks internal agent identity for profiling | Use opaque session IDs for external communication |
+
+## Performance Optimization
+
+- **Idempotency store batching**: Batch idempotency store writes (flush every 50ms or 100 keys) to reduce write overhead on high-throughput systems.
+- **Parallel tool discovery**: If multiple MCP servers are configured, discover tools from all servers in parallel using asyncio.gather.
+- **Schema compilation caching**: Pre-compile JSON Schemas into validator functions on tool discovery. Avoid re-compiling on every invocation.
+- **Transport connection pooling**: For HTTP-based transports, reuse connection pools and keep-alive to avoid TCP handshake overhead on each tool call.
+- **Result caching for read-only tools**: Cache results of deterministic read-only tools (file_read, config_get) with TTL. Avoid re-execution when identical parameters are provided.
+
 <!-- COMPRESSION FOOTER -->
 <!--
 Compression Level: 5 (Comprehensive architectural references & code details preserved)

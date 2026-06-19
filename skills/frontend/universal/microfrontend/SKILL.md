@@ -333,6 +333,193 @@ With 3 MFEs each using React (45KB gzipped):
 - Shared auth state needs secure token storage (httpOnly cookies, not localStorage for sensitive tokens)
 - Module Federation remoteEntry.js URLs should use HTTPS and SRI (Subresource Integrity)
 
+## Module Federation with Rspack/Vite
+
+```typescript
+// Rspack Module Federation (faster builds than Webpack 5)
+// rspack.config.js (host)
+const { ModuleFederationPlugin } = require('@module-federation/enhanced/rspack');
+
+module.exports = {
+  plugins: [
+    new ModuleFederationPlugin({
+      name: 'shell',
+      remotes: {
+        orders: 'orders@https://orders.app.com/remoteEntry.js',
+      },
+      shared: {
+        react: { singleton: true, requiredVersion: '^18.2.0' },
+        'react-dom': { singleton: true, requiredVersion: '^18.2.0' },
+      },
+    }),
+  ],
+};
+```
+
+```typescript
+// Vite Module Federation (@originjs/vite-plugin-federation)
+// vite.config.ts (host)
+import federation from '@originjs/vite-plugin-federation';
+
+export default defineConfig({
+  plugins: [
+    federation({
+      name: 'shell',
+      remotes: {
+        orders: 'https://orders.app.com/assets/remoteEntry.js',
+      },
+      shared: ['react', 'react-dom'],
+    }),
+  ],
+});
+```
+
+## Cross-App Routing Patterns
+
+```typescript
+// Microfrontend routing coordination
+// Shell manages top-level routes, delegates sub-routes to MFEs
+
+// Shell router (React Router)
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <Shell />,
+    children: [
+      { index: true, element: <Home /> },
+      // Delegated to Orders MFE
+      { path: 'orders/*', element: <OrdersShell /> },
+      // Delegated to Products MFE
+      { path: 'products/*', element: <ProductsShell /> },
+    ],
+  },
+]);
+
+// Orders MFE receives base path from shell
+function OrdersShell() {
+  return (
+    <BrowserRouter basename="/orders">
+      <Routes>
+        <Route index element={<OrderList />} />
+        <Route path=":id" element={<OrderDetail />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+// URL-based communication:
+// Orders MFE navigates to /products/123 — shell router handles the transition
+// No shared state needed for navigation between MFEs
+```
+
+## Shared Auth State Across MFEs
+
+```typescript
+// Auth token stored in httpOnly cookie (accessible to all MFEs via same domain)
+// Shell MFE manages login/logout, shares auth state via custom events
+
+// Shell auth service
+class AuthService {
+  private currentUser: User | null = null;
+
+  async login(credentials: Credentials): Promise<void> {
+    const { token, user } = await api.login(credentials);
+    // Set httpOnly cookie (server-side)
+    document.cookie = `session=${token}; path=/; HttpOnly; Secure; SameSite=Lax`;
+    this.currentUser = user;
+    window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user } }));
+  }
+
+  async logout(): Promise<void> {
+    document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    this.currentUser = null;
+    window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: null } }));
+  }
+}
+
+// Any MFE listens:
+window.addEventListener('auth:changed', (e: CustomEvent) => {
+  if (e.detail.user) {
+    // User logged in — update UI
+  } else {
+    // User logged out — redirect to login
+  }
+});
+```
+
+## Module Federation Dynamic Remotes
+
+```typescript
+// Dynamic remote loading — useful for feature flags or A/B testing
+// Instead of static remotes in webpack config, load at runtime
+
+interface RemoteConfig {
+  name: string;
+  url: string;
+}
+
+class DynamicFederationLoader {
+  private loaded = new Map<string, any>();
+
+  async loadRemote(config: RemoteConfig): Promise<any> {
+    if (this.loaded.has(config.name)) {
+      return this.loaded.get(config.name);
+    }
+
+    // Dynamic import of remote entry
+    await __webpack_init_sharing__('default');
+    const container = await import(/* webpackIgnore:true */ config.url);
+    await container.init(__webpack_share_scopes__.default);
+
+    this.loaded.set(config.name, container);
+    return container;
+  }
+
+  async getModule<T>(remoteName: string, modulePath: string): Promise<() => T> {
+    const container = await this.loaded.get(remoteName);
+    const factory = await container.get(modulePath);
+    return factory();
+  }
+}
+
+// Usage:
+// const OrderList = React.lazy(() => dynamicLoader.getModule('orders', './OrderList'));
+```
+
+## Testing Microfrontends
+
+```typescript
+// Integration testing MFEs together
+// Playwright test across MFEs on the same page
+test('navigation between MFEs works', async ({ page }) => {
+  await page.goto('/');
+  // Click order link in Shell → Orders MFE loads
+  await page.click('[data-mfe="shell"] a[href="/orders"]');
+  await expect(page.locator('[data-mfe="orders"]')).toBeVisible();
+  // Click product link → Products MFE loads
+  await page.click('[data-mfe="orders"] a[href="/products/123"]');
+  await expect(page.locator('[data-mfe="products"]')).toBeVisible();
+});
+
+// Unit testing Module Federation components
+// Mock the remote import
+jest.mock('orders/OrderList', () => ({
+  __esModule: true,
+  default: () => <div data-testid="mock-order-list">Mocked Orders</div>,
+}));
+```
+
+## Performance Optimization
+
+| Technique | Impact | Implementation |
+|-----------|--------|---------------|
+| Preload critical remotes | Remove waterfall loading | `<link rel="modulepreload" href="orders/remoteEntry.js">` |
+| Lazy load non-critical MFEs | Faster initial load | Dynamic import in route component |
+| Share large deps as singleton | Reduce duplicate bytes | React, ReactDOM, lodash as singleton |
+| Async chunk splitting | Parallel loading | Each MFE produces independent chunks |
+| Remote entry caching | Cache remoteEntry.js with hash | Versioned URLs, long cache headers |
+| Preconnect to MFE origins | Faster DNS/SSL | `<link rel="preconnect" href="https://orders.app.com">` |
+
 ## Anti-Patterns
 
 | Anti-Pattern | Problem | Fix |
@@ -342,6 +529,21 @@ With 3 MFEs each using React (45KB gzipped):
 | **No shared design system** | Visual inconsistency | Shared component library via federation |
 | **Circular shared deps** | Build-time errors | Strict dependency graph enforcement |
 | **Wrong version of React** | Hooks broken, context lost | Force singleton via Module Federation config |
+| **Synchronous remote loading** | Blocks main thread on remote load | Lazy load all remotes via React.lazy + Suspense |
+| **Missing error boundaries** | One MFE crash takes down whole app | Each MFE wrapped in error boundary |
+| **No loading states** | User sees blank screen on slow network | Suspense fallback per MFE boundary |
+| **Over-communication** | Tight coupling via shared state | Prefer URL-based communication, limit shared state to auth only |
+
+## Rules
+- Microfrontend overhead only justified at 3+ independent teams on the same product
+- React and react-dom MUST be singleton — two instances break hooks, context, and event system
+- Never share remoteEntry.js directly — use CDN with long cache and versioned paths
+- Group microfrontends by team ownership and deployment boundaries, not by component granularity
+- Every MFE owns its data domain — no shared database between frontends
+- Maintain a shared design system as a federated module for visual consistency
+- Enforce strict dependency graph to prevent circular shared dependencies
+- Use content hash or timestamp versioning on remoteEntry.js for cache busting
+- Each MFE independence: builds, tests, and deploys independently — no coordination required for rollout
 
 ## References
   - references/communication-strategies.md — Inter-MFE Communication Strategies

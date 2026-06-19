@@ -357,3 +357,242 @@ Agent Request: "Execute Python data analysis with network access to S3"
 - **safety-guardrails**: Sandbox policies enforce the safety constraints defined by the guardrails skill
 
 <!-- COMPRESSION: sandbox-execution | durable-exec + microvm-isolation + snapshot-fork + resource-quota | v2.0.0 -->
+
+## Implementation Patterns
+
+### Sandbox Manager
+
+```python
+from typing import Dict, List, Optional, Callable
+from dataclasses import dataclass, field
+from datetime import datetime
+import asyncio
+import uuid
+import time
+
+@dataclass
+class SandboxConfig:
+    max_cpu_cores: float = 1.0
+    max_memory_mb: int = 512
+    max_disk_mb: int = 1024
+    max_wallclock_seconds: int = 300
+    allowed_egress_domains: List[str] = field(default_factory=lambda: ["api.openai.com"])
+    blocked_commands: List[str] = field(default_factory=lambda: ["rm -rf", "shutdown", "reboot"])
+    snapshot_enabled: bool = True
+    network_enabled: bool = True
+    read_only_filesystem: bool = False
+
+@dataclass
+class SandboxInstance:
+    id: str
+    config: SandboxConfig
+    status: str = "provisioning"
+    created_at: datetime = field(default_factory=datetime.now)
+    expires_at: Optional[datetime] = None
+    last_activity: datetime = field(default_factory=datetime.now)
+    cpu_usage: float = 0.0
+    memory_usage_mb: int = 0
+    snapshot_id: Optional[str] = None
+
+class SandboxManager:
+    def __init__(self):
+        self.sandboxes: Dict[str, SandboxInstance] = {}
+        self.max_concurrent = 10
+        self._watchdog_task = None
+
+    async def create_sandbox(self, config: Optional[SandboxConfig] = None) -> SandboxInstance:
+        if len(self.sandboxes) >= self.max_concurrent:
+            raise RuntimeError(f"Max concurrent sandboxes ({self.max_concurrent}) reached")
+
+        instance = SandboxInstance(
+            id=str(uuid.uuid4())[:8],
+            config=config or SandboxConfig(),
+        )
+        instance.expires_at = datetime.fromtimestamp(
+            time.time() + instance.config.max_wallclock_seconds
+        )
+        instance.status = "running"
+        self.sandboxes[instance.id] = instance
+        return instance
+
+    async def execute(self, sandbox_id: str, command: str) -> Dict:
+        sandbox = self.sandboxes.get(sandbox_id)
+        if not sandbox or sandbox.status != "running":
+            return {"error": "Sandbox not found or not running"}
+
+        # Check for blocked commands
+        for blocked in sandbox.config.blocked_commands:
+            if blocked in command:
+                return {"error": f"Command blocked: {blocked}"}
+
+        # Check expiration
+        if datetime.now() > sandbox.expires_at:
+            sandbox.status = "expired"
+            return {"error": "Sandbox has expired"}
+
+        sandbox.last_activity = datetime.now()
+        # Simulate execution
+        return {
+            "stdout": f"[sandbox-{sandbox_id}] Executed: {command[:100]}",
+            "stderr": "",
+            "exit_code": 0,
+            "duration_ms": 150,
+        }
+
+    async def create_snapshot(self, sandbox_id: str) -> Optional[str]:
+        sandbox = self.sandboxes.get(sandbox_id)
+        if not sandbox or not sandbox.config.snapshot_enabled:
+            return None
+        snapshot_id = f"snap-{uuid.uuid4()[:8]}"
+        sandbox.snapshot_id = snapshot_id
+        return snapshot_id
+
+    async def restore_snapshot(self, snapshot_id: str) -> Optional[SandboxInstance]:
+        for sandbox in self.sandboxes.values():
+            if sandbox.snapshot_id == snapshot_id:
+                new_config = SandboxConfig(
+                    **{k: v for k, v in sandbox.config.__dict__.items() if not k.startswith("_")}
+                )
+                return await self.create_sandbox(new_config)
+        return None
+
+    async def destroy_sandbox(self, sandbox_id: str):
+        sandbox = self.sandboxes.pop(sandbox_id, None)
+        if sandbox:
+            sandbox.status = "destroyed"
+
+    async def get_metrics(self) -> Dict:
+        total = len(self.sandboxes)
+        running = sum(1 for s in self.sandboxes.values() if s.status == "running")
+        avg_cpu = sum(s.cpu_usage for s in self.sandboxes.values()) / max(total, 1)
+        avg_mem = sum(s.memory_usage_mb for s in self.sandboxes.values()) / max(total, 1)
+        return {
+            "total_sandboxes": total,
+            "running": running,
+            "available": self.max_concurrent - total,
+            "avg_cpu_percent": round(avg_cpu * 100, 1),
+            "avg_memory_mb": round(avg_mem, 1),
+        }
+
+    async def start_watchdog(self):
+        async def watchdog_loop():
+            while True:
+                await asyncio.sleep(10)
+                now = datetime.now()
+                to_destroy = [
+                    sid for sid, s in self.sandboxes.items()
+                    if s.expires_at and now > s.expires_at
+                ]
+                for sid in to_destroy:
+                    await self.destroy_sandbox(sid)
+        self._watchdog_task = asyncio.create_task(watchdog_loop())
+```
+
+### Resource Quota Enforcer
+
+```python
+from typing import Dict, Optional
+import time
+
+class ResourceQuotaEnforcer:
+    def __init__(self):
+        self.usage: Dict[str, Dict] = {}
+        self.limits = {
+            "cpu_seconds": 3600,
+            "memory_mb_seconds": 1024 * 3600,
+            "network_egress_mb": 100,
+            "disk_write_mb": 500,
+            "api_calls": 10000,
+        }
+
+    def check_quota(self, sandbox_id: str, resource: str, amount: float = 1.0) -> bool:
+        if resource not in self.limits:
+            return True
+        if sandbox_id not in self.usage:
+            self.usage[sandbox_id] = {k: 0 for k in self.limits}
+        current = self.usage[sandbox_id].get(resource, 0)
+        return (current + amount) <= self.limits[resource]
+
+    def consume(self, sandbox_id: str, resource: str, amount: float = 1.0):
+        if sandbox_id not in self.usage:
+            self.usage[sandbox_id] = {k: 0 for k in self.limits}
+        self.usage[sandbox_id][resource] = self.usage[sandbox_id].get(resource, 0) + amount
+
+    def get_usage(self, sandbox_id: str) -> Dict:
+        return self.usage.get(sandbox_id, {})
+
+    def reset(self, sandbox_id: str):
+        self.usage.pop(sandbox_id, None)
+```
+
+## Architecture Decision Trees
+
+### Sandbox Isolation Level
+
+```
+What's the trust level of the code being executed?
+├── Trusted code (first-party, reviewed)
+│   └── Process-level sandbox
+│       ├── Resource limits via cgroups
+│       ├── Timeout enforcement
+│       └── Filesystem read-only
+│
+├── Semi-trusted code (third-party, OSS)
+│   └── Container sandbox (Docker)
+│       ├── Full container isolation
+│       ├── Network policy (egress only to allowed domains)
+│       ├── Read-only root filesystem
+│       └── Memory/CPU limits via Docker
+│
+├── Untrusted code (user-submitted, AI-generated)
+│   └── MicroVM sandbox (Firecracker, gVisor)
+│       ├── Hardware-level isolation
+│       ├── No escape from VM boundary
+│       ├── Snapshot/fork for fast startup
+│       └── Kernel-level security
+│
+└── Highly sensitive (PII processing, payments)
+    └── Air-gapped sandbox
+        ├── No network access
+        ├── Ephemeral filesystem (wiped on exit)
+        ├── Full audit logging of every operation
+        └── Manual approval for executions
+```
+
+### Snapshot Strategy
+
+```
+When to create snapshots?
+├── Before destructive operations
+│   └── DROP TABLE, DELETE, rm -rf, format
+├── After significant computation
+│   └── Long-running ML training, data processing
+├── Periodic checkpoints
+│   └── Every N operations, every M minutes
+└── On demand
+    └── User request before experiment
+```
+
+## Production Considerations
+
+- **Sandbox pooling**: Pre-provision a pool of warm sandboxes for low-latency startup. Replenish pool as sandboxes are consumed. Target <100ms sandbox acquisition time.
+- **Aggressive timeout enforcement**: Use external watchdog process (not sandbox-internal). Watchdog runs as a separate process with SIGKILL capability. Prevent sandboxes from disabling the timeout.
+- **Network policy as deny-by-default**: Block all egress by default. Allow only explicitly configured domains. DNS-level + IP-level filtering for defense in depth.
+- **Sandbox telemetry**: Emit metrics for sandbox lifecycle events (create, destroy, timeout, error). Track sandbox age distribution, utilization rates, and failure modes.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Same isolation for all code | Over-isolated trusted code, under-isolated untrusted | Tiered isolation based on trust level |
+| No resource limits per sandbox | One sandbox can starve others | Enforce CPU/memory/disk limits per sandbox |
+| Sandbox can disable its own timeout | Timeout can be overridden | External watchdog process |
+| No snapshot before destruction | Lose ability to debug failures | Snapshot before destroy, keep for N days |
+| Allowing unrestricted egress | Data exfiltration via network | Deny-by-default egress policy |
+| Long-lived sandboxes | Resource fragmentation | Max lifetime (wall-clock limit) for all sandboxes |
+
+## Performance Optimization
+
+- **Sandbox pooling with warm starts**: Pre-create sandboxes with common dependencies pre-loaded. Reduces startup time from seconds to milliseconds. Refresh pool asynchronously when below threshold.
+- **Copy-on-write filesystem**: Use overlayfs or similar for sandbox filesystems. Multiple sandboxes share a base layer. Only modified files consume additional space.
+- **Snapshot-based fast restore**: Use MicroVM snapshots for near-instant sandbox restoration. Snapshot the base OS + runtime, restore in <100ms.

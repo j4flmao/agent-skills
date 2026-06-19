@@ -325,6 +325,193 @@ def analyze_study(study):
 - Archive best configs for each deployment target (accuracy, speed, size).
 - Validate best config with 3-5 different seeds before production.
 
+## Search Space Design — Per Algorithm
+
+### Decision Trees / Random Forest
+```python
+space = {
+    "n_estimators": (10, 500),            # integer, uniform
+    "max_depth": (3, 50),                 # integer, log scale
+    "min_samples_split": (2, 50),         # integer, log scale
+    "min_samples_leaf": (1, 50),          # integer, log scale
+    "max_features": (0.1, 1.0),           # float, logit scale
+    "ccp_alpha": (1e-5, 1e-1),            # float, log scale
+}
+
+# Conditional: if max_features == "sqrt", don't tune proportion
+```
+
+### XGBoost / LightGBM
+```python
+space = {
+    "learning_rate": (1e-4, 0.3),         # float, LOG scale
+    "max_depth": (3, 15),                 # integer, log scale
+    "min_child_weight": (1, 100),         # integer, log scale
+    "subsample": (0.5, 1.0),              # float
+    "colsample_bytree": (0.3, 1.0),       # float
+    "gamma": (0, 10),                     # float, log scale
+    "reg_alpha": (1e-5, 10),              # float, LOG scale
+    "reg_lambda": (1e-5, 10),             # float, LOG scale
+    "n_estimators": (50, 1000),           # integer
+}
+# LightGBM specific:
+# "num_leaves": (15, 255), log scale
+# "min_data_in_leaf": (10, 100), log scale
+```
+
+### Neural Networks
+```python
+space = {
+    "learning_rate": (1e-5, 1e-2),        # LOG scale
+    "batch_size": [16, 32, 64, 128, 256], # categorical (discrete jump)
+    "weight_decay": (1e-6, 1e-2),         # LOG scale
+    "dropout": (0.0, 0.5),                # float
+    "hidden_layers": [1, 2, 3, 4],        # categorical
+    "hidden_dim": (32, 512),              # integer, log scale
+    "activation": ["relu", "gelu", "swish"],  # categorical
+    "gradient_clip": (0.1, 10.0),         # float, log scale
+    "label_smoothing": (0.0, 0.3),        # float
+}
+# Adam-specific:
+# "beta1": (0.8, 0.95),
+# "beta2": (0.99, 0.999),
+```
+
+### Transformers (NLP)
+```python
+space = {
+    "learning_rate": (1e-6, 5e-4),        # LOG scale
+    "warmup_ratio": (0.0, 0.3),           # float
+    "weight_decay": (0.0, 0.1),           # float
+    "dropout": (0.0, 0.3),                # float
+    "batch_size": [8, 16, 32, 64],        # categorical
+    "gradient_accumulation": [1, 2, 4, 8],# categorical
+    "num_train_epochs": (2, 10),          # integer
+    "max_seq_length": [128, 256, 512],    # categorical
+    "lora_r": [4, 8, 16, 32],             # if using LoRA
+    "lora_alpha": [8, 16, 32, 64],        # if using LoRA
+}
+# Rule: lora_alpha = lora_r * 2 usually works well
+```
+
+### Conditional Search Spaces
+```python
+# When parameter B is only valid if parameter A has a specific value
+space = {
+    "optimizer": ["adam", "sgd", "adamw"],
+    # Conditional: if optimizer == "adamw":
+    "weight_decay": (0.0, 0.1),           # only for AdamW
+    "scheduler": ["cosine", "linear", "constant"],
+    # Conditional: if scheduler in ["cosine", "linear"]:
+    "warmup_steps": (0, 1000),            # only if scheduler != constant
+}
+```
+
+## Pruning Patterns
+
+### Median Stopping Rule (Optuna)
+```python
+import optuna
+
+def objective(trial):
+    # Suggest hyperparameters
+    lr = trial.suggest_float("lr", 1e-5, 1e-2, log=True)
+
+    # Train model epoch by epoch
+    for epoch in range(100):
+        loss = train_one_epoch(lr)
+
+        # Report intermediate value to Optuna
+        trial.report(loss, epoch)
+
+        # Handle pruning based on median stopping rule
+        if trial.should_prune():
+            raise optuna.TrialPruned()
+
+    return loss
+
+study = optuna.create_study(
+    direction="minimize",
+    pruner=optuna.pruners.MedianPruner(
+        n_startup_trials=10,    # don't prune first 10 trials
+        n_warmup_steps=5,       # don't prune first 5 epochs
+        interval_steps=1,       # check every epoch
+    ),
+)
+```
+
+### ASHA (Asynchronous Successive Halving Algorithm)
+```python
+from optuna.pruners import HyperbandPruner
+
+study = optuna.create_study(
+    direction="minimize",
+    pruner=HyperbandPruner(
+        min_resource=1,          # minimum epochs
+        max_resource=100,        # maximum epochs
+        reduction_factor=3,      # elim fraction = 1/3
+    ),
+)
+
+# How it works:
+# 1. Start many trials with small budget (1 epoch)
+# 2. Keep top 1/reduction_factor after each rung
+# 3. Double budget for survivors
+# 4. Repeat until max_resource reached
+```
+
+### Custom Pruning Criteria
+```python
+def custom_prune_callback(study, trial):
+    """Prune if loss hasn't improved for 10 epochs."""
+    intermediate_values = trial.intermediate_values
+    if len(intermediate_values) < 10:
+        return
+
+    recent = list(intermediate_values.values())[-10:]
+    best_recent = min(recent)
+    best_overall = min(intermediate_values.values())
+
+    if best_recent > best_overall * 1.1:  # 10% worse than best
+        raise optuna.TrialPruned()
+```
+
+## Bayesian Optimization Strategies
+
+| Strategy | Acquisition Function | Best For | Pros | Cons |
+|----------|---------------------|----------|------|------|
+| GP (Gaussian Process) | EI, UCB, PI | < 20 dims | Sample-efficient | Doesn't scale with dims |
+| TPE (Tree Parzen) | EI | 10-100 dims | Handles mixed types | More overhead per trial |
+| Random Forest SMAC | EI | Categorical heavy | Works well on trees | Slower with many cats |
+| CMA-ES | Population-based | Continuous only | No surrogate model | Not for mixed spaces |
+| BOHB (Bayesian + HB) | TPE + HyperBand | Any | Best of both | Complex setup |
+
+## Hyperparameter Tuning Anti-Patterns
+
+1. **Grid search for > 4 dimensions**: Exponential blowup
+   Fix: Random search or Bayesian optimization
+2. **No log scale for learning rate**: Linear grid misses useful range
+   Fix: Always log-scale positive parameters spanning orders of magnitude
+3. **Pruning too early**: Best configs sometimes start slow
+   Fix: n_warmup_steps >= 5, n_startup_trials >= 10
+4. **Overfitting to validation set**: Tuning on same split as evaluation
+   Fix: Nested CV or separate hold-out for final evaluation
+5. **Too few trials**: Bayesian optimization needs 10-20 initial random trials
+   Fix: Total trials = 10 * dimensionality (minimum)
+6. **Non-deterministic trials**: Randomness masks true HP effects
+   Fix: Fix seed per trial, use same seed across HP comparisons
+
+## Framework Comparison
+
+| Framework | Parallel | Distributed | Pruning | Early Stopping | Visualization |
+|-----------|----------|-------------|---------|----------------|---------------|
+| Optuna | Yes | Yes | Yes | Yes | Built-in dashboard |
+| Ray Tune | Yes | Yes | Yes (ASHA, Median) | Yes | TensorBoard integrated |
+| Hyperopt | Yes | Yes (MongoDB) | No | Manual | Limited |
+| SMAC3 | No | No | No | Manual | Built-in |
+| Katib (K8s) | Yes | Yes | Yes (Median, ASHA) | Yes | K8s-native |
+| Weights & Biases | Yes | No | Yes | Yes | Rich sweeps UI |
+
 ## Rules
 - Random search beats grid when >4 dims.
 - Bayesian optimization needs 10-20 initial random trials.

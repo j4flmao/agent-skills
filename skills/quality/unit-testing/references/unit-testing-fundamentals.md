@@ -1,213 +1,191 @@
 # Unit Testing Fundamentals
 
 ## Overview
-Unit Testing is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Unit testing validates individual functions, methods, or modules in isolation. Good unit tests are fast, deterministic, and focused on a single unit of behavior. They form the base of the test pyramid — fast feedback on every change, catching bugs before they reach integration or E2E tests.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Unit Testing helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Concept 1: FIRST Principles
+- **Fast**: Tests run in milliseconds. Unit suites should complete in under 5 minutes
+- **Independent**: No test depends on another. Run in any order, in parallel
+- **Repeatable**: Same result every time, regardless of environment
+- **Self-validating**: Pass/fail is automatic with assertions, no manual inspection
+- **Timely**: Written before or alongside production code (TDD)
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Unit Testing solutions. These principles help maintain code quality and reduce technical debt.
+### Concept 2: AAA Pattern (Arrange-Act-Assert)
+Standard structure for every test:
+- **Arrange**: Set up test data, create mocks, configure the system under test
+- **Act**: Execute the function or method being tested
+- **Assert**: Verify the outcome matches expectations
 
-### Concept 3: Data Management
-Proper data management is essential for Unit Testing. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Concept 3: Test Doubles
+- **Mock**: Pre-programmed object with expectations about which methods get called
+- **Stub**: Provides canned answers to calls made during the test
+- **Fake**: Lightweight implementation of an interface (e.g., in-memory database)
+- **Spy**: Records calls made to a real object for later verification
+- **Dummy**: Passed around but never used (fills parameter lists)
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+### Concept 4: Test Coverage
+Coverage measures which lines/branches are executed by tests. Line coverage > 80%, branch coverage > 70% for business logic. Coverage is a necessary but not sufficient measure — focus on meaningful tests, not percentage chasing. Exclude generated code, boilerplate, and framework code.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+## Framework Selection
 
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Unit Testing follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+| Feature | Vitest (JS/TS) | Jest (JS/TS) | pytest (Python) | JUnit 5 (Java) | xUnit (.NET) |
+|---------|---------------|-------------|-----------------|----------------|--------------|
+| Speed | Very fast (ESBuild) | Fast | Moderate | Fast | Fast |
+| Mocking | vi.mock, vi.spyOn | jest.mock, jest.spyOn | pytest-mock, unittest.mock | Mockito | Moq, NSubstitute |
+| Assertions | expect() | expect() | assert | AssertJ | FluentAssertions |
+| Parameterized | test.each | test.each | @pytest.mark.parametrize | @CsvSource, @MethodSource | [Theory], [InlineData] |
+| Parallel | Native | jest --maxWorkers | pytest-xdist | Maven/Gradle | Built-in |
+| Coverage | c8/istanbul | istanbul | pytest-cov | JaCoCo | Coverlet |
+| Watch mode | Native | --watch | pytest-watch | IntelliJ | dotnet watch |
+| Best for | New TS/JS projects | Existing JS projects | Python projects | Java projects | .NET projects |
 
 ## Implementation Guide
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Step 1: Identify the Unit
+A unit is a single function or method with a clear responsibility. Pure functions (same input → same output, no side effects) are the easiest to test. Methods with dependencies need test doubles at boundaries. Test behavior, not implementation.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Step 2: Write the Test
+```python
+# tests/unit/test_pricing.py
+"""Unit tests for pricing module — pure function testing."""
+import pytest
+from decimal import Decimal
+from src.pricing import calculate_discount, PriceBreak
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+class TestCalculateDiscount:
+    """Tests for the discount calculation function."""
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+    def test_no_breaks_returns_zero_discount(self):
+        """Should return 0% when no price breaks exist."""
+        result = calculate_discount(10, [])
+        assert result == Decimal("0")
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+    def test_quantity_meets_exact_break(self):
+        """Should apply discount when quantity exactly matches break."""
+        breaks = [PriceBreak(5, Decimal("10"))]
+        result = calculate_discount(5, breaks)
+        assert result == Decimal("10")
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+    def test_quantity_exceeds_break(self):
+        """Should apply discount when quantity exceeds break threshold."""
+        breaks = [PriceBreak(5, Decimal("10"))]
+        result = calculate_discount(10, breaks)
+        assert result == Decimal("10")
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+    def test_highest_applicable_break_applied(self):
+        """Should apply highest discount among applicable breaks."""
+        breaks = [
+            PriceBreak(5, Decimal("10")),
+            PriceBreak(10, Decimal("15")),
+            PriceBreak(20, Decimal("20")),
+        ]
+        assert calculate_discount(15, breaks) == Decimal("15")
+        assert calculate_discount(25, breaks) == Decimal("20")
+
+    def test_quantity_below_all_breaks_returns_zero(self):
+        """Should return 0% when below all break thresholds."""
+        breaks = [PriceBreak(5, Decimal("10"))]
+        result = calculate_discount(3, breaks)
+        assert result == Decimal("0")
+```
+
+### Step 3: Write Tests with Mocks
+```typescript
+// src/services/__tests__/order.service.test.ts
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { OrderService } from '../order.service';
+
+describe('OrderService', () => {
+  let service: OrderService;
+  let mockOrderRepo: { create: ReturnType<typeof vi.fn> };
+  let mockPaymentGateway: { charge: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    // Arrange — create fresh mocks for each test
+    mockOrderRepo = { create: vi.fn() };
+    mockPaymentGateway = { charge: vi.fn() };
+    service = new OrderService(mockOrderRepo, mockPaymentGateway);
+  });
+
+  it('should create order and return it on success', async () => {
+    // Arrange
+    const cart = { items: [{ price: 50 }, { price: 30 }] };
+    mockPaymentGateway.charge.mockResolvedValue({ id: 'pay_123' });
+    mockOrderRepo.create.mockResolvedValue({ id: 'ord_456' });
+
+    // Act
+    const result = await service.placeOrder(cart, 'cust_789');
+
+    // Assert
+    expect(mockPaymentGateway.charge).toHaveBeenCalledWith('cust_789', 80);
+    expect(mockOrderRepo.create).toHaveBeenCalledWith({
+      customerId: 'cust_789', total: 80, paymentId: 'pay_123',
+    });
+    expect(result).toEqual({ id: 'ord_456' });
+  });
+
+  it('should not create order when payment fails', async () => {
+    // Arrange
+    const cart = { items: [{ price: 50 }] };
+    mockPaymentGateway.charge.mockRejectedValue(new Error('insufficient_funds'));
+
+    // Act & Assert
+    await expect(service.placeOrder(cart, 'cust_789')).rejects.toThrow('insufficient_funds');
+    expect(mockOrderRepo.create).not.toHaveBeenCalled();
+  });
+});
+```
+
+### Step 4: Coverage Configuration
+```yaml
+# vitest.config.ts
+import { defineConfig } from 'vitest/config';
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json-summary', 'html'],
+      lines: 80,
+      branches: 70,
+      functions: 80,
+      statements: 80,
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.spec.ts', 'src/generated/**'],
+    },
+  },
+});
+```
 
 ## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+- Follow AAA pattern (Arrange-Act-Assert) consistently
+- Use descriptive test names: "should [expected] when [scenario]"
+- Mock at system boundaries (network, database, filesystem, time), not internals
+- Use real implementations for pure functions and value objects
+- One behavior concept per test — multiple assertions are fine if they test one behavior
+- Use factory functions for test data with sensible defaults and overrides
+- Clean up between tests: restore mocks, reset timers, clear state
+- Write tests alongside or before production code (TDD)
+- Run tests in watch mode during development for fast feedback
+- Use parameterized tests for data-driven scenarios (test.each, @pytest.mark.parametrize)
 
 ## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+- Over-mocking: mocking internals creates brittle tests that break on refactoring
+- Testing implementation: tests that assert internal method calls break during refactoring
+- Shared mutable state: tests that depend on each other are unreliable and order-dependent
+- Slow tests: real I/O makes tests slow — mock network, DB, filesystem
+- Empty assertions: tests without assertions provide false confidence
+- Coverage chasing: targeting 100% encourages meaningless tests; focus on business logic
+- Skipping error paths: only testing happy path misses most bugs
 
 ## Key Points
-- Understand core Unit Testing concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- Unit tests validate single functions/modules in isolation
+- Follow FIRST principles: Fast, Independent, Repeatable, Self-validating, Timely
+- Use AAA pattern for consistent test structure
+- Mock at system boundaries, use real implementations for pure logic
+- Coverage targets: line >= 80%, branch >= 70% for business logic
+- Tests should complete in < 100ms each, suite under 5 minutes
+- Test behavior, not implementation — assertions on observable outcomes only
+- Use factory functions for test data creation
+- Clean up state between tests for reliable, order-independent execution

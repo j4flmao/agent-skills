@@ -327,13 +327,206 @@ pipeline = tfx.dag_runner.Pipeline(
 - Skip re-running unchanged components.
 - Right-size compute per component type.
 
+## CI/CD Patterns for ML Pipelines
+
+### Pattern: CI — Validation on Data Change
+```yaml
+# .github/workflows/data-validation.yml
+name: Data Validation
+on:
+  pull_request:
+    paths:
+      - "data/**"
+      - "features/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate schema
+        run: python validate_schema.py --data data/ --schema schemas/
+      - name: Check data quality
+        run: python data_quality_checks.py --data data/ --threshold 0.95
+      - name: Validate feature definitions
+        run: python validate_features.py --features features/
+      - name: Run integration tests
+        run: python -m pytest tests/test_data_pipeline.py -v
+```
+
+### Pattern: CI — Validation on Code Change
+```yaml
+name: Model CI
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "models/**"
+      - "requirements.txt"
+
+jobs:
+  model-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit tests
+        run: python -m pytest tests/ -v --cov=src/ --cov-fail-under=80
+      - name: Lint and type check
+        run: |
+          ruff check src/
+          mypy src/
+      - name: Test training (small sample)
+        run: python train.py --sample 1000 --epochs 1
+      - name: Test evaluation
+        run: python evaluate.py --model outputs/model.pt --sample 500
+```
+
+### Pattern: CD — Staged Promotion
+```yaml
+name: Model CD
+on:
+  push:
+    branches: [main]
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Full training
+        run: python train.py --config configs/prod.yaml
+      - name: Evaluate
+        run: python evaluate.py --model outputs/model.pt --output metrics.json
+      - name: Check gates
+        run: python check_gates.py --metrics metrics.json --thresholds configs/thresholds.yaml
+      - name: Register model (if gates pass)
+        run: python register_model.py --model-path outputs/model.pt --metrics metrics.json
+
+  promote-to-staging:
+    needs: [train]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to staging
+        run: kubectl apply -f deploy/staging-deployment.yaml
+      - name: Smoke tests
+        run: python smoke_tests.py --endpoint https://staging.model-api.com
+      - name: Shadow traffic test
+        run: python shadow_test.py --live-endpoint prod --shadow-endpoint staging
+
+  promote-to-prod:
+    needs: [promote-to-staging]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Canary deploy (5%)
+        run: python deploy_canary.py --percent 5
+      - name: Monitor canary
+        run: python monitor_canary.py --duration 30m --metric error_rate --threshold 0.01
+      - name: Rollout to 100%
+        run: python deploy_full_rollout.py
+      - name: Verify
+        run: python verify_deployment.py --endpoint https://model-api.com
+```
+
+## Component Decomposition Templates
+
+### Template: Standard ML Pipeline Components
+```
+pipeline/
+├── data_ingestion/
+│   ├── Dockerfile
+│   ├── connector.py        # source-specific (S3, BigQuery, Kafka)
+│   └── config.yaml         # source, schema, partition config
+├── data_validation/
+│   ├── schema.py           # Great Expectations / Pandera schema
+│   ├── quality.py          # null rate, distribution, freshness checks
+│   └── config.yaml         # thresholds per check
+├── feature_engineering/
+│   ├── transformations.py  # feature computation logic
+│   ├── features.yaml       # feature definitions and dependencies
+│   └── config.yaml         # window sizes, aggregation config
+├── training/
+│   ├── model.py            # model architecture definition
+│   ├── train.py            # training loop with logging
+│   ├── config.yaml         # hyperparameters, data splits
+│   └── Dockerfile
+├── evaluation/
+│   ├── evaluate.py         # compute all metrics
+│   ├── gates.py            # pass/fail logic for model promotion
+│   └── config.yaml         # metric thresholds
+├── deployment/
+│   ├── serve.py            # model serving code
+│   ├── Dockerfile
+│   └── k8s.yaml            # Kubernetes deployment config
+└── monitoring/
+    ├── drift.py             # data drift detection
+    ├── performance.py       # online metric computation
+    └── alerts.yaml          # alert rules and thresholds
+```
+
+### Template: Component Interface Contract
+```python
+# Each pipeline component must implement this contract
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
+@dataclass
+class ComponentInput:
+    data_path: str
+    config_path: str
+    artifact_store: str
+    metadata: dict
+
+@dataclass
+class ComponentOutput:
+    artifact_path: str
+    metrics: dict
+    metadata: dict
+
+class PipelineComponent(ABC):
+    @abstractmethod
+    def run(self, input_data: ComponentInput) -> ComponentOutput:
+        """Execute the component and return output artifacts."""
+        pass
+
+    @abstractmethod
+    def validate(self, input_data: ComponentInput) -> bool:
+        """Validate input before execution."""
+        pass
+```
+
+## Pipeline Orchestration Comparison
+
+| Framework | Abstraction | UI | Schedule | Retry | DAG Dependencies | Best For |
+|-----------|-------------|----|----------|-------|------------------|----------|
+| Kubeflow Pipelines | KFP SDK | Yes | Cron | Yes | Explicit | K8s-native teams |
+| TFX | TFX SDK | Yes | Metadata | Yes | Automatic | TensorFlow teams |
+| Airflow | Python DAGs | Yes | Cron/Sensor | Yes | Explicit | General orchestration |
+| Prefect | Python flows | Yes | Cron/Events | Yes | Explicit | Python-heavy teams |
+| Flyte | Python tasks | Yes | Cron | Yes | Automatic + explicit | ML-focused teams |
+| MLflow Pipelines | YAML/CLI | No | Manual | No | Sequential | Small teams |
+
+## Pipeline Anti-Patterns
+
+1. **Monolithic pipeline**: One giant script doing ingestion -> training -> deployment
+   Fix: Break into single-responsibility components with explicit I/O contracts
+2. **No artifact caching**: Re-running entire pipeline for every change
+   Fix: Cache intermediate artifacts; skip unchanged components
+3. **Mixing dev/prod config**: Same pipeline config for development and production
+   Fix: Separate config files per environment with validation
+4. **No data validation**: Training on corrupted data without detection
+   Fix: Data validation gate as first component in every pipeline run
+5. **No rollback capability**: Cannot revert to previous model version
+   Fix: Keep last 3 models, auto-rollback on metric degradation
+6. **Manual promotion**: Human clicks "deploy to prod" every time
+   Fix: Automated staged promotion with gating at each stage
+
 ## Rules
 - Every pipeline component has single responsibility and explicit I/O.
 - Data validation runs before transformation.
 - Model validation gates block deployment if thresholds not met.
 - All pipeline artifacts versioned and tracked.
 - CI/CD includes validation, training, evaluation, promotion.
-- Staged promotion (dev → staging → prod) with auto-rollback.
+- Staged promotion (dev to staging to prod) with auto-rollback.
 - Pipeline metadata stored in experiment tracker.
 - Data drift detection triggers pipeline re-execution.
 - Components are containerized and versioned.

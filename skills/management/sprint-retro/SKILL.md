@@ -292,6 +292,374 @@ Sprint {n} Metrics:
 - Retro output must change behavior — no change means wasted retro
 - Same issue in 3 consecutive retros means the approach needs to change, not just the effort
 
+## Retro Format Deep Dives
+
+### Start/Stop/Continue — Detailed Protocol
+```
+Facilitator Setup: Create 3 columns on board (digital or physical)
+Prep: Bring sprint metrics dashboard, previous action items
+
+Phase 1 — Silent Writing (5 min):
+  Each person writes stickies for each column. No discussion.
+  Prompt: "What should we start doing (new practices), stop doing (waste),
+  and continue doing (strengths)?"
+
+Phase 2 — Round-Robin Sharing (10 min):
+  One person reads all their notes. Next person reads theirs.
+  Facilitator clusters duplicates silently. No cross-talk.
+
+Phase 3 — Discussion (15 min):
+  Review each cluster. Ask: "Why did multiple people note this?"
+  Vote on top 3 clusters needing action. Focus on start/stop over continue.
+
+Phase 4 — Action Items (10 min):
+  Convert top-voted clusters into SMART action items.
+  Assign owners, deadlines, success criteria.
+
+Phase 5 — Retro Retro (5 min):
+  Rate format 1-5. Note one improvement for next retro.
+```
+
+### 4Ls (Liked/Learned/Lacked/Longed For) — Detailed Protocol
+```
+When: Post-milestone (launch, migration, major release)
+Duration: 60 min (longer than standard — more depth)
+
+Liked (10 min):
+  "What specifically went well? Be concrete — name the commit, decision, or moment."
+  Capture as: "Liked: {specific event/outcome} because {reason}"
+
+Learned (10 min):
+  "What did you learn about the technology, the process, the user, or the team?"
+  Capture as: "Learned: {insight} — this changes how we will {action}"
+
+Lacked (15 min):
+  "What was missing? Tools, information, support, clarity, time?"
+  Capture as: "Lacked: {gap} — this caused {specific negative outcome}"
+
+Longed For (15 min):
+  "What do you wish had been different? This is aspirational."
+  Capture as: "Longed For: {ideal scenario} — if we had this we could {outcome}"
+
+Action Item Generation (10 min):
+  Each L generates potential improvements.
+  Vote and select top 2-3.
+```
+
+### Sailboat Retro — Detailed Protocol
+```
+Metaphor mapping:
+  Wind (Tailwinds): What propelled us forward? Accelerators, lucky breaks, great decisions.
+  Anchor: What held us back? Repeated blockers, slow processes, friction.
+  Rocks: What risks are ahead? Upcoming deadlines, known issues not yet addressed.
+  Iceberg: What hidden dangers exist? Unseen risks that could sink the sprint.
+
+Process:
+  1. Prep (before retro): Collect sprint data. Draw the boat metaphor.
+  2. Silent generation (5 min): Notes per category. "What was our wind, anchor, rocks, iceberg?"
+  3. Place anchors first (most concrete), then wind, then rocks/iceberg.
+  4. Discuss the relationships: "Is this rock connected to that anchor?"
+  5. Prioritize: Which anchor, if removed, would have the biggest impact?
+  6. Action items from the highest-priority anchor.
+
+Facilitation tips:
+  - Keep the metaphor alive throughout — refer to it during discussion
+  - The iceberg is the most important quadrant (hidden risks = biggest danger)
+  - If the team struggles with any quadrant, that is itself a data point
+```
+
+### Mad/Sad/Glad — Detailed Protocol
+```
+When: Tough sprint, low morale, team conflict or burnout risk
+Duration: 45 min (emotional work is draining — keep it tight)
+
+Ground Rules (read aloud):
+  - No names on sticky notes — talk about events and systems
+  - All feelings are valid — no arguing about how someone felt
+  - Focus on what we can change, not what we cannot
+
+Silent Writing (5 min):
+  Mad: What frustrated, angered, or disappointed you?
+  Sad: What made you feel discouraged, let down, or worried?
+  Glad: What made you happy, proud, or grateful?
+
+Sharing (15 min):
+  Read all Mad notes first (vent first, then process).
+  Then Sad, then Glad (end on a positive note).
+  Facilitator validates: "I hear that {event} was really frustrating."
+
+Discussion (15 min):
+  "What patterns do we see across these emotions?"
+  "What one thing, if changed, would reduce the Mad and Sad by the most?"
+
+Action Items (10 min):
+  Top 1-2 items. Hard minimum: 1 action item.
+  Celebrate the Glad items briefly before closing.
+```
+
+### Five Whys — Detailed Protocol
+```
+Prep: Select ONE problem from the sprint. Not "everything went wrong" — one specific,
+observable negative outcome.
+
+Process:
+  Problem Statement: "During this sprint, {specific bad outcome} occurred."
+  Why 1: "Because {direct cause}"
+  Why 2: "Why did that happen? Because {underlying cause}"
+  Why 3: "Why? Because {systemic cause}"
+  Why 4: "Why? Because {process/policy cause}"
+  Why 5: "Why? Because {root cause — cultural, structural, or environmental}"
+
+Example:
+  Problem: Production hotfix was deployed without review.
+  Why 1: Because the CI pipeline was broken and couldn't block the merge.
+  Why 2: Because the CI config hadn't been updated after the infra migration.
+  Why 3: Because the infra migration didn't include CI pipeline migration in scope.
+  Why 4: Because the migration checklist only covered runtime infrastructure.
+  Why 5: Because we have no standard migration checklist template.
+
+Root Cause: No standard migration checklist covering CI/CD pipeline migration.
+
+Action: Create migration checklist template covering all pipeline stages + assign owner.
+
+Rules:
+  - One problem per retro — depth over breadth
+  - Answers must be factual, not speculative
+  - Stop earlier if the answer is outside the team's control
+  - Each "why" should get progressively more systemic
+  - The root cause is usually a process gap, not a person failure
+```
+
+### Appreciative Inquiry — Detailed Protocol
+```
+When: Great sprint, high morale, want to amplify strengths
+Philosophy: Rather than fix problems, amplify what works
+
+Four Ds (requires 60 min):
+1. Discover (15 min):
+   "What was the best moment of this sprint?"
+   "What did the team do that made you proud?"
+   "When did you feel most effective?"
+
+2. Dream (15 min):
+   "If this sprint were the new normal, what would be different?"
+   "What would an ideal sprint look like based on what worked?"
+   Capture positive vision statements.
+
+3. Design (15 min):
+   "What two things can we do to make the Dream more likely?"
+   "What systems, practices, or tools would support our strengths?"
+   Design concrete propositions.
+
+4. Destiny (15 min):
+   "What is our commitment to make this happen?"
+   "Who will own each element?"
+   Commit to 1-2 amplifying actions.
+
+Warning: Do NOT use when major problems exist — it will feel dismissive.
+Only use when the team genuinely had a strong sprint and wants to build on it.
+```
+
+### Lean Coffee Retro — Detailed Protocol
+```
+When: Distributed teams, self-organizing teams, democratic process needed
+Duration: 45-60 min
+
+Process:
+  1. Agenda Building (5 min):
+     Each person adds topics to the board: "{topic} | {name}"
+     Topics are problems, ideas, or discussion items.
+
+  2. Voting (3 min):
+     Each person gets 3 dot votes. Vote on topics to discuss.
+     Top 5-8 topics form the agenda.
+
+  3. Discussion Rounds (30-40 min):
+     Timebox per topic: 5-7 minutes (set a timer).
+     At time, group votes: "One more round?" or "Move on?"
+     Capture key discussion points and potential actions.
+
+  4. Action Items (5 min):
+     Convert discussion outcomes into concrete actions.
+     If a topic generated no action, it was a vent — acknowledge and move on.
+
+Facilitation rules:
+  - Anyone can call "move on" if the topic is not productive
+  - Capture parking lot items for later
+  - End on time — do not extend for one more topic
+```
+
+### Timeline Retro — Detailed Protocol
+```
+When: Conflict, emotional sprints, need to establish objective facts
+Duration: 60 min
+
+Prep:
+  - Draw a horizontal timeline of the sprint dates
+  - Mark known events: ceremonies, milestones, releases, incidents
+  - Leave space above and below for notes
+
+Process:
+  1. Populate Timeline (10 min):
+     Each person adds events they remember — stickies on the timeline.
+     Use green for positive events, red for negative, yellow for neutral.
+     No discussion during population.
+
+  2. Identify Patterns (15 min):
+     Look for clusters of negative events. "What happened around Sprint Day 3?"
+     Look for causality chains. "Did the deploy failure cause the late bug fix?"
+     Identify emotional peaks and valleys.
+
+  3. Discuss Key Moments (15 min):
+     Pick 2-3 most impactful moments on the timeline.
+     "What led to this moment?"
+     "What could have been different?"
+
+  4. Action Items (10 min):
+     Focus on process changes that prevent the negative pattern.
+     Assign owners and deadlines.
+
+  5. Timeline Review (10 min):
+     "Does the timeline tell a different story than we remember?"
+     "What would we tell ourselves at the start of this sprint if we knew then what we know now?"
+```
+
+### Speed Boat Retro — Detailed Protocol
+```
+When: Team feels overwhelmed, blocked, or slowed down
+Duration: 45 min
+
+Metaphor:
+  The team is a speedboat heading toward a destination (sprint goal).
+  Anchors are things slowing the boat down, threatening progress.
+  Waves are external factors the team cannot control.
+
+Process:
+  1. Draw the Speedboat (5 min):
+     Boat on left, destination on right (sprint goal).
+     Anchors hanging from the boat. Waves in the water.
+
+  2. Identify Anchors (10 min):
+     Each person writes anchors: "What is slowing us down?"
+     One anchor per sticky. Place them on the anchor chains.
+     Examples: slow CI, unclear decisions, waiting for review, context switching.
+
+  3. Identify Waves (5 min):
+     What external factors are making the journey harder?
+     Examples: reorg, market changes, stakeholder churn.
+
+  4. Prioritize Anchors (10 min):
+     Which anchor, if removed, would increase speed the most?
+     Dot vote on anchors. Top 2-3 anchors selected.
+
+  5. Action Plan (10 min):
+     For each top anchor: "What can we do to cut this anchor loose?"
+     Assign owner and deadline per anchor.
+
+  6. Wave Management (5 min):
+     Waves cannot be removed, but the boat can be prepared.
+     "How can we navigate these waves better?"
+```
+
+### Team Radar (Glad/Sad/Confused/Neutral) — Detailed Protocol
+```
+When: New team's first retro, or checking overall team health
+Simplified version of Mad/Sad/Glad with additional dimension
+
+Process (45 min):
+  1. Silent Writing (5 min):
+     Glad: What made you happy or proud this sprint?
+     Sad: What frustrated or disappointed you?
+     Confused: What is unclear about the process, direction, or expectations?
+     Neutral (optional): What didn't you have a strong feeling about?
+
+  2. Sharing (15 min):
+     Round-robin read all notes. Facilitator sorts into logical groups.
+
+  3. Discussion (15 min):
+     Focus on Confused items first — these are easiest to resolve.
+     Then Sad items — prioritize by frequency.
+     Glad items — reinforce what is working.
+
+  4. Action Items (10 min):
+     Max 3 items. Prioritize Confused resolution (quick wins).
+
+Ideal for: First 2-3 retros of a new team, or after team composition changes.
+```
+
+## Retro Format Selection — Advanced Decision Matrix
+
+| Team State | Sprint Outcome | Primary Format | Backup Format | Timebox |
+|------------|---------------|----------------|---------------|---------|
+| New team (0-2 sprints together) | Any | Team Radar | Start/Stop/Continue | 60 min |
+| Stable, predictable | Standard | Start/Stop/Continue | 4Ls | 45 min |
+| Post-launch / milestone | Successful | Appreciative Inquiry | 4Ls | 60 min |
+| Post-launch / milestone | Rocky | 4Ls | Timeline Retro | 60 min |
+| Recurring same issues | Unchanged | Five Whys | Sailboat | 60 min |
+| Low morale / burnout signs | Negative | Mad/Sad/Glad | Sailboat | 45 min |
+| Team conflict | Negative | Timeline Retro | Mad/Sad/Glad | 60 min |
+| Distributed / async | Any | Lean Coffee | Start/Stop/Continue | 45 min |
+| Overwhelmed / blocked | Any | Speed Boat | Lean Coffee | 45 min |
+| Pre-release / high stress | Any | Sailboat | Speed Boat | 45 min |
+| Holiday / end-of-year | Any | Appreciative Inquiry | Start/Stop/Continue | 30 min |
+
+## Retro Experimentation Playbook
+
+### Experiment 1: Format Rotation Impact
+```
+Hypothesis: Rotating formats every 2 sprints increases retro NPS by 20%.
+Measure: Retro NPS per sprint, action item completion rate.
+Method: For 4 sprints: rotate vs. fixed Start/Stop/Continue.
+Expected: Higher engagement and insight quality with rotation.
+```
+
+### Experiment 2: Timebox Compression
+```
+Hypothesis: 30-minute retros are more focused than 60-minute retros.
+Measure: Action item quality (SMART score), completion rate.
+Method: Alternate 30-min and 60-min retros for 4 sprints.
+Expected: Tighter timeboxes force prioritization, better action items.
+```
+
+### Experiment 3: Facilitator Rotation
+```
+Hypothesis: Rotating facilitators improves format diversity and team ownership.
+Measure: Format variety, participation score, action item quality.
+Method: Fixed facilitator vs. rotated (2 sprints each).
+Expected: Rotated facilitator leads to more format experimentation.
+```
+
+### Experiment 4: Silent Retro (Async)
+```
+Hypothesis: Async written retros produce deeper insights than synchronous.
+Measure: Insight depth (rated by team), participation rate.
+Method: Alternate async (shared doc, 48h window) with synchronous.
+Target async audiences: distributed teams, introverted team members.
+```
+
+### Experiment 5: Anonymous Voting Effects
+```
+Hypothesis: Anonymous dot voting produces different priorities than public voting.
+Measure: Vote distribution, action item selection, post-retro satisfaction.
+Method: Alternate anonymous and public voting across 4 retros.
+Expected: Anonymous voting surfaces more "unpopular but important" items.
+```
+
+## Retro Formats Compared — Full Decision Table
+
+| Format | Prep Time | Session Time | Depth | Best Mood | Worst For |
+|--------|-----------|-------------|-------|-----------|-----------|
+| Start/Stop/Continue | 5 min | 45 min | Medium | Neutral/Positive | Complex problems |
+| 4Ls | 10 min | 60 min | Deep | Reflective | Time-constrained |
+| Sailboat | 10 min | 60 min | Deep | Complex | Concrete thinkers |
+| Mad/Sad/Glad | 5 min | 45 min | Medium | Emotional | Avoidant teams |
+| Appreciative Inquiry | 10 min | 60 min | Deep | Positive | Major problems |
+| Five Whys | 15 min | 60 min | Very deep | Recurring issues | Multiple problems |
+| Speed Boat | 5 min | 45 min | Medium | Overwhelmed | Blame culture |
+| Timeline Retro | 20 min | 60 min | Deep | Conflict | Tight schedules |
+| Team Radar | 5 min | 45 min | Medium | New team | Experienced teams |
+| Lean Coffee | 5 min | 45 min | Variable | Distributed | Directive cultures |
+
 ## References
   - references/action-item-tracking.md — Action Item Tracking
   - references/facilitation-guide.md — Retro Facilitation Guide

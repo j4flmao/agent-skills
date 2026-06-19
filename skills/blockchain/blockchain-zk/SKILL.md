@@ -2,7 +2,7 @@
 name: blockchain-zk
 description: >
   Zero-knowledge proofs, zk-rollup, zkEVM, Circom, Noir, Halo2, proof systems, Groth16, PLONK, STARK, recursive proofs, circuit optimization, zkSync, StarkNet, Scroll, Polygon zkEVM, and ZK application patterns. Covers proof system selection, circuit programming, prover infrastructure, and ZK rollup architecture. Do NOT use for: general cryptography (use blockchain-cryptography), smart contract development (use blockchain-application), or L1 consensus (use blockchain-core).
-version: 1.1.0
+version: 2.0.0
 author: j4flmao
 license: MIT
 tags: [blockchain, zero-knowledge, zk, rollup, proof, phase-blockchain]
@@ -105,6 +105,18 @@ Circuit programming DSL:
     └── Bellman — Rust ZK-SNARK library (old, replaced by halo2)
 ```
 
+### Proof System Comparison
+```
+                Groth16    PLONK      STARK      Halo2
+Proof size      128B       250B       100KB      2-4KB
+Verify time     5ms        10ms       50ms       15ms
+Prove time      10s        30s        5min       2min
+Trusted setup   Per circ   Universal  None       None
+Recursion       Hard       Hard       Native     Possible
+Quantum risk    Yes        Yes        No         Yes
+Gas (EVM)       200K       300K       1M+        400K+
+```
+
 ## Circuit Programming Patterns
 
 ### Circom Basic Circuit
@@ -141,6 +153,50 @@ template MerkleTreeInclusion(nLevels) {
 }
 
 component main = MerkleTreeInclusion(20);
+```
+
+### Circom: Private Transfer (Tornado-style)
+```circom
+pragma circom 2.1.0;
+
+include "poseidon2.circom";
+
+template Withdrawal(nLevels) {
+    signal input root;           // Merkle root
+    signal input nullifierHash;  // Unique spending key hash
+    signal input recipient;      // Recipient address
+    signal input relayer;        // Relayer address
+    signal input fee;            // Relayer fee
+    signal input refund;         // Change
+
+    // Private inputs
+    signal private input nullifier;
+    signal private input secret;
+    signal private input pathElements[nLevels];
+    signal private input pathIndices[nLevels];
+
+    // Compute commitment = hash(nullifier, secret)
+    component commitmentHasher = Poseidon(2);
+    commitmentHasher.inputs[0] <== nullifier;
+    commitmentHasher.inputs[1] <== secret;
+    signal commitment;
+    commitment <== commitmentHasher.out;
+
+    // Verify Merkle inclusion
+    component merkleProof = MerkleTreeInclusion(nLevels);
+    merkleProof.leaf <== commitment;
+    merkleProof.root <== root;
+    merkleProof.pathIndices <== pathIndices;
+    merkleProof.siblings <== pathElements;
+    merkleProof.isIncluded === 1;
+
+    // Compute nullifierHash
+    component nullifierHasher = Poseidon(1);
+    nullifierHasher.inputs[0] <== nullifier;
+    nullifierHash === nullifierHasher.out;
+}
+
+component main { public [root, nullifierHash, recipient, relayer, fee, refund] } = Withdrawal(20);
 ```
 
 ### Noir Circuit
@@ -242,24 +298,112 @@ interface ZKRollup {
 
 ### zkEVM Types (Vitalik's Classification)
 | Type | EVM Equivalence | Proving Time | Compatibility |
-|---|---|---|---|
+|------|----------------|--------------|---------------|
 | Type 1 | Full equivalence | Slow (hours) | 100% compatible |
 | Type 2 | Full equivalence, optimized | Medium (minutes) | ~99% compatible |
 | Type 2.5 | Partial equivalence | Medium | ~95% compatible |
 | Type 3 | Near equivalence | Fast (minutes) | ~85% compatible |
 | Type 4 | High-level equivalence | Fastest | Requires recompilation |
 
+### zkEVM Project Comparison
+| Project | Type | Prover | Proving Time | Status |
+|---------|------|--------|--------------|--------|
+| Scroll | Type 2/3 | Custom | Minutes | Mainnet |
+| Linea | Type 2/3 | Custom | Minutes | Mainnet |
+| ZKsync Era | Type 4 | Custom (Boojum) | Seconds | Mainnet |
+| StarkNet | Type 4 | STARK prover | Seconds | Mainnet |
+| Polygon zkEVM | Type 2 | Custom | Minutes | Mainnet |
+| Taiko | Type 1 | Multiple (SGX, ZK) | Hours | Testnet |
+| RISC Zero | zkVM | Custom | Minutes | Testnet |
+
+## Recursive Proofs
+
+### Recursion Patterns
+```typescript
+// Recursive proof aggregation
+// 1. Prove each batch individually → individual proofs
+// 2. Prover aggregates N proofs into 1 recursive proof
+// 3. L1 verifies single proof for N batches
+
+// Benefits:
+// - Verification cost: O(1) instead of O(N)
+// - Parallel proving: each batch proven independently
+// - Compression: N proofs → 1 proof
+
+// Implementations:
+// - IVC (Incrementally Verifiable Computation): Nova, Cyclefold
+// - PCD (Proof-Carrying Data): continuous computation with proofs
+// - Aggregation: combine N independent proofs (Halo2, plonk-verifier)
+
+// Gas savings (EVM):
+// N batches verified individually: N × 200K gas
+// N batches via recursive proof: 200K gas (regardless of N)
+```
+
 ## Security Considerations
 
 ### Common Circuit Vulnerabilities
 | Vulnerability | Description | Prevention |
-|---|---|---|
+|---------------|-------------|------------|
 | Underconstrained | Circuit allows invalid witnesses | Formal verification of constraints |
 | Missing range check | Integer overflow in circuit | Range check gates on all inputs |
 | Non-deterministic witness | Multiple constraints don't pin value | Unique constraint per signal |
 | Toxic waste exposure | Trusted setup data leaked | Secure multi-party computation |
 | Hash function mismatch | Using prover-unfriendly hash | Poseidon, MiMC, or SHA-256 with optimizations |
 | Frontrunning on proofs | Third-party submits proof first | Commit-reveal, nonce in public inputs |
+| Weak FRI parameters | Insufficient query rounds | Follow ethSTARK parameter recommendations |
+| Underpowered field | Field too small for security target | Use 256-bit+ field for 128-bit security |
+
+### Trusted Setup Lifecycle
+```
+1. Ceremony initiation: Define circuit, generate parameters
+2. Multi-party computation: N participants contribute randomness
+3. Each participant: generates local randomness, transforms parameters
+4. Destroy toxic waste: all but last participant's randomness destroyed
+5. Final parameters: last participant must destroy their randomness
+6. Verification: verify final CRS against transcript
+
+Risks:
+- If any participant retains their randomness, fake proofs are possible
+- Malicious participant can bias parameter generation
+- Ceremony must be audited by independent third party
+
+Current ceremonies:
+- Groth16: Per-circuit ceremony required
+- PLONK: Universal ceremony (one for all circuits, e.g., Perpetual Powers of Tau)
+- STARK: No ceremony (transparent, hash-based)
+```
+
+## Prover Infrastructure
+
+### Prover Hardware Requirements
+```
+Circuit size     Constraints    RAM    GPU Memory    Time
+Small            1K-10K         8GB    4GB           1-10s
+Medium           10K-100K       32GB   8GB           10-60s
+Large            100K-1M        128GB  16GB          1-10min
+zkEVM batch      1M-10M         512GB  48GB          10-60min
+
+Recommended hardware:
+├── GPU: RTX 4090 (24GB), A100 (40/80GB), H100 (80GB)
+├── CPU: AMD EPYC 64-core, Intel Xeon 56-core
+├── RAM: 256GB+ for zkEVM proving
+├── Storage: NVMe SSD for circuit data
+└── Network: 10Gbps for distributed proving
+```
+
+## ZK Application Patterns
+
+### Application Comparison
+| Application | Proof System | Circuit Size | Best DSL |
+|-------------|--------------|-------------|----------|
+| Private transfer (Tornado) | Groth16 | ~1K constraints | Circom |
+| Identity (Semaphore) | Groth16 | ~500 constraints | Circom |
+| zkAirdrop | Groth16 | ~1K constraints | Circom |
+| zkDID (Polygon ID) | Groth16 | ~2K constraints | Circom |
+| zkOracle (Axiom) | Halo2 | Variable | Halo2/EVM |
+| ZK coprocessor | Halo2/PLONK | Variable | Halo2 |
+| On-chain ZKML | PLONKish | 100K-1M+ | Custom |
 
 ## Rules
 1. Always identify which phase: proofs, circuits, rollups, or zkEVM
@@ -272,6 +416,11 @@ interface ZKRollup {
 8. Prefer Poseidon hash over SHA-256 in circuits (~10 vs ~30K constraints per hash)
 9. Use Groth16 for fixed circuits (most gas-efficient on EVM), PLONK for variable circuits
 10. Recursive proofs (IVC, aggregation) for scaling further — prove many proofs with one proof
+11. STARKs are transparent and quantum-resistant but have large proof sizes
+12. Halo2 supports custom gates for highly optimized circuits (essential for zkEVM)
+13. Noir abstracts away backend choice — compile to Groth16, PLONK, or STARK
+14. Trusted setup ceremonies must be audited and have at least one honest participant
+15. Prover infrastructure cost is often the bottleneck for ZK rollup operations
 
 ## References
   - references/blockchain-zk-advanced.md — Blockchain Zk Advanced Topics
@@ -285,5 +434,6 @@ interface ZKRollup {
   - references/zkevm-types.md — zkEVM Types
   - references/trusted-setup-ceremonies.md — Trusted Setup Ceremonies
   - references/zk-deployment.md — ZK System Deployment
+  - references/circom-circuit-optimization.md — Circom Circuit Optimization
 
 ## Phase: blockchain → blockchain-zk

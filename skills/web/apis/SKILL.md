@@ -330,3 +330,444 @@ paths:
 - **No API versioning**: Changes break existing clients
 - **WebSocket without ping/pong**: Stale connections consume resources forever
 - **Synchronous operations for long tasks**: Use 202 Accepted with status polling
+
+## API Design Patterns
+
+### RESTful Resource Naming
+```
+GET    /users                    # List users
+GET    /users/:id                # Get user by ID
+POST   /users                    # Create user
+PUT    /users/:id                # Full update
+PATCH  /users/:id                # Partial update
+DELETE /users/:id                # Delete user
+GET    /users/:id/orders         # Sub-resource collection
+GET    /users/:id/orders/:orderId  # Nested resource
+
+# Actions on resources (not verbs in URL)
+POST   /users/:id/activate       # RPC-style action
+POST   /users/:id/deactivate
+POST   /orders/:id/cancel
+
+# Search — keep simple
+GET    /users?q=search&page=1&limit=20
+# Complex search — use POST with body
+POST   /users/search
+```
+
+### Pagination Strategies
+```json
+// Cursor-based (recommended for large sets)
+GET /users?cursor=eyJpZCI6MTAwfQ&limit=20
+Response:
+{
+  "data": [...],
+  "nextCursor": "eyJpZCI6MTIwfQ",
+  "hasMore": true
+}
+
+// Offset-based (simpler, fragile with inserts)
+GET /users?page=2&limit=20
+Response:
+{
+  "data": [...],
+  "page": 2,
+  "totalPages": 50,
+  "totalItems": 1000
+}
+
+// Keyset-based (efficient, stable)
+GET /users?after_id=100&limit=20
+Response: [...]
+Link: <https://api.example.com/users?after_id=120&limit=20>; rel="next"
+```
+
+### Error Response Format (RFC 9457)
+```json
+{
+  "type": "https://api.example.com/errors/validation-error",
+  "title": "Validation Error",
+  "status": 422,
+  "detail": "The request body contains invalid fields.",
+  "instance": "/api/users",
+  "errors": [
+    {
+      "field": "email",
+      "message": "Email is not a valid email address",
+      "code": "INVALID_FORMAT"
+    },
+    {
+      "field": "age",
+      "message": "Age must be between 0 and 150",
+      "code": "OUT_OF_RANGE"
+    }
+  ]
+}
+```
+
+### Rate Limiting Headers
+```
+RateLimit-Limit: 100
+RateLimit-Remaining: 87
+RateLimit-Reset: 1687193600
+Retry-After: 30
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 87
+```
+
+### API Versioning Strategies
+
+| Strategy | How | Pros | Cons |
+|----------|-----|------|------|
+| URL path | `GET /v1/users` | Simple, explicit | URL pollution, routing overhead |
+| Header | `Accept: application/vnd.api+json;version=1` | Clean URLs | Harder to discover |
+| Query param | `GET /users?version=1` | Easy to test | Caching issues, not standard |
+| No versioning | Backward-compatible changes only | No version management | Breaking changes require coordination |
+
+**Recommendation**: URL path versioning for public APIs, header-based for internal/microservice APIs. Deprecate with `Sunset` header:
+```
+Deprecation: true
+Sunset: Sat, 01 Jan 2026 00:00:00 GMT
+Link: <https://docs.api.example.com/v2-migration>; rel="deprecation"
+```
+
+### HATEOAS & Discoverability
+```json
+GET /users/42
+{
+  "id": 42,
+  "name": "Alice",
+  "_links": {
+    "self": { "href": "/users/42" },
+    "orders": { "href": "/users/42/orders" },
+    "profile": { "href": "/users/42/profile" }
+  }
+}
+```
+
+## OpenAPI / Swagger Patterns
+
+### OpenAPI 3.1 Structure
+```yaml
+openapi: 3.1.0
+info:
+  title: User API
+  version: 1.0.0
+  description: API for managing users
+paths:
+  /users:
+    get:
+      summary: List all users
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Paginated list of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  nextCursor:
+                    type: string
+                  hasMore:
+                    type: boolean
+components:
+  schemas:
+    User:
+      type: object
+      required: [id, name, email]
+      properties:
+        id: { type: integer, readOnly: true }
+        name: { type: string, minLength: 1, maxLength: 100 }
+        email: { type: string, format: email }
+        createdAt: { type: string, format: date-time, readOnly: true }
+```
+
+### API Client Generation
+```bash
+# TypeScript/JavaScript
+npx openapi-typescript schema.yaml -o src/api/schema.d.ts
+npx orval --input schema.yaml --output src/api/generated
+
+# Python
+pip install openapi-python-client
+openapi-python-client generate --path schema.yaml
+
+# Swift
+brew install swagger-codegen
+swagger-codegen generate -i schema.yaml -l swift5
+
+# Kotlin
+openapi-generator generate -i schema.yaml -g kotlin -o api-client/
+```
+
+## Webhook Patterns
+
+### Webhook Delivery Contract
+```json
+// POST to registered webhook URL
+{
+  "event": "order.created",
+  "id": "evt_abc123",
+  "created": "2024-06-15T10:30:00Z",
+  "data": {
+    "orderId": "ord_456",
+    "total": 2999,
+    "currency": "usd"
+  }
+}
+```
+
+**Delivery guarantees:**
+- Retry with exponential backoff: 0s → 10s → 30s → 60s → 5m → 30m → 2h → 6h
+- Max retries: 8 (over ~9 hours)
+- Dead letter queue after max retries
+- Idempotency key in header: `Idempotency-Key: evt_abc123`
+- Signature header: `X-Signature: sha256=....` (HMAC with shared secret)
+
+## GraphQL API Patterns
+
+### Schema Design
+```graphql
+type Query {
+  user(id: ID!): User
+  users(page: Int, limit: Int): UserConnection!
+}
+
+type Mutation {
+  createUser(input: CreateUserInput!): UserPayload!
+  updateUser(id: ID!, input: UpdateUserInput!): UserPayload!
+}
+
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  orders(first: Int, after: String): OrderConnection!
+}
+
+type UserConnection {
+  edges: [UserEdge!]!
+  pageInfo: PageInfo!
+}
+
+type UserEdge {
+  node: User!
+  cursor: String!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+type UserPayload {
+  user: User
+  errors: [UserError!]
+}
+
+type UserError {
+  field: String!
+  message: String!
+}
+```
+
+### N+1 Prevention
+```javascript
+// DataLoader pattern (JavaScript/TypeScript)
+const DataLoader = require('dataloader');
+
+const userLoader = new DataLoader(async (ids) => {
+  const users = await db.select('*').from('users').whereIn('id', ids);
+  return ids.map(id => users.find(u => u.id === id));
+});
+
+// In resolver:
+Query: {
+  user: (_, { id }) => userLoader.load(id),
+},
+User: {
+  orders: (user, args) => orderLoader.load(user.id),
+}
+```
+
+## Security Patterns
+
+### Authentication Headers
+```
+# Bearer JWT
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+
+# API Key (for service-to-service)
+X-API-Key: sk_live_abc123def456
+
+# Mutual TLS (mTLS)
+# Requires client certificate validation at TLS layer
+```
+
+### Input Validation
+```typescript
+// Zod schema (TypeScript)
+import { z } from 'zod';
+
+const createUserSchema = z.object({
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  age: z.number().int().min(0).max(150).optional(),
+});
+
+// Sanitize before processing
+const validated = createUserSchema.parse(req.body);
+```
+
+### CORS Configuration
+```typescript
+// Fastify example
+import cors from '@fastify/cors';
+
+app.register(cors, {
+  origin: ['https://app.example.com', 'https://admin.example.com'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Authorization', 'Content-Type', 'X-Requested-With'],
+  exposedHeaders: ['X-RateLimit-Remaining'],
+  credentials: true,
+  maxAge: 86400, // 24 hours
+});
+```
+
+## API Testing Patterns
+
+### Contract Testing (Pact)
+```typescript
+// Consumer test
+const pact = new Pact({ consumer: 'WebApp', provider: 'UserAPI' });
+
+describe('User API contract', () => {
+  beforeAll(() => pact.setup());
+  afterAll(() => pact.finalize());
+
+  it('returns user by ID', async () => {
+    await pact
+      .given('user 42 exists')
+      .uponReceiving('a request for user 42')
+      .withRequest({ method: 'GET', path: '/users/42' })
+      .willRespondWith({
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+        body: { id: 42, name: 'Alice', email: 'alice@example.com' },
+      });
+
+    const response = await apiClient.getUser(42);
+    expect(response).toEqual({ id: 42, name: 'Alice', email: 'alice@example.com' });
+  });
+});
+```
+
+### Integration Testing
+```typescript
+import supertest from 'supertest';
+import { createApp } from '../src/app';
+
+const app = createApp();
+
+describe('POST /users', () => {
+  it('creates a user and returns 201', async () => {
+    const response = await supertest(app)
+      .post('/users')
+      .send({ name: 'Alice', email: 'alice@example.com' })
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      id: expect.any(Number),
+      name: 'Alice',
+    });
+  });
+
+  it('rejects invalid email with 422', async () => {
+    const response = await supertest(app)
+      .post('/users')
+      .send({ name: 'Alice', email: 'not-an-email' })
+      .expect(422);
+
+    expect(response.body.errors[0].field).toBe('email');
+  });
+});
+```
+
+## Rate Limiting Implementation
+```typescript
+// Token bucket algorithm (TypeScript)
+class TokenBucket {
+  private tokens: number;
+  private lastRefill: number;
+
+  constructor(
+    private maxTokens: number,
+    private refillRate: number,  // tokens per second
+    private refillInterval: number = 1000  // ms
+  ) {
+    this.tokens = maxTokens;
+    this.lastRefill = Date.now();
+  }
+
+  consume(tokens: number = 1): boolean {
+    this.refill();
+    if (this.tokens >= tokens) {
+      this.tokens -= tokens;
+      return true;
+    }
+    return false;
+  }
+
+  private refill(): void {
+    const now = Date.now();
+    const elapsed = now - this.lastRefill;
+    const tokensToAdd = Math.floor(
+      (elapsed / this.refillInterval) * this.refillRate
+    );
+    this.tokens = Math.min(this.maxTokens, this.tokens + tokensToAdd);
+    this.lastRefill = now;
+  }
+}
+```
+
+## Async API / Event-Driven Patterns
+
+### Event Schema (CloudEvents)
+```json
+{
+  "specversion": "1.0",
+  "type": "com.example.order.created",
+  "source": "/orders/12345",
+  "id": "evt_abc123",
+  "time": "2024-06-15T10:30:00Z",
+  "datacontenttype": "application/json",
+  "data": {
+    "orderId": "12345",
+    "total": 2999,
+    "currency": "usd",
+    "items": [
+      { "productId": "prod_abc", "quantity": 2, "price": 1499 }
+    ]
+  }
+}
+```
+
+### Message Queue Patterns
+| Pattern | Use Case | Technology |
+|---------|----------|------------|
+| Publish/Subscribe | Broadcast events to multiple consumers | Redis Pub/Sub, Kafka, NATS |
+| Work Queue | Distribute tasks among workers | RabbitMQ, SQS, Bull (Redis) |
+| Dead Letter Queue | Handle failed messages | SQS DLQ, RabbitMQ DLX |
+| Competing Consumers | Scale processing horizontally | Any queue with consumer groups |
+| Saga | Distributed transaction coordination | Kafka + orchestrator service |

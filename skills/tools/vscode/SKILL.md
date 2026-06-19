@@ -365,3 +365,345 @@ What kind of automation?
   "remote.SSH.configFile": "~/.ssh/config"
 }
 ```
+
+## Advanced Configuration
+
+### Workspace-Level Settings
+Workspace settings override user settings and are shared via `.vscode/settings.json`:
+```json
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "typescript.preferences.quoteStyle": "single",
+  "files.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/dist": true
+  },
+  "search.exclude": {
+    "**/coverage": true,
+    "**/__snapshots__": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/.next/**": true
+  }
+}
+```
+
+### Recommended Extensions (monorepo pattern)
+`.vscode/extensions.json` — share recommended extensions:
+```json
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "ms-vscode.vscode-typescript-next",
+    "github.vscode-github-actions",
+    "ms-azuretools.vscode-docker",
+    "eamodio.gitlens",
+    "streetsidesoftware.code-spell-checker"
+  ],
+  "unwantedRecommendations": [
+    "hookyqr.beautify",
+    "ms-vscode.vscode-typescript-tslint-plugin"
+  ]
+}
+```
+
+### Debugger Configurations
+`.vscode/launch.json` — multi-target debugging:
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Server",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--loader", "ts-node/esm"],
+      "args": ["src/server.ts"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "env": { "NODE_ENV": "development" }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Tests (current file)",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": [
+        "--runTestsByPath",
+        "${relativeFile}",
+        "--config",
+        "jest.config.js"
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Debug Frontend",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/src",
+      "sourceMapPathOverrides": {
+        "webpack:///src/*": "${webRoot}/*"
+      }
+    },
+    {
+      "type": "node-terminal",
+      "request": "launch",
+      "name": "Run Script (terminal)",
+      "command": "npm run dev"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack Debug",
+      "configurations": ["Debug Server", "Debug Frontend"],
+      "stopAll": true
+    }
+  ]
+}
+```
+
+### Tasks for Common Operations
+`.vscode/tasks.json` — automate builds, lint, test:
+```json
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Lint all files",
+      "type": "npm",
+      "script": "lint",
+      "problemMatcher": ["$eslint-stylish"],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "Run tests with coverage",
+      "type": "shell",
+      "command": "npx jest --coverage",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "group": { "kind": "test", "isDefault": true }
+    },
+    {
+      "label": "TypeScript compile check",
+      "type": "typescript",
+      "tsconfig": "tsconfig.json",
+      "option": "watch",
+      "problemMatcher": ["$tsc-watch"],
+      "group": "build"
+    }
+  ]
+}
+```
+
+### Keyboard Shortcuts
+Keybindings that boost productivity (`keybindings.json`):
+```json
+[
+  {
+    "key": "ctrl+shift+h",
+    "command": "workbench.action.replaceInFiles",
+    "when": "editorFocus"
+  },
+  {
+    "key": "ctrl+alt+l",
+    "command": "editor.action.formatDocument"
+  },
+  {
+    "key": "ctrl+shift+enter",
+    "command": "workbench.action.terminal.runSelectedText"
+  },
+  {
+    "key": "ctrl+k ctrl+s",
+    "command": "workbench.action.files.saveAll"
+  },
+  {
+    "key": "alt+up",
+    "command": "editor.action.moveLinesUpAction",
+    "when": "editorTextFocus && !editorReadonly"
+  },
+  {
+    "key": "alt+down",
+    "command": "editor.action.moveLinesDownAction",
+    "when": "editorTextFocus && !editorReadonly"
+  }
+]
+```
+
+### Multi-Root Workspaces
+For monorepos with independent projects:
+```json
+{
+  "folders": [
+    { "name": "API", "path": "packages/api" },
+    { "name": "Web", "path": "packages/web" },
+    { "name": "Shared", "path": "packages/shared" }
+  ],
+  "settings": {
+    "typescript.tsdk": "packages/api/node_modules/typescript/lib",
+    "eslint.workingDirectories": [
+      { "directory": "packages/api", "changeProcessCWD": true },
+      { "directory": "packages/web", "changeProcessCWD": true },
+      { "directory": "packages/shared", "changeProcessCWD": true }
+    ]
+  }
+}
+```
+
+### Extension Development Quick Start
+```javascript
+// extension.js — minimal command
+const vscode = require('vscode');
+
+function activate(context) {
+  const disposable = vscode.commands.registerCommand('hello.world', () => {
+    vscode.window.showInformationMessage('Hello from my extension!');
+  });
+  context.subscriptions.push(disposable);
+}
+
+function deactivate() {}
+
+module.exports = { activate, deactivate };
+```
+Run with F5 in the extension development host window.
+
+### Snippets for Code Patterns
+`.vscode/component.code-snippets`:
+```json
+{
+  "React Component": {
+    "prefix": "rfc",
+    "body": [
+      "import React from 'react';",
+      "",
+      "interface ${1:Component}Props {",
+      "  $2",
+      "}",
+      "",
+      "export const ${1:Component}: React.FC<${1:Component}Props> = ({ $3 }) => {",
+      "  return <div>$4</div>;",
+      "};",
+      "",
+      "export default ${1:Component};"
+    ],
+    "description": "React functional component with TypeScript"
+  },
+  "Jest Test Block": {
+    "prefix": "describe",
+    "body": [
+      "describe('${1:feature}', () => {",
+      "  beforeEach(() => {",
+      "    $2",
+      "  });",
+      "",
+      "  it('should $3', () => {",
+      "    $4",
+      "  });",
+      "});"
+    ],
+    "description": "Jest test block"
+  }
+}
+```
+
+### Performance Tuning
+Settings for large projects (100k+ LOC):
+```json
+{
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.next/**": true,
+    "**/coverage/**": true
+  },
+  "search.followSymlinks": false,
+  "typescript.tsserver.maxTsServerMemory": 4096,
+  "typescript.tsserver.experimental.enableProjectDiagnostics": false,
+  "editor.minimap.enabled": true,
+  "editor.occurrencesHighlight": false,
+  "editor.renderWhitespace": "selection",
+  "git.enableStatusBarSync": false,
+  "git.autofetch": false,
+  "extensions.autoCheckUpdates": false,
+  "workbench.startupEditor": "none"
+}
+```
+
+### Remote Development Patterns
+
+**Dev Containers** (`.devcontainer/devcontainer.json`):
+```json
+{
+  "name": "Node.js 20",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "forwardPorts": [3000, 5173],
+  "postCreateCommand": "npm install",
+  "customizations": {
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint"]
+    }
+  }
+}
+```
+
+**SSH Target config** (`~/.ssh/config`):
+```
+Host dev-server
+  HostName 192.168.1.100
+  User developer
+  IdentityFile ~/.ssh/dev_key
+  ForwardAgent yes
+```
+
+**Port forwarding** — access remote services locally:
+```json
+{
+  "remote.SSH.showLoginTerminal": true,
+  "remote.SSH.forwardX11": false,
+  "remote.SSH.path": "C:\\Windows\\System32\\OpenSSH\\ssh.exe"
+}
+```
+
+### Troubleshooting
+
+**VS Code slow or unresponsive:**
+- `Ctrl+Shift+P` → "Developer: Reload Window" — quick restart
+- `Ctrl+Shift+P` → "Developer: Startup Performance" — trace bottlenecks
+- Disable extensions one by one to find culprit
+- Check `Help → Toggle Developer Tools` (Console tab) for errors
+- Delete `.vscode` cache: `rm -rf ~/.vscode/CachedData`
+
+**Extensions not working:**
+- Check extension output: View → Output → dropdown to select extension
+- Verify extension supports current VS Code version
+- Check for conflicting extensions (e.g., two formatters)
+- `Ctrl+Shift+P` → "Developer: Reload Extensions With Webview Host"
+
+**IntelliSense not working:**
+- `Ctrl+Shift+P` → "TypeScript: Restart TS Server"
+- Check tsconfig.json is valid and in root
+- Check `typescript.tsdk` setting points to correct install
+- Delete project's `node_modules/.cache/` and `tsconfig.tsbuildinfo`
+
+**Git integration issues:**
+- `Ctrl+Shift+P` → "Git: Open Repository" — accidentally wrong folder?
+- Check `git.enabled` setting
+- Verify git is installed and on PATH
+- Restart Git extension: Developer: Reload Extensions

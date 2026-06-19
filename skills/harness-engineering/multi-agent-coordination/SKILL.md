@@ -305,3 +305,229 @@ For context management within individual agents, hand off to `context-engineerin
 Compression Level: 5 (Comprehensive architectural references & code details preserved)
 Strict compliance with multi-agent coordination protocols, DAG execution, and distributed state management.
 -->
+
+## Implementation Patterns
+
+### Agent Coordinator
+
+```python
+from typing import Dict, List, Callable, Any, Optional
+from enum import Enum
+from dataclasses import dataclass, field
+from datetime import datetime
+import asyncio
+
+class AgentRole(Enum):
+    ORCHESTRATOR = "orchestrator"
+    WORKER = "worker"
+    SUPERVISOR = "supervisor"
+    SPECIALIST = "specialist"
+
+@dataclass
+class AgentTask:
+    id: str
+    agent_id: str
+    task_type: str
+    payload: Dict[str, Any]
+    priority: int = 0
+    deadline: Optional[datetime] = None
+    dependencies: List[str] = field(default_factory=list)
+    status: str = "pending"
+    result: Optional[Any] = None
+    error: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+class AgentCoordinator:
+    def __init__(self):
+        self.agents: Dict[str, Dict] = {}
+        self.task_queue: asyncio.PriorityQueue = asyncio.PriorityQueue()
+        self.active_tasks: Dict[str, AgentTask] = {}
+        self.completed_tasks: Dict[str, AgentTask] = {}
+
+    def register_agent(self, agent_id: str, role: AgentRole, capabilities: List[str]):
+        self.agents[agent_id] = {
+            "role": role,
+            "capabilities": capabilities,
+            "status": "idle",
+            "tasks_completed": 0,
+        }
+
+    def can_handle(self, agent_id: str, task_type: str) -> bool:
+        agent = self.agents.get(agent_id)
+        if not agent:
+            return False
+        return task_type in agent["capabilities"]
+
+    def find_best_agent(self, task_type: str) -> Optional[str]:
+        for agent_id, info in sorted(
+            self.agents.items(),
+            key=lambda x: x[1]["tasks_completed"]
+        ):
+            if info["status"] == "idle" and task_type in info["capabilities"]:
+                return agent_id
+        return None
+
+    def create_task(self, task_type: str, payload: Dict, priority: int = 0) -> AgentTask:
+        import uuid
+        task = AgentTask(
+            id=str(uuid.uuid4()),
+            agent_id="",
+            task_type=task_type,
+            payload=payload,
+            priority=priority,
+        )
+        return task
+
+    def create_task_graph(self, tasks: List[Dict]) -> List[AgentTask]:
+        task_objects = []
+        for t in tasks:
+            task = self.create_task(t["type"], t.get("payload", {}), t.get("priority", 0))
+            task.dependencies = t.get("dependencies", [])
+            task_objects.append(task)
+        return task_objects
+
+    def get_execution_order(self, tasks: List[AgentTask]) -> List[AgentTask]:
+        visited = set()
+        result = []
+
+        def dfs(task: AgentTask):
+            if task.id in visited:
+                return
+            visited.add(task.id)
+            for dep_id in task.dependencies:
+                dep = next((t for t in tasks if t.id == dep_id), None)
+                if dep:
+                    dfs(dep)
+            result.append(task)
+
+        for task in tasks:
+            dfs(task)
+        return result
+
+    async def execute_task(self, task: AgentTask, executor: Callable) -> Any:
+        task.started_at = datetime.now()
+        task.status = "running"
+        try:
+            result = await executor(task)
+            task.result = result
+            task.status = "completed"
+        except Exception as e:
+            task.error = str(e)
+            task.status = "failed"
+        task.completed_at = datetime.now()
+        self.completed_tasks[task.id] = task
+        return task
+
+    def get_metrics(self) -> Dict:
+        return {
+            "agents_registered": len(self.agents),
+            "tasks_completed": len(self.completed_tasks),
+            "active_tasks": len(self.active_tasks),
+            "failed_tasks": sum(1 for t in self.completed_tasks.values() if t.status == "failed"),
+            "avg_completion_time": self._avg_completion(),
+        }
+
+    def _avg_completion(self) -> float:
+        completed = [t for t in self.completed_tasks.values() if t.started_at and t.completed_at]
+        if not completed:
+            return 0.0
+        times = [(t.completed_at - t.started_at).total_seconds() for t in completed]
+        return sum(times) / len(times)
+
+
+class DAGExecutor:
+    def __init__(self, coordinator: AgentCoordinator):
+        self.coordinator = coordinator
+
+    def find_critical_path(self, tasks: List[AgentTask]) -> List[AgentTask]:
+        task_map = {t.id: t for t in tasks}
+        earliest_start = {t.id: 0 for t in tasks}
+        earliest_finish = {t.id: 0 for t in tasks}
+
+        topo_order = self.coordinator.get_execution_order(tasks)
+        for task in topo_order:
+            if task.dependencies:
+                earliest_start[task.id] = max(
+                    earliest_finish.get(dep_id, 0) for dep_id in task.dependencies
+                )
+            earliest_finish[task.id] = earliest_start[task.id] + 1
+
+        total_duration = max(earliest_finish.values())
+        critical_path = []
+        for t in reversed(topo_order):
+            if earliest_finish[t.id] == total_duration:
+                if not critical_path or earliest_finish[t.id] >= earliest_finish[critical_path[0].id]:
+                    critical_path.insert(0, t)
+                total_duration -= 1
+
+        return critical_path
+```
+
+## Architecture Decision Trees
+
+### Coordination Pattern Selection
+
+```
+How many agents and tasks?
+├── 2-5 agents, single task → Direct delegation
+│   └── Orchestrator assigns to best-fit specialist
+│
+├── 5-20 agents, multi-step workflow → DAG-based orchestration
+│   ├── Define task dependency graph
+│   ├── Topological sort for execution order
+│   └── Parallel execution of independent branches
+│
+├── 20+ agents, evolving tasks → Supervisor hierarchy
+│   ├── Supervisors manage 5-10 workers each
+│   ├── Workers report results up
+│   └── Supervisor rebalances on failure
+│
+└── Unknown structure, dynamic needs → Blackboard pattern
+    ├── Agents read/write to shared state
+    ├── Agents self-select tasks they can handle
+    └── Conflict resolution via voting or priority
+```
+
+### Failure Handling Strategy
+
+```
+What happens when an agent fails?
+├── Task is idempotent and stateless
+│   └── Retry on another agent (max 3 attempts)
+│
+├── Task has side effects
+│   ├── Compensating transaction available → Execute compensation, retry
+│   └── No compensation → Circuit break, alert human
+│
+├── Agent is unresponsive (timeout)
+│   ├── Below threshold → Mark as degraded, reroute tasks
+│   └── Above threshold → Mark as dead, redistribute across remaining agents
+│
+└── Task graph dependency fails
+    └── Fail all downstream dependent tasks, report as blocked
+```
+
+## Production Considerations
+
+- **Agent health checking**: Implement heartbeat mechanism with configurable intervals. Detect unresponsive agents within 2 heartbeat periods. Automatically redistribute tasks from dead agents.
+- **Task idempotency keys**: Require idempotency keys for all tasks. Enables safe retry without duplicate execution. Store completed keys with TTL for deduplication window.
+- **Graduated timeout strategy**: Start with aggressive timeouts (1s) for simple tasks, increase geometrically for complex ones. Log tasks that hit timeouts for capacity planning.
+- **Agent capacity feedback loop**: Agents report their remaining capacity (in percentage) after each task. Coordinator uses this for load-aware scheduling. Prevent overloading near-capacity agents.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Single point of coordination | Orchestrator becomes bottleneck | Distribute coordination with supervisor hierarchy |
+| No task timeout | Task runs forever, blocks resources | Always set deadlines, enforce with watchdog |
+| Synchronous waiting for all agents | Cascade delays from slow agents | Use async patterns with timeouts, partial results |
+| Ignoring agent affinity | Wrong agent assigned, context switching cost | Route similar tasks to same agent when possible |
+| No failure propagation strategy | Downstream tasks wait for dead upstream | Fail fast, cascade failure notification |
+| Over-centralized state | Blackboard becomes write contention bottleneck | Use partitioned state or CRDTs for conflict resolution |
+| All tasks same priority | Critical tasks queue behind routine work | Priority queue per task type |
+
+## Performance Optimization
+
+- **Agent specialization caching**: Cache which agents can handle which task types. Avoids capability matching scan on every task dispatch. Invalidate cache only on agent registration change.
+- **Task batching for similar operations**: Batch multiple small tasks of the same type for bulk processing. Reduces coordination overhead by up to 10x for high-throughput scenarios.

@@ -74,6 +74,27 @@ Terraform HCL for CDN resources, provider config (CloudFront, Fastly VCL, Cloudf
 | Cold start | No | Yes | No |
 | Use case | Header rewrite, URL redirect | Auth, A/B test | Full edge apps |
 
+### DDoS Mitigation Decision Tree
+```
+Is traffic above baseline?
+├── Yes → Is it application layer (L7)?
+│   ├── Yes → WAF rate limiting + bot management + challenge
+│   └── No → Is it network layer (L3/4)?
+│       ├── Yes → DDoS scrubber (AWS Shield, Cloud Armor, Cloudflare magic transit)
+│       └── No → Volume-based (amplification, reflection)?
+│           ├── Yes → Null route / blackhole + upstream filtering
+│           └── No → Monitor and investigate
+└── No → Normal traffic, allow through
+```
+
+### CDN Origin Selection
+| Origin Type | Latency | Cost | Scaling | Best For |
+|---|---|---|---|---|
+| S3/Cloud Storage | Low | Low | Automatic | Static assets |
+| ALB/GLB | Medium | Medium | Auto-scaling | Dynamic APIs |
+| Custom (EC2/VM) | Variable | Varies | Manual | Legacy apps |
+| Multi-region origin | Low (geo-routed) | High | Complex | Global apps |
+
 ## Quick Start
 CDN distribution → Cache behaviors (static:1y, API:60s) → WAF (OWASP, rate limit) → SSL cert → Edge function for A/B testing → Signed URLs for private content.
 
@@ -164,25 +185,39 @@ resource "aws_wafv2_web_acl" "main" {
   scope       = "CLOUDFRONT"
   default_action { allow {} }
 
-  rule { # AWS managed common rules
+  rule {
     name = "AWSCommonRuleSet"; priority = 0
     override_action { none {} }
     statement { managed_rule_group_statement {
       vendor_name = "AWS"; name = "AWSManagedRulesCommonRuleSet"
     }}
   }
-  rule { # SQLi protection
+  rule {
     name = "SQLiRuleSet"; priority = 1
     override_action { none {} }
     statement { managed_rule_group_statement {
       vendor_name = "AWS"; name = "AWSManagedRulesSQLiRuleSet"
     }}
   }
-  rule { # Rate limiting
+  rule {
     name = "RateLimit"; priority = 10
     action { block {} }
     statement { rate_based_statement {
       limit = 2000; aggregate_key_type = "IP"
+    }}
+  }
+  rule {
+    name = "AWSReputationList"; priority = 2
+    override_action { none {} }
+    statement { managed_rule_group_statement {
+      vendor_name = "AWS"; name = "AWSManagedRulesAmazonIpReputationList"
+    }}
+  }
+  rule {
+    name = "BotControl"; priority = 3
+    override_action { none {} }
+    statement { managed_rule_group_statement {
+      vendor_name = "AWS"; name = "AWSManagedRulesBotControlRuleSet"
     }}
   }
 }
@@ -199,6 +234,9 @@ function handler(event) {
     if (!uri.includes('.') && !uri.startsWith('/api/')) {
         request.uri = '/index.html';
     }
+
+    // Security headers
+    request.headers['x-forwarded-proto'] = { value: 'https' };
     return request;
 }
 ```
@@ -211,6 +249,8 @@ function handler(event) {
 
     response.headers['strict-transport-security'] = { value: 'max-age=31536000' };
     response.headers['x-content-type-options'] = { value: 'nosniff' };
+    response.headers['x-frame-options'] = { value: 'DENY' };
+    response.headers['referrer-policy'] = { value: 'strict-origin-when-cross-origin' };
 
     if (request.uri.startsWith('/static/')) {
         response.headers['cache-control'] = { value: 'public, max-age=31536000, immutable' };
@@ -236,6 +276,9 @@ export default {
     const response = await fetch(originRequest);
     const newResponse = new Response(response.body, response);
     newResponse.headers.set('X-Variant', variant);
+
+    // Set sticky cookie
+    newResponse.headers.set('Set-Cookie', `variant=${variant}; Path=/; Max-Age=86400`);
     return newResponse;
   }
 };
@@ -262,22 +305,165 @@ signed_url = cloudfront_signer.generate_presigned_url(
 print(signed_url)
 ```
 
+### Step 6: Azure Front Door Configuration (HCL)
+```hcl
+resource "azurerm_cdn_frontdoor_profile" "main" {
+  name                = "frontdoor-main"
+  resource_group_name = azurerm_resource_group.main.name
+  sku_name            = "Standard_AzureFrontDoor"
+}
+
+resource "azurerm_cdn_frontdoor_endpoint" "main" {
+  name                     = "myapp-endpoint"
+  cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.main.id
+}
+
+resource "azurerm_cdn_frontdoor_origin_group" "main" {
+  name                     = "main-origin-group"
+  cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.main.id
+  session_affinity_enabled = true
+
+  health_probe {
+    interval_in_seconds = 30
+    path                = "/health"
+    protocol            = "Https"
+    request_type        = "GET"
+  }
+
+  load_balancing {
+    sample_size                 = 4
+    successful_samples_required = 3
+  }
+}
+
+resource "azurerm_cdn_frontdoor_origin" "primary" {
+  name                          = "primary-origin"
+  cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.main.id
+  enabled                       = true
+  host_name                     = aws_lb.api.dns_name
+  http_port                     = 80
+  https_port                    = 443
+  origin_host_header            = "api.example.com"
+  priority                      = 1
+  weight                        = 100
+}
+
+resource "azurerm_cdn_frontdoor_rule_set" "main" {
+  name                     = "CachingRules"
+  cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.main.id
+}
+```
+
+### Step 7: Fastly VCL for Custom Caching
+```vcl
+# Fastly VCL — custom cache behavior per content type
+sub vcl_recv {
+    # Static assets: cache 1 year
+    if (req.url ~ "^/static/") {
+        set req.http.X-Cache-TTL = "31536000";
+        set req.http.X-Static = "true";
+    }
+    # API responses: cache 10s, stale-while-revalidate 1h
+    if (req.url ~ "^/api/") {
+        set req.http.X-Cache-TTL = "10";
+        set req.http.X-Stale-While-Revalidate = "3600";
+    }
+    # Block known bad user agents
+    if (req.http.User-Agent ~ "(bot|crawler|spider)" && req.http.User-Agent ~ "bad-actor") {
+        error 403 "Forbidden";
+    }
+}
+
+sub vcl_fetch {
+    # Override origin Cache-Control
+    if (req.http.X-Cache-TTL) {
+        set beresp.ttl = std.duration(req.http.X-Cache-TTL, "10s");
+    }
+    # Enable stale-while-revalidate
+    if (req.http.X-Stale-While-Revalidate) {
+        set beresp.stale_while_revalidate = std.duration(req.http.X-Stale-While-Revalidate, "0s");
+    }
+    # Shield coalescing
+    if (req.http.X-Static == "true") {
+        set beresp.http.Cache-Control = "public, max-age=31536000, immutable";
+    }
+}
+```
+
+### Step 8: CDN Monitoring and Alerting
+```hcl
+resource "aws_cloudwatch_metric_alarm" "cache_hit_ratio" {
+  alarm_name          = "cdn-cache-hit-ratio-low"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = 3
+  metric_name         = "HitRatio"
+  namespace           = "AWS/CloudFront"
+  period              = 3600
+  statistic           = "Average"
+  threshold           = 80
+  alarm_description   = "CDN cache hit ratio below 80%"
+  
+  alarm_actions = [aws_sns_topic.cdn_alerts.arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "origin_error_rate" {
+  alarm_name          = "cdn-origin-error-rate-high"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "5xxErrorRate"
+  namespace           = "AWS/CloudFront"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 1
+  extended_statistic  = "p99"
+  
+  alarm_actions = [aws_sns_topic.cdn_alerts.arn]
+}
+```
+
+### Step 9: Purge/Invalidation Strategies
+```bash
+# CloudFront: path-based invalidation ($0.005/path, first 1000 free)
+aws cloudfront create-invalidation \
+  --distribution-id E123456 \
+  --paths "/index.html" "/static/css/*"
+
+# Cloudflare: purge everything (free, unlimited)
+curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE/purge_cache" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"purge_everything": true}'
+
+# Fastly: soft purge (purge from cache, keep stale)
+curl -X PURGE -H "Fastly-Soft-Purge:1" "https://www.example.com/index.html"
+
+# Best practice: versioned URLs avoid invalidation entirely
+# /static/js/main.a1b2c3d4.js (content hash in filename)
+# When content changes: filename changes = new cache entry
+```
+
 ## Anti-Patterns
 
 ### Anti-Pattern 1: No Cache Strategy
 Serving all content with no-cache or wrong TTL. Static assets should have 1y TTL with hash in URL; APIs should have short TTL with ETag validation.
 
 ### Anti-Pattern 2: Exposing Origin IP
-Allowing direct origin access bypassing CDN. Origin should only accept requests from CDN IP ranges (via security group/WAF).
+Allowing direct origin access bypassing CDN. Origin should only accept requests from CDN IP ranges (via security group/WAF). The CDN is your security boundary.
 
 ### Anti-Pattern 3: No Origin Shield
-Direct origin traffic for every cache miss. Enable origin shield to coalesce requests and reduce origin load.
+Direct origin traffic for every cache miss. Enable origin shield to coalesce requests and reduce origin load. Can reduce origin requests by 80%+.
 
 ### Anti-Pattern 4: Ignoring Cache Invalidation Cost
 Frequent wildcard invalidations are expensive (CloudFront: $0.005/path, first 1000 free). Use versioned URLs to avoid invalidations entirely.
 
 ### Anti-Pattern 5: No WAF on CDN
-Serving traffic without WAF filtering. CDN is the first line of defense — WAF should always be associated.
+Serving traffic without WAF filtering. CDN is the first line of defense — WAF should always be associated. DDoS protection should be layered (CDN + WAF + origin).
+
+### Anti-Pattern 6: Overly Complex Edge Functions
+Using Lambda@Edge (5s timeout) when CloudFront Functions (50μs) would suffice. CF Functions are cheaper, faster, and always available. Use Lambda@Edge only when you need network/DB access.
+
+### Anti-Pattern 7: Not Compressing at Edge
+Serving uncompressed content increases egress costs and hurts performance. Enable brotli/gzip compression at CDN edge for all text-based content types.
 
 ## Production Considerations
 
@@ -287,6 +473,8 @@ Serving traffic without WAF filtering. CDN is the first line of defense — WAF 
 - Restrict origin access to CDN IP ranges only.
 - Enable HSTS, CSP, and other security headers at edge.
 - Configure geo-blocking for regions without business need.
+- Enable AWS Shield Advanced for L3/L4 DDoS protection.
+- Use Origin Access Control (OAC) instead of OAI for S3 origins.
 
 ### Performance
 - Enable brotli/gzip compression at edge.
@@ -294,12 +482,23 @@ Serving traffic without WAF filtering. CDN is the first line of defense — WAF 
 - Enable HTTP/2 and HTTP/3 (QUIC) for faster connections.
 - Configure proper cache TTLs per content type.
 - Use adaptive bitrate streaming for video.
+- Enable preconnect/preload hints for critical resources.
+- Use regional edge caches (CloudFront origin shield).
 
 ### Cost Optimization
 - Use price class to limit edge locations (PriceClass_100 = US/Europe only).
 - Reduce origin requests with high cache hit ratio (>90%).
 - Use compression to reduce egress costs.
 - Monitor cache hit ratio in CloudWatch/CDN analytics.
+- Versioned URLs vs. invalidations — prefer versioning.
+- Consider multi-CDN for mission-critical delivery.
+
+### Multi-CDN Strategy
+- Primary CDN: CloudFront (AWS-native, deep integration).
+- Secondary CDN: Cloudflare (DDoS, performance).
+- Failover: DNS-based (Route53 latency routing) or client-side.
+- Cost: Multi-CDN increases complexity and cost by 20-40%.
+- Use case: Only for mission-critical global applications.
 
 ## Troubleshooting
 
@@ -310,6 +509,9 @@ Serving traffic without WAF filtering. CDN is the first line of defense — WAF 
 | HTTPS error | Certificate mismatch | Update ACM certificate |
 | WAF false positive | Overly aggressive rule | Create WAF exception rule |
 | Signed URL 403 | Expired or wrong key | Check expiration; verify private key |
+| High egress cost | Low cache hit ratio | Optimize caching; improve TTLs |
+| Slow first byte | No origin shield, distant origin | Enable shield; move origin closer |
+| Stale content served | Cache TTL too long | Reduce TTL; implement purge on deploy |
 
 ## Rules & Constraints
 - Always use HTTPS (redirect HTTP to HTTPS) at CDN level.
@@ -318,6 +520,8 @@ Serving traffic without WAF filtering. CDN is the first line of defense — WAF 
 - Set Cache-Control headers from origin; configure CDN to respect them.
 - Log CDN requests to S3/Blob for analysis.
 - Configure origin shield for all production distributions.
+- Version static assets in URL (content hash) to avoid invalidations.
+- Monitor cache hit ratio and alert below 80%.
 
 ## References
   - references/cdn-edge-advanced.md
@@ -327,6 +531,8 @@ Serving traffic without WAF filtering. CDN is the first line of defense — WAF 
   - references/edge-functions.md
   - references/waf-rules.md
   - references/signed-urls-guide.md
+  - references/multi-cdn-strategy.md
+  - references/cdn-monitoring.md
 
 ## Handoff
 Next: **waf-rules** — deeper WAF configuration. Pass: distribution ID, WAF ACL ARN, edge function names.

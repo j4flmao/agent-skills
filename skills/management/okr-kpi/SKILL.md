@@ -347,6 +347,167 @@ KR 4: Reduce infrastructure cost per deployment by 20% [committed]
 - Leading KPIs are more actionable than lagging — prioritize them
 - OKR mid-quarter adjustments are allowed but limited to one per OKR
 
+## OKR Cascading Template — Company to Team
+
+### Level 1: Company OKR (Quarter {n})
+Objective: {Company-level strategic objective}
+KR 1: {Metric} from {baseline} to {target}
+KR 2: {Metric} from {baseline} to {target}
+KR 3: {Metric} from {baseline} to {target}
+
+### Level 2: Department OKRs
+Objective: {Department-level objective supporting Company O or KR 1}
+KR 1: {Metric} from {baseline} to {target} [supports Company KR 1]
+KR 2: {Metric} from {baseline} to {target} [supports Company KR 2]
+
+### Level 3: Team OKRs
+Objective: {Team-level objective supporting Department O}
+KR 1: {Metric} from {baseline} to {target}
+KR 2: {Metric} from {baseline} to {target}
+KR 3: {Metric} from {baseline} to {target}
+
+### Alignment Mapping
+```
+Company O
+  -> Dept O 1
+    -> Team O 1.1
+    -> Team O 1.2
+  -> Dept O 2
+    -> Team O 2.1
+    -> Team O 2.2
+
+Rules:
+  - Cascading means translating, not copying
+  - Each level focuses on what they control
+  - Dept KRs must be traceable to Company KRs
+  - Cross-team alignment for interdependent teams
+  - Max 4 levels to avoid clarity loss
+```
+
+## KPI Tree Template
+
+```
+Business Goal: Improve Customer Retention
+|
++-- Leading Indicators (predictive, actionable)
+|   +-- Engagement Score
+|   |   +-- DAU/MAU ratio
+|   |   +-- Session duration per user
+|   |   +-- Feature adoption rate (%)
+|   +-- Onboarding Success
+|   |   +-- Time to first key action
+|   |   +-- Activation rate
+|   +-- Satisfaction Signals
+|       +-- NPS score
+|       +-- CSAT survey score
+|
++-- Lagging Indicators (outcome, less actionable)
+    +-- Monthly churn rate
+    +-- Customer LTV
+    +-- Renewal rate
+    +-- Revenue retention (NRR)
+```
+
+### KPI Design Sheet Template
+```
+KPI Name: Activation Rate
+Definition: % of new users who complete activation milestone within 7 days
+Formula: (activated in 7d) / (total new users) x 100
+Baseline: {value} | Target: {value}
+Tier: Health | OKR | Watch | Exploratory
+Data Source: {system, table, query}
+Owner: {team or role}
+Cadence: Daily | Weekly | Monthly | Quarterly
+Trigger Alert: {threshold}
+Actions Available: {action 1}, {action 2}
+```
+
+### KPI vs OKR Decision Matrix
+| Aspect | OKR | KPI |
+|--------|-----|-----|
+| Purpose | Change direction | Track health |
+| Timeframe | Quarterly | Ongoing |
+| Target | Stretch + committed | Threshold |
+| Score | 0.0-1.0 | Pass/fail |
+| Review | Weekly check-in | Dashboard |
+| Change frequency | Per quarter | As needed |
+
+## OKR Scoring Rubric
+```
+Score | Meaning
+0.0-0.3 | Did not achieve - significant gap
+0.4-0.5 | Below target - made progress
+0.6-0.7 | On track - solid delivery
+0.8-0.9 | Exceeded - significantly overshot
+1.0 | Far exceeded - target too low
+
+Weekly confidence: 10 (certain) / 7-9 (on track) / 4-6 (at risk) / 1-3 (escalate)
+```
+
+## OKR Mid-Quarter Adjustment Protocol
+```
+When to adjust: external change, broken dependency, technical infeasibility, priority shift
+When NOT: difficult but achievable, behind but 4+ weeks remain, personal discomfort
+
+Process:
+1. Propose change with data and reasoning
+2. One adjustment per KR per quarter max
+3. Document original and revised values
+4. Communicate to dependent teams
+
+Allowed: lower target, add supporting KR, split KR across teams
+Not allowed: new Objective mid-quarter, lower target due to effort, remove KR without replacement
+```
+
+## OKR Examples by Area
+
+### Engineering Team
+```
+Objective: Reduce production incident impact on users
+KR 1: Decrease P0 incident MTTR from 45min to 15min
+KR 2: Achieve 99.95% uptime (from 99.8%)
+KR 3: Reduce incident-causing deploys from 3/mo to 0/mo
+```
+
+### Product Team
+```
+Objective: Ship a delightful onboarding experience
+KR 1: Increase activation rate from 45% to 65%
+KR 2: Reduce time to first key action from 12min to 5min
+KR 3: Achieve NPS > 40 for onboarding flow
+```
+
+### Marketing Team
+```
+Objective: Establish category leadership in cloud monitoring
+KR 1: Publish 4 thought leadership pieces in top-tier publications
+KR 2: Increase organic traffic from 10k to 25k/mo
+KR 3: Generate 200 qualified leads from content marketing
+```
+
+### Data/ML Team
+```
+Objective: Build data foundation for personalized experiences
+KR 1: Launch real-time feature pipeline with < 100ms p99 latency
+KR 2: Increase feature coverage from 60% to 95%
+KR 3: Enable A/B testing platform for 3 teams by end of quarter
+```
+
+## KPI Dashboard Template
+```
+Team Dashboard - Q{n} {Year}
+KPI | Current | Target | Trend | Status
+{kpi} | {value} | {value} | up/down/flat | G/Y/R
+
+Weekly Check-in:
+Team: {name} | Week: {n}
+OKR: {Objective}
+KR 1: {score} - confidence: {n}/10 - status: track/risk/blocked
+Key updates: {accomplishments}
+Blockers: {blocker with owner}
+Next week: {priorities}
+```
+
 ## References
   - references/kpi-dashboard.md — KPI Dashboard
   - references/kpi-tracking-tools.md — KPI Tracking Tools

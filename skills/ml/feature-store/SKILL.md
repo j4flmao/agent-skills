@@ -286,6 +286,169 @@ def validate_features(store, feature_view_name):
 - CI/CD for feature definition changes (validate + apply).
 - Staged rollout of new feature views.
 
+## Point-in-Time Join Patterns
+
+### Problem
+Training data must use feature values as they existed at the label time, not future values. Without point-in-time (PIT) joins, label leakage occurs — the model learns patterns that don't exist at prediction time.
+
+### Pattern: Standard PIT Join
+```sql
+-- Goal: join features $feature with label at event time
+-- Table: labels (user_id, event_timestamp, label)
+-- Table: features (user_id, feature_timestamp, feature_value)
+
+SELECT
+  l.user_id,
+  l.event_timestamp,
+  l.label,
+  f.feature_value
+FROM labels l
+LEFT JOIN features f
+  ON l.user_id = f.user_id
+  AND f.feature_timestamp <= l.event_timestamp  -- strict: <= not <
+  AND f.feature_timestamp > l.event_timestamp - INTERVAL '30 days'  -- TTL window
+```
+
+### Pattern: Window-Based PIT Join
+```sql
+-- For features computed in windows (e.g., "7-day avg purchase")
+-- The window must be computed BEFORE the event timestamp
+
+SELECT
+  l.user_id,
+  l.event_timestamp,
+  l.label,
+  AVG(f.value) AS avg_7day_purchase
+FROM labels l
+LEFT JOIN features f
+  ON l.user_id = f.user_id
+  AND f.event_timestamp >= l.event_timestamp - INTERVAL '7 days'
+  AND f.event_timestamp < l.event_timestamp  -- strict before
+GROUP BY l.user_id, l.event_timestamp, l.label
+```
+
+### Pattern: Sequential PIT (Multiple Feature Versions)
+```python
+# When feature computation changed (e.g., feature v2 deployed on date D)
+# Use feature v1 for events before D, feature v2 for events after D
+
+def get_feature_at_time(user_id: str, event_time: datetime):
+    deploy_cutoff = datetime(2026, 1, 15)  # feature v2 deployed
+    if event_time < deploy_cutoff:
+        return feature_v1_store.get(user_id, event_time)
+    else:
+        return feature_v2_store.get(user_id, event_time)
+```
+
+### Pattern: Streaming PIT Join
+```python
+# For real-time features (e.g., current session activity)
+# Use Kafka + Flink: join label event with latest feature state
+
+stream_env = StreamExecutionEnvironment.get_execution_environment()
+label_stream = stream_env.add_source(kafka_consumer("labels"))
+feature_stream = stream_env.add_source(kafka_consumer("features"))
+
+# Temporal join: feature stream is keyed by user_id
+joined = label_stream.join(feature_stream)
+    .where(lambda l: l.user_id)
+    .equal_to(lambda f: f.user_id)
+    .window(TumblingEventTimeWindows.of(Time.seconds(5)))
+    .apply(PITJoinFunction())
+```
+
+## Feature Validation Templates
+
+### Basic Validation — Batch Feature Pipeline
+```python
+import pandera as pa
+from datetime import datetime, timedelta
+
+class FeatureValidationSchema(pa.DataFrameModel):
+    user_id: str = pa.Field(nullable=False)
+    feature_timestamp: datetime = pa.Field(nullable=False)
+    feature_1: float = pa.Field(nullable=True, ge=0, le=1)
+    feature_2: int = pa.Field(nullable=True, ge=0)
+    category_feature: str = pa.Field(nullable=True, isin=["A", "B", "C"])
+
+@pa.check_types(lazy=True)
+def validate_features(df: pd.DataFrame) -> pd.DataFrame:
+    schema = FeatureValidationSchema
+    # Check no future dates
+    assert (df["feature_timestamp"] <= datetime.utcnow()).all(), \
+        "Future timestamps detected"
+    # Check no stale features
+    stale = (datetime.utcnow() - df["feature_timestamp"]) > timedelta(days=31)
+    if stale.any():
+        logging.warning(f"Found {stale.sum()} stale feature rows")
+    return df
+```
+
+### Distribution Shift Detection
+```python
+from scipy.stats import ks_2samp
+import numpy as np
+
+def detect_feature_drift(
+    production_values: np.ndarray,
+    reference_values: np.ndarray,
+    feature_name: str,
+    p_threshold: float = 0.05,
+    ks_threshold: float = 0.1,
+):
+    stat, p_value = ks_2samp(production_values, reference_values)
+    drift_detected = (p_value < p_threshold) and (stat > ks_threshold)
+    if drift_detected:
+        alert(f"Feature {feature_name} drifted: KS={stat:.3f}, p={p_value:.3f}")
+    return {
+        "feature": feature_name,
+        "ks_statistic": stat,
+        "p_value": p_value,
+        "drift_detected": drift_detected,
+    }
+```
+
+### Feature Quality Dashboard
+```
+Feature            | Null Rate | Cardinality | Mean | Std | Min | Max | Drift Flag
+feature_1          | 2.3%     | NA          | 0.45 | 0.12| 0.0 | 1.0 | No
+feature_2          | 0.0%     | 18          | 3.2  | 1.1 | 1   | 18  | No
+feature_3          | 15.0%    | NA          | -0.1 | 0.8 | -3  | 4   | YES - KS=0.15
+```
+
+### Validation Alert Severity
+| Severity | Condition | Action |
+|----------|-----------|--------|
+| Info | Null rate > 5% | Log warning |
+| Warning | Null rate > 20% or drift detected | Alert team |
+| Error | Null rate > 50% or schema violation | Block pipeline |
+| Critical | Feature store unreachable | Page on-call |
+
+## Feature Store Anti-Patterns
+
+1. **Training/Serving Skew**: Different feature computation logic in training vs. serving
+   Fix: Serve features through the same feature store, use identical transformation code
+2. **No TTL on Features**: Accumulating stale features in online store
+   Fix: Set explicit TTL per feature view; purge expired entries
+3. **Leaky Point-in-Time Joins**: Using future feature values in training
+   Fix: Always join with `feature_timestamp <= label_timestamp`
+4. **Over-materialization**: Materializing all features to online store
+   Fix: Only materialize features used in production serving
+5. **Feature Sprawl**: Thousands of undocumented features
+   Fix: Feature registry with owner, description, and usage tracking
+
+## Feature Store Comparison
+
+| Capability | Feast | Tecton | Vertex AI Feature Store | Custom |
+|-----------|-------|--------|------------------------|--------|
+| Open source | Yes | No | No | N/A |
+| PIT joins | Manual SQL | Automatic | Manual SQL | Custom |
+| Online serving | Redis, DynamoDB | Managed | Managed | Any |
+| Streaming | Kafka + Flink | Native | No | Custom |
+| Cost | Free (self-managed) | $$$ | $$ | $$ (dev cost) |
+| Complexity | High (must operate) | Low (managed) | Medium | Very high |
+| Best for | Teams wanting control | Teams with budget | GCP-native teams | Specialized needs |
+
 ## Rules
 - Point-in-time joins mandatory for training data.
 - Online store materialization scheduled regularly.

@@ -312,6 +312,150 @@ Impact: 4 hours of prototyping saved 40+ hours of hi-fi redesign
 - Version your prototypes — maintain a changelog of what changed between iterations
 - Handoff should include annotations, specs, and exported assets for development
 
+## Prototyping Tools Deep Dive
+
+### Tool Selection Matrix
+
+| Tool | Learning Curve | Fidelity | Interactivity | Collaboration | Platform Support | Pricing |
+|------|---------------|----------|---------------|---------------|------------------|---------|
+| Figma | Low | Mid-High | Medium (smart animate, overlay, scroll, conditionals) | Excellent (real-time, comments) | Web, mobile, desktop | Free tier, $12/editor/month |
+| Framer | Medium | High | High (React components, states, variables, spring) | Good (version history, share links) | Web, desktop | Free tier, $15/editor/month |
+| ProtoPie | Medium-High | High | Very High (sensors, multi-condition, 3D, haptic) | Medium (review link only) | Desktop, mobile | Free tier, $29/month |
+| Axure | High | Mid-High | High (conditional logic, variables, adaptive views) | Good (team projects) | Desktop | $29/month |
+| Principle | Low | Very High | Medium (driver-based, native quality animation) | Poor (single file, no co-editing) | Mac only | $129 one-time |
+| Sketch | Low | Mid-High | Medium (smart animate) | Medium (Sketch Cloud, handoff) | Mac only | $10/month |
+| Penpot | Low | Mid | Low (basic linking) | Good (open source, self-host) | Web | Free (open source) |
+| Balsamiq | Very Low | Low | None (static wireframes) | Medium (project sharing) | Web, desktop | $12/month |
+| Excalidraw | Very Low | Very Low | None | Good (live collaboration) | Web | Free |
+
+### Tool Decision Tree
+```
+Primary prototyping need?
+├── Collaborative, design-to-dev handoff → Figma
+│   Best for: most product teams, design systems, end-to-end workflow
+├── High-fidelity interactions with code export → Framer
+│   Best for: interaction-heavy prototypes, developer handoff via React
+├── Advanced conditional logic + sensors → ProtoPie
+│   Best for: mobile gesture testing, multi-device interactions, IoT
+├── Complex enterprise workflows with data logic → Axure
+│   Best for: large enterprise apps, logic-heavy workflows, government
+├── Native-quality animation on Mac → Principle
+│   Best for: micro-interaction prototypes, animation spec creation
+└── Quick low-fi wireframes → Balsamiq / Excalidraw / Pen and paper
+    Best for: early ideation, workshops, rapid iteration
+```
+
+## Prototyping Process Framework
+
+### Fidelity Progression Model
+```
+Week 1                    Week 2                    Week 3
+[Paper sketches]  →  [Clickable wireframes]  →  [High-fidelity prototype]
+    5 iterations          3 iterations             2 iterations
+    User testing          User testing             Stakeholder sign-off
+```
+
+Each phase answers a different question:
+1. **Paper sketches**: "Is this the right concept?" — test with 3-5 internal users
+2. **Clickable wireframes**: "Can users navigate this flow?" — test with 5-8 target users
+3. **High-fidelity prototype**: "Does the interaction feel right?" — test for sign-off
+
+### Rapid Iteration Cycle
+```
+Define question → Build prototype → Test with 5 users → Analyze findings → Iterate
+      ↓                                                                 ↑
+      └────────────────── Repeat until question is answered ──────────────┘
+```
+
+Each cycle should take 1-3 days. If a cycle takes longer, the scope is too large or fidelity is too high. Reduce scope (fewer flows) or fidelity (lower fidelity, faster changes).
+
+### Testing Protocol Per Fidelity
+
+**Low-fidelity testing**:
+- "Walk me through what you think this screen is showing"
+- "What would you do next?"
+- "Where would you click to find X?"
+- Focus on: conceptual understanding, task flow, content hierarchy
+
+**Mid-fidelity testing**:
+- Scenario-based tasks: "You need to reset your password from the login screen"
+- Measure: task completion, time on task, navigation path
+- Focus on: navigation, labeling, content findability
+
+**High-fidelity testing**:
+- "Try to complete this purchase using a promo code"
+- Measure: task completion, error rate, satisfaction (SEQ/SUS)
+- Focus on: visual hierarchy, interaction feel, micro-interactions, error recovery
+
+## Production Considerations
+
+### Prototype Handoff Standards
+
+Handoff artifacts for development:
+1. **Design specs**: Measurements, spacing, colors, typography — auto-generated from Figma/Xcode/Framer
+2. **Assets**: Export at 1x, 2x, 3x for mobile; SVG for icons; optimize raster images
+3. **Interaction specification**: For each interaction: trigger, animation, duration, easing, state transitions
+4. **Responsive behavior**: How layout adapts to breakpoints; what stacks, what hides, what transforms
+5. **Accessibility notes**: Focus order, ARIA labels, keyboard shortcuts, screen reader announcements
+6. **Content guidelines**: Character limits, truncation behavior, empty states, error messages
+
+### Prototype to Production Gap Analysis
+
+Common gaps between prototype and shipped product:
+- **Missing states**: Error, empty, loading, success states are often prototyped only for the "happy path"
+- **Real content**: Lorem ipsum hides truncation, wrapping, and overflow issues
+- **Performance**: Prototypes don't reveal loading times, animation jank, or memory issues
+- **Device diversity**: A prototype on a designer's MacBook Pro doesn't show how it feels on a budget Android phone
+- **Network conditions**: No latency, no disconnection, no API errors in prototypes
+
+**Gap mitigation checklist**:
+- [ ] All interactive component states prototyped (hover, active, focus, disabled, loading, error, empty)
+- [ ] Real or near-real content used (character lengths match production data)
+- [ ] Prototype tested on target devices (not just design tool preview)
+- [ ] Loading, empty, and error states included for every data-driven screen
+- [ ] Keyboard and screen reader navigation verified for core flows
+- [ ] Dark mode / high contrast mode checked
+- [ ] Slow network simulation reviewed (throttle to 3G)
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Fix |
+|-------------|---------|-----|
+| **Over-fidelity** | Spending 2 weeks on pixel-perfect mockups before validating concept | Start with paper, validate concept, increase fidelity only when question changes |
+| **Stakeholder-only testing** | Showing to execs instead of real users | Test with 5 target users before stakeholder reviews |
+| **Perfect data trap** | Only testing with ideal content (short text, perfect images) | Test with real data including edge cases, long text, broken images |
+| **Prototype drift** | Prototype keeps growing, never gets tested, becomes a design spec | Set a timebox (max 3 days) per iteration; test or throw away |
+| **Feature creep in prototype** | Adding features that weren't in scope because "it would be cool" | Anchor every addition to the prototype's original question |
+| **Missing state blindness** | Only building the happy path | For each screen, list: loading, empty, error, success, partial states |
+| **Handoff without context** | Developers get screenshots and have to guess interactions | Annotate every interaction: trigger, animation, state transition |
+| **One prototype to rule them all** | Trying to validate concept, usability, and visual design in one prototype | Separate concept prototypes (lo-fi) from visual prototypes (hi-fi) |
+| **Prototype as requirements** | Assuming the prototype is complete as a specification | Supplement prototype with written specs for logic, validation, edge cases |
+| **Ignoring development constraints** | Prototyping interactions that are technically impossible | Include technical review before finalizing high-fidelity prototype |
+
+## Deliverables Checklist
+
+### Low-Fidelity Deliverables
+- [ ] Paper sketches or digital wireframes for each screen
+- [ ] Task flow diagrams showing navigation paths
+- [ ] Annotations explaining interaction logic
+- [ ] Test scenarios and task scripts
+
+### Mid-Fidelity Deliverables
+- [ ] Clickable wireframe prototype (linked screens with hotspots)
+- [ ] User flow documentation with decision points
+- [ ] Content hierarchy and labeling decisions
+- [ ] Navigation structure and labeling rationale
+- [ ] Usability test results with task completion rates
+
+### High-Fidelity Deliverables
+- [ ] Interactive prototype with micro-interactions
+- [ ] Visual design spec (colors, typography, spacing, icons)
+- [ ] Asset exports organized by platform and density
+- [ ] Interaction annotations per component
+- [ ] Responsive behavior documentation
+- [ ] Accessibility notes and ARIA patterns
+- [ ] Handoff URL shared with development team
+
 ## References
   - references/high-fidelity-prototyping.md — High-Fidelity Prototyping Reference
   - references/low-fidelity-prototyping.md — Low-Fidelity Prototyping Reference

@@ -258,23 +258,199 @@ async function multipartUpload(params: { bucket: string; key: string; filePath: 
 }
 ```
 
-## Configuration Reference
+## CDN Architecture Patterns
 
-```yaml
-file_validation:
-  avatar: { mimeTypes: [image/jpeg, image/png, image/webp], maxSize: 5MB, minSize: 1KB }
-  document: { mimeTypes: [application/pdf], maxSize: 50MB, virusScan: true }
-  video: { mimeTypes: [video/mp4, video/quicktime], maxSize: 2GB, multipart: true }
-cdn:
-  distributions:
-    public: { ttl: 31536000, compression: true, price_class: PriceClass_100 }
-    private: { ttl: 300, signed_cookies: true, origin: s3://prod-processed }
-processing:
-  thumbnails: [[150, 150], [300, 300], [1024, 1024]]
-  formats: [webp, avif]
-  virus_scan: true
-  moderation: true
+### Multi-Origin CDN Strategy
 ```
+Client → CloudFront → Origin Groups
+                        ├── Primary: S3 bucket (processed files)
+                        └── Failover: S3 replica in different region
+```
+
+```typescript
+// CloudFront with Lambda@Edge for custom auth
+// viewer-request Lambda: validates signed cookies before S3 origin access
+exports.handler = async (event) => {
+  const request = event.Records[0].cf.request;
+  const cookies = request.headers.cookie?.map(c => c.value).join('; ') || '';
+
+  // Validate signed cookie
+  const isValid = validateSignedCookie(cookies);
+  if (!isValid) {
+    return {
+      status: '403',
+      statusDescription: 'Forbidden',
+      headers: { 'content-type': [{ key: 'Content-Type', value: 'text/plain' }] },
+      body: 'Access denied',
+    };
+  }
+  return request;
+};
+```
+
+### Cache Strategy by File Type
+
+| File Type | Cache TTL | Cache Control | Strategy |
+|-----------|-----------|--------------|----------|
+| Versioned JS/CSS (hash in filename) | 1 year | `public, max-age=31536000, immutable` | Cache at edge + browser |
+| Images (processed, versioned) | 1 year | `public, max-age=31536000, immutable` | Cache at edge + browser |
+| User avatars (not versioned) | 1 hour | `public, max-age=3600, stale-while-revalidate=86400` | Cache at edge, SWR |
+| Documents (PDFs, etc.) | 1 day | `public, max-age=86400` | Cache at edge |
+| Private files (signed) | None | `private, no-cache` | No caching, origin fetch |
+| Thumbnails | 1 week | `public, max-age=604800, stale-while-revalidate=259200` | Edge cache with SWR |
+
+## File Processing Pipeline Patterns
+
+### Event-Driven Processing with SQS
+```typescript
+// S3 → SQS → Lambda processing pipeline
+// Each step is decoupled by a queue
+
+interface ProcessingStep {
+  name: string;
+  inputQueue: string;
+  outputQueue?: string;
+  handler: (event: ProcessingEvent) => Promise<ProcessingResult>;
+}
+
+// Image processing pipeline steps:
+// 1. Upload → S3 event → validate-queue
+// 2. Validate → pass → virus-scan-queue
+// 3. Virus scan → clean → thumbnail-queue
+// 4. Thumbnail → complete → metadata-queue
+// 5. Metadata → DB → processing complete
+
+// Failed items go to DLQ after 3 retries
+const dlq = new DeadLetterQueue({
+  maxRetries: 3,
+  alertTopic: 'processing-failures',
+});
+```
+
+### Video Processing Pipeline
+```typescript
+// Video processing with AWS Elemental MediaConvert
+async function processVideo(inputKey: string): Promise<void> {
+  const job = await mediaconvert.createJob({
+    Role: 'arn:aws:iam::...:role/MediaConvertRole',
+    Settings: {
+      Inputs: [{ FileInput: `s3://uploads/${inputKey}` }],
+      OutputGroups: [
+        // HLS output (adaptive bitrate)
+        {
+          OutputGroupType: 'HLS_GROUP',
+          Outputs: [
+            { VideoDescription: { Width: 1920, Height: 1080, Bitrate: 5000000 } },
+            { VideoDescription: { Width: 1280, Height: 720, Bitrate: 2500000 } },
+            { VideoDescription: { Width: 854, Height: 480, Bitrate: 1000000 } },
+          ],
+        },
+        // Thumbnail extraction
+        {
+          OutputGroupType: 'FILE_GROUP',
+          Outputs: [
+            { VideoDescription: { Width: 1280, Height: 720 }, Extension: 'jpg' },
+          ],
+        },
+      ],
+    },
+  });
+  await storeJobMetadata(inputKey, job.Id);
+}
+```
+
+## Lifecycle Policy Configuration (AWS S3)
+```typescript
+import { S3Client, PutBucketLifecycleConfigurationCommand } from '@aws-sdk/client-s3';
+
+async function configureLifecycle(bucket: string) {
+  const client = new S3Client({ region: 'us-east-1' });
+  await client.send(new PutBucketLifecycleConfigurationCommand({
+    Bucket: bucket,
+    LifecycleConfiguration: {
+      Rules: [
+        {
+          Id: 'transition-to-ia',
+          Status: 'Enabled',
+          Prefix: 'uploads/',
+          Transitions: [{ Days: 30, StorageClass: 'STANDARD_IA' }],
+        },
+        {
+          Id: 'archive-to-glacier',
+          Status: 'Enabled',
+          Prefix: 'uploads/',
+          Transitions: [{ Days: 90, StorageClass: 'GLACIER' }],
+        },
+        {
+          Id: 'delete-old-temp',
+          Status: 'Enabled',
+          Prefix: 'temp/',
+          Expiration: { Days: 7 },
+        },
+        {
+          Id: 'abort-incomplete-multipart',
+          Status: 'Enabled',
+          AbortIncompleteMultipartUpload: { DaysAfterInitiation: 7 },
+        },
+      ],
+    },
+  }));
+}
+```
+
+## Antivirus Integration
+```typescript
+// Lambda: ClamAV scan triggered by S3 event
+import { S3Event } from 'aws-lambda';
+import { spawn } from 'child_process';
+import { S3 } from '@aws-sdk/client-s3';
+
+const s3 = new S3();
+
+export async function handler(event: S3Event) {
+  for (const record of event.Records) {
+    const { key, bucket } = record.s3.object;
+    const { Body } = await s3.getObject({ Bucket: bucket.name, Key: key });
+    const result = await scanWithClamAV(Body as Buffer);
+
+    if (result.infected) {
+      await s3.copyObject({
+        Bucket: process.env.QUARANTINE_BUCKET!,
+        CopySource: `${bucket.name}/${key}`,
+        Key: key,
+      });
+      await s3.deleteObject({ Bucket: bucket.name, Key: key });
+      console.warn(`Infected file quarantined: ${key} — ${result.virus}`);
+    }
+  }
+}
+
+function scanWithClamAV(buffer: Buffer): Promise<{ infected: boolean; virus?: string }> {
+  return new Promise((resolve, reject) => {
+    const clam = spawn('clamscan', ['--stdout', '-']);
+    let output = '';
+    clam.stdout.on('data', (data) => { output += data; });
+    clam.on('close', (code) => {
+      resolve(code === 0 ? { infected: false } : { infected: true, virus: output });
+    });
+    clam.on('error', reject);
+    clam.stdin.write(buffer);
+    clam.stdin.end();
+  });
+}
+```
+
+## Storage Cost Optimization
+
+| Practice | Savings | Complexity |
+|----------|---------|------------|
+| Lifecycle policies (IA after 30d, Glacier after 90d) | 60-80% on older data | Low |
+| Delete incomplete multipart uploads > 7 days | Reduces orphaned storage | Low |
+| Compress before upload (images: WebP, documents: PDF compression) | 50-80% on file sizes | Medium |
+| Deduplicate identical files (content hash dedup) | 10-30% on duplicate content | Medium |
+| Object size minimum (reject < 100 bytes) | Reduces metadata overhead | Low |
+| Set bucket size alerts (warn at 80% of budget) | Prevents surprise bills | Low |
+| Replicate only critical data cross-region | 50% savings on replication | Medium |
 
 ## Production Considerations
 
@@ -286,6 +462,10 @@ processing:
 | Thundering herd | Thumbnail generation after popular upload (e.g., viral image) → use SQS for buffering |
 | Data residency | Choose bucket region based on compliance. Use bucket policies to restrict to region |
 | Disaster recovery | Cross-region replication for critical buckets. Versioning protects against accidental deletion |
+| Hot partition (S3 prefix) | High request rate to single prefix causes 503 slowdowns. Distribute keys with hash prefix |
+| Eventual consistency (read-after-write) | New objects may not be visible immediately for LIST operations. Use versioned buckets |
+| Multipart upload timeouts | Large uploads may timeout. Set reasonable part size (10-50MB) and track progress |
+| Cold start in processing Lambda | Processing Lambda may have 200ms-2s cold start. Use reserved concurrency for critical paths |
 
 ## Security
 
@@ -298,6 +478,9 @@ processing:
 | Exfiltration via upload | S3 bucket policy restricts PutObject to presigned URLs only |
 | CORS abuse | Restrict to known origins. Never use wildcard for credentialed requests |
 | Large file DoS | Enforce max size server-side. Multipart for large reduces memory per request |
+| Stale presigned URLs | Set expiry for upload (5-15 min), view (1h), download (24h max) |
+| In-transit interception | Enforce HTTPS for all S3/CloudFront endpoints. TLS 1.2+ |
+| Access logs exposure | S3 access logs go to separate bucket with restricted access |
 
 ## Anti-Patterns
 
@@ -310,6 +493,8 @@ processing:
 | Client-side validation only | Easily bypassed via curl/Postman | Always validate server-side |
 | Long-lived presigned URLs | Security risk if URL is leaked | 5-15 min for upload, 1h max for download |
 | Processing in upload handler | Increases latency, couples upload to processing | Async processing via SQS queue |
+| Storing processed and original in same bucket | Can't set different lifecycle/security per type | Separate buckets for raw, processed, quarantine |
+| Trusting Content-Type header from client | Easily spoofed — attacker uploads .exe as image/png | Verify magic bytes server-side before processing |
 
 ## Rules
 - Never accept files on application server — direct-to-storage from client

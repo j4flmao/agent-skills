@@ -292,6 +292,214 @@ Derive gradients without expanding to components:
 | JAX | Function transformations, XLA | High-performance custom math |
 | Wolfram Alpha | Symbolic computation | Complex derivations and integrals |
 
+## Loss Function Catalog — Mathematical Reference
+
+### Regression Losses
+```
+MSE: L = (1/n) * sum((y_i - y_hat_i)^2)
+  Use: Standard regression, Gaussian errors
+  Property: Penalizes outliers heavily (quadratic)
+
+MAE: L = (1/n) * sum(|y_i - y_hat_i|)
+  Use: Robust regression, Laplace errors
+  Property: Less sensitive to outliers
+
+Huber: L = (1/n) * sum(huber_loss(y_i, y_hat_i))
+  huber_loss(d) = 0.5*d^2 for |d| <= delta
+  huber_loss(d) = delta*(|d| - 0.5*delta) for |d| > delta
+  Use: Robust regression with smooth gradient
+  Property: Quadratic near 0, linear in tails
+
+Log-Cosh: L = (1/n) * sum(log(cosh(y_i - y_hat_i)))
+  Use: Similar to Huber but twice differentiable everywhere
+  Property: Smooth approximation to MAE
+
+Quantile Loss: L = (1/n) * sum(rho_tau(y_i - y_hat_i))
+  rho_tau(e) = tau * max(e, 0) + (1-tau) * max(-e, 0)
+  Use: Quantile regression, prediction intervals
+  Property: Asymmetric — penalizes over/under differently
+```
+
+### Classification Losses
+```
+Binary Cross-Entropy: L = -(1/n) * sum(y_i*log(p_i) + (1-y_i)*log(1-p_i))
+  Use: Binary classification
+  Property: Strictly proper — calibrated probabilities
+
+Categorical Cross-Entropy: L = -(1/n) * sum(sum(y_ij*log(p_ij)))
+  Use: Multi-class classification
+  Property: Generalization of BCE
+
+Focal Loss: L = -(1/n) * sum(alpha*(1-p_t)^gamma*log(p_t))
+  Use: Imbalanced classification
+  Property: Down-weights easy examples, focuses on hard ones
+
+Hinge Loss: L = (1/n) * sum(max(0, 1 - y_i * f(x_i)))
+  Use: SVM, max-margin classification
+  Property: Only penalizes misclassified + margin violators
+
+Kullback-Leibler Divergence: D_KL(P||Q) = sum(P(x)*log(P(x)/Q(x)))
+  Use: Distribution matching, VAE, knowledge distillation
+  Property: Asymmetric! D_KL(P||Q) != D_KL(Q||P)
+```
+
+### Ranking Losses
+```
+Pairwise Hinge: L = (1/n) * sum(max(0, 1 - (s_pos - s_neg)))
+  Use: Learning to rank, implicit feedback
+  Property: Positive items scored higher than negative by margin
+
+BPR (Bayesian Personalized Ranking):
+  L = -(1/n) * sum(log(sigmoid(s_pos - s_neg)))
+  Use: Implicit feedback ranking
+  Property: Differentiable approximation to AUC
+
+ListNet / ListMLE:
+  L = -sum(P(y|rel) * log(P(y_hat|rel)))
+  Use: Listwise ranking
+  Property: Considers entire ranked list
+```
+
+### Regularization Terms
+```
+L1 (Lasso): lambda * sum(|w_i|)
+  Effect: Sparse weights (feature selection)
+  Gradient: lambda * sign(w_i)
+
+L2 (Ridge): lambda * sum(w_i^2)
+  Effect: Shrinks weights uniformly
+  Gradient: 2 * lambda * w_i
+
+ElasticNet: lambda_1 * sum(|w_i|) + lambda_2 * sum(w_i^2)
+  Effect: Combines L1 sparsity with L2 stability
+
+Entropy Regularization (RL):
+  H(pi) = -sum(pi(a|s) * log(pi(a|s)))
+  Effect: Encourages exploration in policy gradient
+```
+
+## Common Derivations — Step by Step
+
+### Linear Regression: Normal Equations
+```
+Given: X (n x d), y (n x 1), find w minimizing ||Xw - y||^2
+
+L(w) = (Xw - y)^T (Xw - y)
+     = w^T X^T X w - 2 y^T X w + y^T y
+
+dL/dw = 2 X^T X w - 2 X^T y = 0
+X^T X w = X^T y
+w = (X^T X)^{-1} X^T y    ← Normal Equations
+
+Note: (X^T X) must be invertible (full rank)
+If not invertible: use pseudo-inverse or ridge regression
+```
+
+### Logistic Regression: Gradient
+```
+P(y=1|x) = sigma(w^T x) = 1 / (1 + exp(-w^T x))
+
+L(w) = -(1/n) * sum(y_i * log(sigma_i) + (1-y_i) * log(1-sigma_i))
+
+dL/dw_j = (1/n) * sum((sigma_i - y_i) * x_ij)
+
+Gradient descent update:
+w_j := w_j - alpha * (1/n) * sum((sigma_i - y_i) * x_ij)
+```
+
+### Neural Network Backpropagation (Single Neuron)
+```
+Forward:
+z = w^T x + b
+a = sigma(z)
+L = (1/2) * (a - y)^2
+
+Backward (chain rule):
+dL/da = (a - y)
+da/dz = sigma'(z) = sigma(z) * (1 - sigma(z))  [for sigmoid]
+dz/dw = x
+dz/db = 1
+
+dL/dw = dL/da * da/dz * dz/dw = (a - y) * sigma'(z) * x
+dL/db = dL/da * da/dz * dz/db = (a - y) * sigma'(z)
+```
+
+### Softmax + Cross-Entropy Gradient
+```
+Softmax: p_j = exp(z_j) / sum_k(exp(z_k))
+Cross-entropy: L = -sum(y_j * log(p_j))  where y is one-hot
+
+dL/dz_i = p_i - y_i
+
+Proof:
+dL/dz_i = d/dz_i [-sum(y_j * log(p_j))]
+  {simplify using identity: d(log(p_j))/dz_i = (delta_ij - p_j)}
+  = -sum(y_j * (delta_ij - p_j))
+  = -(y_i - p_i * sum(y_j))    since sum(y_j) = 1
+  = p_i - y_i
+
+This is why softmax + cross-entropy gradient is so simple!
+```
+
+### PCA: Covariance Eigendecomposition
+```
+Given: centered data matrix X (n x d)
+
+Covariance: Sigma = (1/n) * X^T X
+Goal: find v such that Var(Xv) = v^T Sigma v is maximized, with ||v||=1
+
+Lagrangian: L(v, lambda) = v^T Sigma v - lambda(v^T v - 1)
+
+dL/dv = 2 Sigma v - 2 lambda v = 0
+Sigma v = lambda v    ← Eigenvalue problem
+
+lambda_i = explained variance of component i
+v_i = principal component direction
+
+Fraction of variance explained by k components:
+sum(lambda_1..lambda_k) / sum(lambda_1..lambda_d)
+```
+
+## Common Distributions in ML
+
+| Distribution | PDF / PMF | Parameters | Uses in ML |
+|-------------|-----------|------------|------------|
+| Bernoulli | P(X=1) = p, P(X=0) = 1-p | p in [0,1] | Binary classification, binary features |
+| Binomial | C(n,k)*p^k*(1-p)^(n-k) | n, p | A/B testing, count outcomes |
+| Gaussian (Normal) | 1/(sqrt(2*pi*sigma^2))*exp(-(x-mu)^2/(2*sigma^2)) | mu, sigma^2 | Regression errors, embeddings |
+| Multivariate Normal | (1/((2*pi)^(d/2)*det(Sigma)^(1/2)))*exp(-0.5*(x-mu)^T Sigma^(-1)(x-mu)) | mu, Sigma | GMM, VAE prior, Mahalanobis |
+| Exponential | lambda*exp(-lambda*x) | lambda > 0 | Waiting times, survival analysis |
+| Poisson | lambda^k*exp(-lambda)/k! | lambda > 0 | Count data, rare events |
+| Uniform | 1/(b-a) for x in [a,b] | a, b | Random initialization, dropout |
+| Beta | x^(alpha-1)*(1-x)^(beta-1)/B(alpha,beta) | alpha, beta | Prior for probabilities, Thompson sampling |
+| Dirichlet | Dir(alpha) — generalization of Beta | alpha vector | Topic models (LDA), mixture weights |
+
+## Key Optimization Algorithms — Visual Summary
+
+```
+SGD: w = w - lr * grad
+  Use: Large datasets, simple convergence
+  Issue: Noisy gradient, slow near optimum
+
+Momentum: v = beta*v + (1-beta)*grad; w = w - lr*v
+  Use: Escapes local minima, accelerates along shallow directions
+
+Adam: m = beta1*m + (1-beta1)*grad; v = beta2*v + (1-beta2)*grad^2
+       m_hat = m/(1-beta1^t); v_hat = v/(1-beta2^t)
+       w = w - lr * m_hat/(sqrt(v_hat) + eps)
+  Use: Default optimizer for deep learning
+  Tuning: lr=3e-4 (AdamW for Transformers)
+
+Newton's Method: w = w - H^(-1)*grad
+  Use: Fast convergence near optimum
+  Issue: O(d^3) per step (Hessian inverse)
+  Approx: L-BFGS for quasi-Newton
+
+Conjugate Gradient: H * p = -grad, solve iteratively
+  Use: Large linear systems, kernel methods
+  Property: Exact in d steps for d x d SPD matrix
+```
+
 ## References
   - references/calculus.md — Calculus for Machine Learning
   - references/deep-learning-math.md — Deep Learning Mathematics

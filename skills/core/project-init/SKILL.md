@@ -208,6 +208,253 @@ docs/
   - references/project-scaffold.md — Project Scaffolding Reference
   - references/stack-templates.md — Stack Templates
 
+## Project Kickoff Checklist
+
+### Pre-Scaffold Validation
+Before creating any files, verify:
+- [ ] Project name is kebab-case and URL-friendly
+- [ ] Target directory doesn't exist or user confirmed overwrite
+- [ ] Required tools are installed (Node 20+, Python 3.12+, etc.)
+- [ ] Package manager chosen (npm/pnpm/yarn/bun) and available
+- [ ] Git is initialized (or will be by init command)
+- [ ] License file will be generated (MIT/Apache/GPL — ask user)
+- [ ] CI platform selected (GitHub Actions / CircleCI / GitLab CI)
+- [ ] Target environment (Node/Deno/Bun, browser targets, mobile OS versions)
+
+### Stack Decision Tree
+```
+What kind of project?
+├── Web App
+│   ├── Full-stack: Next.js, tRPC, Prisma, Postgres
+│   ├── Frontend only: Vite + React/Vue/Svelte, deployed to CDN
+│   └── Backend only: Fastify/Express, Postgres, Redis
+├── API / Backend Service
+│   ├── REST: Fastify/Express/Flask/Django
+│   ├── GraphQL: Apollo/Relay/Hasura
+│   └── gRPC: Buf build, protoc, server reflection
+├── CLI Tool
+│   ├── Node: Commander/oclif, pkg/dist for binaries
+│   ├── Go: Cobra, single binary output
+│   └── Rust: Clap, cross-compile targets
+├── Mobile App
+│   ├── React Native: Expo + file-based routing
+│   ├── Flutter: Dart, single codebase
+│   └── Kotlin Multiplatform: Shared business logic
+├── Library / Package
+│   ├── npm package: TypeScript, tsup/bundling, changesets
+│   └── Python package: uv/pip, pyproject.toml, hatchling
+└── Static Site
+    ├── Astro: content-focused, island architecture
+    └── Eleventy/Hugo: markdown-driven, fast builds
+```
+
+### Modern Stack Templates
+
+**Next.js 15 (App Router + TypeScript):**
+```bash
+npx create-next-app@latest my-app --typescript --tailwind --eslint \
+  --app --src-dir --import-alias "@/*" --use-pnpm
+```
+
+**Vite + React + TypeScript:**
+```bash
+npm create vite@latest my-app -- --template react-ts
+cd my-app
+npm install @tanstack/react-query zustand react-router-dom
+npm install -D vitest @testing-library/react msw
+```
+
+**Fastify + TypeScript backend:**
+```bash
+mkdir my-api && cd my-api
+pnpm init
+pnpm add fastify @fastify/cors @fastify/env zod pino
+pnpm add -D typescript @types/node tsx
+# Create tsconfig.json, src/server.ts
+```
+
+**Flutter mobile app:**
+```bash
+flutter create --org com.mycompany --project-name my_app \
+  --platforms=ios,android,web my_app
+cd my_app
+flutter pub add go_router riverpod flutter_secure_storage
+```
+
+**Python FastAPI backend:**
+```bash
+mkdir my-api && cd my-api
+uv init --app
+uv add fastapi uvicorn[standard] sqlalchemy asyncpg pydantic
+uv add -d pytest httpx
+# Create src/main.py with app factory
+```
+
+**npm library package:**
+```bash
+mkdir my-lib && cd my-lib
+pnpm init
+pnpm add -D typescript @types/node tsup vitest
+# Create src/index.ts with exports
+# Create tsconfig.json with declaration: true
+```
+
+### Project Structure Templates
+
+**Full-stack (Next.js):**
+```
+my-app/
+├── src/
+│   ├── app/          # App Router routes
+│   ├── components/   # Shared UI components
+│   ├── lib/          # Utility functions
+│   ├── server/       # Server-only code (DB, auth)
+│   └── styles/       # Global styles
+├── prisma/           # Database schema + migrations
+├── public/           # Static assets
+├── tests/            # Integration + e2e tests
+├── .env.example
+├── .env.local
+├── next.config.ts
+├── tsconfig.json
+├── tailwind.config.ts
+└── package.json
+```
+
+**Backend service (layered):**
+```
+my-api/
+├── src/
+│   ├── api/          # Route handlers, middleware
+│   │   ├── routes/
+│   │   ├── middleware/
+│   │   └── validators/
+│   ├── core/         # Business logic, use cases
+│   │   ├── services/
+│   │   └── domain/   # Entities, value objects
+│   ├── infra/        # External dependencies: DB, queue, cache
+│   │   ├── database/
+│   │   ├── queue/
+│   │   └── cache/
+│   ├── config/       # Environment, app config
+│   └── index.ts      # Entry point, DI setup
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── fixtures/
+├── migrations/
+├── docker-compose.yml
+├── Dockerfile
+└── tsconfig.json
+```
+
+### CI/CD Template Generation
+
+**GitHub Actions (test + lint):**
+```yaml
+# .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test -- --coverage
+      - run: pnpm build
+```
+
+**Vercel/Netlify deploy config:**
+```json
+// vercel.json
+{
+  "framework": "nextjs",
+  "buildCommand": "pnpm build",
+  "outputDirectory": ".next",
+  "installCommand": "pnpm install"
+}
+```
+
+### Dependency & Tool Version Pinning
+
+```json
+{
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "volta": {
+    "node": "20.18.0",
+    "pnpm": "9.15.4"
+  }
+}
+```
+- Use `engines` + `packageManager` in package.json
+- Use `.nvmrc` / `.node-version` for nvm/nodenv
+- Use `.tool-versions` for asdf (works for all languages)
+- Pin exact versions in CI (GitHub Actions: `setup-node@v4` with `node-version-file: .nvmrc`)
+
+### Configuration File Quick Reference
+
+| Language | Linter | Formatter | Test | Build |
+|----------|--------|-----------|------|-------|
+| TypeScript/JS | `eslint.config.js` | `.prettierrc` | `vitest.config.ts` | `tsconfig.json` |
+| Python | `pyproject.toml` (ruff) | `pyproject.toml` (ruff) | `pyproject.toml` (pytest) | `pyproject.toml` |
+| Go | `.golangci.yml` | `gofumpt` | built-in `go test` | `go.mod` |
+| Rust | `clippy.toml` | `rustfmt.toml` | built-in `cargo test` | `Cargo.toml` |
+| Dart/Flutter | `analysis_options.yaml` | built-in `dart format` | built-in `flutter test` | `pubspec.yaml` |
+
+### Environment Validation Script
+```bash
+#!/usr/bin/env bash
+# scripts/check-env.sh — verifies prerequisites
+set -euo pipefail
+
+check_cmd() {
+  if ! command -v "$1" &> /dev/null; then
+    echo "❌ $1 is required but not installed."
+    echo "   Install: $2"
+    return 1
+  fi
+  echo "✓ $1 found: $(command -v "$1") ($("$1" --version 2>&1 | head -1))"
+}
+
+check_cmd node "https://nodejs.org/ (v20+)"
+check_cmd pnpm "npm install -g pnpm"
+check_cmd git "https://git-scm.com/"
+check_cmd docker "https://docker.com/products/docker-desktop"
+
+if [ ! -f ".env" ]; then
+  if [ -f ".env.example" ]; then
+    cp .env.example .env
+    echo "⚠ Created .env from .env.example — verify values"
+  else
+    echo "ℹ No .env or .env.example found — create one"
+  fi
+fi
+
+echo "✓ Environment check complete"
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Better Approach |
+|---|---|---|
+| Scaffold then configure | Generates default configs that don't match team practices | Use opinionated templates with pre-configured tools |
+| Ignoring monorepo costs | Hit tooling limits (TypeScript project ref, ESLint scope) | Plan from day 1 if project will grow beyond 10 packages |
+| No `.gitignore` upfront | Committed node_modules, .env, secrets | Generate with project init. Block with pre-commit hook. |
+| Hardcoded ports/URLs | Dev/prod conflicts, CI fails locally | Use env vars with defaults in config module |
+| No Docker compose for deps | Devs install Postgres/Redis differently, env drift | docker-compose.yml with all service dependencies |
+| Single tsconfig for monolith + lib | Build config and app config differ | Separate tsconfig for app, lib, build, node |
+| Commit generated scaffold files | Boilerplate that will never change | Let init commands run, then prune unused files |
+| Wrong package manager | pnpm users with npm lockfile conflicts | Pin in `packageManager` field, enforce in CI |
+
 ## Handoff
 Output: Scaffolded project at {path}
 Next skill: create-brief — to define what gets built.

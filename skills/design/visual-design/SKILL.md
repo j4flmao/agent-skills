@@ -382,6 +382,206 @@ Impact: Dev velocity +30%, visual consistency 62% to 94%
 - Responsive design: mobile, tablet, desktop — design from smallest first
 - Loading states must match final layout structure (no layout shift)
 
+## Color in Depth
+
+### Color Psychology in UI
+Color choices communicate meaning and influence user behavior:
+
+| Color | Associations | Best For | Risk |
+|-------|-------------|----------|------|
+| Blue | Trust, stability, professionalism | Finance, healthcare, enterprise | Common — hard to differentiate |
+| Green | Growth, health, success, wealth | Finance, environment, health | Cultural variance (some cultures: luck vs danger) |
+| Red | Urgency, passion, error | CTAs, alerts, sales | High arousal — can cause anxiety if overused |
+| Orange/Yellow | Energy, optimism, warmth | Entertainment, food, children | Low contrast on white — accessibility risk |
+| Purple | Creativity, luxury, wisdom | Beauty, spiritual, premium | Gender bias perception |
+| Black/White | Sophistication, minimalism | Luxury, fashion, tech | Can feel cold or stark without warm accent |
+| Pink | Playful, nurturing, sweet | Beauty, fashion, children | Gender stereotypes — use with awareness |
+
+### Color System Architecture
+```
+Global palette (100+ colors)
+    ↓
+Semantic tokens (30-50 colors)
+    ↓
+Component tokens (mapped to semantic)
+```
+
+**Global palette structure**:
+- 10 neutral grays (50-900 scale) for text, backgrounds, borders
+- 5-10 accent colors (each with 50-900 scale) for primary, secondary, tertiary
+- 4 semantic colors: success (green), warning (amber/yellow), error (red), info (blue/cyan)
+- Extended palette for data visualization (8-12 categorical colors, sequential + diverging scales)
+
+### Color Contrast Calculation
+WCAG contrast ratio = (L1 + 0.05) / (L2 + 0.05), where L1 is relative luminance of lighter color and L2 of darker color. Relative luminance = 0.2126 * R + 0.7152 * G + 0.0722 * B (linearized sRGB values).
+
+```typescript
+// Quick contrast checker
+function getContrastRatio(hex1: string, hex2: string): number {
+  const l1 = relativeLuminance(hexToRgb(hex1));
+  const l2 = relativeLuminance(hexToRgb(hex2));
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+}
+```
+
+Tools: WebAIM Contrast Checker, Stark plugin, axe DevTools. Never guess contrast — always verify algorithmically.
+
+## Typography in Depth
+
+### Typeface Anatomy for UI Decision-Making
+When evaluating typefaces for UI, assess:
+- **x-height**: Larger x-height improves readability at small sizes (body text). Small x-height = more elegant, less readable.
+- **Aperture**: Open apertures (a, c, e) improve legibility. Closed apertures can cause confusion at small sizes.
+- **Stroke contrast**: Low contrast (sans-serif, humanist) for body text. High contrast (didone) for display only.
+- **Counter size**: Open counters improve letter recognition, especially on low-resolution screens.
+- **Numeric figures**: Tabular figures (fixed-width numbers) for tables and data. Proportional figures for running text.
+
+### Web Font Loading Strategy
+```html
+<!-- Preload critical font -->
+<link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin>
+
+<!-- Inline small font subset in CSS -->
+<style>
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter-var.woff2') format('woff2');
+  font-display: swap;  /* Show fallback text immediately, swap when font loads */
+  unicode-range: U+0000-00FF;  /* Latin subset only */
+}
+</style>
+```
+
+- `font-display: swap` prevents invisible text (FOIT) — text renders in fallback font immediately, swaps when custom font loads
+- Subset fonts to Latin/ASCII for initial load, load full character set after first paint
+- Use variable fonts (single .woff2 file for all weights) instead of individual weight files — reduces total font download 40-60%
+- Preconnect to font CDN (Google Fonts, Typekit) to reduce DNS lookup time
+
+### Readability Science
+| Variable | Optimal Range | Impact |
+|----------|--------------|--------|
+| Line length | 50-75 characters (including spaces) | Too long: eye fatigue. Too short: disjointed reading |
+| Line height | 1.5-1.7 for body, 1.2-1.3 for headings | Too tight: lines blur together. Too loose: disconnected |
+| Font size | 16-18px body, 14px minimum for UI labels | Below 14px: significant readability decrease |
+| Paragraph spacing | 1.5x line height between paragraphs | Separates thought groups without breaking flow |
+| Column width | 1-3 columns for content | More than 3: scanning becomes difficult |
+| Contrast | 4.5:1 minimum (AA), 7:1 preferred (AAA) | Below 4.5:1: significant readability decrease in suboptimal conditions |
+
+## Layout Systems in Depth
+
+### Grid Calculation Formula
+```
+Column width = (Content width - (Columns - 1) * Gutter) / Columns
+```
+
+Example: 12-column grid, 1200px content width, 24px gutter:
+```
+Column = (1200 - 11 * 24) / 12 = (1200 - 264) / 12 = 78px
+```
+
+### Responsive Breakpoint Decision Tree
+```
+Content layout change at viewport width?
+├── <640px (mobile) → Single column, stacked layout, hamburger menu
+│   Touch targets: 44x44px minimum
+│   Typography: body 16px, maintain readability at narrow widths
+├── 640-1024px (tablet) → 2-column grid, visible navigation
+│   Consider: portrait vs landscape orientation differences
+├── 1024-1440px (desktop) → 12-column grid, sidebar + main content
+│   Most common target — optimize here first
+└── >1440px (wide) → Constrain max-width (1200-1440px) or use fluid layout
+    Extra whitespace on sides; consider multi-column layouts
+```
+
+Mobile-first approach: start with mobile layout, add complexity at each breakpoint.
+
+### Visual Weight and Balance
+Visual weight is determined by:
+- **Size**: Larger = heavier. Balance a large element with multiple small elements.
+- **Color**: Saturated colors weigh more than muted. Dark weighs more than light.
+- **Texture**: Pattern, gradient, shadow add visual weight.
+- **Whitespace**: More whitespace around an element = more emphasis (isolation).
+- **Position**: Elements at the top and left (LTR) have more perceived weight.
+- **Shape**: Irregular shapes draw more attention than regular ones.
+
+Symmetrical balance: formal, stable. Asymmetrical balance: dynamic, interesting (requires more skill). Radial balance: powerful focal point.
+
+## Component State Architecture
+
+Every interactive component in visual design must define these visual states:
+
+### Button State Examples
+```
+Default:   Solid blue bg #2563EB, white text, border-radius 8px
+Hover:     Lighter blue bg #3B82F6, cursor pointer
+Active:    Darker blue bg #1D4ED8, scale 0.97 (pressed)
+Focus:     Same as default + 2px blue outline #2563EB with 4px offset
+Disabled:  40% opacity, no hover/active effects, cursor not-allowed
+Loading:   Spinner replaces text, button width preserved (prevents layout shift)
+Success:   Green bg #059669, checkmark icon
+Error:     Red bg #DC2626 (for destructive confirmation)
+```
+
+### Input State Examples
+```
+Default:       1px solid border #D1D5DB, white bg
+Focus:         2px solid blue #2563EB, subtle shadow
+Hover:         1px solid border #9CA3AF
+Error:         2px solid red #DC2626, error icon + message below
+Disabled:      Gray bg #F3F4F6, 40% opacity text, no interactions
+Filled:        1px solid border, text content present
+Active:        Cursor blinking, component focused
+Read-only:     Gray bg, no editing possible, cursor default
+```
+
+## Production Considerations
+
+### Design Token Governance
+All visual design properties should be codified as design tokens:
+- **Color tokens**: Namespaced by function, not appearance: `color-primary` not `color-blue`
+- **Typography tokens**: `font-size-heading-1`, `font-weight-regular`, `line-height-body`
+- **Spacing tokens**: `spacing-4` (4px), `spacing-8` (8px), `spacing-16` (16px)
+- **Shadow tokens**: `shadow-sm`, `shadow-md`, `shadow-lg` (each with x/y/blur/spread/color)
+- **Radius tokens**: `radius-sm` (4px), `radius-md` (8px), `radius-lg` (16px), `radius-full` (9999px)
+- **Opacity tokens**: `opacity-disabled` (0.4), `opacity-overlay` (0.6)
+- **Duration tokens**: `duration-fast` (150ms), `duration-normal` (200ms), `duration-slow` (300ms)
+
+### Dark Mode Architecture
+Dark mode requires independent color tokens, not simple inversion:
+- **Surfaces**: Dark gray `#1E1E1E` instead of pure black `#000000` (reduces halation on OLED)
+- **Text**: White `#E0E0E0` (not pure white `#FFFFFF`) to reduce eye strain at night
+- **Elevation**: Lighter surfaces for higher elevation (cards are lighter than background)
+- **Shadows**: Shadows become internal (inset) or use light-on-dark instead of dark-on-light
+- **Images**: Reduce brightness by 20-30% for photos; avoid white backgrounds in illustrations
+- **Accessibility**: Maintain 4.5:1 contrast ratio on ALL text — dark mode doesn't mean lower contrast
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Fix |
+|-------------|---------|-----|
+| **Decorative overload** | Drop shadows, gradients, and borders on every element | Every visual element must serve a function. Remove decoration that doesn't aid communication |
+| **Inconsistent visual language** | Different icons styles (line vs fill), different corner radii, inconsistent shadows | Adopt a design system with enforced visual rules; audit regularly |
+| **80% gray text** | Light gray (#CCC, #999) body text on white background | Minimum 4.5:1 contrast. Use #666 or darker for body text |
+| **No visual hierarchy** | Everything is the same size and weight | Establish 3+ levels of typographic hierarchy; use color, whitespace, and size to create focal points |
+| **Ignoring the fold** | Critical content below viewport without indication | Place primary action and value proposition in the first viewport; use visual cues for scroll |
+| **Color-blind inaccessible palettes** | Red-green status indicators without patterns/icons | Add icons/text/patterns to all color-coded information |
+| **Stretching images** | Distorted aspect ratios | Always maintain aspect ratio; use `object-fit: cover` for containers |
+| **Over-alignment** | Centering everything creates weak hierarchy | Left-align (LTR) content by default; center only for specific emphasis |
+| **Border abuse** | Borders around everything instead of using spacing | Use whitespace and background color to separate content groups; borders are last resort |
+| **Too many focal points** | Every element competes for attention with color/size/motion | Establish one primary action per screen; secondary actions are visually de-emphasized |
+
+## Tools & Deliverables
+
+| Deliverable | Contents | Tools |
+|------------|----------|-------|
+| Color palette | Primary, secondary, neutral, semantic colors with hex/HSL/RGB values | Figma, Adobe Color, Coolors |
+| Typography scale | Font families, sizes, weights, line heights, letter spacing | Figma, Typescale, Google Fonts |
+| Spacing system | 8px grid scale with usage rules | Figma, Token Studio |
+| Layout grid | Column grid, breakpoints, responsive rules | Figma (Auto Layout), CSS Grid |
+| Component library | Visual specs for each component state | Figma, Sketch |
+| Icon system | Icon grid, stroke weights, sizing rules | Figma, Noun Project |
+| Dark mode spec | Color overrides for dark theme | Figma, Token Studio |
+
 ## References
   - references/color-theory.md — Color Theory Reference
   - references/layout-principles.md — Layout Principles Guide

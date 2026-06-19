@@ -379,6 +379,84 @@ async def test_create_order(async_client):
     assert data["status"] == "pending"
 ```
 
+### Dependency Management Comparison
+
+| Tool | Python Req | Lock File | Speed | Virtual Env | Monorepo | Extras |
+|------|-----------|-----------|-------|-------------|----------|--------|
+| pip | Any | No (pip freeze) | Slow | venv | No | Built-in |
+| pip-tools | Any | requirements.txt | Medium | venv | No | Compile + sync |
+| Poetry | 3.8+ | poetry.lock | Medium | Auto | No | Build, publish |
+| PDM | 3.8+ | pdm.lock | Medium | Optional | Workspaces | PEP 582 |
+| uv | 3.8+ | uv.lock | Fastest | Auto | Workspaces | pip-compat |
+| conda | Any | environment.yml | Slow | Auto | env per project | Binary packages |
+
+Recommendation: use `uv` for new projects (2024+), Poetry for established teams, pip-tools for existing pip workflows, conda only for data science/ML with native dependencies.
+
+### Async Framework Feature Comparison
+
+| Feature | FastAPI | Django (async) | Starlette | Quart (Flask async) |
+|---------|---------|----------------|-----------|---------------------|
+| Async-native | Yes | Partial | Yes | Yes |
+| Type validation | Pydantic | DRF serializers | None (add Pydantic) | Marshmallow |
+| OpenAPI docs | Auto (Swagger UI) | DRF YASG | Manual | Manual |
+| ORM | Any (SQLAlchemy) | Django ORM | Any | SQLAlchemy |
+| Admin panel | Third-party | Built-in | None | None |
+| WebSocket | Yes (Starlette) | Channels | Yes | Yes |
+| Background tasks | Lifespan | Celery | Low-level | Celery |
+| Maturity | 2018+ | 2005+ | 2018+ | 2020+ |
+
+### Deployment Target Decision Tree
+```
+Deploying a Python web app?
+├── Serverless → AWS Lambda + Mangum (FastAPI adapter)
+│   Cold start: 200-500ms (provisioned concurrency: 50ms)
+│   Limits: 10GB RAM, 15min timeout, 50MB zip + 250MB /tmp
+│   Best for: low-traffic APIs, spiky workloads
+├── Containers → Docker + ECS/GKE/Azure Containers
+│   Use: gunicorn + uvicorn workers for ASGI, nginx sidecar for static
+│   Best for: consistent traffic, long-running connections
+├── VM / VPS → Docker Compose on single host
+│   nginx reverse proxy, Let's Encrypt SSL
+│   Best for: small teams, cost-effective at moderate scale
+└── PaaS → Railway / Render / Fly.io
+    Zero DevOps, auto-deploy from git, managed DB
+    Best for: MVPs, small apps, internal tools
+```
+
+### Anti-Patterns (Expanded)
+
+- **`__init__.py` as kitchen sink**: Importing everything in `__init__.py` creates circular imports. Keep it minimal or empty.
+- **`from module import *`**: Pollutes namespace, makes mypy integrations impossible. Always explicit imports.
+- **`os.environ` in module scope**: Read env vars on import — can't mock in tests. Use `os.getenv()` inside functions or `pydantic-settings`.
+- **`datetime.now()` default in function signature**: `def f(t=datetime.now())` evaluated once at import. Use default `None` and set inside function.
+- **Overusing `global` / nonlocal**: Makes functions stateful and untestable. Pass state explicitly.
+- **Ignoring mypy strict mode**: `Any` propagates silently. Use `--strict` even on existing code gradually with `# type: ignore`.
+- **Mixing `asyncio` styles**: `asyncio.run()` and `loop.run_until_complete()` in same project creates confusion. Pick one pattern.
+- **Database queries in template rendering**: N+1 queries on every page load. Eager-load in the view layer.
+- **Not pinning transitive dependencies**: Dependencies of dependencies change without notice. Use lock file.
+- **`try: except: pass`**: Silently swallows errors. Always log or re-raise. At minimum `log.exception()`.
+
+### Performance Optimization (Expanded)
+
+- **`__slots__`**: Reduces memory ~50% per instance. Use for classes with many instances (ORM models, value objects).
+- **Caching strategies**: `@functools.lru_cache` for pure functions, Redis/memcached for distributed caching, `functools.cache` (3.9+) for simple cases.
+- **`__pypackage__` / C extensions**: Use Rust with PyO3/maturin for hot paths that can't be optimized in Python. 10-100x speedup on numeric operations.
+- **`array.array` vs list**: Saves ~30x memory for large homogeneous numeric arrays. Use `numpy` if doing any math operations.
+- **I/O multiplexing**: `asyncio.gather()` over sequential awaits for independent I/O. `asyncio.as_completed()` for first-result-wins patterns.
+- **`__match_args__` for structural pattern matching (3.10+)**: Define custom match patterns for data classes.
+- **Query optimization**: `selectinload()` vs `joinedload()` for SQLAlchemy relationships. selectinload issues 2 queries, joinedload does one JOIN — choose based on cardinality.
+- **Request coalescing**: Cache identical concurrent requests with `aiocache` or `cachetools` with `TTLCache`.
+- **String building**: `"".join(list)` over `+=` on strings. `io.StringIO` for large document construction.
+
+### Security Patterns
+
+- **`secrets` module over `random`**: Use `secrets.token_hex(32)` for tokens, keys, passwords. `random` is not cryptographic.
+- **SQL injection defense**: Use parameterized queries with SQLAlchemy/psycopg2 — never f-string interpolation in SQL.
+- **`pydantic.SecretStr`**: Sensitive data like API keys and passwords — `SecretStr` never serializes by default, masks in repr.
+- **`python-jose` / `PyJWT`**: JWT validation with proper audience checking. Never accept `alg: 'none'` tokens.
+- **`httpx` with TLS verification**: Never set `verify=False` in production. Use custom CA bundles if needed.
+- **Rate limiting**: `slowapi` for FastAPI middleware rate limiting. Per-user/IP with Redis backend for distributed apps.
+
 ## References
 - `references/type-annotations.md` — Advanced type annotations, generics, protocols
 - `references/packaging-dependency.md` — Packaging, pyproject.toml, dependency management

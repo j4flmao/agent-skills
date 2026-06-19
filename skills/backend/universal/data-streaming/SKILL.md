@@ -343,6 +343,245 @@ const kafka = new Kafka({
 - Monitor lag, rebalance duration, and consumer group health
 - Never auto-commit offsets
 
+## Stream Processing Patterns
+
+### Stateless Processing (Map/Filter)
+```typescript
+// Kafka Streams — stateless transformations
+stream
+  .filter(({ value }) => JSON.parse(value).status !== 'deleted')
+  .map(({ key, value }) => {
+    const event = JSON.parse(value);
+    return { key, value: JSON.stringify({ ...event, enriched: true }) };
+  })
+  .to('enriched-events');
+```
+
+### Stateful Processing (Windowed Aggregations)
+```typescript
+// Kafka Streams — windowed count aggregation
+// 5-minute tumbling window, count events per key
+const windowedCounts = stream
+  .groupByKey()
+  .windowedBy(TimeWindows.of(5 * 60 * 1000))
+  .count(Materialized.as('windowed-counts-store'));
+
+windowedCounts.toStream().to('windowed-counts');
+```
+
+### Join Patterns
+```typescript
+// Stream-table join: enrich order events with customer data
+// Customer data is in a compacted topic (KTable)
+const customerTable = builder.table('customers-v1', { materialized: 'customer-store' });
+
+const enrichedOrders = ordersStream.join(customerTable, (order, customer) => ({
+  ...order,
+  customerName: customer.name,
+  customerEmail: customer.email,
+}));
+```
+
+## Performance Tuning
+
+| Parameter | Default | Production Tuning | Impact |
+|-----------|---------|------------------|--------|
+| `num.io.threads` | 8 | 2× CPU cores | I/O parallelism |
+| `num.network.threads` | 3 | CPU cores | Network handling |
+| `queued.max.requests` | 500 | 1000 | Producer request queuing |
+| `fetch.min.bytes` | 1 | 65536 (64KB) | Consumer batch efficiency |
+| `fetch.max.wait.ms` | 500 | 1000 | Consumer latency vs batching |
+| `max.partition.fetch.bytes` | 1MB | 10MB (if large msgs) | Consumer throughput |
+| `compression.type` | none | snappy or zstd | Producer network usage |
+| `batch.size` | 16384 | 65536 (64KB) | Producer batching efficiency |
+| `linger.ms` | 0 | 5-20 | Producer batching wait |
+
+## Exactly-Once Semantics Deep Dive
+
+```typescript
+// End-to-end exactly-once setup
+
+// Producer
+const producer = kafka.producer({
+  idempotent: true,
+  transactionalId: 'order-svc-tx',
+  maxInFlightRequests: 5, // idempotent allows >1
+});
+
+// Consumer (read_committed)
+const consumer = kafka.consumer({
+  groupId: 'order-processor',
+  isolationLevel: 'read_committed', // don't read uncommitted/aborted
+  readFromBeginning: false,
+});
+
+// Kafka Streams EOS
+const streamConfig = {
+  'processing.guarantee': 'exactly_once_v2', // EOS with improved performance
+  'transaction.timeout.ms': 60000,
+  'commit.interval.ms': 100, // frequent commits reduce rewind on failure
+};
+
+// Exactly-once requirements:
+// 1. Source system must be idempotent or track published offsets
+// 2. Sink must support idempotent writes (UPSERT with message ID)
+// 3. Transactional producer coordinates across partitions
+// 4. Consumer reads only committed messages
+// 5. Kafka Streams EOS v2 reduces overhead vs v1
+```
+
+## Consumer Group Rebalance Strategies
+
+| Strategy | Description | Impact | Best For |
+|----------|-------------|--------|----------|
+| Eager | All consumers stop, partitions reassigned | Stop-the-world, all processing stops | Stateless consumers |
+| Cooperative Sticky | Incremental rebalance, few partitions at a time | Minimal disruption, preserve most assignments | Stateful consumers with local state stores |
+| Range | Partitions assigned by range per topic | May cause uneven distribution | Simple topologies |
+| RoundRobin | Even distribution across consumers | Balanced but more shuffle | Homogeneous consumers |
+
+```typescript
+// Cooperative sticky rebalance handler
+const consumer = kafka.consumer({
+  groupId: 'stateful-processor',
+  partitionAssigners: [PartitionAssigners.cooperativeSticky()],
+  rebalanceTimeout: 120000, // 2 min for state store operations
+});
+
+consumer.on('consumer.rebalance', async ({ type, payload }) => {
+  if (type === 'revoke') {
+    const partitions = payload.partitions as { topic: string; partition: number }[];
+    for (const { topic, partition } of partitions) {
+      await flushStateStore(topic, partition);
+      await commitOffsets(topic, partition);
+      await closeStateStore(topic, partition);
+    }
+  }
+  if (type === 'assign') {
+    for (const { topic, partition } of payload.partitions) {
+      await restoreStateStore(topic, partition);
+    }
+  }
+});
+```
+
+## Schema Evolution in Practice
+
+```typescript
+// Schema compatibility matrix
+type Compatibility = 'BACKWARD' | 'FORWARD' | 'FULL' | 'NONE' | 'FORWARD_TRANSITIVE' | 'BACKWARD_TRANSITIVE' | 'FULL_TRANSITIVE';
+
+// Recommended settings by scenario:
+const schemaConfigs: Record<string, { compatibility: Compatibility; reason: string }> = {
+  'event-carried-state-transfer': {
+    compatibility: 'BACKWARD',
+    reason: 'New consumers must read old events (most common pattern)',
+  },
+  'command-messages': {
+    compatibility: 'FULL',
+    reason: 'Both producer and consumer may be deployed in any order',
+  },
+  'internal-aggregates': {
+    compatibility: 'FORWARD',
+    reason: 'Old consumers must handle new event shapes during rollouts',
+  },
+  'dead-letter-queue': {
+    compatibility: 'NONE',
+    reason: 'DLQ messages are inspected manually — no automated processing',
+  },
+};
+```
+
+## Operations Runbook
+
+### Common Issues and Mitigations
+
+| Issue | Symptom | Mitigation |
+|-------|---------|------------|
+| Consumer lag spikes | LAG metric jumps > 100K | Check processing bottleneck, scale consumers, investigate slow operations |
+| Under-replicated partitions | URP > 0 | Check broker disk/memory, increase replication factor, add brokers |
+| Leader election storms | ISR shrinks, leaders flapping | Check network partition, controller load, broker failure chain |
+| Producer timeouts | Produce request timeout | Increase `request.timeout.ms`, check broker CPU/network, add partitions |
+| OOM in consumer | Heap exceeds 31GB | Reduce `max.partition.fetch.bytes`, increase consumer instances |
+| Rebalance storm | Frequent rebalances | Increase `session.timeout.ms`, check heartbeat interval, fix slow consumers |
+| Disk full | Broker stops | Set retention limits, add disks, increase retention.bytes |
+
+### Partition Reassignment
+```bash
+# Generate reassignment plan
+kafka-reassign-partitions.sh --bootstrap-server localhost:9092 \
+  --topics-to-move-json-file topics.json \
+  --broker-list "0,1,2,3" --generate
+
+# Execute reassignment
+kafka-reassign-partitions.sh --bootstrap-server localhost:9092 \
+  --reassignment-json-file reassign.json --execute
+
+# Verify
+kafka-reassign-partitions.sh --bootstrap-server localhost:9092 \
+  --reassignment-json-file reassign.json --verify
+```
+
+## Security
+### Kafka Security Configuration
+```yaml
+# SSL + SASL authentication
+security.protocol: SASL_SSL
+sasl.mechanism: SCRAM-SHA-512
+ssl.truststore.location: /etc/kafka/secrets/truststore.jks
+ssl.keystore.location: /etc/kafka/secrets/keystore.jks
+
+# ACL-based authorization
+# Topic-level read/write permissions per principal
+```
+
+### Producer/Consumer Authorization
+```typescript
+const kafka = new Kafka({
+  clientId: 'order-service',
+  brokers: ['kafka:9092'],
+  ssl: { rejectUnauthorized: true },
+  sasl: {
+    mechanism: 'scram-sha-512',
+    username: process.env.KAFKA_USERNAME,
+    password: process.env.KAFKA_PASSWORD,
+  },
+});
+```
+
+### Encryption at Rest
+- Broker level: encrypt Kafka log directories with LUKS or dm-crypt
+- Topic level: configure `confluent.topic.link.encryption` for Confluent Cloud
+- Message level: encrypt sensitive fields before producing, decrypt in consumer
+- TLS for all client-broker and broker-broker communication
+
+## Anti-Patterns (continued)
+
+1. **Schema-less messages**: Producing messages without Schema Registry leads to deserialization failures and data corruption.
+2. **Too many partitions**: More partitions means more rebalancing, more files, more memory. 3× max consumer instances is a good rule.
+3. **Auto-commit enable**: Never use `enable.auto.commit=true` in production — you lose control and may lose data.
+4. **Synchronous processing**: Processing messages one-at-a-time in the consumer callback without batching hurts throughput.
+5. **Ignoring rebalance**: Not handling rebalance events in stateful consumers leads to data loss or duplication.
+6. **Large messages**: Messages over 1MB hurt performance. Store large payloads externally and reference by key.
+7. **Infinite retention**: Data accumulates forever. Set retention limits from day one — retroactive cleanup is expensive.
+8. **No monitoring**: Without lag, throughput, and error metrics, issues are invisible until users complain.
+9. **One consumer per partition pattern**: Over-provisioning consumers wastes resources. Let group rebalance manage assignment.
+
+## Rules
+- Topic name = `{domain}.{event-type}.{version}`
+- Partitions = max expected throughput / per-partition throughput
+- Key-based partitioning for order guarantees
+- Schema registry enforced for all topics
+- Consumer lag alerts at threshold (e.g., 10000 messages)
+- Never produce without schema
+- Replication factor >= 3 in production
+- Use `read_committed` isolation for exactly-once consumers
+- Monitor lag, rebalance duration, and consumer group health
+- Never auto-commit offsets
+- Set retention limits on every topic from day one
+- Use cooperative sticky rebalance for stateful consumers
+- Always configure `min.insync.replicas=2` for durability
+- Compress producer data with zstd for best compression ratio (vs snappy/gzip)
+
 ## References
   - references/exactly-once.md — Exactly-Once Semantics
   - references/streaming-architecture.md — Streaming Architecture

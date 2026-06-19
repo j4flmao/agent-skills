@@ -222,6 +222,222 @@ Below are links to the reference guides detailing the algorithms, data schemas, 
 
 ---
 
+## Implementation Patterns
+
+### Sandbox Execution Wrapper
+
+```python
+import subprocess
+import os
+import tempfile
+import hashlib
+from typing import Optional
+
+class SandboxExecutor:
+    def __init__(self, memory_limit_mb=2048, cpu_limit=1.0, timeout_sec=30):
+        self.memory_limit_mb = memory_limit_mb
+        self.cpu_limit = cpu_limit
+        self.timeout_sec = timeout_sec
+
+    def execute(self, script: str, workdir: Optional[str] = None) -> dict:
+        script_hash = hashlib.sha256(script.encode()).hexdigest()[:12]
+        with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as f:
+            f.write(script)
+            script_path = f.name
+        try:
+            result = subprocess.run(
+                [
+                    "python", "-c", script,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=self.timeout_sec,
+                env={**os.environ, "PYTHONPATH": "", "DISABLE_IMPORTS": "1"},
+            )
+            return {
+                "success": result.returncode == 0,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "exit_code": result.returncode,
+                "script_hash": script_hash,
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": "Process timed out after {} seconds".format(self.timeout_sec),
+                "exit_code": -1,
+                "script_hash": script_hash,
+            }
+        finally:
+            os.unlink(script_path)
+```
+
+### PII Scrubbing Pipeline
+
+```python
+import re
+from typing import List, Tuple
+
+class PIIMasker:
+    PATTERNS = [
+        (r"\b[A-Z][a-z]+ [A-Z][a-z]+\b", "[NAME]"),
+        (r"\b\d{3}-\d{2}-\d{4}\b", "[SSN]"),
+        (r"\b\d{16}\b", "[CC_NUMBER]"),
+        (r"\b[\w\.-]+@[\w\.-]+\.\w+\b", "[EMAIL]"),
+        (r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b", "[PHONE]"),
+        (r"\b\d{4}-\d{4}-\d{4}-\d{4}\b", "[CC_NUMBER]"),
+        (r"(?i)(password|secret|api[_-]?key|token)\s*[:=]\s*\S+", r"\1: [REDACTED]"),
+    ]
+
+    def __init__(self, custom_patterns: List[Tuple[str, str]] = None):
+        if custom_patterns:
+            self.PATTERNS.extend(custom_patterns)
+
+    def mask(self, text: str) -> str:
+        for pattern, replacement in self.PATTERNS:
+            text = re.sub(pattern, replacement, text)
+        return text
+
+    def mask_log(self, log_lines: List[str]) -> List[str]:
+        return [self.mask(line) for line in log_lines]
+
+    def detect_pii(self, text: str) -> List[dict]:
+        findings = []
+        for pattern, label in self.PATTERNS:
+            for match in re.finditer(pattern, text):
+                findings.append({
+                    "type": label.strip("[]"),
+                    "position": match.span(),
+                    "snippet": text[max(0, match.start()-20):match.end()+20],
+                })
+        return findings
+```
+
+### Atomic File Writer with Locking
+
+```python
+import os
+import fcntl
+import json
+import tempfile
+from pathlib import Path
+from typing import Any
+
+class AtomicFileWriter:
+    def __init__(self, filepath: Path, lock_timeout: float = 5.0):
+        self.filepath = Path(filepath)
+        self.lock_path = Path(str(filepath) + ".lock")
+        self.lock_timeout = lock_timeout
+
+    def atomic_write(self, data: dict) -> bool:
+        lock_acquired = self._acquire_lock()
+        if not lock_acquired:
+            raise TimeoutError(f"Could not acquire lock for {self.filepath}")
+        try:
+            tmp_path = self.filepath.with_suffix(".tmp")
+            with open(tmp_path, "w") as f:
+                json.dump(data, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, self.filepath)
+            return True
+        finally:
+            self._release_lock()
+
+    def _acquire_lock(self) -> bool:
+        import time
+        start = time.time()
+        while time.time() - start < self.lock_timeout:
+            try:
+                self.lock_fd = os.open(self.lock_path, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+                return True
+            except FileExistsError:
+                time.sleep(0.1)
+        return False
+
+    def _release_lock(self):
+        if hasattr(self, "lock_fd"):
+            os.close(self.lock_fd)
+            os.unlink(self.lock_path)
+```
+
+### Resource Throttler (Token Bucket)
+
+```python
+import time
+from threading import Lock
+
+class TokenBucketThrottler:
+    def __init__(self, rate: float, burst: int):
+        self.rate = rate
+        self.burst = burst
+        self.tokens = burst
+        self.last_refill = time.monotonic()
+        self.lock = Lock()
+
+    def _refill(self):
+        now = time.monotonic()
+        elapsed = now - self.last_refill
+        self.tokens = min(self.burst, self.tokens + elapsed * self.rate)
+        self.last_refill = now
+
+    def consume(self, tokens: int = 1) -> bool:
+        with self.lock:
+            self._refill()
+            if self.tokens >= tokens:
+                self.tokens -= tokens
+                return True
+            return False
+
+    def wait_and_consume(self, tokens: int = 1, timeout: float = 10.0):
+        start = time.monotonic()
+        while time.monotonic() - start < timeout:
+            if self.consume(tokens):
+                return True
+            time.sleep(0.05)
+        raise TimeoutError(f"Could not acquire {tokens} tokens within {timeout}s")
+```
+
+## Production Considerations
+
+- **Resource limits in containerized environments**: Always set both soft and hard memory limits. Soft limits trigger warnings, hard limits trigger OOM kills. Use cgroups v2 for fine-grained control.
+- **Network egress proxy health checking**: Implement periodic TCP health checks against proxy endpoints. If the proxy is down, fail closed (block all egress) rather than fail open (allow direct access).
+- **Lock file cleanup on crash**: Use PID-file pattern where lock files contain the process PID. On startup, check if the PID is still alive before reporting a stale lock.
+- **Audit log rotation**: Set structured audit logs with size-based rotation (100MB per file, max 10 files) and compression. Ship to centralized logging for compliance.
+- **Graceful degradation tiers**: Define 3 degradation modes: (1) reduced parallelism, (2) degraded fallbacks, (3) read-only mode with user notification.
+
+## Security Considerations
+
+- **Privilege escalation prevention**: Never run sandboxed processes with `--privileged` flags or root user. Use `--cap-drop=ALL` with explicit `--cap-add` for required capabilities.
+- **Filesystem isolation**: Mount host filesystem as read-only with specific writable mount points (e.g., `/tmp`, `/workspace`). Use tmpfs for ephemeral storage.
+- **Network egress allowlist**: Maintain a strict domain allowlist. Block all IP-based connections. Use DNS resolution verification to prevent DNS rebinding attacks.
+- **Secrets injection**: Never pass secrets via environment variables to sandboxed processes. Use a secrets vault with short-lived tokens and inject through a secure sidecar.
+- **Audit trail integrity**: Write audit logs to append-only storage (e.g., immutable S3 buckets) to prevent tampering after compromise.
+
+## Anti-Patterns
+
+| Catching all exceptions in sandbox wrapper | Masks serious security violations in execution logs | Log and re-raise constraint violations separately from application errors |
+| Running subprocesses without timeout | Indefinite hangs consume resources | Always set explicit timeout (default 30s) |
+| Shared filesystem between sandbox and host | Sandbox can access restricted files via symlinks | Use separate mount namespaces, disable symlink following |
+| Logging input parameters verbosely | Sensitive data appears in audit logs | Apply parameter masking (show type/length, hide values) |
+| Setting CPU limits too low | Agent tasks time out due to insufficient compute | Profile typical CPU usage, set limit 2x above typical |
+| No rate limit on lock acquisition retries | Infinite retry loops consume CPU | Add max retry count (default 10) and exponential backoff |
+| Inheriting host environment variables | Secrets and API keys leak into sandbox | Use clean environment with explicit variable passthrough |
+| Not monitoring `/tmp` disk usage | Ephemeral storage fills up, killing processes | Set tmpfs size limits, monitor usage, alert at 80% |
+| Using default Docker seccomp profile | Restrictive defaults break legitimate syscalls | Use custom seccomp profile tailored to agent operations |
+| Forgetting to drop `NET_RAW` capability | Agents can craft raw packets for network scanning | Drop `NET_RAW`, `NET_ADMIN`, `SYS_ADMIN` capabilities |
+
+## Performance Optimization
+
+- **epoll-based I/O multiplexing**: Use `select.epoll()` for monitoring file descriptors in the PII scrubbing pipeline. Reduces CPU usage during high-throughput log processing.
+- **Memory-mapped file locking**: Use `mmap` for lock files to reduce filesystem I/O overhead. Lock acquisition drops from ~1ms to ~50μs.
+- **Lazy sandbox initialization**: Defer sandbox container creation until the first write/execute operation. Read-only operations can execute in a shared readonly sandbox.
+- **Parallel PII scrubbing**: Use multiprocessing pool for batch PII scrubbing. Process 100 log lines in parallel across 4 workers, reducing processing time by 65%.
+- **Compressed audit logs**: Compress audit logs with zlib after writing. Reduces storage costs by 80-90% for long-running agent sessions.
+- **Bounded lock contention windows**: Use short lock TTLs (2 seconds) with automatic lock release on process crash. Avoids manual lock cleanup operations.
+- **File watcher batching**: Use `inotify` (Linux) or `ReadDirectoryChangesW` (Windows) for batched file change notifications instead of polling.
+
 ## Handoff
 For database isolation configurations, hand off to `ai-vector-databases`. For runtime orchestrator loops, hand off to `core-master-orchestrator`. For logging aggregation rules, hand off to `ai-observability`.
 

@@ -222,6 +222,195 @@ What does the caller need?
 | Graceful shutdown | Drain connections, complete in-flight, then exit |
 | Rate limiting | Per service + global via API gateway |
 
+### Step 12: API Gateway Integration
+
+```typescript
+// API Gateway (Kong / APISIX / Envoy) configuration pattern
+// Route: /orders/* -> order-service:3001
+// Route: /payments/* -> payment-service:3002
+// Global: rate limit 1000 req/min per tenant, auth via JWT
+
+// Gateway-level concerns:
+// 1. Authentication — validate JWT before routing to service
+// 2. Rate limiting — per-tenant, per-endpoint, burst allowance
+// 3. Request validation — schema-based body validation at edge
+// 4. Response transformation — strip internal headers, add CORS
+// 5. Circuit breaking — gateway can fail fast before calling service
+```
+
+### Step 13: Service Mesh Integration
+
+```yaml
+# Istio VirtualService for traffic splitting (canary)
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: order-service
+spec:
+  hosts:
+  - order-service
+  http:
+  - match:
+    - headers:
+        x-canary: { exact: "true" }
+    route:
+    - destination:
+        host: order-service
+        subset: v2
+      weight: 100
+  - route:
+    - destination:
+        host: order-service
+        subset: v1
+      weight: 90
+    - destination:
+        host: order-service
+        subset: v2
+      weight: 10
+# Service mesh provides: mTLS, traffic shifting, fault injection,
+# circuit breaking, observability — without changing application code
+```
+
+### Step 14: Database per Service Implementation
+
+```typescript
+// Order Service — owns its PostgreSQL database
+// Schema: orders, order_items, order_events
+// No other service has direct DB access
+
+// Payment Service — owns its PostgreSQL database
+// Schema: payments, refunds, payment_methods
+
+// Cross-service data access: via API calls only
+// Example: Order Service needs payment status
+// Solution: call `GET /payments/v1/orders/:orderId` — never query payment DB
+```
+
+### Step 15: Contract Testing with Pact
+
+```typescript
+// Consumer-driven contract test (Order Service -> Payment Service)
+describe('Order Service - Payment API contract', () => {
+  const provider = new Pact({
+    consumer: 'OrderService',
+    provider: 'PaymentService',
+    port: 4000,
+  });
+
+  beforeAll(() => provider.setup());
+  afterEach(() => provider.verify());
+  afterAll(() => provider.finalize());
+
+  it('should process payment and return transaction ID', async () => {
+    await provider.addInteraction({
+      state: 'payment can be processed',
+      uponReceiving: 'a request to process payment',
+      withRequest: {
+        method: 'POST',
+        path: '/v1/payments',
+        headers: { 'Content-Type': 'application/json' },
+        body: { orderId: '123', amount: 99.99, currency: 'USD' },
+      },
+      willRespondWith: {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+        body: { transactionId: like('txn_abc123'), status: 'completed' },
+      },
+    });
+    const result = await paymentClient.processPayment({ orderId: '123', amount: 99.99, currency: 'USD' });
+    expect(result.transactionId).toBeDefined();
+  });
+});
+```
+
+## API Composition Pattern
+```typescript
+// API Gateway / BFF that aggregates multiple downstream services
+// Instead of client making 4 requests, gateway does it server-side
+
+interface ProductDetailsResponse {
+  product: Product;
+  inventory: Inventory;
+  reviews: Review[];
+  recommendations: Product[];
+}
+
+async function getProductDetails(productId: string): Promise<ProductDetailsResponse> {
+  const [product, inventory, reviews, recommendations] = await Promise.all([
+    fetchProductService(productId),
+    fetchInventoryService(productId),
+    fetchReviewService(productId),
+    fetchRecommendationService(productId),
+  ]);
+
+  return { product, inventory, reviews, recommendations };
+}
+
+// Circuit breaker for resilient inter-service calls
+class CircuitBreaker {
+  private failures = 0;
+  private lastFailureTime = 0;
+  private state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
+  private readonly threshold = 5;
+  private readonly timeout = 30000; // 30s
+
+  async call<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.state === 'OPEN') {
+      if (Date.now() - this.lastFailureTime > this.timeout) {
+        this.state = 'HALF_OPEN';
+      } else {
+        throw new Error('Circuit breaker is OPEN');
+      }
+    }
+
+    try {
+      const result = await fn();
+      this.failures = 0;
+      this.state = 'CLOSED';
+      return result;
+    } catch (err) {
+      this.failures++;
+      this.lastFailureTime = Date.now();
+      if (this.failures >= this.threshold) {
+        this.state = 'OPEN';
+      }
+      throw err;
+    }
+  }
+}
+```
+
+## Service Discovery
+```yaml
+# Kubernetes Headless Service for DNS-based discovery
+# Services discover peers via SRV DNS lookups
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+spec:
+  clusterIP: None  # Headless — returns pod IPs
+  selector:
+    app: payment-service
+  ports:
+    - name: grpc
+      port: 50051
+    - name: health
+      port: 8080
+```
+
+```typescript
+// DNS-based service discovery with retry
+import * as dns from 'dns/promises';
+
+async function resolveService(name: string): Promise<string> {
+  const records = await dns.resolveSrv(`_grpc._tcp.${name}.svc.cluster.local`);
+  // Round-robin across healthy instances
+  const target = records[Math.floor(Math.random() * records.length)];
+  return `${target.name}:${target.port}`;
+}
+```
+
 ## Production Considerations
 
 | Concern | Practice |
@@ -232,6 +421,35 @@ What does the caller need?
 | Team autonomy vs consistency | Balance: shared infrastructure (monitoring, CI) without coupling service decisions |
 | Testing | Unit (service-local) + Integration (per service) + Contract (per API pair) + E2E (minimal) |
 | Observability | Must be in place before going live. Debugging without it is guesswork |
+| Cold start latency | Serverless services (Lambda) add 200ms-5s cold start — keep latency-critical services on persistent compute |
+| Inter-service auth overhead | mTLS handshake adds ~10-50ms per connection — use connection pooling and keepalive |
+| Schema changes | Independent DB migrations per service — coordination needed for cross-service schema changes |
+| Backup and restore | Each service has independent backup strategy — test restore procedure quarterly |
+
+## Security
+
+| Layer | Threat | Mitigation |
+|-------|--------|------------|
+| API Gateway | DDoS, brute force | Rate limiting, WAF, IP allowlisting, request size limits |
+| Inter-service | Man-in-the-middle | mTLS with short-lived certs (Istio/Linkerd auto-rotation) |
+| Data at rest | Data breach | Encrypt DB volumes (AES-256), encrypt S3 buckets (SSE-KMS) |
+| Secrets | Credential leak | Vault/AWS Secrets Manager, never in env files or config repos |
+| Auth tokens | Token theft | Short-lived JWT (15 min), refresh tokens with rotation, httpOnly cookies |
+| Supply chain | Compromised dependency | Dependency scanning (Snyk/Dependabot), signed artifacts, SBOM generation |
+| API contracts | Breaking changes | Consumer-driven contracts, CI-validated, versioned APIs |
+
+```typescript
+// Service-to-service authentication with mTLS
+import { credentials, Metadata } from '@grpc/grpc-js';
+import { readFileSync } from 'fs';
+
+const rootCert = readFileSync('/etc/ssl/certs/ca-cert.pem');
+const clientCert = readFileSync('/etc/ssl/certs/service-cert.pem');
+const clientKey = readFileSync('/etc/ssl/certs/service-key.pem');
+
+const channelCredentials = credentials.createSsl(rootCert, clientKey, clientCert);
+const client = new PaymentServiceClient('payment-service:443', channelCredentials);
+```
 
 ## Anti-Patterns
 
@@ -245,6 +463,21 @@ What does the caller need?
 | **Synchronous Chains** | A calls B calls C — high latency, fragile | Async where possible, parallel calls |
 | **Leaky Abstractions** | Service exposes internal DB schema in API | API is contract — hide implementation |
 | **Golden Hammer** | All problems solved with microservices | Consider monolith first, extract when needed |
+| **Chatty Services** | Many small calls instead of one batched call | Use GraphQL or API composition layer |
+| **Shared Model Classes** | Same DTO class in multiple services | Each service has its own view of data (duplication is OK) |
+| **No Schema Governance** | Inconsistent API designs across services | API style guide + linting in CI (Spectral for OpenAPI) |
+| **Synchronous Event Publishing** | Services send events inline in request path | Use transactional outbox pattern |
+
+## Performance Benchmarks
+
+| Pattern | Latency (p50) | Latency (p99) | Throughput |
+|---------|---------------|---------------|------------|
+| In-process method call | < 1µs | < 1µs | Unlimited |
+| HTTP inter-service (same AZ) | 2-5ms | 10-20ms | ~10K req/s per instance |
+| gRPC inter-service (same AZ) | 0.5-2ms | 5-10ms | ~50K req/s per instance |
+| Message queue (async) | 5-50ms | 100-500ms | ~100K msg/s per broker |
+| Saga (orchestration, 3 steps) | 15-50ms | 100-200ms | ~5K saga/s |
+| Service mesh sidecar overhead | +1-3ms | +5-10ms | ~5% throughput reduction |
 
 ## Rules
 - No shared databases between services — ever.
@@ -258,6 +491,10 @@ What does the caller need?
 - Always define API contracts before implementation (contract-first).
 - Each service has at most one DB (shared-nothing).
 - Prefer eventual consistency unless strong consistency is legally required.
+- gRPC for high-throughput internal calls (< 2ms latency). HTTP for external or low-throughput internal.
+- Rate limit at the gateway AND per-service for defense in depth.
+- Use consumer-driven contracts to detect breaking API changes in CI.
+- Every service must have independent backup and restore tested quarterly.
 
 ## References
   - references/communication-patterns.md — Communication Patterns

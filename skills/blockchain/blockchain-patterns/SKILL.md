@@ -288,19 +288,6 @@ Decide: Bridge Architecture
 | Oracle dependency | Single oracle | Single oracle | Per-market oracle |
 | Upgradeability | Proxy-based | Proxy-based | Diamond (EIP-2535) |
 
-## Performance Considerations
-
-- **UUPS vs. Beacon**: UUPS costs ~200 gas more per call than beacon, but avoids an external read
-- **ERC-1155 batch transfers**: 80% cheaper than individual ERC-721 transfers for 5+ items
-- **Calldata vs. blob cost**: EIP-4844 blobs reduce L2 data availability cost from ~16 gas/byte to ~1-2 gas/byte
-- **Merkle proof verification**: O(log n) gas for inclusion proof; optimize with sorted merkle trees
-- **Oracle update frequency**: Push-based oracles (Pyth) update every ~400ms vs pull-based (Chainlink) ~20 min
-- **Concentrated liquidity**: 2000x capital efficiency vs constant product at 1% fee tier
-- **ERC-1167 minimal proxy**: ~200 gas to deploy vs ~500,000 for full contract
-- **Beacon proxy**: ~100 gas overhead per call vs ~200 for transparent proxy
-- **Diamond proxy**: ~250 gas overhead per call (facet map lookup + delegatecall)
-- **EIP-2535 diamond storage**: No collision risk, but ~5000 gas per namespace registration
-
 ## Operations & Maintenance
 
 ### Upgrade Management
@@ -360,6 +347,258 @@ Decide: Bridge Architecture
 23. NFT market contracts must implement EIP-2981 (royalty standard) for creator fees
 24. Off-chain oracles must not be the sole price source for liquidation-level decisions
 25. Token contracts must implement `_beforeTokenTransfer` hooks for composability
+
+## Implementation Examples
+
+### UUPS Proxy Pattern (Solidity)
+```solidity
+// UUPS upgradeable proxy — OpenZeppelin style
+contract UUPSProxy is ERC1967Proxy {
+    constructor(address _logic, bytes memory _data) ERC1967Proxy(_logic, _data) {}
+}
+
+abstract contract UUPSUpgradeable is Initializable, UUPSUpgradeable {
+    function _authorizeUpgrade(address newImplementation) internal virtual;
+
+    function upgradeTo(address newImplementation) external virtual onlyProxy {
+        _authorizeUpgrade(newImplementation);
+        _upgradeToAndCallUUPS(newImplementation, new bytes(0));
+    }
+
+    // Storage gap for future variables
+    uint256[50] private __gap;
+}
+
+// Example usage
+contract MyContractV1 is UUPSUpgradeable {
+    uint256 public value;
+
+    function initialize(uint256 _value) public initializer {
+        __UUPSUpgradeable_init();
+        value = _value;
+    }
+
+    function setValue(uint256 _value) external {
+        value = _value;
+    }
+}
+
+contract MyContractV2 is MyContractV1 {
+    function setValue(uint256 _value) external override {
+        require(_value > 0, "Zero not allowed");
+        value = _value;
+    }
+}
+```
+
+### ERC-4626 Yield-Bearing Vault (Solidity)
+```solidity
+contract YieldVault is ERC4626, ERC20Permit {
+    using SafeERC20 for IERC20;
+
+    constructor(
+        IERC20 _asset,
+        string memory _name,
+        string memory _symbol
+    ) ERC4626(_asset) ERC20(_name, _symbol) ERC20Permit(_name) {
+        // Virtual shares defense against inflation attack
+        _mint(address(this), 10**6); // 1M virtual shares
+        _asset.safeTransferFrom(msg.sender, address(this), 10**6); // 1M virtual assets
+    }
+
+    // Override to add fees
+    function _afterDeposit(uint256 assets, uint256 shares) internal override {
+        // Fee: 0.1% deposit fee
+        uint256 fee = assets / 1000;
+        _asset.safeTransfer(treasury, fee);
+    }
+
+    // Override to add performance fee on withdraw
+    function _beforeWithdraw(uint256 assets, uint256 shares) internal override {
+        uint256 totalAssets = totalAssets();
+        uint256 totalSupply = totalSupply() - 10**6; // Exclude virtual shares
+        uint256 navPerShare = totalAssets / totalSupply;
+        // Performance fee: 10% of yield above NAV
+        if (navPerShare > highWaterMark) {
+            uint256 yield = (navPerShare - highWaterMark) * shares;
+            uint256 perfFee = yield / 10;
+            _asset.safeTransfer(treasury, perfFee);
+            highWaterMark = navPerShare;
+        }
+    }
+
+    uint256 public highWaterMark;
+    address public treasury;
+}
+```
+
+### Cross-Chain Message Pattern (LayerZero OFT)
+```solidity
+contract MyOFT is OFT {
+    // LayerZero OFT — send tokens cross-chain
+    function sendCrossChain(
+        uint16 _dstChainId,
+        address _to,
+        uint256 _amount,
+        address payable _refundAddress,
+        bytes memory _adapterParams
+    ) external payable {
+        _send(_msgSender(), _dstChainId, _to, _amount, msg.value, _adapterParams);
+    }
+
+    // Override to enforce rate limiting
+    function _debitFrom(
+        address _from,
+        uint16 _dstChainId,
+        bytes memory _toAddress,
+        uint256 _amount
+    ) internal override returns (uint256) {
+        uint256 sentToday = dailyVolume[_dstChainId][block.timestamp / 86400];
+        require(sentToday + _amount <= dailyLimit, "Rate limit exceeded");
+        dailyVolume[_dstChainId][block.timestamp / 86400] = sentToday + _amount;
+        return super._debitFrom(_from, _dstChainId, _toAddress, _amount);
+    }
+
+    mapping(uint16 => mapping(uint256 => uint256)) public dailyVolume;
+    uint256 public dailyLimit = 100_000 * 10**18; // 100k tokens/day
+}
+```
+
+### AMM Constant Product Pool (Minimal)
+```solidity
+contract ConstantProductPool {
+    IERC20 public token0;
+    IERC20 public token1;
+    uint256 public reserve0;
+    uint256 public reserve1;
+
+    function swap(uint256 amount0Out, uint256 amount1Out, address to) external {
+        require(amount0Out > 0 || amount1Out > 0, "No output");
+        require(amount0Out < reserve0 && amount1Out < reserve1, "Insufficient liquidity");
+
+        uint256 balance0Before = token0.balanceOf(address(this));
+        uint256 balance1Before = token1.balanceOf(address(this));
+
+        // Transfer output tokens
+        if (amount0Out > 0) token0.safeTransfer(to, amount0Out);
+        if (amount1Out > 0) token1.safeTransfer(to, amount1Out);
+
+        // Verify invariant: (r0 - a0) * (r1 - a1) >= r0 * r1
+        uint256 balance0After = token0.balanceOf(address(this));
+        uint256 balance1After = token1.balanceOf(address(this));
+
+        uint256 amount0In = balance0After - (reserve0 - amount0Out);
+        uint256 amount1In = balance1After - (reserve1 - amount1Out);
+
+        require(amount0In > 0 || amount1In > 0, "Insufficient input");
+
+        uint256 balance0Adjusted = balance0After * 1000 - amount0In * 3; // 0.3% fee
+        uint256 balance1Adjusted = balance1After * 1000 - amount1In * 3;
+
+        require(
+            balance0Adjusted * balance1Adjusted >= reserve0 * reserve1 * 1_000_000,
+            "Invariant failed"
+        );
+
+        (reserve0, reserve1) = (balance0After, balance1After);
+
+        emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
+    }
+
+    event Swap(address indexed sender, uint256 amount0In, uint256 amount1In,
+               uint256 amount0Out, uint256 amount1Out, address indexed to);
+}
+```
+
+### Flash Loan Pattern (Minimal)
+```solidity
+contract FlashLoanProvider {
+    IERC20 public token;
+    uint256 public protocolFee = 9; // 0.09% fee
+
+    function flashLoan(uint256 amount, address receiver, bytes calldata data) external {
+        uint256 balanceBefore = token.balanceOf(address(this));
+        require(balanceBefore >= amount, "Insufficient liquidity");
+
+        token.safeTransfer(receiver, amount);
+
+        // Callback to borrower
+        IFlashLoanReceiver(receiver).executeOperation(amount, protocolFee, data);
+
+        // Verify repayment + fee
+        uint256 balanceAfter = token.balanceOf(address(this));
+        require(balanceAfter >= balanceBefore + amount * protocolFee / 10000, "Repayment failed");
+
+        emit FlashLoan(receiver, amount, protocolFee);
+    }
+
+    event FlashLoan(address indexed receiver, uint256 amount, uint256 fee);
+}
+
+interface IFlashLoanReceiver {
+    function executeOperation(uint256 amount, uint256 fee, bytes calldata data) external;
+}
+```
+
+### Factory + Minimal Proxy Pattern (ERC-1167)
+```solidity
+contract WalletFactory {
+    address public immutable implementation;
+
+    event WalletCreated(address indexed wallet, address indexed owner);
+
+    constructor(address _implementation) {
+        implementation = _implementation;
+    }
+
+    function createWallet(address owner, bytes32 salt) external returns (address) {
+        bytes memory initData = abi.encodeWithSelector(Wallet.initialize.selector, owner);
+
+        address wallet = Clones.cloneDeterministic(implementation, salt);
+        // Deploy cost: ~200 gas (ERC-1167 minimal proxy)
+        // vs ~500k gas for full contract deployment
+
+        IProxy(wallet).initialize(initData);
+        emit WalletCreated(wallet, owner);
+        return wallet;
+    }
+}
+
+// ERC-1167 minimal proxy bytecode:
+// 0x363d3d373d3d3d363d73{b_20 bytes address}5af43d82803e903d91602b57fd5bf3
+```
+
+## Security Analysis Per Pattern
+
+| Pattern | Primary Attack Vector | Mitigation |
+|---------|----------------------|------------|
+| UUPS Proxy | Initialization frontrunning | Constructor `_disableInitializers()` |
+| Transparent Proxy | Function selector collision | Admin storage at `0xb53127684a...` (EIP-1967) |
+| Beacon Proxy | Beacon implementation change mid-transaction | Atomic updates with reentrancy guard |
+| Diamond (EIP-2535) | Storage collision across facets | Diamond storage with unique namespace |
+| ERC-4626 Vault | Inflation attack | Virtual shares + assets (OpenZeppelin fix) |
+| AMM Constant Product | Sandwich attack | Slippage tolerance + TWAP oracle |
+| AMM Concentrated Liquidity | Range manipulation | Tick-based pricing, immutable tick boundaries |
+| Bridge (Canonical) | Reorg finality gap | Challenge window (7d Optimistic / 30min ZK) |
+| Bridge (External Verifier) | Verifier collusion | Threshold signing + economic bonding |
+| LayerZero | DVN compromise | Multiple DVN paths + security stack |
+| State Channel | Watchtower offline | Watchtower service, challenge period |
+| Flash Loan | Oracle manipulation | TWAP oracle, min-max bounds checks |
+| ERC-20 Permit | Signature replay (cross-chain) | Include chain ID in domain separator |
+| ERC-4337 AA | EntryPoint DoS | Per-account staking + gas limits |
+
+## Performance Considerations
+
+- **UUPS vs. Beacon**: UUPS costs ~200 gas more per call than beacon, but avoids an external read
+- **ERC-1155 batch transfers**: 80% cheaper than individual ERC-721 transfers for 5+ items
+- **Calldata vs. blob cost**: EIP-4844 blobs reduce L2 data availability cost from ~16 gas/byte to ~1-2 gas/byte
+- **Merkle proof verification**: O(log n) gas for inclusion proof; optimize with sorted merkle trees
+- **Oracle update frequency**: Push-based oracles (Pyth) update every ~400ms vs pull-based (Chainlink) ~20 min
+- **Concentrated liquidity**: 2000x capital efficiency vs constant product at 1% fee tier
+- **ERC-1167 minimal proxy**: ~200 gas to deploy vs ~500,000 for full contract
+- **Beacon proxy**: ~100 gas overhead per call vs ~200 for transparent proxy
+- **Diamond proxy**: ~250 gas overhead per call (facet map lookup + delegatecall)
+- **EIP-2535 diamond storage**: No collision risk, but ~5000 gas per namespace registration
 
 ## References
 - references/advanced-token-standards.md — Advanced Token Standards

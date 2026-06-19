@@ -305,3 +305,237 @@ techniques:
   - references/root-cause-analysis.md — Root Cause Analysis Reference
 ## Handoff
 Hand off to `dev-loop-performance-profiler` if the bug is performance-related. Hand off to `dev-loop-code-review` for security-related bugs.
+
+## Implementation Patterns
+
+### Bug Report Parser
+
+```python
+from typing import Dict, Optional, List
+import re
+from datetime import datetime
+
+class BugReport:
+    def __init__(self, title: str, description: str):
+        self.title = title
+        self.description = description
+        self.severity = self._classify_severity()
+        self.category = self._classify_category()
+        self.reproducibility = self._assess_reproducibility()
+
+    def _classify_severity(self) -> str:
+        critical_kw = ["crash", "segfault", "data loss", "security", "0-day",
+                       "production down", "p0", "p1", "critical"]
+        high_kw = ["incorrect", "wrong", "broken", "not working", "fails",
+                   "error", "exception", "regression"]
+        text = f"{self.title} {self.description}".lower()
+        for kw in critical_kw:
+            if kw in text:
+                return "critical"
+        for kw in high_kw:
+            if kw in text:
+                return "high"
+        return "medium"
+
+    def _classify_category(self) -> str:
+        text = f"{self.title} {self.description}".lower()
+        if any(w in text for w in ["race", "async", "concurrent", "thread", "timing"]):
+            return "race_condition"
+        if any(w in text for w in ["null", "undefined", "non-null", "optional"]):
+            return "null_reference"
+        if any(w in text for w in ["memory", "leak", "oom", "heap"]):
+            return "memory"
+        if any(w in text for w in ["perf", "slow", "timeout", "hang"]):
+            return "performance"
+        if any(w in text for w in ["api", "http", "response", "status", "400", "500"]):
+            return "api_integration"
+        if any(w in text for w in ["database", "query", "sql", "migration"]):
+            return "database"
+        return "logic"
+
+    def _assess_reproducibility(self) -> str:
+        text = f"{self.title} {self.description}".lower()
+        if any(w in text for w in ["always", "every time", "100%", "consistently"]):
+            return "always"
+        if any(w in text for w in ["sometimes", "intermittent", "occasionally", "random"]):
+            return "intermittent"
+        if any(w in text for w in ["once", "single time", "one time", "rarely"]):
+            return "rare"
+        return "unknown"
+```
+
+### Root Cause Analysis Documenter
+
+```python
+from typing import List, Dict, Optional
+from datetime import datetime
+import json
+
+class RCADocument:
+    def __init__(self, bug_id: str, title: str):
+        self.bug_id = bug_id
+        self.title = title
+        self.created_at = datetime.utcnow()
+        self.timeline: List[Dict] = []
+        self.hypotheses: List[Dict] = []
+        self.root_cause: Optional[Dict] = None
+        self.fix: Optional[Dict] = None
+
+    def add_hypothesis(self, description: str, probability: float, evidence: List[str]):
+        self.hypotheses.append({
+            "description": description,
+            "probability": probability,
+            "evidence": evidence,
+            "status": "proposed",
+            "test_result": None,
+        })
+
+    def record_test(self, hypothesis_index: int, confirmed: bool, notes: str):
+        if hypothesis_index < len(self.hypotheses):
+            self.hypotheses[hypothesis_index]["status"] = "confirmed" if confirmed else "rejected"
+            self.hypotheses[hypothesis_index]["test_result"] = notes
+
+    def set_root_cause(self, description: str, file: str, line: int, category: str):
+        self.root_cause = {
+            "description": description,
+            "file": file,
+            "line": line,
+            "category": category,
+            "discovered_at": datetime.utcnow().isoformat(),
+        }
+
+    def set_fix(self, description: str, files_changed: List[str], prevention: List[str]):
+        self.fix = {
+            "description": description,
+            "files_changed": files_changed,
+            "prevention": prevention,
+            "applied_at": datetime.utcnow().isoformat(),
+        }
+
+    def get_5_whys(self) -> List[str]:
+        if not self.root_cause:
+            return ["Root cause not identified"]
+        whys = []
+        cause = self.root_cause["description"]
+        why_count = 0
+        while cause and why_count < 5:
+            whys.append(f"Why? {cause}")
+            cause = self._get_deeper_cause(cause)
+            why_count += 1
+        return whys
+
+    def _get_deeper_cause(self, cause: str) -> Optional[str]:
+        deeper = {
+            "null check missing": "developer didn't consider edge case",
+            "no input validation": "trusted external input without sanitization",
+            "wrong return type": "interface contract not documented",
+            "race condition": "shared state without synchronization",
+        }
+        cause_lower = cause.lower()
+        for key, val in deeper.items():
+            if key in cause_lower:
+                return val
+        return None
+
+    def summary(self) -> str:
+        return json.dumps({
+            "bug_id": self.bug_id,
+            "title": self.title,
+            "severity": "high" if self.root_cause else "unknown",
+            "root_cause": self.root_cause["description"] if self.root_cause else "pending",
+            "hypotheses_tested": sum(1 for h in self.hypotheses if h["status"] != "proposed"),
+            "prevention": self.fix["prevention"] if self.fix else [],
+        }, indent=2)
+```
+
+### Git Bisect Automation
+
+```bash
+# Automated git bisect script
+cat > /tmp/bisect.sh << 'SCRIPT'
+#!/bin/bash
+# Usage: git bisect run /tmp/bisect.sh
+
+# Build the project
+npm run build > /dev/null 2>&1
+
+# Run the specific test that catches the bug
+npx jest --testPathPattern="tests/specific-bug-test" 2>&1 | grep -q "FAIL"
+
+# Exit 0 if good (test passes), 1 if bad (test fails)
+# Git bisect expects 0 for good, 1 for bad (or 125 for skip)
+SCRIPT
+chmod +x /tmp/bisect.sh
+
+# Start bisect
+git bisect start HEAD v1.0.0
+git bisect run /tmp/bisect.sh
+```
+
+## Architecture Decision Trees
+
+### Debugging Tool Selection
+
+```
+What language/platform?
+├── JavaScript / TypeScript
+│   ├── Node.js backend → --inspect + Chrome DevTools / VS Code
+│   ├── Browser → Chrome DevTools / React DevTools / Redux DevTools
+│   └── Mobile (React Native) → Flipper / React Native Debugger
+│
+├── Python
+│   ├── Local → pdb / ipdb / breakpoint()
+│   └── Production → traceback + structured logging + Sentry
+│
+├── Java / JVM
+│   ├── Local → IntelliJ debugger / JDB / VisualVM
+│   └── Production → JMX / JFR / heap dump / thread dump
+│
+├── .NET / C#
+│   ├── Local → VS / Rider debugger / dotnet-trace
+│   └── Production → dotnet-counters / dotnet-dump
+│
+├── Rust
+│   ├── Local → lldb / gdb / rust-gdb
+│   └── Panic → RUST_BACKTRACE=1 / RUST_LIB_BACKTRACE=1
+│
+└── Go
+    ├── Local → delve debugger
+    └── Production → pprof / trace
+```
+
+### Hypothesis Prioritization
+
+```
+Given multiple possible causes, which to test first?
+├── Most recent change (git log, deployment)
+├── Most likely based on error message
+├── Easiest to test (quick experiment)
+├── Most common cause for this type of bug
+└── Components involved in critical path
+```
+
+## Production Considerations
+
+- **Structured error logging**: Log all errors with correlation IDs, stack traces, and context. Use a consistent JSON format consumable by log aggregation tools.
+- **Automatic error triage**: Set up automated error grouping by stack trace fingerprint. Route to appropriate team based on affected service.
+- **Canary debugging**: Enable verbose debug logging for specific users or sessions via feature flags. Avoids deploying debug builds to all users.
+- **Production breakpoints**: Use tools like Lightrun or Rookout for on-demand production debugging without redeployment or restart.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Debugging in production with console.log | Requires code change + redeploy just to add logging | Use structured logging at appropriate levels |
+| Changing multiple things at once | Can't isolate which change fixed the bug | One change at a time, test after each |
+| Fixing the symptom not the root cause | Bug reappears in different form | Trace to source, fix the root cause |
+| Not writing a regression test | Same bug reintroduced later | Write test that fails before fix, passes after |
+| Assuming without checking | "That can't be the cause" is often wrong | Verify every assumption with evidence |
+| No reproduction steps | Can't verify fix or test regression | Always document full reproduction steps |
+| Using outdated/stale reproductions | Bug already fixed or changed | Reproduce on latest code before debugging |
+
+## Performance Optimization
+
+- **Binary search on code**: Use git bisect for regression bugs. Automates the most efficient search strategy — O(log N) commits checked instead of O(N).
+- **Focused test for reproduction**: Write a minimal test case that reproduces the bug. Avoids running full test suite during fix verification.
+- **Conditional breakpoints**: Use data-dependent breakpoints to stop only when relevant conditions are met. Avoids manual stepping through thousands of iterations.

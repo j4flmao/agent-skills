@@ -373,6 +373,142 @@ Impact: Per-feature a11y audit effort -70%, annual findings -60%
 - Screen reader testing must include at least VoiceOver and NVDA.
 - Accessibility documentation must be included in component handoff.
 
+## Mobile Accessibility Patterns
+
+### Touch Target Sizing
+| Platform | Minimum | Recommended | Context |
+|----------|---------|-------------|---------|
+| iOS (HIG) | 44x44pt | 48x48pt | All interactive elements |
+| Android (Material) | 48x48dp | 56x56dp | Touch targets |
+| WCAG 2.2 | 24x24px | 44x44px | Level AA / AAA |
+
+Spacing between touch targets: minimum 8px (prevents accidental taps). For targets below recommended size, increase padding inside the touch target area rather than enlarging the visual element.
+
+### Mobile Screen Reader Patterns
+| Platform | Screen Reader | Gesture | Command |
+|----------|--------------|---------|---------|
+| iOS | VoiceOver | Swipe right/left | Navigate between elements |
+| iOS | VoiceOver | Double tap | Activate element |
+| iOS | VoiceOver | Three-finger swipe | Scroll page |
+| iOS | VoiceOver | Rotor (two-finger twist) | Change navigation mode |
+| Android | TalkBack | Swipe right/left | Navigate between elements |
+| Android | TalkBack | Double tap | Activate element |
+| Android | TalkBack | Swipe up/down with one finger | Change reading mode |
+
+Mobile accessibility testing must include: gesture-only interactions (can they be performed with screen reader gestures?), focus indicators on mobile (visible on colored backgrounds), dynamic content announcements (live regions work on mobile WebView?), orientation lock impact (can content be accessed in both orientations?).
+
+### Mobile-Specific WCAG Criteria
+- **1.3.4 Orientation**: Content must not be locked to a single orientation unless essential (e.g., piano app)
+- **1.3.5 Identify Input Purpose**: Autofill attributes on form fields for password managers
+- **1.4.10 Reflow**: Content must not require horizontal scrolling at 320px equivalent
+- **1.4.11 Non-text Contrast**: UI components and graphic objects must have 3:1 contrast ratio
+- **1.4.12 Text Spacing**: No loss of content when text spacing is overridden
+- **1.4.13 Content on Hover or Focus**: Dismissible, hoverable, persistent popovers
+- **2.5.5 Target Size (AAA)**: Target size at least 44x44px
+- **2.5.7 Dragging Movements (AA)**: All dragging functionality must have a single-pointer alternative
+- **2.5.8 Target Size (AA, 2.2 new)**: Target size at least 24x24px with exceptions
+
+## Accessibility Governance and CI/CD
+
+### Automated Testing in CI
+```yaml
+# GitHub Actions — accessibility checks
+name: Accessibility CI
+on: [pull_request]
+jobs:
+  a11y:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          urls: |
+            https://staging.example.com/
+            https://staging.example.com/checkout
+          configPath: ./lighthouserc.js
+      - name: axe-core
+        run: npx axe --exit --show-errors
+      - name: Pa11y CI
+        run: npx pa11y-ci --sitemap https://staging.example.com/sitemap.xml
+```
+
+### Governance Maturity Levels
+
+| Level | Practices | Enforcement | Frequency |
+|-------|-----------|-------------|-----------|
+| 1 | Ad hoc fixes | None | Reactive (user complaint) |
+| 2 | Automated checks | CI pipeline with axe-core | Per commit |
+| 3 | Manual audits | Keyboard + screen reader audits per feature | Per feature release |
+| 4 | Integrated workflow | A11y in design review, dev review, QA, and CI | Every sprint |
+| 5 | Inclusive culture | User testing with assistive tech, a11y metrics tracked | Continuous |
+
+### A11y Debt Tracking
+Track accessibility issues like technical debt:
+- Severity: Critical (blocks task completion), Major (significant friction), Minor (annoyance), Suggestion
+- Fix effort: hours estimated per issue
+- Category: Perceivable, Operable, Understandable, Robust (POUR)
+- Source: Automated scan, manual audit, user report
+
+Report quarterly to leadership: total issues, issues fixed, issues added, median severity, time-to-fix by severity. Target: zero critical/major issues in production.
+
+## Production Accessibility Checklist
+
+### Pre-Launch Verification
+- [ ] All pages pass automated axe-core scan (zero violations in wcag2a, wcag2aa)
+- [ ] Manual keyboard audit: all interactive elements reachable and operable via keyboard
+- [ ] Screen reader audit: all content perceivable with VoiceOver (macOS) and NVDA (Windows)
+- [ ] Color contrast: all text/background combos verified programmatically (4.5:1 minimum)
+- [ ] Zoom test: page renders without breakage at 200% and 400% zoom
+- [ ] Focus management: visible focus indicators on all interactive elements
+- [ ] Form labels: every form input has a programmatically associated label
+- [ ] Error handling: form errors are announced and associated with inputs
+- [ ] Dynamic content: all updates are announced via aria-live regions
+- [ ] Video/audio: captions, transcripts, and accessible controls
+- [ ] PDFs: tagged with proper heading hierarchy and alt text
+- [ ] Mobile: 44x44px minimum touch targets, no horizontal scroll at 320px
+- [ ] Reduced motion: all animations disable with `prefers-reduced-motion: reduce`
+
+### Post-Launch Monitoring
+- Monthly: automated scan of top 20 pages
+- Quarterly: full keyboard audit + screen reader audit
+- Bi-annually: user testing with assistive technology users
+- Continuous: monitor support tickets for accessibility-related complaints
+- Per release: a11y regression check on changed pages
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Fix |
+|-------------|---------|-----|
+| **ARIA overuse** | `role="button"` on a `<div>` when `<button>` exists | Use native HTML elements first; ARIA only when HTML semantics insufficient |
+| **accessi-beige** | Making everything gray and boring "for accessibility" | Accessibility doesn't mean ugly — vibrant colors work with sufficient contrast |
+| **Focus outline: none** | Removing focus indicators for visual "cleanliness" | Custom focus indicators that match brand but remain visible (2px outline, 3:1 contrast) |
+| **Skip link missing** | Users must tab through entire navigation on every page | Add "Skip to main content" link as first focusable element |
+| **Only automated testing** | 100% Lighthouse score but users can't complete tasks | Automated testing catches ~30% of issues. Manual and user testing required |
+| **Title attribute overuse** | `title` attributes on everything thinking it helps accessibility | Screen readers don't consistently announce title. Use aria-label, aria-describedby |
+| **Disabling zoom** | `user-scalable=no` or `maximum-scale=1.0` in viewport meta | Users with low vision need pinch-zoom. Never disable zoom |
+| **Modal focus trap failure** | Focus leaves modal or Escape key doesn't close it | Implement proper focus trapping: tab cycles within modal, Escape closes, focus returns to trigger |
+| **Color-only states** | Active/selected state shown only by color change | Add icon, text change, underline, or other non-color indicator to all states |
+| **`aria-hidden="true"` on focusable elements** | Screen reader skips content but keyboard can still focus on it | Never use aria-hidden on focusable elements. Combine with `tabindex="-1"` or `display: none` |
+| **CAPTCHA without audio alternative** | Visual CAPTCHA blocks screen reader users | Use hCaptcha (accessible) or implement audio CAPTCHA alternative |
+| **No `prefers-reduced-motion`** | Animations cause discomfort for users with vestibular disorders | Wrap all animations in `@media (prefers-reduced-motion: no-preference)`, provide static alternatives |
+
+## Tools & Deliverables
+
+| Deliverable | Contents | Tools |
+|------------|----------|-------|
+| Accessibility audit | WCAG violations by criterion, severity, location, fix steps | axe DevTools, Lighthouse, manual testing |
+| VPAT (Voluntary Product Accessibility Template) | Section 508 / EN 301 549 compliance statement | Template + audit results |
+| ARIA pattern library | Reusable ARIA patterns per component type | Storybook, documentation site |
+| Accessibility statement | Public-facing commitment, known issues, contact info | Web page |
+| Testing protocol | Step-by-step manual testing procedures | Internal wiki/documentation |
+| Training materials | Developer a11y guide, designer a11y checklist | Internal wiki, slide deck |
+| VPAT report | Formal accessibility conformance report | Compliance team, procurement |
+
 ## References
   - references/accessible-forms.md — Accessible Forms
   - references/aria-patterns.md — ARIA Patterns

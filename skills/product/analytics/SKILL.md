@@ -367,6 +367,197 @@ Method: Event taxonomy audit using pattern matching
 Key finding: 68% of events were unused or duplicated
 Impact: 40% cost reduction in data processing, 50% faster query times
 
+## Event Taxonomy Templates
+
+### Standard Event Schema
+```json
+{
+  "event": "noun_verb",
+  "properties": {
+    "user_id": "string (required)",
+    "timestamp": "ISO 8601 (required)",
+    "session_id": "string (required)",
+    "version": "app_version (required)",
+    "platform": "web | ios | android",
+    "locale": "en_US"
+  },
+  "context": {
+    "page_url": "string",
+    "referrer": "string",
+    "device": "desktop | mobile | tablet",
+    "connection_type": "wifi | cellular | ethernet"
+  }
+}
+```
+
+### Event Naming Convention
+```
+Format: {noun}_{past_tense_verb}
+Examples:
+  user_signed_up
+  plan_subscribed
+  feature_used
+  onboarding_completed
+  payment_failed
+  session_started
+
+Structure rules:
+  noun = the subject (user, plan, payment, session, feature)
+  verb = past tense action (signed_up, subscribed, failed, completed)
+  Use snake_case, all lowercase
+  Max 3 words total (e.g., payment_method_added, not user_added_new_payment_method)
+  Version with suffix: feature_used_v2
+
+Property naming:
+  camelCase for property names
+  snake_case for event names (historical convention)
+```
+
+### Event Taxonomy Template
+```
+## Event: {event_name}
+Owner: {team_name}
+Purpose: {one-line business question answered}
+Trigger: {condition that fires the event}
+
+Properties:
+| Name | Type | Example | Required | PII |
+|------|------|---------|----------|-----|
+| {prop} | string | "premium" | yes | no |
+| {prop} | number | 42 | no | no |
+
+Tracking:
+  - Implementation status: {not_started / in_dev / testing / live}
+  - Dashboard: {link to dashboard}
+  - First tracked: {date}
+  - Last reviewed: {date}
+```
+
+## Cohort Design Patterns
+
+### Pattern 1: Acquisition Cohort (weekly)
+```sql
+-- Users grouped by signup week, tracked for retention
+WITH cohorts AS (
+  SELECT
+    user_id,
+    DATE_TRUNC('week', signup_date) AS cohort_week
+  FROM users
+),
+activity AS (
+  SELECT
+    c.user_id,
+    c.cohort_week,
+    DATE_TRUNC('week', a.activity_date) AS activity_week,
+    DATE_PART('week', a.activity_date) - DATE_PART('week', c.cohort_week)
+      + (DATE_PART('year', a.activity_date) - DATE_PART('year', c.cohort_week)) * 52
+      AS week_number
+  FROM cohorts c
+  JOIN activity_log a ON c.user_id = a.user_id
+)
+SELECT
+  cohort_week,
+  week_number,
+  COUNT(DISTINCT user_id) AS active_users,
+  COUNT(DISTINCT user_id) / MAX(COUNT(DISTINCT user_id)) OVER (PARTITION BY cohort_week) AS retention
+FROM activity
+GROUP BY cohort_week, week_number
+ORDER BY cohort_week, week_number
+```
+
+### Pattern 2: Behavioral Cohort (by feature adoption)
+```sql
+-- Users grouped by feature adoption event date
+WITH feature_users AS (
+  SELECT DISTINCT user_id,
+    MIN(event_timestamp) AS first_feature_date
+  FROM events
+  WHERE event_name = 'feature_used'
+  GROUP BY user_id
+),
+cohorts AS (
+  SELECT
+    fu.user_id,
+    DATE_TRUNC('week', fu.first_feature_date) AS cohort_week
+  FROM feature_users fu
+)
+-- ... rest of retention query as in Pattern 1
+```
+
+### Cohort Interpretation Guidelines
+```
+Retention curve shapes:
+  Flat line at high % -> sticky product (e.g., 60% retained at week 12)
+  Steep drop then flat -> partial retention (e.g., 80% to 30% by week 4, then stable)
+  Continuous decline -> churn problem (fix: improve core value delivery)
+  Increasing retention in older cohorts -> product improving over time
+  Decreasing retention in newer cohorts -> regression (fix: rollback recent changes)
+
+Sample size minimums:
+  100 users per cohort minimum for statistical validity
+  30 users minimum per period for any actionable insight
+  Below 30: aggregate multiple cohorts or extend period
+```
+
+## SQL Templates for Product Analytics
+
+### Funnel Analysis
+```sql
+WITH step_1 AS (
+  SELECT DISTINCT user_id, session_id
+  FROM events WHERE event_name = 'page_viewed' AND page = '/signup'
+),
+step_2 AS (
+  SELECT DISTINCT user_id, session_id
+  FROM events WHERE event_name = 'form_started'
+),
+step_3 AS (
+  SELECT DISTINCT user_id, session_id
+  FROM events WHERE event_name = 'user_signed_up'
+)
+SELECT
+  COUNT(DISTINCT s1.user_id) AS step_1_users,
+  COUNT(DISTINCT s2.user_id) AS step_2_users,
+  COUNT(DISTINCT s3.user_id) AS step_3_users,
+  ROUND(COUNT(DISTINCT s2.user_id) * 100.0 / COUNT(DISTINCT s1.user_id), 1) AS step_1_to_2_pct,
+  ROUND(COUNT(DISTINCT s3.user_id) * 100.0 / COUNT(DISTINCT s2.user_id), 1) AS step_2_to_3_pct
+FROM step_1 s1
+LEFT JOIN step_2 s2 ON s1.session_id = s2.session_id
+LEFT JOIN step_3 s3 ON s2.session_id = s3.session_id
+```
+
+### User Segmentation for Analysis
+```sql
+SELECT
+  CASE
+    WHEN COUNT(DISTINCT e.event_name) >= 10 THEN 'power_user'
+    WHEN COUNT(DISTINCT e.event_name) >= 3 THEN 'regular_user'
+    WHEN sa.user_id IS NOT NULL THEN 'signed_up_only'
+    ELSE 'anonymous'
+  END AS user_segment,
+  COUNT(DISTINCT e.user_id) AS users,
+  COUNT(*) AS total_events,
+  ROUND(COUNT(*) * 1.0 / COUNT(DISTINCT e.user_id), 1) AS events_per_user
+FROM events e
+LEFT JOIN signup_activity sa ON e.user_id = sa.user_id
+WHERE e.event_timestamp >= CURRENT_DATE - INTERVAL '30 days'
+GROUP BY user_segment
+ORDER BY users DESC
+```
+
+## Analytics Anti-Patterns
+
+1. **Vanity metrics on dashboards**: Tracking total users without segmenting
+   Fix: Always segment by cohort, acquisition channel, or user type
+2. **No event governance**: Uncontrolled event creation leads to taxonomies with 1000+ events
+   Fix: Event registry with owner, review quarterly, prune unused
+3. **Confusing correlation with causation**: Dashboard shows correlation, team acts on it
+   Fix: Run controlled experiments before causal claims
+4. **Dashboard overload**: 50+ charts on a single dashboard
+   Fix: One metric per chart, max 8 charts per dashboard, hierarchy of dashboards
+5. **No data quality monitoring**: Pipeline breaks, wrong data for 2 weeks
+   Fix: Daily data quality alerts, event volume anomaly detection
+
 ## Rules
 - Event names must follow noun_verb naming convention consistently.
 - Every event must include user ID, timestamp, session ID, and version.

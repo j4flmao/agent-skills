@@ -14,7 +14,7 @@ description: >
   comparison.
   Do NOT use this for: single-cloud architectures, pure on-prem
   environments, or basic VPN setup without hybrid context.
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -64,21 +64,62 @@ No preamble. No postamble. No explanations.
 - [ ] DR plan with RPO/RTO for hybrid workloads.
 - [ ] Monitoring and observability across environments.
 
-### Max Response Length
-400 lines.
+## Architecture Decision Trees
+
+### Connectivity Options Comparison
+| Method | Latency | Bandwidth | Cost | MTTR | Use Case |
+|---|---|---|---|---|---|
+| Site-to-Site VPN | >5ms | Up to 1.25 Gbps per tunnel | Low | Minutes | Interim, DR, low-volume |
+| Direct Connect / ExpressRoute | 1-3ms | 50 Mbps - 100 Gbps | Medium + egress | 1-4 hours | Primary, high-volume |
+| SD-WAN over MPLS | 5-10ms | Up to 1 Gbps per circuit | Medium | Automatic | Branch offices |
+| Cloud Interconnect (GCP) | 1-3ms | 10-200 Gbps | Medium | 1-2 hours | GCP primary |
+| Megaport / Equinix Fabric | <1ms | Up to 10 Gbps per port | Medium | Instant | Multi-cloud exchange |
+| Colo cross-connect | <1ms | 1-100 Gbps | Low per link | Days | Same-facility hybrid |
+
+### Hybrid Compute Platform Comparison
+| Platform | On-Prem | Cloud | Orchestration | Best For |
+|---|---|---|---|---|
+| VMware HCX | vSphere | AWS VMC, Azure VMware | L2 stretch, bulk migration | VMware-centric orgs |
+| Google Anthos | GKE on-prem | GKE, GCP | Config Management, Service Mesh | K8s-native hybrid |
+| Azure Arc | Any K8s, Linux/Windows | Azure | Azure Policy, GitOps | Azure-first hybrid |
+| AWS Outposts | Native AWS HW | AWS | Same APIs as cloud | AWS extension |
+| EKS Anywhere | EKS on-prem | EKS | GitOps, Curated packages | K8s hybrid |
+| Nutanix Cloud Clusters | AHV | AWS, Azure | Single management | Nutanix shops |
+
+### Identity Federation Comparison
+| Protocol | Use Case | Complexity | Security Level |
+|---|---|---|---|
+| SAML 2.0 | Web app SSO, enterprise | Medium | High |
+| OpenID Connect | Modern apps, API access | Low | High |
+| Kerberos | On-prem legacy SSO | Medium | Medium |
+| LDAP | Direct authentication | Low | Low |
+| SCIM | User provisioning | Low | N/A |
+
+### Data Sync Decision Tree
+```
+Is data structured (RDBMS)?
+├── Yes → Need real-time sync?
+│   ├── Yes → CDC (DMS, Debezium, GoldenGate)
+│   └── No → Batch ETL (periodic extract-load)
+└── No → Is data file-based?
+    ├── Yes → Is NAS/EFS?
+    │   ├── Yes → NetApp SnapMirror, DFS-R, rclone
+    │   └── No → Object store sync (rclone, DataSync, Storage Sync)
+    └── No → Is it message/queue?
+        ├── Yes → Cross-region topic replication
+        └── No → Custom sync logic
+```
+
+### DR Strategy for Hybrid Cloud
+| Strategy | RPO | RTO | Cost | Complexity | Failover |
+|---|---|---|---|---|---|
+| Backup and restore | 24h | 4-24h | Low | Low | Manual |
+| Pilot light | 15min | 1-4h | Low-Medium | Medium | Semi-auto |
+| Warm standby | 5min | 15-60min | Medium | Medium | Semi-auto |
+| Multi-site active-active | <1s | <1min | Very High | High | Automatic |
 
 ## Quick Start
 Establish hybrid connectivity: VPN to cloud as interim → provision Direct Connect/ExpressRoute within 30 days → configure route propagation via Transit Gateway → federate on-prem AD with cloud IdP → deploy hybrid compute (VMware HCX, Anthos, Arc) → set up data sync layer → implement monitoring across both environments.
-
-## Decision Tree: Connectivity Options
-| Method | Latency | Bandwidth | Cost | Use Case |
-|--------|---------|-----------|------|----------|
-| **Site-to-Site VPN** | >5ms | Up to 1.25 Gbps per tunnel | Low | Interim, DR, low-volume |
-| **Direct Connect / ExpressRoute** | 1-3ms | 50 Mbps - 100 Gbps | Medium + egress | Primary, high-volume, latency-sensitive |
-| **SD-WAN over MPLS** | 5-10ms | Up to 1 Gbps per circuit | Medium | Branch offices, multi-site |
-| **Cloud Interconnect (GCP)** | 1-3ms | 10-200 Gbps | Medium | GCP primary connectivity |
-| **Megaport / Equinix Fabric** | <1ms | Up to 10 Gbps per port | Medium | Multi-cloud exchange |
-| **Colo cross-connect** | <1ms | 1-100 Gbps | Low per link | Same-facility hybrid |
 
 ## Core Workflow
 
@@ -115,7 +156,33 @@ resource "azurerm_express_route_circuit" "primary" {
 }
 ```
 
-### Step 2: Identity Federation
+### Step 2: AWS Transit Gateway Configuration
+```hcl
+resource "aws_ec2_transit_gateway" "main" {
+  description                     = "Hybrid cloud transit gateway"
+  amazon_side_asn                 = 64512
+  auto_accept_shared_attachments  = "enable"
+  default_route_table_association = "enable"
+  default_route_table_propagation = "enable"
+  dns_support                     = "enable"
+  vpn_ecmp_support                = "enable"
+  
+  tags = { Name = "hybrid-tgw" }
+}
+
+resource "aws_ec2_transit_gateway_vpc_attachment" "prod" {
+  subnet_ids         = aws_subnet.private[*].id
+  transit_gateway_id = aws_ec2_transit_gateway.main.id
+  vpc_id             = aws_vpc.prod.id
+}
+
+resource "aws_ec2_transit_gateway_route_table_propagation" "dx" {
+  transit_gateway_attachment_id  = aws_dx_gateway_association.main.id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway.main.association_default_route_table_id
+}
+```
+
+### Step 3: Identity Federation
 ```yaml
 # ADFS → Azure AD hybrid identity flow
 Identity sources:
@@ -134,7 +201,7 @@ Federation protocols:
 # - Syncs to cloud IdPs via SCIM connectors
 ```
 
-### Step 3: Hybrid Compute Orchestration
+### Step 4: Hybrid Compute — VMware HCX
 ```yaml
 # VMware Cloud on AWS (HCX)
 Network extension:
@@ -146,8 +213,10 @@ Migration types:
   - Bulk migration: vSphere replication 8 VMs at a time
   - Cold migration: power-off, move via HCX bulk
   - Replication-assisted: near-zero downtime, vMotion over WAN
+  - OS assisted: in-guest replication (no HCX needed)
 ```
 
+### Step 5: Hybrid Compute — Google Anthos
 ```yaml
 # Google Anthos (GKE on-prem + cloud)
 - GKE on VMware for on-premises Kubernetes
@@ -155,8 +224,11 @@ Migration types:
 - Config Management (sync from Cloud Source Repositories or GitLab)
 - Service Mesh (Anthos Service Mesh, Istio-based)
 - Multi-cluster ingress for global load balancing
+- Config Sync to enforce policy across clusters
+- Policy Controller (OPA/Gatekeeper) for guardrails
 ```
 
+### Step 6: Hybrid Compute — Azure Arc
 ```yaml
 # Azure Arc / AWS Outposts
 Azure Arc:
@@ -164,6 +236,7 @@ Azure Arc:
   - Kubernetes: AKS hybrid, K3s, Rancher
   - Data: SQL Managed Instance, PostgreSQL Hyperscale
   - Policies: Azure Policy + Guest Configuration
+  - Extensions: Monitoring, security, custom scripts
 
 AWS Outposts:
   - Native AWS services on-prem (EC2, EBS, RDS, ECS, EKS)
@@ -172,7 +245,7 @@ AWS Outposts:
   - Local gateway for low-latency on-prem traffic
 ```
 
-### Step 4: Data Synchronization Strategy
+### Step 7: Data Synchronization Strategy
 ```yaml
 Data gravity decision matrix:
   Data source          | Sync method                     | RPO     | RTO
@@ -185,28 +258,7 @@ Data gravity decision matrix:
   Analytics            | Periodic extract + incremental   | 1 hour  | 1 hour
 ```
 
-### Step 5: Disaster Recovery Strategy
-```yaml
-# Hybrid DR patterns
-
-Pilot light:
-  - Replicate data to cloud, provision compute only during DR
-  - Lowest cost, longest RTO (hours)
-  - Service Catalog / CloudFormation templates for rapid provisioning
-
-Warm standby:
-  - Base compute running at minimum scale in cloud
-  - Scale up during DR event
-  - Database replica in cloud, failover via DNS/Route53
-  - RTO < 30 min
-
-Multi-site active-active:
-  - Workloads running in both environments
-  - DNS weighted routing or global load balancer
-  - Database multi-region writes (conflict resolution needed)
-  - RPO near-zero, RTO < 1 min
-```
-
+### Step 8: Disaster Recovery with AWS DMS
 ```hcl
 # AWS DMS for hybrid DB replication
 resource "aws_dms_replication_task" "hybrid" {
@@ -237,7 +289,7 @@ resource "aws_dms_replication_task" "hybrid" {
 }
 ```
 
-### Step 6: Monitoring Across Environments
+### Step 9: Monitoring Across Environments
 ```yaml
 Observability stack for hybrid cloud:
   Metrics:  Prometheus + Thanos / Azure Monitor + Grafana
@@ -254,7 +306,47 @@ Key metrics to monitor:
   - Queue depth for async workloads
 ```
 
-### Step 7: Cloud Repatriation
+### Step 10: Hybrid Kubernetes (EKS Anywhere)
+```yaml
+# EKS Anywhere cluster on-prem
+apiVersion: anywhere.eks.amazonaws.com/v1alpha1
+kind: Cluster
+metadata:
+  name: hybrid-cluster
+spec:
+  controlPlaneConfiguration:
+    count: 3
+    machineGroupRef:
+      name: on-prem-machines
+  workerNodeGroupConfigurations:
+  - count: 5
+    machineGroupRef:
+      name: on-prem-machines
+  kubernetesVersion: "1.28"
+  datacenterRef:
+    kind: VSphereDatacenterConfig
+    name: vsphere-dc
+  managementCluster:
+    name: hybrid-cluster
+---
+# GitOps sync to cloud
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hybrid-apps
+spec:
+  source:
+    repoURL: https://github.com/org/hybrid-gitops
+    path: environments/production
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+```
+
+### Step 11: Cloud Repatriation
 ```yaml
 Trigger for repatriation:
   - Data egress costs exceed on-prem TCO
@@ -274,6 +366,45 @@ Key repatriation services:
   - VMware Cloud Foundation (self-managed SDDC)
   - Anthos / AKS hybrid / EKS Anywhere (K8s portability)
 ```
+
+### Step 12: Cost Management for Hybrid Cloud
+```yaml
+Cost categories:
+  Connectivity: DX/ER port hours, data transfer out, VPN
+  Compute: On-prem capex + power + cooling vs cloud instance hours
+  Storage: On-prem array maintenance vs cloud storage tiers + API calls
+  Egress: The largest hidden cost — data leaving cloud to on-prem
+
+Optimization strategies:
+  - Use local caches on-prem to reduce data transfer
+  - Compress data before transferring between environments
+  - Only replicate data needed for DR, not entire datasets
+  - Use CDN for user-facing content to reduce origin egress
+  - Monitor and limit cross-environment traffic with budgets
+```
+
+## Security Considerations
+- All cross-environment traffic must be encrypted (IPsec for VPN, MACsec for DX).
+- Use BGP with MD5 authentication for routing protocol security.
+- Federate identity before migrating workloads to maintain consistent access.
+- Never expose on-prem services to cloud without firewall inspection.
+- Use private IPs for all hybrid connectivity — avoid public internet.
+- Implement network segmentation: separate VRF per environment.
+- Monitor and audit all cross-environment access with VPC Flow Logs.
+- Rotate VPN pre-shared keys and API tokens regularly.
+
+## Anti-Patterns
+- Cloud-first without data gravity analysis — huge egress costs.
+- No backup connectivity path — single point of failure.
+- L2 extension everywhere — broadcast storms across environments.
+- Identity split — different passwords, mismatched groups.
+- All workloads in cloud during repatriation — move incrementally.
+- Manual config for BGP — route leaks, misconfiguration.
+- Cloud as pure DR without testing — failover never actually works.
+- Synchronous writes across hybrid connection — latency kills app perf.
+- Ignoring cloud provider egress costs during cost allocation.
+- Over-provisioning DX/ER bandwidth — expensive and unnecessary.
+- Not tagging resources consistently across environments.
 
 ## Rules
 - Always provision a backup connectivity path (VPN as backup to Direct Connect).
@@ -297,17 +428,6 @@ Key repatriation services:
 - Place log aggregation across environments in a single SIEM for unified search.
 - Tag resources consistently across cloud and on-prem (tag-on-prem-tools like rmm).
 
-## Anti-Patterns
-- Cloud-first without data gravity analysis — huge egress costs.
-- No backup connectivity path — single point of failure.
-- L2 extension everywhere — broadcast storms across environments.
-- Identity split — different passwords, mismatched groups.
-- All workloads in cloud during repatriation — move incrementally.
-- Manual config for BGP — route leaks, misconfiguration.
-- Cloud as pure DR without testing — failover never actually works.
-- Synchronous writes across hybrid connection — latency kills app perf.
-- Ignoring cloud provider egress costs during cost allocation.
-
 ## References
   - references/hybrid-cloud-advanced.md — Hybrid Cloud Advanced Topics
   - references/hybrid-cloud-fundamentals.md — Hybrid Cloud Fundamentals
@@ -316,6 +436,7 @@ Key repatriation services:
   - references/hybrid-storage.md — Hybrid Storage Patterns
   - references/disaster-recovery-hybrid.md — Hybrid DR Strategies
   - references/repatriation.md — Cloud Repatriation Guide
+  - references/hybrid-kubernetes.md — Hybrid Kubernetes with EKS Anywhere
 ## Handoff
 - `devops-aws` for native AWS services integration.
 - `devops-azure` for Azure Arc and ExpressRoute depth.

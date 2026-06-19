@@ -323,6 +323,180 @@ def compute_metrics(eval_pred, task="classification"):
 - A/B testing for staged rollout.
 - Pin model and tokenizer versions.
 
+## Fine-Tuning Patterns — Production Guide
+
+### Full Fine-Tuning (Encoder Models)
+```python
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from transformers import Trainer, TrainingArguments
+
+model_name = "bert-base-uncased"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForSequenceClassification.from_pretrained(
+    model_name, num_labels=2
+)
+
+training_args = TrainingArguments(
+    output_dir="./results",
+    learning_rate=2e-5,           # BERT sweet spot
+    per_device_train_batch_size=32,
+    per_device_eval_batch_size=64,
+    num_train_epochs=3,
+    weight_decay=0.01,
+    warmup_ratio=0.1,             # linear warmup
+    lr_scheduler_type="cosine",
+    logging_steps=100,
+    evaluation_strategy="steps",
+    eval_steps=500,
+    save_strategy="steps",
+    save_steps=500,
+    load_best_model_at_end=True,
+    fp16=True,                     # 2x speed on modern GPUs
+    gradient_checkpointing=True,   # save memory, slower
+    gradient_accumulation_steps=2, # effective batch size = 64
+)
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=eval_dataset,
+)
+trainer.train()
+```
+
+### Parameter-Efficient Fine-Tuning (LoRA)
+```python
+from peft import LoraConfig, get_peft_model, TaskType
+
+lora_config = LoraConfig(
+    task_type=TaskType.SEQ_CLS,     # or CAUSAL_LM for LLMs
+    r=8,                            # rank of LoRA matrices
+    lora_alpha=32,                  # scaling factor
+    lora_dropout=0.1,
+    target_modules=["query", "value"],  # only apply to Q and V
+    bias="none",
+)
+
+model = AutoModelForSequenceClassification.from_pretrained(
+    "roberta-large", num_labels=2
+)
+model = get_peft_model(model, lora_config)
+
+# Training: same as full fine-tuning, but:
+# - Only LoRA params are trained (0.1% of total params)
+# - Learning rate: 1e-4 to 3e-4 (higher than full fine-tuning)
+# - Fewer epochs needed (1-3)
+# - Memory: ~20% of full fine-tuning
+```
+
+### Task-Specific Layer Fine-Tuning
+```python
+# When to use: Similar task to pretraining, small dataset
+
+# Freeze all pretrained layers
+for param in model.roberta.parameters():
+    param.requires_grad = False
+
+# Only train the classification head
+for param in model.classifier.parameters():
+    param.requires_grad = True
+
+# This is equivalent to using BERT as a feature extractor
+# Good for: < 1000 labeled examples, domain matches pretraining
+```
+
+### Fine-Tuning Decision Matrix
+| Scenario | Dataset Size | Compute | Best Approach |
+|----------|-------------|---------|---------------|
+| Same task as pretraining | < 1k | Limited | Feature extraction (freeze) |
+| Similar task | 1k-10k | Limited | LoRA |
+| Different task | 1k-10k | Moderate | LoRA + task head |
+| Large dataset | 10k+ | Ample | Full fine-tuning |
+| LLM (>1B params) | Any | Limited | LoRA / QLoRA |
+| LLM (>1B params) | Any | Ample | FSDP full fine-tuning |
+
+## Tokenizer Selection Guide
+
+### Tokenizer Types Comparison
+| Tokenizer | Vocabulary | Languages | Best For | Limitation |
+|-----------|-----------|-----------|----------|------------|
+| WordPiece (BERT) | 30k | English | Sentence-level tasks | OOV for rare words |
+| BPE (GPT, RoBERTa) | 50k | English | Generation, any | More tokens = slower |
+| Unigram (XLNet, ALBERT) | 32k | Any | Multilingual | Complex training |
+| SentencePiece (T5, Llama) | 32k-256k | Any | Multilingual | No pretokenization |
+| TikToken (GPT-4, Claude) | 100k | Multi | LLM inference | OpenAI-specific |
+| Byte-Level BPE (ByT5) | 256 | Any | No OOV possible | Very long sequences |
+
+### Tokenizer Selection Decision Tree
+```
+What language(s)?
+├── English only
+│   ├── Model < 1B params -> BPE (GPT-2 tokenizer) or WordPiece (BERT)
+│   └── Model > 1B params -> TikToken or SentencePiece (Llama)
+├── Multilingual
+│   ├── Balanced coverage -> SentencePiece (mT5, XLM-R)
+│   └── Non-Latin script -> SentencePiece with char coverage > 0.9995
+└── Code + Natural Language
+    └── GPT-2 tokenizer or StarCoder tokenizer (has special code tokens)
+
+How to evaluate?
+1. Check OOV rate on your corpus (should be < 0.1%)
+2. Check sequence length distribution (<= 512 tokens for 90th %ile)
+3. Check token-per-word ratio (lower = more efficient)
+```
+
+### Custom Tokenizer Training
+```python
+from tokenizers import Tokenizer, models, trainers, pre_tokenizers, decoders
+
+# Build a BPE tokenizer on domain-specific data
+tokenizer = Tokenizer(models.BPE(unk_token="[UNK]"))
+tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)
+
+trainer = trainers.BpeTrainer(
+    vocab_size=32000,
+    special_tokens=["[PAD]", "[UNK]", "[BOS]", "[EOS]"],
+    min_frequency=2,
+    show_progress=True,
+)
+
+files = ["domain_corpus.txt"]
+tokenizer.train(files, trainer)
+tokenizer.save("domain_tokenizer.json")
+
+# When to use:
+# - Domain has specialized vocabulary (medical, legal, scientific)
+# - Standard tokenizer has > 1% OOV rate on your corpus
+# - You have > 100M tokens of domain text
+```
+
+## NLP Anti-Patterns
+
+1. **No domain adaptation**: Using general pretrained model on specialized domain
+   Fix: Continued pretraining (masked LM) on domain corpus before fine-tuning
+2. **Wrong tokenizer**: Using English tokenizer for multilingual data
+   Fix: Match tokenizer to data language(s)
+3. **Static embeddings**: Using word2vec/GloVe instead of contextual embeddings
+   Fix: Use BERT/RoBERTa or other contextual models
+4. **No gradient clipping**: Loss spikes kill training in transformers
+   Fix: Always clip gradients (max_norm=1.0 is standard)
+5. **Too high learning rate**: Using default Adam lr (1e-3) instead of transformer lr (2e-5)
+   Fix: AdamW with 2e-5 for full fine-tuning, 1e-4 for LoRA
+
+## NLP Task — Model Selection
+
+| Task | Model Family | Best Model (2026) | Efficiency |
+|------|-------------|-------------------|------------|
+| Text Classification | Encoder (BERT-style) | DeBERTa-v3, RoBERTa | Full: LoRA |
+| NER / Token Classification | Encoder (BERT-style) | XLMRoBERTa-large | Full: LoRA |
+| QA / SQuAD | Encoder (BERT-style) | DeBERTa-v3-large | Full: LoRA |
+| Summarization | Encoder-Decoder (T5-style) | Pegasus, LongT5 | Full: LoRA |
+| Translation | Encoder-Decoder | NLLB, M2M-100 | Full: LoRA |
+| Text Generation | Decoder-only (GPT-style) | Llama 3, Mistral | LoRA/QLoRA |
+| Embeddings | Encoder (BERT-style) | E5-mistral, BGE | LoRA |
+| Multi-modal | Encoder-Decoder | LLaVA, GPT-4V | Foundation-specific |
+
 ## Rules
 - Prefer pretrained over training from scratch.
 - Set max length by task.

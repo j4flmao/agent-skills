@@ -38,6 +38,21 @@ Plan and execute cloud migrations using the 7 Rs strategy framework, with tools,
 | Repurchase | Switch to SaaS | Medium | Weeks-Months | Functional improvement |
 | Relocate | Move to hyperscaler DC | Low | Weeks | Lower latency |
 
+### Strategy Selection Decision
+```
+Is the application end-of-life?
+├── Yes → Retire (decommission, cost savings)
+└── No → Is it a SaaS replacement available?
+    ├── Yes → Repurchase (SaaS switch)
+    └── No → Need cloud-native benefits (scalability, resilience)?
+        ├── Yes → Can we rewrite the application?
+        │   ├── Yes → Refactor/Rearchitect (max benefit, max effort)
+        │   └── No → Replatform (managed services, moderate effort)
+        └── No → Immediate migration needed?
+            ├── Yes → Rehost (fastest path to cloud)
+            └── No → Replatform or retain (take time to optimize)
+```
+
 ### Readiness Assessment
 | Dimension | Assessment | Metrics |
 |---|---|---|
@@ -56,6 +71,8 @@ Plan and execute cloud migrations using the 7 Rs strategy framework, with tools,
 | RVTools | VMware VMs | Any | VM config, storage |
 | ServiceNow ITOM | Enterprise | Any | CMDB, dependencies |
 | CloudHealth | Multi-cloud | Any | Cost, utilization |
+| Faddom | App dependency | Any | Application dependency mapping |
+| CloudEndure (now AWS MGN) | VMs | AWS | Continuous replication |
 
 ### Migration Wave Planning
 | Wave | Type | Risk | Duration | Max Workloads |
@@ -326,6 +343,189 @@ kubectl -n production set image deployment/app-service \
 curl -f https://app.example.com/health
 ```
 
+### Step 5: Large Data Transfer — AWS Snowball
+```bash
+# Create Snowball import job
+aws snowball create-job \
+  --job-type IMPORT \
+  --resources '{"S3Resources":[{"BucketArn":"arn:aws:s3:::migration-data"}]}' \
+  --role-arn "arn:aws:iam::123456789012:role/snowball-role" \
+  --shipping-option SECOND_DAY \
+  --address-id ADDR123
+
+# Get job manifest
+aws snowball get-job-manifest --job-id JOB123
+
+# Unlock and transfer data (on Snowball device)
+# Use the Snowball Client on the device:
+snowballEdge list-buckets
+snowballEdge cp /data/large-dataset s3://migration-data/large-dataset/ --recursive
+
+# After return, verify data
+aws s3 sync s3://migration-data/large-dataset/ /data/verify/
+```
+
+### Step 6: Azure Migrate — Server Assessment
+```bash
+# Download and configure Azure Migrate appliance
+# Run assessment
+az assessment create \
+  --assessment-name "onprem-migration" \
+  --project-name "MigrationProject" \
+  --resource-group "migration-rg" \
+  --sizing-criteria "PerformanceBased" \
+  --percentile "Percentile95" \
+  --time-range "Month" \
+  --currency "USD" \
+  --azure-location "eastus" \
+  --offer-code "MSFT-AZR-0003P" \
+  --reserved-instance "None" \
+  --vm-uptime "{\"daysPerMonth\": 30, \"hoursPerDay\": 24}"
+
+# Create migration plan
+az migration plan create \
+  --migration-plan-name "production-workloads" \
+  --resource-group "migration-rg" \
+  --project-name "MigrationProject"
+```
+
+### Step 7: GCP Migration — Migrate for Compute
+```bash
+# Install Migrate for Compute (formerly Velostrata)
+gcloud services enable migrate.googleapis.com
+
+# Create migration source
+gcloud migrate sources create \
+  --project=$PROJECT_ID \
+  --source-name="onprem-vcenter" \
+  --source-type="vsphere" \
+  --host="10.0.0.1" \
+  --insecure=true
+
+# Create migration wave
+gcloud migrate waves create \
+  --project=$PROJECT_ID \
+  --wave-name="wave-1-pilot" \
+  --source-name="onprem-vcenter" \
+  --target-project=$TARGET_PROJECT \
+  --target-zone="us-central1-a" \
+  --target-network="production-vpc"
+
+# Start replication
+gcloud migrate replications start \
+  --project=$PROJECT_ID \
+  --wave-name="wave-1-pilot"
+
+# Test cutover
+gcloud migrate cutovers start \
+  --project=$PROJECT_ID \
+  --wave-name="wave-1-pilot" \
+  --cutover-name="cutover-test-1" \
+  --dry-run=true
+```
+
+### Step 8: Post-Migration Optimization
+```python
+# post_migration/optimize.py
+"""Review post-migration for optimization opportunities."""
+import boto3
+
+def post_migration_review():
+    """Check for replatforming opportunities."""
+    ec2 = boto3.client('ec2')
+    rds = boto3.client('rds')
+
+    # Check EC2 instances that could be Lambda
+    instances = ec2.describe_instances(
+        Filters=[{'Name': 'instance-state-name', 'Values': ['running']}]
+    )
+    for reservation in instances['Reservations']:
+        for instance in reservation['Instances']:
+            instance_type = instance['InstanceType']
+            # Flag t2.nano/micro/small as Lambda candidates
+            if instance_type in ['t2.nano', 't2.micro', 't2.small']:
+                print(f"Candidate for Lambda: {instance['InstanceId']} ({instance_type})")
+
+    # Check RDS instances for Aurora upgrade
+    db_instances = rds.describe_db_instances()
+    for db in db_instances['DBInstances']:
+        if 'mysql' in db['Engine'] and db['EngineVersion'].startswith('5'):
+            print(f"Candidate for Aurora MySQL: {db['DBInstanceIdentifier']}")
+        if 'postgres' in db['Engine'] and float(db['EngineVersion'][:2]) < 13:
+            print(f"Candidate for version upgrade: {db['DBInstanceIdentifier']}")
+```
+
+### Step 9: Migration Testing Strategy
+```
+┌────────────────────────────────────────────────────────┐
+│ Migration Testing Pyramid                              │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│   /\                Smoke Tests (post-cutover)         │
+│  /  \               - Health endpoints                 │
+│ /    \              - Critical user journeys           │
+│/______\                                                  │
+│────────                                                 │
+│   ||                Data Validation                     │
+│   ||                - Row counts match                  │
+│   ||                - Checksum verification             │
+│   ||                - Referential integrity             │
+│────────                                                 │
+│   ||                Performance Tests                   │
+│   ||                - Latency comparison                │
+│   ||                - Throughput benchmarks             │
+│   ||                - Connection pool sizing            │
+│────────                                                 │
+│   ||                Functional Tests                    │
+│   ||                - API contract tests                │
+│   ||                - Integration tests                 │
+│   ||                - Authorization/authentication      │
+│────────                                                 │
+│   ||                Dry Run Tests                       │
+│   ||                - Full migration in staging         │
+│   ||                - Timed cutover rehearsal           │
+│   ||                - Rollback procedure test           │
+└────────────────────────────────────────────────────────┘
+```
+
+## Tool Comparison: Cloud Migration Services
+
+| Tool | Source | Target | Migration Type | Replication | Cost |
+|---|---|---|---|---|---|
+| AWS MGN | VM (any hypervisor) | AWS EC2 | Rehost | Continuous | Free (pay for EC2) |
+| AWS DMS | 20+ DB engines | AWS RDS/DW | Online/offline | CDC | Per instance hour |
+| AWS DataSync | NFS/SMB | S3, EFS, FSx | File transfer | Scheduled | Per GB transferred |
+| AWS Snowball | Physical | S3 | Offline bulk | Device shipping | Per job + shipping |
+| Azure Migrate | VM, physical | Azure VM | Rehost/Replatform | Continuous | Free (pay for compute) |
+| Azure DMS | DB engines | Azure SQL/Cosmos | Online/offline | CDC | Per instance hour |
+| Google Migrate for Compute | VMWare, AWS, Azure | GCE | Rehost | Continuous | Free (pay for compute) |
+| Google DMS | MySQL, PG, SQL Server | Cloud SQL | Online/offline | CDC | Per instance hour |
+| Velostrata (now Google M4CE) | VMware | GCE | Rehost with streaming | Streaming | Free with GCE |
+
+## Security Considerations
+- DMS endpoints with SSL/TLS — never transfer database credentials in plaintext
+- Snowball devices must be encrypted with AES-256 — physically secure chain of custody
+- After migration, revoke all on-prem access and rotate all service credentials
+- VPC peering/transit gateway between on-prem and cloud during migration must use VPN or Direct Connect
+- Migration jump boxes must have restricted ingress (SSH from bastion only)
+- Audit logs from both source and target must be preserved for compliance
+- Snapshot target DB immediately after cutover for quick rollback
+- Decommission source infrastructure only after 30-day observation period
+
+## Post-Migration Validation Checklist
+- [ ] All application health endpoints return 200
+- [ ] Smoke tests pass for critical user journeys
+- [ ] Error rate < 0.1% (same as pre-migration baseline)
+- [ ] P99 latency within 1.5x of pre-migration baseline
+- [ ] Database replication lag = 0 (source fully synced)
+- [ ] All monitoring alerts configured and firing correctly
+- [ ] Backup/restore procedure verified on target
+- [ ] DNS propagation verified from multiple geographic locations
+- [ ] SSL/TLS certificates valid and auto-renewal configured
+- [ ] IAM roles and policies reviewed for least privilege
+- [ ] Cost anomaly alerts configured for target environment
+- [ ] Rollback plan still viable (source preserved for 30 days minimum)
+
 ## Anti-Patterns
 
 ### Anti-Pattern 1: Lift-and-Shift Without Optimization
@@ -343,6 +543,15 @@ Moving terabytes without understanding egress costs. Use Snowball/AWS DataSync f
 ### Anti-Pattern 5: No Performance Baseline
 Not measuring pre-migration performance. Establish baselines (latency, throughput, error rate) before migration to validate post-migration.
 
+### Anti-Pattern 6: Replatforming During Migration
+Trying to replatform and migrate simultaneously. Rehost first, then replatform in a separate phase after stabilization.
+
+### Anti-Pattern 7: Skipping Post-Migration Optimization
+Declaring victory after cutover. The real value of cloud comes from right-sizing, using managed services, and automating operations.
+
+### Anti-Pattern 8: Insufficient Wave Testing
+Testing only the first wave thoroughly. Each wave may have unique dependencies — test each wave's cutover in isolation.
+
 ## Rules & Constraints
 - Every migration must have a defined rollback plan.
 - Test cutover in staging before production.
@@ -350,6 +559,9 @@ Not measuring pre-migration performance. Establish baselines (latency, throughpu
 - Use wave-based migration — never "big bang".
 - Run data consistency checks after every data migration.
 - Monitor post-migration for at least 72 hours.
+- Preserve source infrastructure for 30 days post-migration.
+- Rotate all secrets and credentials after cutover.
+- Document architecture drift between source and target.
 
 ## References
   - references/cloud-migration-advanced.md

@@ -2,7 +2,7 @@
 name: blockchain-data-indexing
 description: >
   Blockchain indexing covering The Graph subgraphs, Dune Analytics, Goldsky pipelines, ChainIndex custom indexers, and ETL event-warehousing patterns for blockchain data. Covers event-driven indexing, reorg handling, data source templates, and multi-chain data aggregation. Do NOT use for: web3 frontend data fetching (use blockchain-web3), smart contract development (use blockchain-application), or general ETL (out of scope).
-version: 1.1.0
+version: 2.0.0
 author: j4flmao
 license: MIT
 tags:
@@ -95,6 +95,12 @@ Reorg handling:
 ├── 6 confirmations → Standard safe zone, minimal reorgs
 ├── 12+ confirmations → Very safe, rare reorgs (Ethereum)
 └── Finality gadget → No reorg risk (Cosmos, Solana)
+
+Data volume:
+├── < 100 events/day → Subgraph or Dune query (free tier)
+├── 100-10K events/day → Subgraph (hosted), Goldsky Pipeline
+├── 10K-1M events/day → Goldsky Mirror, self-hosted graph-node
+└── 1M+ events/day → Custom indexer (Rust/Python + ClickHouse)
 ```
 
 ## Subgraph Architecture (The Graph)
@@ -181,6 +187,64 @@ export function handlePoolCreated(event: PoolCreated): void {
 }
 ```
 
+### Dynamic Data Sources
+```yaml
+# Template for dynamically created contracts (e.g., Uniswap pools)
+templates:
+  - name: Pool
+    kind: ethereum
+    network: mainnet
+    source:
+      abi: Pool
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Swap
+        - Mint
+        - Burn
+      abis:
+        - name: Pool
+          file: ./abis/Pool.json
+      eventHandlers:
+        - event: Swap(indexed address,indexed address,int256,int256,uint160,uint128,int24)
+          handler: handleSwap
+        - event: Mint(indexed address,indexed address,int24,int24,uint128,uint256,uint256)
+          handler: handleMint
+      file: ./src/pool-mapping.ts
+```
+
+```typescript
+// In mapping.ts — create dynamic data source on PoolCreated
+import { DataSourceContext, dataSource } from "@graphprotocol/graph-ts"
+import { Pool } from "../generated/templates"
+
+export function handlePoolCreated(event: PoolCreated): void {
+  // ... entity creation ...
+  // Create dynamic data source for the pool
+  Pool.create(event.params.pool)
+}
+```
+
+### Reorg Handling in Subgraphs
+```typescript
+// Subgraphs handle reorgs via block-based detection
+// Graph-node tracks chain head and detects reorgs via block hash changes
+// On reorg: unwind entities to the fork block, reapply events
+
+// BEST PRACTICE: Use block handlers for ordering-dependent data
+// Event handlers are unordered within a block — use block handler for finality
+
+// Reorg-safe pattern: store block hash in entity
+export function handleSwap(event: Swap): void {
+  let swap = new Swap(event.transaction.hash.toHexString() + "-" + event.logIndex.toString())
+  // ... set fields ...
+  swap.blockHash = event.block.hash.toHexString()  // Track for reorg detection
+  swap.save()
+}
+```
+
 ## Dune Analytics Patterns
 
 ### Query Best Practices
@@ -199,15 +263,33 @@ WHERE block_date >= CURRENT_DATE - INTERVAL '30' DAY
   AND success = TRUE
 GROUP BY block_date
 ORDER BY block_date
+
+-- DEX trading volume by pair (Uniswap v3)
+SELECT
+    token0.symbol AS token0,
+    token1.symbol AS token1,
+    SUM(amount0) AS volume_token0,
+    SUM(amount1) AS volume_token1,
+    COUNT(*) AS swap_count
+FROM uniswap_v3_ethereum.Pool_event_Swap
+INNER JOIN tokens.erc20 AS token0
+    ON Pool_event_Swap.token0 = token0.contract_address
+INNER JOIN tokens.erc20 AS token1
+    ON Pool_event_Swap.token1 = token1.contract_address
+WHERE Pool_event_Swap.evt_block_time >= CURRENT_DATE - INTERVAL '7' DAY
+GROUP BY 1, 2
+ORDER BY swap_count DESC
 ```
 
 ### Spellbook Usage
 - Refer to `spellbook` models for pre-aggregated data
 - Use `erc20_evt_Transfer` for standardized token transfer queries
 - Join using `evt_tx_hash` and `evt_index` for event-level joins
+- Spellbook tables: `dex.trades`, `lending.liquidations`, `nft.trades`
 
 ## Goldsky Pipeline Config
 
+### Pipeline Configuration
 ```yaml
 name: uniswap-v3-mirror
 sources:
@@ -230,6 +312,90 @@ sinks:
     from: pool_created
 ```
 
+### Mirror SQL Config
+```sql
+-- Goldsky Mirror: SQL-based transformation
+-- Complex joins across multiple streams
+CREATE MATERIALIZED VIEW pool_metrics AS
+SELECT
+    p.id,
+    p.fee_tier,
+    p.created_at,
+    s.swap_count,
+    s.total_volume_usd,
+    s.last_swap_at
+FROM pools p
+LEFT JOIN (
+    SELECT
+        pool_id,
+        COUNT(*) AS swap_count,
+        SUM(amount_usd) AS total_volume_usd,
+        MAX(block_time) AS last_swap_at
+    FROM swaps
+    GROUP BY pool_id
+) s ON p.id = s.pool_id;
+```
+
+## Custom Indexer Architecture
+
+### Design Patterns
+```
+Components:
+├── Blockchain connector: RPC polling or WebSocket subscription
+│   ├── Gas-efficient: filter by contract address and event signature
+│   ├── Pagination: handle large ranges (eth_getLogs max 10K per call)
+│   └── Reconnection: exponential backoff on connection failure
+├── Event processor: parse logs, decode using ABI
+│   ├── ABI cache: store abi definitions by contract address
+│   ├── Typed events: generate typed event structs from ABI
+│   └── Enrichment: add block timestamp, transaction metadata
+├── Storage layer: write to database
+│   ├── TimescaleDB/ClickHouse for time-series heavy workloads
+│   ├── Postgres for relational queries
+│   └── Message queue (Kafka, NATS) for downstream consumers
+└── Query API: expose indexed data
+    ├── GraphQL (Hasura, Postgraphile) for flexible queries
+    ├── REST for simple key-value access
+    └── WebSocket for real-time subscriptions
+```
+
+### Reorg Handling in Custom Indexers
+```python
+# Custom indexer reorg handling strategy
+class Indexer:
+    def __init__(self, confirmations=6):
+        self.confirmations = confirmations
+        self.checkpoint_file = "checkpoint.json"
+
+    def process_block(self, block_number: int):
+        block = self.rpc.get_block(block_number, full_transactions=True)
+        block_hash = block["hash"]
+
+        # Check for reorg: compare block hash with stored parent hash
+        last_processed = self.get_checkpoint()
+        if last_processed and block["parentHash"] != last_processed["blockHash"]:
+            # Reorg detected! Unwind to fork point
+            fork_height = self.find_common_ancestor(block)
+            self.unwind_to(fork_height)
+            self.logger.warning(f"Reorg detected at {block_number}, unwound to {fork_height}")
+
+        # Process only after confirmation depth
+        if block_number <= self.latest_confirmed() - self.confirmations:
+            self.process_events(block)
+            self.save_checkpoint(block_number, block_hash)
+
+    def find_common_ancestor(self, block):
+        # Walk backwards until hash matches stored data
+        traversed = 0
+        while traversed < 100:  # max reorg depth
+            stored = self.get_stored_block(block["number"])
+            if stored and stored["hash"] == block["hash"]:
+                return block["number"]
+            block = self.rpc.get_block_by_hash(block["parentHash"])
+            traversed += 1
+        raise Exception(f"Deep reorg >100 blocks detected: {block['number']}")
+```
+
 ## Rules
 1. **Prefer The Graph for standard EVM event/call/block indexing** unless the user needs SQL-based exploration (Dune)
 2. **Dune queries must use Databricks SQL syntax** and prefer `crypto_`/`ethereum_` tables or `spellbook` models over raw decoded tables
@@ -241,6 +407,11 @@ sinks:
 8. **Validate event signatures against known ABIs** before processing
 9. **Index only the fields needed for queries** — excessive indexing wastes gas and storage
 10. **Monitor indexing lag** — alert if lag exceeds acceptable threshold for the use case
+11. **Dynamic data sources** are required for factory-deployed contracts (create new data source per deployment)
+12. **AssemblyScript mappings** have limited gas — offload complex computation to post-processing
+13. **Dune queries must include time-based filters** for performance (prevent full table scans)
+14. **Custom indexers should batch writes** — single-row inserts are 100x slower than batch inserts
+15. **Schema evolution** must handle backward-compatible changes (add nullable columns, not remove)
 
 ## References
   - references/blockchain-data-indexing-advanced.md — Blockchain Data Indexing Advanced Topics
@@ -253,5 +424,6 @@ sinks:
   - references/the-graph-subgraph.md — The Graph — Subgraph Reference
   - references/subgraph-performance-tuning.md — Subgraph Performance Tuning
   - references/multi-chain-indexing.md — Multi-Chain Indexing Strategies
+  - references/custom-indexer-patterns.md — Custom Indexer Patterns
 
 ## Phase: blockchain → blockchain-data-indexing

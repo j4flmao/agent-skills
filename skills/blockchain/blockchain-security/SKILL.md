@@ -2,7 +2,7 @@
 name: blockchain-security
 description: >
   Use this skill when asked about blockchain security, smart contract auditing, DeFi threat modeling, blockchain incident response, bug bounty programs, economic security, formal verification of smart contracts, and blockchain-specific security analysis. Languages: Solidity, Python, Rust, Haskell. Covers threat modeling for DeFi protocols (STRIDE for blockchain), audit methodology (scope, manual review, tooling, report), incident response (emergency pause, fork coordination, compensation), bug bounty programs (Immunefi, Code4rena), economic security (game theory, incentive analysis, MEV), and formal verification (Certora CVL, Halmos, Scribble). References shared skills from skills/security/ (threat-intelligence, secrets-management, siem-engineering) and skills/quality/ (property-based-testing) where core concepts overlap. Do NOT use for: general smart contract testing (use blockchain-testing), standard application security (use skills/security/ skills), or core cryptography (use blockchain-cryptography).
-version: "1.1.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 tags: [blockchain, security, audit, formal-verification, phase-blockchain]
@@ -79,7 +79,7 @@ Security need:
 
 ### Vulnerability Severity (Immunefi Standard)
 | Severity | Impact | Payout Range |
-|---|---|---|
+|----------|--------|-------------|
 | Critical | Direct loss of funds, permanent DoS | Up to $10M+ |
 | High | Theft of unclaimed yield, temporary DoS | $50K-$500K |
 | Medium | Contract fails to deliver expected return, temporarily frozen funds | $5K-$50K |
@@ -90,7 +90,7 @@ Security need:
 
 ### STRIDE Adapted for Blockchain
 | Threat | Blockchain Equivalent | Example |
-|---|---|---|
+|--------|----------------------|---------|
 | Spoofing | Fake event log emission, counterfeit token | Impostor token impersonation |
 | Tampering | State manipulation, reorg, flash loan price | Manipulating oracle price |
 | Repudiation | Unauthorized proposal, fake governance | Flash loan governance attack |
@@ -127,6 +127,90 @@ Security need:
     ├── TWAP with sufficient window (30 min+)
     ├── Stale price checks (max age < 1 hour)
     └── Circuit breakers on price deviation
+```
+
+**Flash Loan Attack Tree**
+```
+├── Borrow large capital from flash loan provider
+├── Manipulate price (AMM swap → oracle price change)
+├── Exploit protocol with manipulated price
+│   ├── Mint undercollateralized position
+│   ├── Drain pool via mispriced asset
+│   └── Trigger false liquidations
+└── Repay flash loan + profit
+```
+
+## Vulnerability Catalog
+
+### Reentrancy
+```solidity
+// VULNERABLE
+function withdraw(uint256 amount) external {
+    require(balances[msg.sender] >= amount);
+    (bool ok, ) = msg.sender.call{value: amount}(""); // external call BEFORE state
+    require(ok);
+    balances[msg.sender] -= amount; // state update AFTER
+}
+
+// FIXED: CEI pattern
+function withdraw(uint256 amount) external {
+    require(balances[msg.sender] >= amount);
+    balances[msg.sender] -= amount; // state update FIRST
+    (bool ok, ) = msg.sender.call{value: amount}(""); // then external call
+    require(ok);
+}
+```
+
+### Access Control
+```solidity
+// VULNERABLE: init function unprotected
+function initialize(address _owner) external {
+    owner = _owner; // anyone can call this
+}
+
+// FIXED
+function initialize(address _owner) external initializer {
+    __Ownable_init(_owner);
+}
+
+// VULNERABLE: tx.origin for auth
+function adminOnly() external {
+    require(tx.origin == owner); // tx.origin can be phished
+}
+
+// FIXED: msg.sender for auth
+function adminOnly() external {
+    require(msg.sender == owner);
+}
+```
+
+### Flash Loan Attack Example
+```solidity
+// VULNERABLE: uses spot price for liquidation
+function getLiquidationValue(address user) external view returns (uint256) {
+    return collateral[user] * getSpotPrice(); // Can be manipulated
+}
+
+// FIXED: uses TWAP
+function getLiquidationValue(address user) external view returns (uint256) {
+    return collateral[user] * getTWAP(30 minutes); // Manipulation resistant
+}
+```
+
+### ERC-4626 Inflation Attack
+```solidity
+// VULNERABLE: first depositor manipulates share price
+// Attacker mints 1 wei shares, then donates large amount to vault
+// share price becomes very high → subsequent depositors get 0 shares
+
+// FIXED: virtual shares + assets
+uint256 internal constant VIRTUAL_SHARES = 1e6;
+uint256 internal constant VIRTUAL_ASSETS = 1e6;
+
+function convertToShares(uint256 assets) public view returns (uint256) {
+    uint256 supply = totalSupply + VIRTUAL_SHARES;
+    return assets * supply / (totalAssets() + VIRTUAL_ASSETS);
+}
 ```
 
 ## Audit Methodology
@@ -167,38 +251,125 @@ Security need:
 23. Retest fixes after remediation
 24. Final report with methodology, findings, and risk assessment
 
-## Common Vulnerability Examples
+### Audit Tools Comparison
+| Tool | Type | Best For | Limitations |
+|------|------|----------|-------------|
+| Slither | Static analysis | First-pass vulnerability detection, inheritance analysis | False positives, limited deep logic |
+| Mythril | Symbolic execution | Complex state-exploration bugs | Slow, state explosion |
+| Echidna | Property-based fuzzing | Invariant testing with custom properties | Requires writing properties |
+| Foundry fuzz | Parameterized fuzzing | Input-range fuzzing, stateful tests | Less directed than Echidna |
+| Certora | Formal verification | Critical invariants, solvency proofs | Expensive, requires CVL DSL |
+| Halmos | Symbolic testing | Bounded verification of assertions | Not fully automated |
+| Aderyn | Static analysis | Solidity spec compliance | Limited depth |
 
-### Reentrancy
-```solidity
-// VULNERABLE
-function withdraw(uint256 amount) external {
-    require(balances[msg.sender] >= amount);
-    (bool ok, ) = msg.sender.call{value: amount}(""); // external call BEFORE state
-    require(ok);
-    balances[msg.sender] -= amount; // state update AFTER
+## Formal Verification
+
+### Certora CVL Example
+```cvl
+// Certora Verification Language: define invariants
+rule total_supply_invariant() {
+    // totalSupply must equal sum of all balances
+    uint256 total = totalSupply();
+    uint256 sum = 0;
+    address user;
+    // Quantified assertion over all users (handled by Certora)
+    assert total == currentContract.balance + sumOfAllUserBalances();
 }
 
-// FIXED: CEI pattern
-function withdraw(uint256 amount) external {
-    require(balances[msg.sender] >= amount);
-    balances[msg.sender] -= amount; // state update FIRST
-    (bool ok, ) = msg.sender.call{value: amount}(""); // then external call
-    require(ok);
+rule no_double_withdrawal(address user) {
+    uint256 balance_before = balanceOf(user);
+    uint256 amount = balance_before / 2;
+    
+    withdraw(amount);
+    withdraw(amount);
+    
+    uint256 balance_after = balanceOf(user);
+    assert balance_after == 0;
 }
 ```
 
-### Access Control
-```solidity
-// VULNERABLE: init function unprotected
-function initialize(address _owner) external {
-    owner = _owner; // anyone can call this
-}
+## Economic Security
 
-// FIXED
-function initialize(address _owner) external initializer {
-    __Ownable_init(_owner);
+### Game Theory Analysis Framework
+```
+Protocol economic security:
+├── Nash equilibrium analysis
+│   ├── Does a rational user have incentive to act honestly?
+│   └── Is there a profitable deviation path?
+├── Attack cost vs. profit
+│   ├── How much capital required for exploit?
+│   └── What is the expected profit from exploit?
+├── MEV analysis
+│   ├── What MEV opportunities exist?
+│   └── Can MEV disrupt protocol equilibrium?
+└── Composability risk
+    ├── What other protocols does this interact with?
+    └── Can a failure cascade through the system?
+```
+
+## Incident Response
+
+### Emergency Response Playbook
+```solidity
+// Emergency pause pattern
+contract Pausable {
+    bool public paused;
+    address public guardian;
+
+    modifier whenNotPaused() {
+        require(!paused, "PAUSED");
+        _;
+    }
+
+    function pause() external {
+        require(msg.sender == guardian, "NOT_GUARDIAN");
+        paused = true;
+        emit EmergencyPaused(msg.sender);
+    }
+
+    function unpause() external {
+        require(msg.sender == guardian, "NOT_GUARDIAN");
+        paused = false;
+        emit EmergencyUnpaused(msg.sender);
+    }
 }
+```
+
+### Incident Response Phases
+```
+1. DETECT: Monitoring alert, community report, or security partner notification
+   - Forta bot detects anomalous activity
+   - Tenderly alert on unexpected state changes
+   - Community report via Discord/Immunefi
+
+2. ASSESS: Guardian multi-sig evaluates severity (15-30 min)
+   - Is there an active exploit?
+   - What is compromised? (contract, key, oracle, bridge?)
+   - What is the damage scope? (TVL at risk)
+
+3. PAUSE: Guardian pauses affected contracts
+   - Emergency pause kill switch (guardian only)
+   - Stop deposits, withdraws, liquidations as needed
+   - Can't pause critical owner functions (timelock bypass)
+
+4. COMMUNICATE: Pre-prepared message template
+   - "We are aware of an issue with [contract]. All funds are safe. Paused while investigating."
+   - Twitter/Discord/Governance forum within 30 min
+   - Regular updates every 2 hours
+
+5. MITIGATE: Emergency proposal with fix
+   - Upgrade contract (if upgradeable) or deploy new version
+   - Requires timelock delay (unless emergency bypass)
+   
+6. RESUME: Governance vote to unpause + validate fix
+   - Multi-sig unpause after fix confirmed
+   - Bug bounty payout for reporter
+
+7. POST-MORTEM: Public incident report within 7 days
+   - Root cause analysis
+   - Timeline of events
+   - Fix details
+   - Lessons learned
 ```
 
 ## Rules
@@ -210,11 +381,45 @@ function initialize(address _owner) external initializer {
 6. Formal verification complements but does NOT replace manual review and fuzz testing
 7. Always verify signature malleability (low-s for ECDSA), nonce reuse, and signature replay protection
 8. Cross-chain bridges require additional security layers: rate limiting, circuit breakers, tiered security
+9. ERC-4626 vaults must prevent inflation attacks with virtual shares + assets
+10. Flash loan resistance requires TWAP pricing, not spot prices for critical operations
+11. Upgradeable contracts must have disabled initializers on implementation contracts
+12. All admin functions should be behind timelock + multi-sig, never single-key control
+13. Oracle prices must be validated for freshness (staleness threshold) and deviation
+14. Economic security analysis must model worst-case market conditions, not average
+15. Bug bounties must cover the protocol's total value secured (TVS) for adequate incentives
 
-## References
-  - references/audit-methodology.md — Smart Contract Audit Methodology
-  - references/blockchain-security-advanced.md — Blockchain Security Advanced Topics
-  - references/blockchain-security-fundamentals.md — Blockchain Security Fundamentals
+## Implementation Examples
+
+### Security Analysis (Solidity — Reentrancy Guard)
+```solidity
+contract ProtectedVault {
+    using SafeERC20 for IERC20;
+    uint256 private _status = 1; // 1=unlocked 2=locked
+    modifier nonReentrant() {
+        require(_status == 1, "Reentrant call");
+        _status = 2; _;
+        _status = 1;
+    }
+    function withdraw(uint256 amount) external nonReentrant {
+        uint256 bal = balances[msg.sender];
+        require(bal >= amount, "Insufficient");
+        balances[msg.sender] = bal - amount; // Effects first
+        token.safeTransfer(msg.sender, amount); // Interaction last
+    }
+}
+```
+
+### Formal Verification — Certora CVL
+```cvl
+methods {
+    function totalAssets() external returns (uint256);
+    function totalSupply() external returns (uint256);
+}
+invariant solvency()
+    totalAssets() >= totalSupply()
+    filtered on f { f.contract != currentContract }
+```
   - references/bug-bounty-program.md — Bug Bounty Programs for Blockchain Projects
   - references/economic-security.md — Economic Security in Blockchain Systems
   - references/formal-verification-deep.md — Formal Verification for Smart Contracts
@@ -223,6 +428,7 @@ function initialize(address _owner) external initializer {
   - references/threat-modeling.md — Threat Modeling for Blockchain Systems
   - references/blockchain-vulnerability-catalog.md — Common Blockchain Vulnerabilities Catalog
   - references/cross-chain-security.md — Cross-Chain Security Considerations
+  - references/flash-loan-attack-patterns.md — Flash Loan Attack Patterns
 
 ## Phase
 blockchain → blockchain-security

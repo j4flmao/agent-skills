@@ -2,7 +2,7 @@
 name: blockchain-testing
 description: >
   Use this skill when asked about testing smart contracts, Foundry tests, Hardhat tests, fuzz testing, invariant testing, property-based testing, formal verification, audit preparation, integration testing for dApps, and blockchain testing patterns. Covers Foundry cheatcodes, Echidna fuzzing, Certora verification, Hardhat network forking, mainnet simulation, gas benchmarking, and security audit workflows. Do NOT use for: general web3 frontend testing (use blockchain-web3), smart contract development (use blockchain-application), or core protocol testing (use blockchain-core).
-version: "1.1.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 tags: [blockchain, testing, security, audit, phase-blockchain]
@@ -99,6 +99,20 @@ What to test:
     ├── Symbolic execution (Mythril, Halmos)
     ├── Formal verification (Certora CVL)
     └── Manual review (line-by-line)
+```
+
+### Foundry Test Configuration
+```
+forge test options:
+├── Verbosity: -vv (debug), -vvv (stack traces), -vvvv (all traces)
+├── Match test: --match-test testTransfer -vv
+├── Match contract: --match-contract TokenTest
+├── Fuzz runs: --fuzz-runs 10000 (default 256)
+├── Fuzz seed: --fuzz-seed 42 (reproducible)
+├── Gas reporting: --gas-report
+├── Coverage: forge coverage --report lcov
+├── Fork: --fork-url $RPC_URL --fork-block-number 18000000
+└── Multi-fork: --chain-id 1,137,42161 (simulate cross-chain)
 ```
 
 ## Foundry Testing Patterns
@@ -225,6 +239,47 @@ contract ForkTest is Test {
 }
 ```
 
+### Foundry Cheatcodes Reference
+```solidity
+// Core cheatcodes for testing
+contract CheatcodeDemo is Test {
+    // State manipulation
+    // vm.store(address, bytes32 slot, bytes32 value)    — Write storage directly
+    // vm.load(address, bytes32 slot) → bytes32          — Read storage directly
+    // vm.etch(address, bytes code)                      — Set contract code
+    // vm.deal(address, uint256 amount)                  — Set ETH balance
+    // vm.prank(address)                                 — Set msg.sender for next call
+    // vm.startPrank(address)                            — Set msg.sender for all calls
+    // vm.stopPrank()                                    — Stop prank
+    // vm.roll(uint256 blockNumber)                      — Set block.number
+    // vm.warp(uint256 timestamp)                        — Set block.timestamp
+    // vm.fee(uint256 basefee)                           — Set basefee
+    // vm.difficulty(uint256 difficulty)                 — Set block.difficulty
+    // vm.label(address, string label)                   — Label address in traces
+
+    // Forking
+    // vm.createFork(url, blockNumber) → uint256        — Create fork
+    // vm.selectFork(uint256 forkId)                     — Switch active fork
+    // vm.activeFork() → uint256                         — Get active fork
+    // vm.rollFork(uint256 blockNumber, uint256 forkId)  — Roll fork to block
+    // vm.makePersistent(address)                        — Keep across fork switches
+
+    // Testing utilities
+    // vm.expectRevert(bytes)                            — Expect next call to revert
+    // vm.expectEmit(...)                                — Expect event emission
+    // vm.expectCall(address, bytes)                     — Expect a call
+    // vm.record()                                       — Start recording storage reads
+    // vm.accesses(address) → (bytes32[], bytes32[])     — Get accessed storage slots
+
+    // Assertions
+    // assertEq(a, b)                                   — Assert equality
+    // assertTrue(condition)                            — Assert true
+    // assertGt(a, b)                                   — Assert greater than
+    // assertApproxEqAbs(a, b, delta)                   — Assert approx equality
+    // assertEqDecimal(a, b, decimals)                  — Assert with decimals
+}
+```
+
 ## Gas Benchmarking
 
 ```solidity
@@ -247,6 +302,9 @@ contract GasBenchmark is Test {
         // forge snapshot captures this call's gas
     }
 }
+
+// Gas snapshot output format:
+// testGasTransfer() (gas: ~48723)
 ```
 
 ## Security Audit Testing Flow
@@ -273,6 +331,24 @@ Phase 4: Integration
 └── Gas snapshot — cost regression check
 ```
 
+### Audit Preparation Checklist
+```markdown
+Pre-Audit Checklist:
+- [ ] All functions have unit tests with boundary conditions
+- [ ] Fuzz tests written for all numeric inputs (>10K runs each)
+- [ ] Invariant tests cover protocol-level properties
+- [ ] Full test suite passes with forge coverage >80%
+- [ ] Slither passes with no high-severity findings
+- [ ] Aderyn passes with no spec violations
+- [ ] Mainnet fork tests validate real-world interactions
+- [ ] Gas snapshot shows no unexpected regressions
+- [ ] Upgrade tests validate proxy storage compatibility
+- [ ] Access control tests verify all role/permission paths
+- [ ] Emergency pause tested in all relevant scenarios
+- [ ] Reentrancy guard tested with malicious contract callback
+- [ ] Flash loan resistance tested with price manipulation simulation
+```
+
 ## Rules
 1. Use Foundry (forge) as default Solidity testing framework — fastest and most ergonomic
 2. Always write fuzz tests for functions with numeric inputs — edge cases are where bugs live
@@ -284,11 +360,65 @@ Phase 4: Integration
 8. Before audit: full fuzz coverage, invariant tests, slither analysis, manual review checklist
 9. Coverage is a guide, not a target — 100% coverage doesn't mean 100% correctness
 10. Always test on a testnet deployment before mainnet
+11. Bound fuzz inputs to realistic ranges — unbounded fuzzing wastes compute on unrealistic values
+12. Invariant tests should use handler contracts for structured state mutation
+13. Mainnet fork tests should pin a specific block number for reproducibility
+14. Use vm.assume() carefully — too many assumptions may discard most fuzz inputs
+15. Differential testing (comparing two implementations) catches logic errors fuzz may miss
 
-## References
-  - references/audit-preparation-checklist.md — Audit Preparation Checklist
-  - references/blockchain-testing-advanced.md — Blockchain Testing Advanced Topics
-  - references/blockchain-testing-fundamentals.md — Blockchain Testing Fundamentals
+## Implementation Examples
+
+### Complete Foundry Test Suite
+```solidity
+import {Test} from "forge-std/Test.sol";
+import {MyVault} from "../src/MyVault.sol";
+
+contract MyVaultTest is Test {
+    MyVault vault;
+    address alice = makeAddr("alice");
+    uint256 constant BAL = 1000e18;
+
+    function setUp() public {
+        vault = new MyVault();
+        deal(alice, BAL);
+    }
+
+    // Unit test
+    function test_Deposit() public {
+        vm.prank(alice);
+        uint256 shares = vault.deposit{value: 100e18}(100e18, alice);
+        assertEq(shares, 100e18, "Shares == assets at 1:1");
+    }
+
+    // Fuzz test
+    function testFuzz_Deposit_RoundTrip(uint256 amount) public {
+        vm.assume(amount > 0 && amount <= BAL);
+        vm.prank(alice);
+        uint256 shares = vault.deposit{value: amount}(amount, alice);
+        vm.prank(alice);
+        uint256 returned = vault.withdraw(shares, alice, alice);
+        assertEq(returned, amount, "Roundtrip preserves value");
+    }
+
+    // Invariant test
+    function invariant_Solvency() public {
+        assertGe(address(vault).balance, vault.totalSupply());
+    }
+}
+```
+
+### Fuzz Handler Pattern
+```solidity
+contract VaultHandler is Test {
+    address[] users;
+    function deposit(uint256 amount, uint256 seed) public {
+        address u = users[seed % users.length];
+        amount = bound(amount, 1, u.balance);
+        vm.prank(u);
+        vault.deposit{value: amount}(amount, u);
+    }
+}
+```
   - references/chaos-testing.md — Chaos Testing Reference
   - references/differential-fuzz-regression.md — Differential Fuzz & Regression
   - references/formal-verification.md — Formal Verification Reference
@@ -298,6 +428,7 @@ Phase 4: Integration
   - references/integration-e2e.md — Integration & E2E Testing Reference
   - references/forge-cheatcodes.md — Foundry Cheatcode Reference
   - references/test-strategy-templates.md — Test Strategy Templates
+  - references/foundry-fuzz-best-practices.md — Foundry Fuzz Best Practices
 
 ## Phase
 blockchain → blockchain-testing

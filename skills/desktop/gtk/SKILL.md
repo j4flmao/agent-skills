@@ -385,10 +385,100 @@ scrolled.set_child(Some(&content_widget));
 // GTK4 handles viewport automatically for scrollable widgets
 ```
 
-## References
-  - references/gtk-advanced.md — GTK Advanced Topics
-  - references/gtk-css-styling.md — GTK CSS Styling Reference
-  - references/gtk-fundamentals.md — GTK Fundamentals
-  - references/gtk-migration.md — GTK3 to GTK4 Migration Reference
-## Handoff
-Hand off to `desktop-gnome` for GNOME platform specifics (libadwaita, GSettings). Hand off to `design-accessibility` for AT-SPI compliance testing.
+## Implementation Patterns
+
+### GTK4 Application Template
+
+```rust
+use gtk::prelude::*;
+use gtk::{Application, ApplicationWindow, Button, Box, Orientation, Label};
+
+fn main() {
+    let app = Application::builder()
+        .application_id("com.example.app")
+        .build();
+
+    app.connect_activate(|app| {
+        let window = ApplicationWindow::builder()
+            .application(app)
+            .title("My GTK4 App")
+            .default_width(600)
+            .default_height(400)
+            .build();
+
+        let vbox = Box::new(Orientation::Vertical, 8);
+        vbox.set_margin(16);
+
+        let label = Label::new(Some("Hello, GTK4!"));
+        label.set_css_classes(&["title"]);
+
+        let button = Button::with_label("Click Me");
+        button.connect_clicked(move |_| {
+            println!("Button clicked!");
+        });
+
+        vbox.append(&label);
+        vbox.append(&button);
+        window.set_child(Some(&vbox));
+        window.present();
+    });
+
+    app.run();
+}
+```
+
+### CSS Styling in GTK
+
+```css
+/* style.css — GTK CSS for app */
+.title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+}
+
+.button {
+    background-color: #3584e4;
+    color: white;
+    border-radius: 6px;
+    padding: 8px 16px;
+}
+
+.button:hover {
+    background-color: #4a90e4;
+}
+
+.destructive-button {
+    background-color: #e43535;
+}
+```
+
+## Architecture Decision Trees
+
+### GTK Widget Selection
+
+```
+What UI element?
+├── Show information → Label, TextView, Picture
+├── User input → Entry, TextView, SpinButton, ComboBoxText
+├── Selection → CheckButton, RadioButton, Switch, DropDown
+├── Layout → Box, Grid, Stack, Paned, Notebook
+├── Navigation → StackSidebar, StackSwitcher, HeaderBar
+└── Feedback → ProgressBar, Spinner, Statusbar, Toast
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Direct rendering in expose event | Poor performance, flickering | Use cairo only when necessary, prefer widgets |
+| Long operations on main thread | UI freezes | Use async tasks or GTask for background work |
+| Ignoring dpi/scale factor | Blurry UI on HiDPI | Use CSS units, test at multiple scale factors |
+| No CSS classes | Inline style attributes everywhere | Define CSS classes, apply via add_css_class() |
+| Imperative layout code | Hard to maintain | Use Blueprint UI or GtkBuilder XML for complex UIs |
+
+## Performance Optimization
+
+- **List view with GtkListView (GTK4)**: Use GtkListView with GtkListItemFactory for large data sets. Only creates widgets for visible items. Recycles widgets on scroll. Handles 100K+ items smoothly.
+- **Async image loading**: Load images in background thread with GTask. Update UI on main thread after load. Prevents UI freeze during decoding of large images.

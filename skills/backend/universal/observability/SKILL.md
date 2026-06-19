@@ -374,3 +374,116 @@ collector:
 No artifact produced unless requested.
 Next skill: resilience-patterns — add circuit breakers and retries to the instrumented service.
 Carry forward: service name, OTel exporter endpoint, sampling decision.
+
+## Implementation Patterns
+
+### OpenTelemetry Initialization
+
+```python
+from opentelemetry import trace, metrics
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.resources import Resource, SERVICE_NAME, SERVICE_VERSION, DEPLOYMENT_ENVIRONMENT
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+
+def setup_observability(service_name: str, environment: str, version: str, otlp_endpoint: str):
+    resource = Resource.create({
+        SERVICE_NAME: service_name,
+        SERVICE_VERSION: version,
+        DEPLOYMENT_ENVIRONMENT: environment,
+    })
+
+    # Tracing
+    tracer_provider = TracerProvider(resource=resource)
+    span_exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
+    span_processor = BatchSpanProcessor(span_exporter)
+    tracer_provider.add_span_processor(span_processor)
+    trace.set_tracer_provider(tracer_provider)
+
+    # Metrics
+    metric_exporter = OTLPMetricExporter(endpoint=otlp_endpoint)
+    metric_reader = PeriodicExportingMetricReader(metric_exporter)
+    meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+    metrics.set_meter_provider(meter_provider)
+
+    return trace.get_tracer(service_name), metrics.get_meter(service_name)
+```
+
+### Structured Logging
+
+```python
+import json
+import logging
+from datetime import datetime
+
+class StructuredLogFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        log_entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno,
+        }
+        if hasattr(record, "trace_id"):
+            log_entry["trace_id"] = record.trace_id
+        if hasattr(record, "span_id"):
+            log_entry["span_id"] = record.span_id
+        if record.exc_info and record.exc_info[0]:
+            log_entry["exception"] = {
+                "type": record.exc_info[0].__name__,
+                "message": str(record.exc_info[1]),
+            }
+        return json.dumps(log_entry)
+```
+
+## Architecture Decision Trees
+
+### Telemetry Signal Selection
+
+```
+What do you need to observe?
+├── Request flow across services
+│   └── Distributed tracing (spans with parent-child relationships)
+│       ├── Trace every request, sample for storage
+│       └── Use W3C TraceContext for propagation
+│
+├── System health and utilization
+│   └── Metrics (counters, histograms, gauges)
+│       ├── RED metrics: Rate, Errors, Duration
+│       ├── USE metrics: Utilization, Saturation, Errors
+│       └── Business metrics: users signed up, orders placed
+│
+├── Detailed event records
+│   └── Logs (structured JSON)
+│       ├── ERROR/WARN for operational signals
+│       ├── INFO for business events
+│       └── DEBUG for troubleshooting (on-demand)
+│
+└── User experience (client-side)
+    └── Real User Monitoring (RUM)
+        ├── Core Web Vitals (LCP, CLS, INP)
+        ├── Page load timing
+        └── Error tracking
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Logging everything at INFO | Noise buries real issues | Structured levels: ERROR operational, WARN degradations, INFO business events |
+| No sampling strategy | Storage costs explode, slow queries | Head-based sampling: 10% for normal, 100% for errors |
+| Spans without attributes | Can't filter or group traces | Add semantic attributes: http.method, http.status_code, db.system |
+| No service name set | Can't identify source of telemetry | Always set service.name resource attribute |
+| Synchronous telemetry export | Blocking the application | Use batch span processor, async metrics export |
+
+## Performance Optimization
+
+- **Tail-based sampling**: Use tail-based sampling to keep all traces with errors. Drop 90%+ of healthy traces. Saves 90% storage while keeping critical signal.
+- **Dynamic sampling rate**: Increase sampling rate during deployments and incidents. Decrease during steady state. Configure via feature flag or operator.
+- **OpenTelemetry Collector as buffer**: Deploy OTel Collector as a gateway between SDKs and backend. Provides buffering, retries, and load shedding. Prevents backpressure on applications.

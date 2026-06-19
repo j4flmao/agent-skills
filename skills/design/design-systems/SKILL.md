@@ -351,6 +351,152 @@ Impact: Component quality 4.2 → 8.7/10, adoption 3 → 12 teams
 - Don't solve for every edge case — build for 80%, extend for the rest
 - The best design system is the one teams actually use
 
+## Design-to-Code Workflow
+
+### Token-Driven Design Pipeline
+```
+Design tokens (JSON) ──Style Dictionary──> CSS variables
+                                      ──> Compose/Kotlin constants
+                                      ──> Swift constants
+                                      ──> XML resources
+                                      ──> Figma (Token Studio)
+```
+
+All design decisions begin with tokens. Designers update tokens in Figma via Token Studio → commit changes to git → CI runs Style Dictionary → platform-specific files are generated → PR created → designers and developers review. This eliminates manual sync and drift between design and code.
+
+### Component Spec Handoff
+Each component spec includes:
+1. **Figma link**: Master component with all variants, states, and properties
+2. **Token map**: Every visual property mapped to a design token name
+3. **Interaction spec**: Hover, active, focus, disabled, loading, error states with animation durations/easing
+4. **Responsive behavior**: How the component adapts to mobile/tablet/desktop viewports
+5. **Accessibility**: ARIA roles, keyboard navigation, focus order, screen reader announcements
+6. **Content guidelines**: Character limits, truncation rules, icon usage, label conventions
+
+### Component API Contract
+Define the component API before implementation — it's the contract between design and engineering:
+
+```yaml
+component: "Button"
+variants: ["primary", "secondary", "tertiary", "ghost", "danger"]
+sizes: ["sm", "md", "lg"]
+props:
+  - name: "variant"
+    type: "string"
+    values: ["primary", "secondary", "tertiary", "ghost", "danger"]
+  - name: "size"
+    type: "string"
+    values: ["sm", "md", "lg"]
+  - name: "disabled"
+    type: "boolean"
+    default: false
+  - name: "loading"
+    type: "boolean"
+    default: false
+  - name: "icon"
+    type: "string | Component"
+    description: "Icon name or icon component to render"
+  - name: "children"
+    type: "ReactNode"
+    description: "Button label content"
+slots:
+  - name: "leftIcon"
+    description: "Icon slot before label"
+  - name: "rightIcon"
+    description: "Icon slot after label"
+```
+
+## Design System Maturity Model
+
+| Level | Name | Characteristics | Team Size |
+|-------|------|-----------------|-----------|
+| 1 | Ad hoc | No system, duplicated components, inconsistent design | 0 (no DS team) |
+| 2 | Token foundation | Design tokens defined, basic color/typography/spacing tokens in code | 1 person |
+| 3 | Component library | 10-30 core components documented and tested, basic documentation | 1-2 people |
+| 4 | Integrated system | 30-80 components, comprehensive documentation, CI testing, design-code sync | 2-4 people |
+| 5 | Platform | 80+ components, multi-product, multi-brand support, contribution model, community | 4-8+ people |
+
+Each maturity level requires different investment, team structure, and tooling. Don't jump from level 1 to level 5 — the process takes 2-3 years for most organizations. Measure progress: tokens adopted in N products, components used by N teams, accessibility score, time-to-implement new screens.
+
+## Production Considerations
+
+### Performance Budget
+Every component added to the design system must meet performance criteria:
+- **Bundle size**: Each component should add <2KB gzipped (excluding dependencies). Track with bundle analysis in CI.
+- **Render time**: Components must render in <16ms (60fps). Profile with React DevTools profiler or browser Performance tab.
+- **Layout impact**: Components should not cause layout shifts — define explicit dimensions for loading skeletons.
+- **Tree-shakeable**: Unused components must not appear in production bundles. Use named exports, sideEffects: false in package.json.
+
+### Theming Strategy
+Design systems serving multiple brands or white-label products need a theming layer:
+- **Token override mechanism**: Consumers import base tokens then override specific values:
+  ```css
+  @import '@company/tokens/base.css';
+  :root {
+    --color-primary: #custom-brand-color;
+    --font-heading: 'Custom Font', sans-serif;
+  }
+  ```
+- **Theme variants**: Light, dark, high-contrast, reduced-motion — each a different set of token values applied via `[data-theme="dark"]` selector.
+- **Component theming**: Some components need brand-specific visual treatments beyond token overrides. Use a "theme slot" pattern: `Button.theme === 'brand-x' ? <BrandXButton /> : <DefaultButton />`.
+- **Theming API**: Document which tokens can be overridden, which components have theme variants, and the performance implications of loading multiple themes.
+
+### Accessibility Gates
+Every component must pass these checks before release:
+1. Keyboard navigation: Tab, Shift+Tab, Enter, Escape, Arrow keys work correctly
+2. Focus management: Visible focus indicator (2px+, 3:1 contrast), logical tab order
+3. ARIA: Correct roles, states, and labels per WAI-ARIA Authoring Practices
+4. Color contrast: All text/background combos meet WCAG AA (4.5:1 text, 3:1 large text)
+5. Screen reader: Component functionality is communicated audibly
+6. Reduced motion: All animations respect `prefers-reduced-motion: reduce`
+
+### Versioning & Changelog
+```yaml
+# CHANGELOG.md format
+## [3.2.0] - 2026-06-15
+### Added
+- Button: `loading` state with spinner prop (#342)
+- Card: `compact` variant for data-dense layouts (#348)
+
+### Changed
+- Input: error state now uses `aria-describedby` instead of `aria-invalid` only (#341)
+- Colors: primary blue lightened for better contrast (#333)
+
+### Deprecated
+- Alert: use Toast component instead (Alert removed in 4.0)
+
+### Fixed
+- Select: keyboard navigation skipping first option (#356)
+- Modal: focus trap not working on iOS Safari (#351)
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Fix |
+|-------------|---------|-----|
+| **Design system as side project** | No dedicated team, nobody has time to maintain it | Fund a dedicated DS team (min 1-2 FTE) proportional to product team count |
+| **Building without consumers** | Components don't solve real problems, nobody adopts | Work on real product features first, extract components, don't build in isolation |
+| **Golden path syndrome** | Only the perfect use case works; any deviation is impossible | Design for composition — let consumers compose your components creatively |
+| **API explosion** | Every request adds a new prop — component has 50 props | Build for 80% use case; 20% get custom composition or higher-order components |
+| **No deprecation strategy** | Old components linger forever, nobody migrates | Deprecation policy: communicate → mark deprecated → provide codemod → remove after 2 major versions |
+| **Design-code gap** | Figma has different component than code | Token-driven design with automated sync; audit quarterly; treat code as source of truth |
+| **Accessibility as checkbox** | Passes automated checks but fails user testing | Test with screen readers, keyboard-only users, and assistive technology users — not just axe-core |
+| **Over-engineering for scale** | 100 components built but only 15 used by consumers | Build what's requested, not what's anticipated. Measure usage before expanding |
+| **No design system roadmap** | Reactive work only, no strategic direction | Maintain a roadmap: current quarter focus, next quarter planning, future vision |
+
+## Tools & Deliverables
+
+| Tool | Purpose | Stage |
+|------|---------|-------|
+| Figma + Token Studio | Design token creation and management | Design |
+| Style Dictionary | Token transformation to platform formats | Build |
+| Storybook | Component development, documentation, visual testing | Build |
+| Chromatic | Visual regression testing, review workflow | QA |
+| Testing Library / Vitest | Unit and integration tests | QA |
+| axe-core / Pa11y | Accessibility automation | QA |
+| Zeroheight / Supernova | Design system documentation portal | Publish |
+| npm / GitHub Packages | Component distribution | Deploy |
+
 ## References
   - references/component-api-design.md — Component API Design Patterns Reference
   - references/design-system-advanced.md — Design Systems Advanced Topics

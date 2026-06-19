@@ -216,6 +216,41 @@ Biometric authentication result?
 - Automated test: mock biometric success, failure, and lockout paths
 - Accessibility test: biometric with VoiceOver/TalkBack enabled
 
+### Session Caching Strategy Decision
+```
+How often should user re-authenticate?
+├── Per-session (app launch → app background) → Cache on app foreground
+│   Re-authenticate on return from background after timeout (5/15/60 min)
+│   Valid only for the current app session — logout clears cache
+├── Per-action (each sensitive operation) → No caching, require biometric each time
+│   Use for: payments, password reveal, account deletion
+│   UX: lightweight prompt (no full screen overlay)
+├── Time-gated (re-auth every N minutes) → Biometric key with validity duration
+│   Android: `setUserAuthenticationValidityDurationSeconds(300)` = 5 min cache
+│   iOS: `LAContext.touchIDAuthenticationAllowableReuseDuration = 300`
+│   Key remains accessible for duration without re-prompt
+└── Device-unlock-gated → Use device credential (PIN) as proxy for biometric
+    User has already unlocked phone → trust the device auth
+    Low level of assurance — not for sensitive operations
+```
+
+### Biometric Enrollment Change Handling
+```
+Biometric enrollment changed (new finger/face added, or all removed)?
+├── Key invalidated (setInvalidatedByBiometricEnrollment=true, biometryCurrentSet)
+│   → Data becomes inaccessible: `KeyPermanentlyInvalidatedException` (Android)
+│   → Must re-authenticate + re-encrypt all stored data
+│   → Show clear message: "Your biometrics changed, please re-authenticate"
+├── Key not invalidated (setInvalidatedByBiometricEnrollment=false)
+│   → Old keys work even after new biometric enrolled
+│   → Security risk: stolen biometric can decrypt old data
+│   → Only use for: non-sensitive preferences, cached UI state
+└── All biometrics removed from device
+    → Keys remain if not invalidated by enrollment change
+    → But no biometric available to unlock them — fallback to device credential
+    → Recommend: delete biometric-protected data when no biometric enrolled
+```
+
 ## Biometric Opt-In UX Patterns
 
 Best practice: never force biometrics on users. Implement a progressive disclosure flow: (a) on first launch, skip biometrics, (b) when user accesses protected feature, show a one-time nudge suggesting biometric setup, (c) if declined, respect the decision for 30 days before another nudge, (d) provide a permanent toggle in Settings to enable/disable, (e) if user disables biometrics, fall back to device credential permanently. The Settings screen should show: enrolled biometric type (Face ID, Fingerprint), enrollment status (X fingerprints, Face enrolled), toggle for each protected feature, and a "Change biometric" button that triggers `showBiometric()` to re-enroll the key in Keystore. Never show biometric as the only auth option — always have a device credential path.
@@ -365,6 +400,85 @@ export async function signWithBiometric(payload: string) {
     payload,
   });
   return { success, signature };
+}
+```
+
+### Biometric Implementation Anti-Patterns
+
+- **Timeout on biometric key too long**: `setUserAuthenticationValidityDurationSeconds(86400)` = 24 hours. A compromised device exposes data for a full day. Max recommended: 300 seconds (5 min).
+- **No biometric enrollment change watcher**: Biometric enrollment changes (user adds/removes fingerprint or face) invalidate keys silently. Subscribe to `ACTION_BIOMETRIC_ENROLLMENT_CHANGED` (Android) or check `biometryCurrentSet` on each app launch.
+- **Fallback to app password without device credential**: Users can type an app-specific password instead of device PIN. This creates a secondary auth channel that is often less secure. Always prefer device credential over app password.
+- **Biometric-only settings toggle**: "Enable Face ID" toggle without showing what features it affects. Users enable it thinking all security is handled, but payments still need device credential. Show a per-feature matrix.
+- **Not handling `ERROR_VENDOR` (Android)**: Vendor-specific errors (OEM-specific biometric implementations) can crash the app. Never assume only standard error codes. Wrap in try/catch.
+- **Face authentication without attention check**: On iOS, `LAContext.notRequireAttention` allows face unlock with closed eyes. For high-sensitivity operations, require attention by relying on the default (attention required).
+- **Re-prompting after user cancel**: User cancels biometric prompt, app immediately re-shows it — frustrating. After user cancel, wait for explicit user action before re-prompting.
+- **Caching biometric success for entire app session**: Cache should expire. A user may unlock the app at 9am, hand their phone to someone at 10am — cached biometric access still grants permission. Set session timeout (5-15 min).
+
+### Biometric Performance & Battery Considerations
+
+| Operation | Typical Duration | Battery Impact |
+|-----------|-----------------|----------------|
+| Face ID recognition | ~150ms | Minimal (Neural Engine) |
+| Touch ID recognition | ~200ms | Minimal |
+| Biometric key decryption | ~50ms | Negligible |
+| Biometric prompt UI show | ~100ms | Negligible |
+| Key generation (first time) | ~200-500ms | Small (one-time) |
+| Key invalidation on enrollment change | ~10ms | Negligible |
+
+Biometric operations are hardware-accelerated on modern devices (Secure Enclave / Titan M). They do not require network access. Battery impact is minimal — comparable to pressing a button. The only power concern is the camera-based Face ID on older iPhones (iPhone X/XR) which uses the TrueDepth camera briefly per authentication.
+
+### Biometric Regulatory & Compliance Considerations
+
+GDPR considers biometric data "special category" data requiring explicit consent. Key requirements: (a) biometric data must be processed on-device — never send raw biometric templates to servers, (b) user must explicitly opt-in to biometric auth with clear disclosure of what data is stored, (c) user must be able to revoke biometric consent at any time, (d) on revocation, all biometric-protected keys must be deleted, (e) biometric data must be encrypted at rest (which it is by default in Secure Enclave/Keystore), (f) data retention: biometric templates should not be stored long-term — use device-native biometric APIs that manage templates in the secure processor, (g) transparency: the privacy policy must disclose biometric usage, data storage location, and retention period.
+
+### Biometric Testing Matrix
+
+| Test Scenario | Expected Behavior | Platform Differences |
+|--------------|-------------------|---------------------|
+| Enrolled biometric → success | Grant access | Both platforms |
+| Wrong finger/face → failure | Show retry, count attempts | Both platforms |
+| 5 failures → lockout | Force device credential | iOS: locks until device credential used. Android: 30s timeout |
+| No biometric enrolled | Fallback to device credential | Check `canAuthenticate` first |
+| Biometric enrollment change | Key invalidated, data inaccessible | Must re-encrypt data |
+| Device credential entered | Grant access as fallback | Both |
+| System biometric settings changed during app use | Check status on app return from background | Both |
+| User cancels prompt | Wait for explicit next action | Both |
+| Call interruption during auth | Resume or retry auth | Handle `onAuthenticationError` with `ERROR_CANCELED` |
+| Accessibility: VoiceOver/TalkBack active | Biometric prompt must be accessible | Test with screen reader enabled |
+
+### Code Examples — Biometric Session Cache
+
+```swift
+class BiometricSessionCache {
+    private var lastAuthTimestamp: Date?
+    private let sessionTimeout: TimeInterval = 300 // 5 minutes
+
+    var isSessionValid: Bool {
+        guard let lastAuth = lastAuthTimestamp else { return false }
+        return Date().timeIntervalSince(lastAuth) < sessionTimeout
+    }
+
+    func authenticate(reason: String, completion: @escaping (Bool) -> Void) {
+        if isSessionValid {
+            completion(true) // Use cached auth
+            return
+        }
+        let context = LAContext()
+        context.localizedReason = reason
+        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+                              localizedReason: reason) { success, error in
+            DispatchQueue.main.async {
+                if success {
+                    self.lastAuthTimestamp = Date()
+                }
+                completion(success)
+            }
+        }
+    }
+
+    func invalidateSession() {
+        lastAuthTimestamp = nil // Called on logout or security event
+    }
 }
 ```
 

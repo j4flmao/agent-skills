@@ -384,3 +384,135 @@ Serving a 4000px image for a 300px thumbnail wastes bandwidth. Use `srcset` to s
 ## Handoff
 
 If project requires real-time image transformation pipeline setup (Cloudinary, Imgix, or custom), deliver CDN configuration. For build-time image processing pipeline, hand off to bundler-tools skill. Otherwise implement complete image optimization.
+
+## Implementation Patterns
+
+### Responsive Image Component
+
+```tsx
+interface ResponsiveImageProps {
+  src: string;
+  alt: string;
+  widths?: number[];
+  formats?: string[];
+  sizes?: string;
+  priority?: boolean;
+  className?: string;
+}
+
+function ResponsiveImage({
+  src,
+  alt,
+  widths = [640, 768, 1024, 1280],
+  formats = ['avif', 'webp'],
+  sizes = '100vw',
+  priority = false,
+  className,
+}: ResponsiveImageProps) {
+  const generateSrcSet = (format: string): string => {
+    return widths
+      .map((w) => `${src}?w=${w}&fm=${format} ${w}w`)
+      .join(', ');
+  };
+
+  return (
+    <picture>
+      {formats.map((format) => (
+        <source
+          key={format}
+          type={`image/${format}`}
+          srcSet={generateSrcSet(format)}
+          sizes={sizes}
+        />
+      ))}
+      <img
+        src={`${src}?w=${widths[0]}`}
+        srcSet={generateSrcSet('jpg')}
+        sizes={sizes}
+        alt={alt}
+        loading={priority ? 'eager' : 'lazy'}
+        fetchpriority={priority ? 'high' : undefined}
+        decoding="async"
+        className={className}
+      />
+    </picture>
+  );
+}
+```
+
+### Image CDN Client
+
+```typescript
+interface ImageTransformOptions {
+  width?: number;
+  height?: number;
+  format?: 'auto' | 'webp' | 'avif' | 'jpg' | 'png';
+  quality?: number;
+  crop?: 'fill' | 'fit' | 'crop' | 'scale';
+  blur?: number;
+}
+
+class ImageCDN {
+  constructor(private baseUrl: string, private defaults: ImageTransformOptions = {}) {}
+
+  getUrl(path: string, options?: ImageTransformOptions): string {
+    const opts = { ...this.defaults, ...options };
+    const params = new URLSearchParams();
+
+    if (opts.width) params.set('w', opts.width.toString());
+    if (opts.height) params.set('h', opts.height.toString());
+    if (opts.format) params.set('fm', opts.format);
+    if (opts.quality) params.set('q', opts.quality.toString());
+    if (opts.crop) params.set('fit', opts.crop);
+    if (opts.blur) params.set('blur', opts.blur.toString());
+
+    return `${this.baseUrl}/${path}?${params.toString()}`;
+  }
+}
+```
+
+## Architecture Decision Trees
+
+### Image Optimization Strategy
+
+```
+What's the image use case?
+├── Content images (blog, article, gallery)
+│   └── Responsive images with srcset
+│       ├── Multiple widths for different viewports
+│       ├── AVIF + WebP + JPEG fallback
+│       └── Lazy loading for below-fold images
+│
+├── Hero/LCP images (above the fold)
+│   └── Preload with high priority
+│       ├── <link rel="preload" as="image"> in <head>
+│       ├── eager loading attribute
+│       └── Smaller file size (quality trade-off)
+│
+├── Thumbnails / icons (small, repeated)
+│   └── Inline or sprite
+│       ├── SVG for icons (inline or sprite)
+│       ├── Base64 inline for tiny images
+│       └── CSS sprites for many small images
+│
+└── User-uploaded images (dynamic)
+    └── Image CDN with on-the-fly transformations
+        ├── Resize, crop, format conversion on request
+        ├── Client hints for automatic optimization
+        └── EXIF stripping for privacy
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Serving JPEG when AVIF available | 30-50% larger file sizes | AVIF with WebP fallback in picture element |
+| No srcset on images | Desktop loads mobile image (blurry) or vice versa | Always use srcset with multiple widths |
+| No lazy loading on below-fold | Wastes bandwidth, slower initial load | loading="lazy" for all non-LCP images |
+| Fixed image dimensions | Layout shift (CLS) on load | aspect-ratio CSS or width/height attributes |
+| No preload on LCP image | Delayed largest contentful paint | <link rel="preload> in <head> |
+
+## Performance Optimization
+
+- **Image CDN for dynamic transformations**: Use image CDN (Cloudinary, Imgix, Cloudflare Images) for on-the-fly resizing, format conversion, and compression. Offloads processing from the origin server.
+- **Blur-up placeholders**: Use tiny (20-30px) blurred image as placeholder. Swap to full image on load. Improves perceived performance by showing content outline immediately.

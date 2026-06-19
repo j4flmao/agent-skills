@@ -332,6 +332,221 @@ Observations:
 - Security tool false positives must be documented and tuned
 - Compliance is a baseline, not a security strategy
 
+## Threat Modeling with STRIDE — Deep Dive
+
+### STRIDE Categories
+```
+Spoofing: Pretending to be someone or something else
+  - Examples: stolen credentials, session hijacking, fake API keys
+  - Mitigations: MFA, certificate-based auth, session binding
+
+Tampering: Modifying data or code without authorization
+  - Examples: SQL injection, parameter tampering, file modification
+  - Mitigations: input validation, hashing, digital signatures, integrity checks
+
+Repudiation: Denying having performed an action
+  - Examples: claiming "I didn't make that transfer"
+  - Mitigations: audit logs, digital signatures, non-repudiation tokens
+
+Information Disclosure: Exposing data to unauthorized parties
+  - Examples: PII leak in logs, insecure direct object references, verbose error messages
+  - Mitigations: encryption (at rest and in transit), access control, data masking
+
+Denial of Service: Making a system unavailable
+  - Examples: DDoS, resource exhaustion, algorithmic complexity attacks
+  - Mitigations: rate limiting, load balancing, auto-scaling, resource quotas
+
+Elevation of Privilege: Gaining unauthorized access rights
+  - Examples: privilege escalation, SQL injection to admin, vertical bypass
+  - Mitigations: RBAC, principle of least privilege, privilege separation
+```
+
+### Threat Modeling Process Flow
+```
+1. Define Scope (30 min)
+   ├── System context diagram (actors, data flows, trust boundaries)
+   ├── Identify components in scope
+   ├── Identify external dependencies
+   └── Identify data sensitivity levels
+
+2. Decompose the System (60 min)
+   ├── Data flow diagram (DFD) — level 0 and level 1
+   ├── List trust boundaries (where privilege changes)
+   ├── Note data stores (databases, files, caches)
+   └── Identify entry points (APIs, UIs, file uploads, webhooks)
+
+3. Identify Threats (60 min)
+   ├── Per DFD element, apply STRIDE per element type
+   ├── Element type → relevant STRIDE categories:
+   │   External Entity: S (spoofing)
+   │   Process: STRIDE (all six)
+   │   Data Store: TR (tampering, repudiation)
+   │   Data Flow: TI (tampering, information disclosure)
+   ├── Use threat library (CAPEC, OWASP) for known patterns
+   └── Document: threat ID, element, STRIDE category, description
+
+4. Rank Threats (30 min)
+   ├── Using DREAD or risk matrix
+   ├── Document: ranking, priority order
+   └── Identify quick wins and long-term fixes
+
+5. Mitigate Threats (60 min)
+   ├── For each high/medium threat: design mitigation
+   ├── Update design documents with mitigations
+   ├── Create implementation tasks
+   └── Assign owners and deadlines
+
+6. Validate (ongoing)
+   ├── Code review verifies mitigations
+   ├── Security testing validates mitigations
+   ├── Revisit threat model on architecture change
+   └── Annual full threat model refresh
+```
+
+### DREAD Risk Scoring for Threats
+```
+DAMAGE: How bad would the attack be?
+  10 = complete system compromise, data loss
+  5 = partial compromise, moderate data exposure
+  1 = negligible damage
+
+REPRODUCIBILITY: How easy is it to reproduce?
+  10 = trivial, every attempt succeeds
+  5 = requires specific conditions
+  1 = extremely difficult to reproduce
+
+EXPLOITABILITY: How easy is it to launch?
+  10 = novice can execute, no tools needed
+  5 = requires moderate skill and tools
+  1 = expert, requires custom exploit
+
+AFFECTED USERS: How many users would be impacted?
+  10 = all users affected
+  5 = subset of users affected
+  1 = no users affected, internal only
+
+DISCOVERABILITY: How easy is it to discover the vulnerability?
+  10 = easily discoverable, documented in error messages
+  5 = moderate effort, requires probing
+  1 = nearly impossible to discover
+
+DREAD Score = (D + R + E + A + D) / 5
+  9-10: Critical — immediate remediation
+  7-8: High — planned remediation (< 30 days)
+  4-6: Medium — addressed in normal cycle
+  1-3: Low — accept or backlog
+```
+
+## Compliance Mapping Template
+
+```
+Control Category | Requirement | Current State | Gap | Owner | Target Date
+-----------------|-------------|---------------|-----|-------|------------
+Access Control | MFA on all production access | Implemented for VPN only | Cloud console lacks MFA | DevOps | Q2
+Encryption | Data encrypted at rest | AWS default KMS | Keys not rotated | SecEng | Q1
+Audit Logging | All admin actions logged | CloudTrail enabled | No centralized SIEM | SecOps | Q3
+Incident Response | IR plan tested quarterly | Annual test | Below requirement | SecLead | Q2
+
+Compliance Framework Mapping:
+  ISO 27001: {mapped controls}
+  SOC 2: {mapped controls}
+  GDPR: {mapped controls}
+  PCI DSS: {mapped controls}
+  HIPAA: {mapped controls}
+```
+
+## Security Review Checklist — Phase-by-Phase
+
+### Requirements Phase
+```
+□ Security requirements defined using STRIDE/LINDDUN
+□ Data classification determined (public/internal/confidential/restricted)
+□ Compliance requirements identified (GDPR, SOC2, PCI, HIPAA)
+□ Privacy impact assessment initiated if handling PII
+□ Third-party vendor risk tier assigned
+```
+
+### Design Phase
+```
+□ Threat model completed and reviewed
+□ Architecture review: trust boundaries, data flows, encryption
+□ Authentication mechanism defined (OAuth 2.0, SAML, API keys)
+□ Authorization model defined (RBAC, ABAC, ACL)
+□ Secrets management approach documented
+□ Data at rest encryption approach documented
+□ Data in transit encryption approach documented
+□ Logging and monitoring approach defined
+□ Incident response plan drafted
+□ Reviewed against security design principles
+```
+
+### Development Phase
+```
+□ SAST tools configured in CI pipeline
+□ Linting with security rules enabled
+□ Secrets scanning in pre-commit hooks
+□ Dependency scanning for CVEs
+□ Code review with security checklist
+□ Secure coding guidelines followed
+□ Hardcoded secrets prevented
+□ Input validation and output encoding applied
+□ Error handling without information leakage
+□ Branch protection with required reviews
+```
+
+### Testing Phase
+```
+□ DAST scan on staging environment
+□ Penetration testing (full or targeted)
+□ SAST/SCA scan results reviewed
+□ Security unit tests written for auth, access control, input validation
+□ Fuzz testing on input endpoints
+□ Dependency check completed
+□ Container image scan completed
+□ Configuration review (hardening checklist)
+```
+
+### Deployment Phase
+```
+□ Environment hardening checklist completed
+□ Secrets injected at deploy time (not committed)
+□ Infrastructure-as-code scanned for misconfigurations
+□ Deployment approved via change management
+□ Canary or blue-green deployment strategy
+□ Rollback plan documented
+□ Monitoring alerts configured for security events
+□ WAF rules deployed if applicable
+□ Rate limiting configured
+□ Access to production verified (least privilege)
+```
+
+### Operations Phase
+```
+□ Security monitoring alerts active
+□ Log retention policy configured
+□ Incident response runbook available
+□ Backup and recovery tested
+□ Patch management schedule established
+□ Regular vulnerability scans scheduled
+□ Access reviews conducted quarterly
+□ Drills (tabletop, phishing) scheduled
+□ Security champions program active
+□ CVE monitoring process established
+```
+
+## Tool Selection Guide — Security Scanning
+
+| Tool Type | Purpose | Integration Point | Frequency | Example Tools |
+|-----------|---------|-------------------|-----------|---------------|
+| SAST | Static code analysis | CI pipeline (pre-merge) | Every commit | Semgrep, SonarQube, CodeQL |
+| DAST | Dynamic app scanning | Staging environment | Per release | OWASP ZAP, Burp Suite |
+| SCA | Dependency scanning | CI pipeline | Every build | Dependabot, Snyk, Trivy |
+| Container scan | Image vulnerability | CI pipeline, registry | Every image | Trivy, Clair, Anchore |
+| IaC scan | Infrastructure misconfig | CI pipeline | Every infra change | Checkov, Terrascan |
+| Secrets scan | Credential detection | Pre-commit, CI | Every commit | GitLeaks, TruffleHog |
+| WAF | Traffic filtering | Production edge | Real-time | Cloudflare WAF, AWS WAF |
+| SIEM | Log aggregation & alerting | Production | Real-time | Splunk, ELK, Sentinel |
+
 ## References
   - references/security-advanced.md — Security Advanced Topics
   - references/security-fundamentals.md — Security Fundamentals

@@ -1,65 +1,47 @@
 # Baseline Management
 
-## CI Pipeline Workflow
+## Storage Strategies
+| Strategy | Pros | Cons | Best for |
+|----------|------|------|----------|
+| Git (commit baselines) | Versioned, reviewed in PRs | Large files bloat repo | Small suites, component tests |
+| Git LFS | Large file support, versioned | Requires LFS setup | Medium suites |
+| Cloud service (Percy, Chromatic) | No local storage, team sharing | Vendor lock-in, cost | Team collaboration |
+| CI artifacts | Simple, disposable | No history, not shared | CI-only validation |
 
+## Baseline Update Workflow
+1. Developer makes intentional UI change
+2. CI visual tests fail (expected — baseline is outdated)
+3. Developer reviews diff images to confirm changes are intentional
+4. Developer runs `npx playwright test --update-snapshots` locally
+5. Updated baselines committed with the UI change
+6. Reviewer sees baseline changes in PR diff
+
+## CI-Driven Baseline Updates
+```yaml
+# Automated baseline update on main branch
+jobs:
+  update-baselines:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Update baselines
+        run: npx playwright test --update-snapshots --project=chromium
+      - name: Commit updated baselines
+        run: |
+          git config user.name "Visual Test Bot"
+          git config user.email "bot@example.com"
+          git add visual-snapshots/
+          git commit -m "chore: update visual baselines [skip ci]" || true
+          git push
 ```
-main branch (baseline)
-  └─ Run visual tests → auto-approve all snapshots → update baseline
-feature branch
-  └─ Run visual tests → diff against main baseline → review in Percy/Chromatic
-  └─ Approve changes → merge to main
-  └─ Run visual tests on main → new baseline
-```
 
-## Cross-Browser Baseline Strategy
-
-| Browser | Baseline | Diff Handling |
-|---------|----------|---------------|
-| Chrome | Primary baseline | All diffs reviewed |
-| Firefox | Same baseline as Chrome | Sub-pixel rendering diffs auto-soft-accept |
-| Safari | Same baseline | Font rendering diffs reviewed manually |
-
-## Component-Level Configuration
-
-```typescript
-// Component-specific baseline config
-const visualConfig = {
-  header: { threshold: 0.1, widths: [1440] },
-  "data-table": { threshold: 0.2, widths: [768, 1440] },
-  "user-avatar": { threshold: 0 },
-};
-```
-
-## Baseline Approval Workflow
-
-1. Developer runs visual tests on feature branch
-2. Percy/Chromatic compares against main baseline
-3. Diffs categorized: Unchanged (auto-pass), Changed (review needed), Added (new baseline), Removed (verify intentional)
-4. Reviewer inspects each diff — approve or reject
-5. All diffs approved → PR can merge
-6. Post-merge → new baseline captured on main
-
-## Handling Dynamic Content
-
-| Strategy | Implementation | When to Use |
-|----------|---------------|-------------|
-| Clip region | Snapshot only static area | Header, footer, sidebar |
-| DOM transform | Remove dynamic elements | Dates, user names, timers |
-| Data attribute freeze | Set static state in test | Loading, error, empty states |
-| CSS freeze | Pause animations before snapshot | Carousels, spinners |
-| CSS freeze | `page.addStyleTag` to pause animations | Any animated element |
-
-## Baseline Rotation
-
-- Every main branch build creates a new baseline
-- Retain last 30 days of baselines
-- Archive quarterly full-suite snapshots for trend analysis
-- Purge baselines for deleted components
-
-## Review Checklist
-
-- [ ] Diff is expected (intentional change)
-- [ ] Diff is not a rendering flake (font rendering, anti-aliasing)
-- [ ] Diff does not break a11y contrast
-- [ ] Diff is consistent across browsers
-- [ ] No unintended side effects (layout shift, overflow)
+## Key Points
+- Store baselines in version control (Git or Git LFS)
+- Update baselines when UI changes are intentional
+- Review baseline changes in PRs alongside code changes
+- Use CI to auto-update baselines on main branch
+- Mask dynamic content to reduce unnecessary baseline updates
+- Use element-level screenshots for more stable baselines

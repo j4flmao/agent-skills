@@ -396,3 +396,171 @@ After regression testing, hand off to:
 - `quality-acceptance-testing` — if acceptance criteria gaps were uncovered
 - `quality-e2e-testing` — for end-to-end coverage of newly identified risk areas
 - `quality-integration-testing` — for deeper investigation of regression failures
+
+## Implementation Patterns
+
+### Regression Test Suite Runner
+
+```python
+from typing import List, Dict, Optional, Callable
+from dataclasses import dataclass
+from datetime import datetime
+import json
+import time
+
+@dataclass
+class RegressionTest:
+    name: str
+    run_fn: Callable
+    tier: int  # 1=critical, 2=important, 3=nice-to-have
+    module: str
+    timeout: int = 30
+    retries: int = 0
+
+@dataclass
+class TestResult:
+    name: str
+    passed: bool
+    duration_ms: float
+    error: Optional[str] = None
+    retry_count: int = 0
+
+class RegressionSuite:
+    def __init__(self, name: str):
+        self.name = name
+        self.tests: List[RegressionTest] = []
+
+    def add_test(self, test: RegressionTest):
+        self.tests.append(test)
+
+    def run_tier(self, tier: int, parallel: bool = False) -> Dict:
+        tests = [t for t in self.tests if t.tier == tier]
+        results = []
+        start = time.time()
+
+        if parallel:
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                futures = {executor.submit(self._run_single, t): t for t in tests}
+                for future in concurrent.futures.as_completed(futures):
+                    results.append(future.result())
+        else:
+            for test in tests:
+                results.append(self._run_single(test))
+
+        duration = time.time() - start
+        passed = [r for r in results if r.passed]
+        failed = [r for r in results if not r.passed]
+
+        return {
+            "suite": self.name,
+            "tier": tier,
+            "total": len(results),
+            "passed": len(passed),
+            "failed": len(failed),
+            "duration_seconds": round(duration, 2),
+            "results": results,
+        }
+
+    def _run_single(self, test: RegressionTest) -> TestResult:
+        for attempt in range(test.retries + 1):
+            start = time.time()
+            try:
+                test.run_fn()
+                duration = (time.time() - start) * 1000
+                return TestResult(
+                    name=test.name,
+                    passed=True,
+                    duration_ms=round(duration, 2),
+                    retry_count=attempt,
+                )
+            except Exception as e:
+                if attempt < test.retries:
+                    continue
+                duration = (time.time() - start) * 1000
+                return TestResult(
+                    name=test.name,
+                    passed=False,
+                    duration_ms=round(duration, 2),
+                    error=str(e),
+                    retry_count=attempt,
+                )
+        return TestResult(name=test.name, passed=False, duration_ms=0)
+
+    def run_all(self, parallel: bool = False) -> Dict:
+        tiers = sorted(set(t.tier for t in self.tests))
+        all_results = {}
+        for tier in tiers:
+            all_results[tier] = self.run_tier(tier, parallel)
+        return all_results
+
+
+class FlakyTestDetector:
+    def __init__(self, window_size: int = 10):
+        self.history: Dict[str, List[bool]] = {}
+        self.window_size = window_size
+
+    def record_result(self, test_name: str, passed: bool):
+        if test_name not in self.history:
+            self.history[test_name] = []
+        self.history[test_name].append(passed)
+        if len(self.history[test_name]) > self.window_size:
+            self.history[test_name].pop(0)
+
+    def is_flaky(self, test_name: str, threshold: float = 0.2) -> bool:
+        if test_name not in self.history:
+            return False
+        results = self.history[test_name]
+        if len(results) < 5:
+            return False
+        pass_rate = sum(results) / len(results)
+        return pass_rate < (1 - threshold) and pass_rate > threshold
+```
+
+## Architecture Decision Trees
+
+### Regression Test Scope Selection
+
+```
+What changed?
+├── New feature added
+│   ├── Add tests for new feature
+│   ├── Run full regression for affected module
+│   └── Run smoke tests for entire system
+│
+├── Bug fix
+│   ├── Add regression test for the fixed bug
+│   ├── Run all tests in the affected module
+│   └── Run integration tests for dependent modules
+│
+├── Refactoring (no behavior change)
+│   ├── Run full test suite for refactored module
+│   ├── Contract tests for API changes
+│   └── Compare before/after test coverage
+│
+├── Dependency update
+│   ├── Run full regression suite
+│   ├── Run security-focused tests
+│   └── Test edge cases in updated dependency
+│
+└── Configuration / infrastructure change
+    ├── Smoke tests for deployment
+    ├── Health check tests
+    └── Performance benchmark comparison
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| No tiered regression | Full suite too slow for CI feedback | Tier 1 (critical) in 5 min, Tier 2 in 15 min, Tier 3 nightly |
+| Ignoring flaky tests | Wasted CI time, distrust in suite | Quarantine flaky tests immediately, fix within 5 days |
+| Only adding, never removing | Suite grows unbounded, slow | Remove tests for deleted features, review suite quarterly |
+| Determinism not enforced | Random failures from shared state | Isolate test data per run, no shared state |
+| No baseline for comparison | Don't know if performance regressed | Store baseline metrics, compare on each run |
+
+## Performance Optimization
+
+- **Impact analysis for test selection**: Use code coverage data to select tests for changed files. Only run tests that cover modified code. Reduces regression run time by 60-80%.
+- **Parallel test execution by tier**: Run Tier 1 tests sequentially for fast feedback. Run Tier 2+3 tests in parallel across multiple machines. Total regression time: Tier 1 in 5 min, all tiers in 30 min.
+- **Test impact analysis**: Use `git diff` to identify changed files. Map files to test suites. Only run affected suites. Cache unaffected suite results from previous CI run.

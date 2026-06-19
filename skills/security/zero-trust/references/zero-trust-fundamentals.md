@@ -1,213 +1,294 @@
 # Zero Trust Fundamentals
 
 ## Overview
-Zero Trust is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Zero Trust is a security model based on the principle "never trust, always verify." Unlike traditional perimeter-based security, Zero Trust assumes no implicit trust based on network location. Every access request is authenticated, authorized, and continuously validated before granting access to resources. Zero Trust is not a single product but a strategic framework encompassing multiple security disciplines.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Zero Trust helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Concept 1: Zero Trust Principles (NIST SP 800-207)
+1. **All data sources and computing services are resources**: Any device, API, or service that provides or consumes data
+2. **All communication is secured regardless of network location**: Encrypt everything, no trust based on network location
+3. **Access to resources is granted per-session**: Least privilege, just-in-time access
+4. **Access is determined by dynamic policy**: Based on user identity, device health, location, data sensitivity, and risk
+5. **Monitor and measure all assets and traffic**: Visibility is essential for verification
+6. **Dynamic authentication and authorization before access**: Continuous verification, not just at login
+7. **Collect information about asset state, network behavior, and activity**: Context-aware policy decisions
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Zero Trust solutions. These principles help maintain code quality and reduce technical debt.
+### Concept 2: Zero Trust Architecture Pillars
+| Pillar | Description | Key Technologies |
+|--------|-------------|-----------------|
+| **Identity** | Verify user identity before access | SSO, MFA, PAM, Identity Governance |
+| **Device** | Ensure device is healthy and compliant | MDM, EDR, device posture assessment |
+| **Network** | Micro-segment and encrypt traffic | Micro-segmentation, SD-WAN, TLS, mTLS |
+| **Application** | Secure applications and APIs | WAF, API gateways, runtime protection |
+| **Data** | Classify and protect sensitive data | DLP, encryption, data classification |
+| **Infrastructure** | Secure compute, storage, and networks | CSPM, CIEM, workload identity |
 
-### Concept 3: Data Management
-Proper data management is essential for Zero Trust. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Concept 3: Policy Decision Points
+- **PEP (Policy Enforcement Point)**: Gate that enforces access decisions (gateway, reverse proxy, VPN)
+- **PDP (Policy Decision Point)**: Engine that evaluates policies and makes access decisions
+- **PIP (Policy Information Point)**: Sources of context (IdP, MDM, threat intel, SIEM)
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
-
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Zero Trust follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Concept 4: Deployment Models
+- **NIST Model**: Enhanced identity governance + micro-segmentation
+- **Google BeyondCorp**: Device and user-based access without VPN
+- **Zscaler/Cloud ZTNA**: Cloud-delivered Zero Trust via ZTNA broker
+- **Microsoft Zero Trust**: Integrated Microsoft stack (Azure AD, Intune, Defender)
 
 ## Implementation Guide
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Step 1: Zero Trust Policy Engine (PDP Example)
+```rego
+package zero_trust
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+import future.keywords.if
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+# User attributes
+user_roles := {
+    "alice": ["billing_admin", "finance_team"],
+    "bob": ["developer", "engineering_team"],
+    "carol": ["viewer", "marketing_team"],
+}
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+# Device compliance from MDM
+device_compliance := data.devices[input.device_id]
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+# Allowed access by role + data sensitivity
+allowed_access := {
+    "billing_admin": {"sensitivity": ["confidential", "restricted"]},
+    "developer": {"sensitivity": ["public", "internal"]},
+    "viewer": {"sensitivity": ["public"]},
+}
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+# Risk scoring
+risk_score := score {
+    # Location risk
+    loc_risk := 5 if input.geo_country not in trusted_countries
+    loc_risk := 0 if input.geo_country in trusted_countries
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+    # Device risk
+    dev_risk := 10 if not device_compliance.is_compliant
+    dev_risk := 0 if device_compliance.is_compliant
+
+    # Time risk
+    time_risk := 3 if input.access_time not in business_hours
+    time_risk := 0 if input.access_time in business_hours
+
+    score := loc_risk + dev_risk + time_risk
+}
+
+# Access decision
+allow if {
+    # User must have role
+    user_roles[input.user][_]
+
+    # Role must have access to resource sensitivity
+    user_roles[input.user][role]
+    allowed_access[role].sensitivity[_] == input.resource_sensitivity
+
+    # Risk score must be below threshold
+    risk_score <= 5
+}
+
+# Step-up authentication for higher risk
+deny["step_up_auth_required"] if {
+    user_roles[input.user][_]
+    risk_score > 5
+    risk_score <= 10
+    not input.mfa_verified
+}
+
+# Deny high risk
+deny["access_denied_high_risk"] if {
+    risk_score > 10
+}
+```
+
+### Step 2: ZTNA Configuration (Cloudflare Access)
+```yaml
+# Cloudflare Zero Trust Access configuration
+access_application:
+  name: "Internal Billing App"
+  domain: "billing.internal.example.com"
+  session_duration: "1h"
+
+  policies:
+    - name: "Billing Team"
+      decision: "allow"
+      rules:
+        - selector: "email"
+          operator: "ends_with"
+          value: "@example.com"
+        - selector: "group"
+          operator: "includes"
+          value: "billing-team"
+
+    - name: "Contractor Access"
+      decision: "allow"
+      rules:
+        - selector: "email"
+          operator: "ends_with"
+          value: "@contractor.example.com"
+        - selector: "device_posture"
+          operator: "is"
+          value: "managed_device"
+        - selector: "geo"
+          operator: "in"
+          values: ["US", "CA"]
+      session_duration: "4h"
+      require_mfa: true
+```
+
+### Step 3: Micro-segmentation with Network Policies
+```yaml
+# Kubernetes Network Policy for zero trust
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-tier-policy
+spec:
+  podSelector:
+    matchLabels:
+      tier: api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              tier: frontend
+      ports:
+        - protocol: TCP
+          port: 8080
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              tier: database
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app: auth-service
+      ports:
+        - protocol: TCP
+          port: 5000
+```
+
+### Step 4: Zero Trust Access Flow (Python)
+```python
+class ZeroTrustAccess:
+    """Zero Trust access decision engine."""
+
+    def evaluate_access(self, request: AccessRequest) -> AccessDecision:
+        """Evaluate all policies and return access decision."""
+        # 1. Identity verification
+        if not self.verify_identity(request.user, request.token):
+            return AccessDecision.DENY
+
+        # 2. Device posture check
+        device = self.get_device(request.device_id)
+        if not device.is_compliant:
+            return AccessDecision.DENY
+
+        # 3. Context evaluation
+        risk_context = self.calculate_risk(request, device)
+
+        # 4. Policy evaluation
+        policy_result = self.policy_engine.evaluate(
+            user=request.user,
+            resource=request.resource,
+            action=request.action,
+            context=risk_context,
+        )
+
+        # 5. Step-up auth if needed
+        if policy_result.step_up_required and not request.mfa_verified:
+            return AccessDecision.STEP_UP_AUTH
+
+        # 6. Allow or deny
+        if policy_result.allowed:
+            self.audit_log(request, "ALLOWED")
+            return AccessDecision.ALLOW
+        else:
+            self.audit_log(request, "DENIED", policy_result.reason)
+            return AccessDecision.DENY
+
+    def calculate_risk(self, request: AccessRequest, device: Device) -> RiskContext:
+        """Calculate risk score based on context."""
+        score = 0
+        # Location
+        if request.geo_country not in self.TRUSTED_COUNTRIES:
+            score += 10
+        # Device age
+        if device.last_patch > 30:  # days
+            score += 5
+        # Time
+        if not self.is_business_hours(request.timestamp):
+            score += 3
+        # Behavior anomaly
+        if self.is_anomalous_behavior(request):
+            score += 20
+
+        return RiskContext(score=score, factors={
+            "geo": request.geo_country,
+            "device_age": device.last_patch,
+            "time": request.timestamp,
+            "behavior_anomaly": self.is_anomalous_behavior(request),
+        })
+```
 
 ## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+- Start with identity as the new perimeter (SSO + MFA for everything)
+- Implement device posture checks before granting access
+- Use micro-segmentation to limit lateral movement
+- Encrypt all traffic in transit (TLS everywhere)
+- Implement just-in-time and just-enough-access (JIT/JEA)
+- Log and monitor all access decisions
+- Apply least privilege principle to every resource
+- Implement continuous verification — don't trust after initial auth
+- Phase implementation: pilot with one application, then expand
+- Automate policy enforcement with infrastructure as code
 
 ## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+- Treating Zero Trust as a product (it's a framework, not a single purchase)
+- VPN replacement only — Zero Trust is more than ZTNA
+- No device posture checks — identity alone is not enough
+- Static policies without risk context — misses anomalous behavior
+- Not monitoring access patterns — can't improve without data
+- Trying to achieve Zero Trust overnight — it's a journey, not a project
+- Overly complex policies — hard to maintain, audit, and debug
+- Ignoring data classification — can't protect what you don't understand
+- No continuous verification — compromise after auth is still possible
+- Not involving the business — security decisions affect productivity
 
 ## Key Points
-- Understand core Zero Trust concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
+- Zero Trust: never trust, always verify — no implicit trust based on location
+- NIST SP 800-207 defines 7 core principles
+- Six pillars: Identity, Device, Network, Application, Data, Infrastructure
+- PEP/PDP/PIP architecture for access decisions
+- Continuous verification — not just at login
+- Micro-segmentation limits lateral movement
+- JIT/JEA access reduces privilege blast radius
+- Encrypt all traffic; log all decisions
+- Phased implementation: start with one app, then expand
+- Zero Trust is a framework, not a product
 
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+## Zero Trust Maturity Model
+| Phase | Network | Identity | Device | Applications |
+|-------|---------|----------|--------|-------------|
+| **Traditional** | VPN-based, network segmentation | Password only | Manual compliance | WAF |
+| **Initial** | Cloud proxy, SD-WAN | SSO + MFA | MDM enrollment | ZTNA for web apps |
+| **Advanced** | Micro-segmentation, encryption | Conditional access | Device posture check | mTLS for all comms |
+| **Optimal** | AI-driven segmentation | Passwordless, continuous auth | Zero-touch compliance | Runtime protection |

@@ -332,9 +332,262 @@ optimizations:
 | Check GC logs for memory issues | Allocation rate = GC frequency |
 
 ## References
-  - references/performance-profiler-advanced.md — Performance Profiler Advanced Topics
-  - references/performance-profiler-database.md — Database Profiling Reference
-  - references/performance-profiler-frontend.md — Frontend Profiling Reference
-  - references/performance-profiler-fundamentals.md — Performance Profiler Fundamentals
+   - references/performance-profiler-advanced.md — Performance Profiler Advanced Topics
+   - references/performance-profiler-database.md — Database Profiling Reference
+   - references/performance-profiler-frontend.md — Frontend Profiling Reference
+   - references/performance-profiler-fundamentals.md — Performance Profiler Fundamentals
+
+## Implementation Patterns
+
+### Performance Profiler CLI
+
+```python
+#!/usr/bin/env python3
+import time
+import functools
+import statistics
+import logging
+from typing import Callable, Any, Dict, List, Optional
+from contextlib import contextmanager
+from dataclasses import dataclass, field
+from datetime import datetime
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("perf-profiler")
+
+@dataclass
+class ProfileResult:
+    name: str
+    calls: int = 0
+    total_time: float = 0.0
+    min_time: float = float("inf")
+    max_time: float = 0.0
+    times: List[float] = field(default_factory=list)
+
+    @property
+    def avg_time(self) -> float:
+        return self.total_time / max(self.calls, 1)
+
+    @property
+    def median_time(self) -> float:
+        return statistics.median(self.times) if self.times else 0.0
+
+    @property
+    def p95_time(self) -> float:
+        if not self.times:
+            return 0.0
+        sorted_times = sorted(self.times)
+        idx = int(len(sorted_times) * 0.95)
+        return sorted_times[idx]
+
+    @property
+    def p99_time(self) -> float:
+        if not self.times:
+            return 0.0
+        sorted_times = sorted(self.times)
+        idx = int(len(sorted_times) * 0.99)
+        return sorted_times[idx]
+
+
+class ProfilerManager:
+    def __init__(self):
+        self.results: Dict[str, ProfileResult] = {}
+
+    def profile(self, name: str) -> Callable:
+        def decorator(func: Callable) -> Callable:
+            @functools.wraps(func)
+            def wrapper(*args, **kwargs) -> Any:
+                start = time.perf_counter()
+                result = func(*args, **kwargs)
+                elapsed = time.perf_counter() - start
+                if name not in self.results:
+                    self.results[name] = ProfileResult(name=name)
+                result_obj = self.results[name]
+                result_obj.calls += 1
+                result_obj.total_time += elapsed
+                result_obj.min_time = min(result_obj.min_time, elapsed)
+                result_obj.max_time = max(result_obj.max_time, elapsed)
+                result_obj.times.append(elapsed)
+                return result
+            return wrapper
+        return decorator
+
+    @contextmanager
+    def measure(self, name: str):
+        start = time.perf_counter()
+        try:
+            yield
+        finally:
+            elapsed = time.perf_counter() - start
+            if name not in self.results:
+                self.results[name] = ProfileResult(name=name)
+            result = self.results[name]
+            result.calls += 1
+            result.total_time += elapsed
+            result.min_time = min(result.min_time, elapsed)
+            result.max_time = max(result.max_time, elapsed)
+            result.times.append(elapsed)
+
+    def report(self, sort_by: str = "total_time") -> str:
+        sorted_results = sorted(
+            self.results.values(),
+            key=lambda r: getattr(r, sort_by),
+            reverse=True,
+        )
+        lines = ["## Performance Profile Report"]
+        lines.append(f"{'Name':<40} {'Calls':<8} {'Total':<10} {'Avg':<10} {'P95':<10} {'P99':<10}")
+        lines.append("-" * 88)
+        for r in sorted_results:
+            lines.append(
+                f"{r.name:<40} {r.calls:<8} {r.total_time*1000:<10.2f} "
+                f"{r.avg_time*1000:<10.2f} {r.p95_time*1000:<10.2f} {r.p99_time*1000:<10.2f}"
+            )
+        lines.append(f"\nTotal profiled: {sum(r.calls for r in sorted_results)} calls")
+        total = sum(r.total_time for r in sorted_results)
+        lines.append(f"Total time: {total*1000:.2f}ms")
+        return "\n".join(lines)
+
+    def find_hotspots(self, threshold_pct: float = 5.0) -> List[ProfileResult]:
+        total = sum(r.total_time for r in self.results.values())
+        hotspots = []
+        for r in self.results.values():
+            pct = (r.total_time / total) * 100 if total > 0 else 0
+            if pct >= threshold_pct:
+                hotspots.append(r)
+        return sorted(hotspots, key=lambda r: r.total_time, reverse=True)
+
+profiler = ProfilerManager()
+```
+
+### Memory Usage Snapshot Tool
+
+```python
+import tracemalloc
+import gc
+from typing import Dict, List, Optional
+
+class MemoryProfiler:
+    def __init__(self):
+        self.snapshots = []
+        self.tracemalloc_started = False
+
+    def start_tracing(self):
+        if not self.tracemalloc_started:
+            tracemalloc.start(25)
+            self.tracemalloc_started = True
+
+    def snapshot_memory(self, label: str = ""):
+        if self.tracemalloc_started:
+            snapshot = tracemalloc.take_snapshot()
+            self.snapshots.append((label, snapshot, tracemalloc.get_traced_memory()))
+
+    def compare_snapshots(self, idx1: int = 0, idx2: int = -1, top_n: int = 10) -> str:
+        if len(self.snapshots) < 2:
+            return "Need at least 2 snapshots for comparison"
+        label1, snap1, mem1 = self.snapshots[idx1]
+        label2, snap2, mem2 = self.snapshots[idx2]
+        diff = snap2.compare_to(snap1, "traceback")
+        stats = diff[:top_n]
+        lines = [f"## Memory Comparison: {label1} \u2192 {label2}"]
+        lines.append(f"Memory: {mem1[0]/1024:.1f}KB \u2192 {mem2[0]/1024:.1f}KB ({mem2[0]-mem1[0]:+.1f}B)")
+        lines.append(f"\nTop {top_n} allocations:\n")
+        for stat in stats:
+            lines.append(f"  +{stat.size_diff / 1024:.1f}KB ({stat.count_diff} blocks):")
+            for frame in stat.traceback[:3]:
+                lines.append(f"    {frame.filename}:{frame.lineno} in {frame.function}")
+        return "\n".join(lines)
+
+    def analyze_garbage(self) -> Dict:
+        unreachable = gc.collect()
+        objects = gc.get_objects()
+        type_counts = {}
+        for obj in objects:
+            t = type(obj).__name__
+            type_counts[t] = type_counts.get(t, 0) + 1
+        sorted_types = sorted(type_counts.items(), key=lambda x: -x[1])[:15]
+        return {
+            "unreachable_objects": unreachable,
+            "total_objects": len(objects),
+            "top_types": sorted_types,
+        }
+```
+
+## Architecture Decision Trees
+
+### Performance Issue Diagnosis
+
+```
+What's the symptom?
+├── Slow response time
+│   ├── API latency \u2192 Check database queries, external calls, serialization
+│   ├── Page load \u2192 Check bundle size, render blocking resources, images
+│   └── File processing \u2192 Check I/O, algorithms, concurrent processing
+│
+├── High CPU usage
+│   ├── Tight loops \u2192 Check algorithmic complexity, add breaks/yields
+│   ├── Excessive GC \u2192 Reduce allocation rate, object pooling
+│   └── Infinite recursion \u2192 Add base case or recursion limit
+│
+├── Memory growth
+│   ├── Object accumulation \u2192 Check collection cleanup, weak references
+│   ├── Cache bloat \u2192 Add TTL, size limit, eviction policy
+│   └── Closure references \u2192 Check captured variables scope
+│
+└── I/O bottleneck
+    ├── Database \u2192 Add indexes, connection pool, query optimization, caching
+    ├── Network \u2192 Reduce payload, compression, batching requests
+    └── Disk \u2192 Async I/O, buffering, sequential reads
+```
+
+### Optimization Strategy Selection
+
+```
+What's the impact/effort ratio?
+├── Quick wins (low effort, high impact)
+│   ├── Add caching (Redis, in-memory, CDN)
+│   ├── Database query optimization (missing index, N+1)
+│   ├── Compression (gzip, brotli, image optimization)
+│   └── Bundle splitting (lazy loading, code splitting)
+│
+├── Strategic (high effort, high impact)
+│   ├── Algorithm replacement (O(N\u00b2) \u2192 O(N log N))
+│   ├── Architecture change (sync \u2192 async, monolith \u2192 microservice)
+│   ├── Data structure change (list \u2192 set, dict \u2192 specialized)
+│   └── Database denormalization or migration
+│
+└── Low priority (high effort, low impact)
+    ├── Micro-optimizations (switch to for loop, use let instead of var)
+    └── Premature optimization (memoizing fast functions)
+```
+
+## Production Considerations
+
+- **Continuous profiling**: Deploy always-on profilers like Pyroscope or Google Cloud Profiler. Provides flame graphs 24/7 without manual triggering. Distinguishes routine patterns from anomalies.
+- **APM integration**: Use Application Performance Monitoring (Datadog, New Relic, Grafana) for real-time trace sampling. Correlate slow traces with deployments, feature flags, and region.
+- **Performance budgets**: Set budgets for bundle size (JS/CSS), API latency (p95 < 200ms), and memory usage (< 500MB). Fail CI when budgets are exceeded. Publish to dashboards.
+- **Synthetic monitoring**: Set up synthetic transactions that exercise critical user journeys. Alert on latency regressions in top percentiles (p95, p99). Run from multiple geographic regions.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Optimizing without profiling | Guessing, may optimize wrong thing | Profile first, optimize based on data |
+| Premature optimization | Wastes time on non-hotpaths | Analyze hot paths, optimize only those |
+| Ignoring the bottleneck hierarchy | Fixing wrong layer has no impact | Profile end-to-end, find the actual bottleneck |
+| Single environment profiling | Dev perf != prod perf | Profile in production-like conditions |
+| Micro-optimizations over algorithms | Don't fix algorithmic complexity | Fix O(N\u00b2) before optimizing constants |
+| No baseline comparison | Don't know if it improved | Measure before and after |
+| Forgetting cascading effects | Improving one path may overload another | Test overall system impact |
+| Only load testing | Misses code-level hotspots | Combine synthetic load with fine-grained profiling |
+| Talking about memory without measuring | Memory issues are hard to reason about | Use tracemalloc or heap profiler to measure |
+
+## Performance Optimization
+
+- **Add caching layer**: Identify frequently computed values. Add Redis or in-memory cache with appropriate TTL and eviction policy. Cache invalidation strategy: time-based or event-driven.
+- **Database query optimization**: Use EXPLAIN ANALYZE to find missing indexes. Fix N+1 queries with eager loading or batching. Paginate large result sets. Use connection pooling to reduce overhead.
+- **Reduce serialization overhead**: Use Protocol Buffers or MessagePack instead of JSON for high-throughput paths. Pre-compile templates. Use zero-copy serialization where possible.
+- **Algorithm replacement**: Map code hotspots to algorithmic complexity. Replace O(N\u00b2) algorithms with O(N log N) alternatives. Use appropriate data structures (hash sets, binary trees, prefix tries).
+- **Lazy loading and code splitting**: Split bundles by route. Defer non-critical JavaScript. Load images lazily with IntersectionObserver. Use dynamic imports for rarely-used modules.
+
 ## Handoff
-Hand off to `dev-loop-debugging-strategy` if profiling reveals a bug. Hand off to `dev-loop-code-review` for code-level optimization review.
+Hand off to `dev-loop-debugging-strategy` if profiling reveals a bug. Hand off to `dev-loop-code-review` for code-level optimization review. Hand off to `dev-loop-refactor-guide` for performance-related refactoring.

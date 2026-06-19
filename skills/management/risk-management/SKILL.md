@@ -304,6 +304,186 @@ A fintech startup ignored regulatory risk until mid-project, when new KYC requir
 - **Use ranges not point estimates for high uncertainty** — Express confidence level
 - **Close risks that are no longer relevant** — Don't let the register accumulate debris
 
+## Risk Taxonomy — Common Categories with Examples
+
+| Category | Example | Typical P | Typical I | Response |
+|----------|---------|-----------|-----------|----------|
+| Technical | Core library deprecation EOL next quarter | High | High | Mitigate: upgrade before EOL |
+| Technical | CI pipeline outage during release | Medium | High | Mitigate: redundant CI runners |
+| Schedule | Key dependency delayed by 2 sprints | Medium | High | Mitigate: buffer allocation |
+| Resource | Team member departure mid-project | Low | Critical | Accept: document knowledge |
+| Budget | Cloud cost overrun from unexpected usage | Medium | Medium | Mitigate: cost alerts + budget |
+| Requirements | Scope creep from ambiguous requirements | High | Medium | Avoid: strict definition of ready |
+| External | Regulatory change affecting data handling | Low | Critical | Transfer: legal review + insurance |
+| External | Vendor goes out of business | Low | High | Mitigate: vendor diversification |
+| Organizational | Reorg changes team composition | Medium | Medium | Accept: knowledge transfer plan |
+| Security | Data breach from unpatched vulnerability | Medium | Critical | Mitigate: patch SLA + WAF |
+
+## Risk Assessment Matrix (5×5)
+
+| Impact ↓ \ Probability → | 1 Rare | 2 Unlikely | 3 Possible | 4 Likely | 5 Almost Certain |
+|--------------------------|--------|------------|------------|----------|------------------|
+| 5 Critical | Medium | High | High | Critical | Critical |
+| 4 Major | Medium | Medium | High | High | Critical |
+| 3 Moderate | Low | Medium | Medium | High | High |
+| 2 Minor | Low | Low | Medium | Medium | High |
+| 1 Negligible | Low | Low | Low | Medium | Medium |
+
+### Response Strategy by Score
+
+| Score | Label | Required Action | Review Cadence | Authority |
+|-------|-------|----------------|----------------|-----------|
+| 1-4 | Low | Accept, monitor | Quarterly | Team lead |
+| 5-9 | Medium | Active mitigation plan | Monthly | Team lead |
+| 10-14 | High | Detailed response plan | Bi-weekly | Program manager |
+| 15-19 | Critical | Escalated to steering | Weekly | Steering committee |
+| 20-25 | Unacceptable | Immediate escalation | Daily | Executive sponsor |
+
+## Response Planning Template
+
+```
+Risk ID: R-{nnn}
+Date Identified: {date}
+Identified By: {name}
+
+Description:
+  {Clear, specific statement of the risk}
+
+Category:
+  {Technical | Schedule | Resource | Budget | Requirements | External | Organizational | Security}
+
+Causes:
+  - {Root cause or trigger condition 1}
+  - {Root cause or trigger condition 2}
+
+Consequences:
+  - {Negative outcome if risk occurs}
+  - {Secondary effects}
+
+Probability: {1-5 | Low to Almost Certain}
+Impact: {1-5 | Negligible to Critical}
+Risk Score: P × I = {score}
+
+Response Strategy: {Avoid | Mitigate | Transfer | Accept}
+Response Plan:
+  - {Action 1 with owner}
+  - {Action 2 with owner}
+  - {Action 3 with owner}
+
+Contingency Plan (if risk materializes):
+  - {Step 1 with owner}
+  - {Step 2 with owner}
+
+Trigger Condition:
+  {What event indicates the risk has occurred and contingency should activate}
+
+Residual Risk Score (after mitigation): P × I = {score}
+
+Owner: {name}
+Status: {Open | Mitigating | Monitoring | Closed | Realized}
+Review Date: {date}
+```
+
+## Risk Response Strategies in Detail
+
+### Avoid
+```
+Eliminate the risk by changing the plan.
+Example: If a third-party API is unstable, avoid by building an in-house alternative.
+Trade-off: May cost more time/money upfront.
+When to use: When probability or impact is too high to accept.
+```
+
+### Mitigate
+```
+Reduce probability or impact.
+Example: If data loss risk during migration, mitigate by running parallel systems.
+Probability reduction: Add validation, testing, redundancy.
+Impact reduction: Limit blast radius, prepare rollback.
+When to use: When probability and/or impact can be meaningfully reduced.
+```
+
+### Transfer
+```
+Shift risk to another party.
+Example: Cyber insurance for security incidents. Fixed-price contract for vendor delivery.
+Does NOT eliminate the risk — transfers financial/consequence impact.
+When to use: When another party can better manage the risk.
+```
+
+### Accept
+```
+Acknowledge the risk and proceed without mitigation.
+Passive acceptance: Monitor without action.
+Active acceptance: Set aside contingency budget/time.
+When to use: When cost of mitigation exceeds expected impact, or when risk is low.
+```
+
+## Positive Risk (Opportunity) Response Strategies
+
+| Strategy | Description | Example |
+|----------|-------------|---------|
+| Exploit | Make it happen | Accelerate delivery if early customer interest is high |
+| Enhance | Increase probability/impact | Add more resources to capture unexpected market demand |
+| Share | Partner to capture opportunity | Co-invest with another team for shared benefit |
+| Accept | Take advantage if it occurs | If regulatory changes favor us, fast-track expansion |
+
+## Quantitative Risk Analysis — Expected Monetary Value (EMV)
+
+```
+EMV = P(risk) × Impact($) + P(opportunity) × Impact($)
+
+Example:
+  Risk: API vendor price increase of $50k with 40% probability
+    EMV (risk) = 0.4 × (-$50k) = -$20k
+  Opportunity: Early vendor discount of $20k with 30% probability  
+    EMV (opportunity) = 0.3 × $20k = $6k
+  Net EMV = -$20k + $6k = -$14k
+
+Application:
+  - Use EMV for budget contingency calculation
+  - Sum EMV across all identified risks for total contingency
+  - Confidence level: P50, P80, P90 for different risk tolerances
+```
+
+## Risk Burndown Chart Template
+
+```
+Sprint | Risk Count | Total Score | Critical Count | Mitigated This Sprint | New This Sprint
+Sprint 1 | 15 | 62 | 3 | — | —
+Sprint 2 | 14 | 54 | 2 | 2 | 1
+Sprint 3 | 12 | 41 | 1 | 3 | 1
+Sprint 4 | 10 | 35 | 1 | 2 | 0
+Sprint 5 | 9 | 28 | 0 | 1 | 0
+
+Goal: Trend toward 0 on total score and critical count by delivery date.
+```
+
+## Risk Review Meeting Template
+
+```
+Meeting: Risk Review #{n}
+Date: {date} | Duration: 30 min
+
+Agenda:
+1. New risks since last review (5 min)
+   - Present new risks, assign preliminary score and owner
+2. Existing risks status update (10 min)
+   - Walk through open risks; review mitigation progress
+3. Risk score changes (5 min)
+   - Update P and I as conditions change
+4. Risk burndown review (5 min)
+   - Dashboard: trend lines for total score, critical count
+5. Top 3 risks deep dive (5 min)
+   - Focused discussion on highest-scored active risks
+6. Action items and owners (5 min)
+
+Decision log:
+  - {n} risks accepted
+  - {n} risks closed
+  - {n} new actions assigned
+```
+
 ## References
   - references/mitigation-strategies.md — Mitigation Strategies
   - references/risk-assessment-matrix.md — Risk Assessment Matrix

@@ -270,6 +270,151 @@ async function executeWithRetry(step: () => Promise<void>, maxRetries = 3): Prom
 - **Event ordering in choreography**: Services may receive events out of order. Design for idempotent event handling with deduplication.
 - **Leaked resources**: A saga that times out without proper compensation may leave reserved resources (inventory, credits) permanently locked. Implement TTL-based auto-release as a safety net.
 
+## Compensating Transaction Patterns
+
+```typescript
+// Forward action + compensation registered together
+interface SagaStep<TContext> {
+  name: string;
+  invoke: (ctx: TContext) => Promise<void>;
+  compensate: (ctx: TContext) => Promise<void>;
+  retryConfig?: { maxAttempts: number; backoffMs: number };
+  timeoutMs?: number;
+}
+
+// Compensation failure handling
+async function safeCompensate(step: SagaStep, ctx: any): Promise<boolean> {
+  try {
+    await step.compensate(ctx);
+    return true;
+  } catch (err) {
+    // Log compensation failure, alert ops
+    logger.error(`Compensation failed for step ${step.name}`, { error: err });
+    await alertOps({
+      type: 'compensation_failure',
+      step: step.name,
+      sagaId: ctx.sagaId,
+    });
+    // Even if compensation fails, continue to next step
+    // Mark saga for manual review
+    return false;
+  }
+}
+
+// Null compensation (for read-only steps)
+// Some steps don't need compensation — e.g., sending a notification
+// But consider whether the notification is premature if saga fails later
+const notificationStep: SagaStep<OrderContext> = {
+  name: 'sendConfirmationEmail',
+  invoke: async (ctx) => emailService.send(ctx.customerEmail, ctx.orderDetails),
+  compensate: async (ctx) => {
+    // No undo for email, but log for audit
+    logger.info('Email already sent, notified customer of cancellation', { orderId: ctx.orderId });
+  },
+};
+```
+
+## Handling Partial Failures
+
+```typescript
+// Saga recovery — scan for stuck sagas periodically
+async function recoverStuckSagas(): Promise<void> {
+  const stuckSagas = await sagaStore.findStuck({
+    status: ['RUNNING', 'COMPENSATING'],
+    updatedBefore: new Date(Date.now() - 30_000), // 30s without update
+  });
+
+  for (const saga of stuckSagas) {
+    logger.warn('Recovering stuck saga', { sagaId: saga.id, status: saga.status });
+    if (saga.status === 'COMPENSATING') {
+      // Retry remaining compensations
+      await orchestrator.continueCompensation(saga);
+    } else {
+      // Timeout — assume failure, trigger compensation
+      await orchestrator.fail(saga, 'Saga timed out');
+    }
+  }
+}
+
+// Timeout per step (not just overall saga)
+async function executeWithTimeout<T>(fn: () => Promise<T>, timeoutMs: number): Promise<T> {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`Step timed out after ${timeoutMs}ms`)), timeoutMs)
+  );
+  return Promise.race([fn(), timeout]);
+}
+```
+
+## Parallel Step Execution
+
+```typescript
+// For independent steps that can run in parallel
+async function executeParallelSteps(saga: Saga, steps: SagaStep[]): Promise<void> {
+  const results = await Promise.allSettled(
+    steps.map(step => executeWithRetry(() => step.invoke(saga.data), step.retryConfig))
+  );
+
+  const failures = results.filter(r => r.status === 'rejected') as PromiseRejectedResult[];
+  if (failures.length > 0) {
+    // Compensate successful steps, then fail
+    const successfulSteps = steps.filter((_, i) => results[i].status === 'fulfilled');
+    for (const step of successfulSteps.reverse()) {
+      await safeCompensate(step, saga.data);
+    }
+    throw new Error(`Parallel steps failed: ${failures.map(f => f.reason).join(', ')}`);
+  }
+}
+```
+
+## Monitoring and Alerting
+
+```typescript
+// Structured logging for saga observability
+logger.info('Saga step completed', {
+  sagaId: saga.id,
+  sagaType: saga.type,
+  step: 'processPayment',
+  status: 'completed',
+  duration: 120, // ms
+  compensation: false,
+});
+
+// Metrics to monitor
+// 1. Saga duration (p50, p95, p99) — per saga type
+// 2. Step success rate — per step name
+// 3. Compensation rate — what % of sagas need compensation
+// 4. Stuck saga count — sagas in RUNNING state for > 5 minutes
+// 5. Dead saga count — sagas in COMPENSATING state for > 10 minutes
+```
+
+```typescript
+// OpenTelemetry spans for saga tracing
+import { trace, SpanStatusCode } from '@opentelemetry/api';
+
+const tracer = trace.getTracer('saga-orchestrator');
+
+async function executeSagaStep<T>(step: SagaStep<T>, ctx: T): Promise<void> {
+  const span = tracer.startSpan(`saga.step.${step.name}`, {
+    attributes: {
+      'saga.id': ctx['sagaId'],
+      'saga.type': ctx['sagaType'],
+      'step.name': step.name,
+    },
+  });
+
+  try {
+    await step.invoke(ctx);
+    span.setStatus({ code: SpanStatusCode.OK });
+  } catch (err) {
+    span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+    span.recordException(err);
+    throw err;
+  } finally {
+    span.end();
+  }
+}
+```
+
 ## Compared With
 | Pattern | Consistency | Coordination | Best For |
 |---------|-------------|--------------|----------|
@@ -278,6 +423,7 @@ async function executeWithRetry(step: () => Promise<void>, maxRetries = 3): Prom
 | Two-Phase Commit (2PC) | Strong | Coordinator | Same-DB or XA transactions |
 | BASE (Basic Availability) | Eventual | Varies | High-availability systems |
 | Event Sourcing | Eventual | Event store | Audit-heavy domains |
+| Outbox + Event | Eventual | Reliable pub | Single service publishing events |
 
 ## Performance
 - Saga overhead is dominated by inter-service calls and database writes for state persistence.
@@ -286,6 +432,8 @@ async function executeWithRetry(step: () => Promise<void>, maxRetries = 3): Prom
 - Saga state persistence in PostgreSQL: ~2-5ms per write. Use separate database to avoid contention.
 - Compensations should be fast (sub-100ms) to minimize inconsistency window.
 - Parallel step execution can significantly reduce total saga duration.
+- Cold start of orchestrator (if using serverless): 200ms-2s depending on platform.
+- Typical saga completion: 100-500ms for 3-step orchestration with in-AZ services.
 
 ## Tooling/Methodology
 - **Event stores**: Kafka, EventStoreDB, RabbitMQ for choreography events.
@@ -293,6 +441,18 @@ async function executeWithRetry(step: () => Promise<void>, maxRetries = 3): Prom
 - **State persistence**: PostgreSQL, DynamoDB, Cosmos DB for saga state tables.
 - **Testing**: Testcontainers for integration tests, chaos engineering for failure testing.
 - **Monitoring**: OpenTelemetry spans for saga steps, custom metrics for saga duration and status.
+- **CI testing pattern**: Unit test each step's compensation independently. Integration test the full saga with a test container for each dependency. Chaos test: randomly fail steps in staging.
+
+## Security
+
+| Risk | Mitigation |
+|------|-----------|
+| Unauthorized saga creation | Authenticate and authorize saga start commands |
+| Step execution without proper context | Validate saga state integrity before each step |
+| Compensation replay attacks | Idempotency keys + deduplication in compensation handlers |
+| Sensitive data in saga state | Encrypt sensitive fields in saga store, mask in logs |
+| Saga store access | Separate DB credentials for saga store, least-privilege access |
+| Event spoofing (choreography) | Validate event origin, sign events, use schema registry |
 
 ## References
   - references/choreography-vs-orchestration.md — Choreography vs Orchestration

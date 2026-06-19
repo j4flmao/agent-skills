@@ -341,6 +341,251 @@ git push --force-with-lease
   - references/git-workflow-advanced.md — Git Workflow Advanced Topics
   - references/git-workflow-branching.md — Branching Strategy Reference
   - references/git-workflow-fundamentals.md — Git Workflow Fundamentals
-  - references/git-workflow-hooks.md — Git Hooks Reference
+   - references/git-workflow-hooks.md — Git Hooks Reference
+
+## Implementation Patterns
+
+### Automated Git Workflow Manager
+
+```python
+import subprocess
+import re
+from typing import List, Dict, Optional
+from datetime import datetime
+
+class GitWorkflowManager:
+    def __init__(self, repo_path: str = "."):
+        self.repo_path = repo_path
+
+    def create_feature_branch(self, feature_name: str, base: str = "main") -> bool:
+        branch = f"feat/{feature_name.lower().replace(' ', '-')}"
+        try:
+            subprocess.run(["git", "checkout", base], check=True, cwd=self.repo_path)
+            subprocess.run(["git", "pull", "origin", base], check=True, cwd=self.repo_path)
+            subprocess.run(["git", "checkout", "-b", branch], check=True, cwd=self.repo_path)
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to create branch: {e}")
+            return False
+
+    def squash_commits(self, message: str) -> bool:
+        try:
+            log = subprocess.run(
+                ["git", "log", "--oneline"], capture_output=True, text=True, cwd=self.repo_path
+            )
+            commits = log.stdout.strip().split("\n")
+            if len(commits) <= 1:
+                return True
+            subprocess.run(["git", "reset", "--soft", f"HEAD~{len(commits)-1}"], check=True, cwd=self.repo_path)
+            subprocess.run(["git", "commit", "-m", message], check=True, cwd=self.repo_path)
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to squash: {e}")
+            return False
+
+    def detect_diverged(self, branch: str, base: str = "main") -> int:
+        try:
+            result = subprocess.run(
+                ["git", "rev-list", "--count", f"{base}..{branch}"],
+                capture_output=True, text=True, cwd=self.repo_path
+            )
+            ahead = int(result.stdout.strip())
+            result = subprocess.run(
+                ["git", "rev-list", "--count", f"{branch}..{base}"],
+                capture_output=True, text=True, cwd=self.repo_path
+            )
+            behind = int(result.stdout.strip())
+            return ahead - behind
+        except subprocess.CalledProcessError:
+            return 0
+
+    def suggest_rebase(self, branch: str, base: str = "main") -> Optional[str]:
+        behind = self.detect_diverged(branch, base)
+        if behind < 0:
+            return f"Branch is {abs(behind)} commits behind {base}. Suggested: git rebase {base}"
+        elif behind > 5:
+            return f"Branch is {behind} commits ahead — consider squashing or splitting PR"
+        return None
+
+    def get_latest_tag(self) -> Optional[str]:
+        try:
+            result = subprocess.run(
+                ["git", "describe", "--tags", "--abbrev=0"],
+                capture_output=True, text=True, cwd=self.repo_path
+            )
+            return result.stdout.strip() if result.returncode == 0 else None
+        except subprocess.CalledProcessError:
+            return None
+
+    def changelog_between(self, from_ref: str, to_ref: str = "HEAD") -> List[Dict]:
+        try:
+            result = subprocess.run(
+                ["git", "log", f"{from_ref}..{to_ref}", "--oneline", "--format=%H|%s|%an|%ad", "--date=short"],
+                capture_output=True, text=True, cwd=self.repo_path
+            )
+            entries = []
+            for line in result.stdout.strip().split("\n"):
+                parts = line.split("|")
+                if len(parts) >= 4:
+                    entries.append({
+                        "hash": parts[0][:8],
+                        "message": parts[1],
+                        "author": parts[2],
+                        "date": parts[3],
+                    })
+            return entries
+        except subprocess.CalledProcessError:
+            return []
+
+
+class GitHookInstaller:
+    def __init__(self, repo_path: str = "."):
+        self.repo_path = repo_path
+        self.hooks_dir = f"{repo_path}/.git/hooks"
+
+    def install_pre_commit_hook(self):
+        hook_content = """#!/bin/sh
+# Pre-commit hook: validate commit message format
+commit_msg_file=$1
+msg=$(cat "$commit_msg_file")
+
+# Conventional Commits regex
+conventional_regex="^(feat|fix|docs|refactor|perf|test|chore|ci|build|style|revert)(\\\\(.+\\\\))?(!)?: .+"
+
+if ! echo "$msg" | grep -qE "$conventional_regex"; then
+    echo ""
+    echo "ERROR: Commit message must follow Conventional Commits format."
+    echo "Examples:"
+    echo "  feat(api): add user endpoint"
+    echo "  fix: resolve null pointer in auth"
+    echo "  refactor(core): extract validation logic"
+    echo ""
+    exit 1
+fi
+"""
+        hook_path = f"{self.hooks_dir}/commit-msg"
+        with open(hook_path, "w") as f:
+            f.write(hook_content)
+        import os
+        os.chmod(hook_path, 0o755)
+        print(f"Installed commit-msg hook at {hook_path}")
+
+    def install_pre_push_hook(self):
+        hook_content = """#!/bin/sh
+# Pre-push hook: prevent force push to protected branches
+protected_branches="main master develop"
+
+while read local_ref local_sha remote_ref remote_sha; do
+    for branch in $protected_branches; do
+        if echo "$remote_ref" | grep -q "refs/heads/$branch$"; then
+            if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+                echo "ERROR: Deleting protected branch $branch is not allowed"
+                exit 1
+            fi
+            # Check if force push
+            zero_commit="0000000000000000000000000000000000000000"
+            if [ "$remote_sha" != "$zero_commit" ]; then
+                merge_base=$(git merge-base $local_sha $remote_sha 2>/dev/null)
+                if [ "$merge_base" != "$remote_sha" ]; then
+                    echo "ERROR: Force push to $branch is not allowed. Use --force-with-lease and create a PR instead."
+                    exit 1
+                fi
+            fi
+        fi
+    done
+done
+exit 0
+"""
+        hook_path = f"{self.hooks_dir}/pre-push"
+        with open(hook_path, "w") as f:
+            f.write(hook_content)
+        import os
+        os.chmod(hook_path, 0o755)
+        print(f"Installed pre-push hook at {hook_path}")
+```
+
+## Architecture Decision Trees
+
+### Branch Strategy Selection
+
+```
+What's the team size and release cadence?
+├── Small team (1-5), continuous deployment
+│   └── Trunk-based development
+│       ├── Short-lived feature branches (< 1 day)
+│       ├── Direct commits to main (with review)
+│       └── Feature flags for incomplete work
+│
+├── Medium team (5-20), weekly releases
+│   └── GitHub Flow
+│       ├── feature/* branches from main
+│       ├── PR → main with squash merge
+│       └── Release tags from main
+│
+├── Large team (20+), scheduled releases
+│   └── Git Flow
+│       ├── develop branch for integration
+│       ├── feature/* from develop → develop
+│       ├── release/* for release candidates
+│       └── hotfix/* from main → main + develop
+│
+└── Mono repo with multiple services
+    └── Trunk-based + release branches per service
+        ├── service-* prefixes
+        ├── Independent release cadence
+        └── Per-service CI/CD pipelines
+```
+
+### Merge Conflict Resolution Flow
+
+```
+What type of conflict?
+├── Same file, different sections
+│   └── Auto-merge handles it — verify with build
+│
+├── Same file, same section
+│   ├── One side is trivial (rename, whitespace)
+│   │   └── Accept the meaningful change
+│   └── Both sides are meaningful
+│       ├── Understand both changes → combine
+│       └── If incompatible → talk to the other author
+│
+├── Deleted file vs modified file
+│   └── Usually want the deletion — confirm intent
+│
+└── Binary file conflict
+    └── Pick one version, re-apply the other's intent
+```
+
+## Production Considerations
+
+- **Branch protection rules**: Enable at the Git host (GitHub/GitLab): require PR review, require status checks, restrict merge types, require signed commits for main. No one pushes directly.
+- **Automated cleanup**: Stale branch deletion via GitHub Actions: branches without activity for 30 days get a warning, then auto-deleted after 45 days. Reduces mental load from branch list.
+- **Hooks distribution**: Use a hooks manager like `husky` or `pre-commit` to distribute hooks via git to the whole team. Ensure consistency without manual setup steps.
+- **Rebase vs merge culture**: Document the team's explicit policy: feature branches get rebased onto main, but main is never rebased. Enforce via CI checks on the PR merge strategy dropdown.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Giant mega-branches | Merge hell, integration nightmare | Keep branches < 3 days, use feature flags |
+| Rebased published branches | Creates divergent history for collaborators | Only rebase unpushed commits |
+| Squash merging everything | Loses context of individual commits | Squash features, merge commit for releases |
+| Long-lived release branches | Cherry-pick chaos, never fully synced | Short release branches or trunk-based |
+| No commit message convention | Impossible to auto-generate changelog | Enforce Conventional Commits in hooks/CI |
+| Force pushing to shared branches | Destroys co-authors' work | Use --force-with-lease, protect branches |
+| Multiple merges from main into feature | Pollutes feature branch history | Rebase feature onto main once, before PR |
+| Not pulling before rebase | Rebasing onto outdated main | Always git pull origin main before rebase |
+| Stashing unfinished work for too long | Context lost, conflicts pile up | Commit WIP with fixup!, rebase later |
+| .gitignore updated too late | Secrets committed, repo bloated | Setup .gitignore before first commit |
+
+## Performance Optimization
+
+- **Shallow clone in CI**: Use `git clone --depth 1` in CI pipelines. Reduces clone time by 80%+ for large repositories. Use `git fetch --unshallow` only when full history is needed.
+- **Partial clone with blobless**: Use `git clone --filter=blob:none` for developer machines. Downloads only commit metadata initially, fetches file contents on demand.
+- **Git LFS for binaries**: Track large binary files (images, videos, datasets) with Git LFS. Keeps repo clones fast. LFS pointers are tiny (< 1KB) instead of MB-sized binaries.
+- **Sparse checkout for monorepos**: Use `git sparse-checkout set <path>` to only checkout relevant subdirectories. Reduces working tree size for monorepos with many packages.
+- **Rebase optimization**: Use `git rebase --interactive --autosquash` with fixup! commits. Reduces manual squash effort. Use `git rebase --update-refs` to handle stacked branches.
+
 ## Handoff
 Hand off to `dev-loop-code-review` for PR review process. Hand off to `dev-loop-changelog-generator` for release notes from commits.

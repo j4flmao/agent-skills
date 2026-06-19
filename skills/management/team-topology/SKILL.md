@@ -346,6 +346,99 @@ Trend: {improving / stable / declining}
 - Phase out enabling teams as capability matures
 ```
 
+## Interaction Mode Patterns — Detailed Examples
+
+### Collaboration Mode
+```
+When: Two teams co-own a shared problem with evolving boundaries
+Example: Team A (checkout) and Team B (payment) building a new payment flow
+Process:
+  - Joint design sessions (weekly)
+  - Shared slack channel (#checkout-payment)
+  - Paired development on integration points
+  - Shared sprint review for joint work
+Duration: 2-4 sprints, then evaluate
+Exit: Stable interface between services -> X-as-a-Service
+Warning signs:
+  - Collaboration continues beyond 2 sprints without exit plan
+  - Both teams blocked when one is unavailable
+  - Cross-team meetings exceed 1 hour/week per person
+```
+
+### X-as-a-Service Mode
+```
+When: One team provides stable capabilities to another via API/contract
+Example: Platform team provides feature flag service to stream-aligned teams
+Contract:
+  - API versioned and documented (OpenAPI spec)
+  - SLAs: uptime 99.9%, p99 latency < 100ms
+  - Deprecation policy: 6 months notice
+  - Self-service onboarding (docs, SDK, Terraform module)
+Consuming team experience:
+  - Can adopt without talking to platform team
+  - Clear upgrade path with deprecation notices
+  - Dashboard for usage and limits
+Platform team responsibilities:
+  - Maintain backward compatibility
+  - Monitor adoption and performance
+  - Provide migration guides for breaking changes
+```
+
+### Facilitating Mode
+```
+When: One team helps another build capability in a specific area
+Example: Enabling (SRE) team helps stream-aligned team adopt observability
+Process:
+  Week 1: Assessment — current state, gaps, skills audit
+  Week 2-3: Pairing — SRE pairs with dev team on implementing metrics
+  Week 4: Guided — dev team implements independently, SRE reviews
+  Week 5: Handoff — dev team owns, SRE available for questions
+  Week 6: Graduation — SRE steps away, dev team fully enabled
+Outcome: Stream team can independently maintain observability
+Exit criteria: Team passes capability assessment
+```
+
+## Team Topology Anti-Patterns — Deep Dive
+
+| Anti-Pattern | Symptoms | Root Cause | Fix |
+|-------------|----------|------------|-----|
+| Component teams | Integration hell, handoffs, blame culture | Organized by tech layer | Reorganize into stream-aligned teams |
+| Collaboration everywhere | Meeting overload, context switching | No stable interfaces | Push toward X-as-a-Service |
+| Permanent enabling teams | Bottleneck, dependency | No exit criteria | Max 3-6 month lifespan |
+| Platform that doesn't self-serve | Team-to-team dependency | Poor API/ docs | Platform measured by adoption |
+| Ignoring cognitive load | Burnout, churn, quality decline | Assigned without assessment | Assess before assigning type |
+| Big bang reorg | Chaos, productivity loss, attrition | All-at-once change | Incremental transitions |
+| Copying Spotify model | Org mismatch | Context-blind adoption | Design from value streams |
+| No team API | Confusion, overlaps, dropped work | Missing purpose statement | Every team documents API |
+| Premature scaling | Waste, fragmentation | Added before validation | Start with stream-aligned teams |
+
+## Tools and Activities for Topology Design
+
+### Value Stream Mapping Workshop
+```
+Duration: Half-day workshop
+Participants: 2-3 teams, product managers, architects
+
+Agenda:
+1. Map customer journey (30 min) — identify touchpoints
+2. Map internal handoffs (45 min) — identify where work moves between teams
+3. Identify friction points (30 min) — delays, rework, context switches
+4. Define ideal flow (30 min) — minimize handoffs, optimize for speed
+5. Propose team boundaries (45 min) — align teams to value streams
+6. Identify dependencies (30 min) — what interactions remain across teams
+```
+
+### Interaction Mode Audit
+```
+Quarterly activity:
+1. List all team-to-team interactions
+2. Classify each as Collaboration, X-as-a-Service, or Facilitating
+3. Track total collaboration hours per person per week
+4. Target: collaboration < 2 hours/person/week
+5. For each collaboration > 2 hours: identify what's needed to move to X-as-a-Service
+6. Track trend quarterly
+```
+
 ## Rules
 
 - Each team must own a complete value stream or meaningful subsystem

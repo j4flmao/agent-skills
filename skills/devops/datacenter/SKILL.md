@@ -54,6 +54,21 @@ Design, operate, and manage physical datacenter infrastructure including tier cl
 | Liquid (direct-to-chip) | 1.05-1.1 | 40-100+ | High | HPC, AI/ML clusters |
 | Immersion | 1.02-1.05 | 100+ | Very High | Extreme density |
 
+### Cooling Selection Decision Tree
+```
+Average rack density < 10 kW?
+├── Yes → Room-based CRAC (PUE 1.4-1.8, lowest cost)
+└── No → Average rack density 10-25 kW?
+    ├── Yes → Row-based in-row cooling (PUE 1.2-1.4)
+    └── No → Average rack density 25-40 kW?
+        ├── Yes → Rack-based rear door heat exchanger (PUE 1.1-1.3)
+        └── No → > 40 kW?
+            ├── Yes → GPU/HPC/AI workloads?
+            │   ├── Yes → Liquid direct-to-chip or immersion (PUE < 1.1)
+            │   └── No → Evaluate rack-based + supplemental cooling
+            └── N/A → Reassess density requirements
+```
+
 ### Colocation Selection Criteria
 | Factor | Retail Colo | Wholesale Colo | Hyperscaler Edge |
 |---|---|---|---|
@@ -63,6 +78,19 @@ Design, operate, and manage physical datacenter infrastructure including tier cl
 | Connectivity | Shared meet-me room | Dedicated cross-connects | Provider-specific |
 | Cost/rack/month | $1,000-3,000 | $500-1,500 | Varies |
 | Power included | Often (up to limit) | Separate billing | Per circuit |
+| Cross-connects | Included or $100-500/mo | Included | Per connection |
+| SLA | 99.9-99.99% | 99.99% | Provider SLA |
+
+### Redundancy Decision Tree
+```
+Is the workload business-critical (revenue-impacting)?
+├── Yes → Can we tolerate planned maintenance downtime?
+│   ├── Yes → Tier II (N+1, lower cost)
+│   └── No → Tier III (N+1, concurrently maintainable)
+└── No → Can we tolerate any downtime at all?
+    ├── No → Tier IV (2N, fault tolerant, highest cost)
+    └── Yes → Tier I (N, lowest cost, best for dev/test)
+```
 
 ## Core Workflow
 
@@ -317,6 +345,226 @@ alert_escalation:
     - action: "Check UPS status, initiate generator test"
 ```
 
+### Step 6: ASHRAE Environmental Guidelines
+| Class | Dry Bulb Temp | Humidity Range | Max Dew Point | Best For |
+|---|---|---|---|---|
+| A1 | 15-32°C | 20-80% | 17°C | Enterprise servers, storage |
+| A2 | 10-35°C | 20-80% | 21°C | Volume servers, storage |
+| A3 | 5-40°C | 8-85% | 24°C | IT equipment with extended range |
+| A4 | 5-45°C | 8-90% | 24°C | Specialized hardware |
+
+### Step 7: Server Provisioning Automation
+```bash
+# automation/provision_server.sh
+#!/bin/bash
+# Automated server provisioning with BMC/iLO/iDRAC
+
+SERVER_IP="$1"
+BMC_USER="$2"
+BMC_PASS="$3"
+ISO_PATH="$4"
+
+# Power on and set boot device
+ipmitool -I lanplus \
+  -H "$SERVER_IP" \
+  -U "$BMC_USER" \
+  -P "$BMC_PASS" \
+  chassis bootdev cdrom
+
+# Mount virtual media
+ipmitool -I lanplus \
+  -H "$SERVER_IP" \
+  -U "$BMC_USER" \
+  -P "$BMC_PASS" \
+  vm cdrom insert "$ISO_PATH"
+
+# Power cycle
+ipmitool -I lanplus \
+  -H "$SERVER_IP" \
+  -U "$BMC_USER" \
+  -P "$BMC_PASS" \
+  chassis power reset
+
+# Wait for PXE/installer to boot
+echo "Server $SERVER_IP provisioning started. Monitor via BMC web interface."
+```
+
+### Step 8: Network Topology — Leaf-Spine
+```yaml
+# network/leaf-spine.yaml
+topology: leaf-spine
+leaf_switches: 4
+spine_switches: 2
+over_subscription: 3:1
+
+leaf:
+  model: "Arista 7280SR-48C6"
+  ports:
+    server_ports: 48  # 25G SFP28
+    spine_uplinks: 6  # 100G QSFP28
+  features:
+    - MLAG (multi-chassis link aggregation)
+    - VXLAN termination
+    - sFlow sampling
+
+spine:
+  model: "Arista 7300XP-48Y8C"
+  ports:
+    leaf_ports: 48  # 100G QSFP28
+  features:
+    - ECMP (equal-cost multipath)
+    - EVPN control plane
+    - BGP unnumbered
+
+cabling:
+  leaf_to_spine: "OS2 singlemode, LC connectors"
+  server_to_leaf: "OM4 multimode, LC duplex or CAT6A copper"
+  cross_connect: "OS2 singlemode, MPO-12 trunk cables"
+
+monitoring:
+  - "Interface utilization > 70% triggers capacity alert"
+  - "Packet drop rate > 0.1% triggers investigation"
+  - "sFlow data streamed to analytics pipeline"
+```
+
+### Step 9: DCIM Tool Configuration — netbox
+```python
+# dcim/netbox_sync.py
+"""Sync server inventory to Netbox DCIM."""
+import pynetbox
+import json
+
+NETBOX_URL = "https://netbox.example.com"
+NETBOX_TOKEN = "your-api-token"
+
+nb = pynetbox.api(NETBOX_URL, token=NETBOX_TOKEN)
+
+def register_server(hostname, serial, rack_id, position, role="server"):
+    """Register a server in Netbox."""
+    device = nb.dcim.devices.create(
+        name=hostname,
+        device_type={"id": get_device_type_id("R6525")},
+        device_role={"id": get_role_id(role)},
+        site={"id": get_site_id("dc-1")},
+        rack={"id": rack_id},
+        position=position,
+        face="front",
+        status="active",
+        serial=serial,
+    )
+    return device
+
+def get_device_type_id(model_name):
+    types = nb.dcim.device_types.filter(model=model_name)
+    return types[0].id if types else None
+
+def get_role_id(role_name):
+    roles = nb.dcim.device_roles.filter(name=role_name)
+    return roles[0].id if roles else None
+
+def get_site_id(site_name):
+    sites = nb.dcim.sites.filter(name=site_name)
+    return sites[0].id if sites else None
+
+def audit_power_connections():
+    """Report all PDU port utilization."""
+    power_feeds = nb.dcim.power_feeds.all()
+    for feed in power_feeds:
+        outlets = nb.dcim.power_outlets.filter(device_id=feed.device.id)
+        connected = sum(1 for o in outlets if o.cable)
+        total = len(outlets)
+        print(f"{feed.device.name}: {connected}/{total} outlets used")
+```
+
+### Step 10: Generator and UPS Test Automation
+```bash
+# maintenance/monthly_generator_test.sh
+#!/bin/bash
+# Monthly generator load bank test script
+
+echo "=== Generator Monthly Load Test ==="
+date -u
+
+# Step 1: Verify fuel level
+echo "Fuel level: $(check_fuel_level) gallons (min 75%)"
+
+# Step 2: Start generator in test mode
+echo "Starting generator in test mode..."
+ipmitool dcmi power_reading | grep "System Power"
+
+# Step 3: Transfer critical load to generator
+echo "Transferring UPS input to generator..."
+timeout 30 ups-monitor --transfer-to-generator
+
+# Step 4: Monitor for 15 minutes
+echo "Monitoring generator output..."
+for i in $(seq 1 15); do
+  read voltage frequency phase_balance <<< $(generator_metrics)
+  echo "Minute $i: ${voltage}V ${frequency}Hz balance:${phase_balance}%"
+  sleep 60
+done
+
+# Step 5: Transfer back to mains
+echo "Transferring back to utility power..."
+ups-monitor --transfer-to-utility
+
+# Step 6: Cooldown
+echo "Generator cooldown period: 5 minutes..."
+sleep 300
+echo "Stopping generator..."
+
+echo "=== Test Complete ==="
+```
+
+## Tool Comparison: DCIM Platforms
+
+| Feature | Netbox | Device42 | Sunbird dcTrack | OpenDCIM |
+|---|---|---|---|---|
+| Open source | Yes (Apache 2.0) | No | No | Yes (GPL) |
+| Rack visualization | Yes (2D) | Yes (2D/3D) | Yes (3D) | Yes (2D) |
+| Power tracking | Yes | Yes | Yes | Yes |
+| Cable management | Yes | Yes | Yes | Yes |
+| API | REST + GraphQL | REST | REST | REST |
+| Auto-discovery | Plugins | Yes (agent) | Yes (agent) | Limited |
+| IPAM | Yes | Yes | No | No |
+| Change management | Yes (webhook) | Yes | Yes | No |
+| Pricing | Free | $$$ | $$$ | Free |
+| Best for | OSS-first teams | Enterprise | Facilities teams | Budget-constrained |
+
+## Rack Density Planning Guide
+| Density Level | kW/Rack | Cooling Required | Rack Type | Typical Use |
+|---|---|---|---|---|
+| Low | 2-5 kW | Room CRAC | Standard 42U | Web servers, network gear |
+| Medium | 5-10 kW | Row-based | Standard 42U | Enterprise apps, databases |
+| High | 10-20 kW | Row/Rack-based | Deep (48U) | Virtualization clusters |
+| Very High | 20-40 kW | Rear door HX | Deep + wide | GPU servers, AI training |
+| Extreme | 40-100+ kW | Liquid cooling | Custom | HPC, ASIC miners |
+
+## Security Considerations
+- BMC/iLO/iDRAC ports must be on isolated management VLAN with strict ACLs
+- Default credentials on PDU/UPS/BMC must be changed before deployment
+- SNMP v3 with authentication and encryption for all DCIM polling
+- Physical security: biometric + badge access logged and audited monthly
+- Camera coverage: all rack aisles, entry points, and shipping/receiving
+- Visitor logs: all non-employees sign in/out with escort tracking
+- Rack locks: all racks locked; keys managed via key control system
+- Network taps: no unauthorized taps on structured cabling
+- Remote hands: always supervised by staff; video recorded
+- Decommissioning: drives shredded or degaussed; certificates of destruction maintained
+- Environmental alarms: alert on door open events after hours
+
+## Production Considerations
+- PUE should be < 1.6 for air-cooled DCs; < 1.2 for liquid-cooled
+- Test generator and UPS monthly under load with full run-down test annually
+- Maintain cable management to preserve airflow and reduce cooling costs
+- Redundant cooling paths: never route both CRAC units through same pipe
+- Power monitoring per PDU phase prevents unbalanced load conditions
+- Floor loading: verify slab rating (usually 500-1000 kg/m²) before deploying heavy racks
+- Seismic bracing in earthquake-prone regions on all racks and overhead cable trays
+- FM-200/Novec fire suppression tested per NFPA 75 standards annually
+- Maintain spares inventory: PSU, fan, HDD/SSD, SFP+, cable types
+- Document every circuit breaker panel with labels matching DCIM
+
 ## Anti-Patterns
 
 ### Anti-Pattern 1: Hot/Cold Aisle Mismanagement
@@ -334,6 +582,12 @@ Running cables haphazardly without horizontal/vertical management. Blocks airflo
 ### Anti-Pattern 5: No DCIM
 Managing datacenter capacity without DCIM tools. Leads to stranded capacity and inefficiencies.
 
+### Anti-Pattern 6: Single Points of Failure in Cooling
+Running both CRAC units on the same electrical circuit or same chiller loop. Route redundant cooling from independent sources.
+
+### Anti-Pattern 7: No Environmental Monitoring
+Only monitoring at room level instead of at rack intake. Rack-level monitoring catches hot spots before they cause failures.
+
 ## Rules & Constraints
 - Maintain hot aisle / cold aisle configuration at all times.
 - Leave 20% headroom on all power circuits.
@@ -342,6 +596,9 @@ Managing datacenter capacity without DCIM tools. Leads to stranded capacity and 
 - PUE should be < 1.6 for air-cooled DCs.
 - Test generator and UPS monthly under load.
 - Maintain cable management to preserve airflow.
+- SNMP v3 required on all managed infrastructure.
+- Rack weight must not exceed floor load rating.
+- BMC ports restricted to management VLAN only.
 
 ## References
   - references/cabling.md

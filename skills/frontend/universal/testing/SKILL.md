@@ -239,6 +239,166 @@ it('displays users from API', async () => {
 })
 ```
 
+### Step 6b: Playwright Advanced Patterns
+```typescript
+// Custom fixture with authenticated state
+// fixtures.ts
+import { test as base, type Page } from '@playwright/test'
+
+type MyFixtures = {
+  authenticatedPage: Page
+}
+
+export const test = base.extend<MyFixtures>({
+  authenticatedPage: async ({ page }, use) => {
+    await page.goto('/login')
+    await page.getByLabelText(/email/i).fill('test@example.com')
+    await page.getByLabelText(/password/i).fill('password123')
+    await page.getByRole('button', { name: /sign in/i }).click()
+    await page.waitForURL('/dashboard')
+    await use(page)
+  },
+})
+
+// Usage
+test('user can create invoice', async ({ authenticatedPage }) => {
+  await authenticatedPage.goto('/invoices/new')
+  await authenticatedPage.getByLabelText(/amount/i).fill('100')
+  await authenticatedPage.getByRole('button', { name: /save/i }).click()
+  await expect(authenticatedPage.getByText(/invoice created/i)).toBeVisible()
+})
+```
+
+```typescript
+// API mocking in Playwright
+// playwright.config.ts
+import { defineConfig } from '@playwright/test'
+
+export default defineConfig({
+  globalSetup: './global-setup.ts',
+  use: {
+    baseURL: 'http://localhost:3000',
+    extraHTTPHeaders: { 'x-test-mode': 'true' },
+  },
+})
+
+// Block third-party requests for faster tests
+test.use({
+  blockURLs: ['https://www.googletagmanager.com/', 'https://cdn.segment.com/'],
+})
+
+// Mock API responses per test
+test('shows empty state when no orders exist', async ({ page }) => {
+  await page.route('**/api/orders/**', async (route) => {
+    await route.fulfill({ json: { orders: [] } })
+  })
+  await page.goto('/orders')
+  await expect(page.getByText(/no orders yet/i)).toBeVisible()
+})
+```
+
+### Step 6c: Visual Regression Testing
+```typescript
+// Perceptual diff (Playwright)
+import { test, expect } from '@playwright/test'
+
+test('homepage matches snapshot', async ({ page }) => {
+  await page.goto('/')
+  await expect(page).toHaveScreenshot('homepage.png', {
+    maxDiffPixels: 100, // allow minor anti-aliasing differences
+    fullPage: true,
+  })
+})
+
+// Component-level (Chromatic via Storybook)
+// Button.stories.ts
+import type { Meta, StoryObj } from '@storybook/react'
+import { Button } from './Button'
+
+const meta = {
+  component: Button,
+  parameters: { chromatic: { diffThreshold: 0.2 } },
+} satisfies Meta<typeof Button>
+
+export default meta
+
+export const Primary: StoryObj<typeof meta> = {
+  args: { variant: 'primary', children: 'Click Me' },
+}
+
+// CI integration: chromatic detects visual diffs and prompts approval
+```
+
+### Step 6d: Testing Framework-Specific Patterns
+```typescript
+// React — test hooks with renderHook
+import { renderHook, act } from '@testing-library/react'
+
+it('increments counter', () => {
+  const { result } = renderHook(() => useState(0))
+  act(() => { result.current[1](result.current[0] + 1) })
+  expect(result.current[0]).toBe(1)
+})
+
+// Vue — test composables with mount
+import { mount } from '@vue/test-utils'
+
+it('emits submit event', async () => {
+  const wrapper = mount(LoginForm)
+  await wrapper.find('input[type="email"]').setValue('user@example.com')
+  await wrapper.find('form').trigger('submit.prevent')
+  expect(wrapper.emitted('submit')).toBeTruthy()
+})
+
+// Angular — test with TestBed
+import { TestBed } from '@angular/core/testing'
+
+it('displays user name', () => {
+  const fixture = TestBed.createComponent(UserProfileComponent)
+  fixture.componentInstance.user = { name: 'Alice' }
+  fixture.detectChanges()
+  expect(fixture.nativeElement.textContent).toContain('Alice')
+})
+```
+
+### Step 6e: Test Performance & CI Optimization
+```yaml
+# .github/workflows/test.yml
+name: Tests
+on: [pull_request]
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npx vitest --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+        # Split 1000 tests across 4 shards: ~250 tests each
+    strategy:
+      matrix:
+        shard: [1, 2, 3, 4]
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - run: npx playwright test --workers=4
+```
+
+```typescript
+// Skip slow tests in watch mode
+// vitest.config.ts
+import { defineConfig } from 'vitest/config'
+export default defineConfig({
+  test: {
+    testTimeout: process.env.CI ? 30000 : 10000,
+    retry: process.env.CI ? 2 : 0, // retry flaky tests in CI
+  },
+})
+```
+
 ### Step 7: Testing Async Operations
 ```typescript
 it('shows loading then data', async () => {
@@ -288,6 +448,16 @@ Every getByTestId is a missed opportunity to test accessibility. If you can't fi
 ### 5. Shared Test State
 Tests that share mutable state are flaky and order-dependent. Use `beforeEach` to reset state.
 
+### 6. Flaky E2E Tests
+Network-dependent tests fail intermittently. Use retries for flaky tests and stable selectors (getByRole, getByLabelText) over CSS/XPath.
+```typescript
+// Playwright auto-retry pattern
+await expect(page.getByText(/order confirmed/i)).toBeVisible({ timeout: 10000 })
+```
+
+### 7. Over-Mocking
+Mocking too many dependencies creates tests that pass but don't test real behavior. MSW at network level is preferred; avoid mocking utilities, formatters, and framework internals.
+
 ## Compared With
 
 | Tool | Type | Speed | Purpose |
@@ -307,6 +477,8 @@ Tests that share mutable state are flaky and order-dependent. Use `beforeEach` t
 - MSW intercepts at the network level — near-zero performance overhead
 - `axe` accessibility check adds ~100-500ms per test
 - E2E parallelization: Playwright can run tests in parallel across multiple workers
+- Sharding: split 1000 tests across 4 CI runners → ~250 tests each, 4x faster
+- `test.concurrent` for independent integration tests reduces suite time
 
 ## Accessibility Considerations
 
@@ -315,6 +487,7 @@ Tests that share mutable state are flaky and order-dependent. Use `beforeEach` t
 - `getByLabelText` tests form field labeling
 - `userEvent.tab()` tests keyboard navigation and focus order
 - Test with `prefers-reduced-motion: reduce` if animation is present
+- Test color contrast by asserting no axe violations on dynamic states
 
 ## Rules
 - One describe = one component. One it = one user behavior.
@@ -323,6 +496,8 @@ Tests that share mutable state are flaky and order-dependent. Use `beforeEach` t
 - E2E tests run against a real backend (staging or test environment).
 - data-testid is the last resort. Prefer getByRole and getByLabelText.
 - All tests are deterministic. No Math.random(), no Date.now() without mocking.
+- No snapshot tests. Use explicit assertions or visual regression tools.
+- E2E test count < 10 per app. More means too many brittle tests.
 
 ## References
   - references/component-test-patterns.md — Component Test Patterns

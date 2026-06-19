@@ -295,6 +295,189 @@ def recall_at_k(y_true, y_pred, k):
 - Auto-rollback if primary metric drops >5%.
 - Log requests, candidates, scores, displays for offline analysis.
 
+## Two-Tower Architecture — Detailed Implementation
+
+### Architecture Overview
+```
+Query Tower (user-side)              Item Tower (item-side)
+    user_id                              item_id
+    user_features                        item_features
+    user_history (seq)                   item_metadata
+         |                                    |
+    [Embedding Layer]                   [Embedding Layer]
+         |                                    |
+    [Dense Layers]                      [Dense Layers]
+    (128 -> 64 -> 32)                   (128 -> 64 -> 32)
+         |                                    |
+    [L2 Normalize]                      [L2 Normalize]
+         |                                    |
+    query_embedding (32d)            item_embedding (32d)
+         |                                    |
+         +-----------> [Score = dot(q, i)] <--+
+                           or cosine sim
+```
+
+### Training with In-Batch Negatives
+```python
+import torch
+import torch.nn.functional as F
+
+class TwoTowerModel(torch.nn.Module):
+    def __init__(self, num_users, num_items, user_dim, item_dim, emb_dim=32):
+        super().__init__()
+        self.user_emb = torch.nn.Embedding(num_users, user_dim)
+        self.item_emb = torch.nn.Embedding(num_items, item_dim)
+        self.user_tower = torch.nn.Sequential(
+            torch.nn.Linear(user_dim, 128),
+            torch.nn.ReLU(),
+            torch.nn.Linear(128, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, emb_dim),
+        )
+        self.item_tower = torch.nn.Sequential(
+            torch.nn.Linear(item_dim, 128),
+            torch.nn.ReLU(),
+            torch.nn.Linear(128, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, emb_dim),
+        )
+
+    def forward(self, user_ids, item_ids, user_features, item_features):
+        user_vec = F.normalize(self.user_tower(user_features), dim=1)
+        item_vec = F.normalize(self.item_tower(item_features), dim=1)
+        scores = torch.mm(user_vec, item_vec.t())  # (batch, batch)
+        return scores
+
+def in_batch_negative_loss(scores, temperature=0.07):
+    # positive pairs are on diagonal, negatives in-batch
+    labels = torch.arange(scores.size(0), device=scores.device)
+    loss = F.cross_entropy(scores / temperature, labels)
+    return loss
+```
+
+### ANN Retrieval Setup
+```python
+import faiss
+import numpy as np
+
+class ANNSearcher:
+    def __init__(self, emb_dim=32, index_type="HNSW"):
+        self.emb_dim = emb_dim
+        if index_type == "HNSW":
+            self.index = faiss.IndexHNSWFlat(emb_dim, 32)  # M=32 neighbors
+            self.index.hnsw.efConstruction = 200
+            self.index.hnsw.efSearch = 64
+        elif index_type == "IVFFlat":
+            self.index = faiss.IndexIVFFlat(
+                faiss.IndexFlatL2(emb_dim), emb_dim, 100  # 100 centroids
+            )
+
+    def build(self, item_embeddings: np.ndarray):
+        self.index.train(item_embeddings)
+        self.index.add(item_embeddings)
+
+    def search(self, query_embedding: np.ndarray, k: int = 100):
+        distances, indices = self.index.search(query_embedding, k)
+        return indices  # item_ids of top-k candidates
+
+    def update(self, new_item_embeddings: np.ndarray):
+        self.index.add(new_item_embeddings)  # incremental addition
+```
+
+## Cold Start Strategies — Detailed Comparison
+
+### New User Cold Start
+
+| Strategy | Data Required | Cold Start Speed | Best For |
+|----------|--------------|-----------------|----------|
+| Popularity fallback | None | Instant | First session |
+| Demographic-based | Signup attributes | Instant | Age/gender/region |
+| Onboarding survey | Explicit preferences | < 5 min | Good for taste-based |
+| Fast-session features | 3-5 clicks | < 2 min | Engagement-based |
+| Cross-device | Device fingerprint | Instant | Known device |
+| Explore-then-exploit | Implicit feedback | 1-2 sessions | Long-term learning |
+
+Implementation — Popularity Fallback:
+```python
+def get_candidates(user_id: str, recent_items: List[str], top_popular: List[str]):
+    if user_id is None:
+        return top_popular[:20]  # completely new anonymous user
+    if has_any_history(user_id):
+        return personal_recs(user_id)
+    # cold user with some history
+    return hybrid(top_popular[:10] + similar_to_recent(recent_items))
+```
+
+### New Item Cold Start
+
+| Strategy | When to Use | Volume | Update Frequency |
+|----------|------------|--------|-----------------|
+| Static metadata recs | Item has attributes | Any | Real-time |
+| Explore rate | Boost new items | Low | Per-batch |
+| Content-based (image/text) | Rich metadata | Medium | Offline |
+| Random exploration | Very new platform | Any | Per-request |
+| Publisher trust score | Known publishers | High | Real-time |
+
+Implementation — Explore Rate:
+```python
+def apply_explore_rate(candidates: List[Dict], new_item_ids: Set[str],
+                       explore_rate: float = 0.05):
+    """Replace some recommendations with new items for exploration."""
+    if random.random() < explore_rate:
+        # Replace one candidate with a new item
+        idx = random.randint(0, len(candidates) - 1)
+        candidates[idx] = random.choice(list(new_item_ids))
+    return candidates
+```
+
+## Evaluation Metrics for Recommender Systems
+
+### Offline Metrics
+| Metric | Formula | Use Case |
+|--------|---------|----------|
+| Hit Rate (HR@k) | HR@k = (hits @ k) / (total users) | Is the relevant item in top-k? |
+| NDCG@k | Discounted cumulative gain / ideal DCG | Ranking quality with graded relevance |
+| Mean Reciprocal Rank (MRR) | MRR = 1/rank(first relevant) | First relevant position matters |
+| Coverage | % of items recommended | Diversity of recommendations |
+| Intra-list diversity | avg(1 - sim(i, j)) over all pairs | How diverse are the recs? |
+
+### Online Metrics
+| Metric | What It Measures | Trade-off |
+|--------|-----------------|-----------|
+| CTR | Engagement with recs | Clickbait risk |
+| Conversion Rate | Actual purchases/actions | Downstream metric |
+| Revenue per Visit | Monetary impact | Short-term |
+| Session Duration | Engagement quality | Long-term |
+| User Retention | Long-term value | Hard to measure |
+| Churn Rate | User loss | Lagging indicator |
+
+## Position Bias Correction
+```python
+# Inverse Propensity Weighting (IPW)
+def ipw_correction(rank: int):
+    # propensity of being examined at rank
+    # estimated from logged data
+    propensities = {1: 0.8, 2: 0.6, 3: 0.5, 5: 0.3, 10: 0.1}
+    return 1.0 / propensities.get(rank, 0.05)
+
+def ipw_weighted_loss(predictions, labels, positions):
+    weights = torch.tensor([ipw_correction(pos) for pos in positions])
+    loss = F.binary_cross_entropy(predictions, labels, weight=weights)
+    return loss
+```
+
+## Recommender Anti-Patterns
+1. **Filter Bubbles**: Users only see items similar to their past behavior
+   Fix: Add diversity loss, curate discovery slots, inject random items
+2. **Popularity Bias**: Recommending only popular items, ignoring long-tail
+   Fix: Sample negatives from popularity distribution, re-rank for diversity
+3. **Position Bias in Training**: Model learns position as a signal
+   Fix: IPW correction, randomized position during training
+4. **Stale Embeddings**: User/item embeddings never updated
+   Fix: Online embedding updates, freshness decay
+5. **No Re-ranking**: ANN results served directly without diversity/novelty
+   Fix: Add a lightweight re-ranker for diversity + business rules
+
 ## Rules
 - Start with simple popularity baseline.
 - Two-stage: retrieval quality limits ranking quality.

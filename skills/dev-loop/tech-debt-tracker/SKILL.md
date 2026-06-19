@@ -311,3 +311,194 @@ labels: ["tech-debt", "needs-triage"]
   - references/tech-debt-tracker-prioritization.md — Tech Debt Prioritization Reference
 ## Handoff
 Hand off to `dev-loop-refactor-guide` for refactoring implementation of debt items. Hand off to `dev-loop-security-auditor` for security-related debt.
+
+## Implementation Patterns
+
+### Tech Debt Calculator
+
+```python
+from typing import List, Dict, Optional
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+import math
+
+@dataclass
+class DebtItem:
+    id: str
+    description: str
+    debt_type: str
+    location: str
+    impact_score: int  # 1-5
+    frequency_score: int  # 1-5
+    effort_score: int  # 1-5
+    created_at: datetime = datetime.now()
+    status: str = "open"
+    resolved_at: Optional[datetime] = None
+
+    @property
+    def priority(self) -> float:
+        return self.impact_score * self.frequency_score / max(self.effort_score, 1)
+
+    @property
+    def interest_per_sprint(self) -> float:
+        base_interest = self.impact_score * self.frequency_score * 10
+        days_outstanding = (datetime.now() - self.created_at).days
+        compound = base_interest * (1 + 0.05 * math.floor(days_outstanding / 30))
+        return round(compound, 1)
+
+class DebtTracker:
+    def __init__(self):
+        self.items: List[DebtItem] = []
+        self.sprint_budget_hours = 40
+        self.debt_allocation_pct = 0.15
+
+    def add_item(self, item: DebtItem):
+        self.items.append(item)
+
+    def get_backlog(self, sort_by: str = "priority") -> List[DebtItem]:
+        active = [i for i in self.items if i.status == "open"]
+        if sort_by == "priority":
+            return sorted(active, key=lambda x: -x.priority)
+        elif sort_by == "interest":
+            return sorted(active, key=lambda x: -x.interest_per_sprint)
+        elif sort_by == "effort":
+            return sorted(active, key=lambda x: x.effort_score)
+        return active
+
+    def get_metrics(self) -> Dict:
+        total_items = len([i for i in self.items if i.status == "open"])
+        resolved_items = len([i for i in self.items if i.status == "done"])
+        total_interest = sum(i.interest_per_sprint for i in self.items if i.status == "open")
+        avg_priority = sum(i.priority for i in self.items if i.status == "open") / max(total_items, 1)
+        monthly_cost_hours = total_interest / 60
+        return {
+            "total_debt_items": total_items,
+            "resolved_items": resolved_items,
+            "resolution_rate": round(resolved_items / max(len(self.items), 1) * 100, 1),
+            "total_interest_minutes": round(total_interest, 1),
+            "monthly_cost_hours": round(monthly_cost_hours, 1),
+            "avg_priority": round(avg_priority, 2),
+            "avg_effort": round(sum(i.effort_score for i in self.items if i.status == "open") / max(total_items, 1), 1),
+            "sprint_budget_for_debt": round(self.sprint_budget_hours * self.debt_allocation_pct, 1),
+        }
+
+    def generate_report(self) -> str:
+        metrics = self.get_metrics()
+        lines = ["## Technical Debt Report\n"]
+        lines.append(f"**Total Items**: {metrics['total_debt_items']}")
+        lines.append(f"**Resolution Rate**: {metrics['resolution_rate']}%")
+        lines.append(f"**Monthly Interest Cost**: {metrics['monthly_cost_hours']} hours")
+        lines.append(f"**Sprint Budget for Debt**: {metrics['sprint_budget_for_debt']} hours\n")
+        lines.append("### Top Priority Items\n")
+        for item in self.get_backlog()[:10]:
+            lines.append(f"- {item.id}: {item.description[:80]}")
+            lines.append(f"  Priority {item.priority:.1f} | Interest: {item.interest_per_sprint} min/sprint | Effort: {item.effort_score}")
+        return "\n".join(lines)
+```
+
+### SonarQube Metric Collector
+
+```python
+from typing import Dict, Optional
+import requests
+import json
+
+class SonarQubeCollector:
+    def __init__(self, base_url: str, token: str):
+        self.base_url = base_url.rstrip("/")
+        self.token = token
+        self.auth = (token, "")
+
+    def get_project_metrics(self, project_key: str) -> Dict:
+        metrics = "sqale_index,coverage,duplicated_lines_density,complexity,cognitive_complexity,ncloc,bugs,vulnerabilities,code_smells"
+        resp = requests.get(
+            f"{self.base_url}/api/measures/component",
+            params={"component": project_key, "metricKeys": metrics},
+            auth=self.auth,
+        )
+        if resp.status_code != 200:
+            return {"error": f"API error: {resp.status_code}"}
+        data = resp.json()
+        measures = {}
+        for measure in data.get("component", {}).get("measures", []):
+            metric = measure["metric"]
+            value = measure.get("value", "0")
+            measures[metric] = float(value) if value.replace(".", "").isdigit() else value
+        return measures
+
+    def compute_debt_ratio(self, measures: Dict) -> float:
+        sqale = measures.get("sqale_index", 0)
+        ncloc = measures.get("ncloc", 1)
+        return (sqale / (ncloc * 10)) * 100 if ncloc > 0 else 0
+```
+
+## Architecture Decision Trees
+
+### Debt Type Classification
+
+```
+What's the nature of the issue?
+├── Code quality
+│   ├── Complex/confusing code → Refactor for readability
+│   ├── Duplicated code → Extract shared module
+│   ├── Dead/unused code → Remove
+│   └── Poor naming → Rename for clarity
+│
+├── Architecture
+│   ├── Tight coupling → Extract interface, dependency injection
+│   ├── God object → Split into focused services
+│   ├── Missing abstraction → Add appropriate abstraction layer
+│   └── Wrong technology choice → Plan migration
+│
+├── Testing
+│   ├── Low coverage → Add tests for hot paths first
+│   ├── Flaky tests → Stabilize or rewrite
+│   └── Slow tests → Optimize, parallelize, or tier
+│
+├── Dependencies
+│   ├── Outdated library → Update, check breaking changes
+│   ├── Deprecated API → Migrate to replacement
+│   └── Security vulnerability → Update immediately
+│
+└── Infrastructure
+    ├── Manual processes → Automate
+    ├── Outdated config → Update
+    └── No monitoring → Add observability
+```
+
+### Prioritization Matrix
+
+```
+Impact × Frequency / Effort
+├── > 10 → Do this sprint (critical)
+├── 5-10 → Add to next sprint backlog
+├── 2-5 → Backlog for upcoming sprints
+└── < 2 → Icebox / monitor
+```
+
+## Production Considerations
+
+- **Automated debt discovery**: Integrate SonarQube/CodeClimate scans into CI pipeline. Fail builds when debt ratio increases beyond threshold. Publish trend data to dashboards.
+- **Debt budgeting in sprint planning**: Reserve 15-20% of sprint capacity for tech debt before feature work is estimated. Make debt reduction visible in sprint reviews.
+- **Quarterly debt reviews**: Conduct a dedicated debt review session every quarter. Re-prioritize based on current development pain points. Archive or close items no longer relevant.
+- **Interest rate communication**: Express debt cost in terms stakeholders understand: "This debt costs us one developer day per sprint" rather than abstract quality metrics.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Zero-debt goal | Impossible and counterproductive | Manage debt to sustainable level |
+| Big bang rewrite | Extremely high risk and cost | Incremental refactoring |
+| Tracking everything | Overwhelming backlog | Focus on top 10 highest-impact items |
+| No interest calculation | Can't justify investment | Calculate cost of NOT fixing |
+| Blaming developers | Creates secrecy around debt | Normalize debt as engineering trade-off |
+| No dedicated budget | Debt always deprioritized | Reserve 15-20% sprint capacity |
+| Only automated discovery | Misses developer pain points | Combine tools + developer input |
+| Ignoring test debt | Untested code is fragile | Include test coverage in debt metrics |
+
+## Performance Optimization
+
+- **Automated debt scanning**: Schedule weekly SonarQube scans. Use diff analysis to only re-scan changed files. Report debt ratio trend on team dashboards.
+- **Debt interest computation**: Run automated interest calculation script at end of each sprint. Calculate total interest minutes across all open items.
+- **Git blame integration**: Link debt items to recent git history. Flag when a debt-laden file is being modified and suggest refactoring.
+- **CI pipeline debt gate**: Add debt ratio check to CI. If PR touches high-debt files and doesn't reduce debt, flag for review.

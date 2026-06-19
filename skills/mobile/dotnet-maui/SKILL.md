@@ -131,6 +131,273 @@ Volume of platform code?
 - **Platform API calls without #if guard**: Platform-specific APIs crash on unsupported targets
 - **Ignoring linker configuration**: Linker strips dynamically accessed types — preserve them explicitly
 
+## Performance Optimization
+
+### Startup Performance
+MAUI app startup involves: native initialization, XAML parsing, Shell construction, and first-page rendering. Profile with: `dotnet-trace` (event tracing), Xamarin Profiler (legacy), or custom stopwatch logging. Key optimizations:
+
+- **AOT compilation**: Enable `<PublishAot>true</PublishAot>` in .csproj for iOS/Android (reduces JIT overhead at startup, but increases binary size ~30%). For .NET 8+ MAUI, AOT is available for iOS via `--aot`.
+- **Trim assemblies**: `<TrimMode>full</TrimMode>` with linker configuration. Reduces app size but requires `[DynamicallyAccessedMembers]` attributes on types accessed via reflection.
+- **Lazy initialization**: Defer non-critical services: `Lazy<IService>` or `Task.Run(() => InitializeHeavyService())` after first frame render. Register heavy services as transient or use `Lazy<T>` wrapper.
+- **Shell caching**: Shell caches pages by default — pages remain in memory after navigation. Use `Shell.Current.CachingStrategy = CachingStrategy.RetainElement` judiciously. Prefer `CachingStrategy.RecycleElement` for memory-bound scenarios.
+- **Startup tracing**: Measure with `Activity` or `DiagnosticListener` between `Application.OnStart()` and first frame `Appearing` event. Target: <2s cold start on mid-range Android/iOS devices.
+
+### Memory Management
+- **CollectionView recycling**: Virtualization recycles cell templates — ensure views are data-bound, not created in `ItemTemplate` code-behind. Avoid `DataTemplate` with complex nested layouts.
+- **Image caching**: Use `FFImageLoading` (community) or `MAUI CommunityToolkit`'s `CachedImage`. Set `CacheType` to `Disk` for large images. Avoid `ImageSource.FromStream` on UI thread.
+- **Weak event patterns**: Event subscriptions (PropertyChanged, CollectionChanged) prevent GC of pages. Use `WeakEventManager` or `WeakReference` for subscribers.
+- **Dispose pattern**: Implement `IDisposable` on ViewModels that hold subscriptions. Call `Dispose()` in page `OnDisappearing` or via `Lifecycle` events. Unsubscribe from `MessagingCenter`/`WeakReferenceMessenger` in ViewModel cleanup.
+- **Large collection handling**: For 1000+ items, use `CollectionView` with `RemainingItemsThreshold` + `RemainingItemsThresholdReachedCommand` for incremental loading (infinite scroll). Never load all items into memory at once.
+
+### UI Thread and Responsiveness
+- **Async all the way**: All I/O-bound operations (HTTP, database, file system) must use `async`/`await`. Never call `.Result` or `.Wait()` on Task — this deadlocks on MAUI's main thread.
+- **`MainThread.BeginInvokeOnMainThread`**: Only use for UI updates from background threads. Batch UI updates — don't invoke per-item in a loop.
+- **Layout passes**: Minimize layout pass count. Use `HorizontalStackLayout`/`VerticalStackLayout` over `StackLayout` (lighter). Avoid `AbsoluteLayout` for dynamic layouts (measuring pass is expensive). Prefer `Grid` with proportional rows/columns.
+- **XAML compilation**: Enable `XAMLC` (XAML compilation) in all Release configs: add `[XamlCompilation(XamlCompilationOptions.Compile)]` on all Pages. Reduces runtime XAML parsing time.
+
+```csharp
+[assembly: XamlCompilation(XamlCompilationOptions.Compile)]
+```
+
+- **Data binding performance**: Prefer compiled bindings (`x:DataType`) over reflection-based bindings. Compiled bindings reduce reflection overhead and catch errors at compile time. For list items, ensure `x:DataType` on `DataTemplate` is set to the item type.
+
+```xml
+<CollectionView ItemsSource="{Binding Orders}">
+    <CollectionView.ItemTemplate>
+        <DataTemplate x:DataType="models:Order">
+            <Label Text="{Binding CustomerName}" />
+        </DataTemplate>
+    </CollectionView.ItemTemplate>
+</CollectionView>
+```
+
+### Graphics and Animation
+- **GPU-accelerated properties**: Animate `Opacity`, `Rotation`, `Scale`, `TranslationX`/`TranslationY` (GPU-composited). Avoid animating `Width`, `Height`, `Margin`, `Padding` (trigger layout passes).
+- **`GraphicsView` over custom drawing**: MAUI's `GraphicsView` uses `Microsoft.Maui.Graphics` for 2D drawing — hardware-accelerated on most platforms. Use for custom charts, signatures, diagrams.
+- **Reduce shadow/blur**: Shadows (`Shadow` effect) and blurs trigger off-screen rendering. Use sparingly in lists. Prefer flat design for list items, reserve shadows for modals/popups.
+
+## Build & Deployment Patterns
+
+### Project Configuration (.csproj)
+```xml
+<PropertyGroup>
+    <TargetFrameworks>net8.0-android;net8.0-ios;net8.0-maccatalyst</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Release optimizations -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <PublishAot>false</PublishAot>
+    <TrimMode>partial</TrimMode>
+    <Optimize>true</Optimize>
+</PropertyGroup>
+
+<!-- Android-specific -->
+<PropertyGroup Condition="$(TargetFramework.Contains('android'))">
+    <ApplicationId>com.company.app</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <AndroidSigningKeyStore>$(ProjectDir)release.keystore</AndroidSigningKeyStore>
+    <AndroidSigningKeyAlias>app-alias</AndroidSigningKeyAlias>
+    <AndroidSigningKeyPass>$(KS_PASS)</AndroidSigningKeyPass>
+    <AndroidSigningStorePass>$(KSP_PASS)</AndroidSigningStorePass>
+    <AndroidPackageFormat>aab</AndroidPackageFormat>
+</PropertyGroup>
+
+<!-- iOS-specific -->
+<PropertyGroup Condition="$(TargetFramework.Contains('ios'))">
+    <ApplicationId>com.company.app</ApplicationId>
+    <BuildIpa>true</BuildIpa>
+    <RuntimeIdentifier>ios-arm64</RuntimeIdentifier>
+    <CodesignKey>Apple Distribution: Company Name</CodesignKey>
+    <CodesignProvision>$(APPLE_PROVISIONING_PROFILE)</CodesignProvision>
+    <ArchiveOnBuild>true</ArchiveOnBuild>
+</PropertyGroup>
+```
+
+### CI/CD Pipeline (GitHub Actions)
+```yaml
+name: Build and Deploy MAUI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-android:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: dotnet restore
+      - name: Build Android
+        run: |
+          dotnet build -f net8.0-android --configuration Release `
+            -p:AndroidSigningKeyStore=release.keystore `
+            -p:AndroidSigningKeyAlias=app-alias `
+            -p:AndroidSigningKeyPass=${{ secrets.KEY_PASS }} `
+            -p:AndroidSigningStorePass=${{ secrets.STORE_PASS }}
+      - name: Sign AAB
+        run: |
+          java -jar bundletool-all.jar build-bundle --modules=bin/Release/net8.0-android/*.aab
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: '**/*.aab'
+
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Install iOS provisioning
+        run: |
+          echo ${{ secrets.IOS_CERT }} | base64 --decode > cert.p12
+          echo ${{ secrets.IOS_PROVISIONING }} | base64 --decode > provisioning.mobileprovision
+          security create-keychain -p temp temp.keychain
+          security import cert.p12 -k temp.keychain -P ${{ secrets.CERT_PASS }}
+      - name: Build iOS
+        run: |
+          dotnet build -f net8.0-ios --configuration Release `
+            -p:RuntimeIdentifier=ios-arm64 `
+            -p:CodesignKey="Apple Distribution: Company" `
+            -p:CodesignProvision="$(ls provisioning.mobileprovision)"
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release
+          path: '**/*.ipa'
+```
+
+### App Store & Play Store Submission
+
+**Google Play**: Build AAB with `dotnet publish -f net8.0-android -c Release`. Sign with Android keystore (`jarsigner` or MSBuild properties). Upload to Google Play Console → Internal Testing → Closed Alpha → Open Beta → Production. Use `bundletool` for AAB testing: `java -jar bundletool.jar install-apks --apks=app.aab`.
+
+**Apple App Store**: Build IPA with `dotnet publish -f net8.0-ios -c Release`. Requires Apple Developer Program membership ($99/year). Distribution via App Store Connect: Xcode Organizer → Distribute App → App Store Connect. Or use `Transporter` app for IPA upload. TestFlight for beta distribution before production release.
+
+**App Center** (retired): Migrate to GitHub Actions + App Center Distribute (still available for distribution). Alternative: Firebase App Distribution for Android beta testing, TestFlight for iOS.
+
+### Versioning Strategy
+- `ApplicationVersion` (Android): integer, auto-increment per release.
+- `CFBundleVersion` (iOS): same integer, matches Android version code.
+- `ApplicationDisplayVersion` / `CFBundleShortVersionString`: semver string ("1.2.3").
+- Sync via CI: read from `version.txt` or Git tag, inject into .csproj properties via script or `Directory.Build.props`.
+
+## Platform-Specific Code Examples
+
+### Android — Custom Handler (Remove Entry Underline)
+```csharp
+// MauiProgram.cs
+builder.ConfigureMauiHandlers(handlers => {
+    handlers.AddHandler<Entry, EntryHandler>(nameof(Entry), (handler) => {
+#if ANDROID
+        handler.PlatformView.BackgroundTintList = Android.Content.Res.ColorStateList.ValueOf(
+            Android.Graphics.Color.Transparent);
+#endif
+    });
+});
+```
+
+### iOS — Safe Area Handling
+```csharp
+// iOS — respect safe area in custom views
+#if IOS
+using UIKit;
+using CoreGraphics;
+
+public class SafeAreaAwareView : UIView
+{
+    public override void LayoutSubviews()
+    {
+        base.LayoutSubviews();
+        var insets = Window?.SafeAreaInsets ?? UIEdgeInsets.Zero;
+        // Adjust layout based on safe area
+    }
+}
+#endif
+```
+
+### Windows — Title Bar Customization
+```csharp
+#if WINDOWS
+using Microsoft.UI.Xaml;
+using Microsoft.UI;
+
+public static class WindowTitleBar
+{
+    public static void SetTheme(Window window, bool darkMode)
+    {
+        var nativeWindow = window.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
+        if (nativeWindow != null)
+        {
+            nativeWindow.ExtendsContentIntoTitleBar = true;
+            // Custom title bar colors
+        }
+    }
+}
+#endif
+```
+
+### Shared Service with Platform DI
+```csharp
+// Interface in shared code
+public interface IDeviceInfo
+{
+    string GetDeviceName();
+    string GetOSVersion();
+}
+
+// Android implementation (Platforms/Android/)
+public class AndroidDeviceInfo : IDeviceInfo
+{
+    public string GetDeviceName() =>
+        Android.OS.Build.Model ?? "Unknown";
+    public string GetOSVersion() =>
+        Android.OS.Build.VERSION.Release ?? "Unknown";
+}
+
+// iOS implementation (Platforms/iOS/)
+public class IosDeviceInfo : IDeviceInfo
+{
+    public string GetDeviceName() =>
+        UIKit.UIDevice.CurrentDevice.Name;
+    public string GetOSVersion() =>
+        UIKit.UIDevice.CurrentDevice.SystemVersion;
+}
+
+// Registration in MauiProgram.cs
+#if ANDROID
+builder.Services.AddSingleton<IDeviceInfo, AndroidDeviceInfo>();
+#elif IOS
+builder.Services.AddSingleton<IDeviceInfo, IosDeviceInfo>();
+#endif
+```
+
+## Anti-Patterns (Expanded)
+
+- **Static service locator**: `Application.Current.MainPage` or `DependencyService.Get<T>()` creates hidden dependencies. Use constructor DI only.
+- **Massive MauiProgram.cs**: Registering every service and handler inline in MauiProgram.cs creates an unmaintainable file. Use extension methods: `builder.Services.AddOrderModule()`, `builder.ConfigurePaymentHandlers()`.
+- **Direct ObservableCollection manipulation**: Adding/removing items on background thread crashes. Use `MainThread.BeginInvokeOnMainThread(() => collection.Add(item))`.
+- **Overusing Effects**: Effects are procedural and harder to override. Use Handlers for MAUI-native customization, Effects only for pre-MAUI migration code.
+- **Ignoring linker configuration**: Linker strips unused IL. Types accessed via reflection (Sqlite, serialization) must be preserved. Use `[Preserve]` attribute or linker XML configuration.
+- **Missing `#if` on platform APIs**: `Android.Graphics.Color` in shared code compiles on all targets but throws on iOS. Always guard platform-specific types with `#if ANDROID`, `#if IOS`.
+- **Nested layouts in ListView**: ListView/CollectionView with complex nested layouts (Grid in StackLayout in Frame) kills scroll performance. Flatten hierarchy for list items.
+- **No `x:DataType` on DataTemplate**: Reflection-based bindings in lists are 3-5x slower than compiled bindings. Always set `x:DataType` on ItemTemplate DataTemplate.
+- **Storing secrets in code**: API keys, connection strings in source code. Use Azure Key Vault, GitHub Secrets, or `Secrets.json` (user secrets in development). Never commit secrets.
+- **Over-engineering with Prism**: Prism adds significant complexity for most apps. CommunityToolkit.Mvvm covers 90% of MVVM needs with less overhead.
+
 ## Configuration Reference
 
 ```xml

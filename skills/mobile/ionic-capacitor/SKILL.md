@@ -265,6 +265,215 @@ export default config;
 - Production builds must use `ionic build --prod` with optimizations enabled (ahead-of-time compilation, tree shaking)
 - Bundle size must be monitored: Ionic core should be tree-shaken to exclude unused components
 
+## Performance Optimization
+
+### WebView Rendering Performance
+
+The WebView is the bottleneck in Ionic apps. Optimize for 60fps scrolling and smooth animations:
+
+- **Avoid layout thrashing**: Batch DOM reads and writes. Use `FastDom` or wrapper that schedules writes after reads. Measure with Chrome DevTools Performance tab — look for "Layout" events >10ms.
+- **CSS containment**: `contain: layout style paint` on off-screen components prevents the browser from recalculating layout/style/paint for elements outside the viewport. Apply to static sidebars, headers, footers.
+- **`ion-img` over `<img>`**: Ionic's image component uses IntersectionObserver for lazy loading — images outside viewport don't load. Set `--lazy-load-threshold` for pre-load buffer. Fallback: `loading="lazy"` attribute on native `<img>`.
+- **Virtual scrolling**: `ion-virtual-scroll` renders only visible items + buffer. For lists >100 items, always use virtual scrolling. Configure `approxItemHeight` for smoother scroll. Replaced with `ion-list` + `virtual-scroll` in newer Ionic versions; consider `cdk-virtual-scroll-viewport` from Angular CDK for Angular projects.
+- **Reduce DOM node count**: Target <1500 DOM nodes for good performance. Audit with Chrome DevTools Elements panel. Replace nested `<div>` chains with CSS Grid/Flexbox single-layer layouts. Use `ion-item` directly without wrapping in extra `<div>` elements.
+- **WebView pool (Android)**: Android WebView instances consume ~100MB each. If the app opens secondary WebViews (for external links, in-app browsers), reuse the existing WebView instance or use Custom Tabs (Chrome custom tabs) instead.
+
+### JavaScript Bundle Optimization
+
+- **Tree-shaking**: Ionic components tree-shake with Vite by default — but only if you import from specific paths: `import { IonButton } from '@ionic/react'` instead of importing everything. Audit with `vite-plugin-inspect` or `webpack-bundle-analyzer`.
+- **Lazy load routes**: Framework-specific lazy loading. Angular: `loadChildren: () => import('./orders/orders.module').then(m => m.OrdersModule)`. React: `React.lazy(() => import('./OrdersPage'))`. Vue: `() => import('./OrdersPage.vue')`.
+- **Capacitor plugin tree-shaking**: Capacitor plugins register at build time; unused plugins don't add JS overhead. However, native SDKs (Android `build.gradle` dependencies, iOS Pods) always add binary size. Remove unused plugins from `package.json` and run `npx cap sync`.
+- **Preload critical chunks**: Use `<link rel="modulepreload">` for the app shell and first-route modules. Reduces waterfall of module loading. Configure in `vite.config.ts` via `optimizeDeps.include`.
+
+### Native Bridge Optimization
+
+- **Batch native calls**: Each JS → native call costs 5-15ms round-trip. For bulk operations (reading 100 contacts), create a single plugin method that returns an array instead of 100 individual calls.
+- **Capacitor `runOutsideAngular` (Ionic Angular)**: Plugin callbacks outside Angular's zone reduce change detection cycles. Wrap plugin calls:
+  ```typescript
+  import { NgZone } from '@angular/core';
+  constructor(private zone: NgZone) {}
+  async callPlugin() {
+    const result = await this.zone.runOutsideAngular(() => Camera.getPhoto({...}));
+    // Re-enter zone only for UI updates
+  }
+  ```
+- **Event emitter debouncing**: Native-to-JS events (geolocation updates, sensor data) can flood the bridge. Debounce in native layer before emitting: `DispatchQueue.main.asyncAfter(deadline: .now() + 0.1)` in Swift, `Handler(Looper.getMainLooper()).postDelayed({}, 100)` in Kotlin.
+- **Avoid synchronous plugin calls**: Capacitor doesn't support synchronous native calls. Use `async/await` everywhere. Never use `Capacitor.convertFileSrc()` synchronously — it's fine for path conversion but the underlying file may not be ready.
+- **`@capacitor-community/native-audio` preloading**: For audio assets, preload in native layer during app initialization, trigger play with minimal JS overhead. Audio files in WebView have ~200ms startup latency; native playback is near-instant.
+
+### Memory and Caching
+
+- **`@capacitor/filesystem` cache directory**: Use `Directory.Cache` for temporary files, `Directory.Data` for persistent app data. Clear cache on app version upgrade. Monitor with `window.performance.memory?.usedJSHeapSize`.
+- **Service worker caching**: For PWA mode, use Workbox or custom service worker with stale-while-revalidate strategy for API responses. Cache-first for static assets. Limit cache to 50MB (PWA storage quota varies by browser).
+- **Image cache**: Use `@capacitor/cache` or native image loading libraries (SDWebImage for iOS, Glide for Android) via custom plugin for production apps. WebView image cache is limited and cleared frequently.
+- **`ion-content` scroll events**: Scroll event listeners fire at 60fps — throttle to 100-200ms for non-critical work (lazy loading, analytics). Use `requestAnimationFrame` for visual updates, `setTimeout` for data operations.
+
+## Production Build & App Store Deployment
+
+### Android Play Store
+
+1. **Build signed AAB**: `ionic build --prod && npx cap sync android && cd android && ./gradlew bundleRelease`
+2. **Signing**: Configure `android/app/build.gradle` signing configs:
+   ```groovy
+   android {
+       signingConfigs {
+           release {
+               storeFile file(System.getenv("KEYSTORE_PATH"))
+               storePassword System.getenv("KEYSTORE_PASS")
+               keyAlias System.getenv("KEY_ALIAS")
+               keyPassword System.getenv("KEY_PASS")
+           }
+       }
+       buildTypes {
+           release { signingConfig signingConfigs.release }
+       }
+   }
+   ```
+3. **Play Console**: Upload AAB → Set up Store Listing (screenshots, description, category) → Content Rating → Pricing & Distribution → Rollout to Internal Testing → Closed Alpha → Open Beta → Production.
+4. **App signing by Google Play**: Enroll in Play App Signing. Google manages the signing key; you upload an upload key. If you lose the upload key, Google can reset it.
+
+### iOS App Store
+
+1. **Build IPA**: `ionic build --prod && npx cap sync ios && cd ios && xcodebuild -workspace App.xcworkspace -scheme App -archivePath App.xcarchive archive`
+2. **Code signing**: Automatic signing in Xcode (requires Apple Developer account). For CI, use `fastlane match` to manage certificates and provisioning profiles across machines.
+3. **App Store Connect**: Create app record → Upload IPA via Transporter or Xcode Organizer → Fill out metadata (name, description, keywords, privacy URL) → Submit for Review.
+4. **TestFlight**: Enable in App Store Connect → Add testers (up to 100 internal, 10,000 external) → Build must pass basic review before external testing. Beta builds expire after 90 days.
+
+### Fastlane Automation
+```ruby
+# fastlane/Fastfile
+lane :deploy_ios do
+  match(type: "appstore")  # sync certificates
+  build_ios_app(scheme: "App")
+  upload_to_app_store(skip_metadata: true, skip_screenshots: true)
+end
+
+lane :deploy_android do
+  gradle(task: "bundleRelease")
+  upload_to_play_store(track: "internal")
+end
+```
+
+### Environment Configuration
+- **capacitor.config.ts**: Use environment variables for `server.url` (live reload) vs production. Never ship production build with `server.url` set — it weakens security by allowing external content loading.
+- **Environment flags**: Inject build-time variables via Vite or Angular environment files:
+  ```typescript
+  // src/environments/environment.prod.ts
+  export const environment = {
+    production: true,
+    apiUrl: 'https://api.example.com',
+    appVersion: '1.2.3',
+  };
+  ```
+- **Runtime config**: Load config from a remote endpoint on app startup for feature flags and endpoint URLs without app store submission. Cache in storage, refresh on app foreground.
+
+## Custom Plugin Code Examples
+
+### iOS (Swift) — Background Geolocation Plugin
+```swift
+@objc(BackgroundGeolocation)
+class BackgroundGeolocation: CAPPlugin {
+    private var locationManager = CLLocationManager()
+
+    @objc func startTracking(_ call: CAPPluginCall) {
+        locationManager.delegate = self
+        locationManager.allowsBackgroundLocationUpdates = true
+        locationManager.pausesLocationUpdatesAutomatically = false
+        locationManager.startUpdatingLocation()
+        call.resolve()
+    }
+
+    @objc func stopTracking(_ call: CAPPluginCall) {
+        locationManager.stopUpdatingLocation()
+        call.resolve()
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+        notifyListeners("locationUpdate", data: [
+            "latitude": location.coordinate.latitude,
+            "longitude": location.coordinate.longitude,
+            "accuracy": location.horizontalAccuracy
+        ])
+    }
+}
+```
+
+### Android (Kotlin) — Same Plugin
+```kotlin
+@CapacitorPlugin(name = "BackgroundGeolocation")
+class BackgroundGeolocation : CAPPlugin() {
+    private val locationManager by lazy {
+        activity?.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+    }
+
+    @PluginMethod
+    fun startTracking(call: PluginCall) {
+        if (ActivityCompat.checkSelfPermission(
+                activity, Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            call.reject("Location permission not granted")
+            return
+        }
+        locationManager?.requestLocationUpdates(
+            LocationManager.GPS_PROVIDER, 5000L, 10f,
+            object : LocationListener {
+                override fun onLocationChanged(location: Location) {
+                    notifyListeners("locationUpdate", JSObject().apply {
+                        put("latitude", location.latitude)
+                        put("longitude", location.longitude)
+                        put("accuracy", location.accuracy)
+                    })
+                }
+            }
+        )
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun stopTracking(call: PluginCall) {
+        locationManager?.removeUpdates(this)
+        call.resolve()
+    }
+}
+```
+
+### Web Fallback
+```typescript
+// src/web.ts
+import { WebPlugin } from '@capacitor/core';
+import type { BackgroundGeolocationPlugin } from './definitions';
+
+export class BackgroundGeolocationWeb
+  extends WebPlugin
+  implements BackgroundGeolocationPlugin
+{
+  async startTracking(): Promise<void> {
+    console.warn('BackgroundGeolocation not available on web');
+    // Fallback: use browser Geolocation API
+    navigator.geolocation.watchPosition(
+      (pos) => this.notifyListeners('locationUpdate', {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+      }),
+      (err) => console.error(err),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  async stopTracking(): Promise<void> {
+    // cleanup
+  }
+}
+```
+
+### Plugin Testing
+- **Unit tests**: Test plugin TypeScript API definitions with standard Jest/Vitest — pure interface testing.
+- **Native tests**: Android: JUnit + Mockito for plugin methods. iOS: XCTest with `CAPPluginCall` mock.
+- **E2E**: Maestro or Detox — test plugin calls from the web layer verify native behavior. Run on real devices for hardware-dependent plugins (camera, geolocation, biometrics).
+
 ## References
   - references/capacitor-plugins.md — Capacitor Plugins
   - references/ionic-capacitor-advanced.md — Ionic Capacitor Advanced Topics

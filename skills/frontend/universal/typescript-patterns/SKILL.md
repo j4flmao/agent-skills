@@ -265,6 +265,204 @@ type SpacingProp = `padding-${ComponentSize}`
 // 'padding-sm' | 'padding-md' | 'padding-lg'
 ```
 
+### Step 9: Conditional Types & Mapped Types
+```tsx
+// Conditional type — extract return type from function
+type ReturnOf<T> = T extends (...args: unknown[]) => infer R ? R : never
+type Fn = (x: number) => string
+type Result = ReturnOf<Fn> // string
+
+// Mapped type — make all properties nullable
+type Nullable<T> = { [K in keyof T]: T[K] | null }
+
+// Pick by value type
+type KeysOfType<T, V> = {
+  [K in keyof T]: T[K] extends V ? K : never
+}[keyof T]
+
+type User = { id: string; name: string; age: number }
+type StringKeys = KeysOfType<User, string> // 'id' | 'name'
+
+// Deep partial — recursive mapped type
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K]
+}
+
+type PartialUser = DeepPartial<User> // all fields optional, recursively
+```
+
+### Step 9b: Advanced Generic Constraints
+```tsx
+// Constrain to object with specific key
+function getProp<T extends Record<string, unknown>, K extends keyof T>(obj: T, key: K): T[K] {
+  return obj[key]
+}
+
+// Two-parameter constraint
+function merge<T extends object, U extends object>(a: T, b: U): T & U {
+  return { ...a, ...b }
+}
+
+// Builder pattern with generics
+class QueryBuilder<T extends Record<string, unknown>> {
+  private conditions: string[] = []
+
+  where<K extends keyof T>(field: K, value: T[K]): this {
+    this.conditions.push(`${String(field)} = ${value}`)
+    return this
+  }
+
+  build(): string {
+    return `SELECT * FROM table WHERE ${this.conditions.join(' AND ')}`
+  }
+}
+
+const query = new QueryBuilder<{ name: string; age: number }>()
+  .where('name', 'Alice')
+  .where('age', 30)
+  .build()
+```
+
+### Step 9c: Type-Safe Event Emitter
+```tsx
+type EventMap = {
+  userLoggedIn: { userId: string; timestamp: number }
+  itemAdded: { itemId: string; quantity: number }
+  error: { message: string; code: number }
+}
+
+class TypedEmitter<T extends Record<string, unknown>> {
+  private listeners = new Map<keyof T, Set<Function>>()
+
+  on<K extends keyof T>(event: K, listener: (data: T[K]) => void): void {
+    if (!this.listeners.has(event)) this.listeners.set(event, new Set())
+    this.listeners.get(event)!.add(listener)
+  }
+
+  emit<K extends keyof T>(event: K, data: T[K]): void {
+    this.listeners.get(event)?.forEach((fn) => fn(data))
+  }
+
+  off<K extends keyof T>(event: K, listener: (data: T[K]) => void): void {
+    this.listeners.get(event)?.delete(listener)
+  }
+}
+
+// Usage — full type safety on event names and payloads
+const emitter = new TypedEmitter<EventMap>()
+emitter.on('userLoggedIn', (data) => {
+  console.log(data.userId, data.timestamp) // fully typed
+})
+emitter.emit('userLoggedIn', { userId: 'abc', timestamp: Date.now() })
+```
+
+### Step 9d: Function Overloads for Enhanced DX
+```tsx
+// Overload signatures
+function createUser(data: { name: string; email: string }): Promise<User>
+function createUser(data: FormData): Promise<User>
+function createUser(data: { name: string }): Promise<User>
+
+// Implementation signature
+async function createUser(data: { name: string; email?: string } | FormData): Promise<User> {
+  if (data instanceof FormData) {
+    return api.post('/users', data)
+  }
+  return api.post('/users', data)
+}
+
+// Usage — TypeScript picks the right overload
+createUser({ name: 'Alice', email: 'alice@example.com' }) // overload 1
+createUser(formData) // overload 2
+createUser({ name: 'Alice' }) // overload 3 (minimal)
+```
+
+### Step 9e: Zod Schema Composition & Advanced Parsing
+```tsx
+import { z } from 'zod'
+
+// Composable schema fragments
+const timestamps = z.object({
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime().optional(),
+})
+
+const addressSchema = z.object({
+  street: z.string().min(1),
+  city: z.string().min(1),
+  zip: z.string().regex(/^\d{5}(-\d{4})?$/),
+})
+
+// Compose schemas
+const userSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  role: z.enum(['admin', 'user']),
+  address: addressSchema.optional(),
+}).merge(timestamps)
+
+// Infer type from composed schema
+type User = z.infer<typeof userSchema>
+
+// Discriminated union parsing
+const eventSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('page_view'), url: z.string().url() }),
+  z.object({ type: z.literal('click'), element: z.string(), x: z.number(), y: z.number() }),
+  z.object({ type: z.literal('purchase'), amount: z.number().positive() }),
+])
+
+type AnalyticsEvent = z.infer<typeof eventSchema>
+// { type: 'page_view'; url: string } | { type: 'click'; element: string; x: number; y: number } | ...
+```
+
+### Step 9f: Type-Safe Form State with Discriminated Unions
+```tsx
+type FormState<T> =
+  | { status: 'idle' }
+  | { status: 'filling'; values: Partial<T> }
+  | { status: 'submitting'; values: T }
+  | { status: 'success'; data: T }
+  | { status: 'error'; values: T; error: string }
+
+function useFormState<T extends Record<string, unknown>>() {
+  const [state, setState] = useState<FormState<T>>({ status: 'idle' })
+
+  const update = (values: Partial<T>) => {
+    setState((prev) => ({
+      status: 'filling',
+      values: { ...((prev as any).values || {}), ...values },
+    }))
+  }
+
+  const submit = async () => {
+    if (state.status !== 'filling') return
+    setState({ status: 'submitting', values: state.values as T })
+    try {
+      const result = await api.post('/submit', state.values)
+      setState({ status: 'success', data: result })
+    } catch (err) {
+      setState({ status: 'error', values: state.values as T, error: (err as Error).message })
+    }
+  }
+
+  return { state, update, submit }
+}
+
+// Usage — exhaustive handling
+function MyForm() {
+  const { state, update, submit } = useFormState<{ email: string; name: string }>()
+
+  switch (state.status) {
+    case 'idle': return <StartButton onClick={() => update({})} />
+    case 'filling': return <Form values={state.values} onChange={update} onSubmit={submit} />
+    case 'submitting': return <Spinner />
+    case 'success': return <Success data={state.data} />
+    case 'error': return <Error message={state.error} onRetry={submit} />
+  }
+}
+```
+
 ## Common Pitfalls
 
 ### 1. Bare Generic Without Constraint
@@ -298,6 +496,32 @@ const [data, setData] = useState<T | null>(null)
 const [state, setState] = useState<AsyncState<T>>({ status: 'idle' })
 ```
 
+### 4. Over-Narrowing with `as const`
+Forcing `as const` too aggressively can make types rigid and hard to extend. Use `satisfies` for constraints with literal preservation instead.
+```tsx
+// BAD -- can't add more variants later
+const colors = ['red', 'blue'] as const
+type Color = (typeof colors)[number] // only 'red' | 'blue'
+
+// GOOD -- union type allows extension
+type Color = 'red' | 'blue' | string
+```
+
+### 5. Ignoring `strictNullChecks`
+Non-null assertions (`!`) bypass compiler checks and cause runtime errors. Use type guards or early returns instead.
+```tsx
+// BAD -- may crash at runtime
+function getName(user: User | null): string {
+  return user!.name
+}
+
+// GOOD -- handle null case
+function getName(user: User | null): string {
+  if (!user) return 'Unknown'
+  return user.name
+}
+```
+
 ## Compared With
 
 | Pattern | Type Safety | Runtime Cost | Boilerplate | Use Case |
@@ -309,6 +533,8 @@ const [state, setState] = useState<AsyncState<T>>({ status: 'idle' })
 | Branded types | Static only | 0 | Low | ID type safety |
 | satisfies | Static only | 0 | Low | Literal type preservation |
 | Template literals | Static only | 0 | Low | String manipulation types |
+| Conditional types | Static only | 0 | Medium | Transform types based on conditions |
+| Mapped types | Static only | 0 | Medium | Transform object types |
 
 ## Performance Considerations
 
@@ -317,17 +543,22 @@ const [state, setState] = useState<AsyncState<T>>({ status: 'idle' })
 - Discriminated unions are just objects with a discriminator field — no overhead
 - Branded types are zero-cost (just an intersection at type level)
 - Template literal types are evaluated at compile time only
+- Conditional types with deep recursion can slow down the compiler (use sparingly)
+- Mapped types on large unions (>100 members) may increase compilation time
 
 ## Accessibility Considerations
 
 - TypeScript has no direct accessibility implications
 - Well-typed components with constrained props (ButtonVariant, ButtonSize) are easier to make accessible — the type system guides correct usage
+- Discriminated unions for UI state ensure all states are handled, including accessibility-relevant states (loading, error, empty)
 
 ## Security Considerations
 
 - Zod schema parsing at API boundaries prevents unexpected data shapes from causing runtime errors
 - Type guards prevent type confusion that could lead to security bugs
 - Branded types prevent accidentally passing a UserId where an OrderId is expected
+- Conditional types and mapped types are compile-time only — no security impact
+- Avoid `any` casts when parsing user input — use Zod to validate shapes at runtime
 
 ## Rules
 - Generic type params must have constraint bounds (`extends`) — never bare `<T>` without purpose.
@@ -336,6 +567,8 @@ const [state, setState] = useState<AsyncState<T>>({ status: 'idle' })
 - Type guards must be runtime-safe (check actual values), not just type-level assertions.
 - Exhaustive `switch` on the `status` field — TypeScript will error if a variant is unhandled.
 - Prefer `satisfies` over `as` when constraining a value to a type while keeping its literal type.
+- Avoid deep conditional type recursion — prefer mapped types for object transformations.
+- Never use non-null assertions (`!`) without a preceding null check.
 
 ## References
   - references/ts-generics-patterns.md — TypeScript Generics Patterns

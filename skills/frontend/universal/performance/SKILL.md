@@ -294,18 +294,190 @@ Without a budget, performance regressions sneak in. Enforce budgets in CI with t
 }
 ```
 
+## Image Optimization Deep Dive
+
+```typescript
+// Next.js Image component — automatic optimization
+import Image from 'next/image';
+
+<Image
+  src="/hero.webp"
+  alt="Hero"
+  width={1200}
+  height={630}
+  priority // preload LCP image
+  sizes="(max-width: 768px) 100vw, 1200px"
+  quality={85}
+  placeholder="blur" // blur-up placeholder from base64
+  blurDataURL="data:image/webp;base64,..."
+/>
+
+// Manual responsive images with srcset
+<img
+  src="hero-1200.webp"
+  srcSet="hero-400.webp 400w, hero-800.webp 800w, hero-1200.webp 1200w"
+  sizes="(max-width: 768px) 100vw, 1200px"
+  loading="lazy"
+  decoding="async"
+  alt="Hero image"
+/>
+
+// Image CDN integration (Imgix, Cloudinary, ImageKit)
+// URL-based transformations:
+// https://your-company.imgix.net/hero.jpg?w=800&h=400&fit=crop&auto=format,compress
+// Benefits: automatic format negotiation (WebP/AVIF), resizing, compression
+// No build-time processing needed — transformation happens at request time
+```
+
+## Bundle Analysis and Optimization
+
+```bash
+# Analyze bundle composition
+npx source-map-explorer dist/assets/*.js
+npx webpack-bundle-analyzer dist/stats.json
+npx vite-bundle-visualizer
+
+# Common bundle bloat culprits:
+# - moment.js (250KB) → date-fns (15KB) or Temporal API
+# - lodash (75KB) → lodash-es for tree-shaking or native methods
+# - Three.js (500KB) → only if actually using 3D
+# - Chart.js (100KB) → lightweight alternatives: uPlot (30KB), Chart.js with tree-shaking
+# - Axios (12KB) → native fetch (0KB) for simple cases
+```
+
+## Core Web Vitals Field Monitoring
+
+```typescript
+// Real User Monitoring (RUM) with Web Vitals library
+import { onCLS, onFCP, onLCP, onINP, onTTFB } from 'web-vitals';
+
+function sendToAnalytics(metric: any) {
+  // Send to your analytics provider
+  navigator.sendBeacon('/api/vitals', JSON.stringify({
+    name: metric.name,
+    value: metric.value,
+    rating: metric.rating, // 'good' | 'needs-improvement' | 'poor'
+    delta: metric.delta,
+    id: metric.id, // unique ID for deduplication
+    navigationType: metric.navigationType, // 'navigate' | 'reload' | 'back-forward' | 'prerender'
+  }));
+}
+
+// Measure each vital
+onLCP(sendToAnalytics);
+onCLS(sendToAnalytics);
+onINP(sendToAnalytics);
+onFCP(sendToAnalytics);
+onTTFB(sendToAnalytics);
+
+// Dashboard queries:
+// - % of pages with LCP < 2.5s (by device, country, route)
+// - P95 of CLS across all pages
+// - Regression detection: compare last 7 days vs previous 7 days
+```
+
+## Long Task Detection and Optimization
+
+```typescript
+// Detect long tasks in production
+const observer = new PerformanceObserver((list) => {
+  for (const entry of list.getEntries()) {
+    // Tasks > 50ms block user interactions
+    if (entry.duration > 50) {
+      console.warn('Long task detected:', {
+        duration: entry.duration,
+        startTime: entry.startTime,
+        attribution: entry.attribution?.map(a => ({
+          name: a.name,
+          containerType: a.containerType,
+          containerName: a.containerName,
+        })),
+      });
+    }
+  }
+});
+observer.observe({ type: 'longtask', buffered: true });
+
+// Fix: yield to main thread periodically
+async function processItems<T>(items: T[], processor: (item: T) => void) {
+  let i = 0;
+
+  function processBatch() {
+    const start = performance.now();
+    while (i < items.length && performance.now() - start < 10) {
+      processor(items[i]);
+      i++;
+    }
+    if (i < items.length) {
+      // Yield to browser to handle interactions, paint, etc.
+      requestAnimationFrame(processBatch);
+    }
+  }
+
+  processBatch();
+}
+```
+
+## Performance CI/CD Integration
+
+```yaml
+# .github/workflows/performance.yml
+name: Performance Budget
+on: [pull_request]
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - run: npm ci && npm run build
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          urls: |
+            https://staging.example.com/
+            https://staging.example.com/product/123
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          configPath: './lighthouserc.json'
+      - name: Assert budgets
+        run: npx lhci assert
+
+# lighthouserc.json
+{
+  "ci": {
+    "assert": {
+      "preset": "lighthouse:recommended",
+      "assertions": {
+        "largest-contentful-paint": ["error", { "maxNumericValue": 2500 }],
+        "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }],
+        "interaction-to-next-paint": ["error", { "maxNumericValue": 200 }],
+        "total-blocking-time": ["warn", { "maxNumericValue": 300 }],
+        "unused-javascript": ["warn", { "maxNumericValue": 0 }]
+      }
+    }
+  }
+}
+```
+
 ## Accessibility Considerations
 
 - `prefers-reduced-motion`: Disable animations, transitions, and parallax for users who request reduced motion
 - Loading spinners must have `aria-label` or `role="status"`
 - Content hidden during lazy loading must be announced when revealed
 - Font optimization (`font-display: optional`) should not hide content from screen readers
+- Fast LCP benefits screen reader users (content available sooner)
+- Low CLS prevents screen reader focus from jumping unexpectedly
+- Fast INP means interactive elements respond immediately to keyboard/switch input
 
 ## Security Considerations
 
 - Preload/prefetch can leak information about upcoming navigation (use only for public resources)
 - Third-party scripts loaded for performance (CDN) are also a security vector — use SRI
 - Resource hints can cause double-fetching if not properly implemented
+- Performance measurement APIs (PerformanceObserver) have cross-origin restrictions — use the `Timing-Allow-Origin` header
+- Web Vitals data sent to analytics must not contain PII
 
 ## Rules
 - Measure before and after every optimization. One change at a time.
@@ -314,6 +486,10 @@ Without a budget, performance regressions sneak in. Enforce budgets in CI with t
 - Route-level code splitting is mandatory. Component-level is optional.
 - Set a performance budget before starting. Enforce it in CI.
 - Images are the #1 cause of poor LCP. Optimize them first.
+- Lazy load below-the-fold images, but NEVER lazy load the LCP element.
+- Monitor CWV in production via RUM — Lighthouse alone is insufficient for real-world performance.
+- Third-party scripts are the #1 cause of poor INP — audit, defer, or remove them.
+- Bundle budgets are enforced in CI — PRs that exceed budgets must optimize or get approval.
 
 ## References
   - references/bundle-optimization.md — Bundle Optimization

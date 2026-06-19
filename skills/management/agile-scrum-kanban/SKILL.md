@@ -330,6 +330,150 @@ Modified Fibonacci: 1, 2, 3, 5, 8, 13, 21
 - Estimation should take no more than 10% of sprint capacity
 - Board reflects reality, not aspiration
 
+## Framework Comparison — Scrum vs Kanban vs Scrumban
+
+| Dimension | Scrum | Kanban | Scrumban |
+|-----------|-------|--------|----------|
+| Iterations | Fixed (1-4 weeks) | Continuous flow | Fixed + continuous |
+| Roles | PO, SM, Dev Team | None prescribed | PO, Dev Team, opt SM |
+| Ceremonies | Planning, daily, review, retro | Opt standup, service review | Planning, daily, retro |
+| Estimation | Story points | Not required | Optional |
+| Metrics | Velocity, burndown | Cycle time, throughput, WIP | Cycle time, throughput |
+| WIP Limits | Implicit (sprint scope) | Explicit (per column) | Explicit + sprint scope |
+| Scope Change | Discouraged mid-sprint | Any time | Flexible |
+| Best When | Stable requirements, cross-functional | Variable priorities, ops | Hybrid flexibility needed |
+
+## Flow Metrics — Deep Dive
+
+### Cycle Time Analysis
+```
+Cycle Time: time from "started" to "done"
+
+Segments:
+  P50 (median): typical completion — use for planning
+  P85: moderate complications — use for stakeholder expectations
+  P95: worst case — use for SLA commitments
+
+Targets for healthy dev team:
+  P50: < 2-3 days
+  P85: < 5-7 days
+  P95: < 10-14 days
+
+Scatterplot: tight cluster = predictable; wide spread = unpredictable
+```
+
+### Throughput Analysis
+```
+Throughput: items completed per week (rolling 4-week avg)
+
+Patterns:
+  Flat/declining -> WIP overload, blocked items
+  Periodic drops -> recurring blockers
+  Improving -> WIP reduction, process improvements
+
+Application:
+  Capacity: "We complete {n} items/week"
+  Commitment: "Expect to finish {n} items in {m} weeks"
+```
+
+### WIP Metrics
+```
+Little's Law: WIP = Throughput x Cycle Time
+  Reducing WIP -> reduces Cycle Time
+  Increasing WIP -> increases Cycle Time beyond optimal WIP
+
+WIP Rules:
+  - Dev limit = team size x 2
+  - Review limit = team size
+  - Items exceeding P95 -> flag for triage
+
+Reduction strategies: swarming, lower limits by 1/week, stop starting/start finishing
+```
+
+### Cumulative Flow Diagram (CFD) Interpretation
+```
+Healthy: parallel lines, steady Done slope, narrow In Progress band, consistent gaps
+Unhealthy:
+  - Widening In Progress -> increasing WIP
+  - Flattening Done -> delivery stopped
+  - Stair-step -> batch delivery
+  - Crossing lines -> data quality issue
+```
+
+## WIP Limit Optimization Guide
+
+```
+Initial limits: Dev (n dev + 1), Review (team size / 2, min 2)
+Cycle time too high -> reduce WIP limits
+Throughput too low -> reduce WIP limits (counter-intuitive but correct)
+Idle team -> check blockers first
+Review bottleneck -> increase review limit or add reviewers
+
+Exceptions: hotfix with approval, paired work (pair = 1 WIP), spike < 1 day
+Not exceptions: "almost done", "quick review", "small task"
+```
+
+## Agile Ceremony Timebox Standards
+
+| Ceremony | 2-week Sprint | 4-week Sprint | Kanban |
+|----------|--------------|--------------|--------|
+| Sprint Planning | 4 hours | 8 hours | N/A |
+| Daily Standup | 15 min | 15 min | 15 min |
+| Backlog Refinement | 2 hours | 2 hours | 30 min/week |
+| Sprint Review | 2 hours | 4 hours | N/A |
+| Sprint Retro | 1.5 hours | 3 hours | 1 hour/month |
+| Service Delivery Review | N/A | N/A | 1 hour/week |
+
+## Agile Anti-Pattern Catalog
+
+### Scrum Anti-Patterns
+1. Zombie Scrum: ceremonies without spirit
+   Fix: retro on purpose; skip if no value
+2. Sprint-as-Waterfall: design/build/test in separate sprints
+   Fix: each sprint delivers working increment
+3. PO as Proxy-Customer: no real user contact
+   Fix: PO facilitates access to users
+4. Estimate-As-Commitment: treating estimates as deadlines
+   Fix: estimates are ranges; velocity is planning tool
+5. ScrumBut: cherry-picking ceremonies
+   Fix: do Scrum fully or use Kanban honestly
+
+### Kanban Anti-Patterns
+1. KanBAN: WIP limits ignored when convenient
+   Fix: enforce limits; block new starts until below limit
+2. KanBored: no process improvement
+   Fix: regular service review with metrics
+3. No Policies: columns without rules
+   Fix: explicit done definitions per column
+4. Focus on Busy-ness: celebrating WIP
+   Fix: celebrate completion, not activity
+5. Swimlane Overload: too many swimlanes
+   Fix: max 3-4 swimlanes or use multiple boards
+
+## Playbook: Scrum to Kanban Transition
+
+```
+Step 1 — Assess Readiness (1 week)
+- Why transition? Team size? Top pain points?
+
+Step 2 — Hybrid / Scrumban (2-4 sprints)
+- Keep sprint cadence, add WIP limits
+- Replace estimation with cycle time tracking
+- Keep standup + retro; combine planning + refinement
+
+Step 3 — Full Kanban (after hybrid stabilizes)
+- Drop sprint boundary
+- Pull system with explicit WIP limits
+- Add service delivery review + operations review
+- Use Little's law for commitment
+
+Key transition indicators:
+- Cycle time P50 decreases > 20%
+- Throughput increases > 15%
+- Team satisfaction increases
+- Stakeholder satisfaction increases
+```
+
 ## References
   - references/agile-scrum-kanban-advanced.md — Agile Scrum Kanban Advanced
   - references/agile-scrum-kanban-fundamentals.md — Agile Scrum Kanban Fundamentals

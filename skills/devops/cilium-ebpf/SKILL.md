@@ -67,6 +67,31 @@ Implement Cilium-based Kubernetes networking with eBPF for high-performance netw
 | Query | hubble CLI, UI, Grafana | PromQL |
 | Retention | Configurable (via relay) | Configurable |
 
+### CiliumInstallation Decision
+```
+Kernel version >= 5.10?
+├── Yes → kube-proxy replacement mode (better performance, more features)
+└── No → Standard iptables mode (fallback, fewer features)
+    └── Consider upgrading kernel to 5.10+ for full eBPF benefits
+
+Need encryption between nodes?
+├── Yes → WireGuard (simpler, better perf) or IPsec (legacy compat)
+└── No → Skip encryption config
+
+Need multi-cluster communication?
+├── Yes → Cluster Mesh with KV store mesh
+└── No → Single cluster only
+```
+
+### Encryption Mode Decision
+```
+Kernel supports WireGuard?
+├── Yes → WireGuard (better performance, simpler config)
+│   ├── Kernel module available → encryption.type=wireguard
+│   └── No kernel module → encryption.wireguard.userspaceFallback=true
+└── No → IPsec (broader kernel compatibility, higher overhead)
+```
+
 ## Quick Start
 Helm install Cilium → Verify with cilium status → kube-proxy replacement → Network policies (L3/L4, L7) → Hubble for observability → Cluster mesh for multi-cluster → Service mesh for L7.
 
@@ -279,7 +304,6 @@ spec:
 
 ### Step 8: Encryption with WireGuard
 ```yaml
-# encryption/wireguard.yaml
 # Set during install:
 # --set encryption.type=wireguard
 # --set encryption.wireguard.userspaceFallback=true
@@ -292,6 +316,214 @@ cilium bpf ipcache list | grep encrypt
 # Can verify with tcpdump on any node:
 # tcpdump -i any -nn "udp and port 51871"
 ```
+
+### Step 9: Cilium Service Mesh — L7 Ingress
+```yaml
+# service-mesh/cilium-ingress.yaml
+apiVersion: cilium.io/v2alpha1
+kind: CiliumIngress
+metadata:
+  name: payment-ingress
+  namespace: production
+spec:
+  ingressClassName: cilium
+  rules:
+    - host: api.payments.example.com
+      http:
+        paths:
+          - path: /api/payments
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-service
+                port:
+                  number: 8080
+  tls:
+    - hosts: [api.payments.example.com]
+      secretName: payment-tls
+```
+
+### Step 10: CiliumClusterWideNetworkPolicy — Default Deny
+```yaml
+# policies/default-deny.yaml
+apiVersion: cilium.io/v2
+kind: CiliumClusterWideNetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": kube-system
+  # All other ingress is denied by default
+```
+
+### Step 11: eBPF-native Ingress Load Balancing
+```yaml
+# lb/cilium-lb.yaml
+apiVersion: cilium.io/v2alpha1
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: production-pool
+spec:
+  blocks:
+    - start: 192.168.10.100
+      stop: 192.168.10.200
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: production-l2-announce
+spec:
+  loadBalancerIPs: true
+  interfaces:
+    - eth0
+  externalIPs: true
+```
+
+### Step 12: Hubble Metrics for Prometheus
+```bash
+# Enable Hubble metrics export
+helm upgrade cilium cilium/cilium --namespace kube-system --reuse-values \
+  --set hubble.metrics.enabled="{dns,drop,tcp,flow,icmp,http}" \
+  --set hubble.metrics.destination=prometheus
+
+# Grafana dashboards available at:
+# https://github.com/cilium/cilium/tree/main/install/kubernetes/cilium/environment/hubble/grafana
+```
+
+### Step 13: Cilium Monitor — Real-time Debugging
+```bash
+# Real-time packet flow monitoring
+cilium monitor --verbose
+
+# Monitor specific service
+cilium monitor --related-to payment-service
+
+# Capture dropped packets only
+cilium monitor --type drop
+
+# Monitor HTTP traffic at L7
+cilium monitor --type l7
+
+# Capture and decode with tcpdump-like output
+cilium monitor --hex
+```
+
+### Step 14: Cilium Endpoint and Identity Inspection
+```bash
+# List all Cilium endpoints
+kubectl get ciliumendpoints -A
+
+# Get endpoint identity details
+cilium endpoint list
+cilium endpoint get <endpoint-id>
+
+# Identity-based troubleshooting
+cilium identity list
+cilium identity get <identity-id>
+
+# Check security identity labels
+kubectl get ciliumendpoints --all-namespaces -o json \
+  | jq '.items[] | {pod: .metadata.name, ns: .metadata.namespace, identity: .status.identity.id}'
+```
+
+## Tool Comparison: eBPF-based Security Tools
+
+| Feature | Cilium | Tetragon | Falco | Tracee |
+|---|---|---|---|---|
+| Use case | Network & security | Process & syscall monitoring | System call security | Runtime security |
+| eBPF hooks | TC, XDP, cgroup, sock | Tracepoints, kprobes | Kernel modules + eBPF | Tracepoints, kprobes |
+| Network policies | Yes (L3-L7) | No (process focus) | No | No |
+| Process monitoring | Basic | Deep (exec, file, network) | Syscalls | Syscalls |
+| K8s integration | Native | Native | Plugin | Plugin |
+| CRD policies | Yes (NetworkPolicy) | Yes (TracingPolicy) | Rules file | Rules file |
+| Prometheus metrics | Yes (Hubble) | Yes | Yes | Yes |
+
+## Cilium Helm Values — Production Profile
+```yaml
+# cilium-production-values.yaml
+kubeProxyReplacement: true
+routingMode: native
+autoDirectNodeRoutes: true
+bpf:
+  masquerade: true
+  tproxy: true
+ipam:
+  mode: kubernetes
+encryption:
+  type: wireguard
+  wireguard:
+    userspaceFallback: true
+l7Proxy: true
+policyEnforcementMode: always
+hubble:
+  relay:
+    enabled: true
+  ui:
+    enabled: true
+  metrics:
+    enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - icmp
+      - http
+    destination: prometheus
+rollOutCiliumPods: true
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 2
+    memory: 2Gi
+```
+
+## Security Considerations
+- CiliumNetworkPolicy with `policyEnforcementMode: always` prevents all traffic by default
+- Enable Hubble audit logging for all dropped packets — store in SIEM for compliance
+- Use toFQDN policies instead of allowing all egress — prevents data exfiltration via DNS
+- WireGuard encryption ensures node-to-node traffic is secure even on untrusted networks
+- Cilium identities are tied to Kubernetes service accounts — never run containers as root
+- Hubble Relay API should be internal-only (not exposed externally)
+- Enable TLS for Hubble gRPC communication between relay and UI
+- Use CiliumClusterWideNetworkPolicy for baseline security that spans all namespaces
+- Monitor Cilium agent logs for policy enforcement errors and identity allocation failures
+
+## Production Considerations
+
+### Security
+- Enable encryption (WireGuard) for node-to-node traffic.
+- Use CiliumNetworkPolicy with L7 enforcement for critical services.
+- Apply CiliumClusterWideNetworkPolicy for baseline security (deny all by default).
+- Enable Hubble for network audit trail.
+- Use toFQDN policies instead of allowing all egress to APNs.
+- Enable policy enforcement mode: always.
+
+### Performance
+- Enable kube-proxy replacement for better service routing performance.
+- Use native routing mode with autoDirectNodeRoutes.
+- Enable BPF masquerading instead of iptables MASQUERADE.
+- Use bandwidth annotations for noisy-neighbor prevention.
+- Monitor Hubble dropped packet metrics for network issues.
+- Use XDP acceleration for DDoS mitigation at the NIC level.
+
+### Troubleshooting
+- `cilium connectivity test` for end-to-end validation.
+- `hubble observe --verdict DROPPED` to see dropped packets.
+- `cilium monitor` for real-time packet flow.
+- `cilium bpf` commands for low-level BPF map inspection.
+- `cilium endpoint list` to verify identity labels match expected policies.
+
+### Operations
+- Upgrade Cilium using `helm upgrade` with `rollOutCiliumPods=true` for gradual rollout
+- Test policy changes with `cilium connectivity test` before applying to production
+- Monitor Cilium agent resource usage — enable auto-scaling for large clusters
+- Enable etcd or CRD-backed KV store for Cluster Mesh reliability
+- Set `bpf.lbBurstSize` proportionally to expected concurrent connections
 
 ## Anti-Patterns
 
@@ -310,28 +542,11 @@ Using tunneling (VXLAN/Geneve) when direct routing works. Native routing with au
 ### Anti-Pattern 5: Too Permissive L7 Policies
 Allowing all HTTP methods/paths without restrictions. L7 policies should be as specific as possible — only allow required paths and methods.
 
-## Production Considerations
+### Anti-Pattern 6: Default Allow Egress
+Not restricting pod egress traffic. Pods should only be allowed to talk to required services (API server, DNS, specific endpoints).
 
-### Security
-- Enable encryption (WireGuard) for node-to-node traffic.
-- Use CiliumNetworkPolicy with L7 enforcement for critical services.
-- Apply CiliumClusterWideNetworkPolicy for baseline security (deny all by default).
-- Enable Hubble for network audit trail.
-- Use toFQDN policies instead of allowing all egress to APNs.
-- Enable policy enforcement mode: always.
-
-### Performance
-- Enable kube-proxy replacement for better service routing performance.
-- Use native routing mode with autoDirectNodeRoutes.
-- Enable BPF masquerading instead of iptables MASQUERADE.
-- Use bandwidth annotations for noisy-neighbor prevention.
-- Monitor Hubble dropped packet metrics for network issues.
-
-### Troubleshooting
-- `cilium connectivity test` for end-to-end validation.
-- `hubble observe --verdict DROPPED` to see dropped packets.
-- `cilium monitor` for real-time packet flow.
-- `cilium bpf` commands for low-level BPF map inspection.
+### Anti-Pattern 7: Hubble Disabled for Performance Reasons
+Disabling Hubble thinking it adds overhead. Hubble's eBPF-based observability has negligible overhead (< 5% CPU) and provides invaluable debugging.
 
 ## Rules & Constraints
 - Kernel >= 5.10 required for full eBPF features.
@@ -340,6 +555,9 @@ Allowing all HTTP methods/paths without restrictions. L7 policies should be as s
 - Use CiliumNetworkPolicy (not K8s NetworkPolicy) for L7 features.
 - Enable encryption for multi-node clusters.
 - Test connectivity with `cilium connectivity test` after install.
+- Set policyEnforcementMode=always in production.
+- Native routing requires proper podCIDR configuration on all nodes.
+- Cilium agent log level: info in production, debug during troubleshooting only.
 
 ## References
   - references/cilium-architecture.md

@@ -366,6 +366,292 @@ Best practices: run smoke BDD tests on every commit (tagged @smoke), run full BD
 - Data Tables should have a header row with descriptive column names
 - Scenario nesting (Rule → Example) replaces Background for Gherkin 6+
 
+## Gherkin Code Examples
+
+### Step Definition Patterns
+
+**Ruby (Cucumber):**
+```ruby
+Given("the user {string} exists with role {string}") do |email, role|
+  @user = FactoryBot.create(:user, email: email, role: role)
+end
+
+When("{string} submits a report for {string}") do |email, project_name|
+  project = Project.find_by!(name: project_name)
+  post project_reports_path(project), params: { report: { title: "Q1 Review" } }
+end
+
+Then("the {string} should receive a notification") do |role|
+  expect(Notification.where(recipient_role: role).count).to eq(1)
+end
+```
+
+**Python (Behave):**
+```python
+@given('the inventory has {count} units of "{product}"')
+def step_given_inventory(context, count, product):
+    context.inventory = {product: int(count)}
+
+@when('a customer orders {count} units of "{product}"')
+def step_when_order(context, count, product):
+    context.result = context.service.order(product, int(count))
+
+@then('the order is confirmed with status "{status}"')
+def step_then_confirmed(context, status):
+    assert context.result.status == status
+```
+
+**JavaScript (Cucumber.js):**
+```javascript
+const { Given, When, Then } = require('@cucumber/cucumber');
+
+Given('a policy with coverage type {string}', function (type) {
+  this.policy = new Policy({ coverageType: type });
+});
+
+When('the member submits a claim for ${int}', function (amount) {
+  this.claimResult = this.policy.processClaim(amount);
+});
+
+Then('the claim is {string}', function (status) {
+  assert.strictEqual(this.claimResult.status, status);
+});
+```
+
+### Data Table Examples
+
+```gherkin
+Scenario: Bulk user import
+  Given the system has no users
+  When an admin imports the following users:
+    | name     | email              | role    | department |
+    | Alice    | alice@example.com  | admin   | eng        |
+    | Bob      | bob@example.com    | viewer  | design     |
+    | Charlie  | charlie@example.com| editor  | product    |
+  Then the system has 3 active users
+  And Alice has admin permissions
+
+Scenario Outline: Checkout with different payment methods
+  Given the cart has items totaling $<total>
+  When the customer pays with <method>
+  Then the payment status is <status>
+  And the confirmation is sent via <channel>
+
+  Examples:
+    | total | method   | status  | channel |
+    | 25.00 | credit   | success | email   |
+    | 50.00 | invoice  | pending | email   |
+    | 0.00  | free     | success | none    |
+```
+
+### Doc String Usage
+
+```gherkin
+Scenario: Submit JSON payload via API
+  Given the API endpoint "/api/v1/orders" accepts orders
+  When a POST request is sent with:
+    """json
+    {
+      "customer_id": "abc-123",
+      "items": [
+        {"sku": "SHIRT-001", "qty": 2},
+        {"sku": "PANTS-002", "qty": 1}
+      ],
+      "shipping": "express"
+    }
+    """
+  Then the response status is 201
+  And the response contains an order_id
+
+Scenario: Invoice generation with complex formatting
+  Given an invoice template with the following format:
+    """
+    INVOICE #{invoice_number}
+    Date: {date}
+    Bill To: {customer_name}
+    ---
+    {line_items}
+    ---
+    Total: ${total}
+    """
+  When the invoice is generated for order "ORD-456"
+  Then the invoice contains "Total: $150.00"
+```
+
+## Expanded Decision Trees
+
+### Step Definition Language Decision Tree
+```
+What programming language is the project using?
+  |-- Ruby --> Use Cucumber-Ruby with Cucumber Expressions
+  |-- Python --> Use Behave with regex step definitions
+  |-- JavaScript/TypeScript --> Use Cucumber.js with Cucumber Expressions
+  |-- Java --> Use Cucumber-JVM with @Annotations
+  |-- C#/.NET --> Use SpecFlow with method attributes
+  |-- Go --> Use Godog with function-based steps
+  |-- Swift --> Use XCTest-Gherkin or Quick+Nimble
+
+Are step definitions becoming complex to maintain?
+  |-- YES --> Are steps shared across multiple features?
+  |     |-- YES --> Extract shared steps into a common module
+  |     |-- NO --> Consider using page objects or domain helpers
+  |-- NO --> Keep steps in feature-specific files
+```
+
+### BDD Tool Selection Decision Tree
+```
+What is the team's primary language?
+  |-- Ruby/JVM/JS --> Cucumber (most mature ecosystem)
+  |-- .NET --> SpecFlow (native .NET integration)
+  |-- Python --> Behave or pytest-bdd
+  |-- Java-only --> JBehave (simpler than Cucumber-JVM)
+  |-- Go --> Godog
+  |-- Mobile (iOS) --> XCTest-Gherkin or Cucumberish
+
+Does the team need living documentation reporting?
+  |-- YES --> Cucumber + LivingDoc or SpecFlow LivingDoc
+  |-- NO --> Any BDD tool with basic HTML report
+
+Is CI integration important?
+  |-- YES --> All major tools support JUnit XML output
+  |-- NO --> Any BDD tool
+
+Is parallel execution needed?
+  |-- YES --> Cucumber with polyglot or SpecFlow with split tests
+  |-- NO --> Any BDD tool
+```
+
+### Scenario Writing Strategy Decision Tree
+```
+What kind of behavior are you describing?
+  |-- Happy path (everything works)
+  |     |-- YES --> Standard Given-When-Then
+  |-- Error case (something fails)
+  |     |-- YES --> Given setup + When action + Then error
+  |-- Edge case (boundary condition)
+  |     |-- YES --> Scenario Outline with boundary Examples
+  |-- Complex business rule
+  |     |-- YES --> Rule groups (Gherkin 6+) with multiple Examples
+
+How many steps does the scenario have?
+  |-- <7 steps --> Keep as a single scenario
+  |-- 7-12 steps --> Can the Background be used?
+  |     |-- YES --> Extract common Given steps to Background
+  |     |-- NO --> Consider splitting into multiple scenarios
+  |-- >12 steps --> Definitely split into smaller scenarios
+```
+
+## Expanded Anti-Patterns
+
+### 9. Over-Abstracting Step Definitions
+Making step definitions so generic that they lose meaning. "Given a resource exists" instead of "Given a user account exists with $500 balance". Steps become reusable but scenarios become unreadable. Fix: find the right balance. Steps should be specific enough to communicate intent, generic enough to be reusable. A good heuristic: if the step hides more than 3 parameters, it's too abstract.
+
+### 10. Magic Numbers and Values
+Using hardcoded test values that have no business meaning. Scenario says "user has 3 items" but 3 has no significance. Later, value changes to 5 and scenarios break without reason. Fix: use named constants where values matter. Use Scenario Outlines with meaningful example names. Document why specific values were chosen.
+
+### 11. Testing the Framework
+Writing scenarios that test framework behavior rather than business logic. "Given I navigate to the page, When I click the button, Then the page reloads" — this tests the browser, not the application. Fix: every scenario should test a business rule, not technical behavior. If you're testing framework behavior, write unit tests instead.
+
+### 12. Too Much Background
+Using Background sections that set up too much state. Scenarios become difficult to read because half the Given steps are in the Background. Fix: Background should contain only the setup that is common to ALL scenarios in the feature. If a scenario doesn't use a Background step, move that step into the scenario. Max 3-5 steps in Background.
+
+### 13. Scenario Interdependence
+Scenarios that rely on the output of previous scenarios. Running scenarios individually fails but running the full suite passes. This defeats the purpose of automated testing. Fix: each scenario must be independently executable. Use Background for common setup, never depend on state from other scenarios. Run scenarios in random order to detect dependencies.
+
+### 14. BDD for Everything
+Using BDD for all testing needs including unit tests, integration tests, and performance tests. BDD is for validating business rules through shared understanding. Not for testing database queries, algorithm correctness, or system performance. Fix: use BDD only for scenarios that benefit from business stakeholder readability. Use traditional unit/integration tests for technical concerns.
+
+## Expanded Success Metrics
+
+| Metric | Target | Measurement | Remediation if Below Target |
+|--------|--------|-------------|------------------------------|
+| Scenario pass rate | >95% in CI | CI pipeline report | Review failing scenarios weekly; fix brittleness |
+| Feature file coverage | 100% of stories | PR review gate | Block PRs without feature files for relevant stories |
+| Three amigos completion | 100% of features | Team checklist | Add to Definition of Ready |
+| Living doc freshness | <2 weeks stale | Review cadence | Schedule monthly living doc review |
+| Step definition reuse | >50% shared steps | Code analysis report | Refactor step definitions quarterly |
+| Scenario execution time | <30s per feature | CI pipeline timing | Optimize slow steps; move to parallel execution |
+| Business readability score | >4/5 survey | Stakeholder survey | Rewrite scenarios; reduce technical language |
+| Orphan feature files | 0 in repo | Lint check | Add to CI lint stage; alert on detection |
+| Average steps per scenario | 4-7 steps | Code analysis | Review long scenarios; split where appropriate |
+| Scenario-to-requirement mapping | 100% traceable | Tag audit | Enforce tag conventions; automated traceability check |
+
+## Expanded SBE Process Detail
+
+### Key Principles with Implementation Guidance
+1. **Key examples first**: Schedule a 30-minute example mapping session before any development begins. Bring 3 amigos. Focus on concrete examples, not abstract requirements. Write examples on cards. Group by rule. Identify gaps. Output is 5-10 concrete examples.
+2. **Process as code**: Each example becomes an automated scenario. The feature file is both specification and test. If the scenario passes, the specification is met. If it fails, the implementation is wrong. Never disable a failing scenario — either the code is wrong or the specification changed.
+3. **Living documentation**: Feature files should be readable by business stakeholders. Review them monthly. Publish execution reports as documentation. Link to feature files from your product documentation.
+4. **Common vocabulary**: Maintain a glossary of domain terms used in scenarios. Review terms during three amigos sessions. Document synonyms to avoid confusion. Reject technical terms in scenario language.
+
+### SBE Workshop Format
+| Time | Activity | Participants | Artifact |
+|------|----------|--------------|----------|
+| 0-5 min | Set context: feature goal, scope | 3 amigos | Feature description |
+| 5-15 min | Brainstorm rules | All | Yellow cards (rules) |
+| 15-30 min | Generate examples for each rule | All | Green cards (examples) |
+| 30-40 min | Identify questions and gaps | All | Purple cards (questions) |
+| 40-45 min | Capture new stories discovered | BA/Facilitator | Red cards (new stories) |
+| 45-50 min | Review and prioritize examples | All | Prioritized example list |
+| 50-60 min | Assign ownership for Gherkin conversion | BA/Dev | Action items |
+
+## Expanded Adoption Patterns
+
+### Enterprise BDD Adoption Strategy
+**Phase 1 — Pilot (Weeks 1-4):** Select one team and one feature. Train the team on Gherkin syntax and three amigos facilitation. Write feature files for one feature. Implement step definitions. Run in CI. Measure: time to write first scenario, time to automate first scenario, stakeholder feedback.
+
+**Phase 2 — Expand (Weeks 5-12):** Add 2-3 more teams. Create shared step definition library. Establish three amigos ritual. Set up living documentation publishing. Measure: scenario count growth, step definition reuse rate, three amigos adoption rate.
+
+**Phase 3 — Standardize (Weeks 13-24):** Make BDD part of Definition of Ready (scenarios before development) and Definition of Done (scenarios passing in CI). Train all teams. Centralize step library governance. Measure: feature file coverage, scenario pass rate stability, time from scenario writing to automation.
+
+**Phase 4 — Optimize (Weeks 25+):** BDD metrics in team dashboards. Living documentation as primary requirements reference. Automated traceability from scenarios to requirements. Measure: business stakeholder engagement with living docs, defect escape rate reduction, requirements ambiguity reduction.
+
+## Expansion Patterns for Gherkin
+
+### Pattern: Feature File Organization
+```
+features/
+  ├── authentication/
+  │   ├── login.feature
+  │   ├── registration.feature
+  │   └── password_reset.feature
+  ├── payments/
+  │   ├── checkout.feature
+  │   ├── refunds.feature
+  │   └── subscription.feature
+  └── shared/
+      └── step_definitions/
+          ├── authentication_steps.rb
+          ├── payment_steps.rb
+          └── api_helper.rb
+```
+
+### Pattern: Tag-Driven Test Execution
+```gherkin
+@smoke @critical
+Feature: User Authentication
+
+  @smoke @P0
+  Scenario: Valid credentials login
+    Given the user "admin@example.com" exists with password "validPass123"
+    When the user logs in with email "admin@example.com" and password "validPass123"
+    Then the user is redirected to the dashboard
+
+  @regression @P1
+  Scenario: Invalid credentials shows error
+    Given the user "admin@example.com" exists with password "validPass123"
+    When the user logs in with email "admin@example.com" and password "wrongPass"
+    Then an error message "Invalid credentials" is displayed
+```
+
+CI execution strategy:
+```
+On every commit: @smoke (fast, <2 min)
+On every merge to main: @regression (medium, <15 min)
+Nightly: @e2e (full suite, <30 min)
+On release candidate: all tags (comprehensive)
+```
+
 ## References
   - references/gherkin-deep-dive.md — Gherkin Deep Dive
   - references/spec-example.md — Specification by Example

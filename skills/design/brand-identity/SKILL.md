@@ -325,6 +325,110 @@ Impact: Brand consistency from <40% to 95% in 6 months
 - Brand guidelines must be accessible as a searchable web resource
 - Rebrand announcements include rationale, timeline, and migration guide
 
+## Production Considerations
+
+### Brand Governance Workflow
+```
+Brand asset created → Review against guidelines → Approve → Distribute via brand library → Quarterly audit → Update guidelines
+```
+
+**Brand asset library**: Centralize all approved assets in a shared platform (Figma, Brandfolder, Frontify, or simple cloud storage). Structure: `assets/logos/` (primary, secondary, icon, favicon), `assets/icons/` (SVG sources in multiple sizes), `assets/photography/` (approved image library), `assets/templates/` (slide decks, letterhead, social media templates). Version each asset with date and change reason.
+
+**Digital asset management (DAM)**: For organizations with 500+ brand assets, invest in a DAM system (Bynder, Widen, Cloudinary). DAM provides: access control, usage tracking, automated format conversion, expiration dates on seasonal assets, and AI-powered search by color/object.
+
+**Brand approval matrix**:
+| Asset Type | Creator | Approver | Turnaround |
+|------------|---------|----------|------------|
+| Social media graphic | Marketing designer | Brand manager | 4 hours |
+| Landing page | Product designer | Brand director | 2 days |
+| TV commercial | Agency | VP Marketing + Brand director | 1 week |
+| Partner co-branding | Partner team | Brand + Legal | 2 weeks |
+
+### Brand Evolution Playbook
+Brands evolve — plan for it. Three types of brand changes:
+
+1. **Tactical refresh** (every 2-3 years): Update color palette, typography, photography style. No logo change. Impact: low. Migration: update design tokens, replace assets.
+2. **Strategic evolution** (every 5-7 years): Refine logo (simplify, modernize), evolve voice. Impact: medium. Migration: phased rollout with legacy support.
+3. **Full rebrand** (merger/acquisition): New name, logo, identity system. Impact: high. Migration: cutover date with all touchpoints updated simultaneously.
+
+**Migration checklist for brand updates**:
+- [ ] Update design tokens in code (CSS, Android XML, iOS asset catalog)
+- [ ] Replace all logo files (web, mobile, email, print)
+- [ ] Update favicon and app icon
+- [ ] Refresh marketing materials (website hero, social profiles, ad creatives)
+- [ ] Update email templates and signatures
+- [ ] Replace physical signage and print materials
+- [ ] Update internal tools (slide templates, docs, intranet)
+- [ ] Announce change internally and externally
+- [ ] Monitor for deprecated brand usage over 90-day window
+
+### Digital Implementation
+**CSS custom properties for brand tokens**:
+```css
+:root {
+  --brand-primary: #0052CC;
+  --brand-secondary: #00B8D9;
+  --brand-neutral-100: #F4F5F7;
+  --brand-font-heading: 'Inter', system-ui, sans-serif;
+  --brand-font-body: 'Inter', system-ui, sans-serif;
+  --brand-radius: 8px;
+  --brand-shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+}
+```
+
+**Multi-platform token delivery**: Maintain brand tokens in a single source (JSON/YAML) → generate platform-specific formats using Style Dictionary:
+- Web: CSS custom properties + Sass variables
+- iOS: Swift constants + asset catalog color set
+- Android: XML color resources + Kotlin constants
+- Figma: Token Studio plugin sync
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Fix |
+|-------------|---------|-----|
+| **Brand by committee** | Logo has 5 variations because no one could decide | Assign single decision-maker with design authority |
+| **Copycat branding** | Looks like every other startup in the space | Differentiate through authentic personality, not visual trends |
+| **Redesigning too often** | Users don't recognize the brand anymore | Lock visual identity for minimum 3 years between evolutions |
+| **Brand strategy without execution** | Beautiful guidelines, nothing implemented | Measure adoption rate quarterly; enforce via design system |
+| **Execution without strategy** | Looks good but doesn't communicate values | Start every visual decision from "what does this say about us?" |
+| **Targeting everyone** | Brand appeals to nobody | Define who you're NOT for — exclusion creates stronger identity |
+| **Inconsistent across platforms** | iOS app feels different from web | Design platform-aware but brand-consistent experiences |
+| **Designer-only brand ownership** | Non-designers don't understand brand rules | Create a 1-page brand cheat sheet for the whole company |
+| **No brand crisis protocol** | Inconsistent response during PR issues | Pre-define tone, approval chain, and templates for crisis communication |
+| **Over-designed logo** | Too many details, unreadable at small sizes | Test logo at 16x16px (favicon), 32x32px (app icon), and 1 inch (business card) |
+
+## Context-Aware Brand Application
+
+### Platform Adaptation
+Brand must feel native on each platform while remaining consistent:
+
+| Element | Web | iOS | Android | Print |
+|---------|-----|-----|---------|-------|
+| Typography | System fonts + web fonts | SF Pro + brand font | Roboto + brand font | Brand fonts only |
+| Icon style | Outline 2px | Fill with rounded corners | Fill with sharp corners | Outline 2px |
+| Spacing | 8px grid | 8-point grid | 8dp grid | 4mm grid |
+| Motion | CSS transitions | UIKit animate | Material animation | N/A |
+| Shadow | CSS box-shadow | CALayer shadow | Elevation | N/A |
+
+### Accessibility in Brand Application
+Brand colors must meet WCAG AA minimums:
+- Primary brand color on white: 4.5:1 minimum
+- Primary brand color on brand backgrounds: verify with contrast checker
+- Provide accessible alternate color pairings for low-contrast brand combinations
+- Never use brand colors below 3:1 contrast for text; reserve low-contrast combos for decorative elements only
+
+## Tools & Deliverables
+
+| Deliverable | Format | Audience | Contents |
+|------------|--------|----------|----------|
+| Brand strategy brief | Slide deck/PDF | Leadership, agency | Mission, values, positioning, competitive differentiation |
+| Visual identity guidelines | Web-based + PDF | Designers, developers, partners | Logo, color, typography, imagery, layout rules |
+| Voice & tone guide | Web-based | All employees, writers | Vocabulary, tone map, do/don't examples per channel |
+| Brand asset kit | ZIP with organized folders | All stakeholders | Logo files (multiple formats), icons, templates |
+| Brand cheat sheet | 1-page PDF | All employees | Logo restrictions, colors, fonts, voice rules (condensed) |
+| Template library | Figma/PPT/Google Slides | Marketing, sales | Presentation, email, social, document templates |
+| Brand audit report | Slide deck/PDF | Leadership | Consistency scores, violations, remediation plan |
+
 ## References
   - references/brand-identity-advanced.md — Brand Identity Advanced Topics
   - references/brand-identity-fundamentals.md — Brand Identity Fundamentals

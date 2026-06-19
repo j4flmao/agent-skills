@@ -228,20 +228,144 @@ export default defineNuxtConfig({
 ```typescript
 // Next.js App Router — streaming by default
 async function ProductPage({ params }: { params: { id: string } }) {
-  // Slow data starts streaming immediately
   const product = await getProduct(params.id)
   const relatedPromise = getRelatedProducts(params.id)
 
   return (
     <div>
-      <h1>{product.name}</h1> {/* streams immediately */}
-      <Suspense fallback={<Skeleton />}> {/* streams when ready */}
+      <h1>{product.name}</h1>
+      <Suspense fallback={<Skeleton />}>
         <RelatedItems promise={relatedPromise} />
       </Suspense>
     </div>
   )
 }
 ```
+
+### 7b. ISR with On-Demand Revalidation
+```typescript
+// Revalidate on content change, not on timer
+// app/api/revalidate/route.ts
+export async function POST(request: Request) {
+  const { secret, path } = await request.json()
+  if (secret !== process.env.REVALIDATION_SECRET) {
+    return Response.json({ message: 'Invalid secret' }, { status: 401 })
+  }
+  await revalidatePath(path)
+  return Response.json({ revalidated: true })
+}
+
+// Trigger from CMS webhook
+curl -X POST https://example.com/api/revalidate \
+  -H "Content-Type: application/json" \
+  -d '{"secret": "my-secret", "path": "/blog/my-post"}'
+```
+
+### 7c. React Server Components Patterns
+```typescript
+// Server Component — fetches data, no JS sent to client
+// app/products/page.tsx (no "use client")
+import { ProductCard } from './product-card'
+import { ProductSkeleton } from './product-skeleton'
+
+async function ProductPage() {
+  const products = await db.product.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+  })
+
+  return (
+    <div>
+      <h1>Products ({products.length})</h1>
+      <div className="grid grid-cols-3 gap-4">
+        {products.map((p) => (
+          <ProductCard key={p.id} product={p} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Client Component — interactive bits opt in
+// app/products/product-card.tsx
+'use client'
+
+import { useState } from 'react'
+
+export function ProductCard({ product }: { product: { id: string; name: string; price: number } }) {
+  const [liked, setLiked] = useState(false)
+  return (
+    <div>
+      <h2>{product.name}</h2>
+      <p>${product.price}</p>
+      <button onClick={() => setLiked(!liked)}>
+        {liked ? '❤️' : '🤍'}
+      </button>
+    </div>
+  )
+}
+```
+
+### 7d. Framework-Specific Strategy Comparison
+
+| Feature | Next.js App Router | Remix | Nuxt 3 | Astro |
+|---------|-------------------|-------|--------|-------|
+| Default | RSC (Server Components) | SSR | Universal | SSG |
+| ISR | `revalidate` export | `headers()` + Cache-Control | `routeRules.swr` | `npm run build` |
+| Streaming | Built-in (Suspense) | Built-in (defer) | Built-in (Suspense) | N/A |
+| RSC | Native | No | No | No |
+| Islands | No | No | No | Native (`client:*`) |
+| Edge SSR | `runtime: 'edge'` | Yes | `nitro: { preset: 'edge' }` | `output: 'server'` |
+| Per-route | `dynamic` export | `loader` per route | `routeRules` | Per-page config |
+
+### 7e. Combined Strategy: SSG + Client Fetch
+```typescript
+// Best for: blog posts with comment sections, product pages with reviews
+// SSG renders the static content, client fetches dynamic data
+
+// app/posts/[slug]/page.tsx — SSG (static content)
+interface PostPageProps {
+  params: { slug: string }
+}
+
+export async function generateStaticParams() {
+  const posts = await db.post.findMany({ select: { slug: true } })
+  return posts.map((p) => ({ slug: p.slug }))
+}
+
+async function PostPage({ params }: PostPageProps) {
+  const post = await db.post.findUnique({ where: { slug: params.slug } })
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <div dangerouslySetInnerHTML={{ __html: post.content }} />
+      <CommentSection postId={post.id} /> {/* Client Component */}
+    </article>
+  )
+}
+
+// app/posts/[slug]/comments.tsx — Client Component fetches dynamic data
+'use client'
+
+function CommentSection({ postId }: { postId: string }) {
+  const [comments, setComments] = useState<Comment[]>([])
+  useEffect(() => {
+    fetch(`/api/posts/${postId}/comments`).then((r) => r.json()).then(setComments)
+  }, [postId])
+  return <div>{comments.map((c) => <p key={c.id}>{c.text}</p>)}</div>
+}
+```
+
+### 7f. Performance Budget by Rendering Strategy
+
+| Metric | CSR | SSR (no stream) | SSR (streaming) | SSG | ISR | RSC |
+|--------|-----|-----------------|-----------------|-----|-----|-----|
+| FCP target | < 2.5s | < 1.0s | < 1.0s | < 0.5s | < 0.5s | < 1.0s |
+| LCP target | < 3.0s | < 2.0s | < 1.5s | < 1.0s | < 1.0s | < 1.5s |
+| TTI target | < 3.5s | < 2.5s | < 2.0s | < 1.5s | < 1.5s | < 1.5s |
+| TBT | < 300ms | < 200ms | < 100ms | < 50ms | < 50ms | < 50ms |
+| JS shipped | 100-500KB | 50-200KB | 50-200KB | 10-100KB | 10-100KB | 0-50KB |
+| HTML per page | ~1KB | ~20KB | ~5KB + stream | ~20KB | ~20KB | ~5KB |
 
 ### 8. Deployment Platform Considerations
 | Strategy | Vercel | Netlify | AWS (Lambda) | Static Hosting (S3) |
@@ -285,12 +409,68 @@ Fully hydrating a mostly-static blog page wastes bandwidth and CPU. Use islands 
 | RSC (streamed) | ~5KB initial, streams rest |
 | Astro (islands) | ~15KB HTML + ~5KB JS per island |
 
+### Performance Optimization Patterns
+
+```typescript
+// 1. Preload critical assets for SSG/ISR pages
+// app/layout.tsx
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html>
+      <head>
+        <link rel="preload" href="/hero.webp" as="image" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+      </head>
+      <body>{children}</body>
+    </html>
+  )
+}
+
+// 2. Selective hydration — defer non-critical JS
+// Use dynamic imports for heavy components (Next.js)
+import dynamic from 'next/dynamic'
+const HeavyChart = dynamic(() => import('./heavy-chart'), {
+  loading: () => <ChartSkeleton />,
+  ssr: false, // Don't SSR — hydrate on client only
+})
+
+// 3. Streaming with prioritized data
+async function DashboardPage() {
+  // Critical path data — blocks the shell
+  const user = await getUser()
+
+  // Non-critical — streams in via Suspense
+  const analyticsPromise = getAnalytics()
+
+  return (
+    <div>
+      <UserHeader user={user} /> {/* streams immediately */}
+      <Suspense fallback={<AnalyticsSkeleton />}>
+        <AnalyticsChart dataPromise={analyticsPromise} />
+      </Suspense>
+    </div>
+  )
+}
+
+// 4. Cache strategy for SSR pages
+// middleware.ts — add CDN caching for public SSR pages
+export function middleware(request: NextRequest) {
+  const response = NextResponse.next()
+  if (request.nextUrl.pathname.startsWith('/blog')) {
+    response.headers.set('CDN-Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300')
+  }
+  return response
+}
+```
+
 ## Accessibility Considerations
 
 - SSR/SSG pages with full HTML are inherently more accessible (content available before JS loads)
 - CSR pages must manage focus during loading, error, and content transitions
 - Streaming SSR: use aria-busy on regions while content streams in
 - ISR: cached pages may show stale content — add a "Last updated" timestamp for context
+- Loading skeletons must be announced by screen readers (aria-live="polite")
+- Progressive hydration should not cause focus loss when components become interactive
 
 ## Security Considerations
 
@@ -299,6 +479,8 @@ Fully hydrating a mostly-static blog page wastes bandwidth and CPU. Use islands 
 - ISR: revalidation API routes must be authenticated to prevent DoS
 - RSC: server components never expose server secrets to the client
 - Never embed secrets in SSR/RSC responses sent to the client
+- Server Components cannot access browser APIs — prevents XSS via server data
+- ISR revalidation secret should be a strong, rotated token (e.g., crypto.randomUUID)
 
 ## Rules
 1. SSG is the default strategy for all public, static content — optimize for cache hit ratio.
@@ -309,6 +491,8 @@ Fully hydrating a mostly-static blog page wastes bandwidth and CPU. Use islands 
 6. Streaming SSR starts sending HTML as soon as the shell is ready — never block on slow data.
 7. Each route has exactly one primary strategy — hybrid strategies (e.g., SSG + client fetch for comments) are per-component decisions.
 8. Authentication-driven personalization requires SSR or CSR — never SSG.
+9. On-demand ISR revalidation is preferred over time-based revalidation for content that changes unpredictably.
+10. Server Components that use `cookies()` or `headers()` become dynamic — use them intentionally.
 
 ## References
   - references/edge-rendering.md — Edge Rendering

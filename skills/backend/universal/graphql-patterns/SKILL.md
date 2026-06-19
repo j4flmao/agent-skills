@@ -384,14 +384,112 @@ app.use('/graphql', (req, res, next) => {
 - Never expose internal DB fields directly in the schema
 - All nullable fields should return null instead of throwing for missing data
 
-## References
-  - references/federation-subscriptions.md — Federation and Subscriptions
-  - references/graphql-federation.md — GraphQL Federation
-  - references/graphql-migration.md — GraphQL Migration
-  - references/graphql-monitoring.md — GraphQL Monitoring
-  - references/graphql-performance.md — GraphQL Performance
-  - references/graphql-security.md — GraphQL Security
-  - references/graphql-tooling.md — GraphQL Tooling and Code Generation
-  - references/schema-resolvers.md — Schema and Resolvers
-## Handoff
-`backend-api-design` for REST-GraphQL coexistence strategy
+## Implementation Patterns
+
+### Resolver with DataLoader
+
+```typescript
+import DataLoader from 'dataloader';
+import { GraphQLResolveInfo } from 'graphql';
+
+// Batch function
+async function batchUsers(userIds: readonly string[]): Promise<User[]> {
+  const users = await db.users.findAll({ where: { id: userIds } });
+  const userMap = new Map(users.map(u => [u.id, u]));
+  return userIds.map(id => userMap.get(id) || null);
+}
+
+// Context factory
+function createContext() {
+  return {
+    loaders: {
+      user: new DataLoader(batchUsers),
+      order: new DataLoader(batchOrders),
+    },
+  };
+}
+
+// Resolver using DataLoader
+const resolvers = {
+  Query: {
+    user: async (_: any, { id }: { id: string }, context: any) => {
+      return context.loaders.user.load(id);
+    },
+  },
+  Order: {
+    customer: async (order: Order, _: any, context: any) => {
+      return context.loaders.user.load(order.customerId);
+    },
+  },
+};
+
+// Mutation with input validation
+const mutationResolvers = {
+  Mutation: {
+    createUser: async (_: any, { input }: { input: CreateUserInput }, context: any) => {
+      const user = await db.users.create({ data: input });
+      return { clientMutationId: input.clientMutationId, user, error: null };
+    },
+  },
+};
+```
+
+### Complexity Analysis
+
+```typescript
+import { createComplexityRule, simpleEstimator } from 'graphql-query-complexity';
+
+const complexityRule = createComplexityRule({
+  estimators: [
+    simpleEstimator({ defaultComplexity: 1 }),
+  ],
+  maximumComplexity: 1000,
+  onComplete: (complexity: number) => {
+    console.log(`Query complexity: ${complexity}`);
+  },
+});
+```
+
+## Architecture Decision Trees
+
+### GraphQL vs REST Decision
+
+```
+What's the primary data access pattern?
+├── Multiple clients, different data needs
+│   └── GraphQL (each client requests exactly what it needs)
+│       ├── Mobile: small payloads, specific fields
+│       ├── Web: larger payloads, more fields
+│       └── Admin: bulk access, many relations
+│
+├── Simple CRUD, few clients
+│   └── REST (simpler, well-understood, cacheable)
+│       ├── HTTP caching (ETag, Cache-Control)
+│       ├── HATEOAS for discoverability
+│       └── Better tooling (OpenAPI, Postman)
+│
+├── Real-time subscriptions
+│   └── GraphQL subscriptions (over WebSocket)
+│
+└── File upload / binary data
+    └── REST endpoints for uploads + GraphQL for metadata
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| N+1 in resolvers | One query per item in list | Always use DataLoader for relation fields |
+| No query complexity limits | Malicious queries can DoS server | Set max complexity, depth, and rate limits |
+| Exposing internal DB schema | Tight coupling, security risk | Schema is a contract, not a DB mirror |
+| Mutations without return payload | Can't get updated state | Always return { clientMutationId, error, ...payload } |
+| Pagination with offsets | Inconsistent results when data changes | Cursor-based pagination (Relay spec) |
+| No persisted queries in production | Large query strings waste bandwidth | Persisted queries for production traffic |
+| Resolver doing everything | Complex, untestable resolvers | Thin resolvers, business logic in service layer |
+
+## Performance Optimization
+
+- **DataLoader for batching and caching**: DataLoader batches all `load()` calls within a single event-loop tick into one batch query. Caches results within the request lifecycle. Eliminates N+1 queries entirely.
+- **Persisted queries**: Use persisted queries (APQ or manual) to send only the query hash instead of the full query string. Reduces request size by 90%+ for complex queries.
+- **Response caching with @cacheControl**: Use `@cacheControl` directive for cache hints. Cache at CDN level for public queries. Set different cache scopes (PUBLIC, PRIVATE) per field.
+- **Query depth limiting**: Limit nesting to max 7 levels. Prevents abusive deep-nested queries. Deep queries often indicate schema design issues.

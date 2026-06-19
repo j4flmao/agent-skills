@@ -393,3 +393,115 @@ Redlock assumes synchronized clocks. In practice:
 No artifact produced unless requested.
 Next skill: webhooks — deliver events from the service to external subscribers.
 Carry forward: lock provider, TTL configuration, fencing requirement.
+
+## Implementation Patterns
+
+### Redis-Based Distributed Lock
+
+```python
+import redis
+import uuid
+import time
+from typing import Optional, Callable, Any
+
+class DistributedLock:
+    def __init__(self, redis_client: redis.Redis, lock_key: str, ttl_seconds: int = 30):
+        self.redis = redis_client
+        self.lock_key = f"lock:{lock_key}"
+        self.ttl = ttl_seconds
+        self.lock_value = str(uuid.uuid4())
+        self.acquired = False
+
+    def acquire(self, blocking: bool = True, timeout: Optional[float] = None) -> bool:
+        start = time.time()
+        while True:
+            acquired = self.redis.set(
+                self.lock_key,
+                self.lock_value,
+                nx=True,
+                ex=self.ttl,
+            )
+            if acquired:
+                self.acquired = True
+                return True
+
+            if not blocking:
+                return False
+
+            if timeout and (time.time() - start) > timeout:
+                return False
+
+            time.sleep(0.05)
+
+    def release(self):
+        if not self.acquired:
+            return
+
+        lua_script = """
+        if redis.call("GET", KEYS[1]) == ARGV[1] then
+            return redis.call("DEL", KEYS[1])
+        else
+            return 0
+        end
+        """
+        self.redis.eval(lua_script, 1, self.lock_key, self.lock_value)
+        self.acquired = False
+
+    def __enter__(self):
+        self.acquire()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.release()
+
+
+class FencingTokenGenerator:
+    def __init__(self, redis_client: redis.Redis):
+        self.redis = redis_client
+
+    def next_token(self, lock_key: str) -> int:
+        key = f"fencing:{lock_key}"
+        return self.redis.incr(key)
+```
+
+## Architecture Decision Trees
+
+### Lock Provider Selection
+
+```
+What's the consistency requirement?
+├── Strong consistency, always correct
+│   └── Redis (single node, WAIT for replication)
+│       ├── Redlock for multi-node setups
+│       └── Risk: clock drift, GC pauses
+│
+├── High availability over consistency
+│   └── ZooKeeper / etcd
+│       ├── Consensus-based, CP system
+│       ├── Slower than Redis (RTT matters)
+│       └── No clock drift issues
+│
+├── Simple, no infrastructure
+│   └── Database-based (PostgreSQL advisory lock)
+│       ├── pg_try_advisory_lock() for simple cases
+│       └── SELECT ... FOR UPDATE for row-level locks
+│
+└── Cloud managed
+    └── AWS ElastiCache Redis / Google Cloud Memorystore
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| No TTL on lock | Lock held forever if holder crashes | Always set TTL (lease duration) |
+| Lock check + action not atomic | Race condition between check and action | Use Lua script or atomic operations |
+| Single Redis node for lock | SPOF, lock lost on failover | Redlock or consensus-based provider |
+| Not releasing in finally | Lock held on exception | Always release in finally block |
+| Holding lock during I/O | Lock contention for long periods | Keep critical section short, only for critical path |
+| No fencing tokens | GC pause can cause stale lock holder writes | Monotonic fencing tokens for write operations |
+
+## Performance Optimization
+
+- **Lock-free alternatives**: Use optimistic concurrency (version field, CAS) instead of locks where possible. Reduces latency from 5-50ms (lock round-trip) to <1ms (local CAS).
+- **Read-write locks for read-heavy**: Allow concurrent reads, exclusive writes. Use Redis redlock with shared/exclusive modes. Multiple readers don't block each other.

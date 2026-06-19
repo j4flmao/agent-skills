@@ -389,3 +389,111 @@ CSS logical properties have negligible performance cost. Flipping layout on loca
 No artifact produced unless requested.
 Next skill: `frontend-accessibility` — RTL a11y overlaps with i18n, pass locale direction config.
 Carry forward: locale list, RTL requirement, i18n library, lazy loading strategy.
+
+## Implementation Patterns
+
+### i18next Configuration
+
+```typescript
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
+import Backend from 'i18next-http-backend';
+
+i18n
+  .use(Backend)
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    fallbackLng: 'en',
+    debug: process.env.NODE_ENV === 'development',
+
+    interpolation: {
+      escapeValue: false,
+    },
+
+    detection: {
+      order: ['localStorage', 'navigator', 'htmlTag', 'cookie'],
+      caches: ['localStorage'],
+    },
+
+    backend: {
+      loadPath: '/locales/{{lng}}/{{ns}}.json',
+    },
+
+    ns: ['common', 'auth', 'errors'],
+    defaultNS: 'common',
+
+    returnObjects: true,
+  });
+
+export default i18n;
+```
+
+### Translation Component
+
+```tsx
+import { useTranslation, Trans } from 'react-i18next';
+
+function WelcomeBanner({ userName, itemCount, lastLogin }: WelcomeProps) {
+  const { t, i18n } = useTranslation('common');
+
+  const dateFormatter = new Intl.DateTimeFormat(i18n.language, {
+    dateStyle: 'long',
+  });
+
+  return (
+    <div dir={i18n.dir()}>
+      <h1>{t('welcome.title', { name: userName })}</h1>
+
+      {/* Simple interpolation */}
+      <p>{t('welcome.item_count', { count: itemCount })}</p>
+
+      {/* Pluralization (ICU format) */}
+      <p>{t('welcome.items', { count: itemCount })}</p>
+
+      {/* Complex translation with embedded HTML */}
+      <Trans i18nKey="welcome.last_login">
+        Last login: <strong>{{ date: dateFormatter.format(lastLogin) }}</strong>
+      </Trans>
+    </div>
+  );
+}
+```
+
+## Architecture Decision Trees
+
+### i18n Library Selection
+
+```
+What framework and requirements?
+├── React
+│   ├── Need full feature set → i18next + react-i18next
+│   ├── Simple, lightweight → react-intl (FormatJS)
+│   └── Type-safe translations → typesafe-i18n
+│
+├── Vue
+│   ├── Full featured → vue-i18n
+│   └── Lightweight → @intlify/vue-i18n-core
+│
+├── Angular
+│   └── @angular/localize (built-in)
+│
+└── No framework / vanilla
+    └── i18next (framework-agnostic core)
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Hardcoding strings in components | Can't translate without code changes | Always use translation keys |
+| Bundling all locales in main chunk | Bloated initial bundle | Lazy-load translation files per locale |
+| Single locale detection method | Fails for users in different region | Chain: persisted preference > browser > fallback |
+| No ICU message format | Pluralization breaks for many languages | Use ICU format for plural/select/ordinal |
+| Ignoring text direction in CSS | LTR layouts break for RTL languages | Use CSS logical properties (inline-start/end) |
+
+## Performance Optimization
+
+- **Lazy-loaded locale chunks**: Split translation files per locale and namespace. Load only the user's current locale. Prefetch next likely locale on hover or idle time.
+- **ICU message format compilation**: Precompile ICU messages at build time. Avoids runtime parsing overhead. Reduces translation evaluation time by 5x.

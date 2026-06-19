@@ -309,3 +309,233 @@ For context window management and token optimization, hand off to `context-engin
 Compression Level: 5 (Comprehensive architectural references & code details preserved)
 Strict compliance with guardrail enforcement pipelines, adversarial detection, and audit logging protocols.
 -->
+
+## Implementation Patterns
+
+### Input Validation Guardrail
+
+```python
+import re
+from typing import List, Dict, Optional, Callable
+from dataclasses import dataclass, field
+import hashlib
+
+@dataclass
+class GuardrailResult:
+    passed: bool
+    score: float
+    reason: str
+    details: Dict = field(default_factory=dict)
+
+class InputGuardrail:
+    def __init__(self):
+        self.checks: List[Callable] = []
+        self.injection_patterns = [
+            r"(?i)(ignore|disregard|override|forget)\s+(all\s+)?(previous|above|instructions)",
+            r"(?i)system\s*(prompt|message|instruction|command)",
+            r"(?i)you\s+(are|must|will)\s+(now|from now on)",
+            r"(?i)pretend|role.play|act\s+as\s+if",
+            r"(?i)<\|im_start\|>|<\|im_end\|>|<\|system\|>",
+            r"(?i)```.*system.*```",
+        ]
+        self.blocked_patterns = [
+            r"(?i)(sql|nosql|ldap)\s*:\s*\/\/",
+            r"(?i)select\s+.*\s+from\s+.*\s+where",
+            r"(?i)(?:rm|del|drop)\s+--?",
+        ]
+
+    def add_check(self, name: str, check_fn: Callable[[str], GuardrailResult]):
+        self.checks.append((name, check_fn))
+
+    def validate(self, text: str) -> GuardrailResult:
+        results = []
+        for name, check_fn in self.checks:
+            result = check_fn(text)
+            if not result.passed:
+                return GuardrailResult(
+                    passed=False,
+                    score=0.0,
+                    reason=f"Blocked by {name}: {result.reason}",
+                    details={"failed_check": name, "check_result": result.details},
+                )
+            results.append(result)
+
+        avg_score = sum(r.score for r in results) / max(len(results), 1)
+        return GuardrailResult(passed=True, score=avg_score, reason="All checks passed")
+
+    def check_prompt_injection(self, text: str) -> GuardrailResult:
+        for pattern in self.injection_patterns:
+            match = re.search(pattern, text)
+            if match:
+                return GuardrailResult(
+                    passed=False,
+                    score=0.0,
+                    reason=f"Prompt injection detected: {match.group()[:50]}",
+                    details={"pattern": pattern, "match": match.group()},
+                )
+        return GuardrailResult(passed=True, score=1.0, reason="No injection detected")
+
+    def check_length(self, text: str, max_chars: int = 4000) -> GuardrailResult:
+        if len(text) > max_chars:
+            return GuardrailResult(
+                passed=False,
+                score=max_chars / max(len(text), 1),
+                reason=f"Input too long: {len(text)} chars (max {max_chars})",
+                details={"length": len(text), "max": max_chars},
+            )
+        score = 1.0 - (len(text) / max_chars) * 0.3
+        return GuardrailResult(
+            passed=True,
+            score=score,
+            reason=f"Input length OK ({len(text)} chars)",
+        )
+
+    def check_forbidden_patterns(self, text: str) -> GuardrailResult:
+        for pattern in self.blocked_patterns:
+            match = re.search(pattern, text)
+            if match:
+                return GuardrailResult(
+                    passed=False,
+                    score=0.0,
+                    reason=f"Forbidden pattern: {match.group()[:50]}",
+                )
+        return GuardrailResult(passed=True, score=1.0, reason="No forbidden patterns")
+
+
+class OutputGuardrail:
+    def __init__(self):
+        self.pii_patterns = {
+            "email": r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
+            "phone": r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b",
+            "ssn": r"\b\d{3}-\d{2}-\d{4}\b",
+            "credit_card": r"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b",
+            "ip_address": r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b",
+        }
+
+    def check_pii_leak(self, text: str) -> GuardrailResult:
+        findings = []
+        for pii_type, pattern in self.pii_patterns.items():
+            matches = re.findall(pattern, text)
+            if matches:
+                findings.append({"type": pii_type, "count": len(matches)})
+        if findings:
+            return GuardrailResult(
+                passed=False,
+                score=0.0,
+                reason=f"PII detected in output: {[f['type'] for f in findings]}",
+                details={"findings": findings},
+            )
+        return GuardrailResult(passed=True, score=1.0, reason="No PII detected")
+
+    def check_hallucination_risk(self, text: str, source_context: str) -> GuardrailResult:
+        text_sentences = set(s.strip() for s in text.split(".") if len(s.strip()) > 20)
+        source_sentences = set(s.strip() for s in source_context.split(".") if len(s.strip()) > 20)
+        if not text_sentences or not source_sentences:
+            return GuardrailResult(passed=True, score=0.5, reason="Cannot assess hallucination risk")
+        overlap = len(text_sentences & source_sentences)
+        total = len(text_sentences)
+        score = min(overlap / max(total, 1), 1.0)
+        if score < 0.3:
+            return GuardrailResult(
+                passed=False,
+                score=score,
+                reason=f"Low overlap with source context ({score:.0%})",
+                details={"overlap": overlap, "total": total, "score": score},
+            )
+        return GuardrailResult(passed=True, score=score, reason=f"High overlap with source ({score:.0%})")
+
+
+class PolicyEnforcer:
+    def __init__(self):
+        self.policies = []
+
+    def add_policy(self, name: str, condition: Callable, action: str):
+        self.policies.append({"name": name, "condition": condition, "action": action})
+
+    def evaluate(self, context: Dict) -> List[Dict]:
+        triggered = []
+        for policy in self.policies:
+            try:
+                if policy["condition"](context):
+                    triggered.append({
+                        "policy": policy["name"],
+                        "action": policy["action"],
+                    })
+            except Exception as e:
+                triggered.append({
+                    "policy": policy["name"],
+                    "action": "error",
+                    "error": str(e),
+                })
+        return triggered
+```
+
+## Architecture Decision Trees
+
+### Guardrail Layer Selection
+
+```
+What threat are you protecting against?
+├── Input manipulation
+│   ├── Prompt injection → Input validation guardrails
+│   ├── SQL injection → Input sanitization + parameterized queries
+│   └── XSS → HTML encoding + CSP headers
+│
+├── Output harm
+│   ├── PII/secret leakage → Output scanning + redaction
+│   ├── Hallucination → Factual consistency checking
+│   ├── Toxic content → Toxicity classifiers + content filters
+│   └── Copyright/IP → Similarity check against known works
+│
+├── Logic abuse
+│   ├── Tool misuse → Authorization matrix + capability checks
+│   ├── Permission escalation → RBAC enforcement
+│   └── Resource exhaustion → Rate limiting + quota enforcement
+│
+└── Retrieval poisoning
+    ├── Injected content in context → Context integrity hashing
+    ├── Source provenance spoofing → Source verification
+    └── Indirect prompt injection → Context sanitization
+```
+
+### Policy Enforcement Mode
+
+```
+What's the risk if this is wrong?
+├── High risk (financial, medical, auth)
+│   └── Hard enforcement: reject violations, log all attempts
+│
+├── Medium risk (content, recommendations)
+│   └── Soft enforcement: warn, flag for review, but allow with warning
+│
+├── Low risk (trivial, entertainment)
+│   └── Passive: log only, no enforcement
+│
+└── Unknown risk
+    └── Shadow mode: log + flag but don't block, analyze patterns
+```
+
+## Production Considerations
+
+- **Guardrail cascade**: Run guardrails in order of cost (cheapest first, most expensive last). Fail fast on cheap checks before invoking expensive ones (LLM-based classifiers). Measure p95 latency per guardrail.
+- **Guardrail bypass for power users**: Allow authorized users to bypass specific guardrails with audit trail. Log every bypass with user ID, reason, and guardrail name.
+- **Shadow mode for new guardrails**: Deploy new guardrails in log-only mode initially. Analyze false positive rate before enabling enforcement. Tune thresholds based on 1-2 weeks of production data.
+- **Adversarial robustness testing**: Run red-team exercises with known attack patterns. Maintain a regression test suite of 100+ adversarial examples. Test new guardrail versions against the full suite.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Single guardrail for all threats | Misses specialized attacks | Layered guardrails per threat type |
+| Overly strict guardrails (high false positives) | Users ignore or work around | Tune to acceptable false positive rate (<1%) |
+| No guardrail ordering | Expensive checks run first | Order by cost, fail fast on cheap checks |
+| Ignoring corner cases with Unicode | Bypass via Unicode normalization | Normalize input before checking |
+| Hardcoded block list without maintenance | Block list goes stale, new attacks bypass | Regular update from threat intelligence feeds |
+| No audit trail for violations | Can't investigate security incidents | Log all guardrail triggers with full context |
+| Guardrails that can be LLM-prompted | Guardrail config overridden via injection | Implement guardrails as code, not as prompts |
+| Not testing bypass techniques | False sense of security | Regular adversarial testing with known bypass techniques |
+
+## Performance Optimization
+
+- **Lazy guardrail evaluation**: Use skip flags to bypass guardrails for trusted input sources (internal traffic, admin users). Reduces average latency by 40% for trusted traffic.
+- **Pattern caching for repeated checks**: Cache regex compilation for input guardrails. Use LRU cache for recently checked patterns. Avoid recompiling the same pattern on every check.

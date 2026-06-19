@@ -248,5 +248,164 @@ Before delivering compressed summary, verify:
   - references/summary-templates.md — Summary Templates
   - references/token-management.md — Token Management
 
+## Summary Structure & Format
+
+### Compression Template
+```
+<project_context_summary>
+Project: {name}
+Goal: {current objective}
+Phase: {phase} — {progress summary}
+
+#### Active State
+- Last files: {path1}, {path2}, {path3}
+- Open decisions: {decision1}, {decision2}
+- Current branch: {branch_name}
+- Build status: {passing/failing details}
+
+#### Architecture Snapshot
+{3-5 sentence summary of current architecture understanding}
+
+#### Key Decisions Made
+- {decision}: {rationale} (timestamp)
+- {decision}: {rationale} (timestamp)
+
+#### Next Actions (priority order)
+1. {action} — {why now}
+2. {action} — {depends on context}
+3. {action} — {low priority / stretch}
+
+#### Unresolved Questions
+- {question} — {who needs to answer}
+- {question} — {blocker if not resolved}
+
+#### Relevant References
+- {filepath} — {why it matters}
+- {filepath} — {why it matters}
+
+#### Token Budget
+- Context remaining: ~{n} tokens
+- Next session should first: {rehydrate from summary}
+</project_context_summary>
+```
+
+### Compression Strategies by Context Size
+
+| Available Tokens | Strategy | Detail Level |
+|---|---|---|
+| 100k+ (full context) | Full session summary with code snippets | Max — all decisions, commits, references |
+| 50-100k | Compressed summary, key code, open questions | Medium — drop verbose logs, partial code |
+| 10-50k | Bullet points only, no code blocks | Minimal — decisions + next actions |
+| < 10k | 3-line TL;DR only | Critical — scope + next step |
+
+### Quality & Validation
+
+**Before saving a compressed summary, verify:**
+- [ ] Next actions are specific and actionable (not "continue work")
+- [ ] All open questions have clear owners
+- [ ] File paths match actual project structure
+- [ ] Branches/commits referenced still exist
+- [ ] The summary could be given to another developer who would understand what's happening
+- [ ] No sensitive data (API keys, secrets) included
+
+### Compression Examples
+
+**Good compression (complex project):**
+```
+<project_context_summary>
+Project: j4flmao-org
+Goal: Add OAuth2 PKCE flow to auth module
+Phase: Implementation — 70% complete
+
+#### Active State
+- Last files: src/auth/oauth.ts, src/auth/tokens.ts, tests/auth/oauth.test.ts
+- Open decisions: Token refresh strategy (sliding vs absolute expiry)
+- Current branch: feat/oauth-pkce
+- Build status: 15/18 tests passing (3 need token refresh mock)
+
+#### Architecture Snapshot
+OAuth flow uses PKCE with S256 challenge method. Auth service orchestrates
+authorize → callback → token exchange → refresh cycle. Tokens stored in
+HttpOnly cookies with CSRF token in header. Backend verifies code_verifier
+against stored code_challenge before issuing tokens.
+
+#### Key Decisions Made
+- PKCE S256 over plain: more secure, prevents verifier interception
+- HttpOnly cookies: prevents XSS token theft, requires CSRF header
+- Sliding refresh tokens: better UX, 7-day absolute expiry limit
+
+#### Next Actions (priority order)
+1. Implement token refresh interceptor in fetch wrapper
+2. Add CSRF token generation endpoint (/api/auth/csrf)
+3. Write integration test for full refresh flow
+4. Handle token expiry edge case (both expired)
+
+#### Unresolved Questions
+- Should refresh token rotate? (security vs UX tradeoff)
+- Cookie same-site policy: Lax or Strict? (CSRF risk vs UX)
+
+#### Token Budget
+- Context remaining: ~12k tokens
+- Next session: Rehydrate from this summary, focus on refresh interceptor
+</project_context_summary>
+```
+
+**Over-compressed (bad — not actionable):**
+```
+<summary>Working on auth. Need to do more stuff. Check the files.</summary>
+```
+
+**Under-compressed (bad — defeats purpose):**
+```
+<summary>
+[200 lines of raw conversation history with no structure]
+</summary>
+```
+
+## Integration with Other Skills
+
+### Context Flow Diagram
+```
+master-orchestrator
+    │
+    ├──→ context-compressor (compress session → update context file)
+    │       │
+    │       └──→ context-file.md (persistent, version-controlled)
+    │
+    └──→ master-orchestrator (next session reads context file)
+                │
+                └──→ [decide] → continue work OR new task
+```
+
+### Automated Compression Trigger Points
+- **Session timeout**: ~100k tokens consumed → auto-compress
+- **Error recovery**: Build failures or unexpected errors → compress error context before retry
+- **Phase transitions**: Moving between design → implementation → review phases
+- **Git branch switches**: `git checkout` triggers context snapshot
+- **Manual invocation**: User requests summary or context save
+
+### Rehydration Protocol
+When loading a compressed summary in a new session:
+1. **Read context file** — parse summary structure
+2. **File restoration** — read key files listed in "Last Files"
+3. **Decision recall** — review key decisions and rationale
+4. **Branch verification** — confirm working branch matches
+5. **Build check** — run tests to verify current state
+6. **Action continuation** — begin with first next action
+7. **Context gap detection** — note what's missing and prompt user if critical
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Better Approach |
+|---|---|---|
+| Including raw logs | Wastes tokens, obscures signal | Summarize outcomes: "Build failed: 3 test failures, all in auth module" |
+| Stale summaries | Read old context, make wrong decisions | Always update before session end. Treat as append-only log. |
+| Subjective language | "We're almost done" means nothing | "5 files modified, 3 of 10 tests passing" — quantify everything |
+| No ownership | Questions no one answers get forgotten | Always tag: "(decide with: @product)" or "(blocked: waiting on David)" |
+| Missing file paths | "Update the function" — which function, which file? | Always `src/auth/oauth.ts:42` — exact references |
+| Copy-paste of commit messages | Repeats what git log already has | Synthesize: "3 commits refactored auth middleware for PKCE support" |
+| Over-tokenization | Full code blocks in summary — uses 80% of budget | Link to files, describe changes, don't paste entire functions |
+| No rehydration step | Jump into work, miss context, duplicate decisions | Always read the context file and verify state first |
+
 ## Handoff
 master-orchestrator — the compressed summary is injected at the start of the next work session for the master orchestrator skill to continue the work from where it was interrupted.

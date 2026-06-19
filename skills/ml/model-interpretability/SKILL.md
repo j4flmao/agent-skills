@@ -310,6 +310,237 @@ def validate_explanation(model, X, explanation_fn, top_k=5):
 - Document explanation methods for model governance.
 - Log explanations alongside predictions for audit trail.
 
+## SHAP Usage Patterns — Step by Step
+
+### Pattern 1: Global Feature Importance with TreeSHAP
+```python
+import shap
+import xgboost as xgb
+import matplotlib.pyplot as plt
+
+# Train model
+model = xgb.XGBRegressor().fit(X_train, y_train)
+
+# TreeSHAP — exact for trees, O(T * D * 2^M) but feasible
+explainer = shap.TreeExplainer(model)
+shap_values = explainer.shap_values(X_test)
+
+# Summary plot: feature importance + direction
+shap.summary_plot(shap_values, X_test, max_display=15)
+
+# Mean absolute SHAP value as global importance
+importance = np.abs(shap_values).mean(axis=0)
+feature_ranking = pd.DataFrame({
+    "feature": X_test.columns,
+    "importance": importance,
+}).sort_values("importance", ascending=False)
+```
+
+### Pattern 2: Individual Prediction Explanation
+```python
+# Waterfall plot for one prediction
+row = X_test.iloc[0]
+shap.waterfall_plot(
+    shap.Explanation(
+        values=shap_values[0],  # SHAP values for this row
+        base_values=explainer.expected_value,
+        data=row.values,
+        feature_names=X_test.columns,
+    ),
+    max_display=10,
+)
+
+# Force plot (better for presentations)
+shap.force_plot(
+    explainer.expected_value,
+    shap_values[0, :],
+    X_test.iloc[0, :],
+    matplotlib=True,
+)
+```
+
+### Pattern 3: Dependence Plot with Interaction Detection
+```python
+# Single feature dependence
+shap.dependence_plot("age", shap_values, X_test, alpha=0.5)
+
+# Color by interaction feature
+shap.dependence_plot(
+    "age", shap_values, X_test,
+    interaction_index="income",  # auto-pick or specify
+    alpha=0.5,
+)
+
+# Interpretation:
+# If the scatter shows a clear color gradient (e.g., red high, blue low)
+# then there is a strong interaction between age and income
+```
+
+### Pattern 4: Feature Interaction Detection
+```python
+# SHAP interaction values (only available for TreeExplainer)
+shap_interaction = explainer.shap_interaction_values(X_test)
+
+# Take interaction between feature i and j for specific prediction
+intensity = shap_interaction[0, i, j]
+
+# Global interaction strength
+interaction_matrix = np.abs(shap_interaction).mean(axis=0)
+
+# Plot interaction heatmap
+sns.heatmap(interaction_matrix, xticklabels=X_test.columns,
+            yticklabels=X_test.columns)
+```
+
+## LIME Usage Patterns
+
+### Pattern 1: Tabular Data Explanation
+```python
+import lime
+import lime.lime_tabular
+
+explainer = lime.lime_tabular.LimeTabularExplainer(
+    X_train.values,
+    feature_names=X_train.columns,
+    class_names=["negative", "positive"],
+    mode="classification",
+    discretize_continuous=True,
+    num_features=10,
+)
+
+# Explain one prediction
+exp = explainer.explain_instance(
+    X_test.iloc[0].values,
+    model.predict_proba,  # must return probabilities
+    num_features=8,
+    num_samples=5000,  # more = stable but slower
+)
+
+exp.show_in_notebook(show_table=True)
+exp.as_list()  # list of (feature, weight) tuples
+```
+
+### Pattern 2: Text Explanation
+```python
+from lime.lime_text import LimeTextExplainer
+
+explainer = lime.lime_text.LimeTextExplainer(
+    class_names=["negative", "positive"],
+    split_expression=r"\W+",
+    bow=True,  # bag of words
+)
+
+text = "This product is amazing and life-changing!"
+exp = explainer.explain_instance(
+    text,
+    classifier.predict_proba,  # function taking list of strings -> probs
+    labels=(1,),  # explain positive class
+    num_features=6,
+    num_samples=1000,
+)
+
+# Highlight words
+exp.show_in_notebook(text=text)
+```
+
+### LIME Stability Check
+```python
+# LIME is unstable — run multiple times to verify
+def stable_lime_explanation(instance, num_runs=5):
+    results = []
+    for seed in range(num_runs):
+        np.random.seed(seed)
+        exp = explainer.explain_instance(
+            instance, model.predict_proba, num_features=5
+        )
+        results.append(dict(exp.as_list()))
+
+    df = pd.DataFrame(results)
+    mean_weights = df.mean()
+    std_weights = df.std()
+    stable = std_weights.max() < 0.1  # arbitrary threshold
+    return mean_weights, std_weights, stable
+```
+
+## Visualization Guide
+
+### Plot Selection Decision Tree
+```
+What do you need to understand?
+├── Global feature importance
+│   ├── Which features matter most? -> Summary plot (SHAP)
+│   ├── How feature affects predictions overall? -> PDP / SHAP dependence
+│   └── Interactions between features? -> SHAP interaction heatmap
+│
+├── Individual prediction explanation
+│   ├── Why was this prediction made? -> Waterfall plot (SHAP)
+│   ├── Present to non-technical audience? -> Force plot
+│   └── Local decision boundary? -> LIME weights
+│
+├── Model behavior
+│   ├── Linearity / monotonicity? -> PDP + ICE plots
+│   ├── Decision rules learned? -> Tree visualization / feature interaction
+│   └── Feature group importance? -> Permutation importance by group
+│
+└── Debugging / data quality
+    ├── Feature distribution issues? -> SHAP dependence + violin
+    ├── Outliers affecting model? -> SHAP scatter + leverage
+    └── Label leakage? -> SHAP values on temporal features
+```
+
+### Visualization Templates
+
+#### SHAP Summary Plot
+```
+shap.summary_plot(shap_values, X, max_display=15)
+  X-axis: SHAP value (impact on model output)
+  Color: Feature value (red = high, blue = low)
+  Each point = one prediction
+  Width = importance, Color = direction
+```
+
+#### PDP + ICE Plot
+```
+from sklearn.inspection import PartialDependenceDisplay
+
+PartialDependenceDisplay.from_estimator(
+    model, X, features=["age", "income"],
+    kind="both",  # both = PDP line + ICE lines
+    subsample=50,
+    n_cols=2,
+    grid_resolution=20,
+)
+  Blue line = PDP (average effect)
+  Gray lines = ICE (individual predictions)
+  Wide ICE spread = strong interaction with other features
+```
+
+## Model Interpretability Anti-Patterns
+
+1. **Trusting LIME on one run**: LIME is highly unstable — same instance, different explanation
+   Fix: Run 5+ times, report stability
+2. **SHAP without feature independence note**: SHAP assumes features are independent
+   Fix: Check correlations first, use SHAP interaction for highly correlated pairs
+3. **Interpreting linear coefficients directly**: With correlated features, coefficients are meaningless
+   Fix: Use permutation importance or SHAP instead
+4. **Attention = explanation**: Attention weights show what the model "looked at," not causal importance
+   Fix: Use Integrated Gradients or input x gradient for true attributions
+5. **No validation of explanations**: Explaining without known ground truth
+   Fix: Test on edge cases with known expected behavior
+
+## Method Selection Guide
+
+| Method | Model Agnostic | Speed | Local | Global | Interaction | Best For |
+|--------|---------------|-------|-------|--------|-------------|----------|
+| SHAP (Tree) | No (trees only) | Fast | Yes | Yes | Yes | Tree-based models |
+| SHAP (Kernel) | Yes | Slow | Yes | Yes | No | Small data, any model |
+| LIME | Yes | Medium | Yes | No | No | Text, tabular local |
+| PDP | Yes | Medium | No | Yes | Manual | 2-3 feature analysis |
+| ICE | Yes | Medium | Yes | No | Yes | Uncover heterogeneity |
+| Permutation | Yes | Fast | No | Yes | No | Baseline importance |
+| Integrated Gradients | No (DL only) | Medium | Yes | Yes | No | Deep learning |
+| Grad-CAM | No (CNN only) | Fast | Yes | No | No | Computer vision |
+
 ## Rules
 - Always compute global permutation importance as baseline.
 - TreeSHAP preferred over KernelSHAP for trees.

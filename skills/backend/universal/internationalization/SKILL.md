@@ -247,6 +247,166 @@ async function loadLocale(locale: string, namespace = 'common'): Promise<Record<
 }
 ```
 
+## ICU MessageFormat Deep Dive
+
+```typescript
+// Advanced ICU MessageFormat patterns
+
+// Complex select with nested plurals
+const complexPattern = `{items, plural,
+  =0 {No items in your cart.}
+  one {You have # item ({subtotal, number, ::currency/USD})}
+  other {
+    You have {items_count_formatted} items.
+    {subtotal, number, ::currency/USD} subtotal.
+    {items, plural, one {# includes a pre-order item.} other {# include pre-order items.}}
+  }
+}`;
+
+// Ordinal + duration formatting
+const orderStatus = `Your order is {position, selectordinal,
+  one {#st}
+  two {#nd}
+  few {#rd}
+  other {#th}
+} in the queue. Estimated time: {eta, duration}`;
+
+// Rich text formatting (i18next)
+// richText_key: "Hello <bold>{{name}}</bold>, please <link>click here</link>"
+// Usage:
+// t('richText_key', { name: 'John', bold: (text) => `<strong>${text}</strong>`, link: (text) => `<a href="/">${text}</a>` })
+```
+
+## Translation Platform Integration
+
+### CI/CD Translation Pipeline
+```yaml
+# .github/workflows/translations.yml
+name: Translation Sync
+on:
+  push:
+    branches: [main]
+    paths: ['locales/en-US/**']
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract translation keys
+        run: npx i18next-scanner --config i18next-scanner.config.js
+      - name: Push source to Crowdin
+        run: crowdin upload sources --branch main
+      - name: Download translations
+        run: crowdin download --branch main --skip-untranslated-strings false
+      - name: Validate translations
+        run: npx ts-node scripts/validate-translations.ts
+      - name: Check coverage threshold
+        run: npx ts-node scripts/check-coverage.ts --threshold 80
+```
+
+```typescript
+// i18next-scanner config
+// i18next-scanner.config.js
+module.exports = {
+  input: ['src/**/*.{ts,tsx}', '!src/**/*.test.{ts,tsx}'],
+  output: './locales',
+  options: {
+    debug: true,
+    removeUnusedKeys: true,
+    sort: true,
+    func: {
+      list: ['t', 'i18next.t', 'i18n.t'],
+      extensions: ['.ts', '.tsx'],
+    },
+    lngs: ['en-US', 'vi-VN', 'zh-CN', 'es-MX', 'de-DE', 'fr-FR', 'ja-JP', 'ar-SA'],
+    defaultLng: 'en-US',
+    ns: ['common', 'checkout', 'email', 'error', 'notification'],
+    defaultNs: 'common',
+    resource: {
+      loadPath: 'locales/{{lng}}/{{ns}}.json',
+      savePath: 'locales/{{lng}}/{{ns}}.json',
+    },
+    context: true, // Enable context-based keys (e.g., button.save, button.cancel)
+    contextFallback: true,
+  },
+};
+```
+
+## Locale-Specific Formatting Rules
+
+```typescript
+// Date/time formatting per locale
+const dateFormats: Record<string, Intl.DateTimeFormatOptions> = {
+  'en-US': { month: 'short', day: 'numeric', year: 'numeric' },           // "Jan 15, 2025"
+  'de-DE': { day: '2-digit', month: '2-digit', year: 'numeric' },         // "15.01.2025"
+  'vi-VN': { day: '2-digit', month: '2-digit', year: 'numeric' },         // "15/01/2025"
+  'ja-JP': { year: 'numeric', month: '2-digit', day: '2-digit' },         // "2025/01/15"
+  'ar-SA': { day: 'numeric', month: 'long', year: 'numeric', calendar: 'islamic' }, // "15 محرم 1446"
+};
+
+// Number formatting differences
+// Number grouping: 1,234,567.89 (en) vs 1.234.567,89 (de) vs 12,34,567.89 (hi)
+// Use Intl.NumberFormat with locale — never hardcode separators
+function formatNumber(value: number, locale: string, options?: Intl.NumberFormatOptions): string {
+  return new Intl.NumberFormat(locale, options).format(value);
+}
+
+// Currency formatting: handle placement and symbol variation
+// $1,234.56 (en-US) vs 1.234,56 € (de-DE) vs 1,234.56 USD (en-CA)
+function formatCurrency(value: number, currency: string, locale: string): string {
+  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(value);
+}
+```
+
+## Server-Side Caching Strategy
+
+```typescript
+// Translation cache with fallback chains and TTL
+class TranslationCache {
+  private cache = new Map<string, Record<string, string>>();
+  private ttlMs: number;
+  private maxSize: number;
+
+  constructor(ttlMs = 3600000, maxSize = 50) {
+    this.ttlMs = ttlMs;
+    this.maxSize = maxSize;
+  }
+
+  async getTranslation(locale: string, namespace: string): Promise<Record<string, string>> {
+    const key = `${locale}:${namespace}`;
+    const cached = this.cache.get(key);
+
+    if (cached) return cached;
+
+    // Load from file system or CDN with fallback chain
+    const translations = await this.loadWithFallback(locale, namespace);
+
+    // Evict oldest entry if at capacity
+    if (this.cache.size >= this.maxSize) {
+      const oldest = this.cache.keys().next().value;
+      this.cache.delete(oldest);
+    }
+
+    this.cache.set(key, translations);
+    setTimeout(() => this.cache.delete(key), this.ttlMs);
+    return translations;
+  }
+
+  private async loadWithFallback(locale: string, namespace: string): Promise<Record<string, string>> {
+    const fallbacks = [locale, locale.split('-')[0], 'en-US'];
+    for (const lang of fallbacks) {
+      try {
+        return await loadTranslationFile(lang, namespace);
+      } catch {
+        continue;
+      }
+    }
+    return {};
+  }
+}
+```
+
 ## Configuration Reference
 
 ```yaml
@@ -278,6 +438,10 @@ i18n:
 | CDN for translation files | Serve locale JSON from CDN with versioned URLs |
 | Translation coverage | CI fails if coverage < 80% of source keys |
 | Context for translators | Every key has description, max length hint, and screenshot |
+| Dynamic content (user names, dates) | Always use ICU placeholders — never concatenate translated text with values |
+| RTL layout | Flip layout mirrors, icons, and alignment in addition to text direction |
+| Number of supported locales | Each locale adds maintenance cost. Only add when business need exists |
+| Translation memory reuse | Reuse identical translations across keys to save translator cost |
 
 ## Security
 
@@ -287,6 +451,8 @@ i18n:
 | Missing placeholders | CI validates argument matching between source and target locales |
 | RTL override injection | Sanitize user-generated content in RTL contexts (Unicode bidi overrides) |
 | Excessive locale loading | Rate-limit locale file requests, cache aggressively |
+| Translator access to source code | Use translation platform with proper RBAC — translators should not need repo access |
+| Exposed translation keys in API | Return translated messages, never raw keys, in API responses |
 
 ## Anti-Patterns
 
@@ -298,6 +464,8 @@ i18n:
 | No ICU for plurals | Wrong grammar in many languages | Use ICU plural syntax |
 | Client-side only i18n | SEO fails, server errors not translated | Translate on server for SSR and API errors |
 | Inline strings mixed with code | Impossible to extract for translators | All strings in translation files, none in code |
+| Machine-only translations without review | Low quality, cultural insensitivity | Always have human review machine translations before release |
+| Over-translation of technical terms | Brand names, product names, and commands should stay untranslated | Use ICU `select` or `=0` syntax for untranslated terms |
 
 ## Rules
 - Locale = BCP 47 tag. Never language-only (`en` not `english`)

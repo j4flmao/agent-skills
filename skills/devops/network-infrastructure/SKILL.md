@@ -8,7 +8,7 @@ description: >
   filtering, MED/LOCAL_PREF policy), leaf-spine non-blocking, MTU consistency, and verifiable failover.
   Do NOT use for: cloud-native VPC/Transit Gateway (see devops-aws / devops-gcp / devops-azure),
   service mesh (see devops-service-mesh), or app-level load balancing (see enterprise-high-availability).
-version: "1.0.0"
+version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -54,7 +54,6 @@ North-south: {2+ transit, ≥1 IX, BGP multi-home}
 Failure domains: {rack / row / pod}
 MTU: {core 9216, edge 1500}
 ```
-
 No preamble. No postamble. No explanations.
 
 ### Completion Criteria
@@ -67,10 +66,65 @@ No preamble. No postamble. No explanations.
 - [ ] IPv6 dual-stack
 - [ ] Monitoring: BGP neighbor state, interface errors, throughput
 
-### Max Response Length
-350 lines.
+## Architecture Decision Trees
 
-## Workflow
+### Fabric Topology Selection
+| Topology | East-West BW | Scalability | Cost | Best For |
+|---|---|---|---|---|
+| Leaf-spine (Clos) | Excellent | 1000s of nodes | Medium-High | Modern DC, storage, K8s |
+| Hub-spoke | Poor | <100 nodes | Low | Branch offices, small DC |
+| Full-mesh | Excellent | <8 nodes | Low (small) | Small clusters only |
+| 3-stage Clos | Excellent | ~500 racks | Medium | Most DC deployments |
+| 5-stage Clos | Excellent | 1000+ racks | High | Hyperscale |
+
+### Underlay Routing Protocol Comparison
+| Protocol | Convergence | Complexity | ECMP | Best For |
+|---|---|---|---|---|
+| BGP unnumbered | Sub-second (BFD) | Low | Yes (up to 128-way) | Modern DC, FRR/SONiC |
+| OSPF | Seconds | Low | Yes (up to 32-way) | Small-medium, classic |
+| ISIS | Sub-second | Medium | Yes (up to 128-way) | ISP, hyperscale |
+| Static | None | Lowest | No | Edge, simple branches |
+
+### BGP Route Policy Decision Tree
+```
+Ingress preference:
+  Is peer at IX?
+  ├── Yes → LOCAL_PREF 200 (cheaper peering)
+  └── No → Is peer transit?
+      ├── Yes → LOCAL_PREF 100 (paid transit)
+      └── No → LOCAL_PREF 50 (backup)
+
+Egress preference:
+  Is prefix ours?
+  ├── Yes → MED 100, prepend AS once
+  └── No → Do we need AS prepend?
+      ├── Yes → prepend 2-3 times for less-preferred path
+      └── No → standard MED
+```
+
+### Overlay Protocol Comparison
+| Protocol | L2 Stretch | L3 Isolation | Control-Plane | Best For |
+|---|---|---|---|---|
+| EVPN/VXLAN | Yes | 16M VNIs | BGP MP-BGP | Multi-tenant DC |
+| VLAN | Yes | 4094 VLANs | STP/RSTP | Simple L2 networks |
+| MPLS L3VPN | No | Yes | LDP/RSVP-TE | ISP, WAN |
+| VXLAN (static) | Yes | 16M VNIs | Static | Simple overlay |
+| Geneve | Yes | 16M+ VNIs | EVPN | Modern, extensible |
+
+### Network Vendor Comparison
+| Vendor | Switching | Routing | Automation | Best For |
+|---|---|---|---|---|
+| Arista | EOS VXLAN/EVPN | BGP, ISIS | CloudVision, eAPI | DC leaf-spine |
+| Cisco Nexus | NX-OS VXLAN/EVPN | BGP, OSPF | NX-API, Ansible | Enterprise DC |
+| Juniper | Junos EVPN | BGP, ISIS | PyEZ, Ansible | ISP, large DC |
+| FRR (Linux) | Linux bridge | BGP, OSPF | Ansible, Cumulus | White-box, DIY |
+| SONiC | Switch abstraction | BGP | Redis DB, K8s | Hyperscale, OCP |
+| Aruba CX | VSX, EVPN | BGP, OSPF | AOS-CX Ansible | Campus + DC |
+
+## Quick Start
+Leaf-spine topology → BGP unnumbered underlay → EVPN/VXLAN overlay (if needed) → BGP multi-homing for north-south → Anycast for DNS/API → VRRP for L2 redundancy → MTU 9216 core → Monitoring with Prometheus + SNMP.
+
+## Core Workflow
 
 ### Step 1: Pick Fabric Topology
 ```
@@ -134,7 +188,7 @@ You (AS 65001)
    │           │
  Transit-A   Transit-B
  (Cogent)    (Lumen)
-                     IX-1 (private peering: Cloudflare, Google, AWS, Meta)
+                      IX-1 (private peering: Cloudflare, Google, AWS, Meta)
 
 eBGP to all 3. Outbound: LOCAL_PREF to prefer peering > transit (cheaper).
 Inbound: AS-prepend for less-preferred ingress; MED only with same neighbor.
@@ -185,7 +239,90 @@ interface Vlan100
 Rule: end-to-end consistency. One link at 1500 in a 9000 path = silent fragmentation / blackhole.
 Verify with `ping -M do -s 8972` (don't-fragment).
 
-### Step 8: Carrier Diversity
+### Step 8: BGP Configuration — Arista EOS
+```eos
+! Arista EOS leaf switch BGP config
+router bgp 65001
+ router-id 10.0.0.1
+ maximum-paths 4 ecmp 128
+ neighbor SPINE-PEERS peer-group
+ neighbor SPINE-PEERS remote-as 65000
+ neighbor SPINE-PEERS bfd
+ neighbor SPINE-PEERS timers 3 9
+ neighbor SPINE-PEERS route-map FROM-SPINE in
+ neighbor SPINE-PEERS route-map TO-SPINE out
+ neighbor 10.0.1.0 peer-group SPINE-PEERS
+ neighbor 10.0.1.1 peer-group SPINE-PEERS
+ neighbor 10.0.1.2 peer-group SPINE-PEERS
+ neighbor 10.0.1.3 peer-group SPINE-PEERS
+ !
+ address-family ipv4
+  neighbor SPINE-PEERS activate
+  network 10.0.0.1/32
+  network 198.51.100.0/24
+ !
+ address-family evpn
+  neighbor SPINE-PEERS activate
+  advertise all-vni
+```
+
+### Step 9: EVPN/VXLAN Configuration — Arista
+```eos
+! Configure VXLAN on leaf
+interface Vxlan1
+ description EVPN VXLAN overlay
+ vxlan source-interface Loopback0
+ vxlan udp-port 4789
+ vxlan vlan 100 vni 10100
+ vxlan vlan 200 vni 10200
+ vxlan vlan 300 vni 10300
+ vxlan learn-restrict-any-vni
+ vxlan flood vtep 10.0.0.2
+ vxlan flood vtep 10.0.0.3
+ vxlan flood vtep 10.0.0.4
+
+! EVPN address-family already under BGP
+! Type-2 routes for MAC/IP advertisement
+! Type-5 routes for IP prefix advertisement
+```
+
+### Step 10: BGP Prefix Filtering
+```bash
+! RPKI-based prefix validation
+route-map FROM-TRANSIT permit 10
+ match rpki valid
+ set local-preference 100
+!
+route-map FROM-TRANSIT permit 20
+ match rpki not-found
+ set local-preference 50
+!
+route-map FROM-TRANSIT deny 30
+ match rpki invalid
+!
+
+! Prefix filter — only accept our prefix
+ip prefix-list OUR-BLOCKS seq 5 permit 198.51.100.0/24
+route-map TO-TRANSIT permit 10
+ match ip address prefix-list OUR-BLOCKS
+```
+
+### Step 11: EVPN Multi-Homing (Ethernet Segment)
+```eos
+! On leaf switches connected to same server
+interface Ethernet3
+ description Server-01 bond0
+ switchport access vlan 100
+ evpn ethernet-segment
+  identifier 00:01:01:00:00:01:00:00:00:01
+  df-election method preference
+  df-election preference 150  ! higher priority leaf
+  mpls bgp df-election include-pref-len
+ lacp system-id 00:01:01:00:00:01
+ spanning-tree portfast
+```
+
+### Step 12: Carrier Diversity
 ```
 Tier-1: ≥ 2 transit + ≥ 2 IX peering
 Fiber entry: 2 physical entries to building (different geographic paths)
@@ -194,7 +331,7 @@ Provider: avoid two carriers riding same physical fiber underneath
 Test: actual run from carrier maps; insist on diverse routes in SLA
 ```
 
-### Step 9: QoS and Traffic Shaping
+### Step 13: QoS and Traffic Shaping
 ```
 Classify at edge:
   EF (46): VoIP, real-time       — strict priority, 5% BW
@@ -206,30 +343,66 @@ Classify at edge:
 Apply on all uplinks: shape, queue, police inbound to protect fabric.
 ```
 
-### Step 10: Network Automation
+### Step 14: Network Automation — Ansible
 ```yaml
-# Ansible playbook example for BGP config
+# ansible/bgp-config.yaml
 - name: Configure BGP on leaf switches
   hosts: leaf_switches
+  gather_facts: no
+  vars:
+    leaf_asn: 65001
+    spine_asn: 65000
   tasks:
-  - name: Set BGP ASN
-    cisco.ios.ios_bgp:
-      config:
-        bgp_as: "{{ leaf_asn }}"
-        log_neighbor_changes: true
-        neighbors:
-        - neighbor: "{{ item }}"
-          remote_as: "{{ spine_asn }}"
-          description: "uplink-to-spine-{{ inventory_hostname }}"
-      state: merged
-    loop: "{{ spine_ips }}"
+  - name: Deploy BGP config
+    arista.eos.eos_config:
+      src: bgp-leaf.j2
+      backup: yes
+    notify: save config
+  
+  - name: Verify BGP neighbors
+    arista.eos.eos_command:
+      commands:
+        - show bgp summary | json
+    register: bgp_summary
+    failed_when: bgp_summary.stdout[0].vrfs.default.peers | length < 4
+
+  handlers:
+  - name: save config
+    arista.eos.eos_command:
+      commands:
+        - write memory
 ```
 
-### Step 11: DOCSIS / Fiber OLT Access (Last Mile)
+### Step 15: Network Automation — Nornir
+```python
+# nornir/bgp_check.py
+from nornir import InitNornir
+from nornir_netmiko import netmiko_send_command
+from nornir_utils.plugins.functions import print_result
+
+nr = InitNornir(config_file="config.yaml")
+
+def check_bgp_peers(task):
+    result = task.run(
+        task=netmiko_send_command,
+        command_string="show bgp summary",
+        use_textfsm=True,
+    )
+    bgp_data = result[0].result
+    peers_up = sum(1 for p in bgp_data if p.get('state') == 'Established')
+    task.host["bgp_peers_up"] = peers_up
+    if peers_up < 4:
+        return f"WARNING: Only {peers_up} BGP peers established"
+
+results = nr.run(task=check_bgp_peers)
+print_result(results)
+```
+
+### Step 16: DOCSIS / Fiber OLT Access (Last Mile)
 For ISPs or edge POPs, apply cable access standards. DOCSIS 3.1 supports 10G down/1G up.
 GPON/XGS-PON for fiber to the home. Use BNG (Broadband Network Gateway) for subscriber management.
 
-### Step 12: Monitoring Tools and KPIs
+### Step 17: Monitoring Tools and KPIs
 ```
 BGP neighbor state          up/down + uptime + prefixes received
 Interface counters          errors, drops, throughput per port
@@ -238,10 +411,90 @@ Latency to upstream peers   ping / mtr from edge to {transit, peer}
 DDoS / volume anomaly       netflow / sFlow / IPFIX export
 Switch CPU/memory           control-plane load
 Fabric utilization          per-spine / per-leaf link utilization
+Optics DOM                  temperature, TX power, RX power, bias current
 ```
 
 Tools: librenms, observium, Prometheus + snmp_exporter, flow collector (akvorado, pmacct),
 oxidized for config backup, batfish for config validation.
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Single-Carrier Uplink
+Full outage during carrier maintenance. Always multi-home to ≥ 2 transit providers. Use BGP with LOCAL_PREF to prefer primary, prepend AS for backup path.
+
+### Anti-Pattern 2: Mixing MTU Within a Path
+One link at 1500 in a 9000 path causes silent fragmentation and blackhole connections. Verify end-to-end with `ping -M do -s 8972`. Document MTU per link in DCIM.
+
+### Anti-Pattern 3: No BGP Filtering
+Accepting full BGP table from non-transit peers. Always deploy prefix lists inbound and outbound on every eBGP session. Use RPKI ROA validation to reject invalid prefixes.
+
+### Anti-Pattern 4: L2 Loop with STP
+Spanning tree disables redundant links to prevent loops. Use MLAG/VPC for L2 redundancy instead. STP should only be a safety net, never the primary redundancy mechanism.
+
+### Anti-Pattern 5: Oversubscription > 5:1 on Storage Fabric
+Storage traffic (Ceph, iSCSI, NFS) requires predictable throughput. Oversubscription above 5:1 creates contention. Design storage fabric at 1:1 or 3:1 maximum.
+
+### Anti-Pattern 6: Manual Config Only
+Config drift, no audit trail, no rollback capability. All changes must go through NetOps automation (Ansible, Nornir, Salt). Enable config backup with oxidized.
+
+### Anti-Pattern 7: Flat Network (No L3 Segmentation)
+Broadcast storms, large blast radius, no tenant isolation. Use VLANs or VXLAN for segmentation. Route at the leaf layer — never stretch L2 across the fabric unnecessarily.
+
+### Anti-Pattern 8: Single Fiber Entry into Building
+Backhoe fade takes out entire site regardless of carrier diversity. Ensure two physical fiber entries from different geographic paths. Separate conduits and building entry points.
+
+### Anti-Pattern 9: Ignoring ECMP Polarization
+Poor hash algorithms cause uneven flow distribution across ECMP paths. Use enhanced hashing (include L4 ports, entropy fields). Test with `show ip load-sharing` on Arista/Cisco.
+
+### Anti-Pattern 10: No BFD Configuration
+BGP hold timers alone (30-120s) are too slow for modern DC failover. Always enable BFD for sub-second detection (3x 300ms = 900ms detect). Tune BGP timers to 3s keepalive, 9s hold as backup.
+
+## Production Considerations
+
+### High Availability
+- Deploy BFD with 300ms interval for sub-second failure detection.
+- Use Anycast for DNS, NTP, and stateless API gateways across POPs.
+- MLAG/VPC + VRRP/HSRP for L2 device redundancy at ToR layer.
+- Route reflectors at spine layer to avoid full iBGP mesh between leaves.
+- Design for 50% headroom on spine uplinks during any single link failure.
+- Quarterly fail-test: pull one uplink / one switch and verify auto-recovery.
+
+### Security
+- RPKI ROA published for owned prefixes; RPKI validation inbound on all eBGP sessions.
+- Prefix filters on every eBGP session (in AND out).
+- Max-prefix limits on all neighbor sessions to prevent route table overflow.
+- Control-plane policing (CoPP) to protect switch CPU from DoS.
+- MACsec for intra-fabric encryption if required by compliance.
+- Management VRF for out-of-band management access.
+
+### Performance
+- ECMP across all leaf-spine uplinks; flow-hash tuned to avoid polarization.
+- MTU 9216 in core, 1500 at edge, consistent within each domain.
+- Use jumbo frames for storage and backup traffic (Ceph, iSCSI, NFS).
+- Tune buffer allocation on spine switches for deep-buffered workloads.
+- Monitor optics DOM for predictive failure detection.
+
+### Operational Excellence
+- Color-code and label both ends of every fiber patch for ops clarity.
+- Use digital optical monitoring (DOM) on all optics to predict failures.
+- All changes via NetOps automation, never manual on prod.
+- Separate underlay (loopbacks) from overlay (VNI) addressing plan.
+- Run BGP timers aggressively: 3s keepalive, 9s hold for ToR-to-spine.
+- NetFlow/sFlow export from every ToR for capacity planning + DDoS detection.
+
+## Security Considerations
+| Threat | Mitigation | Implementation |
+|---|---|---|
+| BGP hijack | RPKI ROA + prefix filters | Route-map match rpki valid |
+| Route table flooding | Max-prefix limit | `neighbor max-prefix 1000` |
+| ARP spoofing | Dynamic ARP Inspection | DAI on all access VLANs |
+| DHCP spoofing | DHCP Snooping | Trust uplink ports only |
+| MAC flooding | Port Security + MAC limiting | `switchport port-security` |
+| Control-plane DoS | CoPP | Aggregate control-plane ACL |
+| Unauthorized access | AAA + management VRF | TACACS+/RADIUS on mgmt VRF |
+| VLAN hopping | Disable DTP, restrict trunk | `switchport nonegotiate` |
+| STP attack | BPDU Guard | `spanning-tree bpduguard enable` |
+| MACsec encryption | IEEE 802.1AE | Key agreement via EAP |
 
 ## Rules
 - Multi-home BGP from day one for any north-south critical traffic.
@@ -252,30 +505,10 @@ oxidized for config backup, batfish for config validation.
 - Prefix filters on every eBGP session (in AND out).
 - Carrier diversity: ≥ 2 physical fiber entries, different conduits.
 - IPv6 dual-stack everywhere; IPv6-only acceptable for greenfield.
-- All changes via NetOps automation (Ansible, Nornir), never manual on prod.
+- All changes via NetOps automation, never manual on prod.
 - Quarterly fail-test: pull one uplink / one switch and verify auto-recovery.
 - Deploy QoS classification at edge; trust boundaries on all uplinks.
 - NetFlow/sFlow export from every ToR for capacity planning + DDoS detection.
-
-## Production Considerations
-- Run BGP timers aggressively: 3s keepalive, 9s hold for ToR-to-spine.
-- Use BFD for sub-second failure detection alongside BGP.
-- Separate underlay (loopbacks) from overlay (VNI) addressing plan.
-- Deploy route reflectors at spine layer to avoid full iBGP mesh.
-- Prefix-list filter on all edges: max-prefix limits, RPKI invalid = reject.
-- Design for 50% headroom on spine uplinks during any single link failure.
-- Color-code and label both ends of every fiber patch for ops clarity.
-- Use digital optical monitoring (DOM) on all optics to predict failures.
-
-## Anti-Patterns
-- Single-carrier uplink — full outage during carrier maintenance.
-- Mixing MTU within a path — silent packet drops, inconsistent behavior.
-- No BGP filtering — accepts full BGP table from non-transit peers.
-- L2 loop with STP — spanning tree disables redundant links.
-- Oversubscription > 5:1 on storage fabric — throughput bottleneck.
-- Manual config only — config drift, no audit trail.
-- Flat network (no L3 segmentation) — broadcast storms, large blast radius.
-- Single fiber entry into building — backhoe fade takes out entire site.
 
 ## References
   - references/bgp-anycast.md — BGP + Anycast — Policy, RPKI, Multi-Homing
@@ -284,6 +517,8 @@ oxidized for config backup, batfish for config validation.
   - references/network-infrastructure-fundamentals.md — Network Infrastructure Fundamentals
   - references/sd-wan-mpls.md — SD-WAN vs MPLS — Branch + Hybrid Connectivity
   - references/vrrp-hsrp.md — L2 Redundancy — VRRP / HSRP / CARP / MLAG
+  - references/evpn-vxlan-deep-dive.md — EVPN/VXLAN Deep Dive
+  - references/bgp-automation.md — BGP Automation with Ansible
 ## Handoff
 - `devops-datacenter` for physical cabling and patch panels.
 - `devops-cdn-edge` for global anycast and DDoS scrubbing.

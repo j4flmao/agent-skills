@@ -1,213 +1,181 @@
-# Sast Dast Fundamentals
+# SAST/DAST Fundamentals
 
 ## Overview
-Sast Dast is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Static Application Security Testing (SAST) and Dynamic Application Security Testing (DAST) are complementary security testing approaches. SAST analyzes source code for vulnerabilities without executing it (white-box). DAST tests running applications for vulnerabilities from the outside (black-box). Together they provide comprehensive application security coverage.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Sast Dast helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Concept 1: SAST (Static Analysis)
+- Analyzes source code, bytecode, or binaries without execution
+- Detects vulnerabilities early in SDLC (shift-left)
+- Scans: SQL injection, XSS, buffer overflows, insecure crypto, hardcoded secrets
+- Tools: Semgrep, SonarQube, CodeQL, Checkmarx, Fortify, Snyk Code
+- **True positives**: Real vulnerabilities found by the tool
+- **False positives**: Incorrectly flagged as vulnerable (SAST has high FP rate)
+- **False negatives**: Vulnerabilities the tool misses
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Sast Dast solutions. These principles help maintain code quality and reduce technical debt.
+### Concept 2: DAST (Dynamic Analysis)
+- Tests running applications from the outside (no source code access)
+- Finds vulnerabilities accessible to an attacker
+- Scans: XSS, SQL injection, CSRF, authentication issues, misconfigurations
+- Tools: OWASP ZAP, Burp Suite, Acunetix, Qualys Web App Scanner
+- **True positives**: Verifiable vulnerabilities
+- **False positives**: Lower than SAST, but still present
+- **Context-aware**: Finds issues SAST can't (runtime configuration, third-party components)
 
-### Concept 3: Data Management
-Proper data management is essential for Sast Dast. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+### Concept 3: SAST vs DAST Comparison
+| Aspect | SAST | DAST |
+|--------|------|------|
+| Phase | Early (commit, build) | Late (staging, pre-prod) |
+| Access needed | Source code | Running application |
+| Scan speed | Fast (minutes) | Slower (minutes-hours) |
+| False positives | Higher | Lower |
+| Coverage | All code paths | Only reachable paths |
+| Config detection | Limited | Good |
+| Third-party vulns | Limited (SCA needed) | Runtime detection |
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
-
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Sast Dast follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+### Concept 4: CI/CD Integration
+- **SAST** in CI: Run on every PR/commit, block on critical/high findings
+- **DAST** in CI: Run on staging/preview deployment, block on verified findings
+- **Gate vs non-gate**: Some teams block builds on findings; others only alert
+- **Baseline**: Compare against known findings to avoid regressions
+- **Delta scanning**: Only scan changed code for faster feedback
 
 ## Implementation Guide
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Step 1: SAST Configuration
+```yaml
+# .semgrep.yml
+rules:
+  - id: sql-injection
+    patterns:
+      - pattern: "execute($QUERY)"
+      - metavariable-regex:
+          metavariable: $QUERY
+          regex: ".*\\$.*"
+    message: "Potential SQL injection: use parameterized queries"
+    severity: ERROR
+    languages: [python, javascript]
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+  - id: hardcoded-secret
+    patterns:
+      - pattern-either:
+          - pattern: "password = \"$PASS\""
+          - pattern: "api_key = \"$KEY\""
+      - pattern-not: "password = os.getenv(\"$VAR\")"
+    message: "Hardcoded secret detected"
+    severity: ERROR
+    languages: [python]
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+  - id: debug-endpoint
+    patterns:
+      - pattern: "@app.route(\"/debug\")"
+    message: "Debug endpoint exposed in production"
+    severity: WARNING
+    languages: [python]
+```
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+### Step 2: DAST Configuration (OWASP ZAP)
+```yaml
+# zap-config.yml
+env:
+  contexts:
+    - name: "Web App"
+      urls: ["https://staging.example.com"]
+      authentication:
+        method: "browser"
+        login_url: "https://staging.example.com/login"
+        login_data: "username={{USER}}&password={{PASS}}"
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+params:
+  scan_policy: "API-Scan"  # or "Default Policy"
+  spider:
+    max_depth: 5
+    max_children: 100
+  active_scan:
+    policy_definition:
+      - id: 40012  # SQL Injection
+        threshold: "MEDIUM"
+        strength: "HIGH"
+      - id: 40014  # XSS
+        threshold: "LOW"
+        strength: "HIGH"
+      - id: 90019  # CSRF
+        threshold: "MEDIUM"
+```
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### Step 3: SAST in GitHub Actions
+```yaml
+name: SAST Scan
+on: [pull_request]
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: semgrep/semgrep-action@v1
+        with:
+          config: p/default
+          publishToken: ${{ secrets.SEMGREP_APP_TOKEN }}
+          auditOn: push
+      - name: Check blocking findings
+        run: |
+          if grep -q "blocking" semgrep_results.sarif; then
+            echo "Blocking findings detected!"
+            exit 1
+          fi
+```
+
+### Step 4: DAST in CI Pipeline
+```yaml
+name: DAST Scan
+on:
+  deployment_status:
+    states: [success]
+
+jobs:
+  zap-scan:
+    if: github.event.deployment_status.environment == 'staging'
+    runs-on: ubuntu-latest
+    steps:
+      - name: ZAP Scan
+        uses: zaproxy/action-full-scan@v0.4.0
+        with:
+          target: ${{ github.event.deployment_status.target_url }}
+          rules_file_name: zap-config.yml
+          cmd_options: "-a"
+```
 
 ## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+- Run SAST on every PR/commit — fast feedback prevents vulnerabilities from reaching main
+- Run DAST on staging/preview before production deployment
+- Triage SAST findings: automated tools generate noise, manual review separates real from false
+- Use consistent severity ratings and remediation SLAs
+- SAST + DAST + SCA (software composition analysis) for comprehensive coverage
+- Establish baseline and track delta — don't overwhelm teams with existing findings
+- Customize rule sets to your tech stack and risk profile
+- Train developers to understand and fix findings
+- Integrate results into existing workflows (Jira, Slack, ticketing system)
+- Regular tool updates — new vulnerability patterns are discovered constantly
 
 ## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+- Relying on SAST or DAST alone — they find different vulnerability classes
+- Ignoring false negatives — no tool catches everything
+- Running SAST only at release (too late for remediation)
+- Blindly trusting automated scan results (especially SAST false positives)
+- No baseline management — same findings reported every scan, causing alert fatigue
+- Scanning without authentication — misses most application vulnerabilities
+- Not customizing scan configurations to the application
+- Blocking builds on low-severity findings unnecessarily
 
 ## Key Points
-- Understand core Sast Dast concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- SAST analyzes source code without execution (early, fast, high FP rate)
+- DAST tests running applications from outside (later, contextual, lower FP rate)
+- SAST and DAST are complementary — use both for comprehensive coverage
+- SAST in CI per PR; DAST on staging before production
+- Always scan with authenticated sessions to find real vulnerabilities
+- Establish baselines and track deltas to reduce noise
+- Integrate findings into developer workflows (Jira, PR comments)
+- Customize rules for your tech stack and risk profile
+- SAST + DAST + SCA + manual review provides defense in depth

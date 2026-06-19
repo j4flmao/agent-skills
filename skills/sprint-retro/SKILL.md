@@ -273,4 +273,242 @@ async function postRetroSummary(channel, actions, metrics) {
 | Low participation | Silent team members | Anonymous input, round-robin |
 | No improvement | Same velocity/bugs | Review action completion first |
 | Too much negativity | Only complaints | Force appreciations/celebrations |
-| Too much positivity | No criticism | Use "Even Better If" questions |
+| Too much positivity | No criticism | Use "Even Better If" questions
+
+## Implementation Patterns
+
+### Retro Board Service
+
+```python
+from dataclasses import dataclass, field
+from typing import List, Dict, Optional
+from datetime import datetime
+import json
+import hashlib
+
+@dataclass
+class RetroItem:
+    author: str
+    text: str
+    category: str
+    timestamp: datetime = field(default_factory=datetime.now)
+    vote_count: int = 0
+    id: str = ""
+
+    def __post_init__(self):
+        if not self.id:
+            raw = f"{self.author}:{self.text}:{self.timestamp.isoformat()}"
+            self.id = hashlib.md5(raw.encode()).hexdigest()[:12]
+
+    def vote(self):
+        self.vote_count += 1
+
+@dataclass
+class ActionItem:
+    description: str
+    owner: str
+    due_date: str
+    status: str = "open"
+    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    completed_at: Optional[str] = None
+    id: str = ""
+
+    def __post_init__(self):
+        if not self.id:
+            self.id = hashlib.md5(f"{self.description}:{self.owner}".encode()).hexdigest()[:8]
+
+class RetroBoard:
+    def __init__(self, sprint_id: str, format_type: str = "start_stop_continue"):
+        self.sprint_id = sprint_id
+        self.format_type = format_type
+        self.items: List[RetroItem] = []
+        self.action_items: List[ActionItem] = []
+        self.categories = self._get_categories()
+
+    def _get_categories(self) -> List[str]:
+        formats = {
+            "start_stop_continue": ["start", "stop", "continue"],
+            "glad_sad_mad": ["glad", "sad", "mad"],
+            "sailboat": ["wind", "anchor", "rock", "island"],
+            "starfish": ["keep", "less", "more", "stop", "start"],
+            "four_ls": ["liked", "learned", "lacked", "longed_for"],
+            "rose_thorn_bud": ["rose", "thorn", "bud"],
+            "daki": ["do", "keep", "add", "improve"],
+        }
+        return formats.get(self.format_type, ["good", "bad", "action_items"])
+
+    def add_item(self, author: str, text: str, category: str) -> RetroItem:
+        if category not in self.categories:
+            raise ValueError(f"Invalid category '{category}'. Must be one of {self.categories}")
+        item = RetroItem(author=author, text=text, category=category)
+        self.items.append(item)
+        return item
+
+    def add_action_item(self, description: str, owner: str, due_date: str) -> ActionItem:
+        item = ActionItem(description=description, owner=owner, due_date=due_date)
+        self.action_items.append(item)
+        return item
+
+    def complete_action_item(self, item_id: str):
+        for item in self.action_items:
+            if item.id == item_id:
+                item.status = "completed"
+                item.completed_at = datetime.now().isoformat()
+                break
+
+    def get_top_items(self, limit: int = 3, category: Optional[str] = None) -> List[RetroItem]:
+        filtered = [i for i in self.items if category is None or i.category == category]
+        return sorted(filtered, key=lambda x: -x.vote_count)[:limit]
+
+    def summarize(self) -> Dict:
+        return {
+            "sprint_id": self.sprint_id,
+            "format": self.format_type,
+            "total_items": len(self.items),
+            "items_by_category": {
+                cat: len([i for i in self.items if i.category == cat])
+                for cat in self.categories
+            },
+            "top_voted_items": [
+                {"text": i.text[:100], "category": i.category, "votes": i.vote_count}
+                for i in self.get_top_items(5)
+            ],
+            "action_items": {
+                "total": len(self.action_items),
+                "open": sum(1 for a in self.action_items if a.status == "open"),
+                "completed": sum(1 for a in self.action_items if a.status == "completed"),
+                "overdue": sum(1 for a in self.action_items if a.status == "open" and a.due_date < datetime.now().isoformat()),
+            },
+        }
+
+class RetroFacilitator:
+    def __init__(self, team_size: int, is_remote: bool = True):
+        self.team_size = team_size
+        self.is_remote = is_remote
+
+    def select_format(self, sprint_health: Dict) -> str:
+        mood = sprint_health.get("mood", "neutral")
+        completion_rate = sprint_health.get("completion_rate", 0.5)
+        recurring_issues = sprint_health.get("recurring_issues", 0)
+
+        if completion_rate > 0.8 and mood == "positive":
+            return "glad_sad_mad"
+        elif completion_rate < 0.4:
+            return "sailboat"
+        elif recurring_issues > 3:
+            return "starfish"
+        elif mood == "negative":
+            return "rose_thorn_bud"
+        elif self.team_size > 8:
+            return "start_stop_continue"
+        return "four_ls"
+
+    def get_timings(self) -> Dict:
+        if self.team_size <= 4:
+            return {"setup": 3, "gather": 10, "discuss": 10, "action": 10, "close": 5}
+        elif self.team_size <= 8:
+            return {"setup": 5, "gather": 15, "discuss": 15, "action": 15, "close": 10}
+        return {"setup": 5, "gather": 20, "discuss": 25, "action": 15, "close": 10}
+
+class RetroAnalytics:
+    def __init__(self):
+        self.sprint_history: List[Dict] = []
+
+    def add_sprint(self, health: Dict):
+        self.sprint_history.append(health)
+
+    def get_completion_trend(self) -> Dict:
+        if len(self.sprint_history) < 2:
+            return {"trend": "insufficient_data", "avg_completion": 0}
+        rates = [s.get("completion_rate", 0) for s in self.sprint_history]
+        avg = sum(rates) / len(rates)
+        recent_avg = sum(rates[-3:]) / min(3, len(rates))
+        return {
+            "trend": "improving" if recent_avg > avg else "declining" if recent_avg < avg else "stable",
+            "avg_completion": round(avg, 2),
+            "recent_avg": round(recent_avg, 2),
+        }
+
+    def get_recurring_themes(self) -> List[Dict]:
+        all_issues = []
+        for sprint in self.sprint_history:
+            for issue in sprint.get("top_issues", []):
+                all_issues.append(issue.lower().strip())
+        from collections import Counter
+        recurring = Counter(all_issues)
+        return [{"issue": k, "count": v} for k, v in recurring.most_common(10) if v >= 2]
+```
+
+## Architecture Decision Trees
+
+### Retro Format Selection
+
+```
+What's the team's current situation?
+├── Team is new (<3 sprints together)
+│   └── Start/Stop/Continue → Simple, builds foundational habits
+│
+├── Good sprint with wins to celebrate
+│   └── Glad/Sad/Mad → Balanced positivity and improvement
+│
+├── Rough sprint with setbacks
+│   ├── Team is frustrated → Rose/Thorn/Bud → Emotionally safe
+│   └── Team wants deep analysis → Sailboat → Structured problem solving
+│
+├── Stagnant / recurring issues
+│   └── Starfish → Forces change in 5 dimensions
+│
+├── Low team morale / burnout risk
+│   └── Lean Coffee → Self-organizing, team chooses what matters
+│
+└── Need quantitative improvement
+    └── Metrics-based retro → Data-driven, track velocity/bugs/lead time
+```
+
+### Action Item Tracking Strategy
+
+```
+Can this action be completed next sprint?
+├── YES
+│   ├── Single owner → Assign directly
+│   ├── Multiple people → One accountable, others contributors
+│   └── Team-wide change → Rotating responsibility
+│
+├── NO, too large
+│   ├── Break into smaller sub-tasks (max 1 sprint each)
+│   └── Create experiment with go/no-go decision after 2 weeks
+│
+├── NO, needs investigation
+│   └── Create spike task with timebox (max 1 day)
+│
+└── NOT actionable (systemic, org-level)
+    └── Escalate to management with impact analysis
+```
+
+## Production Considerations
+
+- **Retro tool integration**: Connect retro boards to project management tools (Jira, Linear, Asana). Automatically create action items as tickets with proper labels and sprint assignments.
+- **Anonymous input for sensitive topics**: Support anonymous submissions in digital retros. Anonymize by default, allow opt-in attribution for action items.
+- **Retro data persistence**: Store retro data in a searchable format. Enables trend analysis across sprints and quarter-over-quarter comparison.
+- **Facilitator rotation**: Avoid the same person facilitating every retro. Rotate every 2-3 sprints to bring fresh perspectives and prevent facilitator fatigue.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| No action items from retro | Discussion without action wastes time | Mandatory 2-3 action items per retro |
+| Same action items every sprint | Systemic issues not being addressed | Escalate recurring items, change formats |
+| Blaming individuals | Defensiveness shuts down open discussion | Focus on processes, use "we" language |
+| Management attends all retros | Team self-censors with managers present | Management attends every 3rd, focus on listening not directing |
+| Too many action items | None get completed | Limit to top 3 by team vote |
+| Skipping retros when busy | Most important when under pressure | Even 15-min retro is better than none |
+| Same format every sprint | Becomes routine, loses engagement | Alternate between 2-3 formats |
+| Not reviewing previous actions | Same issues re-appear | Start every retro with action item status check |
+| Going significantly over time | Loses team trust in timebox | Hard stop at time limit, park overflow items |
+
+## Performance Optimization
+
+- **Pre-populate retro board**: Before the retro, pre-populate the board with sprint data (completed stories, bugs, incidents, velocity). Saves 5-10 minutes of context-setting.
+- **Action item auto-assignment**: Use historical data to suggest owners for action items based on expertise and current workload.
+- **Retro templates**: Save successful retro formats as templates with pre-configured categories and timing. Reduces setup time by 80%.
+- **Async retro option**: For distributed teams, enable asynchronous retro input over 24 hours before synchronous discussion. Increases participation from quiet team members. |

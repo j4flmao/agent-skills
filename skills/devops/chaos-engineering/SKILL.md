@@ -39,6 +39,21 @@ Design and execute chaos engineering experiments to validate system resilience u
 | Toxiproxy | App-level | Sidecar/proxy | Network latency, disconnects, throttling | Free |
 | Pumba | Docker | Container | Container kill, network, pause | Free |
 
+### Tool Selection Decision
+```
+Kubernetes-native environment?
+├── Yes → Need K8s-specific chaos?
+│   ├── Yes → Chaos Mesh (broadest failure modes) or Litmus (chaos charts, CI integration)
+│   └── No → Consider cloud-native tool
+│       ├── AWS → AWS FIS (native EC2/RDS/ECS fault injection)
+│       └── Other → Gremlin (multi-platform agent)
+└── No → Non-K8s (VMs, bare metal)?
+    ├── Yes → Gremlin (multi-platform) or custom scripts
+    └── No → Docker-only?
+        ├── Yes → Pumba (lightweight container chaos)
+        └── No → Toxiproxy (application-level, sidecar)
+```
+
 ### Experiment Types by Failure Mode
 | Failure Mode | Chaos Mesh | Litmus | Gremlin | AWS FIS |
 |---|---|---|---|---|
@@ -51,6 +66,9 @@ Design and execute chaos engineering experiments to validate system resilience u
 | DNS failure | DNSChaos | — | DNS | — |
 | Node shutdown | — | node-drain | — | EC2 stop |
 | RDS failover | — | — | — | RDS failover |
+| HTTP abort | HTTPChaos | — | — | — |
+| Process kill | — | — | Process kill | — |
+| Disk fill | — | — | Disk | — |
 
 ### Experiment Maturity Levels
 | Level | Description | Frequency | Blast Radius |
@@ -60,6 +78,22 @@ Design and execute chaos engineering experiments to validate system resilience u
 | L3: Multi-service | Coordinated faults across services | Monthly | Staging + shadow prod |
 | L4: Production | Experiment in production with guardrails | Quarterly | 1% traffic / select users |
 | L5: GameDay | Full failure simulation | Biannual | Full production with runbook |
+
+### Steady State Hypothesis Template
+```
+Given [system/component]
+When [fault is injected]
+Then [expected behavior] should remain within [SLO threshold]
+Because [reason this should hold]
+
+Example:
+Given payment-service
+When 1 of 3 replicas is killed
+Then P99 latency should remain < 500ms
+  AND error rate should remain < 1%
+  AND throughput should return to baseline within 30s
+Because the deployment has anti-affinity and HPA configured
+```
 
 ## Core Workflow
 
@@ -303,6 +337,182 @@ rollback:
   - "Fail DNS back to primary endpoint"
 ```
 
+### Step 7: CI/CD Chaos Integration (Litmus)
+```yaml
+# .github/workflows/chaos-pipeline.yml
+name: Chaos in CI Pipeline
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"  # Every Monday 6 AM
+
+jobs:
+  chaos-test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'chaos')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+      - name: Install Litmus
+        run: |
+          kubectl apply -f https://litmuschaos.github.io/litmus/litmus-operator-v3.0.0.yaml
+          kubectl apply -f https://hub.litmuschaos.io/api/chaos/3.0.0?file=charts/generic/experiments.yaml
+      - name: Run chaos experiment
+        run: |
+          kubectl apply -f chaos/litmus-experiment.yaml
+          # Wait for experiment to complete
+          kubectl wait --for=condition=Completed chaosengine/payment-service-chaos --timeout=300s
+      - name: Check experiment result
+        run: |
+          kubectl get chaosresult payment-service-chaos-pod-delete -o json \
+            | jq '.status.experimentStatus.verdict'
+```
+
+### Step 8: Gremlin API-based Experiment
+```bash
+# Gremlin API Attack — CPU exhaustion
+curl -s https://api.gremlin.com/v1/attacks/new \
+  -H "Authorization: Key $GREMLIN_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target": {
+      "type": "Random",
+      "count": 1
+    },
+    "command": {
+      "type": "CPU",
+      "cpu": {
+        "cores": 2,
+        "capacity": 80,
+        "length": 120
+      }
+    }
+  }'
+
+# Gremlin API — Shutdown attack
+curl -s https://api.gremlin.com/v1/attacks/new \
+  -H "Authorization: Key $GREMLIN_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target": {
+      "type": "Random",
+      "count": 1
+    },
+    "command": {
+      "type": "Shutdown",
+      "shutdown": {
+        "delay": 30,
+        "restart": true
+      }
+    }
+  }'
+```
+
+### Step 9: Blast Radius Configuration
+```yaml
+# chaos/blast-radius-control.yaml
+# Chaos Mesh: mode controls blast radius
+spec:
+  mode: one           # one pod, all pods, fixed percent, fixed count
+  value: ""           # Used with fixed-percent (e.g., "25") or fixed (e.g., "2")
+  selector:
+    namespaces:
+      - staging      # NEVER start with 'production'
+    labelSelectors:
+      app: non-critical-service  # Start with non-critical
+      version: canary           # Canary deployments only
+
+# Litmus: environment variables control blast radius
+env:
+  - name: TOTAL_CHAOS_DURATION
+    value: "30"       # Start small — 30 seconds
+  - name: CHAOS_INTERVAL
+    value: "30"       # Wait 30s between injections
+  - name: PODS_AFFECTED_PERC
+    value: "25"       # Max 25% of pods affected
+```
+
+### Step 10: Experiment Results Documentation
+```yaml
+# chaos/experiment-results.yaml
+experiment_id: "EXP-2025-001"
+date: "2025-03-15"
+type: "Pod Kill"
+tool: "Chaos Mesh"
+duration: 60s
+target:
+  service: "payment-service"
+  namespace: "production"
+  blast_radius: "1 pod (out of 5 replicas)"
+
+steady_state_hypothesis:
+  p99_latency: "< 500ms"
+  error_rate: "< 1%"
+  throughput: "> 100 req/s"
+
+results:
+  p99_before: "120ms"
+  p99_during: "350ms"
+  p99_after: "115ms"
+  error_rate_before: "0.02%"
+  error_rate_during: "1.2%"  # Hypothesis violated — >1%
+  error_rate_after: "0.01%"
+  recovery_time_s: 25
+
+findings:
+  - "Error rate briefly exceeded 1% — circuit breaker configured with too-short timeout"
+  - "Auto-healing worked: new pod scheduled within 15s"
+  - "Client-side retry logic caused temporary thundering herd on pod startup"
+
+action_items:
+  - owner: "platform-team"
+    due: "2025-03-22"
+    description: "Increase circuit breaker timeout from 5s to 10s"
+  - owner: "sre-team"
+    due: "2025-03-29"
+    description: "Add startup probe to payment-service deployment (initialDelaySeconds: 20)"
+
+hypothesis_verdict: "FAILED"  # Error rate exceeded threshold
+```
+
+## Tool Comparison: Chaos Engineering Platforms
+
+| Feature | Chaos Mesh | Litmus | Gremlin | AWS FIS |
+|---|---|---|---|---|
+| Installation | Helm | K8s Operator | Agent per machine | AWS Console/CLI |
+| K8s native | Yes | Yes | Limited | No |
+| Custom experiments | YAML | YAML + Charts | GUI + API | YAML templates |
+| Scheduler | Cron | Cron | Recurring | One-shot |
+| Auto-rollback | Manual | Manual | Manual | Auto (stop conditions) |
+| Blast radius | mode + selector | env vars | Target selection | Resource tags |
+| Steady state metrics | External | External | Built-in dashboard | CloudWatch |
+| CI/CD integration | Manual | Native (Litmus CI) | API | AWS SDK |
+| Multi-cloud | Any K8s | Any K8s | All platforms | AWS only |
+| Community | CNCF (graduated) | CNCF (incubating) | Commercial | AWS service |
+
+## Security Considerations
+- Chaos experiments in production must use read-only monitoring service accounts
+- Never inject faults into stateful workloads (databases, queues) without leader election verification
+- Gremlin agents require network access — restrict to dedicated subnets with egress-only rules
+- AWS FIS role requires `iam:PassRole` for EC2 actions — scope down to experiment-specific resources
+- Chaos Mesh CRDs can modify any pod in targeted namespaces — use RBAC to restrict which service accounts can create Chaos resources
+- Experiment results may contain sensitive performance data — store in access-controlled S3
+- GameDay scenarios involving security breaches must coordinate with security team first
+
+## Production Considerations
+
+- Run experiments during low-traffic hours initially; progress to peak hours as confidence grows.
+- Always have a human in the loop with abort authority (kill switch).
+- Monitor blast radius: never exceed 10% of instances in production for first experiments.
+- Record all experiments: what was injected, what happened, what was learned.
+- Use feature flags to gradually roll out chaos experimentation to more services.
+- Integrate with incident management: experiments that trigger real alerts train responders.
+- Schedule GameDays quarterly and rotate the services under test.
+- Run chaos experiments in staging for at least 1 month before moving to production.
+- Use canary deployments as natural chaos targets — a faulty canary is already isolated.
+- Monitor experiment cost: AWS FIS charges per action, Gremlin per host per month.
+
 ## Anti-Patterns
 
 ### Anti-Pattern 1: No Blast Radius Control
@@ -320,14 +530,14 @@ Running chaos experiments without human supervision. Always have a facilitator w
 ### Anti-Pattern 5: No Rollback Plan
 Failing to define how to stop an experiment and restore normal operation. Every experiment needs an abort condition and restoration procedure.
 
-## Production Considerations
+### Anti-Pattern 6: Only Killing Pods
+Only testing pod failure is insufficient. Test network latency, DNS failure, IO pressure, and node failure to validate comprehensive resilience.
 
-- Run experiments during low-traffic hours initially; progress to peak hours as confidence grows.
-- Always have a human in the loop with abort authority (kill switch).
-- Monitor blast radius: never exceed 10% of instances in production for first experiments.
-- Record all experiments: what was injected, what happened, what was learned.
-- Use feature flags to gradually roll out chaos experimentation to more services.
-- Integrate with incident management: experiments that trigger real alerts train responders.
+### Anti-Pattern 7: No Follow-up
+Running experiments but not tracking action items. Every finding must be captured in an issue with an owner and due date.
+
+### Anti-Pattern 8: Same Experiments Every Time
+Running only easy experiments that always pass. Increase complexity over time: single fault → multi-fault → cascading failure simulation.
 
 ## Rules & Constraints
 - Every experiment must have a defined steady-state hypothesis.
@@ -337,6 +547,9 @@ Failing to define how to stop an experiment and restore normal operation. Every 
 - All experiments must have automated rollback/stop procedure.
 - Results must be documented with action items.
 - No experiment should degrade user-facing SLOs without prior approval.
+- Start experiments in staging first (minimum 1 month).
+- Always have a human facilitator with abort authority during experiments.
+- Rotate which services and failure types are tested each quarter.
 
 ## References
   - references/chaos-cicd.md

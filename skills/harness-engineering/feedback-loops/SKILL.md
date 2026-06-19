@@ -272,6 +272,371 @@ Below are links to the reference guides detailing the algorithms, patterns, and 
 ## Handoff
 For projects requiring pre-execution planning and anticipation, hand off to `feedforward-controls`. For systems implementing core orchestrator loops, hand off to `core-master-orchestrator`. For context window optimization in verification prompts, hand off to `context-engineering`.
 
+## Implementation Patterns
+
+### Multi-Layer Verification Pipeline
+
+```python
+from typing import List, Dict, Optional, Callable
+import subprocess
+import json
+import hashlib
+from dataclasses import dataclass
+
+@dataclass
+class VerificationResult:
+    layer: str
+    passed: bool
+    details: Dict
+    duration_ms: int
+
+class VerificationPipeline:
+    def __init__(self):
+        self.layers: List[Dict] = []
+
+    def add_layer(self, name: str, verifier: Callable, is_required: bool = True):
+        self.layers.append({"name": name, "verifier": verifier, "required": is_required})
+
+    async def run(self, artifact: str, context: Dict) -> Dict:
+        results = []
+        all_passed = True
+        for layer in self.layers:
+            import time
+            start = time.time()
+            try:
+                result = layer["verifier"](artifact, context)
+                passed = result.get("passed", False) if isinstance(result, dict) else bool(result)
+            except Exception as e:
+                result = {"error": str(e)}
+                passed = False
+            duration = int((time.time() - start) * 1000)
+            vr = VerificationResult(
+                layer=layer["name"],
+                passed=passed,
+                details=result if isinstance(result, dict) else {"result": result},
+                duration_ms=duration,
+            )
+            results.append(vr)
+            if not passed and layer["required"]:
+                all_passed = False
+                break
+        return {
+            "all_passed": all_passed,
+            "results": [{"layer": r.layer, "passed": r.passed, "duration_ms": r.duration_ms} for r in results],
+            "artifact_hash": hashlib.sha256(artifact.encode()).hexdigest()[:16],
+        }
+
+class SyntaxVerifier:
+    def __init__(self, language: str):
+        self.language = language
+
+    def verify(self, code: str, context: Dict) -> Dict:
+        if self.language == "python":
+            return self._verify_python(code)
+        elif self.language in ("javascript", "typescript"):
+            return self._verify_javascript(code)
+        return {"passed": True, "message": "No syntax verification available"}
+
+    def _verify_python(self, code: str) -> Dict:
+        try:
+            compile(code, "<verify>", "exec")
+            return {"passed": True, "message": "Python syntax valid"}
+        except SyntaxError as e:
+            return {"passed": False, "error": str(e), "lineno": e.lineno}
+
+    def _verify_javascript(self, code: str) -> Dict:
+        result = subprocess.run(
+            ["node", "-e", f"try {{ {code} }} catch(e) {{ }}"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            return {"passed": True, "message": "JS syntax valid"}
+        return {"passed": False, "error": result.stderr}
+
+class LintVerifier:
+    def __init__(self, linter_config: Optional[Dict] = None):
+        self.config = linter_config or {}
+
+    def verify(self, code: str, context: Dict) -> Dict:
+        language = context.get("language", "python")
+        if language == "python":
+            return self._ruff_verify(code)
+        elif language in ("javascript", "typescript"):
+            return self._eslint_verify(code)
+        return {"passed": True, "message": "No linter configured"}
+
+    def _ruff_verify(self, code: str) -> Dict:
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as f:
+            f.write(code)
+            fname = f.name
+        try:
+            result = subprocess.run(
+                ["ruff", "check", "--no-cache", fname],
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode == 0:
+                return {"passed": True, "message": "Ruff: no issues found"}
+            issues = []
+            for line in result.stdout.strip().split("\n"):
+                if ":" in line and line.strip():
+                    issues.append(line.strip())
+            return {"passed": len(issues) == 0, "issues": issues[:10], "total": len(issues)}
+        finally:
+            os.unlink(fname)
+
+    def _eslint_verify(self, code: str) -> Dict:
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(suffix=".js", delete=False, mode="w") as f:
+            f.write(code)
+            fname = f.name
+        try:
+            result = subprocess.run(
+                ["npx", "eslint", "--no-eslintrc", "--format", "json", fname],
+                capture_output=True, text=True, timeout=15
+            )
+            try:
+                issues = json.loads(result.stdout) if result.stdout else []
+            except json.JSONDecodeError:
+                issues = []
+            return {"passed": len(issues) == 0, "issues": issues[:10], "total": len(issues)}
+        finally:
+            os.unlink(fname)
+
+class TypeCheckVerifier:
+    def verify(self, code: str, context: Dict) -> Dict:
+        language = context.get("language", "python")
+        if language == "python":
+            return self._mypy_verify(code)
+        return {"passed": True, "message": "No type checker configured"}
+
+    def _mypy_verify(self, code: str) -> Dict:
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as f:
+            f.write(code)
+            fname = f.name
+        try:
+            result = subprocess.run(
+                ["mypy", "--no-error-summary", "--ignore-missing-imports", fname],
+                capture_output=True, text=True, timeout=15
+            )
+            passed = result.returncode == 0
+            errors = [l for l in result.stdout.split("\n") if "error:" in l]
+            return {"passed": passed, "errors": errors[:10], "total_errors": len(errors)}
+        finally:
+            os.unlink(fname)
+```
+
+### Implement-Verify-Fix Cycle
+
+```python
+from typing import Dict, Optional
+
+class IVFEngine:
+    def __init__(self, max_cycles: int = 3):
+        self.max_cycles = max_cycles
+        self.cycle_count = 0
+        self.correction_history: list = []
+
+    def run_cycle(self, artifact: str, feedback: Dict, verification_pipeline) -> Dict:
+        self.cycle_count += 1
+        if self.cycle_count > self.max_cycles:
+            return {
+                "status": "max_cycles_exceeded",
+                "cycles_used": self.cycle_count - 1,
+                "last_artifact": artifact,
+                "remaining_feedback": feedback,
+            }
+        correction = self._generate_correction(artifact, feedback)
+        self.correction_history.append({
+            "cycle": self.cycle_count,
+            "feedback": feedback,
+            "correction": correction,
+        })
+        corrected_artifact = self._apply_correction(artifact, correction)
+        verify_result = verification_pipeline(corrected_artifact)
+        if verify_result["all_passed"]:
+            return {
+                "status": "verified",
+                "cycles_used": self.cycle_count,
+                "artifact": corrected_artifact,
+                "history": self.correction_history,
+            }
+        return self.run_cycle(corrected_artifact, verify_result, verification_pipeline)
+
+    def _generate_correction(self, artifact: str, feedback: Dict) -> str:
+        errors = [r for r in feedback.get("results", []) if not r.get("passed")]
+        if not errors:
+            return ""
+        error_msgs = []
+        for e in errors:
+            details = e.get("details", {})
+            error_msgs.append(f"{e['layer']}: {details.get('message', details.get('error', 'unknown'))}")
+        return "Fix: " + "; ".join(error_msgs)
+
+    def _apply_correction(self, artifact: str, correction: str) -> str:
+        if not correction:
+            return artifact
+        return artifact
+```
+
+### HITL Checkpoint Router
+
+```python
+from typing import Dict, Optional
+from enum import Enum
+
+class HITLPolicy(Enum):
+    AUTO_APPROVE = "auto_approve"
+    REVIEW_REQUIRED = "review_required"
+    APPROVAL_REQUIRED = "approval_required"
+
+class HITLRouter:
+    def __init__(self):
+        self.policies = {}
+
+    def configure_policy(self, action_type: str, policy: HITLPolicy):
+        self.policies[action_type] = policy
+
+    def evaluate(self, action: Dict) -> Dict:
+        action_type = action.get("type", "unknown")
+        policy = self.policies.get(action_type, HITLPolicy.AUTO_APPROVE)
+        if policy == HITLPolicy.APPROVAL_REQUIRED:
+            return {
+                "decision": "blocked",
+                "message": "Human approval required for this action",
+                "requires_review": True,
+                "review_package": self._build_review_package(action),
+            }
+        if policy == HITLPolicy.REVIEW_REQUIRED:
+            return {
+                "decision": "pending_review",
+                "message": "Action queued for human review",
+                "requires_review": True,
+                "review_package": self._build_review_package(action),
+            }
+        return {
+            "decision": "approved",
+            "message": "Auto-approved by policy",
+            "requires_review": False,
+            "review_package": None,
+        }
+
+    def _build_review_package(self, action: Dict) -> Dict:
+        return {
+            "action_type": action.get("type"),
+            "description": action.get("description", ""),
+            "target": action.get("target", ""),
+            "diff": action.get("diff"),
+            "risk_level": action.get("risk_level", "unknown"),
+            "requested_by": action.get("agent_id", "unknown"),
+            "context": {
+                "session_id": action.get("session_id"),
+                "timestamp": action.get("timestamp"),
+            },
+        }
+
+class QualityGate:
+    def __init__(self, threshold: float = 0.85):
+        self.threshold = threshold
+
+    def evaluate(self, verification_results: Dict) -> Dict:
+        layers = verification_results.get("results", [])
+        passed_layers = sum(1 for l in layers if l["passed"])
+        total_layers = len(layers)
+        if total_layers == 0:
+            return {"score": 0.0, "passed": False, "message": "No verification layers configured"}
+        score = passed_layers / total_layers
+        return {
+            "score": round(score, 2),
+            "passed": score >= self.threshold,
+            "threshold": self.threshold,
+            "passed_layers": passed_layers,
+            "total_layers": total_layers,
+            "message": f"Quality gate {'passed' if score >= self.threshold else 'failed'} ({score:.0%} ≥ {self.threshold:.0%})",
+        }
+```
+
+## Architecture Decision Trees
+
+### Verification Layer Selection
+
+```
+What type of artifact was generated?
+├── Code (Python, JS, TS, Go, Rust, etc.)
+│   ├── Syntax → Language-specific AST compilation check
+│   ├── Lint → Ruff (Python) / ESLint (JS/TS) / golangci-lint (Go)
+│   ├── Types → mypy (Python) / tsc (TypeScript) / flow (JS)
+│   ├── Tests → pytest / jest / go test / cargo test
+│   └── Security → bandit (Python) / semgrep (general)
+│
+├── Configuration (YAML, JSON, TOML, etc.)
+│   ├── Syntax → Language parser validation
+│   └── Schema → JSON Schema / TOML validation
+│
+├── Markdown / Documentation
+│   ├── Broken links → Link checker
+│   └── Consistency → Style guide lint
+│
+└── SQL
+    ├── Syntax → SQL parser validation
+    └── Safety → EXPLAIN for write operations
+```
+
+### HITL Policy Configuration
+
+```
+What's the risk level of the action?
+├── Low risk (cosmetic change, internal comment)
+│   └── AUTO_APPROVE → No human needed
+│
+├── Medium risk (refactor, add feature, dependency update)
+│   ├── Team small (<5) → REVIEW_REQUIRED (optional review)
+│   └── Team large → AUTO_APPROVE with post-verification
+│
+├── High risk (production deploy, data migration, security change)
+│   └── APPROVAL_REQUIRED → Blocking human review
+│
+└── Critical (database schema change, auth modification, payment)
+    └── APPROVAL_REQUIRED + multi-party approval
+```
+
+## Production Considerations
+
+- **Verification timeout management**: Set total verification pipeline timeout to 30 seconds maximum. Individual layer timeouts should be proportional to their expected duration (syntax: 2s, lint: 5s, tests: 20s).
+- **Parallel verification execution**: Run independent verification layers (lint + type check) in parallel. Reduces total verification time by 30-50% for multi-layer pipelines.
+- **Caching verification results**: Cache syntax and lint verification results by content hash. Same code passing verification doesn't need re-verification within the same session.
+- **HITL notification channels**: Route review requests to appropriate channels (Slack for medium urgency, PagerDuty for high urgency). Include deep links to the review package.
+
+## Security Considerations
+
+- **Verification sandbox escape**: Code verification involves executing linters and type checkers that may execute code. Run all verification in sandboxed containers with restricted permissions.
+- **HITL bypass prevention**: Agents must not be able to override HITL policies. Policy configuration should be immutable from the agent runtime and modifiable only through admin interfaces.
+- **Review package tampering**: Sign review packages with HMAC to prevent tampering between generation and human review. Verify signature before applying approved decisions.
+- **Quality gate threshold manipulation**: Store quality thresholds in a separate configuration service that requires elevated permissions to modify. Agents should read but never write thresholds.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Running verification only at the end | Late error discovery wastes prior work | Verify incrementally after each significant generation step |
+| Same model for generation and judging | Self-bias inflates perceived quality | Different model or deterministic checks for judging |
+| Infinite IVF loop without cycle limit | Escalating token costs without resolution | Hard limit of N=3 cycles per verification layer |
+| No quality gate or fixed dummy threshold | All outputs accepted regardless of quality | Calibrate threshold per project using historical data |
+| All actions require human approval | Creates bottleneck, defeats agent autonomy | Tiered HITL: auto low-risk, review medium, block high-risk |
+| No test execution in verification pipeline | Syntax-correct code can be semantically wrong | Always execute tests alongside static analysis |
+| Discarding correction history after cycle | Loses learning opportunity for feedforward | Persist correction patterns for future prevention |
+
+## Performance Optimization
+
+- **Incremental verification**: Only re-verify changed portions of code, not the entire file. Use AST diff to identify affected functions.
+- **Lazy test execution**: Run unit tests in order of likelihood to fail (historical failure rate). Fail fast on first test failure.
+- **Verification result caching**: Cache verification results keyed by content hash + language + tool version. Invalid 24-hour TTL.
+- **Distributed verification**: For large test suites, distribute test execution across multiple workers. Each worker runs a subset of tests.
+
 <!-- COMPRESSION FOOTER -->
 <!--
 Compression Level: 5 (Comprehensive architectural references & code details preserved)

@@ -156,6 +156,240 @@ val httpClient = HttpClient {
 - **Outdated libs.versions.toml**: KMP ecosystem moves fast — update Ktor, Kotlin, Compose versions together
 - **Mixing KMP modules with Android-only dependencies**: Keep KMP modules pure — put Android UI in separate :app module
 
+## Build & Deployment Patterns
+
+### CI/CD for KMP Projects
+
+KMP requires building for multiple targets — Android (JVM) and iOS (Kotlin/Native). CI must handle both environments. Recommended CI matrix:
+
+```yaml
+# GitHub Actions example
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with: { distribution: 'temurin', java-version: '17' }
+      - name: Build Android
+        run: ./gradlew :shared:assembleAndroidDebug :app:assembleDebug
+      - name: Run common tests
+        run: ./gradlew :shared:allTests
+
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with: { distribution: 'temurin', java-version: '17' }
+      - name: Build iOS framework
+        run: |
+          ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
+          ./gradlew :shared:linkDebugFrameworkIosArm64
+      - name: Run iOS tests
+        run: ./gradlew :shared:iosX64Test :shared:iosSimulatorArm64Test
+      - name: Build Xcode project
+        run: |
+          cd iosApp
+          xcodebuild -scheme iosApp -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15'
+```
+
+### iOS Framework Integration
+
+The KMP shared module produces a Kotlin/Native framework consumed by Xcode:
+
+1. **Gradle setup**: Configure framework name and target in shared/build.gradle.kts:
+   ```kotlin
+   listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
+       it.binaries.framework {
+           baseName = "shared"
+           isStatic = true
+           export("my-exported-module") // re-export module's API
+       }
+   }
+   ```
+
+2. **Xcode integration**: Add build phase to embed framework:
+   - In Xcode target → Build Phases → New Run Script Phase
+   - Script: `cd "$SRCROOT/.." && ./gradlew :shared:embedAndSignAppleFrameworkForXcode`
+   - Input files: `$(SRCROOT)/../shared/build/bin/iosSimulatorArm64/debugFramework/shared.framework`
+
+3. **SPM/CocoaPods distribution**: Publish framework as CocoaPod:
+   ```ruby
+   # shared.podspec
+   Pod::Spec.new do |spec|
+     spec.name = 'Shared'
+     spec.vendored_frameworks = 'shared.framework'
+     spec.platform = :ios, '16.0'
+   end
+   ```
+
+### Version Catalog (libs.versions.toml)
+```toml
+[versions]
+kotlin = "2.0.21"
+ktor = "3.0.3"
+sqldelight = "2.0.2"
+compose-multiplatform = "1.7.1"
+koin = "3.5.6"
+coroutines = "1.9.0"
+datetime = "0.6.1"
+
+[libraries]
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+sqldelight-android = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-native = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
+```
+
+### Gradle Multi-Module Structure
+```
+project/
+├── shared/                    # KMP shared module
+│   ├── src/commonMain/
+│   ├── src/androidMain/
+│   ├── src/iosMain/
+│   └── build.gradle.kts
+├── composeApp/               # Compose Multiplatform UI module
+│   ├── src/commonMain/
+│   ├── src/androidMain/
+│   ├── src/iosMain/
+│   └── build.gradle.kts
+├── app/                       # Android shell app (only if not using composeApp)
+│   └── src/main/
+├── iosApp/                    # iOS Xcode project
+│   └── iosApp.xcodeproj/
+└── build.gradle.kts
+```
+
+Keep `shared` module pure — no Android UI dependencies. The `composeApp` module depends on `shared` and provides the Compose UI layer. Android app module wraps `composeApp`; iOS app embeds the framework from `composeApp` or `shared`.
+
+## Performance Optimization
+
+### Compose Multiplatform Rendering
+
+- **`remember` and `derivedStateOf`**: Cache expensive computations. `val total = remember(items) { items.sumOf { it.price } }` recalculates only when items change. Use `derivedStateOf` for computed state that derives from other state.
+- **`LaunchedEffect` lifecycle**: Runs in the composition's coroutine scope. Cancelled when composable leaves composition — no manual cleanup needed for coroutines. Use `DisposableEffect` for resources that need cleanup (listeners, observers).
+- **`Modifier` ordering**: Order matters — `Modifier.clip().size(100.dp).background(Color.Red)` clips before sizing, which may not work as expected. Always clip after sizing: `Modifier.size(100.dp).clip(CircleShape).background(Color.Red)`.
+- **Lambda stability**: Use `remember` for lambdas passed to composables: `val onClick = remember { { handleClick() } }`. Prevents unnecessary recomposition of child composables that receive unstable lambdas.
+- **`key` parameter in `LazyColumn`**: `LazyColumn { items(items, key = { it.id }) }` provides stable identity — enables item animation, preserves scroll position across recomposition, and minimizes recomposition scope.
+- **`contentType` in lazy lists**: When `LazyColumn` has mixed item types (headers, items, footers), set `contentType` parameter: `items(items, contentType = { "item" })`. Helps the layout engine optimize recycling.
+
+### Memory and Allocation
+
+- **`kotlin.Result` zero-cost**: Use `Result<T>` for operation outcomes instead of sealed classes in performance-critical paths — the Kotlin compiler optimizes it as a single object.
+- **Primitive collections**: Use `IntArray`, `FloatArray`, `LongArray` over `List<Int>`, `List<Float>` for numeric-heavy operations. Reduces boxing overhead 10-20x.
+- **`@Immutable` / `@Stable` annotations**: Mark data classes as `@Immutable` (all properties final, never change) or `@Stable` (changes are reported to Compose). This enables Compose's compiler to skip recomposition when state hasn't changed. Without these annotations, Compose pessimistically recomposes.
+- **Avoid `var` in state holders**: Use `val` with `MutableState`/`MutableStateFlow`. `var customerName by remember { mutableStateOf("") }` — the `by` delegate enables automatic recomposition. Mutating `var` directly (without delegation) doesn't trigger recomposition.
+- **`buildList` / `buildMap` / `buildString`**: Allocation-efficient collection builders. `buildList { addAll(items); sort() }` creates a single list at the end, not intermediate copies for each operation.
+- **Image loading**: Coil 3 (KMP-compatible) with Compose integration. Use `AsyncImage` with `ImageRequest.Builder` for disk/memory cache, transform pipelines, and placeholder/error states.
+
+```kotlin
+AsyncImage(
+    model = ImageRequest.Builder(LocalContext.current)
+        .data("https://example.com/image.jpg")
+        .crossfade(true)
+        .size(512, 512)
+        .build(),
+    contentDescription = "Product image",
+    modifier = Modifier.clip(RoundedCornerShape(8.dp))
+)
+```
+
+### Ktor Client Optimization
+
+- **Connection pooling**: Configure `HttpClient` with custom engine options. OkHttp: `OkHttp.config { connectionPool(ConnectionPool(5, 30, TimeUnit.SECONDS)) }`. Darwin: `Darwin.config { configureRequest { setAllowsCellularAccess(true) } }`.
+- **Response caching**: Enable OkHttp cache on Android for GET requests. Configure cache directory and max size. Reduces redundant network calls.
+- **Serialization performance**: Use `kotlinx.serialization` with `Json { ignoreUnknownKeys = true; isLenient = true }` over Gson or Moshi. KMP-native serialization is 2-3x faster than reflection-based alternatives.
+- **WebSocket keep-alive**: For real-time connections, configure `WebSockets { pingInterval = 30_000 }` — sends ping frames every 30s to keep the connection alive and detect disconnects early.
+
+## Architecture Patterns (Expanded)
+
+### Repository Pattern with Caching
+```kotlin
+// commonMain
+class OrderRepository(
+    private val api: OrderApi,
+    private val db: OrderDatabase,
+) {
+    fun getOrders(): Flow<List<Order>> = flow {
+        // 1. Emit cached first
+        val cached = db.orderQueries.selectAll().executeAsList()
+        if (cached.isNotEmpty()) emit(cached.map { it.toOrder() })
+
+        // 2. Fetch fresh from network
+        val fresh = api.getOrders()
+        db.transaction {
+            db.orderQueries.deleteAll()
+            fresh.forEach { db.orderQueries.insert(it.toEntity()) }
+        }
+
+        // 3. Emit fresh
+        emit(fresh)
+    }
+}
+```
+
+### Clean Architecture Module Layers
+```
+shared/src/commonMain/kotlin/com/app/
+├── domain/                    # Pure Kotlin, no framework dependencies
+│   ├── model/                 # Domain entities (data classes)
+│   ├── repository/            # Repository interfaces
+│   └── usecase/               # Business logic (single responsibility)
+├── data/                      # Implements domain interfaces
+│   ├── remote/                # Ktor API clients
+│   ├── local/                 # SQLDelight DAOs
+│   └── repository/            # Repository implementations
+├── di/                        # Koin module definitions
+└── platform/                  # expect declarations
+    └── Platform.kt
+```
+
+Domain layer has zero dependencies on Ktor, SQLDelight, or Compose. This makes it testable in `commonTest` without platform setup. Repository interfaces are in domain (`OrderRepository`), implementations are in data (`OrderRepositoryImpl`).
+
+### Sealed Class State Management
+```kotlin
+sealed interface UiState<out T> {
+    data object Loading : UiState<Nothing>
+    data class Success<T>(val data: T) : UiState<T>
+    data class Error(val message: String, val throwable: Throwable?) : UiState<Nothing>
+}
+
+@Composable
+fun <T> ContentView(
+    state: UiState<T>,
+    onRetry: () -> Unit,
+    content: @Composable (T) -> Unit
+) {
+    when (state) {
+        is UiState.Loading -> ShimmerLoading()
+        is UiState.Success -> content(state.data)
+        is UiState.Error -> ErrorView(state.message, onRetry)
+    }
+}
+```
+
+## Anti-Patterns (Expanded)
+
+- **Sharing platform-specific types**: `java.io.File` in commonMain breaks compilation. Use expect/actual or interfaces for platform types.
+- **One-shot expect/actual for everything**: Each `expect` declaration needs `actual` on every platform — increases maintenance. Prefer interfaces with platform DI.
+- **Blocking main thread on iOS**: Kotlin coroutines on iOS may dispatch to the main thread. Use `Dispatchers.Main.immediate` with `withContext` for UI updates. Never use `runBlocking` on main thread in iOS.
+- **No iOS memory optimization**: Kotlin/Native frameworks shipped with debug symbols by default. Strip with `isStatic = true` and set `embedAndSignAppleFrameworkForXcode` to use release builds in production.
+- **`kotlin.test` vs platform test runners**: `commonTest` uses `kotlin.test` assertions, which differ from JUnit 5 and XCTest. Teams must learn KMP test patterns.
+- **Over-reliance on Compose for everything**: Compose Multiplatform can't render native MapView, CameraPreview, or ARKit/ARCore. For 20% of features that need native components, use `expect` composable wrappers and keep them thin.
+- **Mixing CocoaPods and SPM**: Choose one dependency manager for iOS. CocoaPods has better KMP integration. SPM support is improving but still has edge cases with transitive dependencies.
+- **Missing `@ThreadLocal` on iOS objects**: iOS object initializers run on arbitrary threads. Use `@ThreadLocal` annotation or `AtomicReference` for mutable state accessed from multiple threads.
+
 ## Configuration Reference
 
 ```kotlin

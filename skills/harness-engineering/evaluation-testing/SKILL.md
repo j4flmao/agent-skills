@@ -252,6 +252,307 @@ Below are links to the reference guides detailing the algorithms, data schemas, 
 ## Handoff
 For projects requiring prompt optimization before evaluation, hand off to `context-engineering`. For systems implementing architectural constraints on agent behavior, hand off to `architectural-constraints`. For agent failure recovery during evaluation runs, hand off to `error-recovery`.
 
+## Implementation Patterns
+
+### LLM-as-Judge Implementation
+
+```python
+import json
+from typing import List, Dict, Any
+import numpy as np
+
+class LLMAsJudge:
+    def __init__(self, judge_model: str = "gpt-4", calibration_samples: int = 50):
+        self.judge_model = judge_model
+        self.calibration_samples = calibration_samples
+        self.calibration_data: List[Dict] = []
+
+    def build_judge_prompt(self, rubric: Dict, candidate: str, reference: str = None) -> str:
+        prompt = "You are an expert evaluator. Score the following output.\n\n"
+        prompt += "## Scoring Rubric\n"
+        for dim, criteria in rubric.items():
+            prompt += f"- {dim}: {criteria}\n"
+        prompt += "\nScore each dimension 1-5 where 5 is best.\n\n"
+        prompt += f"## Candidate Output\n{candidate}\n\n"
+        if reference:
+            prompt += f"## Reference Answer\n{reference}\n\n"
+        prompt += "## Output Format\n"
+        prompt += 'Return JSON: {"dimension_1": score, "dimension_2": score, ...}'
+        return prompt
+
+    def calibrate(self, human_scores: List[Dict], judge_scores: List[Dict]) -> float:
+        human_flat = [s for d in human_scores for s in d.values()]
+        judge_flat = [s for d in judge_scores for s in d.values()]
+        from sklearn.metrics import cohen_kappa_score
+        kappa = cohen_kappa_score(
+            np.round(human_flat).astype(int),
+            np.round(judge_flat).astype(int)
+        )
+        return kappa
+
+    def consensus_score(self, multiple_judgments: List[Dict]) -> Dict:
+        dims = list(multiple_judgments[0].keys())
+        result = {}
+        for dim in dims:
+            scores = [j[dim] for j in multiple_judgments]
+            result[dim] = {
+                "mean": float(np.mean(scores)),
+                "std": float(np.std(scores)),
+                "median": float(np.median(scores)),
+                "min": float(min(scores)),
+                "max": float(max(scores)),
+                "n": len(scores),
+            }
+        return result
+```
+
+### Trajectory Evaluator
+
+```python
+from typing import List, Dict, Optional
+
+class TrajectoryEvaluator:
+    def __init__(self, semantic_threshold: float = 0.85):
+        self.semantic_threshold = semantic_threshold
+
+    def evaluate_step(self, expected: Dict, actual: Dict) -> Dict:
+        tool_match = expected.get("tool") == actual.get("tool")
+        param_sim = self._parameter_similarity(
+            expected.get("parameters", {}),
+            actual.get("parameters", {})
+        )
+        return {
+            "step_type": "tool_call",
+            "tool_match": tool_match,
+            "parameter_similarity": param_sim,
+            "correct": tool_match and param_sim >= self.semantic_threshold,
+        }
+
+    def _parameter_similarity(self, expected: Dict, actual: Dict) -> float:
+        if not expected and not actual:
+            return 1.0
+        all_keys = set(expected.keys()) | set(actual.keys())
+        if not all_keys:
+            return 1.0
+        matches = sum(1 for k in all_keys if expected.get(k) == actual.get(k))
+        return matches / len(all_keys)
+
+    def evaluate_trajectory(self, expected_steps: List[Dict], actual_steps: List[Dict]) -> Dict:
+        step_scores = []
+        for i, (exp, act) in enumerate(zip(expected_steps, actual_steps)):
+            step_scores.append(self.evaluate_step(exp, act))
+        correct_steps = sum(1 for s in step_scores if s["correct"])
+        return {
+            "step_count": len(step_scores),
+            "correct_steps": correct_steps,
+            "step_accuracy": correct_steps / max(len(step_scores), 1),
+            "path_optimality": self._compute_optimality(expected_steps, actual_steps),
+            "step_details": step_scores,
+        }
+
+    def _compute_optimality(self, expected: List, actual: List) -> float:
+        return min(1.0, len(expected) / max(len(actual), 1))
+```
+
+### Hallucination Detection Pipeline
+
+```python
+import re
+from typing import List, Tuple
+
+class HallucinationDetector:
+    def __init__(self, verifier_model: str = "gpt-4"):
+        self.verifier_model = verifier_model
+
+    def extract_claims(self, text: str) -> List[str]:
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        claims = []
+        for s in sentences:
+            if any(kw in s.lower() for kw in ["is", "are", "was", "were",
+                                                "has", "have", "contains",
+                                                "located", "found", "known"]):
+                claims.append(s.strip())
+        return claims[:20]
+
+    def verify_claims(self, claims: List[str], source_docs: List[str]) -> List[Dict]:
+        results = []
+        for claim in claims:
+            verification = self._verify_single(claim, source_docs)
+            results.append({
+                "claim": claim,
+                "supported": verification["supported"],
+                "confidence": verification["confidence"],
+                "source": verification.get("source"),
+            })
+        return results
+
+    def _verify_single(self, claim: str, sources: List[str]) -> Dict:
+        claim_lower = claim.lower()
+        best_match = 0.0
+        best_source = None
+        for src in sources:
+            src_lower = src.lower()
+            claim_words = set(claim_lower.split())
+            src_words = set(src_lower.split())
+            overlap = len(claim_words & src_words) / max(len(claim_words), 1)
+            if overlap > best_match:
+                best_match = overlap
+                best_source = src[:200]
+        return {
+            "supported": best_match > 0.3,
+            "confidence": best_match,
+            "source": best_source,
+        }
+
+    def compute_hallucination_rate(self, claims: List[Dict]) -> float:
+        if not claims:
+            return 0.0
+        unsupported = sum(1 for c in claims if not c["supported"])
+        return unsupported / len(claims)
+```
+
+### Eval Dataset Manager
+
+```python
+import hashlib
+import json
+from typing import List, Dict
+from datetime import datetime
+
+class EvalDatasetManager:
+    def __init__(self, registry_path: str = "./eval_registry.json"):
+        self.registry_path = registry_path
+
+    def register_dataset(self, name: str, test_cases: List[Dict]) -> Dict:
+        content_hash = hashlib.sha256(
+            json.dumps(test_cases, sort_keys=True).encode()
+        ).hexdigest()[:16]
+        entry = {
+            "name": name,
+            "version": content_hash,
+            "created_at": datetime.utcnow().isoformat(),
+            "num_cases": len(test_cases),
+            "difficulty_tiers": self._compute_tiers(test_cases),
+        }
+        self._save_entry(entry)
+        return entry
+
+    def _compute_tiers(self, cases: List[Dict]) -> Dict:
+        tiers = {"easy": 0, "medium": 0, "hard": 0}
+        for case in cases:
+            difficulty = case.get("difficulty", "medium")
+            if difficulty in tiers:
+                tiers[difficulty] += 1
+        return tiers
+
+    def _save_entry(self, entry: Dict):
+        try:
+            with open(self.registry_path, "r") as f:
+                registry = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            registry = []
+        registry.append(entry)
+        with open(self.registry_path, "w") as f:
+            json.dump(registry, f, indent=2)
+
+    def check_contamination(self, new_cases: List[Dict]) -> List[Dict]:
+        contaminated = []
+        try:
+            with open(self.registry_path, "r") as f:
+                registry = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return contaminated
+        for new_case in new_cases:
+            new_hash = hashlib.md5(
+                json.dumps(new_case, sort_keys=True).encode()
+            ).hexdigest()
+            for entry in registry:
+                if any(isinstance(e, dict) for e in entry):
+                    continue
+            for entry in registry:
+                if entry.get("name", "").startswith("contamination_check"):
+                    continue
+        return contaminated
+```
+
+## Architecture Decision Trees
+
+### Evaluation Strategy Selection
+
+```
+What type of agent output?
+├── Single-turn factual response
+│   ├── Ground truth available → Exact Match / F1 / BLEU
+│   └── No ground truth → LLM-as-Judge (pointwise) + calibration
+│
+├── Multi-step tool-calling
+│   ├── Trajectory matters → Step-level trajectory evaluation
+│   └── Only final outcome → Outcome diff + state comparison
+│
+├── Code generation
+│   ├── Executable → pass@k with unit tests
+│   └── Non-executable → LLM-as-Judge (pairwise)
+│
+├── Summarization
+│   ├── Reference available → ROUGE-L + BERTScore
+│   └── No reference → LLM-as-Judge + faithfulness check
+│
+└── Chat/conversation
+    ├── Single response → Dimension-based rubric scoring
+    └── Full conversation → Trajectory + outcome + coherence
+```
+
+### Statistical Test Selection
+
+```
+Comparing agent versions?
+├── Paired data (same test cases, two model versions)
+│   ├── Normal distribution → Paired t-test
+│   └── Non-normal → Wilcoxon signed-rank test
+│
+├── Unpaired data (different test sets)
+│   ├── Normal distribution → Independent t-test
+│   └── Non-normal → Mann-Whitney U test
+│
+├── Multiple dimensions simultaneously
+│   └── Holm-Bonferroni correction for alpha
+│
+└── Small sample (n < 30)
+    └── Bootstrap confidence intervals (1000 resamples)
+```
+
+## Production Considerations
+
+- **Tiered evaluation in CI**: Run fast smoke tests (5% of cases) on every PR commit. Run full suite (100% of cases) on merge to main. Use 3-tier pipeline: smoke → regression → full.
+- **Eval cost management**: LLM-as-judge eval costs can exceed agent generation costs. Use cheaper judge models (GPT-4o-mini) for bulk eval, expensive judges (GPT-4) for calibration only.
+- **Parallel evaluation**: Run independent eval cases in parallel batches. Use async execution to reduce wall-clock time from hours to minutes for 1000+ case suites.
+- **Baseline versioning**: Store baseline distributions (mean, std, N) not just point scores. Enables proper statistical regression detection across version comparisons.
+
+## Security Considerations
+
+- **Jailbreak detection in eval**: Include adversarial test cases that probe for instruction-following violations. Score safety as a mandatory eval dimension.
+- **Eval data poisoning protection**: Hash and verify eval datasets to prevent tampering. Use checksums stored in a separate integrity registry.
+- **Judge model bias auditing**: Periodically audit LLM-as-Judge for biases (preferring longer outputs, specific writing styles). Re-calibrate against human judgments quarterly.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Single-sample evaluation | LLM non-determinism makes results unreproducible | Use N ≥ 5 samples, report confidence intervals |
+| Same model for generation and judging | Self-bias inflates scores | Use different model family for judging |
+| Static test datasets without refresh | Benchmark saturation over time | Stratify by difficulty, refresh 20% quarterly |
+| Ignoring trajectory in multi-step agents | Right answer through wrong reasoning is latent bug | Always evaluate both trajectory and outcome |
+| Using default temperature for eval | High temperature adds noise to judged scores | Fix temperature at 0 for metric-based, 0.3 for judge-based |
+| No calibration of judge models | Scores may not correlate with human preferences | Calibrate against ≥50 human-labeled samples, target κ ≥ 0.6 |
+| Multiple comparisons without correction | Inflated false positive rate in regression detection | Apply Holm-Bonferroni or Benjamini-Hochberg correction |
+
+## Performance Optimization
+
+- **Batch judge prompts**: Combine multiple eval cases into single API calls with structured output schemas to reduce API overhead by 40-60%.
+- **Embedding caching**: Cache embeddings for test case inputs and reference answers to avoid recomputation across evaluation runs.
+- **Incremental eval**: Only re-evaluate test cases affected by code changes (impact analysis via dependency graph). Reduces eval time by 70-90% for targeted changes.
+- **Judge model distillation**: Train a smaller, cheaper judge model on GPT-4 judgments for bulk evaluation. Validate alignment periodically against the full judge model.
+
 <!-- COMPRESSION FOOTER -->
 <!--
 Compression Level: 5 (Comprehensive architectural references & code details preserved)

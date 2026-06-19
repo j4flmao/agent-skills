@@ -390,6 +390,229 @@ Reconciled: TAM ~$4.2B, SAM ~$850M, SOM ~$85M
 - **Analysis tools**: Excel/Google Sheets for TAM models, Miro/MURAL for SWOT workshops.
 - **Visualization**: Canva, Pitch, Google Slides for presentation-ready output.
 
+## Expanded Decision Trees
+
+### Competitive Response Strategy Decision Tree
+```
+What is the competitor's move?
+  |-- Price cut --> Do they have cost advantage?
+  |     |-- YES --> Match or beat price only if we have similar costs
+  |     |-- NO --> Compete on value, not price (differentiate)
+  |-- New feature launch --> Is the feature core to their value prop?
+  |     |-- YES --> How quickly can we respond? (3mo / 6mo / 12mo)
+  |     |-- NO --> Monitor, do not react immediately
+  |-- Market expansion --> Does it directly compete for our customers?
+  |     |-- YES --> Accelerate retention efforts + differentiation
+  |     |-- NO --> No response needed, monitor
+  |-- Acquisition/partnership --> Does it create a stronger competitor?
+        |-- YES --> Assess combined entity's capabilities; consider own M&A
+        |-- NO --> Monitor for indirect effects
+```
+
+### Market Entry Strategy Decision Tree
+```
+Is the market growing (>10% YoY)?
+  |-- YES --> Enter now with investment in growth
+  |-- NO --> Is it a mature market with stable margins?
+        |-- YES --> Enter only with differentiation or cost advantage
+        |-- NO --> Declining market → Do not enter unless exit strategy clear
+
+Is there an existing competitor with >40% market share?
+  |-- YES --> Can we target an underserved segment?
+  |     |-- YES --> Enter with niche focus
+  |     |-- NO --> Consider adjacent market instead
+  |-- NO --> Can we achieve first-mover advantage?
+        |-- YES --> Enter fast with brand-building investment
+        |-- NO --> Enter with strong differentiation
+
+Do we have existing distribution channels?
+  |-- YES --> Lower entry barrier, leverage existing relationships
+  |-- NO --> Higher entry cost, include channel-building in investment plan
+```
+
+### Pricing Strategy Decision Tree (Market Context)
+```
+What is our market position?
+  |-- Market leader --> Set price; competitors follow or undercut
+  |-- Challenger --> Price slightly below leader; compete on value
+  |-- Niche player --> Premium pricing for specialized offering
+  |-- New entrant --> Penetration pricing or freemium to gain share
+
+What is the price sensitivity of target customers?
+  |-- High sensitivity (commodity) --> Compete on price + efficiency
+  |-- Medium sensitivity --> Value-based pricing with clear differentiation
+  |-- Low sensitivity (premium) --> Premium pricing with exclusivity
+```
+
+## Templates
+
+### Competitive Response Plan Template
+```
+# Competitive Response: {Competitor} — {Move}
+
+## Situation Assessment
+- Competitor move: {what they did}
+- Date: {when}
+- Impact on our position: {assessment}
+- Urgency: {immediate / this quarter / monitor}
+
+## Recommendation
+{respond / monitor / no action}
+
+## Response Plan (if respond)
+| Action | Owner | Timeline | Resources | Success Metric |
+|--------|-------|----------|-----------|----------------|
+
+## Risk Assessment
+{risks of responding vs risks of not responding}
+
+## Triggers for Escalation
+{what would cause us to change our response}
+```
+
+### Market Entry Plan Template
+```
+# Market Entry: {Market Name}
+
+## Market Opportunity
+TAM: ${amount}
+Growth rate: {X% YoY}
+Our target segment: {description}
+Estimated SAM: ${amount}
+
+## Entry Strategy
+Mode: {organic / acquisition / partnership}
+Timeline: {entry date} to {target milestone}
+Initial investment: ${amount}
+Break-even timeline: {timeframe}
+
+## Go-to-Market
+Distribution: {channels}
+Pricing: {strategy relative to competitors}
+Positioning: {differentiation message}
+
+## Risk Assessment
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| {risk} | {H/M/L} | {H/M/L} | {mitigation} |
+
+## Success Criteria
+{measurable outcomes within 6/12/24 months}
+```
+
+### Trend Impact Assessment Template
+```
+# Trend Analysis: {Market/Industry}
+
+| Trend | Direction | Impact (1-5) | Timeframe | Our Response | Priority |
+|-------|-----------|-------------|-----------|-------------|----------|
+| {trend} | ↗/→/↘ | {score} | {near/med/long} | {action} | {H/M/L} |
+
+Key signal strength indicators:
+- {signal}: {strong / moderate / weak} — {evidence}
+- {signal}: {strong / moderate / weak} — {evidence}
+
+Scenario: If {key trend} accelerates, our strategy should {shift}.
+Scenario: If {key trend} reverses, our strategy should {shift}.
+```
+
+## Expanded Competitive Analysis
+
+### Competitor Response Modeling
+Map each competitor's likely response to your market entry:
+
+| Competitor | Likelihood of Response | Response Speed | Response Type | Our Counter |
+|------------|----------------------|----------------|---------------|-------------|
+| {name} | High/Med/Low | Fast/Med/Slow | Price/Feature/Marketing | {plan} |
+
+Response types: price matching, feature parity, marketing blitz, exclusivity deals, legal challenges, acquisition of supplier. Prepare counter-strategies for each response type before entering the market.
+
+### Market Share Analysis Methods
+| Method | Data Required | Best For | Limitation |
+|--------|--------------|----------|------------|
+| Revenue-based | Public financial reports | Public companies | Limited to public data |
+| User-based | Analytics, survey data | Consumer products | Usage ≠ paying users |
+| Survey-based | Customer surveys | B2B, niche markets | Sample bias |
+| Traffic-based | SimilarWeb, SEMrush | Digital products | Doesn't capture offline |
+| Analyst reports | Gartner MQ, Forrester Wave | Enterprise software | Analyst bias, cost |
+
+Triangulate from at least 2 methods. If methods diverge >20%, investigate why.
+
+### Blue Ocean Strategy Canvas Template
+Map your offering against competitors on key competitive factors:
+
+```
+High ──────────────────────────────────
+      |    \                 /
+      |     \               /
+Med   |      \             /
+      |       \           /
+      |        \_________/
+Low  ──────────────────────────────────
+      Factor A  B  C  D  E  F
+      --- Industry curve
+      ... Our offering
+```
+
+Identify factors to: Eliminate (industry standard but no value), Reduce (below industry standard), Raise (above industry standard), Create (new to industry). The resulting strategy canvas shows your differentiation at a glance.
+
+## Expanded Anti-Patterns
+
+### 8. Market Size Inflation
+Defining TAM so broadly that it includes markets you can never serve. "We're in the $3T healthcare market" when you sell appointment scheduling software to US dental practices ($2B SAM). Anti-pattern signal: TAM is >100x your realistic SOM. Fix: define TAM as the narrowest reasonable market. Add adjacent market expansion in the future section.
+
+### 9. Ignoring Market Timing
+Analyzing market size without considering whether the market is ready. You may have the right product for a market that doesn't exist yet (too early) or a market that has passed you by (too late). Fix: map technology adoption lifecycle. Identify early adopter segment. Estimate mainstream adoption timeline. Factor timing risk into market size projections.
+
+### 10. Competitive Paranoia
+Over-reacting to every competitor move. Building features to match competitor releases instead of focusing on customer needs. Anti-pattern signal: roadmap driven by competitor launches, not customer research. Fix: maintain a competitive watch list but make product decisions based on customer value.
+
+### 11. Survivorship Bias in Competitor Analysis
+Analyzing only successful competitors and ignoring failed ones. Misses important lessons about what doesn't work in this market. Anti-pattern signal: all competitors look strong. Fix: include failed competitors in the analysis. What mistakes did they make? What would you do differently?
+
+### 12. Analysis Without Synthesis
+Collecting massive amounts of market data without drawing actionable conclusions. The analysis section is comprehensive but there is no "so what" section. Fix: every section should end with implications for your product strategy. The final section should synthesize all findings into 3-5 actionable recommendations.
+
+## Expanded Success Metrics
+
+| Metric | Target | How to Measure | Remediation |
+|--------|--------|----------------|-------------|
+| Data source quality | >80% primary or respected secondary | Source audit, citation count | Add 3+ sources per estimate |
+| TAM reconciliation | Top-down and bottom-up within 2x | Compare both methods | Revisit segment % assumptions |
+| Competitor coverage | Top 7 competitors deep-dived | Count per competitor depth | Add missing competitors |
+| SWOT completeness | No empty quadrants, 3+ items each | Quadrant audit | Research gaps |
+| Analysis freshness | <6 months old | Date check | Schedule refresh |
+| Actions derived | 3+ actionable recommendations | Count in synthesis section | Add "What this means for us" |
+| Feature matrix accuracy | Validated by product use | Spot-check competitor features | Test products, not just website |
+| Market timing assessment | Included in every analysis | Section presence check | Add adoption lifecycle mapping |
+
+## Market Research Methods Comparison
+
+| Method | Cost | Sample Size | Data Quality | Timeline | Best For |
+|--------|------|-------------|-------------|----------|----------|
+| Primary surveys | Medium | 100-1000+ | High | 2-4 weeks | WTP, satisfaction, segment needs |
+| Customer interviews | Low | 10-30 | Very high | 2-3 weeks | Deep needs, pain points |
+| Secondary research | Low | N/A | Medium | 1-2 weeks | Market sizing, competitor intel |
+| Focus groups | High | 6-10 per group | Medium | 3-4 weeks | Concept testing, messaging |
+| Data analytics | Medium | All users | High | 1-4 weeks | Behavioral insights, segments |
+| Expert interviews | Medium | 5-15 | High | 2-3 weeks | Industry trends, validation |
+
+Triangulate findings from at least 2 methods for critical decisions.
+
+## Expanded Porter's Five Forces
+
+For each force, assess with evidence and derive strategic implications:
+
+| Force | Factors to Assess | Questions |
+|-------|------------------|-----------|
+| Threat of new entrants | Barriers to entry, capital requirements, economies of scale, switching costs, regulation | How hard is it for a new company to enter? What advantages do incumbents have? |
+| Supplier power | Number of suppliers, switching costs, uniqueness of inputs, forward integration risk | Can suppliers dictate terms? Are we dependent on specific vendors? |
+| Buyer power | Number of buyers, switching costs, price sensitivity, product differentiation | Can customers demand lower prices? How easy is it to switch? |
+| Threat of substitutes | Alternative solutions, price-performance trade-off, switching cost to substitute | What else can customers use instead? Are substitutes improving? |
+| Competitive rivalry | Number of competitors, industry growth rate, exit barriers, differentiation level | How intense is current competition? Is the market consolidating? |
+
+Score each force: 1 (weak/benign) to 5 (strong/threatening). Total score reveals market attractiveness. For scoring, use evidence not intuition. Validate with market participants. A score of 20-25 = highly attractive market, 10-15 = moderately attractive, 5-9 = unattractive.
+
 ## References
   - references/market-analysis-fundamentals.md — Market Analysis Fundamentals
   - references/market-analysis-advanced.md — Market Analysis Advanced Topics

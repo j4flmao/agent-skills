@@ -391,3 +391,150 @@ Contracts should include both success and error responses. Consumer code must ha
 No artifact produced unless requested.
 Next skill: idempotency — add safe retry semantics to the API endpoints.
 Carry forward: consumer-provider relationships, pact broker URL, CI verification pipeline.
+
+## Implementation Patterns
+
+### Pact Consumer Test
+
+```typescript
+import { PactV3, MatchersV3 } from '@pact-foundation/pact';
+import { API } from './api-client';
+
+const { like, term, eachLike } = MatchersV3;
+
+const provider = new PactV3({
+  consumer: 'WebApp',
+  provider: 'UserService',
+});
+
+describe('UserService API', () => {
+  it('returns user by ID', async () => {
+    provider
+      .given('user with ID 123 exists')
+      .uponReceiving('a request for user 123')
+      .withRequest({
+        method: 'GET',
+        path: '/api/users/123',
+        headers: { Accept: 'application/json' },
+      })
+      .willRespondWith({
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          id: like('123'),
+          name: like('John Doe'),
+          email: term({ generate: 'john@example.com', matcher: '\\S+@\\S+\\.\\S+' }),
+          role: term({ generate: 'admin', matcher: 'admin|user|viewer' }),
+        },
+      });
+
+    await provider.executeTest(async (mockServer) => {
+      const api = new API(mockServer.url);
+      const user = await api.getUser('123');
+      expect(user.id).toBe('123');
+      expect(user.name).toBeDefined();
+    });
+  });
+
+  it('returns 404 for non-existent user', async () => {
+    provider
+      .given('user with ID 999 does not exist')
+      .uponReceiving('a request for non-existent user')
+      .withRequest({
+        method: 'GET',
+        path: '/api/users/999',
+      })
+      .willRespondWith({ status: 404 });
+
+    await provider.executeTest(async (mockServer) => {
+      const api = new API(mockServer.url);
+      await expect(api.getUser('999')).rejects.toThrow();
+    });
+  });
+});
+```
+
+### Pact Provider Verification
+
+```typescript
+import { Verifier } from '@pact-foundation/pact';
+import { startApp } from './app';
+
+describe('UserService Pact Verification', () => {
+  let server: any;
+
+  beforeAll(async () => {
+    server = await startApp(4000);
+  });
+
+  afterAll(async () => {
+    await server.close();
+  });
+
+  it('verifies consumer contracts', async () => {
+    const verifier = new Verifier({
+      provider: 'UserService',
+      providerBaseUrl: 'http://localhost:4000',
+      pactBrokerUrl: 'https://pact-broker.example.com',
+      publishVerificationResult: true,
+      providerVersion: '1.0.0',
+      stateHandlers: {
+        'user with ID 123 exists': async () => {
+          // Set up test data
+          await setupUser({ id: '123', name: 'John Doe' });
+        },
+        'user with ID 999 does not exist': async () => {
+          // Ensure user doesn't exist
+          await deleteUser('999');
+        },
+      },
+    });
+
+    await verifier.verifyProvider();
+  });
+});
+```
+
+## Architecture Decision Trees
+
+### Contract Testing Scope
+
+```
+What's the interaction pattern?
+├── Synchronous HTTP (REST, GraphQL)
+│   └── Pact (consumer-driven contracts)
+│       ├── Consumer defines expectations
+│       ├── Provider verifies against real implementation
+│       └── Pact broker stores and manages versions
+│
+├── Asynchronous messaging (Kafka, SQS)
+│   └── Pact message pacts
+│       ├── Consumer expects a message with specific format
+│       ├── Provider verifies it can produce the message
+│       └── Message content not timing
+│
+├── Internal service-to-service
+│   └── Contract testing + API spec
+│       ├── Version contracts by API version
+│       ├── CI fails on breaking changes
+│       └── Deploy only if contracts pass
+│
+└── External third-party API
+    └── Contract testing (cannot verify)
+        ├── Consumer tests document assumptions
+        └── Monitor for breaking changes in production
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Exact values instead of matchers | Tests fail on valid changes | Use like(), eachLike(), term() for flexibility |
+| No provider state setup | Tests fail because DB state differs | Define provider states for each interaction |
+| Contract tests as only tests | Doesn't test business logic | Contract tests complement unit + integration tests |
+| Not publishing verification results | Can't know if provider is compatible | Always publish verification results to broker |
+
+## Performance Optimization
+
+- **Selective pact verification**: Only verify pacts for changed provider endpoints. Use pact broker's webhook to trigger verification on pact change. Reduces verification time by 70%.
+- **Parallel pact verification**: Verify multiple pacts in parallel for the same provider. Limit concurrency based on provider resources.

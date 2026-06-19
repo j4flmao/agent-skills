@@ -326,6 +326,218 @@ D-03 | Info | Migration timeline | Ops | Carol | Sprint 7 | Not started
 - Capacity planning must account for ceremonies, support, and PTO
 - Sprint buffer of 15-20% for unknowns is mandatory
 
+## Estimation Techniques — Deep Dive
+
+### Planning Poker — Detailed Protocol
+```
+When: Sprint planning, backlog refinement
+Duration: 30-60 min (depending on item count)
+Scale: Modified Fibonacci (1, 2, 3, 5, 8, 13, 21) or T-shirt sizes (XS, S, M, L, XL)
+
+Process:
+1. PO presents backlog item with acceptance criteria
+2. Team discusses the item (2-5 min per item)
+3. Each member privately selects a card/estimate
+4. All cards revealed simultaneously
+5. If consensus (all within 1-2 values), proceed
+6. If wide disparity, high and low estimators explain reasoning
+7. Discuss and re-vote (max 2 rounds per item)
+8. Record final estimate after consensus or majority
+
+Facilitation rules:
+  - No anchoring — don't state estimates before voting
+  - Discuss assumptions uncovered during voting
+  - Items estimated > 13 must be split
+  - Timebox at 5 min per item — unknowns go to spike
+```
+
+### Affinity Estimation — Detailed Protocol
+```
+When: Large backlog, multiple teams, need speed
+Scale: T-shirt sizes (XS, S, M, L, XL) or numeric buckets
+
+Process:
+1. Items are written on cards (one per card)
+2. Without talking, team members place cards into size buckets on a wall
+3. When someone moves a card, they can discuss: "I think this is L not XL because..."
+4. Continue until all cards are placed
+5. Review each bucket for consistency (30 sec per bucket)
+6. Convert T-shirt sizes to points using a conversion chart
+
+Conversion:
+  XS = 1, S = 2, M = 3, L = 5, XL = 8, XXL = 13 (must split)
+
+Best for: Backlog prioritization, initial sizing of 50+ items in < 1 hour.
+```
+
+### Three-Point Estimation — Detailed Protocol
+```
+When: High uncertainty, complex deliverables, need confidence intervals
+Scale: Hours or days (not story points)
+
+Process per item:
+  Optimistic (O): Best case — everything goes right
+  Most Likely (M): Normal case — typical blockers
+  Pessimistic (P): Worst case — everything goes wrong
+
+Expected (E) = (O + 4M + P) / 6
+Standard Deviation (SD) = (P - O) / 6
+
+Confidence intervals:
+  P50: E ± 0.67 × SD
+  P80: E ± 1.28 × SD (recommended for commitment)
+  P95: E ± 1.96 × SD (for high-certainty critical path items)
+
+Example:
+  O = 2 days, M = 5 days, P = 14 days
+  E = (2 + 20 + 14) / 6 = 6 days
+  SD = (14 - 2) / 6 = 2 days
+  P80 = 6 + 1.28(2) = 8.6 days (use for commitment)
+```
+
+### Bucket Estimation — Detailed Protocol
+```
+When: Cross-team estimation, 20-50 items, 60 min
+Team size: 6-10 people
+
+Process:
+1. Create buckets with point values: 1, 2, 3, 5, 8, 13, 20
+2. Place a reference item in each bucket (known-sized items)
+3. Distribute cards among team (each person gets 2-3 unknowns)
+4. Round 1: Each person places their items in the appropriate bucket (silent)
+5. Round 2: Group review — if a card has multiple votes in different buckets, discuss
+6. Round 3: Adjustments based on discussion
+7. Record all final bucket assignments
+
+Best for: Rapid sizing of features where absolute precision is unnecessary.
+```
+
+## Status Report Templates
+
+### Daily Standup Report
+```
+Team: {name} | Date: {date}
+
+Since last standup:
+  ✅ {completed item}
+  ✅ {completed item}
+
+Next steps:
+  🔄 {next work item}
+  🔄 {next work item}
+
+Blockers:
+  🚫 {blocker description} → Unblock plan: {action} | Owner: {name} | By: {date/time}
+
+Metrics snapshot:
+  Sprint remaining: {n} days
+  Sprint velocity: {n} pts / {n} pts committed
+  Blocked count: {n}
+```
+
+### Weekly Status Report (for Stakeholders)
+```
+## Weekly Status: {Project/Team Name}
+Week Ending: {date} | Sprint {n} of {n}
+
+### Health
+Overall: {Green | Yellow | Red}
+Schedule: {G/Y/R} | Quality: {G/Y/R} | Budget: {G/Y/R} | Risks: {G/Y/R}
+
+### Accomplishments This Week
+1. {deliverable} — {team}
+2. {deliverable} — {team}
+3. {deliverable} — {team}
+
+### Next Week Commitments
+1. {deliverable} — {team}
+2. {deliverable} — {team}
+3. {deliverable} — {team}
+
+### Blockers & Risks
+| ID | Description | Impact | Owner | Status |
+|----|-------------|--------|-------|--------|
+| B-1 | {description} | {schedule/cost/quality} | {name} | {open/resolved} |
+| R-1 | {risk description} | P:{n}, I:{n} → Score: {n} | {name} | {open/mitigated} |
+
+### Metrics
+- Velocity (last 3 sprints): {pts}, {pts}, {pts}
+- Throughput: {n} items/week
+- Cycle time (P50/P95): {n}/{n} days
+- Escaped defects: {n}
+
+### Decisions Needed
+- {decision to make} — Deadline: {date} — By: {owner}
+- {decision to make} — Deadline: {date} — By: {owner}
+```
+
+### Executive Status Report (1-page)
+```
+## Executive Highlight: {Project Name}
+Date: {date} | Phase: {phase name}
+
+### Overall Status: {G/Y/R}
+{One-sentence summary of project health}
+
+### Key Milestones
+| Milestone | Due | Status | Confidence |
+|-----------|-----|--------|------------|
+| {milestone} | {date} | {completed/on track/at risk/delayed} | {High/Med/Low} |
+| {milestone} | {date} | {completed/on track/at risk/delayed} | {High/Med/Low} |
+
+### Top 3 Risks
+1. {risk} — {impact if not addressed}
+2. {risk} — {impact if not addressed}
+3. {risk} — {impact if not addressed}
+
+### Budget Status
+Spent to date: ${n} of ${n} budget ({n}%)
+Forecast at completion: ${n}
+
+### Escalations
+{n} items requiring executive attention
+```
+
+## Retrospective Action Item Tracking Template
+
+```
+Sprint: {n} | Date: {date} | Retro Format: {format}
+
+# | Action Item | Owner | Due Date | Success Criteria | Status
+1 | {action} | {name} | {date} | {measurable outcome} | {Not started/In progress/Done/Verified}
+2 | {action} | {name} | {date} | {measurable outcome} | {Not started/In progress/Done/Verified}
+3 | {action} | {name} | {date} | {measurable outcome} | {Not started/In progress/Done/Verified}
+
+Review at next retro:
+- {n}/{n} actions completed
+- {n}/{n} actions had measurable impact
+- {n} actions carried over from previous sprint
+```
+
+## Dependency Management Playbook
+
+```
+Dependency Type Definitions:
+  Hard: Team A cannot start/finish until Team B delivers
+  Soft: Team A could work around it but with significant cost
+  Information: Team A needs decision/guidance from Team B
+
+Dependency Resolution Strategies:
+  Hard: Negotiate scope, adjust timeline, provide shared resources
+  Soft: Evaluate workaround cost; negotiate preference
+  Information: Set decision deadline; escalate if missed
+
+Dependency Tracking Matrix:
+| ID | Type | Description | Source Team | Target Team | Due | Owner | Status |
+|----|------|-------------|-------------|-------------|-----|-------|--------|
+| D01 | Hard | Auth API | FE Team | BE Team | Sprint 5 | Alice | On track |
+
+Dependency Health Check:
+  - % of hard dependencies met on time
+  - Dependency lead time (from identification to resolution)
+  - Number of dependencies added mid-sprint
+```
+
 ## References
   - references/ceremony-guide.md — Agile Ceremony Guide
   - references/estimation-guide.md — Estimation Guide

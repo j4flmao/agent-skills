@@ -386,3 +386,289 @@ MIT
   - references/readme-writer-style-guide.md — README Style Guide Reference
 ## Handoff
 Hand off to `dev-loop-changelog-generator` for changelog content. Hand off to `dev-loop-pr-writer` for PR descriptions.
+
+## Implementation Patterns
+
+### README Generator
+
+```python
+from typing import Dict, List, Optional
+import json
+import subprocess
+import re
+
+class READMEGenerator:
+    def __init__(self, project_path: str = "."):
+        self.project_path = project_path
+        self.package_info = self._detect_package()
+
+    def _detect_package(self) -> Dict:
+        info = {
+            "name": "my-project",
+            "version": "0.1.0",
+            "description": "",
+            "language": "unknown",
+            "has_cli": False,
+            "has_api": False,
+            "has_web": False,
+        }
+        try:
+            with open(f"{self.project_path}/package.json") as f:
+                pkg = json.load(f)
+                info["name"] = pkg.get("name", info["name"])
+                info["version"] = pkg.get("version", info["version"])
+                info["description"] = pkg.get("description", "TypeScript/JavaScript project")
+                info["language"] = "JavaScript/TypeScript"
+                if pkg.get("bin"):
+                    info["has_cli"] = True
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass
+        try:
+            with open(f"{self.project_path}/Cargo.toml") as f:
+                content = f.read()
+                name_match = re.search(r'name\s*=\s*"(.+)"', content)
+                desc_match = re.search(r'description\s*=\s*"(.+)"', content)
+                ver_match = re.search(r'version\s*=\s*"(.+)"', content)
+                info["name"] = name_match.group(1) if name_match else info["name"]
+                info["version"] = ver_match.group(1) if ver_match else info["version"]
+                info["description"] = desc_match.group(1) if desc_match else "Rust project"
+                info["language"] = "Rust"
+        except FileNotFoundError:
+            pass
+        return info
+
+    def detect_features(self) -> Dict[str, bool]:
+        features = {
+            "has_tests": self._file_exists("tests/") or self._file_exists("__tests__/"),
+            "has_docs": self._file_exists("docs/"),
+            "has_ci": self._file_exists(".github/workflows/"),
+            "has_docker": self._file_exists("Dockerfile"),
+            "has_cli": self.package_info["has_cli"],
+            "has_api": self._file_exists("api/") or self._file_exists("routes/"),
+            "has_frontend": self._file_exists("src/App") or self._file_exists("pages/"),
+        }
+        return features
+
+    def _file_exists(self, path: str) -> bool:
+        import os
+        return os.path.exists(f"{self.project_path}/{path}")
+
+    def generate_badges(self) -> str:
+        name = self.package_info["name"]
+        badges = [
+            f"[![npm version](https://img.shields.io/npm/v/{name})](https://www.npmjs.com/package/{name})",
+            f"[![CI](https://img.shields.io/github/actions/workflow/status/org/{name}/ci.yml)](https://github.com/org/{name}/actions)",
+            f"[![License](https://img.shields.io/github/license/org/{name})](https://github.com/org/{name}/blob/main/LICENSE)",
+        ]
+        return " ".join(badges)
+
+    def generate_full_readme(self, features: Dict) -> str:
+        lines = [
+            f"# {self.package_info['name'].replace('@', '').replace('/', '-')}",
+            "",
+            self.generate_badges(),
+            "",
+            self.package_info["description"] or f"A {self.package_info['language']} project.",
+            "",
+            "## Quick Start",
+            "",
+            "```bash",
+        ]
+        lang = self.package_info["language"]
+        if lang == "JavaScript/TypeScript":
+            lines.append("npm install")
+            lines.append("npm run dev")
+        elif lang == "Rust":
+            lines.append("cargo build --release")
+            lines.append("cargo run")
+        else:
+            lines.append("# install instructions")
+        lines.extend([
+            "```",
+            "",
+        ])
+        if features["has_api"]:
+            lines.extend([
+                "## API",
+                "",
+                "### Endpoints",
+                "",
+                "| Method | Path | Description |",
+                "|--------|------|-------------|",
+                "| GET | /api/health | Health check |",
+                "| GET | /api/v1/items | List items |",
+                "| POST | /api/v1/items | Create item |",
+                "",
+            ])
+        if features["has_cli"]:
+            lines.extend([
+                "## CLI Usage",
+                "",
+                "```bash",
+                f"{self.package_info['name']} --help",
+                f"{self.package_info['name']} init --project my-app",
+                "```",
+                "",
+            ])
+        lines.extend([
+            "## Development",
+            "",
+            "```bash",
+            "git clone https://github.com/org/" + self.package_info['name'] + ".git",
+            "cd " + self.package_info['name'],
+        ])
+        if lang == "JavaScript/TypeScript":
+            lines.append("npm install")
+            lines.append("npm test")
+        elif lang == "Rust":
+            lines.append("cargo test")
+        lines.extend([
+            "```",
+            "",
+            "## Contributing",
+            "",
+            "Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.",
+            "",
+            "## License",
+            "",
+            "MIT © 2026",
+            "",
+        ])
+        return "\n".join(lines)
+```
+
+### README Quality Checker
+
+```python
+import re
+from typing import List, Dict
+
+class READMEQualityChecker:
+    def __init__(self):
+        self.checks = []
+
+    def check_readme(self, content: str, filepath: str = "README.md") -> List[Dict]:
+        self.checks = []
+        self._check_required_sections(content)
+        self._check_badges(content)
+        self._check_code_examples(content)
+        self._check_installation(content)
+        self._check_license(content)
+        return self.checks
+
+    def _add_issue(self, severity: str, message: str, category: str):
+        self.checks.append({
+            "severity": severity,
+            "message": message,
+            "category": category,
+        })
+
+    def _check_required_sections(self, content: str):
+        required = {
+            "Description": r"^#\s+",
+            "Installation": r"(?i)##?\s*(install|setup|getting started)",
+            "Usage": r"(?i)##?\s*(usage|example|quick start)",
+            "License": r"(?i)##?\s*(license|licence)",
+        }
+        for section, pattern in required.items():
+            if not re.search(pattern, content, re.MULTILINE):
+                self._add_issue("error", f"Missing required section: {section}", "structure")
+
+    def _check_badges(self, content: str):
+        if not re.search(r"https://img\.shields\.io", content, re.IGNORECASE):
+            self._add_issue("warning", "No badges found (CI, version, license)", "presentation")
+
+    def _check_code_examples(self, content: str):
+        code_blocks = re.findall(r"```", content)
+        if len(code_blocks) < 2:
+            self._add_issue("warning", "No code examples found in README", "usability")
+        elif len(code_blocks) < 6:
+            self._add_issue("info", "Consider adding more code examples", "usability")
+
+    def _check_installation(self, content: str):
+        if not re.search(r"(?i)(npm install|pip install|cargo install|go get|gem install)", content):
+            self._add_issue("error", "No explicit install command found", "usability")
+
+    def _check_license(self, content: str):
+        if not re.search(r"(?i)(MIT|Apache|BSD|GPL|LICENSE)", content):
+            self._add_issue("warning", "No license information found", "legal")
+```
+
+## Architecture Decision Trees
+
+### README Structure by Audience
+
+```
+Who is the primary audience?
+├── End users (library, CLI tool, app)
+│   ├── One-liner description
+│   ├── Quick start with real example
+│   ├── Installation instructions
+│   ├── Usage guide (with code examples)
+│   ├── API reference or CLI flags
+│   ├── FAQ / Troubleshooting
+│   ├── Contributing (lower priority)
+│   └── License
+│
+├── Developers (internal tool, platform)
+│   ├── What it does (one paragraph)
+│   ├── Architecture overview
+│   ├── Setup for local development
+│   ├── Configuration reference
+│   ├── Running tests
+│   ├── Deployment guide
+│   ├── API documentation
+│   └── Monitoring / observability
+│
+└── Both (open source project)
+    ├── Top: User-focused content (install, quick start)
+    ├── Middle: Feature documentation
+    ├── Bottom: Developer-focused (contributing, testing)
+    └── TOC for navigation
+```
+
+### Format Selection
+
+```
+What format fits the content?
+├── Minimal (single section)
+│   └── Tiny utility, single-purpose CLI
+│
+├── Standard (sections with TOC)
+│   └── Most projects — library, tool, app
+│
+├── Detailed (with subsections)
+│   └── Large project, monorepo, framework
+│
+└── Multi-file docs
+    └── Very large project — separate docs/ directory
+```
+
+## Production Considerations
+
+- **README freshness check in CI**: Add a CI check that warns if README hasn't been updated in N commits. Automatically flag when API endpoints change but README doesn't.
+- **Embedded documentation testing**: Use tools like `doctest` or `mdx` to verify code examples in README are correct. Prevents stale or broken example code.
+- **README template per project type**: Maintain standardized README templates for CLI tools, libraries, web apps, and internal services. Reduces decision fatigue and ensures consistency.
+- **Multi-language README**: For projects used by international teams, maintain `README.zh-CN.md`, `README.ja.md` etc. Cross-reference at the top of the default README. Use automated translation with human review.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| No quick start | User must read whole README to try | Code example as first code block |
+| Too much internal detail | User-facing info is buried | User content top, dev content bottom |
+| Outdated screenshots | UI changes, README stale | CI badge for screenshot freshness |
+| No license | Nobody knows if they can use it | SPDX header + LICENSE file |
+| No installation instructions | User can't figure out how to start | Explicit install command |
+| Broken links | Frustrating user experience | Check links in CI |
+| No contributing guide | No one knows how to contribute | CONTRIBUTING.md + PR template |
+| README is the only docs | Too long, hard to navigate | README = front page, docs/ for details |
+| Code examples not tested | Examples don't work | Test examples as part of CI |
+| Assuming reader context | "Simply run it" — confusing | Complete commands, explicit paths |
+
+## Performance Optimization
+
+- **README generation from package metadata**: Use package.json, Cargo.toml etc. to auto-generate badges, install commands, and version info. Reduces manual maintenance.
+- **Badge caching with shields.io**: Use shields.io's cache to serve badges. Static badges (license, version) rarely change. Dynamic badges (CI status, coverage) use short cache.
+- **README link checking**: Use `awesome_bot` or `markdown-link-check` for automated link validation. Run weekly, not on every commit, to avoid CI time waste.
+- **Render preview in PR**: Use tools like `grip` or `remark` to render README preview in CI PR comments. Catches formatting issues before merge.

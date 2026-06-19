@@ -383,3 +383,107 @@ ruleTester.run('no-direct-state-mutation', rule, {
 5. Update CI scripts to use `eslint.config.js`
 6. Remove any `eslintConfig` field from `package.json`
 7. Update VS Code settings to use flat config path
+
+## Production Considerations
+
+### Performance at Scale
+For large codebases (10k+ files), ESLint performance matters. Key strategies:
+- **`--cache` flag**: `npx eslint --cache src/` caches results per file, skips unchanged files. Cache stored in `.eslintcache` — gitignore it. Invalidated when file content changes or config changes.
+- **`--max-warnings`**: Set in CI to enforce warning-free code. `npx eslint --max-warnings 0 src/`. Prevents warning accumulation — teams ignore 1000+ warnings.
+- **File filtering**: Use glob patterns to limit scope. `eslint 'src/**/*.{ts,tsx}'` over scanning all files and ignoring in config.
+- **Parallel linting**: `eslint --no-eslintrc -c config.js` with multiple processes. Use `lint-staged` for pre-commit (staged files only).
+- **Memory profiling**: If ESLint runs OOM, increase Node memory: `NODE_OPTIONS="--max-old-space-size=4096" npx eslint src/`. Or split linting by directory.
+- **Incremental migration**: For large codebases adopting strict rules, use `eslint-plugin-only-error` to enforce only new/changed code follows new rules.
+
+### Monorepo Configuration Patterns
+Monorepo ESLint setup with package-specific overrides:
+```javascript
+// eslint.config.js (root)
+import ts from 'typescript-eslint';
+
+export default [
+  ...ts.configs.recommended,
+  {
+    files: ['packages/api/src/**/*.ts'],
+    rules: { 'no-console': 'off' },
+  },
+  {
+    files: ['packages/web/src/**/*.tsx'],
+    rules: { 'react/jsx-key': 'error' },
+  },
+  {
+    files: ['packages/shared/src/**/*.ts'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'error',
+    },
+  },
+  {
+    files: ['packages/*/test/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      'max-lines-per-function': 'off',
+    },
+  },
+  { ignores: ['**/dist/', '**/node_modules/', '**/coverage/'] },
+];
+```
+
+### Plugin Compatibility Matrix
+| Plugin | Flat Config | Legacy Config | Notes |
+|--------|-------------|---------------|-------|
+| `@eslint/js` | Native | N/A | ESLint 9+ built-in |
+| `typescript-eslint` | Yes (v7+) | Yes | v8+ requires flat config |
+| `eslint-plugin-react` | Yes (v7.35+) | Yes | Hooks is separate |
+| `eslint-plugin-react-hooks` | Yes (v4.6+) | Yes | |
+| `eslint-plugin-import` | Experimental | Yes | Use `eslint-plugin-import-x` fork |
+| `eslint-plugin-prettier` | Yes | Yes | Prefer config-prettier only |
+| `eslint-plugin-vue` | Yes | Yes | |
+| `@angular-eslint` | Yes (v18+) | Yes | |
+| `eslint-plugin-jest` | Yes | Yes | |
+
+### Pre-commit Hook Setup (Husky 9+)
+```bash
+npx husky init
+# .husky/pre-commit:
+npx lint-staged
+```
+```json
+{
+  "lint-staged": {
+    "*.{js,ts,tsx,jsx}": ["eslint --fix", "prettier --write"],
+    "*.{json,md,yml}": ["prettier --write"]
+  }
+}
+```
+
+### Known Limitations
+- **ESLint 9 flat config still maturing**: Some plugins haven't migrated. Maintain both configs during transition.
+- **`--report-unused-disable-directives` noisy during migration**: Use `--report-unused-disable-directives-severity warn`.
+- **`eslint --fix` limited**: Only rules with `meta.fixable` are auto-fixed.
+- **ESLint + Prettier conflict**: Use `eslint-config-prettier` as last config to disable formatting rules.
+- **Large .d.ts files**: May cause false positives with `no-unused-vars`. Exclude `*.d.ts`.
+- **`parserOptions.project` slows TypeScript linting 2-10x**: Use only on specific directories needing type-aware rules.
+
+### Debugging & Troubleshooting
+
+**Rule not firing?**
+1. Check rule name includes plugin prefix: `react/jsx-key` not `jsx-key`
+2. Check `files` pattern matches the file being linted
+3. Check overrides aren't disabling the rule
+4. Run `npx eslint --debug src/file.ts` to see rule execution
+5. Run `npx eslint --print-config src/file.ts` to verify effective config
+6. Check for `/* eslint-disable */` at top of file
+
+**Config debugging commands:**
+```bash
+npx eslint --print-config src/app.ts          # Effective config
+npx eslint --config eslint.config.js src/     # Force config file
+npx eslint --debug src/                       # Trace rule application
+```
+
+**Common flat config mistakes:**
+- Must export an array, not an object
+- Later configs override earlier ones — put generics first, specifics last
+- `ignores` as standalone config must be last item in array
+- Plugins must be imported and passed in `plugins` object, not referenced as strings
+- Only one parser per file — `typescript-eslint` conflicts with `@babel/eslint-parser`

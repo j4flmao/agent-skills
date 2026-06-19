@@ -376,12 +376,98 @@ Use built-in extensions to reduce custom code:
 - Denormalize for read performance — data duplication is acceptable in Firestore.
 - Always use emulator for development. Never point a client SDK at production Firestore during development.
 
-## References
-  - references/cloud-functions.md — Cloud Functions
-  - references/firebase-auth.md — Firebase Auth
-  - references/firebase-cost-optimization.md — Firebase Cost Optimization
-  - references/firebase-emulator-testing.md — Firebase Emulator Testing
-  - references/firebase-storage-hosting.md — Firebase Storage & Hosting
-  - references/firestore-database.md — Firestore Database
-## Handoff
-Hand off to `mobile/*/SKILL.md` for client-side SDK integration or `devops/monitoring/SKILL.md` for Firebase monitoring setup.
+## Implementation Patterns
+
+### Firestore Repository
+
+```typescript
+import { Firestore, CollectionReference, DocumentData, Query } from 'firebase/firestore';
+
+interface Entity {
+  id?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+class FirestoreRepository<T extends Entity> {
+  constructor(
+    private firestore: Firestore,
+    private collectionPath: string
+  ) {}
+
+  get collection(): CollectionReference<T> {
+    return this.firestore.collection(this.collectionPath) as CollectionReference<T>;
+  }
+
+  async create(data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    const docRef = await this.collection.add({
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any);
+    return docRef.id;
+  }
+
+  async get(id: string): Promise<T | null> {
+    const doc = await this.collection.doc(id).get();
+    return doc.exists ? { id: doc.id, ...doc.data() } as T : null;
+  }
+
+  async update(id: string, data: Partial<Omit<T, 'id'>>): Promise<void> {
+    await this.collection.doc(id).update({
+      ...data,
+      updatedAt: new Date(),
+    } as any);
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.collection.doc(id).delete();
+  }
+
+  async query(queries: ((ref: CollectionReference) => Query)[]): Promise<T[]> {
+    let q: Query = this.collection;
+    for (const queryFn of queries) {
+      q = queryFn(this.collection);
+    }
+    const snapshot = await q.get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as T);
+  }
+}
+```
+
+## Architecture Decision Trees
+
+### Firebase When to Use
+
+```
+Should you use Firebase?
+├── Small to medium app (< 100K users)
+│   ├── Need real-time sync → Firestore
+│   ├── Need auth → Firebase Auth (social providers, email)
+│   └── Need file storage → Firebase Storage
+│
+├── MVP / Prototype
+│   └── Firebase = fastest time to ship
+│
+├── Complex queries, joins, aggregations
+│   └── Consider a relational DB (Firestore limits queries)
+│
+└── Heavy server-side processing
+    └── Cloud Functions + Firebase or use a backend framework
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Deeply nested collections (>3 levels) | Slow queries, high read cost | Shallow collections with references |
+| Missing composite indexes | Queries fail with vague errors | Create indexes when query requires them |
+| Storing arrays for growing data | Can't atomically modify large arrays | Use subcollections or maps |
+| Not using emulators | Costs accumulate, slow iteration | Firestore emulator for development |
+| Functions without error handling | Silent failures | Always wrap in try/catch, log errors |
+| Over-indexing | Each index adds write cost | Only index for actual queries |
+
+## Performance Optimization
+
+- **Batch reads in parallel**: Use `getAll()` to fetch multiple documents in one batch. Reduces latency from N sequential reads to 1 parallel batch.
+- **Data denormalization for read performance**: Duplicate data across documents to avoid joins. Accept data duplication — Firestore charges per read, not per storage.

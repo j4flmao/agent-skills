@@ -353,3 +353,167 @@ Mobile users need touch-friendly navigation. Hamburger menus, bottom nav bars, o
 No artifact produced.
 Next skill: `tailwind-css` — implement breakpoints via Tailwind utility classes.
 Carry forward: breakpoint values, container query approach, fluid type scale.
+
+## Implementation Patterns
+
+### Responsive Container Component
+
+```tsx
+import { ReactNode } from 'react';
+
+type Breakpoint = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+
+interface ResponsiveProps {
+  children: ReactNode;
+  /** Hide below this breakpoint */
+  hideBelow?: Breakpoint;
+  /** Hide above this breakpoint */
+  hideAbove?: Breakpoint;
+  /** Tailwind class overrides */
+  className?: string;
+}
+
+const BREAKPOINTS: Record<Breakpoint, string> = {
+  sm: '640px',
+  md: '768px',
+  lg: '1024px',
+  xl: '1280px',
+  '2xl': '1536px',
+};
+
+export function Responsive({ children, hideBelow, hideAbove, className }: ResponsiveProps) {
+  const classes = [];
+  if (hideBelow) {
+    classes.push(`hidden ${hideBelow}:block`);
+  }
+  if (hideAbove) {
+    const nextBreakpoint = getNextBreakpoint(hideAbove);
+    if (nextBreakpoint) {
+      classes.push(`${nextBreakpoint}:hidden`);
+    } else {
+      classes.push('hidden');
+    }
+  }
+  return (
+    <div className={[...classes, className].filter(Boolean).join(' ')}>
+      {children}
+    </div>
+  );
+}
+
+function getNextBreakpoint(bp: Breakpoint): Breakpoint | null {
+  const order: Breakpoint[] = ['sm', 'md', 'lg', 'xl', '2xl'];
+  const idx = order.indexOf(bp);
+  if (idx >= 0 && idx < order.length - 1) return order[idx + 1];
+  return null;
+}
+```
+
+### Fluid Typography Scale
+
+```css
+/* Fluid type scale using clamp() */
+:root {
+  /* 
+   * Formula: clamp(min, preferred, max)
+   * Preferred: (minSize / viewportWidth * 100) for responsive scaling
+   */
+  --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --text-sm: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
+  --text-base: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+  --text-lg: clamp(1.125rem, 1rem + 0.625vw, 1.25rem);
+  --text-xl: clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem);
+  --text-2xl: clamp(1.5rem, 1.25rem + 1.25vw, 2rem);
+  --text-3xl: clamp(1.875rem, 1.5rem + 1.875vw, 2.5rem);
+  --text-4xl: clamp(2.25rem, 1.75rem + 2.5vw, 3rem);
+}
+
+/* Usage */
+body {
+  font-size: var(--text-base);
+}
+
+h1 { font-size: var(--text-3xl); }
+h2 { font-size: var(--text-2xl); }
+h3 { font-size: var(--text-xl); }
+```
+
+### Container Query Component
+
+```css
+/* Card component with container queries */
+.card-container {
+  container-type: inline-size;
+  container-name: card;
+}
+
+@container card (min-width: 400px) {
+  .card {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 1rem;
+  }
+  .card-image {
+    width: 100%;
+    height: auto;
+  }
+}
+
+@container card (max-width: 399px) {
+  .card {
+    display: flex;
+    flex-direction: column;
+  }
+  .card-image {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+  }
+}
+```
+
+## Architecture Decision Trees
+
+### Responsive Approach Selection
+
+```
+What's the layout requirement?
+├── Page-level layout (sidebar, header, main)
+│   └── Viewport media queries
+│       ├── min-width for mobile-first breakpoints
+│       └── Global layout changes (sidebar collapse, header resize)
+│
+├── Component-level layout (card, list, grid)
+│   └── Container queries
+│       ├── Component responds to its own container width
+│       ├── No dependency on viewport for reusable components
+│       └── Ideal for design system components
+│
+├── Typography and spacing
+│   └── Fluid scaling with clamp()
+│       ├── Linear scaling between min and max viewport
+│       ├── No breakpoint jumps for text size
+│       └── Rem-based spacing with fluid base
+│
+└── Images and media
+    └── Responsive images with srcset/sizes
+        ├── Browser picks optimal resolution
+        ├── Art direction with <picture> element
+        └── WebP with AVIF fallback
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Desktop-first media queries | More CSS overrides, harder to maintain | Mobile-first with min-width queries |
+| Fixed pixel values for everything | Doesn't scale with user font preferences | rem/em for spacing and typography |
+| Only viewport media queries | Components don't adapt to their container | Container queries for reusable components |
+| Too many breakpoints | Fragile, hard to test, maintenance burden | 5-6 breakpoints max, system-defined |
+| Horizontal overflow on small screens | Content extends beyond viewport | overflow-x: hidden; min-width: 0 on flex items |
+| Images without max-width | Images overflow their container | max-width: 100%; height: auto on all images |
+
+## Performance Optimization
+
+- **CSS containment**: Use `contain: layout style paint` on independent components. Prevents style recalculation outside the container. Improves rendering performance for large component trees.
+- **Conditional asset loading**: Load different assets based on viewport. Use `window.matchMedia` in JS or `<picture>` element for responsive images. Reduce data transfer by 40% on mobile.

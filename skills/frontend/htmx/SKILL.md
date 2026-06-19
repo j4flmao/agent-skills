@@ -386,3 +386,123 @@ app.get('/contacts', (req, res) => {
 No artifact produced.
 Next skill: htmx-hyperscript (if client-side logic needed) or backend-htmx-integration.
 Carry forward: hx-trigger/hx-target/hx-swap pattern, HTML-fragment responses, HATEOAS.
+
+## Implementation Patterns
+
+### HTMX Component Pattern
+
+```html
+<!-- Server-rendered component with HTMX -->
+<div hx-target="this" hx-swap="outerHTML">
+  <button hx-get="/api/component/counter"
+          hx-trigger="click"
+          hx-vals='{"action": "increment"}'>
+    Count: {{ count }}
+  </button>
+</div>
+
+<!-- Inline editing pattern -->
+<div hx-target="this" hx-swap="outerHTML">
+  <span hx-get="/api/component/edit/{{ id }}"
+        hx-trigger="click"
+        class="editable">
+    {{ value }}
+  </span>
+</div>
+
+<!-- Lazy loading pattern -->
+<div hx-get="/api/component/heavy-content"
+     hx-trigger="load"
+     hx-swap="innerHTML">
+  <div class="spinner">Loading...</div>
+</div>
+
+<!-- Infinite scroll -->
+<div hx-get="/api/items?page=2"
+     hx-trigger="revealed"
+     hx-swap="afterend"
+     hx-target="this">
+</div>
+
+<!-- Form validation -->
+<form hx-post="/api/users"
+      hx-target="#form-errors"
+      hx-swap="innerHTML">
+  <input type="text" name="email"
+         hx-post="/api/validate/email"
+         hx-trigger="change"
+         hx-target="next .error">
+  <div class="error"></div>
+  <button type="submit">Submit</button>
+</form>
+<div id="form-errors"></div>
+```
+
+### Server-Side Handler Pattern
+
+```python
+from flask import Blueprint, request, render_template, jsonify
+
+htmx = Blueprint('htmx', __name__)
+
+@htmx.route('/api/component/counter')
+def counter_component():
+    action = request.form.get('action', 'increment')
+    current = int(request.args.get('count', 0))
+    if action == 'increment':
+        current += 1
+    elif action == 'decrement':
+        current -= 1
+    return render_template('components/_counter.html', count=current)
+
+@htmx.route('/api/component/edit/<id>')
+def edit_component(id):
+    value = get_value(id)
+    return render_template('components/_edit_form.html', id=id, value=value)
+
+@htmx.route('/api/validate/email', methods=['POST'])
+def validate_email():
+    email = request.form.get('email', '')
+    if '@' not in email:
+        return '<span class="error">Invalid email</span>'
+    return '<span class="success">Valid email</span>'
+```
+
+## Architecture Decision Trees
+
+### SPA vs HTMX Decision
+
+```
+What's the interactivity requirement?
+├── Simple CRUD, forms, navigation
+│   └── HTMX + server-side rendering
+│       ├── Less JavaScript, simpler architecture
+│       ├── Server handles rendering
+│       └── Faster initial load
+│
+├── Complex real-time UIs (drag-drop, drawing)
+│   └── SPA (React, Vue, Svelte)
+│       ├── Rich client interactivity
+│       ├── Complex state management
+│       └── More JavaScript overhead
+│
+├── Mixed (mostly simple, some complex)
+│   └── HTMX for simple parts + SPA island for complex
+│       └── Best of both worlds
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Returning JSON from HTMX endpoints | Client has to parse and render | Return HTML fragments directly |
+| Using htmx for everything | Not appropriate for rich UIs | Use SPA for complex interactive parts |
+| No loading indicators | Users don't know if request is working | Always use hx-indicator |
+| Wrong swap strategy | Unexpected UI behavior | Choose correct hx-swap for each use case |
+| Server endpoints not idempotent | Duplicate requests cause issues | GET should be safe, POST can repeat |
+
+## Performance Optimization
+
+- **Server-Sent Events for real-time updates**: Use HTMX with SSE (Server-Sent Events) for real-time push. SSE triggers HTMX requests to update specific elements. More efficient than polling.
+- **View caching on server**: Cache rendered HTML fragments on server. Use response cache headers for HTMX responses. Avoid re-rendering unchanged components.
+- **Morphdom swap for minimal DOM changes**: Use `hx-swap="morphdom"` for fine-grained DOM diffing. Only changes the parts of the element that actually changed. Reduces layout thrash.

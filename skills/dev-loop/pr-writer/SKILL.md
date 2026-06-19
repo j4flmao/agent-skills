@@ -316,3 +316,180 @@ Hotfix tag: v2.0.1
   - references/pr-writer-workflow.md — PR Workflow Reference
 ## Handoff
 Hand off to `dev-loop-code-review` for PR review. Hand off to `dev-loop-changelog-generator` for release note generation from PR.
+
+## Implementation Patterns
+
+### PR Description Generator
+
+```python
+from typing import List, Dict, Optional
+import subprocess
+import re
+from datetime import datetime
+
+class PRDescriptionGenerator:
+    def __init__(self, repo_path: str = "."):
+        self.repo_path = repo_path
+
+    def generate_from_diff(self, branch: str = "HEAD", base: str = "main") -> Dict:
+        diff_stat = self._get_diff_stat(branch, base)
+        commit_log = self._get_commit_log(branch, base)
+        changed_files = self._parse_changed_files(diff_stat)
+        return {
+            "title": self._generate_title(commit_log),
+            "description": self._generate_description(commit_log, changed_files),
+            "type": self._detect_pr_type(commit_log),
+            "changed_files": changed_files,
+            "stats": diff_stat,
+        }
+
+    def _get_diff_stat(self, branch: str, base: str) -> str:
+        try:
+            result = subprocess.run(
+                ["git", "diff", f"{base}..{branch}", "--stat"],
+                capture_output=True, text=True, cwd=self.repo_path
+            )
+            return result.stdout
+        except subprocess.CalledProcessError:
+            return ""
+
+    def _get_commit_log(self, branch: str, base: str) -> List[str]:
+        try:
+            result = subprocess.run(
+                ["git", "log", f"{base}..{branch}", "--oneline", "--format=%s%n%b---"],
+                capture_output=True, text=True, cwd=self.repo_path
+            )
+            return [c.strip() for c in result.stdout.split("---") if c.strip()]
+        except subprocess.CalledProcessError:
+            return []
+
+    def _parse_changed_files(self, stat: str) -> List[Dict]:
+        files = []
+        for line in stat.split("\n"):
+            match = re.match(r"\s*(.+?)\s*\|\s*(\d+)\s*[+-]+", line)
+            if match:
+                files.append({"path": match.group(1), "changes": int(match.group(2))})
+        return files
+
+    def _generate_title(self, commits: List[str]) -> str:
+        if not commits:
+            return "feat: update"
+        first_commit = commits[0]
+        match = re.match(r"^(feat|fix|docs|refactor|perf|test|chore|ci)(\(.+?\))?(!)?: (.+)", first_commit)
+        if match:
+            return first_commit.split("\n")[0]
+        return f"fix: {first_commit[:60].lower()}"
+
+    def _detect_pr_type(self, commits: List[str]) -> str:
+        types = {"feat": 0, "fix": 0, "refactor": 0, "docs": 0}
+        for commit in commits:
+            for t in types:
+                if commit.startswith(t):
+                    types[t] += 1
+        return max(types, key=types.get)
+
+    def _generate_description(self, commits: List[str], files: List[Dict]) -> str:
+        lines = []
+        if commits:
+            lines.append("## Changes")
+            for commit in commits[:5]:
+                lines.append(f"- {commit.split(chr(10))[0][:100]}")
+        lines.append("")
+        if files:
+            lines.append(f"## Files Modified: {len(files)}")
+            for f in files[:10]:
+                lines.append(f"- `{f['path']}` ({f['changes']} changes)")
+        return "\n".join(lines)
+
+class PRReviewChecklist:
+    def __init__(self):
+        self.checks = []
+
+    def add_check(self, category: str, description: str, automated: bool = False):
+        self.checks.append({
+            "category": category,
+            "description": description,
+            "automated": automated,
+        })
+
+    def generate_for_pr(self, pr_data: Dict) -> str:
+        automated_checks = [c for c in self.checks if c["automated"]]
+        manual_checks = [c for c in self.checks if not c["automated"]]
+        lines = ["## Review Checklist\n"]
+        if automated_checks:
+            lines.append("### Automated Checks")
+            for c in automated_checks:
+                lines.append(f"- [ ] {c['description']} ({c['category']})")
+        if manual_checks:
+            lines.append("\n### Manual Review")
+            for c in manual_checks:
+                lines.append(f"- [ ] {c['description']} ({c['category']})")
+        return "\n".join(lines)
+```
+
+## Architecture Decision Trees
+
+### PR Merge Strategy
+
+```
+What's the PR size and context?
+├── Single commit / clean history
+│   └── Rebase merge → Preserves individual commits
+│
+├── Multiple commits, single concern
+│   └── Squash merge → Clean single commit on main
+│
+├── Multiple commits, multiple concerns
+│   └── Split into separate PRs first
+│
+├── Co-authored by multiple developers
+│   └── Merge commit → Preserves all authors
+│
+└── Hotfix for production
+    └── Fast-track: squash merge with hotfix label
+```
+
+### PR Review Depth Selection
+
+```
+What's the risk level?
+├── Low (docs, config, tests, formatting)
+│   └── Shallow review: correctness, consistency
+│
+├── Medium (feature, refactor, dependency update)
+│   ├── Standard review: logic, edge cases, tests
+│   └── At least 1 reviewer from the affected domain
+│
+├── High (architecture change, data migration, API change)
+│   ├── Deep review: design, security, performance, backward compat
+│   └── 2+ reviewers including senior/principal
+│
+└── Critical (auth, payments, PII, breaking change)
+    ├── Full audit: security review + architecture review
+    └── Mandatory: 2+ reviewers, load test results, rollback plan
+```
+
+## Production Considerations
+
+- **PR size enforcement in CI**: Add a CI check that flags PRs exceeding 400 lines changed. Recommend splitting into smaller PRs with a comment template.
+- **Auto-labeling based on commit types**: Parse Conventional Commits in the PR title to auto-apply labels (feat → feature, fix → bug).
+- **Changelog generation from PRs**: Use PR labels and titles to auto-generate changelog entries on merge. Reduces release overhead by 80%.
+- **PR template validation**: Validate PR description against template requirements before allowing submission. Reduce incomplete PRs by 50%.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Leaving PR body empty | Reviewer has zero context about the change | Always use template with what/why/how sections |
+| Combining refactor + feature in one PR | Hard to review, risky to revert | Separate PRs: refactor first, feature second |
+| Requesting review from everyone | No one feels responsible | Request 1-2 specific reviewers with context |
+| Merging without resolving comments | Discussion items remain open | Require all conversations resolved before merge |
+| Title doesn't match content | Confusing in changelog and git log | Title must match Conventional Commits format |
+| No screenshots for UI changes | Reviewer must run code to see visual impact | Always include before/after screenshots |
+| PR that "also fixes" unrelated bugs | Scope creep complicates review | File separate issues, separate PRs |
+
+## Performance Optimization
+
+- **Pre-populate PR description from commits**: Extract commit messages, file list, and diff stats automatically. Saves developer 5-10 minutes per PR.
+- **CI-integrated PR size analysis**: Automatically suggest file splits when PR exceeds 400 lines. Flag files with disproportionate change ratio.
+- **Template auto-fill**: Use HEAD commit message to pre-fill PR title and type. Use git diff to list all changed files. Developer only writes description.
