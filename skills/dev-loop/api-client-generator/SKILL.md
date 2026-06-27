@@ -485,3 +485,37 @@ What language/framework?
 
 - **Tree-shake generated clients**: Use tree-shaking to remove unused endpoints from generated clients. Reduces bundle size by up to 60% for apps using only a subset of the API.
 - **Lazy client initialization**: Generate client code in lazy-loaded chunks for large APIs. Dynamically import endpoint modules on first use.
+
+## Production Considerations
+
+### Version Management
+- **Client version pinning**: Pin generated client versions to specific API versions. Use semver to communicate breaking changes.
+- **Deprecation strategy**: Mark endpoints as deprecated in client before removal. Provide migration guide in changelog.
+- **Multi-version support**: Maintain parallel client versions for APIs with overlapping deprecation windows.
+
+### CI/CD Integration
+- **Spec-driven generation**: Regenerate client on spec change in CI pipeline. Fail build if spec validation fails.
+- **Artifact publishing**: Publish generated client as versioned package to internal registry. Tag with API version and generation timestamp.
+- **Smoke tests**: Run generated client against a live API sandbox as part of CI.
+
+### Error Handling
+- **Retry with backoff**: Implement exponential backoff for transient failures. Use jitter to avoid thundering herd.
+- **Circuit breaker**: Open circuit after N consecutive failures to protect downstream. Close after successful health check.
+- **Structured errors**: Map HTTP status codes to typed exceptions. Include correlation IDs for debugging.
+
+## Security Considerations
+
+### Authentication
+- **Credential injection**: Never hardcode API keys. Use environment variables or secret managers (Vault, AWS Secrets Manager).
+- **Token refresh**: Handle OAuth2 token refresh transparently. Re-authenticate on 401 responses before retrying.
+- **Certificate pinning**: Pin TLS certificates in mobile/high-security clients to prevent MITM.
+
+### Data Protection
+- **Request/response sanitization**: Strip sensitive headers (Authorization, Set-Cookie) before logging.
+- **Encryption at rest**: Encrypt cached API responses containing PII. Use envelope encryption with per-tenant keys.
+- **Input validation**: Validate all inputs client-side before sending. Prevent injection attacks on string parameters.
+
+### Audit & Compliance
+- **Request logging**: Log all API requests with timestamps, endpoints, and status codes. Exclude sensitive payloads.
+- **Rate limit awareness**: Respect Retry-After headers. Implement client-side rate limiting to avoid abuse flags.
+- **Compliance headers**: Add required compliance headers (GDPR consent, data residency) automatically.

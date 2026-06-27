@@ -1,0 +1,40 @@
+
+Name                         Count          AvgRefs
+----                         -----          -------
+ai                              15             11.6
+api                              2               13
+aspirational                     1                8
+backend                         24             7.75
+blockchain                      16            9.625
+cloud-native                     4                8
+core                             4                8
+data                            37 7.81081081081081
+data-science                     4                6
+design                           8             6.75
+desktop                         12                6
+dev-loop                        12 6.33333333333333
+devops                          62 7.62903225806452
+ecommerce                        2                8
+enterprise                      15 7.93333333333333
+frontend                        15 7.46666666666667
+harness-engineering             12                8
+languages                        5                5
+management                      17 7.88235294117647
+map-location                     1                0
+ml                              16            7.625
+mobile                          10              6.2
+planning                        12 8.58333333333333
+product                         10              7.7
+prompt-engineering               5                8
+pwa                              1                0
+quality                         11 8.81818181818182
+security                        17 8.88235294117647
+seo                              1                0
+site-reliability-engineering     4                8
+sprint-retro                     1                0
+system-design                    4                8
+tools                            6                2
+web                              2                1
+
+
+

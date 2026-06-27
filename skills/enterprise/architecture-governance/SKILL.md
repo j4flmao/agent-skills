@@ -397,5 +397,228 @@ A technology company used its architecture principles to make a difficult build-
   - references/architecture-principles.md -- Architecture Principles
   - references/architecture-reviews.md -- Architecture Review Process
   - references/decision-rights.md -- Architecture Decision Rights
-## Handoff
-For architecture development method, hand off to `enterprise-togaf-zachman` for ADM phase execution. For vendor technology evaluations, hand off to `enterprise-vendor-management` for procurement alignment.
+## Implementation Patterns
+
+### Pattern: Automated Compliance Gate in CI/CD
+
+```yaml
+# .github/workflows/architecture-compliance.yml
+name: Architecture Compliance Gate
+on: pull_request
+jobs:
+  fitness-functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check circular dependencies
+        run: |
+          ! jdepend -file . | grep -q "cycles"
+      - name: Naming convention compliance
+        run: |
+          ! find src -name "*.ts" -exec grep -l "interface.*Impl" {} \; | grep .
+      - name: API contract compatibility
+        run: |
+          diff-api openapi-spec-v2.yaml openapi-spec-v3.yaml || true
+      - name: Principle adherence
+        run: |
+          python scripts/check-principles.py --principles docs/architecture/principles.yaml
+      - name: Notify ARB on violation
+        if: failure()
+        run: |
+          gh issue create --title "Architecture compliance failure: ${{ github.sha }}" \
+            --body "PR ${{ github.event.number }} failed fitness functions." \
+            --label "architecture"
+```
+
+### Pattern: ADR Generation and Management
+
+```bash
+# Initialize ADR tool
+adr init docs/architecture/decisions/
+adr new "Use Event-Driven Architecture for Order Processing"
+adr new "Adopt PostgreSQL as Primary Database"
+adr new "Deprecate Legacy SOAP Integration" -s 2
+
+# Link ADRs
+adr new -s 4 -s 5 "Migrate from Monolith to Microservices"
+
+# Output
+# docs/architecture/decisions/
+#   0001-use-event-driven-architecture-for-order-processing.md
+#   0002-adopt-postgresql-as-primary-database.md
+#   0003-deprecate-legacy-soap-integration.md
+#   0004-migrate-from-monolith-to-microservices.md
+```
+
+## Production Considerations
+
+### ARB Operations
+- Meeting cadence: weekly for 45 minutes. Max 5 review items per session. Pre-read required 48h before.
+- Decision tracking: all decisions recorded in ADR format within 2 business days. Stored in version control.
+- Quorum: minimum 3 voting members present. At least 1 domain architect + 1 enterprise architect.
+- Escalation: unresolved conflicts elevated to CTO within 5 business days. CTO decision is final.
+
+### Governance Metrics
+- Review throughput: reviews completed per month. Target > 90% within tier SLA.
+- Exception aging: average days open. Escalate at 60 days. Auto-expire at 12 months.
+- Compliance rate: % of projects passing architecture review. Target > 85%.
+- Governance satisfaction: annual survey of reviewed teams. Target score > 4.0/5.0.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| ARB as rubber stamp | Every submission approved. No value added. | Require alternatives analysis. Challenge assumptions. |
+| Over-governing small decisions | Teams wait weeks for trivial approvals. | Delegate routine decisions to domain architects. |
+| Principles without enforcement | Aspirational but ignored. Cynicism. | Fitness functions in CI/CD. Reference in review criteria. |
+| No follow-up on conditions | Conditional approvals never verified. Architecture drift. | Track conditions to closure. Post-implementation review. |
+| Governance as gate | Teams bypass ARB. Shadow IT. | Position as enabling service. Office hours for early feedback. |
+| Ivory tower governance | Architects disconnected from engineering reality. | Embed architects in delivery teams. Rotation program. |
+| Measuring activity not outcomes | Counting reviews completed, not quality. | Track compliance rate, exception reduction, drift detected. |
+| One-size-fits-all governance | Same process for prototypes and critical systems. | Risk-based tiering. Lighter process for low-risk changes. |
+
+## Performance Optimization
+
+- ADR tooling: `adr-tools` for CLI generation. Log4brains for searchable ADR portal.
+- Architecture repository: Backstage/developer portal for self-service architecture docs.
+- Template automation: Jira issue templates for review submissions. Auto-populate from project metadata.
+- Fitness functions: run in CI/CD under 5 minutes total. Parallel checks for dependency, naming, contract.
+- Dashboard: Grafana for governance metrics. ARB throughput, exception aging, compliance rate.
+- Knowledge base: architecture decision search with full-text index. Categorize by domain, status, date.
+- Review triage: automated tier classification based on change scope. Route to correct reviewer.
+
+## Security Considerations
+
+- Architecture review must include security impact assessment for every submission.
+- Security architecture principles: defense in depth, least privilege, secure by default.
+- Exception process: security exceptions require CISO approval. Max 6 months. Non-renewable.
+- Architecture decisions affecting PII/PHI handling require privacy impact assessment.
+- Third-party architecture reviews include vendor security posture assessment.
+- Compliance gates verify encryption, access control, and audit logging requirements.
+- Architecture repository access: read-only for all engineers. Write access limited to architects.
+- Principle violations with security impact: immediate escalation to CISO. No grace period.
+- Architecture sign-off: two-person rule for security-relevant decisions (architect + security lead).
+## Implementation Patterns
+
+### Observer Pattern for Event Handling
+`
+interface EventObserver<T> {
+  onEvent(event: T): Promise<void>;
+}
+
+class EventBus<T> {
+  private observers: Set<EventObserver<T>> = new Set();
+  subscribe(observer: EventObserver<T>): void {
+    this.observers.add(observer);
+  }
+  unsubscribe(observer: EventObserver<T>): void {
+    this.observers.delete(observer);
+  }
+  async emit(event: T): Promise<void> {
+    const results = Array.from(this.observers).map(o => o.onEvent(event));
+    await Promise.allSettled(results);
+  }
+}
+`
+
+### Configuration-Driven Approach
+`
+config:
+  defaults:
+    timeout: 30s
+    retryCount: 3
+  overrides:
+    production:
+      timeout: 60s
+      retryCount: 5
+    development:
+      timeout: 300s
+      retryCount: 1
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Configuration validated against schema before startup
+- [ ] Health check endpoints registered and monitored
+- [ ] Graceful shutdown with draining period (30s timeout)
+- [ ] Resource limits configured (CPU, memory, file descriptors)
+- [ ] Log level set appropriate for environment
+- [ ] Metrics endpoint secured and exposed
+- [ ] Rate limiting configured per-tier
+- [ ] TLS certificates valid and auto-renewing
+- [ ] Database migrations run as separate deployment step
+- [ ] Feature flags ready for gradual rollout
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% over 5min | Critical | Page on-call |
+| p99 latency | > 2s over 5min | Warning | Investigate |
+| Throughput drop | > 50% over 1min | Critical | Check upstream |
+| Queue depth | > 1000 over 1min | Warning | Scale consumers |
+| Disk usage | > 85% | Warning | Clean or expand |
+| Memory usage | > 90% heap | Critical | Restart or scale |
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Root Cause | Solution |
+|-------------|---------|------------|----------|
+| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
+| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
+| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
+| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
+
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+## Rules
+- Default-deny security posture — allow only explicitly required access.
+- All inputs validated, all outputs encoded, all errors handled.
+- Defend in depth — multiple layers of security controls.
+- Fail securely — errors default to safe behavior.
+- Log security-relevant events for audit and investigation.
+- Keep dependencies updated — automate vulnerability scanning.
+- Design for observability from day one, not as an afterthought.
+- Document all architectural decisions with rationale.
+- Review code for security, performance, and correctness before merging.

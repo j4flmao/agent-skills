@@ -433,3 +433,112 @@ When can we stop the experiment?
 ## References
   - references/experimentation-fundamentals.md — Experimentation Fundamentals
   - references/experimentation-advanced.md — Experimentation Advanced Topics
+
+## Architecture Decision Trees
+
+```
+Experimentation Design
+├── Traffic volume?
+│   ├── High (> 100k users/day) → Classic A/B test (frequentist)
+│   ├── Medium → Bayesian A/B test (prior-informed)
+│   └── Low (< 10k users/day) → Sequential testing (mSPRT)
+├── Number of variants?
+│   ├── 2 → A/B test (simplest, highest power)
+│   ├── 3-5 → A/B/n with Bonferroni correction
+│   └── > 5 → Multi-armed bandit (MAB) with Thompson sampling
+├── Metric type?
+│   ├── Ratio (revenue/user) → Delta method or bootstrap
+│   ├── Binary (conversion) → Chi-squared / Fisher's exact
+│   └── Continuous (session time) → t-test / Welch's test
+└── CUPED implementation?
+    ├── Available pre-experiment data → CUPED (30%+ variance reduction)
+    └── No pre-experiment data → Classic frequentist
+```
+
+**Decision criteria**: Balance statistical power, traffic allocation, and operational complexity.
+
+## Implementation Patterns
+
+### Frequentist A/B Test Analysis
+```python
+# experimentation/frequentist_ab_test.py
+import numpy as np
+from scipy import stats
+
+class ABTestAnalyzer:
+    def __init__(self, alpha: float = 0.05):
+        self.alpha = alpha
+
+    def analyze_conversion(self, control: np.ndarray, treatment: np.ndarray) -> dict:
+        n_c, x_c = len(control), control.sum()
+        n_t, x_t = len(treatment), treatment.sum()
+        p_c, p_t = x_c / n_c, x_t / n_t
+        se = np.sqrt(p_c * (1 - p_c) / n_c + p_t * (1 - p_t) / n_t)
+        z = (p_t - p_c) / se
+        p_value = 2 * (1 - stats.norm.cdf(abs(z)))
+        ci = (p_t - p_c) + np.array([-1, 1]) * stats.norm.ppf(1 - self.alpha / 2) * se
+        return {
+            "lift": p_t - p_c,
+            "relative_lift": (p_t - p_c) / p_c,
+            "p_value": p_value,
+            "ci_95": ci.tolist(),
+            "significant": p_value < self.alpha
+        }
+```
+
+### Bayesian A/B Test
+```python
+# experimentation/bayesian_ab_test.py
+import pymc as pm
+
+class BayesianABTest:
+    def run(self, control: list[int], treatment: list[int]):
+        with pm.Model():
+            p_c = pm.Beta("p_c", alpha=1, beta=1)
+            p_t = pm.Beta("p_t", alpha=1, beta=1)
+            obs_c = pm.Binomial("obs_c", n=len(control), p=p_c, observed=sum(control))
+            obs_t = pm.Binomial("obs_t", n=len(treatment), p=p_t, observed=sum(treatment))
+            lift = pm.Deterministic("lift", p_t - p_c)
+            trace = pm.sample(2000, tune=1000)
+        prob_lift = (trace["lift"] > 0).mean()
+        return {"prob_treatment_winning": float(prob_lift), "trace": trace}
+```
+
+## Production Considerations
+
+- **Sample ratio mismatch (SRM)**: Run SRM check (chi-squared) daily; p < 0.01 → investigate.
+- **Sequential testing**: Implement mSPRT peeking boundaries; stop early only if boundary crossed.
+- **Guardrail metrics**: Define and monitor guardrail metrics with pre-specified thresholds.
+- **Experiment logging**: Log all assignment, exposure, and metric events to warehouse for offline analysis.
+- **Power analysis**: Pre-compute required sample size; extend experiment if underpowered.
+- **Multiple testing correction**: FDR (Benjamini-Hochberg) for secondary metrics; FWER (Bonferroni) for primary.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Peeking without sequential boundaries | Inflated false positive rate | Use mSPRT or fixed-horizon test |
+| Ignoring SRM check | Invalid experiment results | Daily SRM check, stop experiment if failing |
+| Analyzing all users (not just exposed) | Diluted treatment effect | Filter to exposed users by assignment |
+| Multiple primary metrics | Cherry-picking significant ones | Pre-register single primary metric |
+| Novelty effect bias | Early positive effect reverses | Run for minimum 2 full business cycles |
+
+## Performance Optimization
+
+- **CUPED**: Apply CUPED when pre-experiment metric correlation > 0.5; can reduce required sample size by 30%.
+- **Stratified randomization**: Stratify by known high-variance dimensions (country, device) for variance reduction.
+- **Delta method**: Use delta method for ratio metrics (revenue/user) instead of bootstrapping for speed.
+- **Power analysis automation**: Automate sample size estimation in CI; flag underpowered experiments early.
+- **Bayesian acceleration**: Use conjugate priors (Beta-Binomial, Normal-Normal) instead of MCMC for speed.
+
+## Security Considerations
+
+- **Unbiased assignment**: Ensure experiment assignment is deterministic and unforgeable (HMAC-signed user IDs).
+- **Data privacy**: Strip PII from experiment logs; use anonymized user IDs in analysis datasets.
+- **Access control**: Restrict experiment creation and analysis to authorized team members; audit all changes.
+- **Guardrail thresholds**: Pre-specify guardrail metric thresholds; auto-stop experiment if guardrails breached.
+- **Reproducibility**: Version all experiment configurations and analysis code; archive for 2 years for compliance.
+
+## Handoff
+`analytics-engineering` for downstream metric pipeline
+`ml-modeling` for model-based personalization experiments

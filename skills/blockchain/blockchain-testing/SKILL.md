@@ -430,5 +430,116 @@ contract VaultHandler is Test {
   - references/test-strategy-templates.md — Test Strategy Templates
   - references/foundry-fuzz-best-practices.md — Foundry Fuzz Best Practices
 
+## Architecture Decision Trees
+
+```
+Blockchain Testing Strategy
+├── Testing level?
+│   ├── Unit → Foundry (forge test, fastest)
+│   ├── Integration → Foundry fork testing / Hardhat mainnet fork
+│   ├── Fuzz → Foundry fuzz (property-based)
+│   └── E2E → Hardhat + tenderly / local node (Ganache, Anvil)
+├── Coverage target?
+│   ├── 100% line coverage → Unit + integration tests
+│   ├── 100% invariant coverage → Fuzz + symbolic execution
+│   └── Critical path only → Integration tests for high-value functions
+├── Fork testing?
+│   ├── Yes → Forge fork (anvil + fork URL)
+│   ├── Yes (extensive) → Tenderly virtual testnet
+│   └── No → Mock external contracts
+└── CI integration?
+    ├── Yes → Forge test in GitHub Actions / CircleCI
+    └── No → Local testing only (risky)
+```
+
+**Decision criteria**: Evaluate contract complexity, value at risk, team testing maturity, and CI infrastructure.
+
+## Implementation Patterns
+
+### Foundry Unit Test
+```solidity
+// blockchain-testing/test/Token.t.sol
+pragma solidity ^0.8.20;
+
+import "forge-std/Test.sol";
+import "../src/Token.sol";
+
+contract TokenTest is Test {
+    Token public token;
+
+    function setUp() public {
+        token = new Token("Test", "TST", 1e18);
+    }
+
+    function testTransfer() public {
+        address alice = makeAddr("alice");
+        token.transfer(alice, 100);
+        assertEq(token.balanceOf(alice), 100);
+
+        vm.expectRevert("ERC20: insufficient balance");
+        token.transfer(alice, 1e30);
+    }
+
+    function testFuzzTransfer(uint256 amount) public {
+        address alice = makeAddr("alice");
+        amount = bound(amount, 1, token.totalSupply());
+        token.transfer(alice, amount);
+        assertEq(token.balanceOf(alice), amount);
+    }
+}
+```
+
+### Invariant Test
+```solidity
+// blockchain-testing/test/Invariant.t.sol
+contract InvariantTest is Test {
+    ERC20 public token;
+    address[] public holders;
+
+    function invariant_total_supply() public {
+        uint256 circulating = 0;
+        for (uint256 i = 0; i < holders.length; i++) {
+            circulating += token.balanceOf(holders[i]);
+        }
+        assertEq(circulating, token.totalSupply());
+    }
+}
+```
+
+## Production Considerations
+
+- **Test coverage target**: Aim for 90%+ branch coverage; use `forge coverage` to measure.
+- **Fork block selection**: Use recent block (within 1 hour) for realistic state; avoid very old forks.
+- **Gas reporting**: Run `forge snapshot` for gas cost regression; CI checks gas changes vs baseline.
+- **Flaky test handling**: Identify and quarantine flaky fork tests; retry with fresh fork.
+- **Test data generation**: Use fuzz inputs for edge cases; generate realistic test data via foundry cheatcodes.
+- **CI integration**: Run unit + fuzz tests on every PR (timeout 10 min); run fork tests nightly.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| No fork testing | Miss integration bugs with existing protocols | Fork test at matching protocol versions |
+| Low fuzz runs (< 1000) | Miss edge cases | Minimum 5000 fuzz runs per property |
+| Ignoring invariant tests | Protocol invariant violated in production | Define 5+ invariants per protocol |
+| No gas snapshot | Unexpected gas cost increase | CI fails if gas > baseline + 10% |
+| Testing only happy path | Miss revert conditions | Test all require/assert failure paths |
+
+## Performance Optimization
+
+- **Parallel testing**: Use `forge test --no-match-contract "Fork"` for fast unit tests; parallel CI runners.
+- **Fuzz optimization**: Bound inputs with `bound()` to reduce search space; use targeted fuzzing for critical funcs.
+- **Selective fork testing**: Fork only specific contracts needed; use mock for rest to reduce overhead.
+- **Cache dependencies**: Warm fork RPC cache; reuse state across test runs in CI.
+- **Test tiering**: Unit (every commit) → Fuzz (every PR) → Fork (nightly) — fastest gates first.
+
+## Security Considerations
+
+- **Test isolation**: Use `vm.prank` and `vm.startPrank` for isolated test contexts; reset state between tests.
+- **Mainnet state safety**: Never run fork tests on production RPC with write access; use read-only archives.
+- **Secrets in tests**: Store fork RPC URLs in env vars; never commit API keys to test files.
+- **Audit readiness**: Structure tests for auditor review; document test coverage and invariant rationale.
+- **Test timeout**: Set test timeout (e.g., `forge test --no-match-contract "Fork" --timeout 300`) to prevent CI hangs.
+
 ## Phase
 blockchain → blockchain-testing

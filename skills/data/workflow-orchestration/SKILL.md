@@ -454,6 +454,119 @@ Primary pipeline model?
   - references/dagster-prefect.md — Dagster and Prefect Reference
   - references/data-pipeline-monitoring.md — Data Pipeline Monitoring
   - references/temporal-workflows.md — Temporal Workflows
+## Architecture Decision Trees
+
+```
+Orchestration Tool Selection
+├── Primary use case?
+│   ├── Data/ETL pipelines → Airflow / Dagster / Prefect
+│   ├── Microservice workflows → Temporal / Camunda
+│   └── ML pipelines → Kubeflow / Flyte / Airflow + MLflow
+├── Language preference?
+│   ├── Python → Airflow / Dagster / Prefect
+│   ├── TypeScript → Temporal
+│   └── Multi-language → Temporal / Flyte
+├── Infrastructure?
+│   ├── K8s-native → Dagster on K8s / Airflow K8sExecutor / Flyte
+│   └── VM-based → Airflow CeleryExecutor / Prefect (serverless)
+└── Execution model?
+    ├── DAG-based → Airflow / Dagster / Prefect
+    └── Long-running workflows → Temporal (durable execution)
+```
+
+**Decision criteria**: Evaluate team expertise, execution model (DAG vs durable), deployment target, and ecosystem integrations.
+
+## Implementation Patterns
+
+### Airflow DAG with Task Groups
+```python
+# workflow_orchestration/etl_dag.py
+from airflow import DAG
+from airflow.decorators import task, task_group
+from datetime import datetime
+
+with DAG("etl_pipeline", start_date=datetime(2024, 1, 1), schedule="@daily"):
+
+    @task
+    def extract(source: str) -> dict:
+        return {"source": source, "records": 1000}
+
+    @task
+    def transform(data: dict) -> dict:
+        data["transformed"] = True
+        return data
+
+    @task
+    def load(data: dict) -> str:
+        return f"Loaded {data['records']} records to warehouse"
+
+    @task_group
+    def process_source(source: str):
+        raw = extract(source)
+        cleaned = transform(raw)
+        load(cleaned)
+
+    sources = ["orders", "customers", "products"]
+    process_tasks = [process_source(s) for s in sources]
+```
+
+### Dagster Software-Defined Asset
+```python
+# workflow_orchestration/dagster_assets.py
+from dagster import asset, Output, AssetIn
+import pandas as pd
+
+@asset
+def raw_orders() -> Output[pd.DataFrame]:
+    df = pd.read_parquet("s3://data-lake/bronze/orders/")
+    return Output(df, metadata={"row_count": len(df)})
+
+@asset(ins={"orders": AssetIn("raw_orders")})
+def cleaned_orders(orders: pd.DataFrame) -> Output[pd.DataFrame]:
+    df = orders.dropna(subset=["order_id", "customer_id"])
+    return Output(df, metadata={"dropped": len(orders) - len(df)})
+
+@asset(ins={"orders": AssetIn("cleaned_orders")})
+def order_metrics(orders: pd.DataFrame) -> Output[pd.DataFrame]:
+    metrics = orders.groupby("date").agg({"total": "sum"}).reset_index()
+    return Output(metrics, metadata={"days": len(metrics)})
+```
+
+## Production Considerations
+
+- **Executor sizing**: Airflow Celery = 4-8 workers per scheduler; K8sExecutor = each task gets ephemeral pod.
+- **Scheduler HA**: Deploy 2+ Airflow schedulers with HA mode; single active, others standby.
+- **Task retries**: Set retries = 3 with exponential backoff (2 min → 4 min → 8 min) for transient failures.
+- **Dependency management**: Pin all Python dependencies in Docker image; test image build in CI.
+- **Resource limits**: Set CPU/memory per task via `executor_config`; prevent runaway tasks.
+- **Alerting**: Configure email/PagerDuty on task failures; set `email_on_retry=False` to avoid noise.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| DAGs with > 100 tasks | Scheduler overhead, UI confusion | Decompose into sub-DAGs or task groups |
+| No task timeouts | Zombie processes, pool exhaustion | Set `execution_timeout` on every task |
+| Storing large data in XCom | Metadata DB bloat, performance | Use S3/GS for passing > 1 MB data |
+| No pool management | Resource starvation across DAGs | Define pools per resource type |
+| Airflow alone for ML lifecycle | No experiment tracking | Combine with MLflow for model pipeline |
+
+## Performance Optimization
+
+- **Parallelism tuning**: Set `parallelism = 32` and `dag_concurrency = 16` per scheduler; monitor task queue depth.
+- **DAG parsing optimizations**: Enable `dagbag.sync.concurrent=True`; minimize top-level code in DAG files.
+- **Task grouping**: Combine small sequential tasks into single PythonOperator for less overhead.
+- **Database connections**: Set `sql_alchemy_pool_size = 20` for high-throughput workloads; use RDS Proxy.
+- **Deferrable operators**: Use deferrable operators for long-polling tasks (EmrStepSensor, ExternalTaskSensor).
+
+## Security Considerations
+
+- **Connection secrets**: Store all DB/API credentials in Airflow connections (encrypted); never in DAG code.
+- **RBAC**: Enable Airflow RBAC with roles (Admin, Op, User, Viewer); restrict DAG edit to CI/CD only.
+- **Network security**: Run workers in private subnet; use VPC endpoints for AWS services.
+- **Audit logging**: Enable Airflow audit logs for all DAG operations (trigger, edit, delete).
+- **Image scanning**: Scan Airflow Docker images for vulnerabilities; use minimal base images.
+
 ## Handoff
 `data-etl-pipeline` for pipeline design patterns and incremental loading
 `data-batch-processing` for batch query optimization in orchestrated pipelines

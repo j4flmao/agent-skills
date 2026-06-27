@@ -491,3 +491,162 @@ GitOps (pull-based): agent in cluster pulls desired state from Git. No cluster A
 After completing this skill:
 - Next skill: kubernetes-patterns -- pod specs, services, ingress
 - Pass context: Git repo URL, overlay paths, environment structure
+
+## Architecture Decision Trees
+
+### Push-based vs Pull-based Deployments
+
+| Decision | Push-based (CI/CD pushes) | Pull-based (ArgoCD/Flux) |
+|---|---|---|
+| Trigger | CI pipeline completion | Git repo change (commit) |
+| Drift detection | Manual or CI-scheduled | Continuous reconciliation |
+| Network model | CI → Cluster API | Cluster pulls from Git |
+| Secret handling | CI secrets injected | Sealed secrets, SOPS, ESO |
+| RBAC | CI service account | Cluster-local controller |
+| Best for | Simple, single-env | Multi-env, compliance-heavy |
+
+### Single Repo vs Config Repo per Environment
+
+| Aspect | Single Repo | Per-Environment Repos |
+|---|---|---|
+| Atomicity | One commit for all envs | Multiple commits/PRs |
+| Promotion | Branch/tag promotion | Cross-repo promotion |
+| Auditing | Per-path | Per-repo |
+| Complexity | Simple | Higher (sync between repos) |
+| Access control | Same access to all envs | Isolated per environment |
+| Rollback | Revert commit | Revert per-env commit |
+
+## Implementation Patterns
+
+### YAML: ArgoCD Application with Sync Policy
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: production-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/acme/config.git
+    targetRevision: main
+    path: overlays/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+```
+
+### YAML: Flux Kustomization with Health Checks
+
+```yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: app-config
+  namespace: flux-system
+spec:
+  interval: 5m
+  path: ./overlays/production
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: config-repo
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: app
+      namespace: production
+  postBuild:
+    substitute:
+      environment: production
+      region: us-east-1
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-vars
+  dependsOn:
+    - name: cluster-infra
+```
+
+### Bash: Sync Gate for GitOps Promotion
+
+```bash
+#!/usr/bin/env bash
+promote_overlay() {
+  local from_env=$1
+  local to_env=$2
+
+  git checkout -b "promote-$to_env-$(date +%s)"
+
+  # Copy overlay config from source to target environment
+  rsync -av "overlays/$from_env/" "overlays/$to_env/"
+  find "overlays/$to_env/" -name "kustomization.yaml" -exec \
+    sed -i "s/namespace: $from_env/namespace: $to_env/g" {} \;
+
+  git add overlays/
+  git commit -m "promote: $from_env → $to_env"
+  git push origin HEAD
+
+  # Create PR with labels
+  gh pr create \
+    --base main \
+    --title "Promote $from_env → $to_env" \
+    --label gitops,promotion \
+    --body "Promoting configurations from $from_env to $to_env"
+}
+```
+
+## Production Considerations
+
+- Enable **automated sync with prune** — ensures Git is the single source of truth
+- Implement **promotion gates** between environments using PR approvals and CI checks
+- Use **SealedSecrets / SOPS / External Secrets Operator** — never store plaintext secrets in Git
+- Configure **health checks** on sync operations to validate app readiness before completing sync
+- Set **sync wave dependencies** for ordered resource creation (CRDs before CRs, namespaces first)
+- Enable **notifications** (ArgoCD Notifications, Flux Alert) for sync failures and health degradation
+- Use **Kustomize overlays** or **Helm values** per environment to avoid configuration duplication
+
+## Anti-Patterns
+
+- Storing **secrets in plaintext** in the Git repo — always encrypt with SOPS or use external secrets
+- Running **manual kubectl apply** outside GitOps — creates drift that auto-sync will overwrite
+- Using **monolithic Application** for everything — split by service for independent sync cycles
+- Ignoring **sync wave ordering** — resources created in wrong order cause reconciliation failures
+- Applying **ArgoCD/Flux** without backup recovery plan — if cluster dies, GitOps config is useless
+- Setting **auto-sync with prune** on namespaces that contain unmanaged resources — data loss risk
+- Overusing **`ignoreDifferences`** — masks real configuration drift and hides problems
+
+## Performance Optimization
+
+- Set **sync interval** appropriately (5m for apps, 15m for infra) — too frequent causes API pressure
+- Use **ArgoCD ApplicationSet** with matrix generators to reduce Application CR count
+- Configure **resource exclusion** in ArgoCD — ignore cluster-scoped resources managed by other teams
+- Enable **Flux sharding** for large clusters to distribute reconciliation across multiple controllers
+- Limit **sync history** — ArgoCD retains all sync results; prune old entries with cleanup cronjob
+- Use **OCI Helm repositories** with Flux instead of Git-based HelmRelease for faster chart pulls
+- Optimize **Kustomize build** time — avoid excessive remote bases that add network latency
+
+## Security Considerations
+
+- Restrict **ArgoCD/Flux API server** access with NetworkPolicy and OIDC SSO
+- Use **GitHub/GitLab deploy keys** with read-only access for the GitOps controller
+- Enable **webhook validation** to reject commits with unencrypted secrets or policy violations
+- Audit **sync events** centrally — who triggered what sync and what changed in the cluster
+- Set **RBAC** on ArgoCD projects to isolate teams to their namespaces
+- Limit **ArgoCD projects** `sourceNamespaces` to prevent cross-team resource access
+- Sign **Git commits** with GPG and enforce commit signing in the Git provider for traceability

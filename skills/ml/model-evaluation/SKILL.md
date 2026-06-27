@@ -491,3 +491,107 @@ def plot_learning_curve(model, X, y, train_sizes=np.linspace(0.1, 1.0, 10)):
   - references/ranking-metrics.md — Ranking & Recommendation Evaluation
 ## Handoff
 Hand off to ml-experiment-tracking for logging evaluation results. Hand off to ml-hyperparameter-tuning if optimization needed.
+
+## Architecture Decision Trees
+
+### Evaluation Strategy Selection
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Data size | Small (< 10k) → K-fold CV (k=5/10) | Large (> 100k) → Holdout + validation set | Variance of estimate, compute budget |
+| Time dependency | Independent → Random shuffle split | Time-series → Time-based split | Temporal leakage prevention |
+| Class imbalance | Stratified CV (preserves class ratio) | Group CV (preserves group structure) | Imbalance severity, group clustering |
+| Multi-task | Micro-average (all instances equal) | Macro-average (each class equal) | Class imbalance, business priority |
+
+### Metric Selection by Task
+- Binary classification → AUC-ROC, F1, precision-recall curve
+- Multi-class → Macro F1, per-class confusion matrix
+- Regression → MAE (robust), RMSE (penalizes outliers), MAPE (relative)
+- Ranking → NDCG@k, MRR, MAP
+- Time series → MASE, sMAPE, forecast bias
+
+## Implementation Patterns
+
+### Cross-Validation with Metrics
+`python
+from sklearn.model_selection import StratifiedKFold, cross_validate
+from sklearn.metrics import (
+    make_scorer, accuracy_score, precision_score,
+    recall_score, f1_score, roc_auc_score
+)
+import numpy as np
+
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+scoring = {
+    'accuracy': make_scorer(accuracy_score),
+    'precision': make_scorer(precision_score, average='weighted'),
+    'recall': make_scorer(recall_score, average='weighted'),
+    'f1': make_scorer(f1_score, average='weighted'),
+    'roc_auc': make_scorer(roc_auc_score, needs_proba=True, multi_class='ovr')
+}
+
+results = cross_validate(
+    model, X, y,
+    cv=cv,
+    scoring=scoring,
+    return_train_score=True,
+    n_jobs=-1
+)
+
+for metric in scoring:
+    scores = results[f'test_{metric}']
+    print(f'{metric}: {scores.mean():.4f} +/- {scores.std():.4f}')
+`
+
+### Model Comparison Report
+`python
+import matplotlib.pyplot as plt
+from sklearn.metrics import RocCurveDisplay, PrecisionRecallDisplay
+
+models = {'Random Forest': rf_model, 'XGBoost': xgb_model, 'Logistic': lr_model}
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+for name, model in models.items():
+    RocCurveDisplay.from_estimator(model, X_test, y_test, ax=ax1, name=name)
+    PrecisionRecallDisplay.from_estimator(model, X_test, y_test, ax=ax2, name=name)
+
+ax1.set_title('ROC Curves')
+ax2.set_title('Precision-Recall Curves')
+plt.tight_layout()
+plt.savefig('model_comparison.png')
+`
+
+## Performance Optimization
+
+### Evaluation Speed
+- **Subsampling**: For large datasets, evaluate on representative sample. Use stratified sampling to preserve class ratios.
+- **Incremental evaluation**: Compute metrics incrementally with partial_fit for streaming. Use running statistics for large-scale evaluation.
+- **GPU-accelerated metrics**: Use CuPy/RAPIDS for large-scale metric computation. Speed up bootstrapped confidence intervals.
+
+### Bootstrap Confidence Intervals
+`python
+from sklearn.utils import resample
+
+def bootstrap_ci(y_true, y_pred, metric_fn, n_iterations=1000, ci=0.95):
+    scores = []
+    n = len(y_true)
+    for _ in range(n_iterations):
+        idx = resample(range(n), replace=True, n_samples=n)
+        scores.append(metric_fn(y_true[idx], y_pred[idx]))
+    scores = sorted(scores)
+    lower = scores[int((1 - ci) / 2 * n_iterations)]
+    upper = scores[int((1 + ci) / 2 * n_iterations)]
+    return lower, upper, np.mean(scores)
+`
+
+## Security Considerations
+
+### Evaluation Integrity
+- **Data contamination**: Ensure test data is never seen during training. Use pipeline-based evaluation to prevent leakage.
+- **Seed control**: Vary CV seed across experiments to avoid over-optimistic results. Report confidence intervals, not just point estimates.
+- **Held-out test set**: Lock final test set for final evaluation only. Never use test set for model selection or tuning.
+
+### Fairness & Bias
+- **Subgroup evaluation**: Evaluate model performance across demographic groups. Report disaggregated metrics alongside aggregate.
+- **Fairness metrics**: Track demographic parity, equal opportunity, equalized odds. Set minimum performance floor for all subgroups.
+- **Bias detection**: Use fairness libraries (AIF360, Fairlearn) for systematic bias auditing. Address detected biases with re-weighting or post-processing.

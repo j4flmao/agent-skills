@@ -411,7 +411,139 @@ function createAuditEvent(params: Omit<AuditEvent, 'id' | 'signature' | 'timesta
   - references/payment-orchestration.md — Payment Orchestration
   - references/reconciliation.md — Reconciliation
   - references/transaction-processing.md — Transaction Processing
-## Handoff
-- `backend/report-generation` — Financial report generation (P&L, balance sheet, trial balance)
-- `security/compliance` — Regulatory compliance, data retention, audit requirements
-- `backend/bulk-import` — Bulk financial data import and reconciliation
+## Architecture Decision Trees
+
+### Transaction Processing Mode
+```
+Is the transaction customer-facing or internal?
+├── Customer-facing (checkout, payment) → Synchronous with idempotency
+│   Must respond within seconds. Use payment intent pattern.
+│   Idempotency key required. Fail fast, let client retry.
+├── Internal batch (payroll, settlement) → Asynchronous batch
+│   Process in scheduled jobs. Full reconciliation after batch.
+│   Use outbox pattern for reliability. Alert on partial failure.
+└── Inter-system (ledger sync, reconciliation) → Event-driven
+    Produce domain events. Consumers process async.
+    Dead-letter queue for failed events. Manual replay capability.
+```
+
+### Ledger Account Architecture
+```
+What type of account?
+├── Customer-facing wallet → Asset account (customer liability to platform)
+│   Normal balance: credit. Each customer is a sub-ledger.
+│   Non-negative balance enforced.
+├── Platform operational → Revenue / Expense / Asset
+│   Revenue: normal credit. Expense: normal debit.
+│   Chart of accounts follows GAAP/IFRS structure.
+└── Settlement / Clearing → Transit accounts
+    Temporary holding during settlement windows.
+    Must zero out at end of each settlement cycle.
+```
+
+## Implementation Patterns
+
+### Pattern: Staged Payment Processing with 3DS
+
+```typescript
+async function processPaymentWith3DS(request: PaymentRequest): Promise<PaymentResult> {
+  const idempotent = await IdempotencyRecord.findByKey(request.idempotencyKey);
+  if (idempotent) return idempotent.result;
+
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: Math.round(request.amount * 100),
+    currency: request.currency,
+    payment_method_types: ['card'],
+    capture_method: 'manual',
+  });
+
+  if (paymentIntent.next_action?.type === 'use_stripe_sdk') {
+    return { status: 'requires_action', clientSecret: paymentIntent.client_secret };
+  }
+
+  const confirmed = await stripe.paymentIntents.confirm(paymentIntent.id);
+  if (confirmed.status === 'requires_capture') {
+    const captured = await capturePayment(confirmed.id, request.amount);
+    await postLedgerEntries(captured, request);
+    return { status: 'succeeded', paymentId: captured.id };
+  }
+
+  return { status: 'failed', error: confirmed.last_payment_error?.message };
+}
+```
+
+### Pattern: Async Reconciliation with Outbox
+
+```typescript
+async function reconcileBatch(externalTxns: ExternalTransaction[]): Promise<void> {
+  const batches = chunk(externalTxns, 100);
+  for (const batch of batches) {
+    await db.transaction(async (trx) => {
+      for (const txn of batch) {
+        const match = await findMatchingEntry(trx, txn);
+        if (match) {
+          await trx('reconciliation_matches').insert({
+            external_id: txn.id,
+            internal_id: match.journal_entry_id,
+            amount_match: Math.abs(txn.amount - match.amount) < 0.01,
+            reconciled_at: new Date(),
+          });
+        } else {
+          await trx('reconciliation_exceptions').insert({
+            external_id: txn.id,
+            amount: txn.amount,
+            reason: 'no_match',
+            status: 'pending_review',
+          });
+        }
+      }
+    });
+  }
+}
+```
+
+## Production Considerations
+
+### Deployment & Operations
+- Financial systems deploy during low-activity windows. Never deploy during end-of-day settlement.
+- Database migrations for ledger tables require extreme care. Never drop columns — soft-deprecate over 3 cycles.
+- Idempotency key storage: use Redis with TTL matching ledger retention period (90 days minimum).
+- Payment provider API keys stored in vault/KMS, rotated quarterly. Never in config files or env vars in plaintext.
+- Monitoring: alert on reconciliation match rate < 98%, journal entry imbalance, payment failure rate > 2%.
+
+### Audit & Compliance
+- Every write to ledger is logged in immutable audit table. Tamper-evident via hash chain.
+- Balance snapshots taken daily at market close. Used for reconciliation and financial reporting.
+- All idempotency keys logged with timestamps for audit trail.
+- Read replicas for reporting queries — never run reports against primary ledger database.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| Floating-point for money | 0.1 + 0.2 = 0.30000000000000004. Balance errors. | Store in cents (integer) or PostgreSQL NUMERIC(28,8) |
+| Direct balance mutation | UPDATE accounts SET balance = balance + 100 — no audit trail. | Always post journal entry. Recalculate balance from entries. |
+| One-size-fits-all reconciliation | Matching payments to invoices differs from matching bank statements. | Separate reconciliation engine per transaction type. |
+| No dead-letter queue | Failed reconciliation events silently dropped. Manual recovery impossible. | DLQ with alerting and replay UI. |
+| Hardcoded exchange rates | Rate changes mid-transaction cause discrepancies. Audit flags every mismatch. | Lock rate at quote time. Store rate ID in transaction record. |
+
+## Performance Optimization
+
+- Batch journal entry posting: insert 500 entries per transaction instead of 1-at-a-time.
+- Balance caching: Redis with WAL. Invalidate on journal post. Recalculate from DB on cache miss.
+- Partition ledger tables by month. Archive partitions older than 7 years to cold storage.
+- Reconcile incrementally: only match new transactions since last reconciliation, not full history.
+- Index by (tenant_id, transaction_date) for most ledger queries. Covering indexes for balance lookups.
+- Read replicas for statement generation, reports, and reconciliation queries.
+- Paginate payment provider API calls. Use cursor-based pagination for large transaction volumes.
+
+## Security Considerations
+
+- PCI DSS: card data never touches your server. Use Stripe Elements or hosted payment fields. SAQ A scope.
+- Ledger access: read-only for support staff, write for batch jobs only. All mutations require approval.
+- Encryption at rest: ledger data encrypted with AES-256. Key rotation every 12 months.
+- Encryption in transit: mTLS between services for ledger operations. API calls over TLS 1.3.
+- Audit log: append-only database table. Hash chain links each entry to previous. Weekly hash published externally.
+- Secrets management: all API keys, encryption keys in Vault. Application reads at startup, never stores on disk.
+- Rate limiting: writes to ledger limited per source system (max 1000/s). Abuse detection on payment endpoints.
+- Data retention: transactions kept 7 years (regulatory). After retention, anonymize, not delete.

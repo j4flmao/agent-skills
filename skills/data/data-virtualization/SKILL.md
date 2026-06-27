@@ -486,5 +486,99 @@ WHERE o.total_amount > 1000;
   - references/virtualization-platforms.md — Data Virtualization Platforms
   - references/virtualization-query-optimization.md — Virtualization Query Optimization
   - references/virtualization-security.md — Virtualization Security Reference
+## Architecture Decision Trees
+
+```
+Data Virtualization Strategy
+├── Query engine selection?
+│   ├── Open-source → Trino (Presto lineage)
+│   ├── Cloud-native → Athena / Redshift Spectrum / BigQuery Omni
+│   └── Hybrid → Dremio (semantic layer + virtualization)
+├── Data source types?
+│   ├── Multiple (S3, RDS, Kafka) → Trino with connectors
+│   ├── Lake-only → Trino Iceberg connector
+│   └── Warehouse-only → Federation via SQL/MED
+├── Caching required?
+│   ├── Yes → Alluxio / Dremio acceleration layer
+│   └── No → Direct query (lower cost, higher latency)
+└── Semantic layer?
+    ├── Yes → Dremio (VDS) or Trino views + dbt
+    └── No → Direct table references
+```
+
+**Decision criteria**: Evaluate source diversity, latency requirements, data locality, and semantic consistency needs.
+
+## Implementation Patterns
+
+### Trino Multi-Source Query
+```sql
+-- data_virtualization/multi_source_query.sql
+SELECT
+    o.order_id,
+    o.total_amount,
+    c.name AS customer_name,
+    r.review_score
+FROM iceberg.datalake.orders o
+JOIN postgresql.ecommerce.customers c
+    ON o.customer_id = c.id
+LEFT JOIN mongodb.reviews.reviews r
+    ON o.order_id = r.order_id
+WHERE o.order_date >= DATE '2024-01-01'
+  AND o.status = 'shipped'
+```
+
+### Dremio Virtual Dataset
+```yaml
+# data_virtualization/dremio_vds.yml
+virtual_dataset:
+  name: customer_orders_summary
+  sql: >
+    SELECT c.customer_id, c.name, COUNT(o.order_id) as order_count,
+           SUM(o.total_amount) as total_spend
+    FROM @runtime/customers c
+    JOIN @runtime/orders o ON c.customer_id = o.customer_id
+    GROUP BY c.customer_id, c.name
+  acceleration:
+    mode: aggregation
+    refresh: 1h
+  access:
+    readers: [analyst, marketing]
+```
+
+## Production Considerations
+
+- **Pushdown optimization**: Ensure connectors pushdown filters (WHERE, LIMIT, AGGR) to source for performance.
+- **Connection pooling**: Configure Trino data source connection pools; set `maxConnections` per connector.
+- **Query routing**: Route queries to source-optimized clusters (Trino resource groups per data source).
+- **Result caching**: Enable Trino result cache (TTL 5 min) for repeated queries; flush on data refresh.
+- **Monitoring**: Track per-source query latency, bytes scanned, and error rates in Grafana.
+- **Capacity planning**: Size coordinator + workers based on concurrent query load (16GB RAM per worker minimum).
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| No predicate pushdown | Full table scan over network | Verify `EXPLAIN` shows source filters |
+| Too many live connections to sources | Source DB connection exhaustion | Use optimized connection pools |
+| No caching for BI dashboards | Repeated expensive queries | Cache at virtualization layer |
+| Ignoring connector version compatibility | Query failures after upgrade | Test connector upgrades in staging |
+| Querying across cloud regions | High egress costs, slow | Co-locate engine with data sources |
+
+## Performance Optimization
+
+- **Materialized acceleration**: Dremio materialization caches hot data locally (SSD); refresh on schedule.
+- **Connector tuning**: Set source read parallelism via `http-server.thread-count` and `task.writer-count`.
+- **Federated join optimization**: Push largest table as left-side join; use distributed join strategy.
+- **Data source indexing**: Push down indexed lookups by ensuring WHERE clauses match source indexes.
+- **Compression**: Enable gzip compression for network transfer between Trino and remote sources.
+
+## Security Considerations
+
+- **Credential management**: Store data source credentials in Trino password vault or Vault; never in catalog configs.
+- **Row-level security**: Implement Trino view-based RLS by appending `WHERE user_region = current_user_region()`.
+- **Network isolation**: Deploy Trino in same VPC as data sources; use VPC peering for cross-account sources.
+- **Audit**: Log all queries with source, user, and bytes scanned for cost and compliance tracking.
+- **TLS**: Enable TLS for all Trino client and interservice connections; mutual TLS for connector auth.
+
 ## Handoff
 `data-data-platform` for Trino cluster deployment on K8s. `data-data-catalog` for registering engine as data source. `data-data-observability` for query performance monitoring. `data-data-security` for RBAC and TLS setup.

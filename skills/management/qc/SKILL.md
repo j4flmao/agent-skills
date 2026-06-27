@@ -435,3 +435,93 @@ An open-source project with 500+ contributors needed consistent quality across P
 After completing this skill:
 - Next skill: **code-review** — detailed code review on the implementation
 - Pass context: quality gate results, violation list, technical debt register
+
+## Architecture Decision Trees
+
+### Quality Gate Configuration
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Gate timing | Pre-merge (slower PRs but clean) | Post-merge (fast PRs but risk) | Team size, release frequency |
+| Coverage threshold | Line coverage (exists in all tools) | Branch coverage (more meaningful) | Tool support, regulatory needs |
+| Enforcement | Soft (informational) | Hard (blocking) | Maturity, project phase |
+
+### Tool Selection
+- Static analysis → SonarQube, ESLint, Pylint
+- Security scanning → Snyk, Trivy, Semgrep
+- Performance profiling → Lighthouse, k6 bundled
+- Dependency scanning → Dependabot, Renovate
+
+## Implementation Patterns
+
+### Quality Gate Configuration (CI)
+`yaml
+quality_gate:
+  code_coverage:
+    minimum: 80
+    fail_on_drop: true
+  test_pass_rate:
+    minimum: 100
+    required: true
+  lint_errors:
+    maximum: 0
+    required: true
+  security_scan:
+    critical_allowed: 0
+    high_allowed: 0
+  dependency_vulnerabilities:
+    critical_allowed: 0
+    high_allowed: 0
+`
+
+### Technical Debt Register Template
+| ID | Location | Type | Severity | Effort | Discovered | Owner | Status |
+|---|---|---|---|---|---|---|---|
+| TD-001 | src/auth/login.ts | Duplication | Medium | 2d | 2025-01-15 | @alice | In progress |
+| TD-002 | api/legacy/v1 | Deprecated API | High | 5d | 2025-02-01 | @bob | Backlogged |
+| TD-003 | db/migrations | Dead code | Low | 0.5d | 2025-02-10 | @charlie | Fixed |
+
+## Production Considerations
+
+### Gate Maintenance
+- **Threshold tuning**: Review gate thresholds quarterly. Adjust based on team performance and project needs.
+- **False positive management**: Review static analysis rule set regularly. Suppress known false positives with traceable justification.
+- **Technical debt budget**: Allocate 20% of sprint capacity to tech debt. Track debt ratio in quality dashboard.
+
+### Process Integration
+- **PR workflow**: Quality gates run automatically on PR creation. Gate results posted as PR comment.
+- **Escalation**: Override gate only with manager approval. Log all overrides with reason and timeline.
+- **Metrics review**: Review quality metrics in sprint retro. Identify trends and systemic issues.
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Solution |
+|---|---|---|
+| Gate for the sake of gate | Blocked PRs on non-issues | Each gate must tie to a real quality risk |
+| Ignoring tech debt until crisis | Massive refactoring needed | Track and allocate budget, don't let debt accumulate |
+| Overly strict lint rules | Format bikeshedding in PR review | Use auto-formatting (prettier, black) consistently |
+| Coverage target gaming | Tests that assert nothing but cover lines | Enforce mutation testing or coverage with assertion checks |
+| Rotting quality dashboard | No one looks at metrics | Review in retro, alert on threshold breaches |
+
+## Performance Optimization
+
+### Gate Performance
+- **Incremental analysis**: Run analysis only on changed files. Use diff-based scanning to reduce CI time.
+- **Caching**: Cache lint/analysis results for unchanged files. Parallelize independent quality checks.
+- **Tiered execution**: Fast checks (lint, unit tests) run on every push. Slow checks (SAST, full coverage) run on PR ready-for-review.
+
+### Developer Experience
+- **Pre-commit hooks**: Run fast quality checks locally before push. Provide fix suggestions for auto-fixable issues.
+- **IDE integration**: Provide IDE config files (ESLint, Prettier, EditorConfig). Reduce format/style discussions in code review.
+- **Self-service exemptions**: Allow developers to temporarily override non-critical gates. Auto-revert after 7 days.
+
+## Security Considerations
+
+### Gate Security
+- **SAST integration**: Run static application security testing as mandatory gate. Block PRs with critical/high findings.
+- **Secret scanning**: Scan every commit for hardcoded secrets. Alert security team on credential exposure.
+- **License compliance**: Scan dependencies for license compatibility. Block open-source licenses not on approved list.
+
+### Supply Chain
+- **Dependency pinning**: Require lockfile (package-lock, poetry.lock) in every repo. Reject PRs modifying deps without lockfile.
+- **Vulnerability database**: Update vulnerability databases daily. Fail builds on CVE with known exploit.
+- **Software bill of materials**: Generate SBOM for every release. Submit to internal security review for critical services.

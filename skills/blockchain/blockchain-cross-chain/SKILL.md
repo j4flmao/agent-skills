@@ -397,4 +397,116 @@ Relayer sustainability:
   - references/cross-chain-token-representation.md — Cross-Chain Token Standards & Representation
   - references/bridge-fee-models.md — Bridge Fee Models & Relayer Economics
 
+## Architecture Decision Trees
+
+```
+Cross-Chain Bridge Selection
+├── Security model?
+│   ├── Trust-minimized → Light client / ZK bridge (IBC, zkBridge)
+│   ├── External validator → PoS oracle bridge (LayerZero, Wormhole)
+│   └── Liquidity network → Atomic swap / HTLC-based (ThorChain, Connext)
+├── Finality requirement?
+│   ├── Fast (< 30 min) → Optimistic bridge (Nomad, Synapse)
+│   ├── Instant → Liquidity network (Celer, Connext)
+│   └── Slow but secure → ZK bridge with light client verification
+├── Asset type?
+│   ├── Native token → Wrapped asset / canonical bridge
+│   ├── ERC-20 → Liquidity pool bridge (Stargate, Hop)
+│   └── NFT → Specialized NFT bridge (deBridge, LiFi)
+└── Message passing?
+    ├── Generic → LayerZero (omni-chain messaging)
+    └── App-specific → Custom bridge with application logic
+```
+
+**Decision criteria**: Evaluate trust tradeoffs, latency requirements, asset types, and ecosystem compatibility.
+
+## Implementation Patterns
+
+### Atomic Swap (HTLC)
+```solidity
+// blockchain-cross-chain/contracts/HTLC.sol
+pragma solidity ^0.8.20;
+
+contract HTLC {
+    struct Swap {
+        bytes32 hashLock;
+        uint256 timeout;
+        address payable sender;
+        address payable receiver;
+        uint256 amount;
+        bool redeemed;
+    }
+
+    mapping(bytes32 => Swap) public swaps;
+
+    function initiate(bytes32 hashLock, address payable receiver, uint256 timeout) external payable {
+        bytes32 id = keccak256(abi.encodePacked(msg.sender, receiver, hashLock, block.timestamp));
+        swaps[id] = Swap(hashLock, block.timestamp + timeout, payable(msg.sender), receiver, msg.value, false);
+    }
+
+    function redeem(bytes32 id, string memory secret) external {
+        Swap storage swap = swaps[id];
+        require(keccak256(abi.encodePacked(secret)) == swap.hashLock, "Invalid secret");
+        require(!swap.redeemed, "Already redeemed");
+        swap.redeemed = true;
+        swap.receiver.transfer(swap.amount);
+    }
+}
+```
+
+### Relayer Verification
+```python
+# blockchain-cross-chain/relayer_verification.py
+class CrossChainRelayer:
+    def __init__(self, source_rpc: str, dest_rpc: str):
+        self.source = Web3(Web3.HTTPProvider(source_rpc))
+        self.dest = Web3(Web3.HTTPProvider(dest_rpc))
+
+    def verify_and_forward(self, tx_hash: str, source_chain: int, dest_chain: int) -> bool:
+        receipt = self.source.eth.get_transaction_receipt(tx_hash)
+        logs = receipt.get("logs", [])
+        for log in logs:
+            if log["address"] == self.bridge_address:
+                payload = self.decode_log(log)
+                if self.verify_merkle_proof(tx_hash, receipt["blockNumber"]):
+                    self.submit_to_dest(payload, dest_chain)
+                    return True
+        return False
+```
+
+## Production Considerations
+
+- **Validator set rotation**: Rotate bridge validators periodically; enforce quorum threshold (2/3+).
+- **Rate limiting**: Implement daily transfer caps per asset; increase with additional validator approvals.
+- **Pause mechanism**: Emergency pause on anomaly detection; multisig with timelock for unpause.
+- **Monitor relayer health**: Alert on relayer missed messages; failover to backup relayers.
+- **Slippage protection**: Protect against MEV during swaps; use dynamic slippage based on pool depth.
+- **Cross-chain finality**: Wait for sufficient confirmations based on chain finality (32 slots for Ethereum).
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Single validator set | Centralization, single point of failure | Use distributed validator technology |
+| No rate limiting | Drain in single attack | Per-asset daily caps with gradual release |
+| Trusting source chain finality | Reorg leads to false message | Wait for probabilistic finality (32 slots) |
+| Ignoring message replay | Double-spend across chains | Include nonce + chain ID in message hash |
+| Centralized sequencer | Censorship risk | Decentralize to multiple relayers |
+
+## Performance Optimization
+
+- **Batch messages**: Batch multiple cross-chain messages into single transaction to amortize gas cost.
+- **Async verification**: Verify proofs in background; forward messages in parallel across relayers.
+- **Compressed calldata**: Use packed encoding (abi.encodePacked) for cross-chain messages.
+- **Caching validators**: Cache validator signature sets in memory; verify batch signatures in single call.
+- **Optimistic batching**: Batch outgoing messages; challenge period covers batch, not individual messages.
+
+## Security Considerations
+
+- **Validator set management**: Stake-based validator selection; slash on misbehavior (equivocation, false messages).
+- **Message replay protection**: Include originating chain ID, nonce, and block number in message digest.
+- **Oracle manipulation**: Use multiple oracle sources for exchange rates; TWAP-based pricing.
+- **Bridge contract upgradeability**: Timelock + multisig for bridge upgrades; pause before upgrade.
+- **Audit requirements**: Bridge contracts require multiple audits; formal verification for critical paths.
+
 ## Phase: blockchain → blockchain-cross-chain

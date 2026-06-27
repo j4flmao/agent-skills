@@ -408,3 +408,97 @@ export const config: Config = {
 No artifact produced.
 Next skill: stencil-design-system (if building a design system) or frontend-testing.
 Carry forward: @Component/@Prop/@Event pattern, shadow DOM, framework-agnostic output.
+## Implementation Patterns
+
+### Factory Pattern for Module Creation
+`
+function createModule<T>(config: ModuleConfig): T {
+  const dependencies = initializeDependencies(config);
+  const module = new Module(dependencies);
+  module.hooks.onInit();
+  return module as T;
+}
+`
+
+### Builder Pattern for Complex Configuration
+`
+class ConfigBuilder {
+  private config: AppConfig = new AppConfig();
+  withDatabase(url: string): ConfigBuilder { ... }
+  withCache(ttl: number): ConfigBuilder { ... }
+  withLogging(level: string): ConfigBuilder { ... }
+  build(): AppConfig { return this.config; }
+}
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Production build with optimizations enabled
+- [ ] Environment variables configured per environment
+- [ ] Health check endpoint responds correctly
+- [ ] Error tracking and monitoring integrated
+- [ ] Logging level configured (not debug in production)
+- [ ] Resource limits configured
+- [ ] Database migrations applied
+- [ ] Static assets built and served from CDN or cache
+- [ ] Feature flags toggled appropriately
+- [ ] Rollback plan documented and tested
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% | Critical | Rollback or fix |
+| p95 latency | > 500ms | Warning | Profile and optimize |
+| Uptime | < 99.9% | Critical | Investigate infrastructure |
+| Memory usage | > 80% | Warning | Check for leaks |
+| CPU usage | > 80% | Warning | Scale up or optimize |
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+
+## Architecture Decision Trees
+
+### Component Type Decision Tree
+```
+Does the component encapsulate visual rendering?
+  ├── No  → Functional component (@stencil/store, no shadow DOM)
+  └── Yes → Does it need style isolation?
+       ├── Yes → Shadow DOM component (shadow: true)
+       └── No  → Scoped component (scoped: true)
+            Is it a leaf UI element or composite?
+            ├── Leaf → @Prop-driven, no internal state management
+            └── Composite → @State + @Watch for internal coordination
+```
+
+### Build Output Decision Tree
+```
+Who will consume this component?
+  ├── Same app only → dist-custom-elements or dist
+  ├── Multiple frameworks → dist-custom-elements (framework-agnostic)
+  └── CDN script tag → dist (self-contained bundle)
+       Do consumers use React/Vue/Angular?
+       ├── Yes → Generate framework wrappers via outputTargets.bindings
+       └── No  → Raw custom elements, document usage
+```

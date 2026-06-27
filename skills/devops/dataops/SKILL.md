@@ -488,3 +488,138 @@ dbt: transformation layer (SELECT statements). Airflow: orchestration layer (DAG
 
 ## Handoff
 For data warehouse schema design, hand off to data-warehouse. For data pipeline ETL, hand off to etl-pipeline. For quality monitoring, hand off to data-quality.
+
+## Architecture Decision Trees
+
+### Batch vs Streaming Pipeline
+
+| Decision | Batch | Streaming |
+|---|---|---|
+| Latency requirement | > 5 min acceptable | < 1 min required |
+| Data volume pattern | Periodic large loads | Continuous small events |
+| Processing complexity | Complex joins, aggregations | Simple transforms, filtering |
+| Cost sensitivity | Lower (spot instances) | Higher (always-on clusters) |
+| Recommended tool | Apache Spark, Airflow | Kafka Streams, Flink |
+
+### Data Lake vs Data Warehouse
+
+| Dimension | Data Lake | Data Warehouse |
+|---|---|---|
+| Schema | Schema-on-read | Schema-on-write |
+| Data types | Raw, unstructured, structured | Structured, curated |
+| Users | Data scientists, engineers | Analysts, BI tools |
+| Storage | Object store (S3, ADLS) | RDBMS (Redshift, Snowflake) |
+| Partitioning | Hive-style partitions | Star/snowflake schema |
+
+## Implementation Patterns
+
+### YAML: Airflow DAG for Data Pipeline Orchestration
+
+```yaml
+dag_id: data_quality_pipeline
+schedule: "0 2 * * *"
+default_args:
+  owner: data-platform
+  retries: 2
+  retry_delay: 5m
+  email_on_failure: true
+tasks:
+  - id: extract_sources
+    operator: PostgresOperator
+    sql: "SELECT * FROM source_orders WHERE date = '{{ ds }}'"
+  - id: validate_schema
+    operator: PythonOperator
+    python_callable: validate_columns
+    params:
+      expected_schema:
+        order_id: INTEGER
+        customer_id: INTEGER
+        amount: FLOAT
+  - id: transform_to_parquet
+    operator: SparkSubmitOperator
+    application: transforms/orders_to_parquet.py
+    conf:
+      spark.sql.adaptive.enabled: "true"
+  - id: load_to_warehouse
+    operator: SnowflakeOperator
+    sql: "COPY INTO analytics.orders FROM @staging/{{ ds }}"
+  dependencies:
+    - from: extract_sources
+      to: validate_schema
+    - from: validate_schema
+      to: transform_to_parquet
+    - from: transform_to_parquet
+      to: load_to_warehouse
+```
+
+### Bash: Data Quality Monitor
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+check_data_quality() {
+  local table=$1
+  local date=$2
+
+  TOTAL=$(bq query --format=json \
+    "SELECT COUNT(*) as cnt FROM ${table} WHERE date = '${date}'" \
+    | jq '.[0].cnt')
+
+  NULLS=$(bq query --format=json \
+    "SELECT COUNT(*) as cnt FROM ${table} WHERE date = '${date}' AND primary_key IS NULL" \
+    | jq '.[0].cnt')
+
+  echo "Total rows: $TOTAL, Null PKs: $NULLS"
+
+  if [ "$NULLS" -gt 0 ]; then
+    echo "FAIL: Found $NULLS null primary keys in $table"
+    exit 1
+  fi
+
+  if [ "$TOTAL" -eq 0 ]; then
+    echo "FAIL: Zero rows in $table for $date"
+    exit 1
+  fi
+}
+```
+
+## Production Considerations
+
+- Implement **data contracts** between producers and consumers to prevent schema drift
+- Use **column-level lineage** tracking so downstream impact analysis is reproducible
+- Enable **data catalog** (DataHub, Amundsen) for discoverability and documentation
+- Separate **compute** from **storage** to independently scale based on workload
+- Configure **data retention policies** by tier: raw (30d), cleansed (90d), aggregated (365d)
+- Set up **data freshness SLAs** with automated alerts when pipelines miss deadlines
+- Use **exactly-once semantics** in streaming pipelines to prevent data duplication
+
+## Anti-Patterns
+
+- Over-normalizing **data lake** schemas — keep raw data as close to source format as possible
+- Running **ad-hoc ETL** on production warehouse without CI — breaks downstream consumers
+- Ignoring **data skew** in partitioning — leads to executor OOM in Spark jobs
+- Mixing **batch and streaming** in the same pipeline without clear boundary — causes confusion
+- Skipping **data validation** — garbage-in-garbage-out erodes trust in the data platform
+- Hardcoding **connection strings** in pipeline code — use secrets manager and dynamic configs
+- Building **one-size-fits-all** transformation — different use cases need different data shapes
+
+## Performance Optimization
+
+- Partition **large tables** by date and cluster by frequently filtered columns (customer_id, region)
+- Use **columnar file formats** (Parquet, ORC) with compression (snappy, zstd) instead of CSV/JSON
+- Enable **materialized views** in the warehouse for pre-aggregated dashboards
+- Optimize **Spark shuffle** — set `spark.sql.adaptive.coalescePartitions.enabled = true`
+- Use **incremental loads** instead of full table refreshes for daily batch pipelines
+- Size **Airflow worker concurrency** based on task type (IO-bound vs CPU-bound)
+- Implement **data skipping** with Z-order indexing on Delta/Iceberg tables
+
+## Security Considerations
+
+- Encrypt **data at rest** with KMS-managed keys and **data in transit** with TLS 1.3
+- Implement **column-level access control** for PII fields (SSN, email, phone)
+- Audit **data access** with query log analysis and alert on anomalous data exports
+- Mask **sensitive data** in non-production environments using tokenization or hashing
+- Rotate **service account credentials** for data pipeline tools every 30 days
+- Use **private network endpoints** (VPC peering, PrivateLink) for data transfer
+- Enable **immutable audit logs** for all data mutations with retention of 7+ years

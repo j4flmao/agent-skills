@@ -467,8 +467,108 @@ try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
 - `references/java-advanced.md` — Advanced Java Patterns
 - `references/java-testing.md` — Java Testing Guide
 
-## Handoff
-- `mobile/android` — Android-specific Java/Kotlin patterns
-- `mobile/universal/testing` — JUnit, Mockito, integration testing
-- `mobile/universal/performance` — JVM tuning, profiling
-- `mobile/universal/networking` — HTTP clients, gRPC
+## Implementation Patterns
+
+### Pattern: Repository with Specification
+
+```java
+public interface OrderRepository extends JpaRepository<Order, Long> {
+    @Query("""
+        SELECT o FROM Order o
+        WHERE o.customerId = :customerId
+        AND o.status IN :statuses
+        AND o.createdAt BETWEEN :from AND :to
+    """)
+    List<Order> findFiltered(Long customerId, List<OrderStatus> statuses, Instant from, Instant to);
+}
+
+// Specification pattern for dynamic queries
+public class OrderSpecifications {
+    public static Specification<Order> byCustomer(Long customerId) {
+        return (root, query, cb) -> cb.equal(root.get("customerId"), customerId);
+    }
+
+    public static Specification<Order> byStatus(OrderStatus... statuses) {
+        return (root, query, cb) -> root.get("status").in((Object[]) statuses);
+    }
+
+    public static Specification<Order> createdBetween(Instant from, Instant to) {
+        return (root, query, cb) -> cb.between(root.get("createdAt"), from, to);
+    }
+}
+```
+
+### Pattern: Async Event Publisher with Retry
+
+```java
+@Component
+public class DomainEventPublisher {
+    private final ApplicationEventPublisher publisher;
+    private final RetryTemplate retryTemplate;
+
+    public void publish(DomainEvent event) {
+        retryTemplate.execute(ctx -> {
+            publisher.publishEvent(event);
+            return null;
+        });
+    }
+}
+
+// RetryTemplate configuration
+@Bean
+public RetryTemplate retryTemplate() {
+    return RetryTemplate.builder()
+        .maxAttempts(3)
+        .exponentialBackoff(100, 2, 2000)
+        .retryOn(TransientDataAccessException.class)
+        .build();
+}
+```
+
+## Production Considerations
+
+### JVM Tuning for Containers
+- `-XX:+UseContainerSupport` (default in JDK 10+) — JVM detects container CPU/memory limits.
+- `-XX:InitialRAMPercentage=50 -XX:MaxRAMPercentage=75` — heap relative to container memory.
+- `-XX:+ExitOnOutOfMemoryError` — container orchestrator restarts failed process.
+- `-Xlog:gc*:file=gc.log:time,uptime,tags` — GC logging for post-mortem analysis.
+- Heap dump on OOM: `-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/dumps/`.
+
+### Observability
+- Micrometer + MicrometerRegistry for metrics. Export to Prometheus via `micrometer-registry-prometheus`.
+- Spring Actuator: `/actuator/health` (liveness + readiness), `/actuator/metrics`, `/actuator/prometheus`.
+- Distributed tracing: Micrometer Tracing + Brave + Zipkin. Propagate trace IDs via HTTP headers.
+- Structured logging: Logback with JSON encoder. `net.logstash.logback.encoder.LogstashEncoder`.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| `@RequestMapping` on class-level with no method narrowing | All requests map to same path. Confusing. | Use `@GetMapping`, `@PostMapping` per method |
+| `Thread.sleep()` in tests | Flaky, slow. | `Awaitility.await().atMost(5, SECONDS).until(...)` |
+| Overusing `Optional.get()` | Still throws NoSuchElementException. | `orElseThrow()` with domain-specific exception |
+| Catch `Exception` broadly | Swallows critical errors like InterruptedException. | Catch specific exception types |
+| Mutable fields in `@Entity` | Hibernate dirty checking scans all fields. | Use `@Immutable` or DTO projections |
+| Static methods calling Spring beans | Can't mock in unit tests. | Inject as bean dependency |
+
+## Performance Optimization
+
+- Virtual threads for I/O: `Executors.newVirtualThreadPerTaskExecutor()` — 20x more throughput than platform threads.
+- Record classes for DTOs: 40% less bytecode than POJOs. Value-based equality.
+- `ConcurrentHashMap.computeIfAbsent(k, fn)` — atomic memoization. Avoids `putIfAbsent` race.
+- String pooling with `String.intern()` only for small, bounded sets of strings.
+- Jackson performance: use `ObjectMapper` as singleton. Register Kotlin/Java time modules once.
+- HikariCP pool sizing: `maximumPoolSize = ((core_count * 2) + effective_spindle_count)`. Start with 10, tune up.
+- Query tuning: `@QueryHints(@QueryHint(name = "org.hibernate.readOnly", value = "true"))` for read-only queries.
+
+## Security Considerations
+
+- Spring Security: `SecurityFilterChain` with explicit permitAll vs authenticated. Never role-based on global permit.
+- CSRF: enabled by default in Spring Security. Stateless APIs use CSRF disabled + JWT.
+- CORS: `@CrossOrigin(origins = "https://app.example.com")`. Never `origins = "*"`.
+- JWT: `nimbus-jose-jwt` for parsing. Validate signature, issuer, audience, expiration. Reject alg:none.
+- SQL injection: JPA/Hibernate parameterized queries. Native queries use `?` or `:named` placeholders.
+- Input validation: `@Valid` on controller params with Jakarta Validation annotations.
+- Rate limiting: Bucket4j or Spring Cloud Gateway's `RequestRateLimiter` filter.
+- Secrets: Spring Cloud Config with Vault backend. Or `@Value` from environment variables. Never hardcoded.
+- Dependency scanning: OWASP Dependency Check in CI. Fail builds on CVSS >= 7.0.

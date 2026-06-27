@@ -428,3 +428,97 @@ A hospital network implemented a new EHR system affecting 5000+ clinicians. Resi
 
 ## Handoff
 For stakeholder communication execution, hand off to `management-stakeholder`. For OKR alignment with change goals, hand off to `management-okr-kpi`. For team-level change impact, hand off to `management-team-topology`.
+
+## Architecture Decision Trees
+
+### Change Approach
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Change scale | Incremental (low disruption) | Transformational (rapid) | Urgency, organizational readiness |
+| Communication | Top-down (executive-led) | Participative (grassroots) | Culture, change complexity |
+| Training | Classroom (comprehensive) | Just-in-time (lean) | Time to adoption, learning styles |
+
+### Methodology Selection
+- Low complexity, low urgency → ADKAR (individual focus)
+- High complexity, low urgency → Kotter 8-Step (organizational)
+- High urgency, any complexity → Accelerated change (lean, iterative)
+- Regulatory-driven → Prosci 3-Phase (structured, auditable)
+
+## Implementation Patterns
+
+### Change Impact Assessment Template
+`markdown
+## Change Proposal: {title}
+
+### Scope
+- Processes affected: {list}
+- Systems affected: {list}
+- Teams affected: {list}
+- External impact: {customers/partners}
+
+### Impact Analysis
+| Dimension | Current State | Future State | Gap |
+|---|---|---|---|
+| Skills | {current skills} | {required skills} | {training needs} |
+| Processes | {current workflow} | {new workflow} | {process redesign} |
+| Technology | {current stack} | {target stack} | {migration plan} |
+
+### Risk Assessment
+- Adoption risk: {High/Medium/Low} - {mitigation}
+- Productivity dip: {expected duration} - {support plan}
+- Resistance risk: {sources} - {engagement strategy}
+`
+
+### Communication Plan Template
+| Stakeholder | Message | Channel | Frequency | Owner |
+|---|---|---|---|---|
+| Exec sponsors | Business impact, progress | Monthly exec review | Monthly | Change lead |
+| Managers | Team impact, FAQs | Manager briefing | Bi-weekly | Change team |
+| End users | What's changing, training | Email + all-hands | Weekly | Comms team |
+| Affected customers | Timeline, support | Newsletter | Per milestone | Account mgmt |
+
+## Production Considerations
+
+### Adoption Tracking
+- **Adoption metrics**: Track active usage, feature adoption rate, and proficiency levels. Set adoption targets with milestone dates.
+- **Feedback loops**: Establish anonymous feedback channels. Run pulse surveys at each change milestone.
+- **Resistance management**: Identify resistance sources through 1:1s and surveys. Address concerns individually with tailored coaching.
+
+### Sustainability
+- **Change reinforcement**: Embed new processes in SOPs and performance reviews. Celebrate early adopters and success stories.
+- **Revert plan**: Define rollback criteria and process. Know when to pivot vs persist on change initiatives.
+- **Continuous improvement**: Gather lessons learned at each phase. Apply to next change wave.
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Solution |
+|---|---|---|
+| Change for change's sake | No clear business outcome | Define measurable success criteria before starting |
+| Communication vacuum | Rumors fill the gap | Over-communicate, repeat messages 7x in different formats |
+| Ignoring middle management | Managers undermine change | Equip managers with talking points and support first |
+| Training too early/late | Knowledge decay or panic learning | Training within 2 weeks of go-live, refreshers at 30 days |
+| Celebrating prematurely | Relapse to old behaviors | Validate adoption at 30-60-90 day checkpoints |
+
+## Performance Optimization
+
+### Speed of Adoption
+- **Champion network**: Identify and train change champions in each team. Champions model behavior and support peers.
+- **Quick wins**: Identify 2-3 early quick wins to build momentum. Showcase results in first 30 days.
+- **Pilot groups**: Run change with willing pilot team first. Iterate approach based on pilot feedback before broad rollout.
+
+### Cost Efficiency
+- **Self-service learning**: Build knowledge base and FAQ documentation. Reduce dependency on instructor-led training.
+- **Peer coaching**: Train internal coaches rather than external consultants. Embed coaching in team rituals.
+- **Automated tracking**: Use survey tools and analytics for automated adoption monitoring. Reduce manual check-in overhead.
+
+## Security Considerations
+
+### Change Security
+- **Access changes**: Review and revoke stale access as part of organizational change. Document permission changes in change register.
+- **Data migration**: Encrypt data in transit during system migrations. Validate data integrity post-migration.
+- **Change validation**: Verify security controls still function after organizational changes. Re-run security scans post-change.
+
+### Confidentiality
+- **Early communication**: Limit early change communications to need-to-know. Announce broadly only after security assessment.
+- **Document security**: Store change plans in access-controlled repositories. Redact sensitive org structure details in external comms.
+- **Regulatory compliance**: Ensure change process complies with SOX/HIPAA change control requirements. Maintain audit trail of all change approvals.

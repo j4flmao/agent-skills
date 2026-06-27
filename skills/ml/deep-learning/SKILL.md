@@ -467,3 +467,113 @@ Scalability: single GPU for models up to 7B params (quantized). 4-8 GPUs for 7B-
 ## Handoff
 `ml-experiment-tracking` for logging deep learning experiments
 `ml-feature-engineering` for deep learning feature extraction
+
+## Architecture Decision Trees
+
+### Architecture Selection
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Data type | Sequential → RNN/LSTM/Transformer | Spatial → CNN/ViT | Input structure, domain |
+| Dataset size | Small → Transfer learning (pre-trained) | Large → Train from scratch | Data availability, compute budget |
+| Interpretability | Simple (linear layers, attention) | Complex (deep residual networks) | Regulatory requirements, debugging |
+| Latency requirement | Low → Shallow network, quantization | High throughput → Deep network, ensemble | Deployment constraints |
+
+### Optimizer Selection
+- Small dataset, sparse features → Adam with weight decay
+- CV tasks, large batch → SGD with cosine annealing
+- NLP/Transformers → AdamW with linear warmup
+- GANs → Adam with beta1=0.5, beta2=0.999
+
+## Implementation Patterns
+
+### Transformer for Time Series
+`python
+import torch
+import torch.nn as nn
+
+class TimeSeriesTransformer(nn.Module):
+    def __init__(self, input_dim, d_model=128, nhead=8, num_layers=4):
+        super().__init__()
+        self.input_proj = nn.Linear(input_dim, d_model)
+        self.pos_encoding = nn.Parameter(torch.randn(1, 1000, d_model))
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model, nhead=nhead,
+            dim_feedforward=512, dropout=0.1,
+            activation='gelu', batch_first=True
+        )
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers)
+        self.output_head = nn.Linear(d_model, 1)
+
+    def forward(self, x):
+        x = self.input_proj(x) + self.pos_encoding[:, :x.size(1), :]
+        x = self.transformer(x)
+        return self.output_head(x[:, -1, :])
+`
+
+### Training Loop with Mixed Precision
+`python
+import torch
+from torch.cuda.amp import autocast, GradScaler
+
+scaler = GradScaler()
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.01)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
+
+for epoch in range(num_epochs):
+    for batch in dataloader:
+        optimizer.zero_grad()
+        with autocast():
+            outputs = model(batch['input'])
+            loss = criterion(outputs, batch['target'])
+        scaler.scale(loss).backward()
+        scaler.unscale_(optimizer)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        scaler.step(optimizer)
+        scaler.update()
+    scheduler.step()
+`
+
+## Production Considerations
+
+### Scalability
+- **Distributed training**: Use FSDP or DeepSpeed for large models. Enable activation checkpointing for memory efficiency.
+- **Model parallelism**: Split large models across GPUs using pipeline parallelism. Use Tensor Parallelism for very large models.
+- **Inference serving**: Deploy with TorchServe or Triton Inference Server. Use dynamic batching for throughput optimization.
+
+### Reproducibility
+- **Seed everything**: Set seeds for all random generators. Log seed with each experiment in MLflow.
+- **Deterministic algorithms**: Use torch.backends.cudnn.deterministic = True. Accept potential 10-20% training slowdown.
+- **Environment pinning**: Pin CUDA, cuDNN, PyTorch minor versions. Use Docker container for consistent environment.
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Solution |
+|---|---|---|
+| Too big learning rate | Loss diverges to NaN | Use learning rate finder, cosine warmup |
+| No validation during training | No early stopping, overfit | Always hold out validation set, monitor loss |
+| Ignoring gradient clipping | Training instability with transformers | Clip gradients to max_norm=1.0 |
+| Single batch norm statistics | Batch norm fails on small batches | Use LayerNorm or GroupNorm for small batches |
+| Overfitting on augmentation | Model fails on clean data | Cross-validate with clean validation set |
+
+## Performance Optimization
+
+### Memory Efficiency
+- **Gradient checkpointing**: Trade compute for memory, reduce memory 3-4x. Use torch.utils.checkpoint.checkpoint.
+- **Mixed precision training**: Train in bfloat16 on Ampere+ GPUs. Maintains model quality while halving memory.
+- **Activation offloading**: Offload activations to CPU during backward pass. Useful for extremely large models.
+
+### Throughput
+- **Data pipeline optimization**: Use WebDataset for large-scale training. Pre-shard data to avoid IO bottleneck.
+- **Compiled models**: Use torch.compile with inductor backend. Achieves 1.5-2x training speedup on modern GPUs.
+- **Flash Attention**: Replace standard attention with Flash Attention v2. Achieves 2-4x attention speedup for long sequences.
+
+## Security Considerations
+
+### Model Security
+- **Backdoor detection**: Scan model for hidden triggers using activation analysis. Validate all training data sources.
+- **Extraction attacks**: Monitor API for suspicious pattern of queries. Rate-limit and add jitter to predictions.
+- **Inversion attacks**: Prevent training data reconstruction from gradients. Use gradient noise or secure aggregation.
+
+### Infrastructure Security
+- **GPU isolation**: Ensure GPU memory isolation in multi-tenant environments. Use CUDA MPS with memory limits.
+- **Model distribution**: Sign model artifacts with GPG/containers. Only load models from signed and verified registries.

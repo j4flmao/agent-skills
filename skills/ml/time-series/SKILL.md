@@ -409,3 +409,111 @@ def conformal_prediction(model, X_train, y_train, X_test, alpha=0.1):
   - references/time-series-fundamentals.md — Time Series Fundamentals
 ## Handoff
 Hand off to ml-feature-engineering for advanced feature creation. For anomaly detection on residuals, hand off to ml-anomaly-detection.
+## Architecture Decision Trees
+
+### Forecasting Method Selection
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Forecast horizon | Short (< 30 days) → ARIMA/Prophet | Long (> 90 days) → Deep learning | Uncertainty accumulation, data availability |
+| Seasonality type | Single season → SARIMA/ETS | Multiple season → TBATS/MSTL | Seasonality detection, decomposition needs |
+| Covariates needed | Univariate → Prophet/ARIMA | Multivariate → LSTM/Transformer | Feature availability, causal inference |
+| Data frequency | High (minute/hourly) → M5/MCS | Low (weekly/monthly) → Prophet/ETS | Sparsity, computation budget |
+
+### Decomposition Strategy
+- Additive decomposition → When seasonal amplitude is constant
+- Multiplicative decomposition → When seasonal amplitude scales with trend
+- STL decomposition → When seasonality changes over time
+- MSTL decomposition → When multiple seasonal periods exist
+
+## Implementation Patterns
+
+### Prophet Forecasting Pipeline
+`python
+from prophet import Prophet
+from prophet.diagnostics import cross_validation, performance_metrics
+import pandas as pd
+
+df = pd.DataFrame({
+    'ds': pd.date_range('2023-01-01', periods=730, freq='D'),
+    'y': values
+})
+
+model = Prophet(
+    yearly_seasonality=True,
+    weekly_seasonality=True,
+    daily_seasonality=False,
+    changepoint_prior_scale=0.05,
+    seasonality_prior_scale=10.0,
+    seasonality_mode='multiplicative'
+)
+
+model.add_regressor('holiday_indicator')
+model.add_seasonality(name='monthly', period=30.5, fourier_order=5)
+
+model.fit(df)
+
+future = model.make_future_dataframe(periods=90)
+future['holiday_indicator'] = holiday_forecast
+forecast = model.predict(future)
+
+# Cross-validation
+df_cv = cross_validation(
+    model, initial='365 days',
+    period='30 days', horizon='90 days'
+)
+metrics = performance_metrics(df_cv, metrics=['mse', 'mae', 'mape'])
+print(metrics[['horizon', 'mse', 'mae', 'mape']].mean())
+`
+
+### LSTM Time Series Model
+`python
+import torch
+import torch.nn as nn
+
+class TimeSeriesLSTM(nn.Module):
+    def __init__(self, input_size=1, hidden_size=64, num_layers=2, output_size=1):
+        super().__init__()
+        self.lstm = nn.LSTM(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=0.2
+        )
+        self.regressor = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x):
+        lstm_out, (hidden, cell) = self.lstm(x)
+        return self.regressor(lstm_out[:, -1, :])
+
+def create_sequences(data, seq_length=30):
+    X, y = [], []
+    for i in range(len(data) - seq_length):
+        X.append(data[i:i + seq_length])
+        y.append(data[i + seq_length])
+    return torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
+`
+
+## Performance Optimization
+
+### Training Speed
+- **Direct forecasting**: For long horizons, predict all steps directly. Avoid iterative multi-step which compounds error.
+- **Truncated BPTT**: Limit backpropagation through time to reduce memory. Use gradient checkpointing for very long sequences.
+- **Fast Fourier features**: Use FFT to quickly identify dominant seasonalities. Pre-compute seasonal features for non-deep learning models.
+
+### Inference Speed
+- **Model quantization**: Quantize LSTM/Transformer to int8 for edge deployment. Can achieve 3-4x speedup with hardware acceleration.
+- **Recursive vs direct**: Use direct multi-step for short horizons (faster). Use recursive for any horizon (slower but one model).
+- **Batch forecasting**: Forecast multiple time series in batch. Use same model for parallel inference across series.
+
+## Security Considerations
+
+### Data Security
+- **PII in time series**: Ensure timestamps don't encode user activity patterns indirectly. Aggregate or sample for privacy.
+- **Forecast opacity**: Forecasts may reveal business-sensitive patterns (revenue trends). Restrict access to model outputs.
+- **Anomaly leakage**: Anomaly flags in time series can leak when incidents occurred. Anonymize timestamps in shared reports.
+
+### Model Security
+- **Adversarial time series**: Crafted inputs can manipulate forecast output. Validate input range and detect adversarial patterns.
+- **Poisoning**: Anomalous historical data poisons forecast model. Use robust statistics for changepoint detection.
+- **Causality violation**: Ensure no future data leaks into training. Enforce strict temporal split in evaluation pipeline.

@@ -438,3 +438,94 @@ describe('UserStore', () => {
 No artifact produced.
 Next skill: frontend-testing — test Angular components.
 Carry forward: interceptor setup, store pattern choice (Signal Store/NgRx), RxJS conventions.
+## Implementation Patterns
+
+### Factory Pattern for Module Creation
+`
+function createModule<T>(config: ModuleConfig): T {
+  const dependencies = initializeDependencies(config);
+  const module = new Module(dependencies);
+  module.hooks.onInit();
+  return module as T;
+}
+`
+
+### Builder Pattern for Complex Configuration
+`
+class ConfigBuilder {
+  private config: AppConfig = new AppConfig();
+  withDatabase(url: string): ConfigBuilder { ... }
+  withCache(ttl: number): ConfigBuilder { ... }
+  withLogging(level: string): ConfigBuilder { ... }
+  build(): AppConfig { return this.config; }
+}
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Production build with optimizations enabled
+- [ ] Environment variables configured per environment
+- [ ] Health check endpoint responds correctly
+- [ ] Error tracking and monitoring integrated
+- [ ] Logging level configured (not debug in production)
+- [ ] Resource limits configured
+- [ ] Database migrations applied
+- [ ] Static assets built and served from CDN or cache
+- [ ] Feature flags toggled appropriately
+- [ ] Rollback plan documented and tested
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% | Critical | Rollback or fix |
+| p95 latency | > 500ms | Warning | Profile and optimize |
+| Uptime | < 99.9% | Critical | Investigate infrastructure |
+| Memory usage | > 80% | Warning | Check for leaks |
+| CPU usage | > 80% | Warning | Scale up or optimize |
+
+## Architecture Decision Trees
+
+### State Management Decision Tree
+```
+Is state shared across multiple components?
+  ├── No  → Component-local state with signal() or BehaviorSubject
+  └── Yes → Is state from server API?
+       ├── Yes → Use HTTP interceptor + signal store or NgRx signal store
+       └── No  → Is it user session/global UI state?
+            ├── Yes → Signal-based store (NgRx Signal Store or custom)
+            └── No  → Service with providedIn:'root' + signals
+```
+
+### DI Strategy Decision Tree
+```
+Does the service need different implementations per environment?
+  ├── No  → providedIn:'root' with concrete class
+  └── Yes → Use InjectionToken + ClassProvider factory
+       Is the implementation chosen at runtime?
+       ├── Yes → Use factory provider with conditional logic
+       └── No  → Use useClass with environment-based provider override
+```
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Mutating signal arrays in place | No change detection triggered | Use `.update(items => [...items, newItem])` |
+| Nested subscriptions (subscribe in subscribe) | Unreadable, hard to cancel | Use higher-order operators (switchMap, mergeMap, concatMap) |
+| Giant component templates | Hard to test, slow compilation | Break into smaller standalone components |
+| Using NgZone for performance | Zone.js overhead for all components | Use signals + OnPush for zone-less change detection |
+
+## Performance Optimization
+
+- **TrackBy with @for**: Always provide `track` function in `@for` blocks: `@for (item of items; track item.id)`. Prevents full DOM rebuild on list mutations. Use primitive keys (number/string) for fastest comparison.
+- **Defer non-critical components**: `@defer (on viewport) { <heavy-component /> } @placeholder { <spinner /> }`. Use `on interaction`, `on timer(500ms)`, or `on idle` triggers. Avoid deferring components above the fold.
+- **Image optimization**: Use `NgOptimizedImage` directive with `ngSrc`. Set `priority` on LCP images. Use `fill` mode for responsive images. Configure `IMAGE_LOADER` for CDN transformation.
+- **Virtual scrolling for long lists**: Use `@angular/cdk/scroll` with `CdkVirtualScrollViewport`. Renders only visible items. Set `itemSize` for performant scroll. Combine with `trackBy` for optimal reuse.
+
+## Security Considerations
+
+- **HTTP interceptor for auth tokens**: Attach JWT/Bearer tokens via interceptor. Never store tokens in localStorage if XSS is a concern - use HttpOnly cookies. Implement token refresh logic in a dedicated interceptor.
+- **Route guards with server validation**: Client-side guards prevent UI navigation but don't protect API endpoints. Always validate authorization on the server. Use `CanMatch` to prevent lazy-loading unauthorized modules.
+- **Sanitization pipeline**: Use Angular's `DomSanitizer` for trusted content. For user-generated rich text, integrate DOMPurify via an injectable service. Never bypass security context for user input.
+- **Content Security Policy**: Configure CSP headers for Angular apps. Angular relies on inline styles in dev mode - use `ngCspNonce` attribute for style nonces. Apply `'strict-dynamic'` for script-src with nonce-based approach.

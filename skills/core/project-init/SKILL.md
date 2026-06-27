@@ -455,7 +455,135 @@ echo "✓ Environment check complete"
 | Commit generated scaffold files | Boilerplate that will never change | Let init commands run, then prune unused files |
 | Wrong package manager | pnpm users with npm lockfile conflicts | Pin in `packageManager` field, enforce in CI |
 
+## Architecture Decision Trees
+
+```
+Project Initialization Strategy
+├── Project type?
+│   ├── Web app → Vite + React/Next.js + TypeScript
+│   ├── API service → Fastify/Express + TypeScript + OpenAPI
+│   ├── CLI tool → Commander/oclif + TypeScript
+│   └── Library → tsup + TypeScript + Vitest
+├── Monorepo needed?
+│   ├── Yes → Turborepo / Nx / pnpm workspaces
+│   ├── Single package → Simple single-package setup
+│   └── Microservices → Nx with buildable libraries
+├── Testing strategy?
+│   ├── Unit + E2E → Vitest + Playwright
+│   ├── Unit only → Vitest
+│   └── Type-safe mocks → Node Test Runner + testdouble
+└── Deployment target?
+    ├── Serverless → AWS Lambda / Vercel / Netlify
+    ├── Container → Docker + Docker Compose + K8s manifests
+    └── Edge → Cloudflare Workers / Deno Deploy
+```
+
+**Decision criteria**: Assess team size, deployment target, monorepo complexity, and testing maturity.
+
+## Implementation Patterns
+
+### Scaffold Script
+```bash
+#!/usr/bin/env bash
+# project-init/scaffold.sh
+
+PROJECT_NAME=$1
+FRAMEWORK=$2
+
+mkdir -p "$PROJECT_NAME"/{src,test,docs}
+cd "$PROJECT_NAME"
+
+# Initialize package
+npm init -y
+npm pkg set type="module"
+
+# Install core deps
+case $FRAMEWORK in
+  react)
+    npm create vite@latest . -- --template react-ts
+    ;;
+  next)
+    npx create-next-app@latest . --typescript --tailwind
+    ;;
+  express)
+    npm install express cors helmet
+    npm install -D typescript @types/node vitest
+    ;;
+esac
+
+# Git setup
+git init
+cat > .gitignore << EOF
+node_modules/
+dist/
+.env
+*.log
+EOF
+git add . && git commit -m "chore: initial scaffold"
+```
+
+### TypeScript Config Template
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test"]
+}
+```
+
+## Production Considerations
+
+- **`.gitignore` completeness**: Include `node_modules/`, `dist/`, `.env`, `*.log`, `.next/`, `coverage/`, `tmp/`.
+- **Environment validation**: Include `.env.example` with all required vars documented; use Zod for runtime validation.
+- **CI/CD templates**: Generate `.github/workflows/ci.yml` with lint, typecheck, test, and build stages.
+- **Docker support**: Include multi-stage `Dockerfile` and `docker-compose.yml` for local development.
+- **Editor config**: Generate `.vscode/settings.json` with format-on-save and recommended extensions.
+- **License**: Add `LICENSE` file matching project requirements (MIT, Apache 2.0, or proprietary).
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Hardcoded ports/URLs | Dev/prod conflicts | Use env vars with defaults |
+| No Docker compose for deps | Environment drift across team | Include docker-compose.yml |
+| Single tsconfig for all | Build config and app config differ | Separate tsconfigs per context |
+| Committing scaffold files | Boilerplate that never changes | Prune unused files after init |
+| Wrong package manager | Lockfile conflicts | Pin in packageManager field |
+
+## Performance Optimization
+
+- **Minimal dependencies**: Pin exact versions for critical packages; audit `node_modules` size.
+- **Tree-shaking**: Configure ESM with `sideEffects: false` in `package.json` for optimal bundle.
+- **Build caching**: Set up Turborepo/Nx caching for faster local and CI builds.
+- **Dev server**: Use Vite (esbuild-based) for sub-second HMR; avoid webpack for new projects.
+- **TypeScript project references**: Use project references for monorepo to enable incremental builds.
+
+## Security Considerations
+
+- **Dependency auditing**: Run `npm audit` or `pnpm audit` on init; pin dependency versions with lockfile.
+- **Environment isolation**: Generate `.env` with placeholder values; never commit actual secrets.
+- **Docker security**: Use non-root user in Dockerfile; pin base image digests, not tags.
+- **Lint rules**: Include ESLint security plugin (`eslint-plugin-security`) for Node.js projects.
+- **Git hooks**: Configure husky + lint-staged for pre-commit checks; prevent secrets from being committed.
+- **License compliance**: Check dependency licenses (`license-checker`) for compatibility with project license.
+
 ## Handoff
 Output: Scaffolded project at {path}
-Next skill: create-brief — to define what gets built.
+Next skill: create-brief - to define what gets built.
 Carry forward: project path, stack, framework.

@@ -432,12 +432,126 @@ Practice 7: Support split payments, partial payments, and multi-currency. Not al
 
 Practice 8: Implement cart expiry and cleanup. Abandoned carts consume storage. Schedule cleanup job for expired carts. Follow data retention policy for abandoned cart data.
 
-## References
-  - references/cart-architecture.md -- Cart Data Model
-  - references/checkout-cart-advanced.md -- Checkout Cart Advanced Topics
-  - references/checkout-cart-fundamentals.md -- Checkout Cart Fundamentals
-  - references/checkout-optimization.md -- Checkout Optimization
-  - references/checkout-ux.md -- Checkout UX Patterns
-  - references/discount-engine.md -- Discount Engine Design
-## Handoff
-Hand off to `ecommerce-payment-processing` for payment integration. Hand off to `backend-universal-order-management` for order fulfillment patterns. Hand off to `ecommerce-subscription` for recurring billing needs.
+## Implementation Patterns
+
+### Pattern: Cart Merge on Login (Guest to Registered)
+
+```typescript
+async function mergeCartsOnLogin(guestToken: string, userId: string): Promise<Cart> {
+  const guestCart = await Cart.findOne({ sessionToken: guestToken, status: 'active' });
+  const userCart = await Cart.findOne({ userId, status: 'active' });
+
+  if (!guestCart) return userCart;
+  if (!userCart) {
+    guestCart.userId = userId;
+    guestCart.sessionToken = null;
+    return guestCart.save();
+  }
+
+  // Merge guest items into user cart
+  for (const guestItem of guestCart.items) {
+    const existing = userCart.items.find(i =>
+      i.productId === guestItem.productId && i.variantId === guestItem.variantId
+    );
+    if (existing) {
+      existing.quantity = Math.max(existing.quantity, guestItem.quantity);
+    } else {
+      userCart.items.push(guestItem);
+    }
+  }
+
+  // Recalculate totals
+  userCart.totals = calculateTotals(userCart.items, userCart.couponCode);
+  await userCart.save();
+  await Cart.deleteOne({ _id: guestCart._id });
+  return userCart;
+}
+```
+
+### Pattern: Discount Engine with Rule Chain
+
+```typescript
+interface DiscountRule {
+  type: 'percentage' | 'fixed' | 'bogo' | 'tiered' | 'bundle';
+  priority: number;
+  condition: (cart: Cart) => boolean;
+  apply: (cart: Cart) => DiscountResult;
+}
+
+class DiscountEngine {
+  private rules: DiscountRule[];
+
+  applyPromotions(cart: Cart, couponCode?: string): Cart {
+    let workingCart = this.snapshotCart(cart);
+
+    const applicable = this.rules
+      .filter(r => r.condition(workingCart))
+      .sort((a, b) => a.priority - b.priority);
+
+    for (const rule of applicable) {
+      const result = rule.apply(workingCart);
+      workingCart.discountTotal += result.amount;
+      workingCart.appliedPromotions.push(result.promotionId);
+      // Cap discount at subtotal
+      if (workingCart.discountTotal > workingCart.subtotal) {
+        workingCart.discountTotal = workingCart.subtotal;
+      }
+    }
+
+    workingCart.grandTotal = workingCart.subtotal
+      - workingCart.discountTotal
+      + workingCart.shippingTotal
+      + workingCart.taxTotal;
+    return workingCart;
+  }
+
+  private snapshotCart(cart: Cart): Cart {
+    return JSON.parse(JSON.stringify(cart));
+  }
+}
+```
+
+## Production Considerations
+
+### Cart Performance
+- Cart read path: Redis cache with TTL of 15 minutes. Write-through on mutation.
+- Price snapshotting: store price at add-to-cart time. Re-verify if cart older than 1 hour.
+- Inventory reservation: only reserve at checkout entry. Release reservation after 15 min if not completed.
+- Bulk operations: batch cart updates at 100ms intervals during rapid add/remove (flash sales).
+
+### Checkout Reliability
+- State machine persistence: cart state in RDBMS. Transitions logged with timestamp + actor.
+- Idempotency: checkout submission idempotency key prevents duplicate orders.
+- Partial failures: if payment succeeds but order creation fails, compensate with refund.
+- Timeout: total checkout flow complete within 10 seconds or release resources.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| Real-time pricing for every cart load | 30+ DB calls per cart view. Load spike on sales. | Snapshot price at add-time. Periodically re-verify. |
+| Blocking inventory check | Cart page stuck loading if inventory slow. | Async inventory check. Show optimistic availability. |
+| No cart expiry cleanup | Millions of abandoned cart rows. Query slowdown. | TTL index. Batch delete expired carts daily. |
+| Coupon code case-sensitivity | Users confused when "SAVE20" ≠ "save20". | Normalize to uppercase on input. Store and compare uppercase. |
+| Cart merge destroys guest items | User logs in, guest items disappear. Lost revenue. | Merge strategy: union both sets, newest quantity wins. |
+
+## Performance Optimization
+
+- Redis for cart read cache: TTL 15 min. Invalidated on item add/remove/quantity change.
+- Materialized cart totals: store subtotal, discount, tax, shipping, grand total in cart document. No recalculation on read.
+- Batch price lookups: `productRepository.findByIds(ids)` instead of N individual queries.
+- Deferred tax/shipping calculation: compute estimate on cart view, full calculation on checkout entry.
+- Cart pagination for large carts (B2B): load first 20 items, lazy load rest via scroll.
+- Index on (user_id, status) and (session_token, status) for cart lookup queries.
+- Partition order tables by creation date. Monthly partitions for high-volume stores.
+
+## Security Considerations
+
+- Coupon injection: validate coupon belongs to store/app. Never trust client-side coupon name.
+- Price manipulation: always recalculate totals server-side. Never accept subtotal from client.
+- Cart tampering: sign cart data with HMAC if client-side storage used. Verify signature on checkout.
+- Rate limiting on coupon application: max 5 attempts per cart per minute. Prevents brute force of coupon codes.
+- Session hijacking: regenerate session token on login. Bind cart to user ID after auth.
+- Inventory race conditions: atomic `DECR` on Redis for flash sales. Row-level lock for normal flow.
+- Data validation: validate all item IDs, quantities, prices against catalog at checkout.
+- Abandoned cart PII: encrypt personally identifiable information in cart records. Anonymize after 30 days.

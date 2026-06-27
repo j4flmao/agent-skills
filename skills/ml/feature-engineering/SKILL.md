@@ -488,3 +488,107 @@ feature_engineering:
 ## Handoff
 `ml-classical-ml` for model training with engineered features
 `ml-deep-learning` for deep learning feature extraction (embeddings)
+
+## Architecture Decision Trees
+
+### Feature Encoding Selection
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Categorical cardinality | Low (< 10) → One-hot encode | High (> 50) → Target/embedding | Dimensionality constraints, tree vs linear model |
+| Feature type | Numeric → Scale (Standard/MinMax) | Temporal → Cyclic encode (sin/cos) | Algorithm sensitivity, domain semantics |
+| Missing values | Few (< 5%) → Impute (median) | Many (> 5%) → Flag + impute | Pattern in missingness, data volume |
+| Feature interaction | Known interactions → Polynomial features | Unknown → Tree-based (handles automatically) | Model type, feature domain knowledge |
+
+### Feature Selection Strategy
+- Filter methods → Statistical tests (chi-square, mutual info). Fast, model-agnostic, good for high dimensions.
+- Wrapper methods → RFE, forward selection. Model-specific, more accurate, computationally expensive.
+- Embedded methods → L1 regularization, tree importance. Balance speed and accuracy, built into training.
+
+## Implementation Patterns
+
+### Feature Engineering Pipeline
+`python
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.preprocessing import FunctionTransformer
+import numpy as np
+import pandas as pd
+
+def cyclical_encode(df, col, period):
+    df[f'{col}_sin'] = np.sin(2 * np.pi * df[col] / period)
+    df[f'{col}_cos'] = np.cos(2 * np.pi * df[col] / period)
+    return df.drop(columns=[col])
+
+class AggregationFeatures(BaseEstimator, TransformerMixin):
+    def __init__(self, group_col, agg_col, aggs=['mean', 'std', 'count']):
+        self.group_col = group_col
+        self.agg_col = agg_col
+        self.aggs = aggs
+
+    def fit(self, X, y=None):
+        self.agg_map_ = X.groupby(self.group_col)[self.agg_col].agg(self.aggs)
+        return self
+
+    def transform(self, X):
+        return X.join(self.agg_map_, on=self.group_col, rsuffix='_agg')
+
+pipeline = Pipeline([
+    ('cyclical', FunctionTransformer(
+        lambda df: cyclical_encode(df, 'hour', 24),
+        validate=False
+    )),
+    ('aggregations', AggregationFeatures('user_id', 'amount')),
+    ('scaler', StandardScaler())
+])
+`
+
+### Text Feature Extraction
+`python
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import TruncatedSVD
+import spacy
+
+nlp = spacy.load('en_core_web_sm')
+
+def extract_text_features(documents):
+    tfidf = TfidfVectorizer(
+        max_features=5000,
+        ngram_range=(1, 2),
+        stop_words='english',
+        sublinear_tf=True
+    )
+    tfidf_matrix = tfidf.fit_transform(documents)
+
+    svd = TruncatedSVD(n_components=100, random_state=42)
+    text_embeddings = svd.fit_transform(tfidf_matrix)
+
+    pos_features = np.array([
+        [token.pos_ for token in nlp(doc)].count('VERB')
+        / max(len(doc), 1) for doc in documents
+    ]).reshape(-1, 1)
+
+    return np.hstack([text_embeddings, pos_features])
+`
+
+## Performance Optimization
+
+### Computation Efficiency
+- **Lazy evaluation**: Use Dask or Vaex for out-of-core feature engineering. Process datasets larger than RAM.
+- **Parallelization**: Use swifter or pandarallel for parallel apply. Groupby aggregations in parallel with dask.
+- **Caching**: Cache intermediate feature computations. Use joblib.Memory for deterministic pipeline caching.
+
+### Storage Efficiency
+- **Sparse matrices**: Use sparse representations for one-hot encoded features. Reduces memory 10-100x for high-cardinality categoricals.
+- **Feature dtype optimization**: Downcast float64 to float32/int32. Use categorical dtype for string columns with few unique values.
+- **Feature store**: Precompute and store features in feature store. Avoid recomputing features across training and inference.
+
+## Security Considerations
+
+### Feature Leakage
+- **Time leakage**: Never use future information to compute past features. Use expanding window for time-based features.
+- **Target leakage**: Avoid features that use target information indirectly. Validate with feature importance review.
+- **Validation strategy**: Use time-based split for time-series features. Use stratified split for group-based aggregation features.
+
+### Data Privacy
+- **PII in features**: Remove direct identifiers before feature engineering. Anonymize or hash user/device IDs.
+- **Aggregation privacy**: Ensure aggregate features don't reveal individual records. Apply k-anonymity to group features.
+- **Feature encryption**: Encrypt sensitive features at rest in feature store. Use homomorphic encryption for privacy-preserving inference.

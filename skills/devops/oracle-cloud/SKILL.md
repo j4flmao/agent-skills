@@ -456,3 +456,284 @@ resource "oci_monitoring_alarm" "cpu_high" {
 - `devops-hybrid-cloud` for connecting OCI with on-prem or other clouds.
 - `devops-backup-dr` for OCI-based backup and DR strategies.
 - `devops-observability` for OCI logging and monitoring integration.
+
+## Architecture Decision Trees
+
+### OCI IAM vs Federation
+
+| Decision | OCI Native IAM | Federated (SSO/OIDC) |
+|---|---|---|
+| User management | OCI console, manual | Central IdP (Okta, Azure AD) |
+| MFA | OCI built-in MFA | IdP-managed MFA |
+| Group sync | Manual or API | SCIM provisioning |
+| Audit trail | OCI Audit logs | IdP audit + OCI Audit |
+| Complexity | Lower (in-platform) | Higher (IdP setup + mapping) |
+| Best for | Small teams, isolated OCI | Enterprise with SSO requirement |
+
+### Compute Shapes: AMD vs ARM (Ampere)
+
+| Aspect | AMD (Standard) | ARM / Ampere A1 |
+|---|---|---|
+| vCPU ratio | 1:2 per core | 1:1 per core |
+| Price-performance | Baseline | 20-40% better for scale-out |
+| Software compat | Universal | Requires ARM64 builds |
+| GPU support | Available | Not available |
+| Best for | General workloads, legacy | Containerized, web, K8s nodes |
+
+## Implementation Patterns
+
+### Terraform: OCI VCN with Public and Private Subnets
+
+```hcl
+resource "oci_identity_compartment" "prod" {
+  name        = "production"
+  description = "Production compartment"
+}
+
+resource "oci_core_vcn" "main" {
+  compartment_id = oci_identity_compartment.prod.id
+  display_name   = "production-vcn"
+  cidr_block     = "10.0.0.0/16"
+  dns_label      = "prod"
+
+  defined_tags = {
+    "Operations.CostCenter" = "12345"
+  }
+}
+
+resource "oci_core_subnet" "public" {
+  compartment_id    = oci_identity_compartment.prod.id
+  vcn_id            = oci_core_vcn.main.id
+  cidr_block        = "10.0.1.0/24"
+  display_name      = "public-lb"
+  security_list_ids = [oci_core_security_list.lb.id]
+  route_table_id    = oci_core_route_table.public.id
+  dhcp_options_id   = oci_core_dhcp_options.main.id
+  dns_label         = "public"
+  prohibit_public_ip_on_vnic = false
+}
+
+resource "oci_core_subnet" "private" {
+  compartment_id    = oci_identity_compartment.prod.id
+  vcn_id            = oci_core_vcn.main.id
+  cidr_block        = "10.0.2.0/24"
+  display_name      = "private-app"
+  security_list_ids = [oci_core_security_list.app.id]
+  route_table_id    = oci_core_route_table.private.id
+  dhcp_options_id   = oci_core_dhcp_options.main.id
+  dns_label         = "private"
+  prohibit_public_ip_on_vnic = true
+}
+
+resource "oci_core_instance" "app" {
+  compartment_id  = oci_identity_compartment.prod.id
+  display_name    = "app-server-01"
+  shape           = "VM.Standard.A1.Flex"
+  shape_config {
+    ocpus         = 4
+    memory_in_gbs = 24
+  }
+  source_details {
+    source_type = "image"
+    source_id   = var.ol8_image_id
+  }
+  create_vnic_details {
+    subnet_id = oci_core_subnet.private.id
+    assign_public_ip = false
+  }
+  metadata = {
+    ssh_authorized_keys = var.ssh_public_key
+  }
+}
+```
+
+### Bash: OCI CLI Automation for OKE
+
+```bash
+#!/usr/bin/env bash
+oci_login() {
+  oci session authenticate --region us-ashburn-1
+}
+
+oke_kubeconfig() {
+  local cluster_id=$1
+  oci ce cluster create-kubeconfig \
+    --cluster-id "$cluster_id" \
+    --file "${HOME}/.kube/oke-config" \
+    --region us-ashburn-1 \
+    --token-version 2.0.0
+  export KUBECONFIG="${HOME}/.kube/oke-config"
+}
+
+list_compartments() {
+  oci iam compartment list \
+    --compartment-id-in-subtree true \
+    --all \
+    --query 'data[*].{Name:name, Id:id, State:"lifecycle-state"}' \
+    --output table
+}
+```
+
+## Production Considerations
+
+- Use **compartments** for resource isolation per team/environment with IAM policies at compartment level
+- Enable **OCI Cloud Guard** target on every compartment for threat detection and misconfiguration alerts
+- Configure **Vault (KMS)** for encryption keys — encrypt all block volumes, object storage, and databases
+- Deploy **OKE clusters** with `--pod-cidr` and `--service-cidr` that don't overlap with on-prem or VCN ranges
+- Use **Flex shapes** (VM.Standard.E5.Flex) for most workloads — better price-performance than fixed shapes
+- Set up **budgets** at compartment level with threshold alerts to Slack/email
+- Enable **VCN Flow Logs** for network traffic analysis and security investigation
+
+## Anti-Patterns
+
+- Using **root compartment** for all resources — prevents fine-grained IAM and cost tracking
+- Exposing **database ports (1521, 3306)** to 0.0.0.0/0 in security lists — always scope to app subnet
+- Skipping **OCI Vulnerability Scanning Service** — containers and OS images should be scanned weekly
+- Using **burstable shapes** (VM.Standard.E2.1.Micro) for production — they throttle CPU under load
+- Ignoring **block volume backups** — enable automatic backups with 7-day retention as minimum
+- Applying **broad IAM policies** at tenancy level — use compartment-level policies with conditions
+- Over-provisioning **boot volumes** (default 50 GB) — resize only when needed to avoid waste
+
+## Performance Optimization
+
+- Use **DenseIO shapes** for database and analytics workloads requiring high local NVMe performance
+- Enable **FastConnect** for dedicated, low-latency connectivity to OCI regions
+- Configure **load balancer** with session persistence and health checks for zero-downtime deployments
+- Use **OCI Object Storage** with standard tier for frequently accessed data, infrequent tier for logs
+- Tune **OKE worker node shapes** by workload: `VM.Standard.E5.Flex` for general, `BM.Optimized3.36` for AI/ML
+- Enable **autoscaling** on OKE node pools with cluster autoscaler and spot instances for batch workloads
+- Use **OCI Cache (Redis)** for session state and query result caching instead of local instance storage
+
+## Security Considerations
+
+- Enable **OCI Identity Domain** with MFA for all console users — enforce password policies
+- Use **resource principal** (instance principals) for OKE and Compute VMs — never store API keys
+- Restrict **object storage bucket access** with pre-authenticated requests (PAR) and least-privilege policies
+- Rotate **OCI API keys** every 90 days and use API key versioning for key rotation without downtime
+- Enable **Cloud Guard** with detector recipes for storage, networking, and IAM misconfigurations
+- Use **Vault (HSM)** for master encryption keys and auto-rotate DEKs every 180 days
+- Audit **IAM policy changes** with OCI Audit logs and stream to OCI Object Storage for retention
+## Implementation Patterns
+
+### Observer Pattern for Event Handling
+`
+interface EventObserver<T> {
+  onEvent(event: T): Promise<void>;
+}
+
+class EventBus<T> {
+  private observers: Set<EventObserver<T>> = new Set();
+  subscribe(observer: EventObserver<T>): void {
+    this.observers.add(observer);
+  }
+  unsubscribe(observer: EventObserver<T>): void {
+    this.observers.delete(observer);
+  }
+  async emit(event: T): Promise<void> {
+    const results = Array.from(this.observers).map(o => o.onEvent(event));
+    await Promise.allSettled(results);
+  }
+}
+`
+
+### Configuration-Driven Approach
+`
+config:
+  defaults:
+    timeout: 30s
+    retryCount: 3
+  overrides:
+    production:
+      timeout: 60s
+      retryCount: 5
+    development:
+      timeout: 300s
+      retryCount: 1
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Configuration validated against schema before startup
+- [ ] Health check endpoints registered and monitored
+- [ ] Graceful shutdown with draining period (30s timeout)
+- [ ] Resource limits configured (CPU, memory, file descriptors)
+- [ ] Log level set appropriate for environment
+- [ ] Metrics endpoint secured and exposed
+- [ ] Rate limiting configured per-tier
+- [ ] TLS certificates valid and auto-renewing
+- [ ] Database migrations run as separate deployment step
+- [ ] Feature flags ready for gradual rollout
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% over 5min | Critical | Page on-call |
+| p99 latency | > 2s over 5min | Warning | Investigate |
+| Throughput drop | > 50% over 1min | Critical | Check upstream |
+| Queue depth | > 1000 over 1min | Warning | Scale consumers |
+| Disk usage | > 85% | Warning | Clean or expand |
+| Memory usage | > 90% heap | Critical | Restart or scale |
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Root Cause | Solution |
+|-------------|---------|------------|----------|
+| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
+| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
+| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
+| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
+
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+## Rules
+- Default-deny security posture — allow only explicitly required access.
+- All inputs validated, all outputs encoded, all errors handled.
+- Defend in depth — multiple layers of security controls.
+- Fail securely — errors default to safe behavior.
+- Log security-relevant events for audit and investigation.
+- Keep dependencies updated — automate vulnerability scanning.
+- Design for observability from day one, not as an afterthought.
+- Document all architectural decisions with rationale.
+- Review code for security, performance, and correctness before merging.

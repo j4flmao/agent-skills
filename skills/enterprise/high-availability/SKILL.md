@@ -392,14 +392,163 @@ Required signals (alert before users notice):
 - Burn-rate alerts use multi-window (fast + slow burn), never single-threshold.
 - Never deploy on Friday afternoon to a 99.99% system without senior approval.
 
-## References
-  - references/availability-tiers.md — Availability Tiers — Budget, Cost, Architecture
-  - references/data-sync-migration.md — Data Sync & Migration — Expand-Contract, Dual-Write, Backfill, Verify
-  - references/high-availability-advanced.md — High Availability Advanced Topics
-  - references/high-availability-fundamentals.md — High Availability Fundamentals
-  - references/load-balancing.md — Load Balancing — L4/L7, Health Contracts, Drain
-  - references/replica-topologies.md — Replica Topologies — Master-Slave to Multi-Region Active-Active
-  - references/version-sync.md — Version Sync — N / N+1 Compatibility, Rollout Strategies
+## Architecture Decision Trees
+
+### Rollout Strategy Selection
+```
+Error budget available?
+├── Generous (> 50% remaining) → Rolling update
+│   Cheapest. 25% surge, 0 unavailable. Bake time 20s.
+│   Risk: partial blast radius, slow rollback (per pod).
+├── Moderate (25-50%) → Canary
+│   5% → 25% → 50% → 100% with analysis gates.
+│   Automated rollback if error rate spikes.
+└── Tight (< 25%) → Blue-green
+    Instant cutover. Instant rollback. 2x infra cost.
+    Best for: zero-downtime mandatory, critical compliance.
+```
+
+### Replication Mode Selection
+```
+RPO requirement?
+├── Zero data loss → Synchronous replication
+│   Commit waits for ≥1 replica ack. Increases p99 latency by 1-5ms.
+│   Use only for financial transactions. Budget for latency impact.
+├── < 5s data loss → Semi-synchronous
+│   Default for same-AZ. Timeout falls back to async.
+│   RPO = 0 during normal ops, < 1s during degredation.
+└── < 60s data loss → Asynchronous
+    Cross-region only. No latency impact on primary.
+    Risk: replication lag causes data loss on failover.
+```
+
+## Implementation Patterns
+
+### Pattern: Blue-Green Deployment with LB Swap
+
+```yaml
+# argo-rollouts/bluegreen.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata: {name: api-service}
+spec:
+  replicas: 10
+  strategy:
+    blueGreen:
+      activeService: api-active
+      previewService: api-preview
+      autoPromotionEnabled: false
+      prePromotionAnalysis:
+        templates:
+        - templateName: smoke-test
+      scaleDownDelaySeconds: 300  # keep old version for rollback
+  template:
+    spec:
+      containers:
+      - name: api
+        image: api:v2.5.0
+        readinessProbe:
+          httpGet: {path: /readyz, port: 8080}
+          periodSeconds: 2
+          failureThreshold: 2
+        lifecycle:
+          preStop:
+            exec: {command: ["/bin/sh","-c","sleep 15"]}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: api-active}
+spec:
+  selector: {app: api, rollouts-pod-template-hash: "stable"}
+```
+
+### Pattern: Semi-Sync Replication with Auto-Failover
+
+```ini
+# Patroni configuration for PostgreSQL HA
+scope: mydb
+namespace: /service/
+name: pg-primary
+
+restapi:
+  listen: 0.0.0.0:8008
+  connect_address: 10.0.1.10:8008
+
+etcd:
+  hosts: ['10.0.1.100:2379', '10.0.1.101:2379', '10.0.1.102:2379']
+
+bootstrap:
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576  # 1MB
+    postgresql:
+      use_pg_rewind: true
+      parameters:
+        wal_level: replica
+        hot_standby: "on"
+        wal_log_hints: "on"
+        synchronous_standby_names: "ANY 1 (pg-replica-1, pg-replica-2)"
+
+postgresql:
+  listen: 0.0.0.0:5432
+  connect_address: 10.0.1.10:5432
+  data_dir: /data/postgresql
+  bin_dir: /usr/lib/postgresql/16/bin
+  authentication:
+    replication:
+      username: replicator
+      password: strongpassword
+  parameters:
+    max_connections: 200
+```
+
+## Production Considerations
+
+### Disaster Recovery Drills
+- Quarterly for ≥99.99%: scheduled failover exercise during maintenance window. Half production traffic routed to DR.
+- Annual: full region failover. All traffic to DR region for 4 hours. Measure RPO and RTO.
+- Game day: surprise failover scenario. Team follows runbook without prior notice. Measure response time.
+- Post-drill: update runbook based on findings. Add automation for manual steps discovered during drill.
+
+### Cost Management
+- Multi-AZ DB: 2x compute cost for standby. ~20% increase for storage (replication).
+- Blue-green deploy: 2x infra during deploy window. Use scaled-down preview environment for cost savings.
+- Cross-region: minimum 2x infra cost. Data transfer costs between regions.
+- TURN relay: $0.005-0.02 per GB egress. Budget 2-5 Mbps per active media stream.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| Two-node cluster | Split-brain on network partition. Neither side has quorum. | Minimum 3 nodes for auto-failover. |
+| Schema change in same deploy | Migration breaks old pods. Rollback impossible. | Expand-contract over 3 releases. |
+| No read-forward compatibility | Old client crashes on new field in response. | Add fields only. Never remove or rename. |
+| No drain before shutdown | In-flight requests dropped. Users see 502. | 15s drain in preStop. LB marks unhealthy. |
+| All eggs in one AZ | AZ outage = full outage. | Multi-AZ. Active-passive minimum. |
+| No burn-rate alerts | Error budget exhausted before anyone notices. | Multi-window alerts. Fast + slow burn. |
+
+## Performance Optimization
+
+- Connection pooling with PgBouncer: reduce PostgreSQL connection overhead. Transaction pooling mode.
+- Read replicas for reporting: offload analytics queries from primary. Allow 5-10 replicas.
+- Database connection limit: 100 per application instance. Queue with `pgbouncer` for spikes.
+- Caching layer at LB: cache GET responses for 30s. Reduces application load by 30-50%.
+- Query optimization: slow query log (>200ms). Index recommendations from `pg_stat_statements`.
+- Replica lag monitoring: alert on > 5s lag for async, > 1s for semi-sync. Investigate immediately.
+- Disk throughput: provision IOPS at 3x baseline. Burst credits for gp3 volumes monitored.
+
+## Security Considerations
+
+- TLS everywhere: mTLS between services. Certificate rotation every 90 days. Auto-renew via cert-manager.
+- Database encryption at rest: AWS RDS encryption / Azure TDE. Key rotation every 12 months.
+- Network segmentation: app and DB in private subnets. Bastion host for admin access.
+- Backup encryption: S3 bucket with SSE-KMS. Cross-region backup copy encrypted with different key.
+- Access control: database credentials in Vault. Rotated every 30 days. Application reads at startup.
+- Audit logging: all schema changes logged. DDL triggers in PostgreSQL. Review weekly.
+- Failover authentication: failover commands require MFA. Human-in-the-loop for manual promotion.
+- WAF in front of LB: rate limiting, SQL injection protection, IP blocklist for known bad actors.
 ## Handoff
 - `enterprise-sla-management` for SLA contract wording, customer credits, multi-tier SLA structure.
 - `data-data-replication` for deep dive on database-specific replication internals (GoldenGate, Patroni, etc).

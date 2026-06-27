@@ -414,6 +414,119 @@ Deployment topology?
   - references/replication-security.md — Data Replication Security
   - references/replication-tools.md — Replication Tools
   - references/replication-topologies.md — Replication Topologies Reference
+## Architecture Decision Trees
+
+```
+Replication Strategy
+├── Source type?
+│   ├── OLTP (PostgreSQL, MySQL) → CDC (Debezium, AWS DMS)
+│   ├── OLAP (Snowflake, BigQuery) → Batch export (unload to S3)
+│   └── NoSQL (MongoDB, Cassandra) → Change streams + Kafka
+├── Latency requirements?
+│   ├── Real-time (< 1 min) → Kafka + Debezium CDC
+│   ├── Near-real-time (< 1 hr) → Micro-batch (5 min intervals)
+│   └── Batch (daily) → Full-table dumps with watermarks
+├── Destination?
+│   ├── Data lake (S3/ADLS) → Parquet with schema evolution
+│   └── Data warehouse → SQL MERGE / COPY INTO
+└── Reliability requirements?
+    ├── Exactly-once → Idempotent sinks + dedup keys
+    └── At-least-once → Upsert sinks (Delta Lake MERGE)
+```
+
+**Decision criteria**: Balance latency SLA, source capabilities, infrastructure maturity, and operational complexity.
+
+## Implementation Patterns
+
+### Debezium CDC Connector
+```json
+{
+  "name": "orders-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres-primary",
+    "database.port": "5432",
+    "database.user": "replicator",
+    "database.password": "${POSTGRES_PASSWORD}",
+    "database.dbname": "ecommerce",
+    "database.server.name": "pg-ecommerce",
+    "table.include.list": "public.orders,public.order_items",
+    "plugin.name": "pgoutput",
+    "slot.name": "debezium_orders",
+    "publication.name": "debezium_pub_orders",
+    "publication.autocreate.mode": "filtered",
+    "topic.prefix": "cdc.orders",
+    "transforms": "unwrap,route",
+    "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+    "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
+    "transforms.route.regex": "cdc.orders.public.(.*)",
+    "transforms.route.replacement": "datalake.orders.$1"
+  }
+}
+```
+
+### Batch Replication with Watermark
+```python
+# data_replication/watermark_replication.py
+from datetime import datetime, timedelta
+
+class WatermarkReplicator:
+    def __init__(self, source_conn, sink_conn, table: str, watermark_col: str):
+        self.source = source_conn
+        self.sink = sink_conn
+        self.table = table
+        self.watermark_col = watermark_col
+
+    def fetch_last_watermark(self) -> datetime:
+        row = self.sink.execute(f"SELECT MAX({self.watermark_col}) FROM {self.table}").fetchone()
+        return row[0] or datetime(2020, 1, 1)
+
+    def replicate_batch(self, batch_size: int = 50000):
+        last = self.fetch_last_watermark()
+        rows = self.source.execute(
+            f"SELECT * FROM {self.table} WHERE {self.watermark_col} > %s ORDER BY {self.watermark_col} LIMIT %s",
+            (last, batch_size)
+        ).fetchall()
+        if rows:
+            self.sink.execute_many(f"INSERT INTO {self.table} VALUES ({','.join(['%s']*len(rows[0]))}) ON CONFLICT DO UPDATE", rows)
+        return len(rows)
+```
+
+## Production Considerations
+
+- **Schema drift handling**: Monitor source schema changes via Debezium schema change events; alert on breaking changes.
+- **Backfill strategy**: Parallel full-load for initial backfill; switch to CDC once caught up.
+- **Connector monitoring**: Monitor Debezium lag via Kafka Connect REST API; alert on lag > 5 min.
+- **Slot management**: Monitor PostgreSQL replication slots to prevent WAL bloat; set `max_slot_wal_keep_size`.
+- **Topic retention**: Set Kafka topic retention to 7 days for replay capability; compact topics for keyed data.
+- **Idempotent sinks**: Use Delta Lake MERGE or PostgreSQL ON CONFLICT for idempotent replay.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| No watermark column | Full table scan every batch | Always include updated_at/version column |
+| CDC without schema history | Schema change breaks sink pipeline | Enable Debezium schema history topic |
+| No replication slot monitoring | WAL bloat kills source DB | Alert on replication lag slots |
+| Single connector for many tables | Connector restart rebuilds all tasks | One connector per table group (max 20 tables) |
+| Ignoring network latency | Replication lag across regions | Deploy connector in source region; replicate asynchronously |
+
+## Performance Optimization
+
+- **Parallel snapshots**: Parallelize initial snapshot by table partitioning (parallel Debezium snapshot modes).
+- **Batch sizing**: Tune Debezium `max.batch.size` to 2048 and `poll.interval.ms` to 500 for throughput.
+- **Compression**: Enable Kafka topic compression (zstd) for CDC topics; 60-70% size reduction.
+- **Sink parallelism**: Match sink connector tasks to source partitions for optimal throughput.
+- **Memory buffering**: Buffer CDC events in memory before batch write to sink; flush every 10k events or 1s.
+
+## Security Considerations
+
+- **Source credentials**: Use Debezium `database.history.store.only.monitored.tables`; rotate credentials via Vault.
+- **TLS encryption**: Enable TLS for all Kafka, Debezium, and database connections; mutual TLS for Kafka brokers.
+- **Data masking**: Mask sensitive columns at the Debezium level (`ExtractNewRecordState` + `MaskField` transform).
+- **Audit trail**: Log all replication configuration changes and schema drift events to SIEM.
+- **Network isolation**: Deploy connectors in private subnet; restrict egress to only source and sink endpoints.
+
 ## Handoff
 `data-cdc-patterns` for CDC-based replication (Debezium, Kafka Connect)
 `data-distributed-storage` for HDFS and object store replication

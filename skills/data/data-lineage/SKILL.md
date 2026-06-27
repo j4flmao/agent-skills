@@ -483,6 +483,112 @@ Data processing tool?
   - references/lineage-tools.md — Lineage Tools Integration Reference
   - references/lineage-visualization.md — Lineage Visualization
   - references/openlineage-integration.md — OpenLineage Integration
+## Architecture Decision Trees
+
+```
+Lineage Collection Strategy
+├── Extract from SQL queries?
+│   ├── Yes → SQL parser (sqlparse, sqllineage)
+│   └── No → Instrument Spark plan (OpenLineage)
+├── Real-time lineage needed?
+│   ├── Yes → OpenLineage via Kafka transport
+│   └── No → Batch lineage extraction from query logs
+├── Column-level granularity?
+│   ├── Yes → OpenLineage with column-level facets
+│   └── No → Table-level lineage (simpler storage)
+└── Multi-tool ecosystem?
+    ├── Yes → OpenLineage standard (Airflow, Spark, dbt)
+    └── No → Proprietary (Atlan, Datahub native)
+```
+
+**Decision criteria**: Balance lineage granularity, collection latency, and storage cost. Column-level lineage requires 10x more storage.
+
+## Implementation Patterns
+
+### OpenLineage Spark Listener
+```python
+# data_lineage/spark_listener.py
+from openlineage.spark import OpenLineageSparkListener
+from openlineage.client import OpenLineageClient
+from openlineage.client.transport import KafkaTransport
+
+class LineageReporter:
+    def __init__(self, topic: str, bootstrap_servers: str):
+        config = {"bootstrap.servers": bootstrap_servers}
+        transport = KafkaTransport(topic, config)
+        self.client = OpenLineageClient(transport=transport)
+
+    def enrich_metric(self, dataset: str, column: str, metric: dict):
+        self.client.emit(
+            event_type="ColumnMetric",
+            inputs=[{"namespace": "bigquery", "name": dataset}],
+            facets={"column_metric": {"column": column, **metric}}
+        )
+```
+
+### SQL Parser Lineage
+```python
+# data_lineage/sql_lineage.py
+from sqlparse import parse
+from sqllineage.runner import LineageRunner
+
+class SQLLineageExtractor:
+    def extract_column_lineage(self, sql: str) -> dict[str, list[str]]:
+        runner = LineageRunner(sql)
+        lineage = {}
+        for table_ref in runner.source_tables:
+            for col in table_ref.columns:
+                lineage.setdefault(str(table_ref), []).append(col.name)
+        return lineage
+
+    def build_lineage_graph(self, queries: list[str]) -> dict:
+        graph = {"nodes": set(), "edges": []}
+        for sql in queries:
+            runner = LineageRunner(sql)
+            for src in runner.source_tables:
+                graph["nodes"].add(str(src))
+            for tgt in runner.target_tables:
+                graph["nodes"].add(str(tgt))
+                for src in runner.source_tables:
+                    graph["edges"].append({"from": str(src), "to": str(tgt)})
+        return graph
+```
+
+## Production Considerations
+
+- **Storage scaling**: Store lineage in a graph DB (Neo4j) or document store (Elasticsearch) for query performance; TTL 90 days.
+- **Ingestion rate**: OpenLineage events can reach 10k/sec; use Kafka with partitioning by dataset.
+- **Deduplication**: Deduplicate lineage edges at write time using upsert semantics (graph DB merge).
+- **Visualization**: Render lineage as DAG with collapsible columns; color by data tier (bronze/silver/gold).
+- **Impact analysis**: Pre-compute downstream impact (× N degrees) for schema change alerts.
+- **Schema drift correlation**: Link lineage with schema registry to detect which downstream tables are affected by upstream changes.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Table-level lineage only | Can't pinpoint column-level impact | Add column-level facets where critical |
+| No deduplication in graph | Massive edge explosion | Merge identical edges; version timestamps |
+| Lineage without freshness | Stale lineage misleads users | Timestamp every lineage edge |
+| Ignoring Spark UI plan changes | Lineage breaks | Re-parse after Spark version upgrades |
+| No column masking in lineage | PII column names exposed | Strip PII column names from lineage graph |
+
+## Performance Optimization
+
+- **Graph indexing**: Index lineage graph on (source, target, timestamp) for fast impact analysis queries.
+- **Batch emit**: Buffer OpenLineage events and emit in batches of 100 to reduce Kafka load and cost.
+- **TTL partitioning**: Partition lineage storage by month; drop partitions older than retention period.
+- **Query acceleration**: Pre-aggregate lineage paths weekly for common impact analysis queries.
+- **Column pruning**: Store only columns that appear in WHERE/JOIN/GROUP BY for finer granularity.
+
+## Security Considerations
+
+- **Column sensitivity**: Tag sensitive columns in lineage with classification label (PII, PCI); strip from unprivileged views.
+- **Access controls**: Restrict lineage graph query API by role (analysts see table-level, engineers see column-level).
+- **Audit logging**: Log all lineage queries and export operations for data governance compliance.
+- **Encryption at rest**: Encrypt lineage graph storage (AES-256) and Kafka topics at rest.
+- **Input validation**: Validate OpenLineage event schema before ingestion; reject malformed events.
+
 ## Handoff
 `data-data-catalog` for metadata enrichment and dataset discovery
 `data-data-observability` for freshness and quality integration with lineage

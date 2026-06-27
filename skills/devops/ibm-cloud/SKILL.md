@@ -443,3 +443,256 @@ resource "ibm_en_destination" "pagerduty" {
 - `devops-hybrid-cloud` for connectivity between IBM Cloud and on-prem/other clouds.
 - `devops-backup-dr` for backup strategies using IBM Cloud services.
 - `devops-observability` for monitoring and logging integration with IBM Cloud.
+
+## Architecture Decision Trees
+
+### IBM Cloud IKS vs OpenShift
+
+| Decision | IKS (IBM Kubernetes Service) | OpenShift (ROKS) |
+|---|---|---|
+| Management | IBM-managed control plane | Red Hat managed |
+| Container runtime | containerd | CRI-O (OpenShift) |
+| Networking | IBM Cloud VLAN + Calico | OpenShift SDN (OVN-K8s) |
+| Developer tooling | kubectl, standard K8s | oc, Web Console, Operators |
+| Security | IBM Cloud IAM + RBAC | SCC + built-in cert rotation |
+| Best for | Standard K8s workloads | Enterprise, compliance-heavy |
+
+### Cloud Object Storage vs Block Storage
+
+| Aspect | COS (Object Storage) | Block Storage |
+|---|---|---|
+| Access | REST API (HTTP/S) | iSCSI volume mount |
+| Throughput | Scales with concurrent requests | Single volume limit |
+| Use case | Backup, archival, data lake | Databases, stateful apps |
+| Capacity | Effectively unlimited | Up to 2 TB per volume |
+| Cost | Low, pay-per-GB-stored | Higher, provisioned IOPS |
+
+## Implementation Patterns
+
+### Terraform: IBM Cloud VPC with IKS Cluster
+
+```hcl
+resource "ibm_is_vpc" "main" {
+  name = "production-vpc"
+}
+
+resource "ibm_is_subnet" "workers" {
+  count         = 3
+  name          = "workers-${count.index + 1}"
+  vpc           = ibm_is_vpc.main.id
+  zone          = "us-south-${count.index + 1}"
+  ipv4_cidr_block = cidrsubnet(var.vpc_cidr, 4, count.index)
+}
+
+resource "ibm_container_vpc_cluster" "iks" {
+  name              = "production-iks"
+  vpc_id            = ibm_is_vpc.main.id
+  worker_count      = 3
+  flavor            = "bx2.4x16"
+  kube_version      = "1.28"
+  update_all_workers = true
+  zones {
+    subnet_id = ibm_is_subnet.workers[0].id
+    name      = "us-south-1"
+  }
+  zones {
+    subnet_id = ibm_is_subnet.workers[1].id
+    name      = "us-south-2"
+  }
+  zones {
+    subnet_id = ibm_is_subnet.workers[2].id
+    name      = "us-south-3"
+  }
+}
+
+resource "ibm_resource_instance" "cos" {
+  name     = "app-backup-cos"
+  service  = "cloud-object-storage"
+  plan     = "standard"
+  location = "global"
+}
+```
+
+### Bash: IBM Cloud CLI Automation
+
+```bash
+#!/usr/bin/env bash
+ibmcloud_login() {
+  ibmcloud login --apikey "$IBM_CLOUD_API_KEY" -r us-south -g production
+}
+
+iks_credentials() {
+  local cluster=$1
+  ibmcloud ks cluster config --cluster "$cluster" --admin
+  export KUBECONFIG="${HOME}/.bluemix/plugins/container-service/clusters/${cluster}/kube-config-prod.yaml"
+}
+
+list_all_resources() {
+  ibmcloud resource service-instances --all-resource-groups \
+    --output json | jq -r '.[].name'
+}
+```
+
+## Production Considerations
+
+- Enable **IBM Cloud Activity Tracker** for all API events with LogDNA integration
+- Use **IAM trusted profiles** for compute resources instead of hardcoded service IDs
+- Deploy **IKS clusters** with at least 3 worker nodes across different zones for HA
+- Configure **IBM Cloud Backup** (Veeam-powered) for all block storage volumes
+- Enable **HSM** (IBM Cloud Hyper Protect Crypto Services) for FIPS 140-2 Level 3 key management
+- Use **Cloud Internet Services** (CIS) for DDoS protection and global load balancing
+- Implement **IBM Cloud Security and Compliance Center** for continuous posture assessment
+
+## Anti-Patterns
+
+- Using **classic infrastructure** (non-VPC) for new deployments — VPC is the future on IBM Cloud
+- Ignoring **IAM resource groups** — without them, RBAC becomes unmanageable at scale
+- Storing **API keys in source code** — use IBM Cloud Secrets Manager or IAM trusted profiles
+- Using **default worker pool** sizing — IOPS and memory profiles need workload-specific tuning
+- Skipping **Key Protect** — all data at rest should use customer-managed KMS keys
+- Over-provisioning **COS buckets** — plan bucket naming convention and lifecycle policies ahead
+- Managing **IPSec VPNs** manually — use IBM Cloud Transit Gateway for site-to-site connectivity
+
+## Performance Optimization
+
+- Use **IBM Cloud Hyper Protect Virtual Servers** for sensitive workloads requiring isolation
+- Enable **COS accelerate** configuration for high-throughput data transfer to compute regions
+- Choose **dedicated IBM Cloud hosts** for predictable performance in IKS clusters
+- Optimize **COS multipart uploads** with 100 MB part size for large file transfers
+- Use **CDN (Akamai via CIS)** for static asset delivery with POPs in every region
+- Right-size **IKS worker node flavors** — monitor CPU/memory and adjust worker pool instance types
+- Configure **IBM Cloud Databases for etcd** with autoscaling for K8s control plane durability
+
+## Security Considerations
+
+- Enable **IBM Cloud Flow Logs** on all VPC subnets for network traffic analysis
+- Use **IAM access groups** with least-privilege policies rather than per-user permissions
+- Rotate **IBM Cloud API keys** every 30 days and use short-lived IAM tokens in automation
+- Encrypt **COS buckets** with IBM Key Protect and enable Object Lock for immutability
+- Enable **Hyper Protect Crypto Services** for applications requiring HSM-backed keys
+- Deploy **IBM Cloud Internet Services** WAF for all web-facing applications
+- Audit **IAM policy changes** with Activity Tracker alerts for privilege escalation attempts
+## Implementation Patterns
+
+### Observer Pattern for Event Handling
+`
+interface EventObserver<T> {
+  onEvent(event: T): Promise<void>;
+}
+
+class EventBus<T> {
+  private observers: Set<EventObserver<T>> = new Set();
+  subscribe(observer: EventObserver<T>): void {
+    this.observers.add(observer);
+  }
+  unsubscribe(observer: EventObserver<T>): void {
+    this.observers.delete(observer);
+  }
+  async emit(event: T): Promise<void> {
+    const results = Array.from(this.observers).map(o => o.onEvent(event));
+    await Promise.allSettled(results);
+  }
+}
+`
+
+### Configuration-Driven Approach
+`
+config:
+  defaults:
+    timeout: 30s
+    retryCount: 3
+  overrides:
+    production:
+      timeout: 60s
+      retryCount: 5
+    development:
+      timeout: 300s
+      retryCount: 1
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Configuration validated against schema before startup
+- [ ] Health check endpoints registered and monitored
+- [ ] Graceful shutdown with draining period (30s timeout)
+- [ ] Resource limits configured (CPU, memory, file descriptors)
+- [ ] Log level set appropriate for environment
+- [ ] Metrics endpoint secured and exposed
+- [ ] Rate limiting configured per-tier
+- [ ] TLS certificates valid and auto-renewing
+- [ ] Database migrations run as separate deployment step
+- [ ] Feature flags ready for gradual rollout
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% over 5min | Critical | Page on-call |
+| p99 latency | > 2s over 5min | Warning | Investigate |
+| Throughput drop | > 50% over 1min | Critical | Check upstream |
+| Queue depth | > 1000 over 1min | Warning | Scale consumers |
+| Disk usage | > 85% | Warning | Clean or expand |
+| Memory usage | > 90% heap | Critical | Restart or scale |
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Root Cause | Solution |
+|-------------|---------|------------|----------|
+| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
+| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
+| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
+| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
+
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+## Rules
+- Default-deny security posture — allow only explicitly required access.
+- All inputs validated, all outputs encoded, all errors handled.
+- Defend in depth — multiple layers of security controls.
+- Fail securely — errors default to safe behavior.
+- Log security-relevant events for audit and investigation.
+- Keep dependencies updated — automate vulnerability scanning.
+- Design for observability from day one, not as an afterthought.
+- Document all architectural decisions with rationale.
+- Review code for security, performance, and correctness before merging.

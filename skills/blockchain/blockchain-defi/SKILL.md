@@ -434,5 +434,118 @@ interface CowOrder {
   - references/defi-flash-loans.md — Flash Loan Attack Patterns
   - references/mev-in-defi.md — MEV in DeFi Protocols
 
+## Architecture Decision Trees
+
+```
+DeFi Protocol Design
+├── Protocol type?
+│   ├── DEX → AMM (Uniswap v2/v3, Curve) / Orderbook (dYdX, Serum)
+│   ├── Lending → Pool-based (Aave, Compound) / Isolated (Morpho)
+│   ├── Yield → Vault strategy (Yearn) / Auto-compounder
+│   └── Derivatives → Perpetuals (GMX, Synthetix) / Options (Opyn)
+├── AMM curve?
+│   ├── Constant product → x*y=k (Uniswap v2) — simple, capital inefficient
+│   ├── Concentrated liquidity → Uniswap v3 — capital efficient, complex
+│   └── Stable swap → Curve — low slippage for stable pairs
+├── Oracle dependency?
+│   ├── Critical → Chainlink TWAP + Uniswap TWAP fallback
+│   ├── Moderate → Chainlink with circuit breaker
+│   └── None → Internal oracle (on-chain TWAP)
+└── Liquidity incentive model?
+    ├── Liquidity mining → Token rewards per LP share
+    ├── Fee sharing → Protocol revenue distributed to LPs
+    └── veToken → Vote-escrowed token for fee direction
+```
+
+**Decision criteria**: Evaluate capital efficiency needs, gas costs, oracle risk, and liquidity bootstrapping strategy.
+
+## Implementation Patterns
+
+### Uniswap V2 Style AMM
+```solidity
+// blockchain-defi/contracts/AMM.sol
+pragma solidity ^0.8.20;
+
+contract SimpleAMM {
+    uint256 public reserve0;
+    uint256 public reserve1;
+
+    function swap(uint256 amount0In, uint256 amount1In, uint256 amount0Out, uint256 amount1Out) external {
+        require(amount0Out > 0 || amount1Out > 0, "No output");
+        require(amount0Out < reserve0 && amount1Out < reserve1, "Insufficient liquidity");
+        uint256 balance0 = reserve0 + amount0In - amount0Out;
+        uint256 balance1 = reserve1 + amount1In - amount1Out;
+        require(balance0 * balance1 >= reserve0 * reserve1, "K invariant");
+        reserve0 = balance0;
+        reserve1 = balance1;
+    }
+
+    function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut) external pure returns (uint256) {
+        uint256 amountInWithFee = amountIn * 997;
+        uint256 numerator = amountInWithFee * reserveOut;
+        uint256 denominator = reserveIn * 1000 + amountInWithFee;
+        return numerator / denominator;
+    }
+}
+```
+
+### Lending Pool
+```solidity
+// blockchain-defi/contracts/LendingPool.sol
+contract LendingPool {
+    mapping(address => uint256) public deposits;
+    mapping(address => uint256) public borrows;
+    uint256 public totalLiquidity;
+    uint256 public utilizationRate;
+
+    function deposit() external payable {
+        deposits[msg.sender] += msg.value;
+        totalLiquidity += msg.value;
+        utilizationRate = totalBorrows * 1e18 / totalLiquidity;
+    }
+
+    function borrow(uint256 amount) external {
+        require(amount <= getMaxBorrow(msg.sender), "Exceeds borrow limit");
+        borrows[msg.sender] += amount;
+        totalBorrows += amount;
+        payable(msg.sender).transfer(amount);
+    }
+}
+```
+
+## Production Considerations
+
+- **Liquidation monitoring**: Monitor positions with health factor < 1.2; trigger liquidation at 1.0.
+- **Oracle freshness**: Alert on oracle price staleness (> 2 hours); pause borrowing if stale.
+- **Slippage protection**: Set max slippage per transaction (0.5% default for major pairs).
+- **MEV protection**: Implement commit-reveal or batch auctions for large liquidations.
+- **Emergency withdrawal**: Pause deposits/borrows during incidents; allow withdrawals only.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Single oracle source | Manipulation via flash loans | Use TWAP + multiple oracle sources |
+| No min borrow amount | Dust positions, gas waste | Set minimum borrow (e.g., 0.1 ETH) |
+| Incorrect fee calculation | Value leakage or overcharging | Use 0.30% standard; verify with reference |
+| No health check in withdraw | Protocol insolvency | Revert if withdraw causes insolvency |
+| Centralized pause authority | Censorship risk | Multisig + timelock for pausing |
+
+## Performance Optimization
+
+- **Batch liquidations**: Process liquidations in batches to amortize gas costs across multiple positions.
+- **Storage optimization**: Pack borrowing variables tightly; use uint112 for balances.
+- **Flash loans integration**: Integrate flash loans for arbitrage to increase trading volume.
+- **Concentrated liquidity**: Use Uniswap v3 style for capital efficiency in specific price ranges.
+- **Gas token usage**: Refund unused gas with EIP-3298 (removed in London); optimize with EIP-1559.
+
+## Security Considerations
+
+- **Reentrancy**: Apply `ReentrancyGuard` on all withdraw/borrow/repay functions.
+- **Oracle manipulation**: Use TWAP (30 min) for critical price feeds; circuit breaker on > 5% deviation.
+- **Flash loan attacks**: Check price deviation against multiple sources; use time-weighted prices.
+- **Economic security**: Formal verification of liquidation math; fuzz testing for edge cases.
+- **Composability risk**: Audit integration points with external protocols; whitelist allowed adapters.
+
 ## Phase
 blockchain → blockchain-defi

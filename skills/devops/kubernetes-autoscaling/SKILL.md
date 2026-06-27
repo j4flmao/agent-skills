@@ -478,3 +478,296 @@ spec:
 After completing this skill:
 - Next skill: **devops-apm-observability** — Observability to monitor and inform autoscaling
 - Pass context: HPA metric names, VPA recommendations, Keda scaler configuration, node group names
+
+## Architecture Decision Trees
+
+### HPA vs VPA vs KEDA
+
+| Decision | HPA (Horizontal) | VPA (Vertical) | KEDA (Event-driven) |
+|---|---|---|---|
+| Scaling dimension | Replica count | CPU/Memory requests | Replica count |
+| Metric source | CPU, memory, custom metrics | CPU, memory | 50+ event sources (Kafka, Prometheus, SQS) |
+| Response time | ~30-60s | ~60-180s (restart required) | ~5-15s |
+| Use case | Web apps, stateless | Stateful, batch | Queue-based, event-driven |
+| Coordination | Works with CA | Conflicts with HPA | Works with CA + HPA |
+| Recommendation | Default for most workloads | Long-lived pods with variable needs | Serverless-style, async workloads |
+
+### Cluster Autoscaler vs Karpenter
+
+| Aspect | Cluster Autoscaler | Karpenter |
+|---|---|---|
+| Provisioning | Node group → ASG → instance | Direct instance from cloud API |
+| Scale-up speed | Minutes (ASG warm-up) | Seconds (direct launch) |
+| Scheduling | Pending pod → node group match | Pending pod → optimal instance type |
+| Consolidation | Slow (scale-down cooldown) | Aggressive (continuous consolidation) |
+| Instance diversity | Limited to ASG config | Wide (any instance family/size) |
+
+## Implementation Patterns
+
+### YAML: HPA with Custom Prometheus Metrics
+
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: app-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: app
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Pods
+      pods:
+        metric:
+          name: requests_per_second
+        target:
+          type: AverageValue
+          averageValue: 500
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 20
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+        - type: Pods
+          value: 4
+          periodSeconds: 30
+      selectPolicy: Max
+```
+
+### YAML: KEDA ScaledObject for RabbitMQ Queue
+
+```yaml
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker-scaler
+spec:
+  scaleTargetRef:
+    name: worker
+  minReplicaCount: 1
+  maxReplicaCount: 50
+  triggers:
+    - type: rabbitmq
+      metadata:
+        protocol: amqp
+        queueName: tasks
+        mode: QueueLength
+        value: "10"
+        activationValue: "1"
+      authenticationRef:
+        name: rabbitmq-auth
+  fallback:
+    failureThreshold: 5
+    replicas: 5
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 60
+```
+
+### Bash: Cluster Autoscaler Simulation
+
+```bash
+#!/usr/bin/env bash
+simulate_scale_up() {
+  local deployment=$1
+  local replicas=$2
+
+  kubectl scale deployment "$deployment" --replicas="$replicas"
+
+  # Watch pending pods
+  while true; do
+    PENDING=$(kubectl get pods -l app="$deployment" --field-selector status.phase=Pending -o json | jq '.items | length')
+    RUNNING=$(kubectl get pods -l app="$deployment" --field-selector status.phase=Running -o json | jq '.items | length')
+    echo "Pending: $PENDING, Running: $RUNNING"
+
+    if [ "$PENDING" -eq 0 ] && [ "$RUNNING" -ge "$replicas" ]; then
+      echo "Scale-up complete"
+      break
+    fi
+    sleep 5
+  done
+}
+```
+
+## Production Considerations
+
+- Set **PodDisruptionBudget** (PDB) on every workload when using cluster autoscaler — prevents full eviction
+- Configure **cluster-autoscaler** `--scale-down-unneeded-time` to 10m for prod, 5m for dev
+- Use **topology spread constraints** to distribute pods across zones when using node autoscaler
+- Set **resource requests = limits** for burstable workloads to avoid VPA conflicts with HPA
+- Enable **cluster-proportional-autoscaler** for DNS and addon components
+- Monitor **HPA readiness** — an unhealthy pod under HPA doesn't count toward metrics
+- Use **predictive autoscaling** (Kubernetes Event-driven Autoscaling with forecasting) for slow-moving metrics
+
+## Anti-Patterns
+
+- Setting **HPA minReplicas = 1** for production — always run at least 2 for availability
+- Using **VPA in Auto mode** with HPA on the same deployment — they conflict and cause thrashing
+- Ignoring **disruption budgets** — cluster autoscaler scale-down evicts pods without PDB
+- Scaling on **stale metrics** — HPA uses averaged values; short spikes are smoothed out
+- Setting **identical behavior** for scale-up and scale-down — scale-up should be fast, scale-down slow
+- Over-scaling **with too-sensitive thresholds** — frequent scaling causes API server and pod churn
+- Forgetting to **pre-warm node pools** — predictable traffic spikes should pre-scale nodes before pods arrive
+
+## Performance Optimization
+
+- Use **Karpenter** over Cluster Autoscaler for faster instance provisioning and consolidation
+- Enable **spot instances** for workloads with PDB, using Karpenter's `spot-to-price` diversity
+- Set **HPA sync period** (`--horizontal-pod-autoscaler-sync-period`) to 10s for faster reaction
+- Use **Cron-based HPA** for predictable load patterns (lunch rush, batch processing windows)
+- Optimize **container start time** — small images, init containers in parallel, no blocking probes
+- Pre-pull **sidecar images** with `kubernetes-image-puller` to speed up scale-up
+- Tune **kubelet `--kube-reserved`** and `--system-reserved` to give autoscaler accurate capacity info
+
+## Security Considerations
+
+- Restrict **Cluster Autoscaler** IAM permissions to only modify node groups in the same account
+- Enable **Pod Identity / IRSA** for KEDA scalers so they authenticate to queues without long-lived creds
+- Audit **scaling events** with Kubernetes audit logs — who or what triggered a scale action
+- Set **PodSecurity admission** on scaled workloads to prevent privileged pods in autoscaled namespaces
+- Use **Secrets Store CSI** for KEDA authentication instead of plaintext K8s secrets
+- Limit **HPA resource metrics** to prevent information leak — don't expose internal metrics to unauthenticated sources
+- Pin **KEDA and Cluster Autoscaler** versions and scan container images for vulnerabilities
+## Implementation Patterns
+
+### Observer Pattern for Event Handling
+`
+interface EventObserver<T> {
+  onEvent(event: T): Promise<void>;
+}
+
+class EventBus<T> {
+  private observers: Set<EventObserver<T>> = new Set();
+  subscribe(observer: EventObserver<T>): void {
+    this.observers.add(observer);
+  }
+  unsubscribe(observer: EventObserver<T>): void {
+    this.observers.delete(observer);
+  }
+  async emit(event: T): Promise<void> {
+    const results = Array.from(this.observers).map(o => o.onEvent(event));
+    await Promise.allSettled(results);
+  }
+}
+`
+
+### Configuration-Driven Approach
+`
+config:
+  defaults:
+    timeout: 30s
+    retryCount: 3
+  overrides:
+    production:
+      timeout: 60s
+      retryCount: 5
+    development:
+      timeout: 300s
+      retryCount: 1
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Configuration validated against schema before startup
+- [ ] Health check endpoints registered and monitored
+- [ ] Graceful shutdown with draining period (30s timeout)
+- [ ] Resource limits configured (CPU, memory, file descriptors)
+- [ ] Log level set appropriate for environment
+- [ ] Metrics endpoint secured and exposed
+- [ ] Rate limiting configured per-tier
+- [ ] TLS certificates valid and auto-renewing
+- [ ] Database migrations run as separate deployment step
+- [ ] Feature flags ready for gradual rollout
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% over 5min | Critical | Page on-call |
+| p99 latency | > 2s over 5min | Warning | Investigate |
+| Throughput drop | > 50% over 1min | Critical | Check upstream |
+| Queue depth | > 1000 over 1min | Warning | Scale consumers |
+| Disk usage | > 85% | Warning | Clean or expand |
+| Memory usage | > 90% heap | Critical | Restart or scale |
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Root Cause | Solution |
+|-------------|---------|------------|----------|
+| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
+| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
+| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
+| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
+
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+## Rules
+- Default-deny security posture — allow only explicitly required access.
+- All inputs validated, all outputs encoded, all errors handled.
+- Defend in depth — multiple layers of security controls.
+- Fail securely — errors default to safe behavior.
+- Log security-relevant events for audit and investigation.
+- Keep dependencies updated — automate vulnerability scanning.
+- Design for observability from day one, not as an afterthought.
+- Document all architectural decisions with rationale.
+- Review code for security, performance, and correctness before merging.

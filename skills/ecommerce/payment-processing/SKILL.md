@@ -446,12 +446,116 @@ Practice 8: Implement gateway failover for critical payments. If primary gateway
 | 3 | 20k-1M/year | SAQ + ASV scan quarterly, annual self-assessment |
 | 4 | < 20k/year | SAQ (self-assessment), ASV scan quarterly |
 
-## References
-  - references/checkout-optimization.md -- Checkout Optimization
-  - references/gateway-patterns.md -- Payment Gateway Integration Patterns
-  - references/payment-processing-advanced.md -- Payment Processing Advanced Topics
-  - references/payment-processing-fundamentals.md -- Payment Processing Fundamentals
-  - references/payment-security.md -- Payment Security
-  - references/pci-dss-guide.md -- PCI DSS Compliance Guide
-  - references/stripe-integration.md -- Stripe Integration
-  - references/subscription-billing.md -- Subscription Billing
+## Implementation Patterns
+
+### Pattern: Gateway Abstraction Layer
+
+```typescript
+interface PaymentGateway {
+  createPaymentIntent(params: PaymentIntentParams): Promise<PaymentIntentResult>;
+  capturePayment(paymentId: string, amount?: number): Promise<CaptureResult>;
+  refundPayment(paymentId: string, amount?: number): Promise<RefundResult>;
+  getPaymentStatus(paymentId: string): Promise<PaymentStatus>;
+}
+
+class StripeAdapter implements PaymentGateway {
+  async createPaymentIntent(params: PaymentIntentParams): Promise<PaymentIntentResult> {
+    const intent = await stripe.paymentIntents.create({
+      amount: Math.round(params.amount * 100),
+      currency: params.currency.toLowerCase(),
+      payment_method_types: ['card'],
+      metadata: { orderId: params.orderId },
+      idempotencyKey: params.idempotencyKey,
+    });
+    return { id: intent.id, clientSecret: intent.client_secret, status: intent.status };
+  }
+
+  async capturePayment(paymentId: string, amount?: number): Promise<CaptureResult> {
+    const intent = await stripe.paymentIntents.capture(paymentId, { amount_to_capture: amount ? Math.round(amount * 100) : undefined });
+    return { id: intent.id, status: intent.status, amountCaptured: intent.amount_received / 100 };
+  }
+
+  async refundPayment(paymentId: string, amount?: number): Promise<RefundResult> {
+    const refund = await stripe.refunds.create({ payment_intent: paymentId, amount: amount ? Math.round(amount * 100) : undefined });
+    return { id: refund.id, status: refund.status, amount: refund.amount / 100 };
+  }
+}
+```
+
+### Pattern: Webhook Idempotent Handler
+
+```typescript
+async function handleStripeWebhook(req: Request, res: Response): Promise<void> {
+  const sig = req.headers['stripe-signature'];
+  const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+
+  // Idempotency check
+  const processed = await ProcessedEvent.findOne({ eventId: event.id });
+  if (processed) { res.json({ received: true }); return; }
+
+  await db.transaction(async (trx) => {
+    await ProcessedEvent.create({ eventId: event.id, handledAt: new Date() });
+
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        await OrderService.markPaid(event.data.object.metadata.orderId);
+        break;
+      case 'payment_intent.payment_failed':
+        await OrderService.markFailed(event.data.object.metadata.orderId, event.data.object.last_payment_error?.message);
+        break;
+      case 'charge.refunded':
+        await OrderService.markRefunded(event.data.object.metadata.orderId);
+        break;
+    }
+  });
+
+  res.json({ received: true });
+}
+```
+
+## Production Considerations
+
+### Payment Operations
+- Idempotency keys stored for 48 hours. TTL matches gateway idempotency window.
+- Webhook retry: gateway retries webhook delivery up to 3 times over 24 hours. Log every attempt.
+- Payment reconciliation runs at midnight UTC. Matches gateway settlement report against internal records.
+- Gateway failover: if primary gateway 5xx > 2% in 5 minutes, route to secondary. Health check every 30 seconds.
+
+### Compliance Operations
+- PCI DSS SAQ A (most common for hosted fields): self-assessment questionnaire. ASV scan quarterly.
+- Card data handling: NEVER log card numbers, CVV, or track data. Mask in logs: `****` + last 4.
+- Data retention: transaction records kept 7 years for tax/audit. Token references kept indefinitely.
+- KYC records for high-risk merchants: retain for 5 years after account closure.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| Synchronous payment in HTTP request | Blocks server for 5-30s on 3DS. Timeouts. | Async payment flow. Webhook confirms completion. |
+| Storing full card number | PCI SAQ D scope. Massive compliance burden. | Client-side tokenization. Save only gateway token. |
+| No webhook idempotency | Duplicate events double-charge customer. | Store processed event IDs. Reject duplicates. |
+| Ignoring gateway error codes | "card_declined" vs "insufficient_funds" need different UX. | Map gateway codes to user-facing messages. |
+| Single payment method | Customer with only Amex can't pay on Visa-only setup. | Support at least credit card + digital wallet. |
+
+## Performance Optimization
+
+- Payment intent creation: pre-create intents for known amounts (subscription renewals) via batch Stripe API.
+- Webhook processing: process in background queue. Return 200 immediately to gateway.
+- Read replicas for transaction history queries. Primary for writes only.
+- Cache gateway fee schedules (updated daily, not per-transaction).
+- Batch reconciliation: match 500 transactions per API call instead of 1-by-1.
+- Connection pooling for Stripe API: keepalive enabled, max 25 connections per worker.
+- Paginate Stripe API responses for large transaction exports. Use starting_after cursor.
+
+## Security Considerations
+
+- PCI DSS requirement 3: stored PAN must be unreadable (tokenization, encryption, truncation, hashing).
+- Requirement 4: encrypt transmission of cardholder data over open networks (TLS 1.2+).
+- Requirement 6: develop and maintain secure systems. Patch payment systems within 30 days of critical patch.
+- Requirement 7: restrict access to cardholder data by business need-to-know.
+- Requirement 10: track and monitor all access to cardholder data. Log: user, timestamp, action, resource.
+- Requirement 11: regularly test security systems. ASV scan quarterly. Penetration test annually.
+- Tokenization flow: card data → gateway token → your server (never card data). Token is useless if breached.
+- 3D Secure (SCA): required for EU transactions. Exemption for low-risk, low-value, or recurring.
+- Fraud monitoring: velocity check (X attempts/hour), AVS mismatch, IP geo mismatch, card BIN country mismatch.
+- Chargeback prevention: clear descriptor, delivery confirmation for physical goods, customer support contact visible.

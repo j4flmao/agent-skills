@@ -443,3 +443,128 @@ Classical ML vs rule-based: rule-based systems are fully interpretable but don't
 ## Handoff
 `ml-deep-learning` for deep learning/neural network methods
 `ml-feature-engineering` for feature extraction and selection
+
+## Architecture Decision Trees
+
+### Algorithm Selection
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Problem type | Regression (continuous output) | Classification (discrete labels) | Target variable type |
+| Data size | Small (<10k samples) → LR/SVM kernel | Large (>100k) → RF/XGBoost/LightGBM | Training time, performance needs |
+| Interpretability | Linear/Logistic Regression (glassbox) | XGBoost/Random Forest (blackbox) | Regulatory requirements, debugging needs |
+| Linearity | Linear methods (if data is linear) | Tree-based/Kernel (if non-linear) | Feature-target relationship |
+
+### Preprocessing Decision Tree
+- Missing values few → Impute (mean/median/mode)
+- Missing values many → Flag + impute, or drop feature
+- Categorical low cardinality → One-hot encode
+- Categorical high cardinality → Target encoding or embedding
+- Skewed numeric → Log/Box-Cox transform
+- Different scales → StandardScaler or MinMaxScaler
+
+## Implementation Patterns
+
+### End-to-End Classification Pipeline
+`python
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import cross_val_score
+import pandas as pd
+
+numeric_features = ['age', 'income', 'score']
+categorical_features = ['region', 'plan_type']
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), numeric_features),
+        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
+    ])
+
+pipeline = Pipeline([
+    ('preprocessor', preprocessor),
+    ('classifier', RandomForestClassifier(
+        n_estimators=200, max_depth=10, random_state=42
+    ))
+])
+
+pipeline.fit(X_train, y_train)
+cv_scores = cross_val_score(pipeline, X_train, y_train, cv=5, scoring='f1_macro')
+print(f'CV F1: {cv_scores.mean():.3f} +/- {cv_scores.std():.3f}')
+`
+
+### XGBoost with Hyperparameter Tuning
+`python
+import xgboost as xgb
+from sklearn.model_selection import RandomizedSearchCV
+
+param_grid = {
+    'max_depth': [3, 5, 7, 9],
+    'learning_rate': [0.01, 0.05, 0.1, 0.3],
+    'n_estimators': [100, 200, 300],
+    'subsample': [0.6, 0.8, 1.0],
+    'colsample_bytree': [0.6, 0.8, 1.0]
+}
+
+xgb_model = xgb.XGBClassifier(
+    objective='binary:logistic',
+    eval_metric='auc',
+    early_stopping_rounds=20,
+    random_state=42
+)
+
+search = RandomizedSearchCV(
+    xgb_model, param_grid,
+    n_iter=50, cv=5,
+    scoring='roc_auc',
+    n_jobs=-1, verbose=1
+)
+search.fit(X_train, y_train, eval_set=[(X_val, y_val)])
+`
+
+## Production Considerations
+
+### Model Deployment
+- **Versioning**: Version both model artifacts and preprocessing pipeline. Use MLflow or DVC for model registry.
+- **Feature validation**: Validate input features match training schema. Reject inference requests with missing/out-of-range features.
+- **Prediction monitoring**: Track prediction distribution drift vs training. Alert when serving distribution deviates significantly.
+
+### Infrastructure
+- **Scaling**: Batch predictions via async workers or streaming. Real-time predictions via REST endpoint with autoscaling.
+- **Latency**: Set latency budgets (p99 < 100ms for real-time). Pre-compute predictions for slow features.
+- **Fallback**: Serve cached predictions when model is unavailable. Degrade gracefully to simpler baseline model.
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Solution |
+|---|---|---|
+| Data leakage | Unrealistically high CV scores | Use pipelines, never fit on full data before split |
+| Target encoding without regularization | Overfitting to rare categories | Use smoothing (e.g., CatBoost ordered encoding) |
+| Ignoring class imbalance | High accuracy but zero recall on minority class | Use class weights, SMOTE, or specialized sampling |
+| P-hacking features | Overfit on spurious correlations | Use feature selection with cross-validation |
+| One-hot encoding high cardinality | Exploding feature space | Use target encoding, embeddings, or feature hashing |
+
+## Performance Optimization
+
+### Training Speed
+- **GPU acceleration**: Use cuML/RAPIDS for GPU-accelerated classical ML. Can achieve 10-50x speedup over CPU sklearn.
+- **Feature selection**: Remove features with zero importance after first model run. Use SelectFromModel with threshold.
+- **Early stopping**: Use early stopping for gradient boosting. Monitor validation metric, stop when no improvement for N rounds.
+
+### Inference Speed
+- **Model distillation**: Train smaller student model on teacher predictions. Reduce inference time 5-10x with minimal accuracy loss.
+- **Tree pruning**: Reduce tree depth in XGBoost/LightGBM. Prune trees by removing low-importance splits.
+- **Feature caching**: Cache preprocessed features. Avoid redundant computation for repeated values.
+
+## Security Considerations
+
+### Model Security
+- **Adversarial robustness**: Test model against adversarially perturbed inputs. Evaluate feature importance for vulnerability assessment.
+- **Model theft**: Monitor API access patterns to detect extraction attacks. Rate-limit predictions, add random noise to outputs.
+- **Membership inference**: Ensure training data cannot be reconstructed. Apply differential privacy for sensitive datasets.
+
+### Data Security
+- **PII in features**: Scrub PII from training data. Use data masking or tokenization for sensitive features.
+- **Model artifacts**: Encrypt serialized models containing sensitive patterns. Use access control on model registry.
+- **Audit trail**: Log all predictions with request ID and timestamp. Enable post-hoc investigation of model decisions.

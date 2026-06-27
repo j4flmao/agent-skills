@@ -409,3 +409,122 @@ Every keystroke in a controlled input re-renders the entire form. Use React Hook
 ## Handoff
 
 If form requires multi-step wizard with persisted draft state or server-side draft saving, flag for backend handoff. Otherwise deliver complete form implementation with schema, fields, validation, and submission handler.
+## Implementation Patterns
+
+### Observer Pattern for Event Handling
+`
+interface EventObserver<T> {
+  onEvent(event: T): Promise<void>;
+}
+
+class EventBus<T> {
+  private observers: Set<EventObserver<T>> = new Set();
+  subscribe(observer: EventObserver<T>): void {
+    this.observers.add(observer);
+  }
+  unsubscribe(observer: EventObserver<T>): void {
+    this.observers.delete(observer);
+  }
+  async emit(event: T): Promise<void> {
+    const results = Array.from(this.observers).map(o => o.onEvent(event));
+    await Promise.allSettled(results);
+  }
+}
+`
+
+### Configuration-Driven Approach
+`
+config:
+  defaults:
+    timeout: 30s
+    retryCount: 3
+  overrides:
+    production:
+      timeout: 60s
+      retryCount: 5
+    development:
+      timeout: 300s
+      retryCount: 1
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Configuration validated against schema before startup
+- [ ] Health check endpoints registered and monitored
+- [ ] Graceful shutdown with draining period (30s timeout)
+- [ ] Resource limits configured (CPU, memory, file descriptors)
+- [ ] Log level set appropriate for environment
+- [ ] Metrics endpoint secured and exposed
+- [ ] Rate limiting configured per-tier
+- [ ] TLS certificates valid and auto-renewing
+- [ ] Database migrations run as separate deployment step
+- [ ] Feature flags ready for gradual rollout
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% over 5min | Critical | Page on-call |
+| p99 latency | > 2s over 5min | Warning | Investigate |
+| Throughput drop | > 50% over 1min | Critical | Check upstream |
+| Queue depth | > 1000 over 1min | Warning | Scale consumers |
+| Disk usage | > 85% | Warning | Clean or expand |
+| Memory usage | > 90% heap | Critical | Restart or scale |
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Root Cause | Solution |
+|-------------|---------|------------|----------|
+| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
+| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
+| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
+| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+## Architecture Decision Trees
+
+### Form Library Decision Tree
+```
+Is the form simple (login, search, contact)?
+  ├── Yes → Native HTML form with validation + framework bindings
+  └── No  → Does it need complex validation (cross-field, async)?
+       ├── Yes → React Hook Form + Zod/Yup, or Formik
+       └── No  → React Hook Form (minimal re-renders)
+            Is the form multi-step (wizard)?
+            ├── Yes → Step context provider + persisted draft state
+            └── No  → Single-page form with sections
+```
+
+### Validation Strategy Decision Tree
+```
+Can validation be done client-side only?
+  ├── Yes → Zod schema validation on submit + onChange
+  └── No  → Is the validation async (API call)?
+       ├── Yes → validate onBlur to avoid excessive API calls
+       └── No  → Sync validation with debounced schema check
+            Need cross-field validation?
+            ├── Yes → Schema refinement (zod.refine) or custom validator
+            └── No  → Per-field validation rules
+```

@@ -402,6 +402,109 @@ Relational vs NoSQL: relational databases provide ACID transactions, strong cons
   - references/query-optimization.md — Query Optimization
   - references/relational-database-query-optimization.md — Query Optimization Deep Dive
   - references/relational-database-high-availability.md — High Availability Reference
+## Architecture Decision Trees
+
+```
+Relational Database Selection
+├── Transaction volume?
+│   ├── High (10k+ write tps) → PostgreSQL / MySQL with connection pooling
+│   ├── Very high (100k+ tps) → CockroachDB / Yugabyte (distributed SQL)
+│   └── Low (< 1k tps) → SQLite / Single-node PostgreSQL
+├── Consistency requirements?
+│   ├── Strong consistency → PostgreSQL / MySQL (single-primary)
+│   ├── Eventual → Distributed SQL (CockroachDB, TiDB)
+│   └── Configurable → Yugabyte (tunable consistency)
+├── Geo-distributed reads?
+│   ├── Yes → CockroachDB (global distribution, follower reads)
+│   └── No → Single-region PostgreSQL / MySQL
+└── Managed or self-hosted?
+    ├── Managed → RDS / Cloud SQL / Aurora
+    └── Self-hosted → PostgreSQL on K8s (CloudNativePG, Patroni)
+```
+
+**Decision criteria**: Evaluate throughput, consistency, geo-distribution, and operational team capacity.
+
+## Implementation Patterns
+
+### PostgreSQL Partitioning & Indexing
+```sql
+-- relational_database/orders_partitioning.sql
+CREATE TABLE orders (
+    order_id BIGSERIAL,
+    customer_id INTEGER NOT NULL,
+    order_date DATE NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending'
+) PARTITION BY RANGE (order_date);
+
+CREATE TABLE orders_2024_q1 PARTITION OF orders
+    FOR VALUES FROM ('2024-01-01') TO ('2024-04-01');
+CREATE TABLE orders_2024_q2 PARTITION OF orders
+    FOR VALUES FROM ('2024-04-01') TO ('2024-07-01');
+
+CREATE INDEX idx_orders_customer_date ON orders (customer_id, order_date DESC);
+CREATE INDEX idx_orders_status ON orders (status) WHERE status IN ('pending', 'processing');
+```
+
+### Connection Pooling Pattern
+```python
+# relational_database/connection_pool.py
+from psycopg2 import pool
+from contextlib import contextmanager
+
+class DatabasePool:
+    def __init__(self, dsn: str, min_conn: int = 4, max_conn: int = 20):
+        self.pool = pool.ThreadedConnectionPool(min_conn, max_conn, dsn)
+
+    @contextmanager
+    def get_connection(self):
+        conn = self.pool.getconn()
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            self.pool.putconn(conn)
+```
+
+## Production Considerations
+
+- **Backup strategy**: Use pgBackRest or WAL-G for PostgreSQL; PITR with 7-day window; test restore monthly.
+- **High availability**: Deploy Patroni/Stolon for auto-failover; 3-node cluster with synchronous replication.
+- **Migration management**: Use Sqitch or Flyway for versioned schema migrations; zero-downtime via `CREATE INDEX CONCURRENTLY`.
+- **Query monitoring**: Log slow queries (> 100ms) via `auto_explain`; monitor with pg_stat_statements.
+- **Vacuum tuning**: Set auto-vacuum thresholds per table; monitor bloat with pgstattuple extension.
+- **Resource limits**: Set PostgreSQL `max_connections = max_worker_processes * 2`; use PgBouncer for connection pooling.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| No connection pooling | Connection storm kills DB | Deploy PgBouncer / RDS Proxy |
+| SELECT * in production apps | Unnecessary I/O, no index usage | Always specify columns |
+| Missing foreign key indexes | Lock escalation on DELETE/UPDATE | Index all FK columns |
+| Running VACUUM FULL regularly | Table bloat + downtime during reindex | Use `pg_repack` instead |
+| Ignoring `EXPLAIN ANALYZE` | Persistent slow queries | Profile every query before deploy |
+
+## Performance Optimization
+
+- **Index strategy**: B-tree for equality/range; GiST for full-text/geospatial; BRIN for time-series on ordered data.
+- **Partial indexes**: Use `WHERE` clause partial indexes for sparse query patterns (e.g., only active orders).
+- **Covering indexes**: Use `INCLUDE` clause to create covering indexes for index-only scans.
+- **Materialized views**: Refresh mviews for expensive aggregations (daily/hourly); concurrent refresh to avoid lock.
+- **Partition pruning**: Ensure WHERE clauses align with partition keys for full partition elimination.
+
+## Security Considerations
+
+- **Authentication**: Use `scram-sha-256` for PostgreSQL password auth; disable `trust` and `md5` in production.
+- **SSL/TLS**: Enforce SSL for all client connections; set `ssl_min_protocol_version = 'TLSv1.3'`.
+- **Row-level security**: Enable RLS on multi-tenant tables; policy based on `current_setting('app.tenant_id')`.
+- **Audit logging**: Enable `pgaudit` extension; log all DDL and DML on sensitive tables.
+- **Encryption at rest**: Use TDE or disk-level encryption (LUKS, EBS encryption) for database storage.
+- **Secret rotation**: Rotate DB passwords every 90 days; use Vault for dynamic credentials (short-lived leases).
+
 ## Handoff
 `data-etl-pipeline` for loading data into relational schemas
 `data-data-warehouse` for dimensional modeling from relational sources

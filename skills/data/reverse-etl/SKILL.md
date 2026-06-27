@@ -436,6 +436,123 @@ Destination type?
   - references/reverse-etl-patterns.md — Reverse ETL Patterns
   - references/sync-config-examples.md — Sync Configuration Examples
   - references/warehouse-activation.md — Warehouse Activation Reference
+## Architecture Decision Trees
+
+```
+Reverse ETL Tool Selection
+├── SaaS tool or self-built?
+│   ├── SaaS → Hightouch / Census / Polytomic (faster time-to-value)
+│   └── Self-built → Custom dbt + API sync scripts (more flexible)
+├── Destination type?
+│   ├── Sales/Marketing → Hubspot, Salesforce, Marketo
+│   ├── Advertising → Facebook Ads, Google Ads, TikTok
+│   └── Internal ops → Internal API, in-house tool
+├── Sync frequency?
+│   ├── Real-time (< 5 min) → Webhook / CDC-based sync
+│   ├── Hourly → Scheduled batch sync
+│   └── Daily → Nightly warehouse exports
+└── Identity resolution needed?
+    ├── Yes → Built-in identity graph (matching across sources)
+    └── No → Direct key mapping (warehouse ID → tool ID)
+```
+
+**Decision criteria**: Evaluate number of destinations, sync latency requirements, identity matching complexity, and budget for SaaS tools.
+
+## Implementation Patterns
+
+### Hightouch Sync Configuration
+```yaml
+# reverse_etl/hightouch_sync.yml
+sync:
+  name: "Customer Attributes to Salesforce"
+  source:
+    type: snowflake
+    model: |
+      SELECT
+        c.customer_id,
+        c.email,
+        c.full_name,
+        c.total_lifetime_value,
+        c.last_purchase_date,
+        c.churn_risk_score
+      FROM analytics.gold.dim_customer c
+      WHERE c.is_active = true
+  destination:
+    type: salesforce
+    object: Contact
+    external_id: Email
+    operation: upsert
+  schedule: "0 */6 * * *"
+  behavior:
+    deletion: archive
+    null_values: skip
+```
+
+### Custom Reverse ETL Pipeline
+```python
+# reverse_etl/custom_sync.py
+from datetime import datetime
+import httpx
+
+class ReverseETLSync:
+    def __init__(self, warehouse_conn, api_endpoint: str, api_key: str):
+        self.warehouse = warehouse_conn
+        self.api = api_endpoint
+        self.headers = {"Authorization": f"Bearer {api_key}"}
+
+    def sync_customers(self, last_sync: datetime) -> int:
+        rows = self.warehouse.execute("""
+            SELECT email, name, segment, updated_at
+            FROM gold.customers
+            WHERE updated_at > %s
+        """, (last_sync,)).fetchall()
+        count = 0
+        for row in rows:
+            resp = httpx.post(f"{self.api}/customers", json={
+                "email": row[0],
+                "name": row[1],
+                "segment": row[2],
+            }, headers=self.headers)
+            if resp.status_code == 200:
+                count += 1
+        return count
+```
+
+## Production Considerations
+
+- **Sync monitoring**: Track sync success rate, row counts, and latency per destination; alert on failures.
+- **Idempotency**: Design all syncs to be idempotent (UPSERT semantics); safe for replay after failure.
+- **Rate limiting**: Respect destination API rate limits; implement exponential backoff with jitter.
+- **Field mapping versioning**: Version field mappings; handle source schema changes gracefully with fallback values.
+- **Deletion handling**: Define deletion behavior (soft-delete, archive, or hard-delete) per destination.
+- **Error quarantining**: Send failed records to a dead-letter queue (S3/SQS) for manual resolution.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Syncing all columns to every destination | PII leakage, high bandwidth | Only sync required fields per destination |
+| No dedup before sync | Duplicate records in CRM | Deduplicate on source identity key |
+| Full resync every time | API quota exhaustion | Only sync changed records since last sync |
+| Ignoring destination schema limits | Truncated/failed records | Validate length and format before sync |
+| No identity resolution | Orphaned records in destination | Pre-merge identities before sync |
+
+## Performance Optimization
+
+- **Incremental sync**: Use watermark columns (updated_at) for incremental extracts; avoid full table scans.
+- **Batch API calls**: Batch 100 records per API request (where supported) instead of individual calls.
+- **Parallel destinations**: Sync to multiple destinations in parallel using async I/O or thread pools.
+- **Compression**: Compress payloads (gzip) for API transfers; reduce payload size by excluding NULL fields.
+- **Pre-aggregation**: Pre-join and aggregate warehouse data via dbt models before extraction.
+
+## Security Considerations
+
+- **Credentials**: Store destination API keys in Vault or Secrets Manager; rotate keys quarterly.
+- **Data minimization**: Sync only minimum required fields per destination; never sync raw PII unless necessary.
+- **Audit trail**: Log all sync operations including row count, fields synced, and destination.
+- **Compliance**: Ensure reverse ETL complies with data residency requirements; filter by region.
+- **Rate limit protection**: Implement circuit breaker for destination APIs to avoid being rate-limited or banned.
+
 ## Handoff
 `data-data-warehouse` for warehouse data modeling and transformation needed before sync
 `data-etl-pipeline` for traditional batch ETL (warehouse as target, not source)

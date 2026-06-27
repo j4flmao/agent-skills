@@ -452,3 +452,151 @@ Cost-saving strategies:
 - `devops-monitoring` for Prometheus-based monitoring.
 - `devops-hybrid-cloud` for connecting Hetzner with other providers.
 - `devops-datacenter` for physical hardware considerations.
+
+## Architecture Decision Trees
+
+### Dedicated Server vs Cloud Instance
+
+| Decision | Dedicated Server (Hetzner) | Cloud Instance (Hetzner Cloud) |
+|---|---|---|
+| Performance | Full bare-metal (no neighbors) | Virtualized (shared hypervisor) |
+| Flexibility | OS from ISO, full control | Pre-installed images, API-driven |
+| Provisioning | Hours (manual setup) | Seconds (API, Terraform) |
+| Cost | Lower at high utilization | Higher per-hour, pay-as-you-go |
+| Autoscaling | Not supported | Supported via API/Terraform |
+| Network | Single server, BGP possible | Private network, floating IPs |
+| Best for | Workloads needing raw throughput | Variable workloads, ephemeral |
+
+### Storage Box vs Volume Storage
+
+| Aspect | Storage Box (Borg) | Volume Storage (Block) |
+|---|---|---|
+| Protocol | SFTP, SMB, WebDAV | iSCSI, attached via SCSI |
+| Performance | Sequential OK, slow IOPS | Fast IOPS, low latency |
+| Capacity | Up to 20 TB | Up to 10 TB per volume |
+| Use case | Backups, file shares | Database disks, app data |
+| Mountability | Network mount | Direct block device |
+| Redundancy | RAID on datacenter side | Replicated across hosts |
+
+## Implementation Patterns
+
+### Terraform: Hetzner Cloud K3s Cluster
+
+```hcl
+resource "hcloud_server" "k3s_control" {
+  name        = "k3s-control-01"
+  server_type = "cax31"
+  image       = "ubuntu-24.04"
+  location    = "fsn1"
+  ssh_keys    = [hcloud_ssh_key.default.id]
+  network {
+    network_id = hcloud_network.main.id
+  }
+
+  user_data = templatefile("${path.module}/cloud-init/control-plane.yaml", {
+    k3s_token  = random_password.k3s_token.result
+    cluster_cidr = "10.42.0.0/16"
+    service_cidr = "10.43.0.0/16"
+  })
+}
+
+resource "hcloud_server" "k3s_worker" {
+  count       = 3
+  name        = "k3s-worker-${count.index + 1}"
+  server_type = "cax21"
+  image       = "ubuntu-24.04"
+  location    = "fsn1"
+  ssh_keys    = [hcloud_ssh_key.default.id]
+  network {
+    network_id = hcloud_network.main.id
+  }
+
+  user_data = templatefile("${path.module}/cloud-init/worker.yaml", {
+    k3s_url    = "https://${hcloud_server.k3s_control.ipv4_address}:6443"
+    k3s_token  = random_password.k3s_token.result
+  })
+}
+
+resource "hcloud_network" "main" {
+  name     = "k3s-network"
+  ip_range = "10.0.0.0/16"
+}
+
+resource "hcloud_network_subnet" "main" {
+  network_id   = hcloud_network.main.id
+  type         = "server"
+  network_zone = "eu-central"
+  ip_range     = "10.0.0.0/16"
+}
+```
+
+### Bash: Hetzner API Server Management
+
+```bash
+#!/usr/bin/env bash
+HCLOUD_TOKEN="${HCLOUD_TOKEN:?required}"
+
+create_server() {
+  local name=$1
+  local type=${2:-cax21}
+  local location=${3:-fsn1}
+
+  curl -sf -X POST "https://api.hetzner.cloud/v1/servers" \
+    -H "Authorization: Bearer $HCLOUD_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"name\": \"$name\",
+      \"server_type\": \"$type\",
+      \"location\": \"$location\",
+      \"image\": \"ubuntu-24.04\",
+      \"automount\": false,
+      \"networks\": [$(hcloud network list -o noheader -o columns=id | head -1)]
+    }" | jq '.server'
+}
+
+delete_old_snapshots() {
+  hcloud image list --type snapshot --output json \
+    | jq -r ".[] | select(.created | fromdate < $(date -d '-30 days' +%s)) | .id" \
+    | xargs -I {} hcloud image delete {}
+}
+```
+
+## Production Considerations
+
+- Use **Hetzner's vSwitch** for dedicated server connectivity to Cloud instances when running hybrid
+- Configure **DDoS protection** via Hetzner's default filtering; request additional DDoS rules if needed
+- Enable **Backup Space** (Storage Box) for all critical server data with 7-day retention minimum
+- Set up **robot-wg-tools** for WireGuard VPN between dedicated servers in different datacenters
+- Use **Hetzner Cloud Firewall** with least-privilege rules — default deny inbound
+- Monitor **Hetzner Robot** for hardware health alerts (ECC errors, disk SMART, temperature)
+- Use **Hetzner API tokens** with restricted scopes per server group (read-only for monitoring)
+
+## Anti-Patterns
+
+- Ignoring **traffic limits** on dedicated servers — exceeding included traffic incurs significant overage
+- Using **default VLAN** for all servers — segment by function (web, db, storage) with separate networks
+- Provisioning **servers without monitoring** — Hetzner doesn't provide built-in server monitoring
+- Skipping **rescue mode testing** — know how to boot into rescue mode for recovery scenarios
+- Relying on **single datacenter** for production — FSN1/HEL1/NBG1 inter-DC latency is low but non-zero
+- Underestimating **Storage Box IOPS limits** — not suitable for database workloads directly
+- Forgetting to **detach volumes** before deleting servers — volumes survive but must be cleaned up
+
+## Performance Optimization
+
+- Choose **CCX instances** for compute-heavy workloads (better price-performance than non-dedicated CX)
+- Enable **Hardware RAID** on dedicated servers with NVMe SSDs for storage-heavy applications
+- Use **HCloud API** to set `automount: false` and mount volumes directly in fstab with noatime
+- Configure **network optimization** — enable `tcp_congestion_control=bbr` on all servers
+- Use **Hcloud Placement Groups** (`spread`) for K8s worker anti-affinity across hypervisors
+- Enable **CPU governor** `performance` on dedicated servers for latency-sensitive workloads
+- Set up **local NVMe cache** on Storage Box mounts using `cachefilesd` or similar caching layer
+
+## Security Considerations
+
+- Enable **Hetzner Firewall** on every Cloud instance — default deny rules, only expose necessary ports
+- Use **SSH key-only auth** — disable password authentication on all servers via cloud-init
+- Enable **Automatic Backups** on Hetzner Cloud and test restoration quarterly
+- Restrict **HCloud API tokens** to IP allowlist (office IPs, CI runner IPs only)
+- Set up **fail2ban** on dedicated servers to protect against brute force SSH attempts
+- Use **Storage Box snapshots** via Borg backup — snapshots are immutable and encrypt at rest
+- Audit **team member access** to Hetzner project — remove keys and tokens on offboarding

@@ -406,6 +406,108 @@ GROUP BY requesting_party;
   - references/clean-room-use-cases.md — Clean Room Use Cases
   - references/privacy-compute-patterns.md — Privacy Compute Patterns
   - references/privacy-compute.md — Privacy Compute Patterns Reference
+## Architecture Decision Trees
+
+```
+Clean Room Architecture
+├── Cloud provider ecosystem lock-in acceptable?
+│   ├── Yes → AWS Clean Rooms / Azure Confidential Ledger
+│   └── No → Open-source (Differential Privacy libs + TEE)
+├── Real-time joins across parties?
+│   ├── Yes → Secure multi-party computation (MPC)
+│   └── No → Batch differential privacy (DP)
+├── Regulatory requirements (HIPAA, GDPR)?
+│   ├── Yes → TEE-based (AWS Nitro, Intel SGX)
+│   └── No → Cryptographic (HE, PSI)
+└── Large-scale datasets (> 10 TB)?
+    ├── Yes → Privacy-preserving aggregate queries
+    └── No → Row-level PSI joins
+```
+
+**Decision criteria**: Evaluate trust model (honest-but-curious vs malicious adversary), scale, latency, and certification requirements.
+
+## Implementation Patterns
+
+### Differential Privacy Aggregation
+```python
+# data_clean_room/dp_aggregation.py
+import numpy as np
+
+class DPAggregator:
+    def __init__(self, epsilon: float = 1.0, delta: float = 1e-5):
+        self.epsilon = epsilon
+        self.delta = delta
+        self.sensitivity = None
+
+    def compute_count(self, data: np.ndarray) -> int:
+        self.sensitivity = 1
+        noise_scale = self.sensitivity / self.epsilon
+        noise = np.random.laplace(0, noise_scale)
+        return max(0, int(len(data) + noise))
+
+    def compute_sum(self, data: np.ndarray, bounds: tuple[float, float]) -> float:
+        self.sensitivity = bounds[1] - bounds[0]
+        noise_scale = self.sensitivity / self.epsilon
+        clipped = np.clip(data, bounds[0], bounds[1])
+        return float(np.sum(clipped) + np.random.laplace(0, noise_scale))
+```
+
+### Private Set Intersection Protocol
+```python
+# data_clean_room/psi.py
+from cryptography.hazmat.primitives import hashes
+
+class PSIProtocol:
+    def __init__(self, key: bytes):
+        self.key = key
+
+    def hash_and_bloom(self, items: list[str], bloom_size: int = 1 << 20) -> bytearray:
+        bloom = bytearray(bloom_size // 8)
+        for item in items:
+            h = hashes.Hash(hashes.SHA256())
+            h.update(self.key + item.encode())
+            digest = h.finalize()
+            idx = int.from_bytes(digest[:4], "big") % bloom_size
+            bloom[idx // 8] |= 1 << (idx % 8)
+        return bloom
+```
+
+## Production Considerations
+
+- **Noise calibration**: Set epsilon based on legal/compliance requirements; lower ε means more privacy.
+- **Budget tracking**: Track DP budget consumption per data partner; reset quarterly or per campaign.
+- **Query auditing**: Log all queries executed in the clean room with approval trail for compliance.
+- **Output vetting**: Implement privacy loss threshold checks before releasing results (< 5% re-identification risk).
+- **Key management**: Rotate PSI/encryption keys daily; store in HSM or cloud KMS.
+- **Data retention**: Purge raw data from clean room after join completion; store only aggregated results.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Reusing the same epsilon across queries | Privacy budget exhaustion with no tracking | Per-query epsilon accounting |
+| Joining on UID without PSI | Direct exposure of user identifiers | Always use PSI or salted hashes |
+| No output vetting | Accidental PII leakage | Implement l-diversity / k-anonymity checks |
+| Too-small epsilon | Useless noisy results | Calibrate ε based on dataset size |
+| Ignoring delta parameter | No protection against catastrophic failure | Set δ < 1/N² for database size N |
+
+## Performance Optimization
+
+- **PSI optimization**: Use Cuckoo filters instead of Bloom filters for 30% faster intersection.
+- **Batch processing**: Batch DP queries to amortize encryption overhead across multiple computations.
+- **Parallel enclaves**: Distribute TEE processing across multiple enclave instances for large datasets.
+- **Pre-filtering**: Filter non-intersecting records using pre-computed hash sets before DP computation.
+- **Result caching**: Cache approved aggregate results for repeated queries (identical parameters).
+
+## Security Considerations
+
+- **Side-channel protection**: Use constant-time cryptographic operations in TEE to prevent timing attacks.
+- **Enclave attestation**: Verify TEE attestation documents before loading data into enclave.
+- **Input validation**: Sanitize all inputs to prevent SQL injection into clean room query engine.
+- **Output constraints**: Limit returned rows to N (e.g., 1000) and suppress cell counts < threshold (e.g., 10).
+- **Audit trail**: Immutable log of all queries, epsilon consumption, and approved results for auditor review.
+- **Network isolation**: Deploy clean room in VPC with no internet access; data plane isolated from control plane.
+
 ## Handoff
 `data-data-security` for broader data security and encryption patterns
 `data-compliance-audit` for regulatory compliance requirements affecting clean rooms

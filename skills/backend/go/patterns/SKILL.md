@@ -430,3 +430,209 @@ Always run with `-race` flag: `go test -race ./...`. Use `sync.WaitGroup` or `er
 No artifact produced.
 Next skill: backend-testing — test Go patterns.
 Carry forward: concurrency model, HTTP handler DI pattern, graceful shutdown.
+## Implementation Patterns
+
+### Factory Pattern for Module Creation
+`
+function createModule<T>(config: ModuleConfig): T {
+  const dependencies = initializeDependencies(config);
+  const module = new Module(dependencies);
+  module.hooks.onInit();
+  return module as T;
+}
+`
+
+### Builder Pattern for Complex Configuration
+`
+class ConfigBuilder {
+  private config: AppConfig = new AppConfig();
+  withDatabase(url: string): ConfigBuilder { ... }
+  withCache(ttl: number): ConfigBuilder { ... }
+  withLogging(level: string): ConfigBuilder { ... }
+  build(): AppConfig { return this.config; }
+}
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Production build with optimizations enabled
+- [ ] Environment variables configured per environment
+- [ ] Health check endpoint responds correctly
+- [ ] Error tracking and monitoring integrated
+- [ ] Logging level configured (not debug in production)
+- [ ] Resource limits configured
+- [ ] Database migrations applied
+- [ ] Static assets built and served from CDN or cache
+- [ ] Feature flags toggled appropriately
+- [ ] Rollback plan documented and tested
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% | Critical | Rollback or fix |
+| p95 latency | > 500ms | Warning | Profile and optimize |
+| Uptime | < 99.9% | Critical | Investigate infrastructure |
+| Memory usage | > 80% | Warning | Check for leaks |
+| CPU usage | > 80% | Warning | Scale up or optimize |
+
+## Rules
+- Prefer composition over inheritance
+- Favor immutable data structures
+- Use dependency injection for testability
+- Keep functions pure when possible — no side effects
+- Fail fast with clear error messages
+- Don't repeat yourself (DRY) — extract shared logic
+- Keep it simple (KISS) — avoid unnecessary complexity
+- You aren't gonna need it (YAGNI) — build what's required
+- Separate concerns — single responsibility per module
+- Code to interfaces, not implementations
+- Write self-documenting code — clear names over comments
+- Prefer standard library over third-party dependencies
+- Handle errors explicitly — no silent failures
+- Validate inputs at boundaries
+- Log at appropriate levels (debug, info, warn, error)
+
+## Implementation Patterns
+
+### Pattern: Options Function
+
+```go
+type ServerOption func(*Server)
+
+func WithPort(port int) ServerOption {
+    return func(s *Server) {
+        s.port = port
+    }
+}
+
+func WithTimeout(d time.Duration) ServerOption {
+    return func(s *Server) {
+        s.timeout = d
+    }
+}
+
+func NewServer(opts ...ServerOption) *Server {
+    s := &Server{port: 8080, timeout: 30 * time.Second}
+    for _, opt := range opts {
+        opt(s)
+    }
+    return s
+}
+```
+
+### Pattern: Worker Pool
+
+```go
+type Pool struct {
+    jobs    chan Job
+    results chan Result
+    done    chan struct{}
+}
+
+func NewPool(numWorkers int) *Pool {
+    p := &Pool{
+        jobs:    make(chan Job, 100),
+        results: make(chan Result, 100),
+        done:    make(chan struct{}),
+    }
+    for i := 0; i < numWorkers; i++ {
+        go p.worker()
+    }
+    return p
+}
+
+func (p *Pool) worker() {
+    for job := range p.jobs {
+        result := job.Execute()
+        p.results <- result
+    }
+}
+```
+
+## Production Considerations
+
+- Graceful shutdown: `signal.NotifyContext` for SIGINT/SIGTERM. Drain connections before exit.
+- Panic recovery: middleware recovers panics. Log stack trace. Return 500.
+- Resource limits: `GOMAXPROCS` set to CPU limit in container. `ulimit -n` for file descriptors.
+- Memory: Go runtime GC triggered by heap growth. Monitor `go_memstats_alloc_bytes`.
+- Goroutine leaks: ensure goroutines exit. Use `context.Context` for cancellation.
+- Profiling: `pprof` endpoints behind admin guard. CPU and heap profiles on demand.
+- Build: `-ldflags="-s -w"` for smaller binaries. `-trimpath` for reproducible builds.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| Global state | Race conditions. Untestable. | Dependency injection. Pass dependencies explicitly. |
+| Background goroutines without cleanup | Leaked goroutines. | `errgroup.WithContext` for lifecycle management. |
+| `context.Background()` everywhere | No cancellation propagation. | Derive context from request. Pass through call chain. |
+| Interface pollution | Many single-method interfaces. | Define interfaces where they're consumed, not produced. |
+| `recover()` outside deferred func | Panic not caught. | Always use `defer recover()` in goroutine entry points. |
+| Deep package nesting | Import cycles. Hard to navigate. | Flat or shallow package layout. `internal/` for private code. |
+
+## Performance Optimization
+
+- `json.Marshal` / `json.Unmarshal` with `json.Encoder`/`json.Decoder` for streams.
+- `sync.Pool` for frequently allocated objects. Reduces GC pressure.
+- `strings.Builder` over bytes.Buffer for string concatenation.
+- Pre-allocate slices with `make([]T, 0, capacity)` when size is known.
+- Use `map` with struct keys over string keys for structured lookups.
+- `io.Copy` with `io.Pipe` for streaming transformations.
+- Escape analysis: prefer value receivers. Check with `-gcflags="-m"`.
+- `runtime.GOMAXPROCS(0)` matches CPU quota. No oversubscription.
+- Profile-guided optimization with `-PGO` flag in Go 1.21+.
+
+## Security Considerations
+
+- Input validation: `validator` package for struct tags. Always validate at boundaries.
+- SQL injection: parameterized queries with `database/sql`. Never string concatenation.
+- XSS: `html/template` auto-escapes. Never use `template.HTML` with user input.
+- CSRF: token-based protection for web apps. Double-submit cookie pattern.
+- Secrets: environment variables or vault. Never hardcode. `os.Getenv` with defaults.
+- TLS: `http.Server` with `TLSConfig`. Minimum TLS 1.2. Strong cipher suites.
+- Rate limiting: token bucket per client IP. Sliding window for authenticated users.
+- CORS: `rs/cors` middleware. Allow specific origins only.
+- Authentication: JWT with `golang-jwt/jwt`. Short expiry. Refresh token rotation.
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets

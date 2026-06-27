@@ -450,3 +450,263 @@ Lambda response streaming:
 - `devops-cicd-pipeline` for CI/CD pipelines with Lambda deployment.
 - `devops-security` for IAM and secrets management.
 - `devops-monitoring` for Lambda-specific monitoring dashboards.
+
+## Architecture Decision Trees
+
+### Lambda vs Fargate vs ECS
+
+| Decision | Lambda (FaaS) | Fargate (Serverless Container) | ECS (Container Orchestration) |
+|---|---|---|---|
+| Execution model | Event-driven, short-lived | Long-running container | Long-running container |
+| Max duration | 15 minutes | Unlimited | Unlimited |
+| Cold start | Yes (<1s provisioned concurrency) | No (always warm) | No (always warm) |
+| Scaling | Instant (per-event) | Auto-scaling (minutes) | Auto-scaling (minutes) |
+| Cost model | Per-invocation + duration | Per-hour (vCPU + memory) | Per-hour (EC2 instances) |
+| State | Stateless (externalize to SQS/DynamoDB) | Stateful possible | Stateful possible |
+| Best for | Event-driven, bursty, variable | Steady API workloads | Batch, ML, GPU workloads |
+
+### API Gateway REST vs HTTP vs WebSocket
+
+| Aspect | REST API | HTTP API | WebSocket API |
+|---|---|---|---|
+| Latency | ~50ms | ~10ms | ~50ms |
+| Features | WAF, usage plans, API keys | JWT, CORS, cheaper | Real-time, bidirectional |
+| Cost | Most expensive | Cheapest (~70% less) | Connection + message |
+| Integration | Lambda, HTTP, Step Functions | Lambda, HTTP, Service Discovery | Lambda, DynamoDB |
+| Use case | Public APIs with throttling | Microservices APIs | Chat, real-time updates |
+
+## Implementation Patterns
+
+### Terraform: Event-driven Lambda with SQS and DynamoDB
+
+```hcl
+resource "aws_lambda_function" "order_processor" {
+  function_name = "order-processor-${var.environment}"
+  runtime       = "nodejs22.x"
+  handler       = "index.handler"
+  filename      = "${path.module}/function.zip"
+  source_code_hash = filebase64sha256("${path.module}/function.zip")
+
+  memory_size = 512
+  timeout     = 30
+  reserved_concurrent_executions = 50
+
+  environment {
+    variables = {
+      TABLE_NAME    = aws_dynamodb_table.orders.name
+      DLQ_QUEUE_URL = aws_sqs_queue.dlq.url
+    }
+  }
+
+  tracing_config {
+    mode = "Active"
+  }
+}
+
+resource "aws_lambda_event_source_mapping" "sqs_trigger" {
+  event_source_arn = aws_sqs_queue.order_events.arn
+  function_name    = aws_lambda_function.order_processor.arn
+  batch_size       = 10
+  maximum_batching_window_in_seconds = 5
+  scaling_config {
+    maximum_concurrency = 10
+  }
+}
+
+resource "aws_dynamodb_table" "orders" {
+  name         = "orders-${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "orderId"
+
+  attribute {
+    name = "orderId"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
+resource "aws_sqs_queue" "dlq" {
+  name                       = "order-processor-dlq-${var.environment}"
+  message_retention_seconds  = 1209600 # 14 days
+  visibility_timeout_seconds = 30
+}
+```
+
+### Bash: Lambda Deployment Script
+
+```bash
+#!/usr/bin/env bash
+deploy_lambda() {
+  local function_name=$1
+  local source_dir=$2
+
+  # Install production dependencies
+  cd "$source_dir"
+  npm ci --production --ignore-scripts
+
+  # Package with esbuild for minimal bundle
+  npx esbuild index.js --bundle --minify --platform=node \
+    --outfile=dist/index.js --external:aws-sdk
+
+  # Create deployment package
+  cd dist
+  zip -r9 "../${function_name}.zip" .
+
+  # Deploy to Lambda
+  aws lambda update-function-code \
+    --function-name "$function_name" \
+    --zip-file "fileb://../${function_name}.zip"
+
+  # Publish version
+  aws lambda publish-version \
+    --function-name "$function_name"
+
+  # Update alias to point to new version
+  aws lambda update-alias \
+    --function-name "$function_name" \
+    --name production \
+    --function-version "$(aws lambda list-versions-by-function \
+      --function-name "$function_name" --query 'Versions[-1].Version' --output text)"
+}
+```
+
+## Production Considerations (Serverless-specific)
+
+- Enable **provisioned concurrency** for latency-sensitive functions to eliminate cold starts
+- Configure **Lambda Powertools** (TypeScript/Python/Java) for structured logging and tracing
+- Set **function timeouts** realistically — 30s for APIs, 5m for batch processors, never max unless needed
+- Implement **idempotency** in all event-driven functions (store processed event IDs in DynamoDB)
+- Use **Lambda Extensions** for secrets caching, APM agents, and sidecar processes
+- Enable **CloudWatch Lambda Insights** for memory profiling and cold start analysis
+- Set **reserved concurrency** per critical function to prevent noise from other functions starving it
+
+### Observer Pattern for Event Handling
+`
+interface EventObserver<T> {
+  onEvent(event: T): Promise<void>;
+}
+
+class EventBus<T> {
+  private observers: Set<EventObserver<T>> = new Set();
+  subscribe(observer: EventObserver<T>): void {
+    this.observers.add(observer);
+  }
+  unsubscribe(observer: EventObserver<T>): void {
+    this.observers.delete(observer);
+  }
+  async emit(event: T): Promise<void> {
+    const results = Array.from(this.observers).map(o => o.onEvent(event));
+    await Promise.allSettled(results);
+  }
+}
+`
+
+### Configuration-Driven Approach
+`
+config:
+  defaults:
+    timeout: 30s
+    retryCount: 3
+  overrides:
+    production:
+      timeout: 60s
+      retryCount: 5
+    development:
+      timeout: 300s
+      retryCount: 1
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Configuration validated against schema before startup
+- [ ] Health check endpoints registered and monitored
+- [ ] Graceful shutdown with draining period (30s timeout)
+- [ ] Resource limits configured (CPU, memory, file descriptors)
+- [ ] Log level set appropriate for environment
+- [ ] Metrics endpoint secured and exposed
+- [ ] Rate limiting configured per-tier
+- [ ] TLS certificates valid and auto-renewing
+- [ ] Database migrations run as separate deployment step
+- [ ] Feature flags ready for gradual rollout
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% over 5min | Critical | Page on-call |
+| p99 latency | > 2s over 5min | Warning | Investigate |
+| Throughput drop | > 50% over 1min | Critical | Check upstream |
+| Queue depth | > 1000 over 1min | Warning | Scale consumers |
+| Disk usage | > 85% | Warning | Clean or expand |
+| Memory usage | > 90% heap | Critical | Restart or scale |
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Root Cause | Solution |
+|-------------|---------|------------|----------|
+| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
+| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
+| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
+| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
+
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+## Rules
+- Default-deny security posture — allow only explicitly required access.
+- All inputs validated, all outputs encoded, all errors handled.
+- Defend in depth — multiple layers of security controls.
+- Fail securely — errors default to safe behavior.
+- Log security-relevant events for audit and investigation.
+- Keep dependencies updated — automate vulnerability scanning.
+- Design for observability from day one, not as an afterthought.
+- Document all architectural decisions with rationale.
+- Review code for security, performance, and correctness before merging.

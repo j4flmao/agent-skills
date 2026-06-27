@@ -431,5 +431,115 @@ func (api *EthAPI) Call(args TransactionArgs, blockNrOrHash *rpc.BlockNumberOrHa
   - references/blob-transactions-4844.md — Blob Transactions (EIP-4844)
   - references/optimistic-vs-zk-rollups.md — Optimistic vs ZK Rollup Comparison
 
+## Architecture Decision Trees
+
+```
+Ethereum Development Strategy
+├── Layer-2 deployment?
+│   ├── Optimistic rollup → Optimism / Arbitrum (EVM equivalent, 7d challenge)
+│   ├── ZK rollup → zkSync / StarkNet (fast finality, proving overhead)
+│   └── L1 only → Ethereum mainnet (security at cost)
+├── Account abstraction?
+│   ├── Yes → ERC-4337 (smart accounts, paymasters, bundlers)
+│   ├── EIP-7702 → Native account abstraction (future)
+│   └── No → EOA-based (traditional)
+├── Calldata optimization?
+│   ├── EIP-4844 blobs → Rollups (lower L1 call data cost)
+│   ├── Calldata compression → Custom compression for L2 batches
+│   └── None → Standard calldata
+└── MEV strategy?
+    ├── Capture → PBS (MEV-Boost) for validators
+    ├── Minimize → CowSwap / batch auctions for users
+    └── Ignore → Standard transaction submission
+```
+
+**Decision criteria**: Evaluate L2 needs, gas optimization, target users, and MEV exposure tolerance.
+
+## Implementation Patterns
+
+### ERC-4337 Account Abstraction
+```solidity
+// blockchain-ethereum/contracts/SmartAccount.sol
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+
+contract SmartAccount {
+    using ECDSA for bytes32;
+
+    address public owner;
+
+    function validateUserOp(UserOperation calldata userOp, bytes32 userOpHash) external returns (uint256) {
+        bytes32 hash = userOpHash.toEthSignedMessageHash();
+        require(owner == hash.recover(userOp.signature), "Invalid signature");
+        return 0; // validation gas
+    }
+
+    function execute(address dest, uint256 value, bytes calldata func) external {
+        require(msg.sender == address(this), "Only self-call");
+        (bool success,) = dest.call{value: value}(func);
+        require(success, "Execution failed");
+    }
+}
+```
+
+### EIP-4844 Blob Transaction
+```python
+# blockchain-ethereum/blob_transaction.py
+from eth_account import Account
+from eth_account._utils.signing import sign_message_hash
+
+class BlobTransaction:
+    def __init__(self, w3: Web3):
+        self.w3 = w3
+
+    def send_blob(self, blob_data: bytes, to: str) -> dict:
+        tx = {
+            "type": 0x03,
+            "chainId": self.w3.eth.chain_id,
+            "to": to,
+            "maxFeePerGas": self.w3.eth.gas_price * 2,
+            "maxPriorityFeePerGas": self.w3.eth.max_priority_fee,
+            "blobVersionedHashes": [self._kzg_commitment(blob_data)],
+            "maxFeePerBlobGas": 1000000000,
+        }
+        return self.w3.eth.send_transaction(tx)
+```
+
+## Production Considerations
+
+- **Gas estimation**: Use `eth_estimateGas` with state override; account for L1 data fee on L2.
+- **Nonce management**: Track nonces per address; handle reverted tx with nonce caching.
+- **Fee market**: Set priority fee dynamically (Flashbots API); monitor base fee trends.
+- **L2 finality**: Wait for L2 output root submission to L1 for canonical finality (7d Optimism, ~1h Arbitrum).
+- **Wallet compatibility**: Test with MetaMask, WalletConnect, and Coinbase Wallet.
+- **Infrastructure**: Deploy RPC nodes with redundancy; use load balancer for high-availability.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Setting all txs to 0 priority fee | Slow or stuck transactions | Use dynamic priority fee (1-5 gwei) |
+| No L2-specific gas estimation | Failed L2 transactions | Use L2 gas oracle for estimation |
+| Hardcoded chain ID | Replay on different chain | Read chain ID from contract/network |
+| Ignoring EIP-1559 | Overpaying for gas | Use type-2 transactions (EIP-1559) |
+| Single RPC for production | Downtime during RPC issues | Multiple RPC endpoints with fallback |
+
+## Performance Optimization
+
+- **Calldata compression**: Compress calldata with custom encoding for L2 transactions to reduce L1 data fees.
+- **Batch transactions**: Use Multicall (MakerDAO) to batch multiple calls into single transaction.
+- **Nonce pre-computation**: Pre-compute nonces for parallel transaction submission.
+- **Blob gas optimization**: Pack multiple rollup transactions into single blob (EIP-4844).
+- **Gas token refund**: Use EIP-3298 removed; leverage EIP-1559 base fee refund calculations.
+
+## Security Considerations
+
+- **Replay protection**: Include chain ID in EIP-712 signatures; verify in contract.
+- **Signature malleability**: Use EIP-2 (s < secp256k1n/2) to prevent signature malleability.
+- **Access control for smart accounts**: Implement social recovery; multi-owner approval for high-value operations.
+- **MEV protection**: Use Flashbots Protect or CoW Swap for order-flow privacy.
+- **Contract verification**: Publish source code on Etherscan; verify with Sourcify for multi-chain.
+
 ## Phase
 blockchain → blockchain-ethereum

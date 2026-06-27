@@ -446,6 +446,111 @@ spec:
 ## References
 Coming soon.
 
+## Architecture Decision Trees
+
+```
+Distributed Compute Framework
+├── Batch or streaming?
+│   ├── Batch → Spark / Trino / Hive
+│   ├── Streaming → Flink / Kafka Streams / Spark Streaming
+│   └── Both → Flink (unified) / Spark Structured Streaming
+├── Language preference?
+│   ├── Python → PySpark / Dask / Ray
+│   ├── SQL → Trino / Spark SQL / Hive
+│   └── Java/Scala → Flink / Beam / Spark
+├── ML workload?
+│   ├── Yes → Spark MLlib / Ray / Dask-ML
+│   └── No → Spark / Trino for analytical queries
+└── K8s-native deployment?
+    ├── Yes → Spark on K8s / Flink K8s Operator
+    └── No → YARN / standalone cluster (legacy)
+```
+
+**Decision criteria**: Assess workload type, team language expertise, ecosystem integration, and deployment infrastructure.
+
+## Implementation Patterns
+
+### Spark Shuffle Optimization
+```python
+# distributed_compute/shuffle_optimization.py
+from pyspark.sql import SparkSession
+
+class ShuffleOptimizer:
+    def __init__(self, spark: SparkSession):
+        self.spark = spark
+
+    def optimize_joins(self, df_a, df_b, join_key: str):
+        self.spark.conf.set("spark.sql.shuffle.partitions", "400")
+        self.spark.conf.set("spark.sql.adaptive.enabled", "true")
+        self.spark.conf.set("spark.sql.adaptive.coalescePartitions.enabled", "true")
+        self.spark.conf.set("spark.sql.adaptive.skewJoin.enabled", "true")
+
+        broadcast_df = self.spark.sparkContext.broadcast(
+            df_b.select(join_key).distinct().collect()
+        )
+        return df_a.join(df_b, join_key, "hash")
+```
+
+### Flink Stream Processing
+```python
+# distributed_compute/flink_stream.py
+from pyflink.datastream import StreamExecutionEnvironment
+from pyflink.table import StreamTableEnvironment
+
+env = StreamExecutionEnvironment.get_execution_environment()
+t_env = StreamTableEnvironment.create(env)
+
+t_env.execute_sql("""
+    CREATE TABLE orders (
+        order_id STRING,
+        customer_id STRING,
+        amount DECIMAL(10,2),
+        event_time TIMESTAMP(3),
+        WATERMARK FOR event_time AS event_time - INTERVAL '5' SECOND
+    ) WITH (
+        'connector' = 'kafka',
+        'topic' = 'orders',
+        'properties.bootstrap.servers' = 'kafka:9092',
+        'format' = 'json'
+    )
+""")
+```
+
+## Production Considerations
+
+- **Resource allocation**: Set Spark executor memory = (total memory / executors) with 10% overhead; avoid overcommit.
+- **Dynamic allocation**: Enable Spark dynamic allocation for variable workload; set max executors to cluster cap.
+- **Shuffle tuning**: Configure `spark.shuffle.partitions` = 2x-3x cluster cores; monitor shuffle spill to disk.
+- **Flink checkpointing**: Set checkpoint interval = 1 min with exactly-once semantics; store in durable backend (S3).
+- **Task parallelism**: Set parallelism = 2x-3x cores per node for CPU-bound tasks; adjust for IO-bound tasks.
+- **Cluster autoscaling**: Configure Spark on K8s with cluster autoscaler; min 2, max 20 nodes.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Default shuffle partitions (200) | Too few/large partitions for data size | Tune based on data volume (100-500 MB/partition) |
+| No broadcast hint for small tables | Expensive shuffle join | Use broadcast join for tables < 100 MB |
+| Ignoring data skew | OOM on single executor | Enable AQE skew join + salting |
+| Over-partitioning streaming | Too many small state backends | Set Flink parallelism = target throughput / 1000 |
+| No checkpointing in Flink | Data loss on failure | Enable exactly-once checkpointing |
+
+## Performance Optimization
+
+- **AQE (Adaptive Query Execution)**: Enable Spark AQE for automatic partition coalescing, skew join, and join reordering.
+- **Data locality**: Read from local SSDs when possible; minimize S3 get request overhead via file coalescing.
+- **Serialization**: Use Kryo serializer for Spark (2-4x faster than Java); register classes for best performance.
+- **Off-heap memory**: Allocate 15% of executor memory as off-heap for Spark Tungsten optimization.
+- **Broadcast join**: Explicitly broadcast dimension tables < 100 MB to avoid shuffle.
+
+## Security Considerations
+
+- **Cluster isolation**: Use separate Spark/Flink clusters per environment (dev, staging, prod) via Kubernetes namespaces.
+- **Job authentication**: Require service accounts for job submission; audit who submits which job.
+- **Data access control**: Enforce Spark SQL `GRANT/REVOKE` via Apache Ranger for table-level access.
+- **Credential injection**: Pass storage credentials via Kubernetes secrets, never in code; use IAM roles.
+- **Network security**: Restrict cluster communication to private VPC; no public endpoints for Spark UI.
+
 ## Handoff
 `data-batch-processing` for Spark SQL and Hive-specific optimizations
 `data-data-platform` for cluster provisioning and infrastructure

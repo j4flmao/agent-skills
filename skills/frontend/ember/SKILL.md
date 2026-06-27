@@ -455,3 +455,81 @@ module('Acceptance | posts', function (hooks) {
 No artifact produced.
 Next skill: ember-data (if complex data layer) or frontend-testing.
 Carry forward: route/service pattern, Glimmer component conventions, @tracked/@action.
+## Implementation Patterns
+
+### Factory Pattern for Module Creation
+`
+function createModule<T>(config: ModuleConfig): T {
+  const dependencies = initializeDependencies(config);
+  const module = new Module(dependencies);
+  module.hooks.onInit();
+  return module as T;
+}
+`
+
+### Builder Pattern for Complex Configuration
+`
+class ConfigBuilder {
+  private config: AppConfig = new AppConfig();
+  withDatabase(url: string): ConfigBuilder { ... }
+  withCache(ttl: number): ConfigBuilder { ... }
+  withLogging(level: string): ConfigBuilder { ... }
+  build(): AppConfig { return this.config; }
+}
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Production build with optimizations enabled
+- [ ] Environment variables configured per environment
+- [ ] Health check endpoint responds correctly
+- [ ] Error tracking and monitoring integrated
+- [ ] Logging level configured (not debug in production)
+- [ ] Resource limits configured
+- [ ] Database migrations applied
+- [ ] Static assets built and served from CDN or cache
+- [ ] Feature flags toggled appropriately
+- [ ] Rollback plan documented and tested
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% | Critical | Rollback or fix |
+| p95 latency | > 500ms | Warning | Profile and optimize |
+| Uptime | < 99.9% | Critical | Investigate infrastructure |
+| Memory usage | > 80% | Warning | Check for leaks |
+| CPU usage | > 80% | Warning | Scale up or optimize |
+
+## Architecture Decision Trees
+
+### Component Strategy Decision Tree
+```
+Does the component need lifecycle hooks or DOM access?
+  ├── No  → Template-only component (Glimmer) - fastest, no JS class
+  └── Yes → Does it manage state shared across components?
+       ├── Yes → Service + component pattern
+       └── No  → Classic Glimmer component with @tracked
+            Is the DOM interaction imperative (drag/drop, canvas)?
+            ├── Yes → Use modifier (ember-modifier)
+            └── No  → Use component lifecycle (constructor, willDestroy)
+```
+
+### Routing Strategy Decision Tree
+```
+Is the route data-driven (model-dependent)?
+  ├── No  → Static route with template content
+  └── Yes → Does the model come from API?
+       ├── Yes → Route model() hook with ember-data or fetch
+       └── No  → Route model() with local computation
+            Are there multiple async dependencies?
+            ├── Yes → RSVP.hash() in model() with parallel loading
+            └── No  → Single async model() return
+```
+
+## Security Considerations
+
+- **Safe strings**: Use `{{someProperty}}` for auto-escaped output. For trusted HTML, use `{{{htmlContent}}}` only after sanitization via `ember-cli-htmlbars` or DOMPurify. Never triple-stash user content.
+- **CSRF protection**: Ember Data automatically reads CSRF token from meta tag. Ensure backend sets `<meta name="csrf-token" content="...">`. For non-ember-data requests, read the meta tag and include in headers.
+- **Content Security Policy**: Configure CSP in `config/content-security-policy.js`. Ember's `ember-cli-build` can inject meta CSP tags. Set `script-src 'self'` and use nonces for inline scripts in production.
+- **Dependency auditing**: Run `ember-cli-deprecation-workflow` to track deprecations. Use `npm audit` or `yarn audit` in CI. Pin major dependency versions. Avoid deprecated Ember addons without active maintenance.

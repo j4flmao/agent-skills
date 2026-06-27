@@ -441,5 +441,107 @@ func (mp *Mempool) Add(tx *Transaction) bool {
   - references/transaction-ordering-policies.md — Transaction Ordering Policies
   - references/mempool-design-patterns.md — Mempool Design Patterns
 
+## Architecture Decision Trees
+
+```
+Consensus Mechanism Selection
+├── Permissioned or permissionless?
+│   ├── Permissionless → PoS (Ethereum, Cosmos) / PoW (Bitcoin)
+│   ├── Permissioned (enterprise) → IBFT / Raft / Clique (Quorum)
+│   └── Consortium → PoA / DPoS (multiple validators)
+├── Finality requirement?
+│   ├── Instant → IBFT / HotStuff / Tendermint (PBFT-based)
+│   ├── Probabilistic → PoW / PoS (Ethereum, Bitcoin)
+│   └── Economic → PoS with slashing (Casper, Tendermint)
+├── Scalability priority?
+│   ├── High tps → DPoS / HotStuff (1000+ tps)
+│   ├── Moderate → PoS (100 tps)
+│   └── Low → PoW (7-15 tps)
+└── Energy efficiency?
+    ├── Critical → PoS / DPoS / PoA
+    └── Not critical → PoW (Bitcoin)
+```
+
+**Decision criteria**: Evaluate decentralization requirements, finality speed, validator set size, and energy constraints.
+
+## Implementation Patterns
+
+### Merkle Proof Verification
+```solidity
+// blockchain-core/contracts/MerkleVerifier.sol
+pragma solidity ^0.8.20;
+
+contract MerkleVerifier {
+    function verify(bytes32[] memory proof, bytes32 root, bytes32 leaf) internal pure returns (bool) {
+        bytes32 computedHash = leaf;
+        for (uint256 i = 0; i < proof.length; i++) {
+            computedHash = computedHash < proof[i]
+                ? keccak256(abi.encodePacked(computedHash, proof[i]))
+                : keccak256(abi.encodePacked(proof[i], computedHash));
+        }
+        return computedHash == root;
+    }
+}
+```
+
+### P2P Node Discovery
+```rust
+// blockchain-core/src/discovery.rs
+use libp2p::{identity, Multiaddr, PeerId};
+use std::collections::HashSet;
+
+pub struct DiscoveryService {
+    peers: HashSet<PeerId>,
+    bootnodes: Vec<Multiaddr>,
+}
+
+impl DiscoveryService {
+    pub fn new(bootnodes: Vec<Multiaddr>) -> Self {
+        Self { peers: HashSet::new(), bootnodes }
+    }
+
+    pub fn discover_peers(&mut self) -> Vec<PeerId> {
+        self.bootnodes.iter().filter_map(|addr| {
+            addr.iter().last().and_then(|_| Some(PeerId::random()))
+        }).collect()
+    }
+}
+```
+
+## Production Considerations
+
+- **Validator monitoring**: Monitor validator uptime, missed blocks, and slashing events; alert on downtime.
+- **Checkpoint sync**: Use checkpoint sync for fast node bootstrap; validate against trusted checkpoints.
+- **Mempool management**: Set mempool size limits; prioritize transactions by fee using priority queue.
+- **State pruning**: Prune old state trie nodes; use snap sync for initial state download.
+- **P2P networking**: Configure max peers (default 50), NAT traversal, and relay nodes for restricted networks.
+- **Fork handling**: Implement fork choice rule (GHOST, LMD-GHOST) for chain reorganization scenarios.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Single validator for testnet | No realistic failure testing | Run minimum 4 validators per network |
+| No slashing protection | Accidental double-sign | Implement slashing protection per validator |
+| Unbounded mempool | Memory exhaustion | Set max mempool size with fee-based eviction |
+| No peer scoring | Eclipse attack vulnerability | Implement reputation-based peer scoring |
+| Ignoring clock skew | Block timestamps invalid | Use NTP; tolerate 2s clock drift |
+
+## Performance Optimization
+
+- **Block propagation**: Use compact block relay (only tx IDs, full txs on miss) for faster propagation.
+- **Transaction pool sharding**: Partition mempool by gas price tier; prioritize high-fee transactions.
+- **Parallel block execution**: Execute independent transactions in parallel (BlockSTM, Sui).
+- **State DB optimization**: Use LevelDB with tuned cache (RocksDB for high IO nodes).
+- **Gossip optimization**: Use erasure coding for large block propagation; reduce redundant messages.
+
+## Security Considerations
+
+- **Sybil resistance**: Require stake deposit for validators; implement slashing for equivocation.
+- **Long-range attack**: Use weak subjectivity checkpoints; validate against genesis or trusted checkpoint.
+- **Eclipse attack**: Diverse peer connections across IP/subnet; enforce peer diversity in discovery.
+- **Censorship resistance**: Include censorship-detection in block proposals; forced inclusion mechanism.
+- **Reorg safety**: Finality gadget (Casper FFG) to prevent deep reorgs after finalization.
+
 ## Phase
 blockchain → blockchain-core

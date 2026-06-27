@@ -467,5 +467,147 @@ end
   - references/elixir-otp.md — Elixir & OTP
   - references/elixir-testing-exunit.md — Elixir Testing with ExUnit
   - references/phoenix-ecto.md — Phoenix & Ecto
-## Handoff
-Hand off to `backend/universal/testing/SKILL.md` for ExUnit testing patterns or backend-deployment skill for Elixir releases.
+## Architecture Decision Trees
+
+### GenServer vs Agent vs ETS
+```
+State management pattern?
+├── Mutable state with side effects → GenServer
+│   Confirms that you need state transitions with side effects (sending emails, writing to DB).
+│   Use handle_call for synchronous, handle_cast for fire-and-forget.
+├── Simple state, no side effects → Agent
+│   get/update pattern. No handle_call/cast boilerplate. Good for config, counters.
+│   Risk: Agent.update is synchronous — wraps GenServer.call internally.
+└── Read-heavy, rarely-changed → ETS
+    No process bottleneck. ~1µs reads. Good for reference data, session caches.
+    Risk: data lost on restart. Pair with Ecto for durability.
+```
+
+### Supervision Strategy Selection
+```
+Failure recovery requirement?
+├── Children independent → :one_for_one
+├── Dependency chain → :rest_for_one
+│   If DB worker dies, restart DB before workers that depend on it.
+├── All must be up → :one_for_all
+│   If any child dies, restart all. Use for tightly coupled services.
+└── Dynamic children → DynamicSupervisor
+    For GenServers started at runtime (e.g., per-user processes).
+```
+
+## Implementation Patterns
+
+### Pattern: Phoenix PubSub Broadcast with LiveView Update
+
+```elixir
+# lib/my_app/catalog.ex
+defmodule MyApp.Catalog do
+  alias MyApp.Repo
+  alias MyApp.Catalog.Product
+
+  def create_product(attrs) do
+    %Product{}
+    |> Product.changeset(attrs)
+    |> Repo.insert()
+    |> broadcast(:product_created)
+  end
+
+  defp broadcast({:ok, product}, event) do
+    Phoenix.PubSub.broadcast(MyApp.PubSub, "products", {event, product})
+    {:ok, product}
+  end
+
+  defp broadcast(error, _event), do: error
+end
+
+# lib/my_app_web/live/product_live/index.ex (mount)
+def mount(_params, _session, socket) do
+  if connected?(socket), do: Phoenix.PubSub.subscribe(MyApp.PubSub, "products")
+  {:ok, stream(socket, :products, Catalog.list_products())}
+end
+
+def handle_info({:product_created, product}, socket) do
+  {:noreply, stream_insert(socket, :products, product, at: 0)}
+end
+```
+
+### Pattern: Ecto Multi for Transactional Operations
+
+```elixir
+def place_order(cart_id, customer_id) do
+  Ecto.Multi.new()
+  |> Ecto.Multi.run(:cart, fn _repo, _changes ->
+    case get_cart(cart_id) do
+      %Cart{status: :active} = cart -> {:ok, cart}
+      _ -> {:error, :cart_not_found}
+    end
+  end)
+  |> Ecto.Multi.run(:order, fn repo, %{cart: cart} ->
+    %Order{customer_id: customer_id, total: cart.total}
+    |> Order.changeset(%{})
+    |> repo.insert()
+  end)
+  |> Ecto.Multi.run(:line_items, fn repo, %{order: order} ->
+    items = Enum.map(cart.items, fn item ->
+      %LineItem{order_id: order.id, product_id: item.product_id, quantity: item.quantity, price: item.price}
+    end)
+    repo.insert_all(LineItem, items)
+  end)
+  |> Ecto.Multi.run(:clear_cart, fn repo, _changes ->
+    repo.delete_all(from c in CartItem, where: c.cart_id == ^cart_id)
+  end)
+  |> Repo.transaction()
+end
+```
+
+## Production Considerations
+
+### Deployment Pipeline
+```
+mix release build → container image → CI tests → staging deploy → smoke tests → prod deploy
+```
+- Releases: `MIX_ENV=prod mix release` bundles BEAM + deps + config into self-contained directory.
+- Database migrations run as separate step BEFORE new release starts. Never auto-migrate on app boot.
+- Use `RELEASE_NODE` and `RELEASE_COOKIE` for distributed Erlang node clustering.
+- Health checks: `/health` endpoint returns 200 when app is running. DB connectivity checked before startup completes.
+
+### Monitoring & Observability
+- Telemetry events: `[:phoenix, :endpoint, :stop]` for request duration, `[:ecto, :query, :total]` for DB.
+- Export: TelemetryMetricsPrometheus for `/metrics` endpoint scraped by Prometheus.
+- Key metrics: request latency (p50/p95/p99), DB query timing, LiveView socket count, process count, memory.
+- Logging: use `Logger.metadata()` with request_id, user_id, tenant_id for structured logs.
+- Alert on: process mailbox size > 1000, ETS table growth, Oban queue depth.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| GenServer as DB replacement | State lost on crash, restart resets. No durability. | Use Ecto for persistent data; GenServer for cache/state only |
+| `IO.inspect` debugging in prod | Compiles into release. Exposes internal state in logs. | `Logger.debug(inspect(data))` removed by compiler in :prod |
+| Phoenix context cross-calls | Context A calls Context B's Repo directly. Breaks encapsulation. | Always go through public context API functions |
+| Large Ecto preloads in LiveView | 10+ preloads per query = slow mounts. | Paginate, lazy-load, or use ETS cache for reference data |
+| `send_after` without cancellation | Timer survives GenServer crash. Fires into dead process. | Store timer ref, cancel on terminate with `Process.cancel_timer/1` |
+| `:infinity` GenServer timeout | Blocks caller indefinitely. Cascading failure on stuck call. | Always set explicit timeout (default 5000ms) |
+
+## Performance Optimization
+
+- Streams over Enum for large collections: `Stream.map` / `Stream.filter` avoid intermediate list allocation.
+- ETS read concurrency: `:named_table, :public, read_concurrency: true` for read-heavy workloads.
+- Ecto query optimization: use `Repo.preload` with `select: [:id, :name]` to fetch only needed columns.
+- Phoenix LiveView stream diffing: `stream_insert` / `stream_delete` over full re-render for list performance.
+- `IO.iodata_to_binary/1` for string concatenation in hot paths — avoids binary copying.
+- `:persistent_term` for truly immutable configuration — fastest read on BEAM (~10ns).
+- Oban job batching: batch similar jobs into single worker execution to reduce DB roundtrips.
+- Caching with Cachex: `Cachex.fetch(:products, key, fn -> Catalog.get_product(id) end)` with TTL.
+
+## Security Considerations
+
+- Phoenix Router: `:put_secure_browser_headers` plug enabled by default. Don't disable.
+- Ecto changesets prevent mass-assignment via `cast/3`. Never use `cast(attrs, [:all])`.
+- Password hashing: `Argon2` (memory-hard) over `bcrypt`. Never store plaintext or MD5/SHA.
+- Session tokens stored in signed cookies (default). Use database-backed sessions for sensitive apps.
+- CORS: configure `Plug.CORS` with explicit origins. Never `Access-Control-Allow-Origin: *` for auth endpoints.
+- SQL injection: Ecto's parameterized queries prevent injection. Never use `Ecto.Adapters.SQL.query!` with string interpolation.
+- LiveView: validate user permissions in handle_params/handle_event, not just in assigns.
+- Rate limiting: use Hammer or ExRated for per-IP/per-user rate limiting on auth endpoints.
+- Dependencies: run `mix hex.audit` in CI. Pin versions in mix.lock.

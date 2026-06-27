@@ -438,3 +438,108 @@ Brand colors must meet WCAG AA minimums:
   - references/visual-identity-guidelines.md — Visual Identity Guidelines Reference
 ## Handoff
 Hand off to `design-visual-design` for visual system implementation. Hand off to `design-design-systems` for token/component implementation. Hand off to `design-ux-research` for audience validation.
+## Implementation Patterns
+
+### Observer Pattern for Event Handling
+`
+interface EventObserver<T> {
+  onEvent(event: T): Promise<void>;
+}
+
+class EventBus<T> {
+  private observers: Set<EventObserver<T>> = new Set();
+  subscribe(observer: EventObserver<T>): void {
+    this.observers.add(observer);
+  }
+  unsubscribe(observer: EventObserver<T>): void {
+    this.observers.delete(observer);
+  }
+  async emit(event: T): Promise<void> {
+    const results = Array.from(this.observers).map(o => o.onEvent(event));
+    await Promise.allSettled(results);
+  }
+}
+`
+
+### Configuration-Driven Approach
+`
+config:
+  defaults:
+    timeout: 30s
+    retryCount: 3
+  overrides:
+    production:
+      timeout: 60s
+      retryCount: 5
+    development:
+      timeout: 300s
+      retryCount: 1
+`
+
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+## Architecture Decision Trees
+
+### Brand Architecture Decision Tree
+`
+Is the product a standalone brand or part of a portfolio?
+  ├── Standalone → Full brand identity system from scratch
+  └── Portfolio → Does it need to align with parent brand?
+       ├── Tight alignment → Sub-brand with visual consistency
+       └── Loose alignment → Independent brand with shared values
+            Number of target markets?
+            ├── Single → One cohesive identity
+            └── Multiple → Master brand with market-specific adaptations
+`
+
+### Visual Identity Decision Tree
+`
+What is the primary application context?
+  ├── Digital-first → Responsive logo, variable fonts, dark mode support
+  ├── Print-first → CMYK color space, PANTONE reference, bleed specifications
+  └── Environmental → Large-format scaling, material specifications
+       Does the brand need motion identity?
+       ├── Yes → Logo animation, loading sequences, transition guidelines
+       └── No  → Static identity only, no motion specifications
+`

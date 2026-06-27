@@ -431,6 +431,119 @@ Combine re_data (baseline tracking) + dbt-audit-helper (migration validation) + 
   - references/quality-automation.md — Quality Automation
   - references/quality-dimensions.md — Data Quality Dimensions
   - references/soda-check-examples.md — Soda Check Examples
+## Architecture Decision Trees
+
+```
+Data Quality Framework
+├── Real-time quality checks?
+│   ├── Yes → Great Expectations with Spark streaming / Deequ streaming
+│   └── No → Batch quality checks (dbt tests, Soda)
+├── Column-level quality needed?
+│   ├── Yes → Great Expectations (rich expectation suite)
+│   └── No → dbt generic tests (not null, unique, referential)
+├── ML data quality?
+│   ├── Yes → TensorFlow Data Validation (TFDV) for feature drift
+│   └── No → Row-level checks (freshness, completeness)
+└── Centralized quality platform?
+    ├── Yes → Soda Cloud / Monte Carlo / Great Expectations Data Context
+    └── No → Per-pipeline inline checks
+```
+
+**Decision criteria**: Evaluate real-time requirements, team size, existing dbt usage, and ML data pipeline maturity.
+
+## Implementation Patterns
+
+### Great Expectations Checkpoint
+```python
+# data_quality/ge_checkpoint.py
+import great_expectations as ge
+from great_expectations.core.batch import RuntimeBatchRequest
+
+class DataQualityPipeline:
+    def __init__(self, context_path: str = "./great_expectations"):
+        self.context = ge.get_context(context_root_dir=context_path)
+
+    def run_checks(self, df, suite_name: str, datasource_name: str):
+        batch_request = RuntimeBatchRequest(
+            datasource_name=datasource_name,
+            data_connector_name="default_runtime_data_connector_name",
+            data_asset_name=suite_name,
+            runtime_parameters={"batch_data": df},
+            batch_identifiers={"default_identifier_name": "pipeline_run"},
+        )
+        validator = self.context.get_validator(
+            batch_request=batch_request,
+            expectation_suite_name=suite_name,
+        )
+        results = validator.validate()
+        validator.save_expectation_suite(discard_failed_expectations=False)
+        return results
+```
+
+### dbt Quality Tests
+```yaml
+# data_quality/dbt_tests.yml
+version: 2
+
+models:
+  - name: orders
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('customers')
+              field: customer_id
+      - name: total_amount
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100000
+  - name: silver_orders
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "order_date >= '2020-01-01'"
+```
+
+## Production Considerations
+
+- **Alert routing**: Route quality failures to domain team Slack channels; page on gold-level failures.
+- **Tiered severity**: Bronze failures → log only; Silver failures → alert; Gold failures → page + block downstream.
+- **Quality SLAs**: Define freshness (99% of tables within 24h), completeness (< 5% null rate), accuracy (< 1% error).
+- **Historical tracking**: Store quality check results in a quality warehouse (table per dataset) for trend analysis.
+- **Data contracts**: Enforce contracts via CI checks on schema change; block PR if contract compatibility fails.
+- **Root cause analysis**: Link failures to upstream source changes via lineage; auto-file Jira tickets.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Testing everything equally | Noise, ignored alerts | Tier quality checks by criticality |
+| No baseline for thresholds | False positives from unfamiliar data | Profile data first, set dynamic thresholds |
+| Quality checks on production only | Bad data reaches consumers | Block at staging/Bronze layer |
+| No observability integration | Alerts with no context | Link to catalog, lineage, dashboard |
+| Ignoring data distribution drift | Static thresholds become obsolete | Periodic retraining of expectation baselines |
+
+## Performance Optimization
+
+- **Partitioned validation**: Run quality checks per partition; only validate new/modified partitions.
+- **Sampling**: Use stratified sampling for very large tables (10M+ rows); validate 100% only for critical columns.
+- **Parallel validation**: Run table-level checks in parallel (Dask/Spark) for 5x faster quality runs.
+- **Caching expectations**: Cache compiled expectations to avoid re-parsing suite definitions on each run.
+- **Incremental checks**: Validate only changed rows using CDC streams instead of full table scans.
+
+## Security Considerations
+
+- **Quality metadata access**: Restrict quality historical data access to data stewards and domain owners.
+- **PII in expectations**: Never reference raw PII values in expectation parameters; use hashed references.
+- **Alert channels**: Encrypt Slack webhook URLs; avoid including sensitive data values in alert messages.
+- **Schema validation**: Validate quality results schema before writing to warehouse; reject malformed records.
+- **Audit trail**: Log all quality configuration changes and threshold modifications for compliance.
+
 ## Handoff
 `data-etl-pipeline` for embedding quality checks into pipeline
 `data-bi-tools` for displaying quality metadata on dashboards

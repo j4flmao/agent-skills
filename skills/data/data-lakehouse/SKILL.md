@@ -491,6 +491,110 @@ Primary ecosystem?
   - references/medallion-architecture.md — Medallion Architecture Reference
   - references/lakehouse-architecture-patterns.md — Lakehouse Architecture Patterns
   - references/lakehouse-performance-optimization.md — Performance Optimization Reference
+## Architecture Decision Trees
+
+```
+Lakehouse Architecture Selection
+├── Medallion architecture (bronze/silver/gold)?
+│   ├── Yes → Delta Lake / Iceberg with medallion layers
+│   └── No → Direct ingestion to gold/pre-aggregated
+├── Multi-cloud or hybrid?
+│   ├── Yes → Iceberg (cloud-agnostic)
+│   ├── AWS-native → Delta Lake on S3
+│   └── Azure-native → Delta Lake on ADLS
+├── BI tool compatibility priority?
+│   ├── Yes → Delta Lake (BI native support)
+│   └── No → Iceberg (broader engine support)
+└── Streaming + batch convergence?
+    ├── Yes → Delta Live Tables / PyIceberg streaming
+    └── No → Batch-only lakehouse
+```
+
+**Decision criteria**: Assess cloud strategy, engine ecosystem (Spark, Trino, DuckDB), streaming needs, and team expertise with table formats.
+
+## Implementation Patterns
+
+### Medallion Architecture Pipeline
+```python
+# data_lakehouse/medallion_pipeline.py
+from pyspark.sql import SparkSession, DataFrame
+
+class MedallionPipeline:
+    def __init__(self, spark: SparkSession, catalog: str, database: str):
+        self.spark = spark
+        self.catalog = catalog
+        self.database = database
+
+    def bronze_layer(self, source_path: str, table: str) -> DataFrame:
+        df = self.spark.read.format("json").load(source_path)
+        df.writeTo(f"{self.catalog}.{self.database}.bronze_{table}") \
+            .tableProperty("format-version", "2") \
+            .createOrReplace()
+        return df
+
+    def silver_layer(self, bronze_table: str, silver_table: str, transformations: list) -> DataFrame:
+        df = self.spark.table(f"{self.catalog}.{self.database}.{bronze_table}")
+        for t in transformations:
+            df = t(df)
+        df.writeTo(f"{self.catalog}.{self.database}.{silver_table}") \
+            .partitionedBy("ingestion_date") \
+            .createOrReplace()
+        return df
+
+    def gold_layer(self, silver_table: str, gold_table: str, agg_cols: list, metric: str):
+        df = self.spark.table(f"{self.catalog}.{self.database}.{silver_table}")
+        aggs = df.groupBy(*agg_cols).agg({metric: "SUM"})
+        aggs.writeTo(f"{self.catalog}.{self.database}.{gold_table}").createOrReplace()
+```
+
+### Lakehouse Catalog Sync
+```yaml
+# data_lakehouse/catalog_sync.yml
+sync:
+  source: nessie
+  target: aws_glue
+  tables:
+    - silver.orders
+    - gold.revenue_daily
+  schedule: "0 */6 * * *"
+  conflict_resolution: source_wins
+```
+
+## Production Considerations
+
+- **Table maintenance**: Schedule Iceberg `expire_snapshots` and `rewrite_data_files` / Delta `VACUUM` and `OPTIMIZE` as weekly jobs.
+- **Catalog consistency**: Run catalog sync between Nessie/Iceberg REST and Glue/Hive Metastore for cross-engine support.
+- **Cost governance**: Tag tables with owner and cost center; set storage lifecycle policies (bronze 30d, silver 90d, gold indefinite).
+- **Write audit**: Track who wrote what via Spark listener or AWS CloudTrail for lakehouse write operations.
+- **Schema enforcement**: Enforce strict schema on write for silver/gold layers; schema on read for bronze.
+- **Time travel window**: Retain 7 days of snapshots for point-in-time queries; balance storage cost.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| No medallion layering | Direct ingestion creates unmanageable lake | Adopt bronze/silver/gold pattern |
+| Cross-engine format incompatibility | Queries fail on different engines | Test Iceberg with all query engines |
+| Ignoring orphan file cleanup | Storage costs balloon without benefit | Run vacuum after every compaction |
+| No catalog redundancy | Single point of failure for metadata | Deploy Nessie + Glue fallback |
+| Over-partitioning gold tables | Too many small files in aggregates | Coalesce gold tables by day/week |
+
+## Performance Optimization
+
+- **Z-order clustering**: Apply Z-ordering on frequently filtered columns in silver/gold tables.
+- **File compaction**: Rewrite small files into 256 MB–1 GB targets; trigger after large ingest batches.
+- **Incremental queries**: Use Iceberg incremental reads (`table_changes`) for downstream consumers instead of full scans.
+- **Materialized views**: Create materialized views (Trino, Spark) for gold-level dashboards; refresh on schedule.
+- **Data skipping**: Enable Iceberg/Delta statistics collection for better data skipping in WHERE clauses.
+
+## Security Considerations
+
+- **Column-level security**: Use Iceberg column mapping or Delta column mapping for PII restriction.
+- **Access controls**: Enforce lakehouse access via SQL standard `GRANT`/`REVOKE` on table/catalog level.
+- **Encryption at rest**: Enable S3/ADLS encryption with customer-managed keys for lakehouse storage.
+- **Audit logging**: Log all table reads and writes through Spark/Trino audit hooks to SIEM.
+- **Credential rotation**: Rotate storage access keys and catalog credentials every 90 days; use IAM roles.
+
 ## Handoff
 `data-data-lake` for underlying table format operations (compaction, vacuum, Z-order)
 `data-distributed-storage` for S3-compatible storage backend configuration

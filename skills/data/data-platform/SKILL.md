@@ -474,5 +474,116 @@ Metrics: Prometheus + Grafana dashboards. Logs: ELK/Loki + structured logging. T
   - references/platform-architecture.md — Data Platform Architecture
   - references/platform-decision-tree.md — Platform Decision Tree
   - references/platform-tools-comparison.md — Platform Tools Comparison
+## Architecture Decision Trees
+
+```
+Data Platform Architecture
+├── Self-managed or SaaS?
+│   ├── SaaS → Snowflake / Databricks / BigQuery
+│   ├── Self-managed → Trino + Hive Metastore + Spark
+│   └── Hybrid → Managed storage + self-managed compute
+├── Multi-cloud required?
+│   ├── Yes → Iceberg + Trino (cloud-agnostic)
+│   └── No → Cloud-native (Redshift, BigQuery, Synapse)
+├── Streaming workloads?
+│   ├── Heavy → Kafka + Flink + real-time warehouse
+│   └── Batch-only → Airflow + Spark/Dbt
+└── Developer experience priority?
+    ├── Yes → dbt + Datahub + self-serve provisioning
+    └── No → Traditional ETL orchestration
+```
+
+**Decision criteria**: Weigh total cost of ownership, team skill set, cloud strategy, and time-to-value.
+
+## Implementation Patterns
+
+### Platform Provisioning API
+```python
+# data_platform/provisioning.py
+from pydantic import BaseModel
+from enum import Enum
+
+class StorageTier(str, Enum):
+    bronze = "bronze"
+    silver = "silver"
+    gold = "gold"
+
+class DatasetRequest(BaseModel):
+    name: str
+    domain: str
+    tier: StorageTier
+    schema_def: dict
+    retention_days: int = 90
+    owner: str
+
+class PlatformProvisioner:
+    async def create_dataset(self, req: DatasetRequest) -> dict:
+        location = f"s3://data-lake/{req.tier}/{req.domain}/{req.name}"
+        await self.create_storage_location(location, req.retention_days)
+        await self.register_catalog(req.name, location, req.schema_def)
+        await self.set_iam_policies(req.domain, location)
+        return {"dataset_urn": f"urn:dataset:{req.domain}.{req.name}", "location": location}
+
+    async def create_storage_location(self, path: str, ttl_days: int):
+        lifecycle = {"Expiration": {"Days": ttl_days}}
+        await self.s3_client.put_bucket_lifecycle(path, lifecycle)
+```
+
+### Self-Serve Stack Definition
+```yaml
+# data_platform/stack.yml
+stack:
+  name: analytics-sandbox
+  compute:
+    engine: trino
+    cluster_size: XS
+    auto_suspend_minutes: 15
+  storage:
+    catalog: nessie
+    default_format: iceberg
+  tools:
+    - dbt (transformations)
+    - superset (dashboards)
+    - datahub (catalog)
+  access:
+    users: [team-marketing]
+    admin: platform-team
+```
+
+## Production Considerations
+
+- **Cost governance**: Tag all resources with cost center, domain, and environment; alert on cost anomalies.
+- **Multi-tenancy**: Isolate compute resources per domain using virtual clusters (Trino resource groups, Spark pools).
+- **Provisioning automation**: Infrastructure-as-code (Terraform) for all platform components; self-serve via API.
+- **Observability**: Centralized logging (ELK), metrics (Prometheus/Grafana), and tracing (OpenTelemetry) across platform.
+- **Backup & DR**: Cross-region replication for catalog metadata; daily backups of Hive Metastore/Nessie.
+- **Version upgrades**: Rolling upgrades for query engines; maintain compatibility matrix for dbt versions.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| One-size-fits-all compute | Over-provisioned for small queries, slow for large | Resource groups + tiered clusters |
+| No cost visibility | Unexpected bills, no team accountability | Tag all resources, daily cost reports |
+| DIY everything | Team spends 80% on infra, 20% on data value | Buy vs build decisions; leverage managed services |
+| Ignoring metadata management | Data swampland, no discovery | Deploy catalog from day one |
+| No schema enforcement | Downstream chaos from schema drift | dbt tests + contract enforcement |
+
+## Performance Optimization
+
+- **Compute separation**: Separate query engines for ETL (Spark) and BI (Trino) to avoid resource contention.
+- **Result caching**: Cache frequent query results in Trino result cache (Redis) or Alluxio for 5x speedup.
+- **Auto-scaling**: Enable cluster auto-scaling with 5-min warmup pool; shut down idle clusters.
+- **Data locality**: Co-locate compute with storage (same AWS region, same AZ) to reduce egress costs.
+- **Query queuing**: Implement query priority queues (Trino resource groups) for SLA management.
+
+## Security Considerations
+
+- **IAM hierarchy**: Define IAM roles per domain with least privilege; platform-admin role heavily restricted.
+- **Network security**: Deploy platform in private VPC with VPC endpoints for S3, Glue, and other services.
+- **Secrets management**: Centralize secrets in Vault/AWS Secrets Manager; never in config files or env vars.
+- **Data encryption**: SSE-S3 default for all storage; KMS for sensitive datasets with key rotation.
+- **Compliance**: Encrypt audit logs for 7-year retention; support GDPR right-to-deletion workflows.
+
 ## Handoff
 For ETL pipeline implementation, hand off to `etl-pipeline`. For data warehouse modeling, hand off to `data-warehouse`. For streaming, hand off to `streaming`.

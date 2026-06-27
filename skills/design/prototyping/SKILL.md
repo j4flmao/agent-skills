@@ -465,3 +465,109 @@ Common gaps between prototype and shipped product:
   - references/prototyping-tools.md — Prototyping Tools Reference
 ## Handoff
 Hand off to `design-ux-research` for usability test design. Hand off to `design-visual-design` for visual refinement. Hand off to `design-accessibility` for WCAG compliance audit.
+## Implementation Patterns
+
+### Observer Pattern for Event Handling
+`
+interface EventObserver<T> {
+  onEvent(event: T): Promise<void>;
+}
+
+class EventBus<T> {
+  private observers: Set<EventObserver<T>> = new Set();
+  subscribe(observer: EventObserver<T>): void {
+    this.observers.add(observer);
+  }
+  unsubscribe(observer: EventObserver<T>): void {
+    this.observers.delete(observer);
+  }
+  async emit(event: T): Promise<void> {
+    const results = Array.from(this.observers).map(o => o.onEvent(event));
+    await Promise.allSettled(results);
+  }
+}
+`
+
+### Configuration-Driven Approach
+`
+config:
+  defaults:
+    timeout: 30s
+    retryCount: 3
+  overrides:
+    production:
+      timeout: 60s
+      retryCount: 5
+    development:
+      timeout: 300s
+      retryCount: 1
+`
+
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+## Architecture Decision Trees
+
+### Prototype Fidelity Decision Tree
+`
+What is the goal of the prototype?
+  ├── Concept validation → Low-fidelity (wireframes, paper sketches)
+  ├── Usability testing → Medium-fidelity (interactive, limited visuals)
+  └── Stakeholder approval → High-fidelity (polished UI, real content, animations)
+       How much interactivity is needed?
+       ├── Click-through only → Static screens with links (Figma prototyping)
+       ├── Conditional logic → Variable-based interactions (Figma variables, Protopie)
+       └── Real data simulation → Code prototype (React, Framer, Webflow)
+`
+
+### Tool Selection Decision Tree
+`
+Who needs to edit the prototype?
+  ├── Designers only → Figma (collaborative, developer handoff built-in)
+  ├── Cross-functional team → Framer (design + code in same tool)
+  └── Developers + Designers → Code prototype (Next.js, Storybook)
+       What integrations are required?
+       ├── Design system → Link to component library in Figma/Storybook
+       ├── Real data → Connect to API mock (Mockaroo, Mirage JS)
+       └── Analytics → Track prototype interactions (Hotjar, FullStory)
+`

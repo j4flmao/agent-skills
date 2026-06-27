@@ -406,6 +406,103 @@ print(f"Result: {table.num_rows} rows, {table.num_columns} columns")
   - references/file-format-benchmarks.md — File Format Benchmarks
   - references/format-migration-strategies.md — Format Migration Strategies
   - references/schema-evolution.md — Schema Evolution Reference
+## Architecture Decision Trees
+
+```
+Data Format Selection
+├── OLAP analytical queries?
+│   ├── Yes → Parquet (columnar, predicate pushdown)
+│   ├── Columnar with mutation support? → ORC (ACID via Hive)
+│   └── No → Row-based (Avro for streaming, JSON for APIs)
+├── Schema evolution required?
+│   ├── Yes → Avro / Parquet (schema merge compatible)
+│   └── No → FlatBuffers / Protocol Buffers
+├── Human readability needed?
+│   ├── Yes → JSON / YAML (configs, small data)
+│   └── No → Binary (Parquet, Avro, Arrow)
+└── Zero-copy shared memory?
+    ├── Yes → Arrow (columnar, in-memory)
+    └── No → File-based (Parquet on S3, Avro on Kafka)
+```
+
+**Decision criteria**: Prioritize query pattern (OLAP vs OLTP), schema flexibility, storage cost, and serialization performance.
+
+## Implementation Patterns
+
+### Parquet Schema Evolution
+```python
+# data_formats/schema_evolution.py
+import pyarrow.parquet as pq
+import pyarrow as pa
+
+def merge_schemas(base_path: str, new_schema: pa.Schema) -> pa.Schema:
+    existing = pq.read_schema(base_path)
+    merged = existing
+    for field in new_schema:
+        if field.name not in existing.names:
+            merged = merged.append(field)
+    return merged
+
+def safe_append(table: pa.Table, path: str):
+    existing_schema = pq.read_schema(path)
+    merged = merge_schemas(path, table.schema)
+    pq.write_to_dataset(table, path, schema=merged, existing_data_behavior="overwrite_or_ignore")
+```
+
+### Arrow Flight gRPC Pattern
+```python
+# data_formats/arrow_flight.py
+import pyarrow.flight as flight
+
+class DataFlightClient:
+    def __init__(self, host: str = "localhost", port: int = 8815):
+        self.client = flight.FlightClient(f"grpc://{host}:{port}")
+
+    def query_partitioned(self, sql: str) -> pa.Table:
+        descriptor = flight.FlightDescriptor.for_command(sql.encode())
+        info = self.client.get_flight_info(descriptor)
+        tables = []
+        for endpoint in info.endpoints:
+            reader = self.client.do_get(endpoint.ticket)
+            tables.append(reader.read_all())
+        return pa.concat_tables(tables)
+```
+
+## Production Considerations
+
+- **File size tuning**: Target 256 MB–1 GB per Parquet file; too many small files hurt query performance.
+- **Compression**: Use Zstandard (zstd) for Parquet/ORC; snappy for balance. Avoid gzip for large datasets.
+- **Schema registry**: Maintain schema registry (Confluent Schema Registry) for Avro; enforce backward/forward compatibility.
+- **Encoding**: Use dictionary encoding for low-cardinality columns; delta encoding for timestamps.
+- **Row group sizing**: Set Parquet row group size to 128 MB for optimal split + compression ratio.
+- **Partitioning**: Partition by high-cardinality columns (date, region) but avoid > 1000 partitions.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| JSON for analytical workloads | 10-50x slower than Parquet | Convert to columnar format for analytics |
+| Too many small files ( < 64 MB) | Namenode pressure, slow list ops | Coalesce/compact into target file sizes |
+| No schema validation on write | Downstream breakage on reads | Enforce schema compatibility checking |
+| Mixing compression + encoding poorly | Bloated files or slow reads | Use zstd + dictionary encoding |
+| Ignoring Arrow for in-memory exchange | Serialization overhead dominates | Use Arrow Flight for high-throughput |
+
+## Performance Optimization
+
+- **Column pruning**: Read only required columns with `SELECT` pushdown; avoid `SELECT *`.
+- **Predicate pushdown**: Leverage Parquet/ORC min-max statistics for partition and row group filtering.
+- **Vectorized reads**: Use Arrow-backed readers (DuckDB, DataFusion) for SIMD-accelerated scans.
+- **Bloom filters**: Enable Parquet bloom filters for high-cardinality columns to skip non-matching row groups.
+- **Arrow zero-copy**: Share Arrow buffers between processes (mmap) instead of serializing/deserializing.
+
+## Security Considerations
+
+- **Encryption**: Use Parquet column encryption for sensitive columns (AES-GCM); manage keys via KMS.
+- **Schema validation**: Validate incoming Avro/Protobuf against schema registry to prevent malicious payloads.
+- **Data masking**: Mask PII columns at write time (Parquet mod encrypt or custom transform).
+- **Access control**: Apply file-level ACLs on data lake storage (S3 bucket policies, HDFS ACLs).
+- **Audit**: Log schema registry changes and file format conversions for compliance tracking.
+
 ## Handoff
 `data-streaming` for Kafka/Avro schema management and stream processing
 `data-data-lake` for Parquet/ORC file organization in data lake storage

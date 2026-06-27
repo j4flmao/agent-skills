@@ -432,3 +432,206 @@ Use `pytest-django` for faster test discovery and fixtures. Use `factory_boy` fo
 No artifact produced.
 Next skill: backend-testing — test Django with pytest.
 Carry forward: app organization, service layer pattern, DRF setup.
+## Implementation Patterns
+
+### Factory Pattern for Module Creation
+`
+function createModule<T>(config: ModuleConfig): T {
+  const dependencies = initializeDependencies(config);
+  const module = new Module(dependencies);
+  module.hooks.onInit();
+  return module as T;
+}
+`
+
+### Builder Pattern for Complex Configuration
+`
+class ConfigBuilder {
+  private config: AppConfig = new AppConfig();
+  withDatabase(url: string): ConfigBuilder { ... }
+  withCache(ttl: number): ConfigBuilder { ... }
+  withLogging(level: string): ConfigBuilder { ... }
+  build(): AppConfig { return this.config; }
+}
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Production build with optimizations enabled
+- [ ] Environment variables configured per environment
+- [ ] Health check endpoint responds correctly
+- [ ] Error tracking and monitoring integrated
+- [ ] Logging level configured (not debug in production)
+- [ ] Resource limits configured
+- [ ] Database migrations applied
+- [ ] Static assets built and served from CDN or cache
+- [ ] Feature flags toggled appropriately
+- [ ] Rollback plan documented and tested
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% | Critical | Rollback or fix |
+| p95 latency | > 500ms | Warning | Profile and optimize |
+| Uptime | < 99.9% | Critical | Investigate infrastructure |
+| Memory usage | > 80% | Warning | Check for leaks |
+| CPU usage | > 80% | Warning | Scale up or optimize |
+
+## Rules
+- Prefer composition over inheritance
+- Favor immutable data structures
+- Use dependency injection for testability
+- Keep functions pure when possible — no side effects
+- Fail fast with clear error messages
+- Don't repeat yourself (DRY) — extract shared logic
+- Keep it simple (KISS) — avoid unnecessary complexity
+- You aren't gonna need it (YAGNI) — build what's required
+- Separate concerns — single responsibility per module
+- Code to interfaces, not implementations
+- Write self-documenting code — clear names over comments
+- Prefer standard library over third-party dependencies
+- Handle errors explicitly — no silent failures
+- Validate inputs at boundaries
+- Log at appropriate levels (debug, info, warn, error)
+
+## Implementation Patterns
+
+### Pattern: Service Layer with Type Hints
+
+```python
+from dataclasses import dataclass
+from django.db import transaction
+from django.core.exceptions import ValidationError
+
+@dataclass
+class CreateOrderInput:
+    user_id: int
+    items: list[dict]
+    shipping_address: dict
+
+class OrderService:
+    def __init__(self, order_repo=None, payment_gw=None):
+        self.order_repo = order_repo or OrderRepository()
+        self.payment_gw = payment_gw or PaymentGateway()
+
+    @transaction.atomic
+    def create_order(self, input_data: CreateOrderInput) -> Order:
+        user = User.objects.get(id=input_data.user_id)
+        order = self.order_repo.create(user=user)
+        for item_data in input_data.items:
+            self.order_repo.add_item(order, item_data)
+        payment = self.payment_gw.charge(order.total)
+        order.payment = payment
+        order.save()
+        return order
+```
+
+### Pattern: Select-Related and Prefetch-Related Optimization
+
+```python
+# Bad: N+1 queries
+orders = Order.objects.filter(user=request.user)
+for order in orders:
+    print(order.items.count())  # hits DB per iteration
+
+# Good: prefetch related
+orders = Order.objects.filter(user=request.user).prefetch_related('items')
+for order in orders:
+    print(len(order.items.all()))  # in-memory, no extra query
+
+# Deep prefetch
+from django.db.models import Prefetch
+orders = Order.objects.prefetch_related(
+    Prefetch('items', queryset=Item.objects.select_related('product'))
+)
+```
+
+## Production Considerations
+
+- Gunicorn with `uvicorn` workers for ASGI. Workers = 2 * CPU cores + 1.
+- Database connection pooling: PgBouncer. Max 10 connections per worker.
+- Caching: Redis cache backend. `cache_page` decorator for heavy endpoints.
+- Static files: Whitenoise for middleware-serving. CDN for production.
+- Media files: S3/GCS storage backend. Signed URLs for private files.
+- Celery for background tasks. Redis broker. Task routing by priority.
+- Sentry integration for error tracking. Performance monitoring enabled.
+- Logging: structured JSON logs. Log level INFO. DEBUG only in dev.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| Fat models with business logic | Untestable. Hard to change. | Service layer for business logic. Models for data only. |
+| Signals for everything | Implicit execution. Debugging nightmare. | Use signals sparingly. Prefer explicit service calls. |
+| N+1 queries in templates | Page load explodes. | `select_related` and `prefetch_related` in views. |
+| Using `get_object_or_404` in loops | Hits DB repeatedly. | Prefetch all objects first. Map by ID. |
+| Massive `requirements.txt` | Slow builds. Dependency conflicts. | Pin versions. Use `pip-tools` or `uv`. |
+| Raw SQL without parameters | SQL injection risk. | Always use parameterized queries. Django ORM preferred. |
+
+## Performance Optimization
+
+- Database indexing: `db_index=True` on frequently filtered fields. Composite indexes for multi-column filters.
+- QuerySet caching: `.iterator()` for large result sets. Reduces memory in long-running tasks.
+- Template fragment caching: `{% cache 600 sidebar %}` for expensive renders.
+- Session engine: Redis or database. Avoid file-based sessions in production.
+- ORM batch operations: `bulk_create`, `bulk_update` for batch writes.
+- `only()` and `defer()` to select only needed columns.
+- Pagination: `Paginator` or cursor-based for large datasets.
+- Async views with `sync_to_async` for IO-bound tasks. Django 4.1+.
+- Connection pooling with `django-db-connection-pool` for high concurrency.
+
+## Security Considerations
+
+- CSRF: `{% csrf_token %}` in all forms. CSRF middleware enabled.
+- SQL injection: ORM parameterizes by default. Never raw SQL with string formatting.
+- XSS: Django template auto-escapes. Mark safe only for trusted content.
+- Clickjacking: `X-Frame-Options: DENY` via middleware.
+- HTTPS: `SECURE_SSL_REDIRECT = True` in prod. HSTS enabled.
+- Session security: `SESSION_COOKIE_HTTPONLY`, `SESSION_COOKIE_SECURE`.
+- Password validation: AUTH_PASSWORD_VALIDATORS. Argon2 hasher.
+- Rate limiting: `django-ratelimit` on auth and registration endpoints.
+- Content security: `django-csp` for CSP headers. Restrict script sources.
+- Secrets: environment variables. Never commit `.env` files.
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets

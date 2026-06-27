@@ -1,6 +1,6 @@
 # @j4flmao/agent-skills
 
-437 agent skills for software development — planning, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, data-science, design, quality, blockchain. Each skill is a `SKILL.md` defining triggers, rules, and response format.
+454 agent skills for software development — planning, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, data-science, design, quality, blockchain, prompt-engineering, cloud-native, system-design, site-reliability-engineering. Each skill is a `SKILL.md` defining triggers, rules, and response format.
 
 ## Installation
 
@@ -253,11 +253,15 @@ Agent config files contain the compression rules:
 │   ├── data/          37 skills
 │   ├── design/        8 skills
 │   ├── quality/       11 skills
+│   ├── prompt-engineering/ 5 skills
+│   ├── cloud-native/   4 skills
+│   ├── system-design/  4 skills
+│   ├── site-reliability-engineering/ 4 skills
 └── bundles/
     └── bundle-definitions.json
 ```
 
-Total: **437 SKILL.md** + **3174 reference .md files** + **18 docs/ guides** + **agent configs** = **3629+ files** (835k+ lines). Avg **7.26 refs/skill** — all skills 6+ refs. **solution-architecture** deepened to **22 refs** covering system design methodology, C4 model, evaluation methods (ATAM/CBAM), fitness functions, reference architectures, modernization, technology radar, architecture debt, leadership, metrics, risk quantification, API strategy, security architecture, and startup-vs-enterprise patterns.
+Total: **454 SKILL.md** + **3486 reference .md files** + **18 docs/ guides** + **agent configs** = **3958+ files** (900k+ lines). Avg **7.6 refs/skill** — all skills 6+ refs. **solution-architecture** deepened to **22 refs** covering system design methodology, C4 model, evaluation methods (ATAM/CBAM), fitness functions, reference architectures, modernization, technology radar, architecture debt, leadership, metrics, risk quantification, API strategy, security architecture, and startup-vs-enterprise patterns.
 
 ## License
 

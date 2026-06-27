@@ -480,3 +480,65 @@ angular_testing:
 No artifact produced.
 Next skill: angular-patterns — DI, interceptors, guards, NgRx vs Signal Store.
 Carry forward: standalone setup, signal patterns, feature organization.
+## Implementation Patterns
+
+### Factory Pattern for Module Creation
+`
+function createModule<T>(config: ModuleConfig): T {
+  const dependencies = initializeDependencies(config);
+  const module = new Module(dependencies);
+  module.hooks.onInit();
+  return module as T;
+}
+`
+
+### Builder Pattern for Complex Configuration
+`
+class ConfigBuilder {
+  private config: AppConfig = new AppConfig();
+  withDatabase(url: string): ConfigBuilder { ... }
+  withCache(ttl: number): ConfigBuilder { ... }
+  withLogging(level: string): ConfigBuilder { ... }
+  build(): AppConfig { return this.config; }
+}
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Production build with optimizations enabled
+- [ ] Environment variables configured per environment
+- [ ] Health check endpoint responds correctly
+- [ ] Error tracking and monitoring integrated
+- [ ] Logging level configured (not debug in production)
+- [ ] Resource limits configured
+- [ ] Database migrations applied
+- [ ] Static assets built and served from CDN or cache
+- [ ] Feature flags toggled appropriately
+- [ ] Rollback plan documented and tested
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% | Critical | Rollback or fix |
+| p95 latency | > 500ms | Warning | Profile and optimize |
+| Uptime | < 99.9% | Critical | Investigate infrastructure |
+| Memory usage | > 80% | Warning | Check for leaks |
+| CPU usage | > 80% | Warning | Scale up or optimize |
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Heavy ngOnInit logic | Blocks component initialization | Move to signal factories or async constructors |
+| Overusing async pipes | Multiple subscriptions per template | Use `toSignal()` or signal-based state |
+| Direct DOM manipulation | Bypasses Angular change detection | Use Renderer2 or @ViewChild with signals |
+| Giant NgModules | Tight coupling, slow compilation | Standalone components, lazy-loaded feature modules |
+| Subscriptions without cleanup | Memory leaks from orphaned observables | `takeUntilDestroyed()` or `async` pipe |
+
+## Security Considerations
+
+- **DomSanitizer for trusted content**: Never bypass security with `bypassSecurityTrustHtml` for user content. Use `DomSanitizer.sanitize(SecurityContext.HTML, value)`. Sanitize all `[innerHTML]` bindings.
+- **Interceptors for CSRF/XSRF**: Angular `HttpClientXsrfModule` handles XSRF token injection. Ensure backend sends `XSRF-TOKEN` cookie readable by JS. Use HTTP interceptor to add `X-XSRF-TOKEN` header automatically.
+- **Route guards for authorization**: Implement `CanActivate` and `CanMatch` guards. Use `inject()` in functional guards. Never trust client-only guards for sensitive routes - always validate server-side.
+- **Prevent template injection**: Use `{{ }}` interpolation which auto-escapes HTML. Avoid `[innerHTML]` with user content. For rich text, use a sanitized rich text component with DomPurify integration.

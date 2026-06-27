@@ -469,3 +469,96 @@ services:
   - references/experiment-reproducibility.md — Experiment Reproducibility
 ## Handoff
 `ml-classical-ml` for model training workflows. `ml-deep-learning` for deep learning experiment tracking.
+
+## Architecture Decision Trees
+
+### Tracking Platform Selection
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Hosting | MLflow (self-hosted, open source) | Weights & Biases (SaaS) | Data privacy, team size, budget |
+| Integration depth | Lightweight (log params + metrics) | Full pipeline (data + model registry) | MLOps maturity, regulatory needs |
+| Artifact storage | Local filesystem (simple) | S3/GCS (scalable, shareable) | Team distribution, data size |
+
+### Logging Granularity
+- Rapid iteration → Log only final metrics per run
+- Research/debugging → Log per-epoch metrics and gradients
+- Production → Log per-batch metrics, system resources, predictions
+- Compliance → Log all of the above with full data lineage
+
+## Implementation Patterns
+
+### MLflow Experiment Tracking
+`python
+import mlflow
+import mlflow.sklearn
+from sklearn.ensemble import RandomForestRegressor
+
+mlflow.set_experiment("house_price_prediction")
+
+with mlflow.start_run(run_name="rf_v3") as run:
+    params = {
+        "n_estimators": 200,
+        "max_depth": 15,
+        "min_samples_split": 5,
+        "random_state": 42
+    }
+    mlflow.log_params(params)
+
+    model = RandomForestRegressor(**params)
+    model.fit(X_train, y_train)
+
+    predictions = model.predict(X_test)
+    mse = mean_squared_error(y_test, predictions)
+    r2 = r2_score(y_test, predictions)
+
+    mlflow.log_metrics({"mse": mse, "r2": r2})
+    mlflow.log_artifact("feature_importance.png")
+    mlflow.sklearn.log_model(model, "model")
+
+    print(f"Run ID: {run.info.run_id}")
+`
+
+### Hyperparameter Sweep with MLflow
+`python
+import optuna
+import mlflow
+
+def objective(trial):
+    params = {
+        "learning_rate": trial.suggest_float("lr", 1e-4, 1e-1, log=True),
+        "max_depth": trial.suggest_int("max_depth", 3, 10),
+        "subsample": trial.suggest_float("subsample", 0.5, 1.0)
+    }
+    with mlflow.start_run(nested=True):
+        mlflow.log_params(params)
+        score = train_and_evaluate(params)
+        mlflow.log_metric("val_score", score)
+    return score
+
+study = optuna.create_study(direction="maximize")
+study.optimize(objective, n_trials=50)
+`
+
+## Performance Optimization
+
+### Storage Efficiency
+- **Artifact pruning**: Delete failed/aborted runs artifacts after 30 days. Keep only best run per parameter combination.
+- **Metric aggregation**: Log aggregated metrics (epoch-level) instead of per-batch for long runs. Sample per-batch metrics at intervals.
+- **Compression**: Compress logged artifacts (Parquet over CSV, gzip over plain). Use lossless compression for metrics parquet files.
+
+### Query Performance
+- **Tag-based filtering**: Tag runs with meaningful labels (dataset version, branch name). Use tags for efficient filtering in UI.
+- **Metric indexing**: Log commonly queried metrics as top-level keys. Avoid nested structures for frequently compared metrics.
+- **Separation of environments**: Separate dev/test/prod experiments into different experiments. Archive experiments older than 6 months.
+
+## Security Considerations
+
+### Access Control
+- **Run visibility**: Restrict experiment access by team/project. Use MLflow's permission model or reverse proxy auth.
+- **Artifact encryption**: Encrypt artifacts at rest in blob storage. Use server-side encryption with KMS.
+- **API tokens**: Use service accounts for CI/CD experiment tracking. Rotate tokens quarterly.
+
+### Data Governance
+- **Dataset versioning**: Log dataset hash/version with every run. Enable reproducibility and audit trail.
+- **PII in logs**: Never log raw data containing PII. Log aggregated statistics only, use anonymized sample data.
+- **Retention policy**: Define data retention policy for experiments. Auto-delete artifacts after compliance period expires.

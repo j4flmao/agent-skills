@@ -470,3 +470,103 @@ feature_3          | 15.0%    | NA          | -0.1 | 0.8 | -3  | 4   | YES - KS=
   - references/feature-store-fundamentals.md — Feature Store Fundamentals
 ## Handoff
 For model training with feature store integration, hand off to `ml-ml-pipeline`. For serving infrastructure, hand off to `ml-model-serving`.
+
+## Architecture Decision Trees
+
+### Feature Store Architecture
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Deployment | Self-hosted Feast (open source) | Managed Tecton/Hopsworks | Team size, operational overhead budget |
+| Storage backend | Offline: Parquet on S3 (batch) + Online: Redis (real-time) | Offline: BigQuery + Online: Datastore | Existing data infra, latency requirements |
+| Feature computation | Batch (Airflow scheduled) | Streaming (Kafka + Flink) | Freshness needs, data source velocity |
+
+### Feature Engineering Paradigm
+- Point-in-time correct features → Use feature store with timestamp join
+- Real-time features → Stream processing with feature materialization
+- Window aggregation → Feature store with time-windowed transforms
+- Embedding features → Pre-compute and store in vector DB
+
+## Implementation Patterns
+
+### Feast Feature Definition
+`python
+from datetime import timedelta
+from feast import Entity, FeatureView, Field, FileSource, ValueType
+from feast.types import Float32, Int64, String
+
+customer = Entity(
+    name="customer_id",
+    value_type=ValueType.INT64,
+    description="Customer identifier",
+)
+
+customer_transactions = FileSource(
+    path="s3://feature-bucket/transactions/*.parquet",
+    timestamp_field="event_timestamp",
+    created_timestamp_column="created",
+)
+
+transaction_features = FeatureView(
+    name="customer_transaction_features",
+    entities=[customer],
+    ttl=timedelta(days=7),
+    schema=[
+        Field(name="total_spend_7d", dtype=Float32),
+        Field(name="transaction_count_7d", dtype=Int64),
+        Field(name="avg_ticket_size_7d", dtype=Float32),
+        Field(name="top_category", dtype=String),
+    ],
+    source=customer_transactions,
+)
+`
+
+### Feature Serving API
+`python
+from feast import FeatureStore
+import pandas as pd
+
+store = FeatureStore(repo_path="./feature_repo")
+
+# Online serving for real-time inference
+features = store.get_online_features(
+    features=[
+        "customer_transaction_features:total_spend_7d",
+        "customer_transaction_features:transaction_count_7d",
+    ],
+    entity_rows=[{"customer_id": 1234}, {"customer_id": 5678}]
+).to_dict()
+
+# Offline retrieval for training
+training_df = store.get_historical_features(
+    entity_df=entity_df,
+    features=[
+        "customer_transaction_features:*",
+        "customer_profile_features:age",
+        "customer_profile_features:segment",
+    ],
+).to_df()
+`
+
+## Performance Optimization
+
+### Query Performance
+- **Feature caching**: Cache frequently accessed online features in Redis cluster. Set TTL based on feature staleness tolerance.
+- **Pre-computation**: Pre-compute expensive window features on schedule. Avoid recomputing on every retrieval.
+- **Batch retrieval**: Fetch features in batch for multi-entity requests. Use mget for Redis feature retrieval.
+
+### Storage Optimization
+- **Compression**: Use Parquet with snappy/zstd compression for offline store. Achieves 3-5x storage reduction.
+- **Partitioning**: Partition offline store by timestamp and entity ID. Enable predicate pushdown for efficient queries.
+- **Tiered storage**: Hot features in Redis, warm in S3, cold in Glacier. Define access frequency-based migration policy.
+
+## Security Considerations
+
+### Access Control
+- **Feature-level ACL**: Restrict access to sensitive features by team. Use column-level access policies in feature store.
+- **Entity encryption**: Hash or tokenize entity IDs in feature store. Never store raw PII as entity keys.
+- **API authentication**: Secure feature serving API with OAuth2. Require service-to-service mTLS.
+
+### Data Governance
+- **Feature lineage**: Track which models consume which features. Document feature owner, source, and transformation logic.
+- **Feature validation**: Validate feature values against defined ranges. Flag and quarantine anomalous feature values.
+- **Audit trail**: Log all feature retrieval requests with identity and timestamp. Enable compliance audit of feature access.

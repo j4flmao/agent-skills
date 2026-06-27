@@ -464,6 +464,113 @@ maintenance_jobs:
 ## References
 Coming soon.
 
+## Architecture Decision Trees
+
+```
+Lake Table Format Selection
+├── ACID transactions on lake?
+│   ├── Yes → Delta Lake / Iceberg / Hudi
+│   └── No → Hive-style partitions (legacy)
+├── Cross-engine compatibility?
+│   ├── Yes → Iceberg (Spark, Flink, Trino, Athena)
+│   ├── Databricks ecosystem? → Delta Lake
+│   └── No → Hudi (mature upsert/deletes)
+├── Real-time ingestion required?
+│   ├── Yes → Hudi (Copy-on-Write + Merge-on-Read)
+│   └── No → Iceberg (batch optimized)
+└── Schema evolution needed?
+    ├── Yes → Iceberg (add/drop/rename columns freely)
+    └── No → Delta Lake
+```
+
+**Decision criteria**: Evaluate engine ecosystem, transaction requirements, latency SLA, and schema flexibility.
+
+## Implementation Patterns
+
+### Iceberg Table Maintenance
+```python
+# data_lake/iceberg_maintenance.py
+from pyspark.sql import SparkSession
+
+class IcebergMaintenance:
+    def __init__(self, spark: SparkSession, table: str):
+        self.spark = spark
+        self.table = table
+
+    def expire_snapshots(self, retain_days: int = 7):
+        self.spark.sql(f"""
+            CALL {self.table}.expire_snapshots(
+                older_than => TIMESTAMP '{datetime.now() - timedelta(days=retain_days)}',
+                retain_last => 5
+            )
+        """)
+
+    def compact_data(self, target_size_mb: int = 256):
+        self.spark.sql(f"""
+            CALL {self.table}.rewrite_data_files(
+                target_file_size_bytes => {target_size_mb * 1024 * 1024}
+            )
+        """)
+
+    def rewrite_manifests(self):
+        self.spark.sql(f"CALL {self.table}.rewrite_manifests()")
+```
+
+### Lake Catalog Registration
+```yaml
+# data_lake/catalog_registration.yml
+catalog:
+  type: rest
+  uri: http://nessie:19120/api/v1
+  warehouse: s3://data-lake/warehouse
+  default_branch: main
+  tables:
+    - name: bronze.orders
+      format: iceberg
+      partitioning:
+        - identity: ingestion_date
+        - bucket(16): order_id
+    - name: silver.customers
+      format: delta
+      partitioning:
+        - identity: region
+```
+
+## Production Considerations
+
+- **Compaction scheduling**: Schedule data compaction during low-traffic windows; monitor file count per partition.
+- **Vacuum retention**: Keep snapshot history for 7 days for time-travel queries; vacuum older snapshots.
+- **Write amplification**: Prefer Copy-on-Write for read-heavy workloads; Merge-on-Read for write-heavy.
+- **Partition evolution**: Iceberg supports hidden partitioning; avoid repartitioning large tables.
+- **Catalog HA**: Deploy Nessie or AWS Glue Catalog with high availability; cache metadata locally.
+- **Storage tiering**: Use S3 Intelligent-Tiering for cost optimization; expire old data to Glacier.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| No compaction routine | Millions of small files, slow queries | Schedule hourly compaction |
+| Vacuum during active writes | Data loss or orphaned files | Coordinate with write quiesce |
+| Ignoring file format stats | No predicate pushdown benefit | Enable column stats in manifests |
+| Same format for all workloads | Suboptimal for streaming vs batch | Evaluate MoR vs CoW per use case |
+| No catalog backup | Table metadata loss | Snapshot catalog metadata daily |
+
+## Performance Optimization
+
+- **Partition pruning**: Align partitions with query filter patterns (date, region); use Iceberg hidden partitions.
+- **File clustering**: Run Z-order clustering on frequently filtered non-partition columns (Iceberg sort order).
+- **Metadata caching**: Cache Iceberg/Delta manifests in memory (local SSD) to reduce S3 metadata requests.
+- **Committed write ordering**: Use sorted writes to align with partition boundaries for faster merges.
+- **Parallel manifest reads**: Increase metadata parallelism via `spark.sql.iceberg.worker.numThreads`.
+
+## Security Considerations
+
+- **Table ACLs**: Use Ranger/Atlas for lake table-level authorization; restrict `DROP TABLE` permissions.
+- **Data encryption**: Enable S3 server-side encryption (SSE-S3 or SSE-KMS) for lake storage.
+- **Audit trail**: Log all DDL operations, compaction runs, and schema changes to AWS CloudTrail.
+- **Credential management**: Use IAM roles for Spark/Trino access to lake storage; rotate keys.
+- **Network isolation**: Deploy lake storage in VPC endpoints; no public S3 access to data lake buckets.
+
 ## Handoff
 `data-data-platform` for overall lake architecture
 `data-data-warehouse` for warehouse layer on top of lake

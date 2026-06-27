@@ -407,5 +407,94 @@ When loading a compressed summary in a new session:
 | Over-tokenization | Full code blocks in summary — uses 80% of budget | Link to files, describe changes, don't paste entire functions |
 | No rehydration step | Jump into work, miss context, duplicate decisions | Always read the context file and verify state first |
 
+## Architecture Decision Trees
+
+```
+Context Compression Strategy
+├── Session length?
+│   ├── > 2 hours → Summarize by phase (planning, implementation, debugging)
+│   ├── < 30 min → Single block summary with key decisions
+│   └── Multi-session → Cross-reference with prior session summaries
+├── Decision density?
+│   ├── High (architecture changes) → Detailed ADR-style entries
+│   ├── Medium (implementation) → What/Why, not How
+│   └── Low (bug fixes) → Symptom + root cause + fix path
+└── Collaboration type?
+    ├── Solo → Technical decisions + next steps
+    └── Team → Ownership tags + blocked items for async resolution
+```
+
+**Decision criteria**: Balance token budget (target < 2k tokens for summary), reader time, and completeness.
+
+## Implementation Patterns
+
+### Compressed Session Summary
+```markdown
+# Context Summary: 2024-06-21
+
+## Progress
+- `src/auth/oauth.ts`: Implemented PKCE flow (3 commits)
+- `tests/auth.test.ts`: Added 8 test cases, 6 passing, 2 flaky (rate-limited)
+
+## Decisions
+- Use @opencode/logger instead of winston (lighter, native ESM)
+- Rejected: gRPC for auth service → REST is sufficient for < 10 req/s
+
+## Blocked
+- Awaiting: CDN SSL cert from DevOps (@david, ticket OPS-442)
+- Pending: Design review for dashboard widget API (due Fri)
+```
+
+### Decision Log Entry
+```json
+{
+  "timestamp": "2024-06-21T14:30:00Z",
+  "type": "architecture",
+  "title": "Choose logging framework",
+  "context": "Need structured logging for auth service",
+  "options": ["winston", "pino", "@opencode/logger"],
+  "decision": "@opencode/logger",
+  "rationale": "Native ESM, 40% less bundle size, active maintenance",
+  "rejected": ["gRPC for auth service"],
+  "tags": ["auth", "logging"]
+}
+```
+
+## Production Considerations
+
+- **Token budget**: Keep compressed summary under 2k tokens; link to detailed docs for context.
+- **Freshness**: Always update summary at session end; never carry stale context into new session.
+- **Quantification**: Use numbers (3 files, 8 tests, 2 blockers) instead of vague descriptors.
+- **Git integration**: Cross-reference commit SHAs for traceability; don't duplicate git log.
+- **Ownership tagging**: Tag every blocker with an owner `(@person)` for accountability.
+- **Decision lifecycle**: Mark decisions as `active`, `superseded`, or `rejected` with dates.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Over-tokenization | 80% of budget on code blocks | Link to files, describe changes |
+| No ownership | Unresolved blockers | Always tag `(@person)` |
+| Subjective language | Ambiguous next steps | Quantify everything |
+| Missing file paths | Can't find what changed | Always `src/path/file.ts:42` |
+| Copy-paste commits | Redundant with git log | Synthesize, don't repeat |
+| No rehydration | Duplicate decisions | Read context file first |
+
+## Performance Optimization
+
+- **Structured format**: Use consistent markdown sections for fast parsing by both humans and LLMs.
+- **Incremental updates**: Append new entries; rewrite summary only when token budget exceeded.
+- **Indexing decisions**: Maintain decision index (JSON) for quick lookup across sessions.
+- **Archive stale entries**: Move decisions > 30 days old to archive; keep only active context.
+- **Template shortcuts**: Use templates for common session types (bug fix, feature, refactor).
+
+## Security Considerations
+
+- **Secrets in context**: Never include API keys, tokens, or credentials in context summaries.
+- **PII exclusion**: Strip user-identifiable information from error logs and decision rationales.
+- **Access control**: Store context files in private repo/bucket; encrypt if containing sensitive decisions.
+- **Audit trail**: All context updates are version-controlled (git); rollback if incorrect decisions propagate.
+- **Retention**: Archive contexts > 90 days; purge sessions with security-sensitive content.
+
 ## Handoff
 master-orchestrator — the compressed summary is injected at the start of the next work session for the master orchestrator skill to continue the work from where it was interrupted.

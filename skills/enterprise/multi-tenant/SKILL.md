@@ -448,14 +448,98 @@ A SaaS platform expanding into EU and Asia faced data residency requirements (GD
 - Tenant architecture changes require governance board approval.
 - All tenant isolation models support upgrade/migration paths.
 
-## References
-  - references/multi-tenant-advanced.md -- Multi-Tenant Advanced Topics
-  - references/multi-tenant-architecture.md -- Multi-Tenant Architecture Patterns
-  - references/multi-tenant-architecture-patterns.md -- Multi-Tenant Architecture Deep Reference
-  - references/multi-tenant-cost-allocation.md -- Multi-Tenant Cost Allocation
-  - references/multi-tenant-fundamentals.md -- Multi-Tenant Fundamentals
-  - references/tenant-isolation.md -- Tenant Isolation Models
-  - references/tenant-lifecycle.md -- Tenant Lifecycle Management
-  - references/tenant-provisioning.md -- Tenant Provisioning
+## Implementation Patterns
+
+### Pattern: Row-Level Security with PostgreSQL RLS
+
+```sql
+-- Enable RLS on tenant-scoped tables
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders FORCE ROW LEVEL SECURITY;
+
+-- Create policy that checks tenant_id against session variable
+CREATE POLICY tenant_isolation_policy ON orders
+  USING (tenant_id = current_setting('app.tenant_id')::UUID);
+
+-- Application middleware sets tenant context
+-- In Node.js/Express middleware:
+--   await db.query("SELECT set_config('app.tenant_id', $1, true)", [tenantId]);
+-- In Python/FastAPI middleware:
+--   await db.execute("SELECT set_config('app.tenant_id', $1, true)", [tenant_id])
+```
+
+### Pattern: Tenant-Aware Cache Isolation
+
+```typescript
+class TenantCache {
+  private redis: Redis;
+  private readonly PREFIX = 'tenant';
+
+  async get<T>(tenantId: string, key: string): Promise<T | null> {
+    const data = await this.redis.get(`${this.PREFIX}:${tenantId}:${key}`);
+    return data ? JSON.parse(data) : null;
+  }
+
+  async set<T>(tenantId: string, key: string, value: T, ttl = 300): Promise<void> {
+    await this.redis.set(`${this.PREFIX}:${tenantId}:${key}`, JSON.stringify(value), 'EX', ttl);
+  }
+
+  async invalidateTenant(tenantId: string): Promise<void> {
+    const keys = await this.redis.keys(`${this.PREFIX}:${tenantId}:*`);
+    if (keys.length > 0) await this.redis.del(...keys);
+  }
+
+  async invalidatePattern(tenantId: string, pattern: string): Promise<void> {
+    const keys = await this.redis.keys(`${this.PREFIX}:${tenantId}:${pattern}`);
+    if (keys.length > 0) await this.redis.del(...keys);
+  }
+}
+```
+
+## Production Considerations
+
+### Tenant Provisioning Automation
+- Target: provision new tenant in < 3 minutes from API call to ready.
+- Idempotent provisioning: each step retryable. State machine tracks completion. Resume on failure.
+- Event-driven: tenant provision request → SQS/SQS queue → worker → callback webhook.
+- Cost allocation: tag all resources with `tenant_id`. Track spend per tenant in billing system.
+
+### Multi-Tenant Monitoring
+- Per-tenant dashboards: request count, error rate, p95 latency, resource usage.
+- Noisy neighbor detection: alert when single tenant consumes > 30% of shared resource.
+- Tenant-level SLOs: uptime, latency, error rate per tenant. Alert on breach.
+- Usage metering: record per-tenant API calls, storage, compute. Bill accordingly.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| RLS as only isolation layer | Misconfiguration exposes all tenant data. | Enforce at app layer + RLS as defense-in-depth. |
+| No tenant ID in logs | Can't debug per-tenant issues. | Structured logging with tenant_id field. |
+| Shared cache without tenant prefix | Tenant A data served to Tenant B. | Prefix all cache keys with tenant_id. |
+| Single schema for regulated + non-regulated | HIPAA data in same table as free tier. | Hybrid model: dedicated DB for regulated. |
+| Provisioning not idempotent | Retry creates duplicate resources. | Idempotent steps. Rollback on failure. |
+| No per-tenant rate limiting | Noisy neighbor degrades all tenants. | Token bucket per tenant. Hard cap on connections. |
+
+## Performance Optimization
+
+- Connection pooling per DB: PgBouncer for DB-per-tenant models. Max 100 connections per tenant pool.
+- Shard routing: partition tenants across DB instances. Consistent hashing on tenant_id.
+- Cache isolation: Redis with `tenant_id` prefix. Per-tenant memory limit via `maxmemory-policy`.
+- Read replicas: per-tenant read replicas for reporting workloads. Offload analytics.
+- Index tenant_id columns: all shared tables indexed on tenant_id. Covering indexes for common queries.
+- Batch tenant maintenance: scheduled jobs iterate tenants in batches of 100. Stagger to avoid load spikes.
+- Materialized views per tenant for reporting. Refresh on schedule or event-driven.
+
+## Security Considerations
+
+- Tenant ID validation: every request checks tenant ID exists and is active. 403 for unknown/suspended.
+- Authentication: tenant-scoped JWT. Token includes tenant_id, validated on every request.
+- Authorization: middleware extracts tenant_id from token. Rejects multi-tenant queries without tenant context.
+- Data encryption: per-tenant KMS keys for DB-per-tenant model. Shared key with tenant_id context for row-level.
+- Audit logging: all data access logged with tenant_id. Tenant boundary violations treated as security incident.
+- Network isolation: per-tenant VPC for dedicated DB instances. VPC peering for shared services.
+- Backup isolation: per-tenant backup files. Encrypted with tenant-specific key. Cross-tenant restore blocked.
+- Deletion: soft-delete with 30-day grace. Full purge with validation. Backup purge after deletion confirmed.
 ## Handoff
 For compliance requirements on tenant isolation, hand off to `enterprise-compliance-audit`. For cost allocation per tenant, hand off to `enterprise-cost-governance`.

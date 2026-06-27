@@ -430,5 +430,115 @@ invariant solvency()
   - references/cross-chain-security.md — Cross-Chain Security Considerations
   - references/flash-loan-attack-patterns.md — Flash Loan Attack Patterns
 
+## Architecture Decision Trees
+
+```
+Blockchain Security Approach
+├── Audit phase?
+│   ├── Pre-development → Threat model + formal spec
+│   ├── Post-development → Smart contract audit + fuzzing
+│   ├── Pre-deployment → Comprehensive security review + bug bounty
+│   └── Post-deployment → Continuous monitoring + incident response
+├── Vulnerability type?
+│   ├── Reentrancy → ReentrancyGuard, checks-effects-interactions
+│   ├── Access control → OpenZeppelin AccessControl, multisig
+│   ├── Oracle manipulation → TWAP, multiple sources, circuit breaker
+│   └── Math errors → SafeMath (pre-0.8), overflow checks (0.8+)
+├── Formal verification needed?
+│   ├── Yes (high-value) → Certora / Halmos (rule-based verification)
+│   ├── Yes (ZK circuits) → Circom compiler checks, zkVerify
+│   └── No → Standard audit + fuzz testing
+└── Bug bounty program?
+    ├── Yes → Immunefi / HackerOne (up to 10% of TVL)
+    └── No → Internal audits only (higher residual risk)
+```
+
+**Decision criteria**: Evaluate TVL at risk, regulatory requirements, team security maturity, and budget.
+
+## Implementation Patterns
+
+### Reentrancy Protection
+```solidity
+// blockchain-security/contracts/ReentrancyGuard.sol
+pragma solidity ^0.8.20;
+
+abstract contract ReentrancyGuard {
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+    uint256 private _status;
+
+    modifier nonReentrant() {
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+        _status = _ENTERED;
+        _;
+        _status = _NOT_ENTERED;
+    }
+}
+```
+
+### Access Control with Timelock
+```solidity
+// blockchain-security/contracts/TimelockController.sol
+contract TimelockController {
+    uint256 public constant MIN_DELAY = 2 days;
+    uint256 public constant GRACE_PERIOD = 14 days;
+    mapping(bytes32 => bool) public queuedTransactions;
+
+    event Queued(bytes32 indexed txHash, address target, uint256 value, bytes data, uint256 executeTime);
+    event Executed(bytes32 indexed txHash);
+
+    function queue(address target, uint256 value, bytes calldata data) external onlyRole(PROPOSER_ROLE) {
+        bytes32 txHash = keccak256(abi.encode(target, value, data, block.timestamp + MIN_DELAY));
+        queuedTransactions[txHash] = true;
+        emit Queued(txHash, target, value, data, block.timestamp + MIN_DELAY);
+    }
+
+    function execute(address target, uint256 value, bytes calldata data) external onlyRole(EXECUTOR_ROLE) {
+        bytes32 txHash = keccak256(abi.encode(target, value, data, block.timestamp));
+        require(queuedTransactions[txHash], "Not queued");
+        delete queuedTransactions[txHash];
+        (bool success,) = target.call{value: value}(data);
+        require(success, "Execution failed");
+        emit Executed(txHash);
+    }
+}
+```
+
+## Production Considerations
+
+- **Audit frequency**: Full audit before mainnet deploy; re-audit on major upgrade (> 20% code change).
+- **Bug bounty**: Launch Immunefi bounty (up to 10% TVL); scope all contracts and frontend.
+- **Monitoring**: Deploy Forta/OpenZeppelin Defender Sentinel for transaction monitoring.
+- **Incident response**: Pre-defined IR playbook; pause contracts within 30 min of exploit detection.
+- **Insurance**: Purchase DeFi insurance (Nexus Mutual, Sherlock) for TVL coverage.
+- **Responsible disclosure**: Maintain security.txt; private disclosure channel for vulnerability reports.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Skipping threat model | Miss architecture-level vulnerabilities | Mandatory threat model before code |
+| Only automated audits | Miss logic bugs | Manual review + automated + fuzzing |
+| No timelock on upgrades | Compromised owner upgrades malicious code | Enforce minimum 48h timelock |
+| Fixing bugs without re-audit | New bugs introduced | Re-audit > 20% code changes |
+| No pause mechanism | Can't stop exploit in progress | Implement pausable + emergency stop |
+
+## Performance Optimization
+
+- **Gas-efficient access control**: Use bitmap-based roles (BitMaps) instead of array for role management.
+- **Batch verification**: Verify multiple signatures in single operation for multisig.
+- **Storage-efficient audits**: Use event-based audit trail instead of on-chain storage for non-critical logs.
+- **Off-chain monitoring**: Use The Graph subgraph for security monitoring; avoid on-chain overhead.
+- **Selective audit scope**: Focus formal verification on critical paths (token transfers, liquidations).
+
+## Security Considerations
+
+- **Checks-effects-interactions**: Always follow pattern: validate → update state → external calls.
+- **Proxy security**: Use transparent proxy (EIP-1967) to avoid function selector collisions.
+- **Access control**: Implement role-based access with OpenZeppelin AccessControl; avoid `onlyOwner`.
+- **Signature replay**: Include domain separator, nonce, and chain ID; validate expiry.
+- **Randomness**: Use Chainlink VRF for on-chain randomness; never use block.timestamp or blockhash.
+- **Governance attack resistance**: Implement flash loan resistant voting; time-weighted voting power.
+
 ## Phase
 blockchain → blockchain-security

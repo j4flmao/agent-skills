@@ -426,4 +426,121 @@ class Indexer:
   - references/multi-chain-indexing.md — Multi-Chain Indexing Strategies
   - references/custom-indexer-patterns.md — Custom Indexer Patterns
 
+## Architecture Decision Trees
+
+```
+Blockchain Indexing Strategy
+├── Indexing granularity?
+│   ├── Full chain → The Graph (subgraphs) / QuickNode streaming
+│   ├── Event-specific → Custom indexer (ethers.js + PostgreSQL)
+│   └── Real-time + historical → Goldsky (subgraph + pipeline)
+├── Query interface?
+│   ├── GraphQL → The Graph subgraph (standard for dApps)
+│   ├── SQL → Dune Analytics / Flipside (analytical queries)
+│   └── Custom API → Build with ethers.js + Express
+├── Scale requirements?
+│   ├── < 10M events → Single-node indexer (The Graph, Goldsky)
+│   ├── 10M-100M → Sharded indexer (multi-subgraph)
+│   └── > 100M → Custom pipeline (Kafka + Flink)
+└── Multi-chain?
+    ├── Yes → The Graph multi-chain subgraphs / Goldsky mirror
+    └── No → Single-chain indexer
+```
+
+**Decision criteria**: Evaluate query complexity, data volume, real-time needs, and team GraphQL/SQL expertise.
+
+## Implementation Patterns
+
+### The Graph Subgraph
+```yaml
+# blockchain-data-indexing/subgraph.yaml
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: TransferIndexer
+    network: mainnet
+    source:
+      address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+      abi: ERC20
+      startBlock: 15000000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Transfer
+      abis:
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+      file: ./src/mapping.ts
+```
+
+### Custom Indexer with PostgreSQL
+```python
+# blockchain-data-indexing/custom_indexer.py
+from web3 import Web3
+import asyncpg
+
+class EventIndexer:
+    def __init__(self, w3: Web3, db_url: str):
+        self.w3 = w3
+        self.db_url = db_url
+
+    async def index_events(self, contract_address: str, from_block: int, to_block: int):
+        conn = await asyncpg.connect(self.db_url)
+        events = self.w3.eth.get_logs({
+            "address": contract_address,
+            "fromBlock": from_block,
+            "toBlock": to_block
+        })
+        for event in events:
+            await conn.execute("""
+                INSERT INTO events (tx_hash, block_number, log_index, data)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (tx_hash, log_index) DO NOTHING
+            """, event["transactionHash"].hex(), event["blockNumber"],
+                 event["logIndex"], event["data"].hex())
+        await conn.close()
+```
+
+## Production Considerations
+
+- **Block range batching**: Batch historical sync in chunks of 5000 blocks; retry failed ranges.
+- **Reorg handling**: Detect reorgs via block parent hash chain; revert indexing to last safe block.
+- **Subgraph versioning**: Version subgraphs (v0.1.0); deploy new version alongside old; migrate queries.
+- **Indexer monitoring**: Track indexed block lag, event processing rate, and database write latency.
+- **Cost optimization**: Index only required events; use startBlock to limit historical scan range.
+- **Retry with backoff**: Exponential backoff on RPC failures; switch to backup RPC on persistent failure.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Indexing all events | High storage cost, slow queries | Filter to only required event types |
+| No reorg handling | Stale/wrong data after chain reorg | Store block hash; revert on mismatch |
+| Single RPC provider | Rate limiting, downtime | Multiple RPC endpoints with failover |
+| Using subgraph for analytics | Gas inefficient, limited aggregation | Dune/Flipside for analytics; subgraphs for dApp |
+| No event deduplication | Duplicate rows on restart | Use ON CONFLICT DO NOTHING (tx_hash, log_index) |
+
+## Performance Optimization
+
+- **Batch RPC calls**: Use `eth_getLogs` with block ranges; batch multiple contracts in single call.
+- **Database indexing**: Index on (block_number, log_index) and (tx_hash) for fast query performance.
+- **Parallel scanning**: Parallelize historical block ranges across multiple workers.
+- **Connection pooling**: Use connection pool for database; reuse HTTP connections for RPC.
+- **Event filtering**: Filter at RPC level (`address`, `topics`) before processing; avoid app-level filtering.
+
+## Security Considerations
+
+- **RPC authentication**: Use API keys with rate limits; rotate keys quarterly; use private RPC endpoints.
+- **Database access**: Separate read/write credentials; read-only for query endpoints.
+- **Input validation**: Validate event data before insert; reject malformed log entries.
+- **Audit trail**: Log all indexing jobs with parameters (range, contract, status) for traceability.
+- **Backup**: Daily database backups; point-in-time recovery for 7-day window.
+
 ## Phase: blockchain → blockchain-data-indexing

@@ -428,3 +428,91 @@ class RealTimeAnomalyDetector:
   - references/statistical-methods.md — Statistical Anomaly Detection
 ## Handoff
 Hand off to devops-observability for alerting and monitoring infrastructure. For time-series forecasting to model normal behavior first, hand off to ml-time-series.
+
+## Architecture Decision Trees
+
+### Detection Method Selection
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Data labeled? | Supervised (classification) | Unsupervised (isolation forest, AE) | Label availability, cost of labeling |
+| Time sensitivity | Online (real-time streaming) | Batch (offline analysis) | Latency requirements, data volume |
+| Anomaly type | Point anomaly (single outlier) | Collective/contextual (sequence) | Data structure, domain |
+| Dimensionality | Low-dim (statistical, distance-based) | High-dim (ensemble, deep learning) | Feature count, curse of dimensionality |
+
+### Algorithm Selection Matrix
+- Known distribution → Z-score, modified Z-score, Grubbs' test
+- Low-dim, unlabeled → Isolation Forest, LOF, DBSCAN
+- High-dim, unlabeled → Autoencoder reconstruction error, Deep SVDD
+- Sequential data → LSTM prediction error, Twitter ADVec
+
+## Implementation Patterns
+
+### Isolation Forest for Anomaly Detection
+`python
+import numpy as np
+from sklearn.ensemble import IsolationForest
+from sklearn.model_selection import train_test_split
+
+X_train, X_test = train_test_split(features, test_size=0.2, random_state=42)
+
+model = IsolationForest(
+    n_estimators=200,
+    contamination=0.05,
+    random_state=42,
+    max_samples='auto'
+)
+model.fit(X_train)
+
+scores = model.decision_function(X_test)
+predictions = model.predict(X_test)  # 1 = normal, -1 = anomaly
+`
+
+### Autoencoder-Based Anomaly Detection
+`python
+import tensorflow as tf
+from tensorflow.keras import layers, Model
+
+class AnomalyAutoencoder(Model):
+    def __init__(self, input_dim, encoding_dim=16):
+        super().__init__()
+        self.encoder = tf.keras.Sequential([
+            layers.Dense(64, activation='relu'),
+            layers.Dense(encoding_dim, activation='relu')
+        ])
+        self.decoder = tf.keras.Sequential([
+            layers.Dense(64, activation='relu'),
+            layers.Dense(input_dim, activation='sigmoid')
+        ])
+
+    def call(self, x):
+        encoded = self.encoder(x)
+        return self.decoder(encoded)
+
+    def anomaly_score(self, x):
+        reconstructed = self(x)
+        return tf.reduce_mean(tf.square(x - reconstructed), axis=1)
+`
+
+## Performance Optimization
+
+### Training Efficiency
+- **Subsampling**: For large datasets, train on representative sample. Isolation Forest scales O(n) with subsample size.
+- **Feature selection**: Reduce dimensionality with PCA before anomaly detection. Remove constant/near-constant features.
+- **Batch streaming**: For time-series, use sliding window training. Retrain only when drift is detected.
+
+### Inference Speed
+- **ONNX export**: Convert trained models to ONNX for faster inference. Achieve 2-5x speedup over native Python.
+- **Quantization**: Use int8 quantization for edge deployment. Reduces model size 4x with minimal accuracy loss.
+- **Approximate nearest neighbor**: Replace exact distance computation with ANN (Annoy, FAISS). Essential for real-time LOF at scale.
+
+## Security Considerations
+
+### Model Security
+- **Adversarial evasion**: Test anomaly detector against adversarial samples. An attacker can craft normal-looking anomalies.
+- **Model poisoning**: Anomaly detector trained on contaminated data fails. Validate training data for known normal ranges.
+- **Output leakage**: Anomaly scores may leak information about the model. Apply differential privacy for sensitive data.
+
+### Data Security
+- **PII in features**: Ensure features don't encode PII indirectly. Use anonymization for user-level anomaly detection.
+- **Production monitoring**: Log anomaly detection decisions for audit. Set up alerts on anomaly rate shifts.
+- **Access control**: Restrict access to anomaly scores and model artifacts. Anomaly labels can reveal business-sensitive patterns.

@@ -479,3 +479,164 @@ Reusable workflows: call another workflow file, support secrets and matrix, good
 After completing this skill:
 - Next skill: gitops -- ArgoCD/Flux deployment from CI artifacts
 - Pass context: workflow file paths, artifact names, deployment environments
+
+## Architecture Decision Trees
+
+### Composite vs Reusable Workflow
+
+| Decision | Composite Action | Reusable Workflow |
+|---|---|---|
+| Scope | Single job (multi-step) | Full workflow (multi-job) |
+| Call context | Same workflow, step level | Separate workflow call |
+| Input/Output | `inputs`, `outputs` | `workflow_call` inputs, secrets |
+| Use case | Shared step logic (build, test) | Shared pipeline (deploy, release) |
+| Versioning | Branch/commit SHA | Branch/tag in `uses` |
+| Debugging | Step inside caller's workflow | Separate run, harder to trace |
+
+### GitHub-hosted vs Self-hosted Runners
+
+| Aspect | GitHub-hosted | Self-hosted |
+|---|---|---|
+| Maintenance | Zero (GitHub managed) | Team maintains patching |
+| Scale | Auto-scales | Fixed capacity |
+| Network | Public internet | VPC, private access |
+| Cost | Included in plan minutes | Compute cost only |
+| Customization | Limited OS/images | Any OS, any tooling |
+| Security | Ephemeral (clean slate) | Persistent, needs hardening |
+
+## Implementation Patterns
+
+### YAML: Multi-job CI/CD with Matrix and Environments
+
+```yaml
+name: CI/CD Pipeline
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - run: npm run test -- --coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.node-version }}
+          path: coverage/
+
+  build-and-push:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - run: |
+          echo "Deploying ${{ github.sha }} to production"
+```
+
+### Bash: Dispatch Workflow from CLI
+
+```bash
+#!/usr/bin/env bash
+trigger_workflow() {
+  local repo=$1
+  local workflow=$2
+  local branch=$3
+  local payload=$4
+
+  gh workflow run "$workflow" \
+    --repo "$repo" \
+    --ref "$branch" \
+    --json "$payload"
+}
+
+verify_run() {
+  local run_id
+  run_id=$(gh run list --repo "$1" --limit 1 --json databaseId --jq '.[0].databaseId')
+  gh run watch "$run_id" --repo "$1" --exit-status
+}
+```
+
+## Production Considerations
+
+- Use **OpenID Connect (OIDC)** for cloud provider access instead of long-lived secrets
+- Set **environment protection rules** — required reviewers for production deployments
+- Configure **artifact retention** — default 90 days; set shorter for ephemeral build artifacts
+- Enable **GitHub Actions cache** with v2 (cross-branch cache access) for dependency caching
+- Use **status checks** in branch protection rules to require all jobs pass before merge
+- Label **self-hosted runners** by capability (gpu, arm64, windows) and scope to specific repos
+- Pin **third-party actions** to commit SHAs instead of major version tags for supply chain security
+
+## Anti-Patterns
+
+- Storing **secrets as plain text in YAML** — always use GitHub Secrets or OIDC
+- Running **build and test on every push** to all branches — use path filters for non-code changes
+- Using **`GITHUB_TOKEN`** with excessive permissions — scope `permissions:` per job
+- Neglecting **matrix strategy** for multi-version testing — testing only latest misses regressions
+- Creating **monolithic workflows** — split into focused workflows for faster feedback
+- Leaving **action versions unpinned** (`uses: actions/checkout` v no @v4) — breaks on major updates
+- Ignoring **concurrency groups** — concurrent deploys to the same environment cause conflicts
+
+## Performance Optimization
+
+- Use **cache action** with `restore-keys` to fall back to previous cache if exact match not found
+- Enable **BuildKit caching** with `docker/build-push-action` `cache-from` and `cache-to` layers
+- Split **test runs** into parallel matrix jobs using `strategy.fail-fast: false` for full results
+- Use **path filtering** (`paths-ignore`) to skip CI for documentation-only changes
+- Download **pre-built tool caches** with `actions/cache` or `actions/setup-*` restore features
+- Set **job timeout-minutes** appropriately — prevents hung jobs from burning runner minutes
+- Combine **multiple build steps** into a single composite action to reduce setup overhead
+
+## Security Considerations
+
+- Enable **Dependabot** for Actions and Docker dependencies with auto-merge for patch updates
+- Verify **attestations** on third-party actions using GitHub's artifact attestations
+- Use **minimum required permissions** per job with `permissions:` block instead of default broad access
+- Scan **container images** in the build pipeline with Trivy before pushing to registry
+- Rotate **deployment keys** and secrets quarterly; revoke immediately on team member departure
+- Set **IP allowlist** on self-hosted runners to prevent unauthorized workflow execution
+- Restrict **workflow triggers** to `pull_request_target` only with safe checkout patterns

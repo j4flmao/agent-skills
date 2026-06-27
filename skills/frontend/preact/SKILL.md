@@ -448,28 +448,6 @@ function App() {
 }
 ```
 
-## Architecture Decision Trees
-
-### Preact vs React Decision
-
-```
-Should you use Preact instead of React?
-├── Bundle size is critical (under 10kB budget)
-│   └── Preact (3kB vs React 42kB)
-│
-├── Need full React ecosystem (React Router, Framer Motion)
-│   └── Use Preact compat layer — most libraries work
-│
-├── Need React-specific features (Suspense with concurrent mode)
-│   └── Stick with React — Preact may not match behavior
-│
-├── Building a micro-frontend or widget for embedding
-│   └── Preact — smaller footprint for third-party embedding
-│
-└── New project, no existing React dependency
-    └── Preact is a good default — switch to React later if needed
-```
-
 ## Anti-Patterns
 
 | Anti-Pattern | Why It Fails | Correct Approach |
@@ -485,3 +463,34 @@ Should you use Preact instead of React?
 - **Signal-based reactivity over re-renders**: Signals only re-render the specific DOM nodes that depend on them. No virtual DOM diff for the parent component. 10x faster for fine-grained updates.
 - **Aliasing react to preact/compat**: Configure in bundler (vite, webpack) to redirect `react` imports to `preact/compat`. Enables using React ecosystem with Preact's small bundle size.
 - **No synthetic event pooling**: Preact doesn't pool events like React does. No nullification of event properties after callback. Improves performance for event-heavy components.
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Production build with optimizations enabled
+- [ ] Environment variables configured per environment
+- [ ] Health check endpoint responds correctly
+- [ ] Error tracking and monitoring integrated
+- [ ] Logging level configured (not debug in production)
+- [ ] Resource limits configured
+- [ ] Database migrations applied
+- [ ] Static assets built and served from CDN or cache
+- [ ] Feature flags toggled appropriately
+- [ ] Rollback plan documented and tested
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% | Critical | Rollback or fix |
+| p95 latency | > 500ms | Warning | Profile and optimize |
+| Uptime | < 99.9% | Critical | Investigate infrastructure |
+| Memory usage | > 80% | Warning | Check for leaks |
+| CPU usage | > 80% | Warning | Scale up or optimize |
+
+## Security Considerations
+
+- **DangerousHtml sanitization**: Preact doesn't auto-sanitize `dangerouslySetInnerHTML`. Always sanitize HTML content through DOMPurify before injecting. Never set `__html` from untrusted sources.
+- **Signal expression safety**: Signal values in JSX auto-escape via Preact's diffing. However, signals in `innerHTML` bypass JSX escaping. Always use `{signal.value}` in JSX, never construct raw HTML strings.
+- **XSS via compat**: `preact/compat` may expose React patterns like `createElement` with dangerouslySetInnerHTML. Audit compat-using components for injection vectors. Use PropTypes or TypeScript runtime checks for user input.
+- **Third-party script isolation**: Preact apps embedded in third-party sites must handle CSS/JS conflicts. Use shadow DOM for widget components via `preact-shadow-root` or custom elements. Isolate state from host page globals.
+- **Input validation**: Always validate and sanitize user inputs before rendering. Use Preact's built-in escaping through JSX expressions `{value}`. For rich text rendering, use a dedicated component with DOMPurify integration and never bypass JSX escaping with `innerHTML`.
+- **Dependency audit**: Preact's small API surface reduces attack surface but `preact/compat` pulls in more code. Audit compat dependencies for known vulnerabilities. Keep Preact and compat versions in sync to avoid security patch gaps.

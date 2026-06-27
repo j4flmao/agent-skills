@@ -414,3 +414,111 @@ A retail company implemented consumer-driven contract testing (Pact) for microse
 After completing this skill:
 - Next skill: **qc** — to enforce code quality gates and standards
 - Pass context: test strategy, test cases, defect reports, coverage targets
+
+## Architecture Decision Trees
+
+### Test Strategy Selection
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Test pyramid shape | Ice cream cone (lots of E2E) | Classical pyramid (lots of unit) | Application type, team maturity |
+| Automation approach | Record & playback (fast start) | Code-first (maintainable) | Longevity, team skill, CI integration |
+| Test data strategy | Production clone (realistic) | Synthetic data (controlled) | Privacy compliance, data volume |
+
+### Automation Framework Decision
+- Microservices API → REST Assured + Postman/Newman
+- Frontend-heavy SPA → Playwright or Cypress
+- Mobile app → Appium + Maestro
+- Legacy monolith → Selenium + JUnit
+
+## Implementation Patterns
+
+### Test Plan Template
+`markdown
+# Test Plan: {project}
+
+## Scope
+- In scope: {features to test}
+- Out of scope: {exclusions}
+
+## Test Levels
+| Level | Tools | Coverage Target |
+|---|---|---|
+| Unit | Jest | 85% line coverage |
+| Integration | Supertest | All API endpoints |
+| E2E | Playwright | Critical paths |
+| Manual | TestRail | Exploratory |
+
+## Schedule
+- Test case creation: {dates}
+- Test execution: {dates}
+- Regression: {dates}
+
+## Entry / Exit Criteria
+### Entry
+- Code deployed to test environment
+- Smoke tests pass
+
+### Exit
+- No critical/blocker bugs open
+- Coverage targets met
+`
+
+### Defect Report Template
+`markdown
+## Bug: {title}
+- **Severity**: Critical / High / Medium / Low
+- **Priority**: P0 / P1 / P2 / P3
+- **Environment**: {OS, browser, version}
+- **Steps to Reproduce**:
+  1. {step}
+  2. {step}
+- **Expected**: {behavior}
+- **Actual**: {behavior}
+- **Attachment**: {screenshot/log}
+`
+
+## Production Considerations
+
+### Test Environment
+- **Environment parity**: Test env mirrors production as closely as possible. Use containerized ephemeral environments for each PR.
+- **Test data management**: Refresh test data regularly to prevent data rot. Use idempotent setup/teardown.
+- **Flaky test management**: Track flaky test rate. Automatically quarantine tests that fail > 5% of runs.
+
+### Release Gating
+- **Quality gates**: Block deployment on unit test failures, coverage drops, or critical bugs. Require QA sign-off for production releases.
+- **Smoke tests**: Run critical path smoke tests post-deployment. Auto-rollback if smoke tests fail within 15 minutes.
+- **Metrics dashboard**: Display test pass rate, coverage trend, and defect aging. Review in weekly QA sync.
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Solution |
+|---|---|---|
+| Testing everything the same way | Slow E2E tests for simple logic | Match test type to risk (unit for logic, E2E for flows) |
+| Manual regression testing | 3-day regression cycles, human error | Automate regression, limit manual to exploratory |
+| Flaky test tolerance | Random CI failures, team ignores tests | Investigate and fix or quarantine flaky tests immediately |
+| Bug report without reproduction | Developer cannot reproduce | Enforce reproduction steps requirement in template |
+| Testing after code freeze | No time to fix found bugs | Shift left — test during development, not after |
+
+## Performance Optimization
+
+### Test Execution Speed
+- **Parallel execution**: Run tests in parallel by file/class. Use sharding across CI agents.
+- **Selective testing**: Run only affected tests based on code change. Use dependency analysis for smart test selection.
+- **Mock external services**: Use wiremock/mockserver for external dependencies. Avoid real network calls in unit/integration tests.
+
+### CI Integration
+- **Fast feedback**: Run unit tests in < 5 minutes. Run full suite in < 30 minutes on CI.
+- **Test splitting**: Split test suite into fast (PR) and full (nightly). PR pipeline runs critical tests only.
+- **Caching**: Cache node_modules, build artifacts, and test results. Use buildkite/github actions cache features.
+
+## Security Considerations
+
+### Test Security
+- **Test secrets**: Use CI secrets for test credentials. Never hardcode API keys in test files or config.
+- **Data privacy**: Never use real PII in test data. Generate synthetic data matching production schemas.
+- **Environment isolation**: Test environments must be isolated from production. No production-write access from test suites.
+
+### Vulnerability Testing
+- **Security test cases**: Include auth bypass, injection, and XSS test cases. Add security scenarios to regression suite.
+- **Dependency scanning**: Scan test dependencies for known vulnerabilities. Keep test tooling up to date.
+- **Access control testing**: Verify role-based access in test suites. Include negative tests for unauthorized access.

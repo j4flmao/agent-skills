@@ -460,3 +460,72 @@ If migrating a simple Vue app that doesn't need SPA features:
 No artifact produced.
 Next skill: alpine-laravel (if Laravel backend) or frontend-testing.
 Carry forward: x-data state pattern, x-model binding, store pattern.
+## Implementation Patterns
+
+### Factory Pattern for Module Creation
+`
+function createModule<T>(config: ModuleConfig): T {
+  const dependencies = initializeDependencies(config);
+  const module = new Module(dependencies);
+  module.hooks.onInit();
+  return module as T;
+}
+`
+
+### Builder Pattern for Complex Configuration
+`
+class ConfigBuilder {
+  private config: AppConfig = new AppConfig();
+  withDatabase(url: string): ConfigBuilder { ... }
+  withCache(ttl: number): ConfigBuilder { ... }
+  withLogging(level: string): ConfigBuilder { ... }
+  build(): AppConfig { return this.config; }
+}
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Production build with optimizations enabled
+- [ ] Environment variables configured per environment
+- [ ] Health check endpoint responds correctly
+- [ ] Error tracking and monitoring integrated
+- [ ] Logging level configured (not debug in production)
+- [ ] Resource limits configured
+- [ ] Database migrations applied
+- [ ] Static assets built and served from CDN or cache
+- [ ] Feature flags toggled appropriately
+- [ ] Rollback plan documented and tested
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% | Critical | Rollback or fix |
+| p95 latency | > 500ms | Warning | Profile and optimize |
+| Uptime | < 99.9% | Critical | Investigate infrastructure |
+| Memory usage | > 80% | Warning | Check for leaks |
+| CPU usage | > 80% | Warning | Scale up or optimize |
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Complex logic in Alpine expressions | Unreadable, untestable | Extract to JavaScript functions, reference by name |
+| Deeply nested x-data | State becomes tangled | Use $store or flat component state |
+| Direct DOM manipulation alongside Alpine | Causes hydration conflicts | Always use Alpine directives (x-text, x-bind, x-model) |
+| Ignoring x-cloak for dynamic content | FOUC on page load | Always add x-cloak to root Alpine elements |
+| Overusing x-effect instead of computed | Effects run on every dependency change | Use x-data getters for computed values |
+
+## Performance Optimization
+
+- **x-if vs x-show**: Use `x-if` for content that toggles rarely (tabs, modals) - it removes DOM nodes. Use `x-show` for frequent toggles (dropdowns, tooltips) - it uses CSS display toggle. x-if is more expensive on first render but cheaper on memory.
+- **Debounce expensive operations**: Attach `.debounce` modifier to inputs that trigger API calls or complex computations: `@input.debounce.300ms="search"`. Use `.throttle` for scroll/resize handlers.
+- **Lazy-load Alpine components**: Split pages into multiple `x-data` scopes rather than one large scope. Each scope initializes independently. Use Intersection Observer with `x-intersect` to init components when visible.
+- **Minimal reactivity**: Alpine tracks property access inside x-data. Use `Object.freeze()` for static data to prevent observation overhead. Avoid deeply nested reactive objects.
+
+## Security Considerations
+
+- **CSP mode**: Always prefer the CSP-compatible build (`alpinejs@3/dist/csp.min.js`) in production. It restricts expressions to `x-data` attributes only, preventing injection of arbitrary JS via `x-text` or `x-html`.
+- **Sanitize x-html input**: `x-html` inserts raw HTML. Never bind user-generated content to `x-html`. Use `x-text` for user content. If HTML rendering is required, sanitize through DOMPurify first.
+- **Avoid inline event handlers with user input**: `@click="handleUserInput(someUserValue)"` can be exploited if `someUserValue` contains expressions. Validate and escape user data before passing into Alpine expressions.
+- **Protect $store from mutation**: Use `Object.freeze()` or proxy patterns to prevent accidental store corruption from third-party scripts. Validate store mutations in production.

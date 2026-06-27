@@ -432,3 +432,95 @@ A company had 20+ internal tools for HR, IT, and Finance processes. BA analysis 
 After completing this skill:
 - Next skill: **qa** — to plan testing for the defined requirements
 - Pass context: user stories with acceptance criteria, NFRs, process models
+
+## Architecture Decision Trees
+
+### Requirements Elicitation Method
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Stakeholder access | Direct interviews (rich detail) | Document analysis (async) | Stakeholder availability, project timeline |
+| Problem complexity | User story mapping (end-to-end view) | Use case specs (detailed flows) | Team familiarity with agile vs formal methods |
+| Validation method | Prototyping (interactive feedback) | Written sign-off (formal approval) | Speed of iteration, regulatory requirements |
+
+### Requirements Structuring
+- Simple feature → Single user story with acceptance criteria
+- Complex workflow → User story map with epics and tasks
+- Compliance-heavy → Use case specifications with pre/post conditions
+- Integration-heavy → BDD scenarios in Gherkin format
+
+## Implementation Patterns
+
+### User Story Template
+`gherkin
+Feature: User Authentication
+  As a registered user
+  I want to log in with email and password
+  So that I can access my account
+
+  Scenario: Successful login
+    Given I am on the login page
+    When I enter valid email and password
+    And I click "Sign In"
+    Then I should be redirected to my dashboard
+    And I should see my profile name in the header
+
+  Scenario: Failed login with invalid password
+    Given I am on the login page
+    When I enter an invalid password
+    Then I should see an error message "Invalid email or password"
+    And I should remain on the login page
+`
+
+### Requirements Traceability Matrix
+| Req ID | Priority | Source | Test Case | Status |
+|---|---|---|---|---|
+| FR-001 | High | Stakeholder interview #3 | TC-AUTH-01 | Verified |
+| FR-002 | Medium | Regulatory req §5.2 | TC-COMP-04 | Pending |
+| NFR-001 | High | SLA requirement | TC-PERF-02 | In review |
+| FR-003 | Low | Competitive analysis | TC-FEAT-07 | Deferred |
+
+## Production Considerations
+
+### Quality Assurance
+- **Peer review**: All requirements documents need peer review. Use checklist-based review for completeness.
+- **Traceability**: Link every requirement to a test case. Maintain forward/backward traceability in RTM.
+- **Change impact**: When requirements change, assess impact on scope, timeline, and budget. Document changes in version-controlled register.
+
+### Stakeholder Management
+- **Regular validation**: Re-validate requirements with stakeholders at each phase. Avoid assumption-driven requirements.
+- **Sign-off process**: Formal sign-off at requirement baseline and each change. Use approval tracking matrix.
+- **Escalation path**: Define escalation for unresolved requirement conflicts. Include business sponsor as final arbiter.
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Solution |
+|---|---|---|
+| Analyzing to death | 200-page BRD, never implemented | Timebox analysis, release in increments, validate early |
+| Assumed consensus | Stakeholders disagree at demo | Document decisions, use decision log, validate individually |
+| Copy-paste requirements | Requirements don't match actual system | Contextualize each requirement, link to business goal |
+| Gold-plating | Features nobody asked for | Scope must map to prioritized business outcomes |
+| Silent stakeholder | Missing critical domain knowledge | Identify and interview all power users explicitly |
+
+## Performance Optimization
+
+### Elicitation Efficiency
+- **Pre-work**: Send interview guides 48 hours in advance. Use async surveys for data gathering before sync sessions.
+- **Workshop formats**: Use timeboxed workshops (max 2 hours). Apply Lean Coffee format for prioritization sessions.
+- **Template reuse**: Maintain requirement pattern library. Reuse validated requirement templates across projects.
+
+### Documentation Velocity
+- **Tooling**: Use requirement management tools (Jira, Confluence, Notion) with templates. Automate RTM generation.
+- **Collaborative editing**: Use real-time collaborative documents for requirements. Reduce iteration cycles on documents.
+- **AI assistance**: Use AI for first-draft requirement generation from meeting transcripts. Always verify and refine output.
+
+## Security Considerations
+
+### Sensitive Information
+- **Data classification**: Tag requirements containing PII, financial data, or trade secrets. Apply access controls to sensitive requirements.
+- **Third-party disclosure**: Never include vendor API keys or credentials in requirement docs. Use placeholder values.
+- **Security requirements**: Include security requirements (auth, encryption, audit) for every feature touching sensitive data.
+
+### Compliance & Audit
+- **Regulatory mapping**: Map requirements to regulatory controls (GDPR, SOC2, HIPAA). Maintain compliance traceability matrix.
+- **Approval trail**: Document who approved each requirement and when. Maintain immutable audit log of changes.
+- **Access control**: Restrict requirement document access on need-to-know basis. Review access quarterly.

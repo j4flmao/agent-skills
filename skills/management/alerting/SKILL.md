@@ -399,3 +399,103 @@ Escalation path:
 ## Handoff
 Hand off to `devops/monitoring/SKILL.md` for monitoring stack setup.
 Hand off to `management/team-rules/SKILL.md` for on-call schedule and incident response.
+
+## Architecture Decision Trees
+
+### Alert Routing
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Alert channel | Email (archival) | PagerDuty/Opsgenie (real-time) | Urgency, response SLA |
+| Notification platform | Built-in (Grafana) | Dedicated (PagerDuty) | Cost vs flexibility, existing stack |
+| Escalation strategy | Linear escalation | Tiered/broadcast escalation | Team size, criticality tiers |
+
+### Threshold Definition
+- Static threshold: Simple, good for stable systems with known baselines.
+- Dynamic/seasonal threshold: Uses ML on historical data. Better for systems with periodic traffic patterns.
+- Anomaly-based: Flags deviations from predicted behavior. Ideal for systems without clear fixed thresholds.
+
+## Implementation Patterns
+
+### Alert Rule Template (Prometheus)
+`yaml
+groups:
+  - name: service_alerts
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "High error rate on {{ \.service }}"
+          description: "Error rate {{ \ | humanizePercentage }} exceeded 5% for 3 minutes"
+          runbook: "https://runbooks.internal/error-rate"
+`
+
+### Escalation Policy Template
+`yaml
+escalation_policy:
+  name: "Backend On-Call"
+  rules:
+    - targets: [primary_on_call]
+      timeout: 15m
+    - targets: [secondary_on_call]
+      timeout: 10m
+    - targets: [engineering_manager]
+      timeout: 5m
+    - targets: [incident_command]
+      notify: immediate
+`
+
+## Production Considerations
+
+### Alert Fatigue Prevention
+- **Noise reduction**: Use alert aggregation and deduplication. Silence recurring known issues.
+- **Alert severity**: Distinguish critical (page) vs warning (notification). Aim for < 5 pages per on-call shift.
+- **Maintenance windows**: Suppress alerts during planned maintenance. Automatically create maintenance windows from deployment schedules.
+
+### Reliability
+- **Redundant notification**: Alert through multiple channels (PagerDuty + Slack + SMS). Have fallback if primary channel is down.
+- **Heartbeat alerts**: Monitor the monitoring system itself. Alert if alertmanager/prometheus is unreachable.
+- **On-call handoff**: Document active incidents during shift handoff. Require 15min overlap for knowledge transfer.
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Solution |
+|---|---|---|
+| Alerting everything | 500+ alerts/day, all ignored | Alert on symptoms, not causes. Start with < 10 rules |
+| No runbook | On-call wakes up and doesn't know what to do | Every alert must link to a runbook |
+| Friday evening deploys | Weekend pages | Restrict deploys to business hours |
+| Silent threshold increase | Decreased sensitivity masks real issues | Track MTTA/MTTR alongside alert volume |
+| No alert testing | False sense of security | Weekly alert simulation drills |
+
+## Performance Optimization
+
+### Response Time
+- **Runbook automation**: Embed auto-remediation scripts in runbooks. Use webhook-triggered lambda functions for common fixes.
+- **Alert enrichment**: Augment alerts with links to dashboards, logs, and trace IDs. Pre-compute likely impact scope.
+- **Intelligent routing**: Route alerts based on current on-call, time of day, and expertise. Use ML to predict best responder.
+
+### Monitoring Efficiency
+- **Reduced alert storm**: Implement dependency-aware alerting. Suppress downstream alerts when root cause is identified upstream.
+- **Aggregation rules**: Group related alerts into incidents. Deduplicate identical alerts within time windows.
+- **Auto-closure**: Auto-resolve alerts when metric returns to normal. Require manual ack only for acknowledged pages.
+
+## Security Considerations
+
+### Authentication & Access
+- **Alert modification**: Restrict who can silence/modify alert rules. Audit all alert configuration changes.
+- **On-call roster access**: Protect on-call schedules as PII (staff location, rotation patterns). Use SSO with MFA for alerting platforms.
+- **Alert channel security**: Use private Slack channels for alert notifications. Never forward alerts to public channels.
+
+### Incident Response Security
+- **Alert data leakage**: Sanitize alert payloads to exclude secrets. Mask sensitive values in alert annotations.
+- **Secure runbooks**: Host runbooks in authenticated internal wikis. Never embed API keys or passwords in runbook steps.
+- **Post-incident review**: Conduct blameless postmortems. Preserve alert data and timelines for forensic analysis.
+
+- **Audit trail maintenance**: Retain alert and incident records per compliance requirements. Archive resolved incidents for trend analysis.
+- **On-call shift logging**: Log all on-call actions, escalations, and handoffs. Use time-stamped entries for postmortem reconstruction.
+- **Notification delivery confirmation**: Verify all critical alerts are acknowledged. Escalate unacknowledged pages after timeout.
+- **Alert volume trending**: Track weekly alert volume per service. Set targets for reducing noise-to-signal ratio.
+- **Cross-team incident coordination**: Document handoff procedures between primary and secondary on-call teams. Maintain shared incident timeline.

@@ -386,15 +386,129 @@ The hybrid approach ensured both method (ADM phases kept migration on track) and
 - ADM cycle reviews incorporate lessons learned from previous cycle for continuous improvement
 - Zachman cell analysis includes both current and target states to identify transformation scope
 
-## References
-- references/togaf-zachman-fundamentals.md -- Togaf Zachman Fundamentals
-- references/togaf-zachman-advanced.md -- Togaf Zachman Advanced Topics
-- references/togaf-framework.md -- TOGAF Architecture Development Method (ADM)
-- references/architecture-content.md -- Architecture Content Framework
-- references/ea-governance.md -- Enterprise Architecture Governance
-- references/zachman-framework.md -- Zachman Framework for Enterprise Architecture
-- references/togaf-architecture-development.md -- TOGAF Architecture Development
-- references/zachman-framework-implementation.md -- Zachman Framework Implementation
+## Implementation Patterns
+
+### Pattern: ADM Phase Checklist Automation
+
+```yaml
+# adm-phase-automation.yaml
+phases:
+  preliminary:
+    deliverables:
+      - "Architecture Principles Document"
+      - "Architecture Governance Charter"
+      - "EA Tool Selection"
+      - "Repository Setup"
+    gates: "Principles approved, governance body active"
+    automation:
+      - "Template repository initialized from EA tool"
+      - "ADR tool configured in repo"
+      - "Governance calendar created"
+
+  phase_a:
+    deliverables:
+      - "Architecture Vision Document"
+      - "Stakeholder Map"
+      - "Business Case"
+      - "Value Chain Diagram"
+    gates: "Vision approved by stakeholders"
+    automation:
+      - "Stakeholder analysis questionnaire sent"
+      - "Business case template pre-filled from strategy"
+
+  phase_b_d:
+    deliverables:
+      - "Baseline Architecture (per domain)"
+      - "Target Architecture (per domain)"
+      - "Gap Analysis Report"
+      - "Architecture Roadmap"
+    gates: "Gap analysis complete, roadmap approved"
+    automation:
+      - "Architecture survey tool deployed for as-is capture"
+      - "Gap analysis template auto-populated"
+```
+
+### Pattern: Zachman Cell Mapping to ADM Deliverables
+
+```yaml
+zachman_adm_mapping:
+  row_1_executive:
+    what: "Business Strategy Map → Phase A"
+    how: "Value Chain → Phase B"
+    where: "Geographic Coverage → Phase D"
+    who: "Organization Chart → Phase B"
+    when: "Strategic Timeline → Phase A"
+    why: "Business Goals → Phase A"
+
+  row_2_business_owner:
+    what: "Data Entity List → Phase C"
+    how: "Business Process Model → Phase B"
+    where: "Business Locations → Phase B"
+    who: "Role Hierarchy → Phase B"
+    when: "Process Schedule → Phase B"
+    why: "Business Rules → Phase B"
+
+  row_3_architect:
+    what: "Logical Data Model → Phase C"
+    how: "Application Architecture → Phase C"
+    where: "Logical Network → Phase D"
+    who: "Access Rights → Phase B"
+    when: "Event Model → Phase C"
+    why: "Architecture Principles → Preliminary"
+
+  row_4_engineer:
+    what: "Physical Data Model → Phase D"
+    how: "System Design → Phase D"
+    where: "Physical Network → Phase D"
+    who: "Security Model → Phase D"
+    when: "Processing Schedule → Phase D"
+    why: "Design Constraints → Phase D"
+```
+
+## Production Considerations
+
+### EA Tool Integration
+- ArchiMate models stored in EA repository (Sparx, LeanIX). Linked to ADM phases.
+- ADR tool integrated with repository. Every architecture decision traceable to ADM phase.
+- Stakeholder viewpoints generated from repository. One-click report generation.
+- Governance dashboard: compliance status per project, exception aging, ADM phase progress.
+
+### ADM Cycle Management
+- Full ADM cycle duration: 6-12 months for enterprise transformation. 3-6 months for domain-specific.
+- Phase gate reviews scheduled at minimum monthly during active phases.
+- Architecture repository review: quarterly completeness and accuracy check.
+- ADM tailoring document: updated annually. Reflects organizational maturity and process improvements.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| Architecture without business alignment | EA team builds models nobody uses. | Map artifacts to business goals. Show traceability. |
+| Over-documentation | 200-page architecture documents nobody reads. | Tailor ADM outputs. Create only value-adding deliverables. |
+| Gap analysis without action | Finding gaps without remediation plans. | Every gap has owner, solution, timeline. |
+| Zachman obsession | Filling all 36 cells perfectly. Analysis paralysis. | Fill cells that matter for current decisions. Expand as needed. |
+| Skipping Phase H | Architecture becomes stale. No continuous improvement. | Schedule regular architecture review cycles. |
+| Waterfall ADM execution | Rigid sequential process ignores reality. | Iterative: focus on high-value domains first. |
+
+## Performance Optimization
+
+- EA tool API: automate artifact creation. Scripted generation of stakeholder viewpoints.
+- Repository search: full-text index on all architecture artifacts. Cross-reference linking.
+- Template library: reusable ADR templates, phase deliverable templates, viewpoint templates.
+- Visualization automation: C4 model diagrams generated from architecture repository data.
+- Impact analysis: automated dependency graph. Identify affected systems before changes.
+- Metrics dashboard: phase completion rate, gate approval velocity, exception resolution time.
+- Documentation generation: Markdown export from repository. Published as static site for stakeholders.
+
+## Security Considerations
+
+- Architecture repository access: role-based (viewer, contributor, architect, admin).
+- Phase gate approvals: recorded with digital signature. Non-repudiation for audit.
+- Security architecture artifacts: classified as internal confidential. Restricted distribution.
+- Third-party architecture sharing: sanitized viewpoints only. No internal network details.
+- Compliance tracking: all phase gates include security architecture review checklist.
+- Repository backup: encrypted. Point-in-time recovery. 90-day retention for daily, 7-year for annual.
+- Architecture decision audit: all ADM phase decisions logged with timestamp, author, rationale.
 
 ## Handoff
 For implementation projects, hand off to `enterprise-architecture-governance` for review board decisions, or `enterprise-vendor-management` for technology procurement alignment.

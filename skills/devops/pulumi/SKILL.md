@@ -495,3 +495,254 @@ const subnetIds = infra.getOutput("publicSubnetIds");
 After completing this skill:
 - Next skill: **devops-crossplane** — control plane abstractions on top of Pulumi-provisioned infrastructure
 - Pass context: Stack output references, component resource names, state backend location
+
+## Architecture Decision Trees
+
+### Pulumi vs Terraform
+
+| Decision | Pulumi | Terraform |
+|---|---|---|
+| Language | TypeScript, Python, Go, C#, Java | HCL (DSL) |
+| State management | Service or self-managed | Backend (S3, GCS, etc.) |
+| Testing | Unit test in general-purpose language | `terraform plan` + OPA/Sentinel |
+| Debugging | IDE debugger, logs | `TF_LOG`, limited |
+| Modularity | npm/PyPI packages | Terraform Registry modules |
+| Ecosystem | Smaller, growing | Larger, mature |
+| Best for | Teams that prefer code over DSL | Teams already invested in HCL |
+
+### State Backend Choice
+
+| Aspect | Pulumi Cloud (Managed) | Self-managed (S3, GCS, Azure Blob) |
+|---|---|---|
+| Auth | Pulumi tokens, OIDC | Cloud provider IAM |
+| History | Full deployment history | Limited to state file |
+| Encryption | At-rest + in-transit by default | SSE on storage bucket |
+| Collaboration | Built-in stack locking | Bucket-level lease |
+| Secrets | Encrypted via Pulumi escrow | Managed by provider |
+
+## Implementation Patterns
+
+### TypeScript: Multi-stack Infrastructure
+
+```typescript
+import * as aws from "@pulumi/aws";
+import * as pulumi from "@pulumi/pulumi";
+
+const config = new pulumi.Config();
+const environment = config.require("environment");
+const vpcCidr = config.get("vpcCidr") || "10.0.0.0/16";
+
+const vpc = new aws.ec2.Vpc("main", {
+  cidrBlock: vpcCidr,
+  enableDnsHostnames: true,
+  enableDnsSupport: true,
+  tags: { Name: `app-${environment}`, Environment: environment },
+});
+
+const publicSubnet = new aws.ec2.Subnet("public", {
+  vpcId: vpc.id,
+  cidrBlock: pulumi.interpolate`10.0.1.0/24`,
+  mapPublicIpOnLaunch: true,
+  availabilityZone: "us-east-1a",
+  tags: { Name: `public-${environment}` },
+});
+
+const cluster = new aws.ecs.Cluster("app", {
+  name: `app-${environment}`,
+  tags: { Environment: environment },
+});
+
+const service = new aws.ecs.Service("app", {
+  cluster: cluster.arn,
+  desiredCount: environment === "production" ? 3 : 1,
+  launchType: "FARGATE",
+  networkConfiguration: {
+    subnets: [publicSubnet.id],
+    assignPublicIp: true,
+  },
+});
+
+export const vpcId = vpc.id;
+export const clusterArn = cluster.arn;
+export const serviceName = service.name;
+```
+
+### Python: Component Resource with Automation API
+
+```python
+from pulumi import ComponentResource, ResourceOptions, Output
+import pulumi_aws as aws
+import pulumi_random as random
+
+class Database(ComponentResource):
+    def __init__(self, name: str, engine: str, version: str, opts: ResourceOptions = None):
+        super().__init__("acme:platform:Database", name, None, opts)
+
+        self.password = random.RandomPassword(
+            f"{name}-password",
+            length=24,
+            special=True,
+            opts=ResourceOptions(parent=self),
+        )
+
+        self.instance = aws.rds.Instance(
+            f"{name}-instance",
+            engine=engine,
+            engine_version=version,
+            instance_class="db.t3.medium",
+            allocated_storage=100,
+            username="admin",
+            password=self.password.result,
+            skip_final_snapshot=True,
+            opts=ResourceOptions(parent=self),
+        )
+
+        self.register_outputs({
+            "endpoint": self.instance.endpoint,
+            "port": self.instance.port,
+        })
+
+    @property
+    def endpoint(self) -> Output[str]:
+        return self.instance.endpoint
+
+def main():
+    db = Database("app-db", "postgres", "15")
+    print(f"Database endpoint: {db.endpoint}")
+
+if __name__ == "__main__":
+    main()
+```
+
+## Production Considerations (Pulumi-specific)
+
+- Use **stack references** to share outputs between stacks (`new pulumi.StackReference("infra/prod")`)
+- Enable **auto-merge** for Pulumi Deployments (Pulumi Cloud) with policy pack enforcement
+- Run `pulumi preview` in CI and post the diff as a PR comment for every infrastructure change
+- Set **retention policies** on stack history — keep last 100 deployments, delete older stale stacks
+- Use **deployment settings** in Pulumi Cloud for consistent `pulumi up` execution across environments
+- Configure **webhooks** from Pulumi Cloud to Slack/Teams for deployment notifications
+- Pin **provider versions** in `Pulumi.yaml` — never use `latest` for production stacks
+
+### Observer Pattern for Event Handling
+`
+interface EventObserver<T> {
+  onEvent(event: T): Promise<void>;
+}
+
+class EventBus<T> {
+  private observers: Set<EventObserver<T>> = new Set();
+  subscribe(observer: EventObserver<T>): void {
+    this.observers.add(observer);
+  }
+  unsubscribe(observer: EventObserver<T>): void {
+    this.observers.delete(observer);
+  }
+  async emit(event: T): Promise<void> {
+    const results = Array.from(this.observers).map(o => o.onEvent(event));
+    await Promise.allSettled(results);
+  }
+}
+`
+
+### Configuration-Driven Approach
+`
+config:
+  defaults:
+    timeout: 30s
+    retryCount: 3
+  overrides:
+    production:
+      timeout: 60s
+      retryCount: 5
+    development:
+      timeout: 300s
+      retryCount: 1
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Configuration validated against schema before startup
+- [ ] Health check endpoints registered and monitored
+- [ ] Graceful shutdown with draining period (30s timeout)
+- [ ] Resource limits configured (CPU, memory, file descriptors)
+- [ ] Log level set appropriate for environment
+- [ ] Metrics endpoint secured and exposed
+- [ ] Rate limiting configured per-tier
+- [ ] TLS certificates valid and auto-renewing
+- [ ] Database migrations run as separate deployment step
+- [ ] Feature flags ready for gradual rollout
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% over 5min | Critical | Page on-call |
+| p99 latency | > 2s over 5min | Warning | Investigate |
+| Throughput drop | > 50% over 1min | Critical | Check upstream |
+| Queue depth | > 1000 over 1min | Warning | Scale consumers |
+| Disk usage | > 85% | Warning | Clean or expand |
+| Memory usage | > 90% heap | Critical | Restart or scale |
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Root Cause | Solution |
+|-------------|---------|------------|----------|
+| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
+| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
+| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
+| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
+
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+## Rules
+- Default-deny security posture — allow only explicitly required access.
+- All inputs validated, all outputs encoded, all errors handled.
+- Defend in depth — multiple layers of security controls.
+- Fail securely — errors default to safe behavior.
+- Log security-relevant events for audit and investigation.
+- Keep dependencies updated — automate vulnerability scanning.
+- Design for observability from day one, not as an afterthought.
+- Document all architectural decisions with rationale.
+- Review code for security, performance, and correctness before merging.

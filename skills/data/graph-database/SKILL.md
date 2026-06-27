@@ -399,6 +399,102 @@ Graph vs document (MongoDB): document stores embed related data, limiting traver
   - references/query-patterns.md — Graph Query Patterns Reference
   - references/graph-data-modeling.md — Graph Data Modeling Deep Dive
   - references/graph-query-performance.md — Query Performance Reference
+## Architecture Decision Trees
+
+```
+Graph Database Selection
+├── Query pattern?
+│   ├── OLTP (transactions) → Neo4j (property graph, ACID)
+│   ├── OLAP (analytics) → JanusGraph + Spark / TigerGraph
+│   └── RDF/Semantic web → Amazon Neptune / Stardog
+├── Scale requirements?
+│   ├── < 10B edges → Neo4j (single instance or causal cluster)
+│   ├── 10B-100B edges → JanusGraph (distributed, HBase/Cassandra backend)
+│   └── > 100B edges → TigerGraph (native parallel graph)
+├── Real-time traversal?
+│   ├── Yes → Neo4j / TigerGraph (native graph store)
+│   └── No → JanusGraph / Neptune
+└── Cloud-managed?
+    ├── Yes → Neptune / Neo4j Aura
+    └── No → Self-managed Neo4j / JanusGraph on K8s
+```
+
+**Decision criteria**: Evaluate query latency, graph size, team Cypher/Gremlin/SPARQL expertise, and operational overhead tolerance.
+
+## Implementation Patterns
+
+### Neo4j Cypher for Fraud Detection
+```cypher
+// graph_database/fraud_patterns.cypher
+MATCH (u:User)-[:MADE_TRANSFER]->(t:Transaction)-[:TO_ACCOUNT]->(a:Account)
+WHERE t.amount > 10000
+  AND t.timestamp > datetime() - duration('PT1H')
+WITH u, a, count(t) as tx_count, sum(t.amount) as total_amount
+WHERE tx_count > 3
+OPTIONAL MATCH (a)<-[:TO_ACCOUNT]-(:Transaction)<-[:MADE_TRANSFER]-(other:User)
+WHERE other <> u
+RETURN u.id, a.id, tx_count, total_amount, count(DISTINCT other) as connected_users
+ORDER BY total_amount DESC
+```
+
+### Graph Embedding with Node2Vec
+```python
+# graph_database/node2vec_embedding.py
+from node2vec import Node2Vec
+import networkx as nx
+
+class GraphEmbedding:
+    def __init__(self, graph: nx.Graph):
+        self.graph = graph
+
+    def generate_embeddings(self, dimensions: int = 128, walk_length: int = 80):
+        n2v = Node2Vec(
+            self.graph,
+            dimensions=dimensions,
+            walk_length=walk_length,
+            num_walks=10,
+            workers=4
+        )
+        model = n2v.fit(window=10, min_count=1)
+        embeddings = {node: model.wv[node].tolist() for node in self.graph.nodes()}
+        return embeddings
+```
+
+## Production Considerations
+
+- **Indexing strategy**: Create indexes on frequently queried properties and relationship types; monitor write perf.
+- **Backup strategy**: Use Neo4j online backup for incremental + full backups; test restore quarterly.
+- **Query profiling**: Profile Cypher queries with `PROFILE`; monitor full-node scans vs index lookups.
+- **Memory management**: Allocate 70% of available RAM to Neo4j page cache; monitor swap usage.
+- **Cluster sizing**: Neo4j causal cluster: 3 core nodes + N read replicas based on query concurrency.
+- **Bulk loading**: Use neo4j-admin import for initial loads; batch CREATE statements in 1000-row transactions.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| No indexes on query properties | Full store scan on every query | Create indexes on filtered properties |
+| Deep traversals without LIMIT | Query timeout, server OOM | Always use LIMIT + pagination |
+| Storing large blob properties in graph | Graph bloat, slow traversals | Store blobs in S3; reference by URL |
+| Using Cypher for ETL | Slow, not designed for bulk | Use neo4j-admin import or Spark connector |
+| Ignoring relationship direction | Wrong query results, confusion | Explicitly define and document direction |
+
+## Performance Optimization
+
+- **Page cache sizing**: Set Neo4j page cache = 70% of available RAM for active dataset; monitor cache hits.
+- **Query plan caching**: Use Cypher plan caching (parameterized queries) to avoid repeated planning.
+- **Relationship indexes**: Create relationship indexes for frequently traversed relationship types with properties.
+- **Batched traversals**: Use `apoc.periodic.iterate` for large batch operations instead of single large queries.
+- **Read replicas**: Offload read-heavy workloads to read replicas; core nodes handle writes only.
+
+## Security Considerations
+
+- **Authentication**: Enforce Neo4j native auth or LDAP/SSO; disable default `neo4j/neo4j` credentials.
+- **Authorization**: Use Neo4j RBAC with roles (admin, architect, analyst, reader); apply to subgraphs.
+- **Encryption**: Enable TLS for all Bolt and HTTPS connections; Neo4j cluster internal encryption.
+- **Audit**: Log all Cypher queries with sensitive actions (CREATE, DELETE, DROP) to SIEM.
+- **Data masking**: Create read-only views that mask sensitive properties (email, SSN) for auditor roles.
+
 ## Handoff
 `data-nosql-database` for non-relational data stores
 `ml-feature-engineering` for graph feature extraction (PageRank, embeddings)

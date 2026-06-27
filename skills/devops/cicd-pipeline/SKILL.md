@@ -446,3 +446,122 @@ Pipeline runs for 30+ min before failing at end. Fail fast: lint first, then bui
 
 ## Handoff
 Next: **kubernetes-patterns** — K8s deployment for pipeline output.
+
+## Implementation Patterns
+
+### YAML: Multi-stage CI Pipeline with Conditional Deploy
+
+```yaml
+stages:
+  - lint
+  - test
+  - build
+  - deploy
+
+lint-job:
+  stage: lint
+  script:
+    - npm ci
+    - npm run lint
+  cache:
+    key: $CI_COMMIT_REF_SLUG
+    paths:
+      - node_modules/
+
+test-job:
+  stage: test
+  script:
+    - npm run test:unit
+    - npm run test:integration
+  artifacts:
+    reports:
+      junit: junit.xml
+
+build-job:
+  stage: build
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  only:
+    - main
+    - tags
+
+deploy-staging:
+  stage: deploy
+  script:
+    - kubectl set image deployment/app app=$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  environment: staging
+  only:
+    - main
+```
+
+### Bash: Pipeline Promotion Gate
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+promote_to_prod() {
+  local tag=$1
+  local env=$2
+
+  echo "Promoting $tag to $env"
+
+  # Run smoke tests against staging
+  if ! curl -sf "https://staging.example.com/health" | grep -q "ok"; then
+    echo "Staging health check failed — aborting promotion"
+    exit 1
+  fi
+
+  # Deploy to production
+  kubectl set image deployment/app \
+    "app=${CI_REGISTRY_IMAGE}:${tag}" \
+    --namespace production
+
+  # Monitor rollout
+  kubectl rollout status deployment/app \
+    --namespace production --timeout=5m
+}
+
+promote_to_prod "$@"
+```
+
+## Production Considerations
+
+- Implement **change management** so every production deploy requires an approved MR/ticket
+- Use **feature flags** to decouple deploy from release — enables instant rollback
+- Store all pipeline artifacts in a **central artifact repository** with retention policies
+- Configure **pipeline notifications** to Slack/PagerDuty on failure with run links
+- Enforce **branch protection** rules: no direct pushes to main, require PR approvals
+- Set up **pipeline concurrency limits** to prevent resource exhaustion on runners
+- Use **signed commits** and verify signatures in the pipeline to ensure supply chain integrity
+
+## Anti-Patterns
+
+- Single **monolithic pipeline** for everything — split by service for parallel execution
+- Hardcoding **secrets** in pipeline YAML — always use CI/CD secret vaults or external secrets
+- Ignoring **pipeline failures** on non-critical jobs — fail the pipeline by default, opt-in for soft failures
+- Running **all stages sequentially** when they could run in parallel — increases feedback time
+- Deploying directly to **production without staging** validation — always promote through environments
+- Using **`latest` tag** for Docker images — always pin to semantic version or commit SHA
+- Neglecting **pipeline cleanup** — stale artifacts, caches, and workspaces waste storage
+
+## Performance Optimization
+
+- Use **pipeline caching** for dependencies (npm, pip, Maven) to avoid re-downloading
+- Enable **parallel job execution** for independent stages (lint, test, security scan)
+- Split **test suites** into shards and run them concurrently to reduce wall-clock time
+- Use **self-hosted runners** with warm caches instead of ephemeral cloud runners
+- Optimize **Docker layer caching** — order RUN commands from least to most frequently changing
+- Implement **conditional stage skipping** — skip build if only docs changed
+- Use **build matrix** for multi-version testing instead of sequential jobs
+
+## Security Considerations
+
+- Scan all container images with **Trivy or Snyk** before pushing to registry — fail on critical CVEs
+- Enable **SBOM generation** in every pipeline and upload to a central store
+- Sign all pipeline artifacts with **Sigstore/cosign** and verify before deployment
+- Rotate CI/CD tokens and service account credentials every 30 days
+- Scan **infrastructure-as-code** (Terraform, Helm) for misconfigurations using Checkov
+- Restrict **pipeline trigger** permissions to trusted actors only
+- Audit **pipeline logs** centrally and alert on suspicious activity (exfiltrated env vars)

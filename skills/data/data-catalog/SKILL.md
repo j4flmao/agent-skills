@@ -492,5 +492,115 @@ Team size and metadata requirements?
   - references/metadata-management.md — Metadata Management
   - references/data-catalog-metadata-management.md — Metadata Management Deep Dive
   - references/data-catalog-search-discovery.md — Search Discovery Reference
+## Architecture Decision Trees
+
+```
+Catalog Platform Selection
+├── Cloud-native SaaS desired?
+│   ├── Yes → Atlan / Datahub Cloud / Alation
+│   └── No → Open-source self-hosted (Datahub, Amundsen)
+├── dbt integration required?
+│   ├── Yes → Datahub (dbt ingestion native)
+│   └── No → Evaluate feature completeness
+├── Real-time metadata sync?
+│   ├── Yes → Datahub with Kafka-based ingestion
+│   └── No → Batch ingestion (daily cron)
+└── Schema drift detection needed?
+    ├── Yes → Datahub with column-level lineage
+    └── No → Basic table/column catalog (Amundsen)
+```
+
+**Decision criteria**: Evaluate metadata freshness, integration depth, operating cost, and team size for administration.
+
+## Implementation Patterns
+
+### Metadata Ingestion Pattern
+```python
+# data_catalog/ingestion.py
+from dataclasses import dataclass
+from datetime import datetime
+
+@dataclass
+class TableMetadata:
+    database: str
+    schema: str
+    table: str
+    columns: list[dict]
+    row_count: int
+    last_updated: datetime
+    description: str
+
+class MetadataIngestor:
+    def __init__(self, catalog_api: str, token: str):
+        self.api = catalog_api
+        self.headers = {"Authorization": f"Bearer {token}"}
+
+    async def ingest_table(self, metadata: TableMetadata):
+        payload = {
+            "urn": f"urn:li:dataset:{metadata.database}.{metadata.schema}.{metadata.table}",
+            "schema": metadata.columns,
+            "last_updated": metadata.last_updated.isoformat(),
+            "description": metadata.description,
+        }
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(f"{self.api}/entities", json=payload, headers=self.headers)
+            resp.raise_for_status()
+```
+
+### Search Index Pattern
+```yaml
+# data_catalog/search_config.yml
+index:
+  name: data_catalog
+  fields:
+    - name: table_name
+      type: text
+      boost: 3.0
+    - name: description
+      type: text
+      boost: 1.5
+    - name: tags
+      type: keyword
+      boost: 2.0
+  synonyms:
+    - ["user", "customer", "account"]
+    - ["revenue", "sales", "income"]
+```
+
+## Production Considerations
+
+- **Ingestion reliability**: Use dead-letter queues for failed metadata syncs; retry with exponential backoff.
+- **Schema versioning**: Store schema history to track column additions, removals, and type changes.
+- **Access control**: Restrict sensitive table discovery by role (PII tables hidden from non-privileged users).
+- **Crawl scheduling**: Set full crawl daily, incremental crawl every 15 min for high-priority sources.
+- **Search optimization**: Index descriptions, column names, and tags; boost popular tables in results.
+- **Ownership tracking**: Require each dataset to have a steward; alert on unowned datasets > 7 days.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Manual metadata entry | Stale catalog, low adoption | Automate all ingestion from sources |
+| No column-level lineage | Trust issues with data | Enable field-level lineage tracking |
+| Over-permissive discovery | Sensitive data exposed | Implement role-based access on catalog |
+| No freshness indicators | Users distrust stale tables | Add last-updated badges and alert on staleness |
+| Ignoring dbt model metadata | Catalog misses transformation logic | Ingest dbt manifest and docs |
+
+## Performance Optimization
+
+- **Search indexing**: Use Elasticsearch with field boosting; reindex on schema change only.
+- **API caching**: Cache catalog API responses at reverse proxy (Varnish/nginx, TTL 60s).
+- **Batch ingestion**: Bulk ingest 500 tables per API call instead of individual requests.
+- **Query optimization**: Index the catalog database on (database, schema, table) and last_updated.
+- **Thumbnail generation**: Pre-generate data preview thumbnails during ingestion, not on request.
+
+## Security Considerations
+
+- **PII classification**: Auto-tag columns with PII/PCI using regex patterns; restrict discovery by role.
+- **Audit trail**: Log all catalog searches, views, and ownership changes for compliance.
+- **API security**: Require service tokens with least privilege; rotate tokens every 90 days.
+- **Data masking**: Preview queries run on sampled masked data; never expose raw sensitive values.
+- **RBAC integration**: Sync catalog roles from enterprise IdP (Okta, Azure AD) via SCIM.
+
 ## Handoff
 `data-data-platform` for platform infrastructure. `data-data-quality` for linking quality metadata to catalog. `data-data-observability` for freshness monitoring. `data-data-contracts` for contract metadata in catalog.

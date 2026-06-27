@@ -459,15 +459,135 @@ Remediation: immediate reliability investment (multi-region deployment, load tes
 - Burn rate alert thresholds calibrated per service, not one-size-fits-all.
 - SLO targets tightened incrementally as reliability improves, not in large jumps.
 
-## References
-  - references/error-budget.md — Error Budget Management
-  - references/sla-definitions.md — SLA Definitions and Terminology
-  - references/sla-design-negotiation.md — SLA Design and Negotiation
-  - references/sla-management-advanced.md — SLA Management Advanced Topics
-  - references/sla-management-fundamentals.md — SLA Management Fundamentals
-  - references/sla-monitoring.md — SLA Monitoring
-  - references/sla-monitoring-reporting.md — SLA Monitoring and Reporting
-  - references/slo-definition.md — SLO Definition Guide
+## Implementation Patterns
+
+### Pattern: SLO Burn Rate Alert Configuration
+
+```yaml
+# prometheus-rules.yaml
+groups:
+  - name: slo-burn-rate
+    rules:
+      # Fast burn: page immediately (exhaust budget in < 6 hours)
+      - alert: SLOFastBurn
+        expr: |
+          (
+            1 - (sum(rate(http_requests_total{status=~"5.."}[1h]))
+                 / sum(rate(http_requests_total[1h])))
+          ) < 0.99
+          and
+          (
+            1 - (sum(rate(http_requests_total{status=~"5.."}[5m]))
+                 / sum(rate(http_requests_total[5m])))
+          ) < 0.90
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "SLO fast burn - error budget exhausts in < 6h"
+          
+      # Slow burn: daily digest (exhaust budget in < 3 days)
+      - alert: SLOSlowBurn
+        expr: |
+          (
+            1 - (sum(rate(http_requests_total{status=~"5.."}[6h]))
+                 / sum(rate(http_requests_total[6h])))
+          ) < 0.99
+          and
+          (
+            1 - (sum(rate(http_requests_total{status=~"5.."}[30m]))
+                 / sum(rate(http_requests_total[30m])))
+          ) < 0.97
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "SLO slow burn - error budget exhausts in < 3d"
+```
+
+### Pattern: Error Budget Tracker
+
+```python
+class ErrorBudget:
+    def __init__(self, slo: float, window_days: int = 30):
+        self.slo = slo
+        self.window_seconds = window_days * 86400
+        self.total_requests = 0
+        self.failed_requests = 0
+
+    def record_request(self, success: bool):
+        self.total_requests += 1
+        if not success:
+            self.failed_requests += 1
+
+    @property
+    def attainment(self) -> float:
+        if self.total_requests == 0:
+            return 1.0
+        return 1 - (self.failed_requests / self.total_requests)
+
+    @property
+    def budget_consumed(self) -> float:
+        allowed_errors = self.total_requests * (1 - self.slo)
+        if allowed_errors <= 0:
+            return 0
+        return min(1.0, self.failed_requests / allowed_errors)
+
+    @property
+    def status(self) -> str:
+        consumed = self.budget_consumed
+        if consumed >= 1.0:
+            return "exhausted"
+        elif consumed >= 0.75:
+            return "critical"
+        elif consumed >= 0.50:
+            return "warning"
+        return "healthy"
+```
+
+## Production Considerations
+
+### SLO Implementation
+- Measurement interval: 10-second buckets for high-traffic services. 60-second for low-traffic.
+- Alerting: multi-window, multi-burn-rate (fast burn page, slow burn digest).
+- Exclusion windows: planned maintenance excluded from SLO calculation. Configured in alerting system.
+- Rolling windows: 30-day rolling prevents permanent deficit. Services recover after incident.
+
+### SLA Reporting
+- Generate automated monthly reports per customer. Delivery within 5 business days of month end.
+- Service credits: calculate and issue automatically on next invoice. Track credit cost as % of revenue.
+- Trend reporting: 12-month rolling view. Identify degradation patterns before they breach.
+- Executive dashboard: SLA health score across all services. Drill-down per service and per customer.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| SLO tighter than system can deliver | Constant breach. Feature freeze always active. | Set SLO based on 3-month historical performance. |
+| Error budget hidden in dashboard nobody reads | Useless. No behavior change. | Display on team dashboard. Standup status. Sprint planning input. |
+| Feature freeze not enforced | Error budget policy has no teeth. | Automated deploy block when budget exhausted. |
+| Single-threshold alerting | Alert fatigue. Miss real incidents. | Multi-window, multi-burn-rate. Calibrate per service. |
+| Wrong SLIs measured | CPU at 20% but p99 latency at 5s. Users unhappy. | Measure user-facing: latency, error rate, uptime. |
+| No maintenance exclusions | Pager on every deploy. | Planned maintenance window configured in alerting. |
+
+## Performance Optimization
+
+- Metrics aggregation: recording rules for SLO burn rate. Pre-compute every 30 seconds. Avoids query-time computation.
+- SLO dashboard: Grafana with SLO panel. Real-time budget consumption. Forecast exhaustion date.
+- Error budget API: internal endpoint returns current status. Used by deploy pipeline for gating.
+- SLA report generation: batch run on first of month. Cached per customer. Async PDF generation.
+- Alert deduplication: group by alert name + severity. Single notification per group. Digest mode for slow burn.
+- Historical SLO data: downsampled after 90 days. 1-hour resolution for trend analysis.
+- Cache expensive SLO queries: materialized view updated every 5 minutes for dashboard queries.
+
+## Security Considerations
+
+- SLA report data: internal use only unless shared per contract. Access controlled per customer.
+- Error budget API: authenticated. Write access for service owners only. Read for all engineers.
+- Alerting webhooks: signed payloads. HMAC verification. TLS for all alert destinations.
+- Service credit automation: calculations logged. Dual approval for credits > $10K. Audit trail.
+- SLO measurement data: immutable metrics database. Tamper-evident via append-only storage.
+- Customer SLA portal: HTTPS only. Session timeout 15 minutes. Per-customer data isolation.
+- Incident data: PII scrubbed from public status page. Customer-specific details in private portal only.
+- Metric retention: raw metrics 90 days. Aggregated 7 years for SLA audit compliance.
 
 ## Handoff
 For compliance-related SLA requirements, hand off to `enterprise-compliance-audit`. For cost implications of SLA tiers and service credits, hand off to `enterprise-cost-governance`. For incident response processes triggered by burn rate alerts, hand off to `enterprise-incident-response`.

@@ -427,6 +427,115 @@ pub struct CounterState { pub count: u64, pub authority: Pubkey }
 ## Phase
 blockchain → blockchain-application
 
+## Architecture Decision Trees
+
+```
+Blockchain Application Design
+├── Application type?
+│   ├── DeFi → DEX, lending, yield aggregator
+│   ├── NFT → Marketplace, collection, gaming
+│   ├── DAO → Governance, treasury, voting
+│   └── Identity → SSI, verifiable credentials, attestations
+├── Smart contract language?
+│   ├── Solidity (most mature) → EVM chains (Ethereum, Polygon, Arbitrum)
+│   ├── Rust → Solana / NEAR / Polkadot (high performance)
+│   └── Move → Sui / Aptos (parallel execution)
+├── Upgradeability?
+│   ├── Yes → UUPS / Transparent proxy pattern
+│   ├── Yes (immutable core) → Diamond pattern (EIP-2535)
+│   └── No → Minimal proxy + migration strategy
+└── Gas optimization priority?
+    ├── Critical → Optimize storage layout, batch operations, use ERC-2612
+    ├── Moderate → Standard patterns, avoid loops
+    └── Low → Focus on correctness first
+```
+
+**Decision criteria**: Evaluate target chain, development team experience, security requirements, and upgrade path.
+
+## Implementation Patterns
+
+### UUPS Upgradeable Contract
+```solidity
+// blockchain-application/contracts/UUPSUpgradeable.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+contract MyApp is UUPSUpgradeable, OwnableUpgradeable {
+    uint256 public value;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() { _disableInitializers(); }
+
+    function initialize(address owner_) initializer external {
+        __UUPSUpgradeable_init();
+        __Ownable_init(owner_);
+    }
+
+    function setValue(uint256 _value) external onlyOwner { value = _value; }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
+}
+```
+
+### Minimal Proxy (EIP-1167)
+```solidity
+// blockchain-application/contracts/CloneFactory.sol
+contract CloneFactory {
+    event CloneCreated(address indexed clone, address indexed implementation);
+
+    function createClone(address implementation) external returns (address) {
+        bytes20 implBytes = bytes20(implementation);
+        address clone;
+        assembly {
+            let cloneData := mload(0x40)
+            mstore(cloneData, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
+            mstore(add(cloneData, 0x14), implBytes)
+            mstore(add(cloneData, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
+            clone := create(0, cloneData, 0x37)
+        }
+        emit CloneCreated(clone, implementation);
+    }
+}
+```
+
+## Production Considerations
+
+- **Proxy admin**: Use TimelockController for proxy upgrades; require multisig approval for production.
+- **Pausability**: Implement OpenZeppelin Pausable; pause on critical vulnerability detection.
+- **Emergency stop**: Circuit breaker pattern; owner can halt critical functions in case of exploit.
+- **Gas limits**: Test on testnet with realistic gas prices; monitor gas consumption on mainnet.
+- **Event emissions**: Emit events for all state-changing operations; index address and uint256 parameters.
+- **Fork detection**: Use VRF or Chainlink to detect L1 reorgs on L2 deployments.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Using `tx.origin` for auth | Phishing attacks | Use `msg.sender` always |
+| Unchecked external calls | Silent failures | Check return values of `.call{value: }()` |
+| Storage collision in upgrades | Corrupted state | Use structured storage (EIP-1967, UUPS) |
+| Owner-only functions without timelock | Single-key compromise risk | Use multisig + timelock |
+| No reentrancy guard | Reentrancy exploits | Apply `ReentrancyGuard` on all external functions |
+
+## Performance Optimization
+
+- **Storage packing**: Pack related variables in same slot (`uint128 + uint128`); use `struct` for related fields.
+- **Batch operations**: Batch transfers (Multicall, batch ERC-20 transfers) to amortize overhead.
+- **Calldata optimization**: Use `calldata` instead of `memory` for read-only function parameters.
+- **Immutable variables**: Use `immutable` for constructor-set constants to save SSTORE costs.
+- **EIP-2612 permits**: Use permit() for gasless approvals; batch approve + transferFrom.
+
+## Security Considerations
+
+- **Access control**: Use OpenZeppelin `AccessControl` with roles; never rely on `onlyOwner` alone.
+- **Oracle manipulation**: Use TWAP or multiple oracle sources for price feeds; never single source.
+- **Flash loan resistance**: Check oracle price deviation; use time-weighted average prices.
+- **Signature replay**: Include `nonce`, `deadline`, and `chainId` in EIP-712 signatures.
+- **Upgrade safety**: Test upgrades on fork; use `oz upgrade` validator; never upgrade without timelock.
+
 ## Handoff
 blockchain-application → blockchain-testing (for test strategy implementation)
 blockchain-application → blockchain-security (for pre-audit review)

@@ -429,3 +429,138 @@ alpine: smallest with apk, musl libc compatibility issues possible. slim: debian
 After completing this skill:
 - Next skill: cicd-pipeline -- CI/CD for the containerized app
 - Pass context: Dockerfile structure, multi-stage setup, Docker Compose config
+
+## Architecture Decision Trees
+
+### Multi-stage vs Single-stage Dockerfile
+
+| Decision | Multi-stage | Single-stage |
+|---|---|---|
+| Image size | Small (only runtime deps) | Large (includes build tools) |
+| Build time | Similar (cached layers) | Similar (cached layers) |
+| Security surface | Minimal (no compilers, headers) | Large (build tools in runtime) |
+| CI complexity | OK (multiple stages) | Simple |
+| Build caching | Requires `--cache-from` per stage | Single cache chain |
+| Debugging | Harder (distroless base) | Easier (full shell) |
+
+### Docker Compose vs Kubernetes
+
+| Aspect | Docker Compose | Kubernetes |
+|---|---|---|
+| Learning curve | Low | High |
+| Scalability | Single host | Multi-cluster |
+| Service discovery | DNS via compose network | DNS, K8s Services |
+| Secrets management | Basic env_file | Secrets, external stores |
+| Monitoring | Docker stats, basic | Prometheus, Grafana stack |
+| Production readiness | Limited | Enterprise-grade |
+
+## Implementation Patterns
+
+### Dockerfile: Multi-stage Build with Distroless
+
+```dockerfile
+# syntax=docker/dockerfile:1.4
+ARG GO_VERSION=1.22
+
+FROM golang:${GO_VERSION}-alpine AS builder
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -o /app -ldflags="-s -w" .
+
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=builder /app /app
+USER 65532:65532
+ENV GIN_MODE=release
+EXPOSE 8080
+ENTRYPOINT ["/app"]
+```
+
+### YAML: Docker Compose for Dev Environment
+
+```yaml
+version: "3.9"
+services:
+  app:
+    build:
+      context: .
+      target: development
+      cache_from:
+        - app:latest
+    volumes:
+      - .:/app:delegated
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://user:pass@db:5432/app
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d app"]
+      interval: 5s
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: app
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redisdata:/data
+
+volumes:
+  pgdata:
+  redisdata:
+```
+
+## Production Considerations
+
+- Set **memory and CPU limits** on every container — prevents noisy neighbor problems
+- Use **healthchecks** (HEALTHCHECK instruction) for container orchestrator to manage lifecycle
+- Implement **graceful shutdown** by handling SIGTERM in the application entrypoint
+- Pin **base image digests** (not tags) for reproducible builds — `FROM node:22@sha256:...`
+- Enable **Docker Content Trust** to verify image integrity in production pulls
+- Configure **log drivers** (json-file with max-size, fluentd, or cloud logging) — never default
+- Use **read-only root filesystem** (`--read-only`) and mount tmpfs for runtime writes
+
+## Anti-Patterns
+
+- Using **`latest` tag** in production — always pin to semantic version or commit SHA
+- Running **as root** inside the container — create a non-root user in the Dockerfile
+- Storing **secrets in environment variables** visible via `docker inspect` — use Docker secrets
+- Building **giant images** with build tools and caches in the final stage — always multi-stage
+- Ignoring **layer ordering** — putting frequently-changing files early in the Dockerfile
+- Using **`ADD`** instead of `COPY` when extracting archives isn't needed — COPY is more transparent
+- Exposing **unnecessary ports** in the Dockerfile — only EXPOSE what your app needs
+
+## Performance Optimization
+
+- Use **`--cache-from`** in CI builds to reuse previous build cache layers across runs
+- Order **Dockerfile instructions** from least-changing to most-changing for better layer caching
+- Use **BuildKit** (`DOCKER_BUILDKIT=1`) for parallel builds, inline caching, and skip unused stages
+- Compress **image layers** with `--squash` (experimental) or use distroless base images
+- Set **`--mount=type=cache`** for package manager caches (apt, pip, npm) during build
+- Use **`.dockerignore`** to exclude node_modules, .git, and other large files from context
+- Enable **Docker Buildx** with multi-architecture builds in parallel (arm64 + amd64)
+
+## Security Considerations
+
+- Scan **all images** with Trivy or Snyk before pushing to registry — fail on critical CVEs
+- Use **distroless** or scratch base images to minimize attack surface
+- Sign **images** with cosign and verify signatures before deployment
+- Run **Docker Bench Security** regularly to audit host and daemon configuration
+- Enable **user namespace remapping** (`userns-remap`) on Docker daemon for extra isolation
+- Never mount **Docker socket** (`/var/run/docker.sock`) in containers — use remote API with TLS
+- Set **seccomp** and **AppArmor** profiles to restrict container syscall access

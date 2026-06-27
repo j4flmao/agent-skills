@@ -438,3 +438,140 @@ npm (package-lock.json): npm standard, deterministic. yarn (yarn.lock): yarn spe
 After completing this skill:
 - Next skill: monorepo -- workspace dependency graph, internal packages
 - Pass context: Dependabot/Renovate config, update schedules, security policies
+
+## Architecture Decision Trees
+
+### Automated vs Manual Updates
+
+| Decision | Automated (Dependabot/Renovate) | Manual Updates |
+|---|---|---|
+| Update frequency | Daily/Weekly PRs | Quarterly releases |
+| Breaking changes | Automated major bump PRs | Manual review per package |
+| CI requirement | Must pass test suite per PR | Full regression suite |
+| Team size | Any | Small teams (< 5) |
+| Risk profile | Low to moderate | High (accumulated drift) |
+| Maintenance burden | Low (bot handles PRs) | High (scheduled upgrade weeks) |
+
+### Monorepo vs Polyrepo Dependency Strategy
+
+| Aspect | Monorepo | Polyrepo |
+|---|---|---|
+| Shared dep updates | Single lockfile, atomic | Per-repo, coordinated releases |
+| Version conflicts | Single version constraint | Multiple, drift possible |
+| CI complexity | Single pipeline | N pipelines, matrix builds |
+| Publishing | Internal packages first | External registry needed |
+
+## Implementation Patterns
+
+### YAML: Renovate Configuration for Monorepo
+
+```yaml
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    ":separateMajorMinor",
+    ":combinePatchMinorUpdates",
+    "group:monorepos",
+    "schedule:weekly"
+  ],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": ">=1.0.0",
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true,
+      "schedule": ["before 9am on Monday"]
+    },
+    {
+      "matchPackageNames": ["react", "react-dom"],
+      "groupName": "React Core",
+      "labels": ["frontend", "react"]
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "enabled": true,
+      "schedule": ["before 9am on Monday"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 9am on Monday"]
+  }
+}
+```
+
+### Bash: Dependency Audit Script
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+audit_dependencies() {
+  local manifest=$1
+
+  case "$manifest" in
+    package.json)
+      npm audit --json > audit-report.json
+      jq '.vulnerabilities | to_entries | map(select(.value.severity == "critical")) | length' audit-report.json
+      ;;
+    pom.xml)
+      mvn org.owasp:dependency-check-maven:check \
+        -DfailBuildOnCVSS=7 \
+        -Dformat=JSON
+      ;;
+    requirements.txt)
+      pip-audit --desc on --format json > audit-report.json
+      ;;
+  esac
+}
+```
+
+## Production Considerations
+
+- Use **lockfiles** (`package-lock.json`, `poetry.lock`, `requirements.txt` hashes) to pin transitive deps
+- Configure **Dependency Dashboard** in Renovate to track all pending updates in one place
+- Set **update schedules** to avoid peak hours: `schedule:before 9am on Monday`
+- Implement **canary deploys** after major dependency upgrades to catch regressions in production
+- Monitor **deprecation warnings** from package registries and plan migrations proactively
+- Keep a **dependency changelog** to communicate breaking changes to downstream consumers
+- Use **internal package registries** (Verdaccio, JFrog Artifactory) to cache external dependencies
+
+## Anti-Patterns
+
+- Using **`latest`** tags in Docker or npm — always pin to exact semver ranges
+- Ignoring **peer dependency warnings** — they cause runtime failures in shared libraries
+- Running **`npm update`** without review — batch updates hide breaking changes
+- Excluding **transitive dependencies** from security scanning — vulnerabilities hide in nested deps
+- Keeping **abandoned packages** as dependencies — removes the ability to get security patches
+- Mixing **lockfiles** across environments — commit the lockfile and regenerate on CI
+- Applying **automated patches** without running the full test suite — causes silent regressions
+
+## Performance Optimization
+
+- Use **npm ci** instead of `npm install` in CI for deterministic, faster installs (skips resolution)
+- Implement **tree-shaking** via bundler configuration to eliminate unused dependencies
+- Deduplicate **versions** with `npm dedupe` or Yarn constraints to reduce bundle size
+- Enable **pnpm** or **Yarn PnP** (Plug'n'Play) for faster installs and less disk usage
+- Configure **dependency caching** in CI pipelines to skip re-downloading unchanged packages
+- Use **sub-imports / deep imports** to import only needed modules instead of entire libraries
+- Split **monorepo packages** into granular modules so consumers only install what they use
+
+## Security Considerations
+
+- Enable **Dependabot security alerts** and auto-merge only patch-level security fixes
+- Scan **SBOM** (SPDX/CycloneDX) against NVD database in every CI pipeline
+- Rotate **npm/GitHub tokens** with minimal scopes (read:packages, no write access on CI)
+- Use **`.npmrc`** with `engine-strict=true` and `ignore-scripts=false` to block postinstall exploits
+- Implement **package signing** verification for internal packages with Sigstore
+- Monitor **supply chain attacks** by reviewing new dependency maintainers and recent commits
+- Block **known malicious packages** with blocklists in the internal registry proxy

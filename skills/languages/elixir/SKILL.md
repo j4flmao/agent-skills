@@ -491,7 +491,102 @@ end
 - `references/elixir-advanced.md` — Advanced Elixir Patterns
 - `references/elixir-deployment.md` — Elixir Deployment Guide
 
-## Handoff
-- `mobile/universal/testing` — ExUnit, property-based testing
-- `mobile/universal/networking` — HTTP clients, WebSocket, Oban
-- `mobile/universal/performance` — BEAM profiling, memory optimization
+## Implementation Patterns
+
+### Pattern: Ecto Schema with Soft Delete and Scoping
+
+```elixir
+defmodule MyApp.Accounts.User do
+  use Ecto.Schema
+  import Ecto.Query
+
+  schema "users" do
+    field :email, :string
+    field :role, :string, default: "user"
+    field :deleted_at, :naive_datetime
+    timestamps()
+  end
+
+  def active(query \\ __MODULE__) do
+    from q in query, where: is_nil(q.deleted_at)
+  end
+
+  def by_role(query, role) do
+    from q in query, where: q.role == ^role
+  end
+end
+
+# Usage
+MyApp.Repo.all(User |> User.active |> User.by_role("admin"))
+```
+
+### Pattern: Backoff Retry with Circuit Breaker
+
+```elixir
+defmodule MyApp.Retry do
+  def with_backoff(opts \\ []) do
+    max_retries = Keyword.get(opts, :max_retries, 3)
+    base_delay = Keyword.get(opts, :base_delay, 100)
+    max_delay = Keyword.get(opts, :max_delay, 5000)
+
+    Enum.reduce_while(1..(max_retries + 1), :error, fn attempt, _acc ->
+      case apply(fun, args) do
+        {:ok, result} -> {:halt, {:ok, result}}
+        {:error, reason} when attempt <= max_retries ->
+          delay = min(base_delay * :math.pow(2, attempt - 1) |> round, max_delay)
+          Process.sleep(delay + :rand.uniform(delay))
+          {:cont, {:error, reason}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+end
+```
+
+## Production Considerations
+
+### Configuration Management
+- Use `config/runtime.exs` for all env-dependent config. `config/prod.exs` for compile-time config only.
+- Secrets in environment variables or Vault. Never commit `.secret` files.
+- Release config: `RELEASE_CONFIG_DIR` points to external config directory. Overrides at runtime without rebuild.
+- Feature flags via persistent_term or a GenServer loaded from DB at boot. Toggle without restart.
+
+### Error Budget for Elixir Services
+- Alert on: process mailbox size > 1000, ETS table exceeding 80% memory limit, Oban job failure rate > 5%.
+- Memory: BEAM typically uses 30-50% more memory than equivalent JVM app. Budget accordingly.
+- Crash dumps: `erl_crash.dump` written on BEAM crash. Analyze with `crashdump_viewer`.
+- Logger level: set `:debug` in dev, `:info` in staging, `:warn` in prod. Never < :warn in prod.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| `Task.start` without supervision | Process orphaned on crash. Memory leak. | `Task.Supervisor.async` under DynamicSupervisor |
+| `send_after` loop for polling | Wastes process cycles. Timer drift. | Use `Registry` + PubSub push pattern |
+| Ecto schema with 30+ associations | Slow preloads. Complex migration dependencies. | Break into bounded contexts. Lazy load. |
+| GenServer `handle_info(:timeout)` | Only fires if init returns :timeout tuple. Confusing. | Use `Process.send_after(self(), :tick, interval)` |
+| Nested `if` in templates | Unreadable. Hard to test. | Move logic to helper/component. Use `cond` or `case`. |
+| Phoenix channel per user | 100k users = 100k connections. | Use presence + PubSub broadcast. DynamicSupervisor per room. |
+
+## Performance Optimization
+
+- `IO.iodata_to_binary/1` for string building: 10x faster than `<>` concatenation.
+- ETS read-only tables: `read_concurrency: true` for high-read workloads.
+- `Task.async_stream` with `max_concurrency: System.schedulers_online() * 2`.
+- `Cachex` for TTL-based caching: background refresh before expiry.
+- LiveView `temp_assign` for assigns that update frequently without persisting across reconnects.
+- Phoenix `~H` sigil over `.heex` templates: compile-time verification.
+- Ecto `Repo.insert_all` / `Repo.update_all` for batch operations. Skips changeset validation.
+
+## Security Considerations
+
+- Plug `:put_secure_browser_headers` — enables HSTS, X-Frame-Options, X-Content-Type-Options.
+- Ecto changeset `cast/3` whitelist: never cast all params. Reject unexpected fields with `validate_change`.
+- Argon2 for passwords (memory-hard). Cost: 2^18 iterations, 16MB memory per hash.
+- Phoenix Token for signed/encrypted tokens. Use `Phoenix.Token.sign/4` for invite links, password resets.
+- CORS: restrict to known origins. Pre-flight OPTIONS handling with `CORSPlug`.
+- SQL injection protection: Ecto parameterized queries. Never raw `Ecto.Adapters.SQL.query!(Repo, "SELECT ... #{unsafe}")`.
+- LiveView: autoload `:current_user` in assigns. Verify on every handle_event/handle_params.
+- Rate limiting: `ExRated` with GenServer-backed bucket. Apply to auth, signup, password-reset endpoints.
+- Dependency audit: `mix hex.audit` in CI. Fail on known vulnerabilities.
+- Secrets: `config/runtime.exs` reads from environment. Never `config/prod.exs` with hardcoded values.

@@ -489,7 +489,145 @@ func TestParseDuration(t *testing.T) {
 - `references/go-advanced.md` — Advanced Go Patterns
 - `references/go-http-server.md` — Go HTTP Server Patterns
 
-## Handoff
-- `mobile/universal/testing` — Testing patterns, CI integration
-- `mobile/universal/performance` — Go profiling, optimization
-- `mobile/universal/networking` — HTTP server/client, middleware patterns
+## Implementation Patterns
+
+### Pattern: Resilient HTTP Client with Retry and Circuit Breaker
+
+```go
+package client
+
+import (
+    "context"
+    "fmt"
+    "math/rand"
+    "net/http"
+    "time"
+)
+
+type CircuitBreaker struct {
+    failures    int
+    threshold   int
+    resetAfter  time.Duration
+    lastFailure time.Time
+    halfOpen    bool
+}
+
+func (cb *CircuitBreaker) Call(ctx context.Context, fn func(context.Context) error) error {
+    if cb.failures >= cb.threshold && time.Since(cb.lastFailure) < cb.resetAfter {
+        return fmt.Errorf("circuit open")
+    }
+    err := fn(ctx)
+    if err != nil {
+        cb.failures++
+        cb.lastFailure = time.Now()
+        return err
+    }
+    cb.failures = 0
+    return nil
+}
+
+func RetryBackoff(ctx context.Context, maxRetries int, fn func(context.Context) error) error {
+    for i := range maxRetries {
+        err := fn(ctx)
+        if err == nil {
+            return nil
+        }
+        if i == maxRetries-1 {
+            return err
+        }
+        delay := time.Duration(100*(1<<i)+rand.Intn(100)) * time.Millisecond
+        select {
+        case <-ctx.Done():
+            return ctx.Err()
+        case <-time.After(delay):
+        }
+    }
+    return nil
+}
+```
+
+### Pattern: Middleware Chain with Context Values
+
+```go
+package middleware
+
+import (
+    "context"
+    "log/slog"
+    "net/http"
+    "time"
+)
+
+type ctxKey string
+const RequestIDKey ctxKey = "request_id"
+
+func RequestID(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        id := r.Header.Get("X-Request-ID")
+        if id == "" {
+            id = fmt.Sprintf("%d", time.Now().UnixNano())
+        }
+        ctx := context.WithValue(r.Context(), RequestIDKey, id)
+        next.ServeHTTP(w, r.WithContext(ctx))
+    })
+}
+
+func Logger(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        start := time.Now()
+        wrapped := &responseWriter{ResponseWriter: w, status: 200}
+        next.ServeHTTP(wrapped, r)
+        slog.InfoContext(r.Context(), "request",
+            "method", r.Method, "path", r.URL.Path,
+            "status", wrapped.status, "duration", time.Since(start).Milliseconds(),
+        )
+    })
+}
+```
+
+## Production Considerations
+
+### Graceful Shutdown with Context Propagation
+- `http.Server.Shutdown()` with `context.WithTimeout(ctx, 30s)` — wait for in-flight requests.
+- Signal handling: SIGTERM → stop listener → wait for active requests → close connections.
+- Worker pools: close input channel → `sync.WaitGroup.Wait()` → close output channel.
+- Database connections: `sql.DB.Close()` blocks until pool drained. Call in shutdown defer.
+
+### Observability
+- pprof endpoints: only on internal port (not exposed publicly). Restricted to admin network.
+- slog structured logging with `slog.HandlerOptions{Level: slog.LevelInfo}` in prod, `LevelDebug` in dev.
+- Metrics: Prometheus `promhttp.Handler()` at `/metrics`. Histogram for request duration, counter for errors.
+- Tracing: OpenTelemetry Go SDK with OTLP exporter. Propagate trace context via HTTP headers.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| `context.Background()` in library code | Never cancelled. Leaks goroutines on caller shutdown. | Accept `context.Context` as first param. Propagate. |
+| `init()` for registration | Implicit side effect. Can't test registration. | Register in main() or use `go:generate`. |
+| Embedding `sync.Mutex` publicly | Exposes Lock/Unlock. Breaks encapsulation. | `type safeMap struct { mu sync.Mutex; m map[string]T }` |
+| `io.ReadAll` without limit | OOM on large response. | `io.LimitReader(r, maxSize)` |
+| `defer db.Close()` in function | DB connection stays open until function returns. | Return DB connection to pool explicitly. |
+| Writing to `http.ResponseWriter` after handler return | Panic. | Check `wroteHeader` flag. |
+
+## Performance Optimization
+
+- `sync.Pool` for temporary structs in high-throughput handlers. Reduces GC pressure by 30-50%.
+- Pre-allocate slices: `make([]T, 0, expectedCap)` avoids multiple reallocations.
+- String concatenation: `strings.Builder` for many concatenations. Single `+` for 2-3 strings.
+- `encoding/json` vs `jsoniter`: stdlib is fine for most. Use `jsoniter` only under profiling evidence.
+- `runtime.GOMAXPROCS(N)` set to CPU quota in containerized environments (prevents over-subscription).
+- Memory pooling with `sync.Pool` for buffer reuse in HTTP response parsing.
+- Goroutine pool with errgroup for fan-out operations. Cap at `runtime.NumCPU() * 2`.
+
+## Security Considerations
+
+- SQL injection: parameterized queries only. `db.QueryContext(ctx, "SELECT * FROM users WHERE id = $1", id)`.
+- XSS: `html/template` auto-escapes. React/Next.js also handle. Raw `text/template` does NOT.
+- CSRF: `gorilla/csrf` or `nosurf`. Token in cookie + form header.
+- JWT validation: `golang-jwt/jwt/v5`. Verify `alg`, `exp`, `iss`. Reject `alg: none`.
+- Rate limiting: `golang.org/x/time/rate` per-IP limiter. Per-user in authenticated routes.
+- CORS: `rs/cors` with explicit origins. Never `*` for authenticated endpoints.
+- TLS: `http.Server{TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}}`.
+- Secrets: read from env vars at startup. Never in source code or binary.
+- Dependency scanning: `govulncheck ./...` in CI. Block on critical vulnerabilities.

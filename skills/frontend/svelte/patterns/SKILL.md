@@ -480,3 +480,83 @@ onMount(async () => {
 No artifact produced.
 Next skill: frontend-sveltekit if using SvelteKit.
 Carry forward: form binding patterns, transition/animate conventions, action patterns.
+## Implementation Patterns
+
+### Factory Pattern for Module Creation
+`
+function createModule<T>(config: ModuleConfig): T {
+  const dependencies = initializeDependencies(config);
+  const module = new Module(dependencies);
+  module.hooks.onInit();
+  return module as T;
+}
+`
+
+### Builder Pattern for Complex Configuration
+`
+class ConfigBuilder {
+  private config: AppConfig = new AppConfig();
+  withDatabase(url: string): ConfigBuilder { ... }
+  withCache(ttl: number): ConfigBuilder { ... }
+  withLogging(level: string): ConfigBuilder { ... }
+  build(): AppConfig { return this.config; }
+}
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Production build with optimizations enabled
+- [ ] Environment variables configured per environment
+- [ ] Health check endpoint responds correctly
+- [ ] Error tracking and monitoring integrated
+- [ ] Logging level configured (not debug in production)
+- [ ] Resource limits configured
+- [ ] Database migrations applied
+- [ ] Static assets built and served from CDN or cache
+- [ ] Feature flags toggled appropriately
+- [ ] Rollback plan documented and tested
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% | Critical | Rollback or fix |
+| p95 latency | > 500ms | Warning | Profile and optimize |
+| Uptime | < 99.9% | Critical | Investigate infrastructure |
+| Memory usage | > 80% | Warning | Check for leaks |
+| CPU usage | > 80% | Warning | Scale up or optimize |
+
+## Architecture Decision Trees
+
+### Reactive State Decision Tree
+```
+Is the state used in a single component?
+  ├── No  → Should it persist across page loads?
+  │    ├── Yes → localStorage store or URL search params
+  │    └── No  → Svelte writable store (shared module-level store)
+  └── Yes → Is it derived from props or other state?
+       ├── Yes → $derived expression
+       └── No  → $state with local component scope
+            Does it need async handling?
+            ├── Yes → $state with promise resolution or $effect
+            └── No  → Synchronous state only
+```
+
+### Component Composition Decision Tree
+```
+Does the child need to project content?
+  ├── No  → Standard props-based component
+  └── Yes → Is the projected content static?
+       ├── Yes → <slot> with fallback content
+       └── No  → Named slots + slot props for dynamic content
+            Need to pass children through multiple levels?
+            ├── Yes → Svelte snippets ({#snippet}) or stores
+            └── No  → Direct slot usage with prop drilling
+```
+
+## Security Considerations
+
+- **@html template escaping**: `{@html userContent}` bypasses Svelte's auto-escaping. Always sanitize HTML through DOMPurify. Never use `{@html}` with unsanitized user input. For rich text rendering, use a dedicated sanitized component.
+- **Store data exposure**: Svelte stores at module level are singletons shared across all users on the server (SSR). Never store per-user sensitive data in module-level stores - use context API or server-only modules.
+- **Action security**: Custom `use:action` functions have access to the element. Validate any data passed to action parameters. Actions in SSR must handle missing `window`/`document`. Clean up event listeners in destroy callback.
+- **Form action validation**: SvelteKit form actions require both client and server validation. Never trust `FormData` values - validate server-side. Use `zod` or `superforms` for schema validation. Sanitize output before rendering in `{@html}`.

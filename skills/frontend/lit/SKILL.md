@@ -421,3 +421,97 @@ it('dispatches custom event on button click', async () => {
 No artifact produced.
 Next skill: frontend-universal-web-components for vanilla custom elements and cross-framework compatibility.
 Carry forward: LitElement patterns, reactive property config, shadow DOM conventions.
+## Implementation Patterns
+
+### Factory Pattern for Module Creation
+`
+function createModule<T>(config: ModuleConfig): T {
+  const dependencies = initializeDependencies(config);
+  const module = new Module(dependencies);
+  module.hooks.onInit();
+  return module as T;
+}
+`
+
+### Builder Pattern for Complex Configuration
+`
+class ConfigBuilder {
+  private config: AppConfig = new AppConfig();
+  withDatabase(url: string): ConfigBuilder { ... }
+  withCache(ttl: number): ConfigBuilder { ... }
+  withLogging(level: string): ConfigBuilder { ... }
+  build(): AppConfig { return this.config; }
+}
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Production build with optimizations enabled
+- [ ] Environment variables configured per environment
+- [ ] Health check endpoint responds correctly
+- [ ] Error tracking and monitoring integrated
+- [ ] Logging level configured (not debug in production)
+- [ ] Resource limits configured
+- [ ] Database migrations applied
+- [ ] Static assets built and served from CDN or cache
+- [ ] Feature flags toggled appropriately
+- [ ] Rollback plan documented and tested
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% | Critical | Rollback or fix |
+| p95 latency | > 500ms | Warning | Profile and optimize |
+| Uptime | < 99.9% | Critical | Investigate infrastructure |
+| Memory usage | > 80% | Warning | Check for leaks |
+| CPU usage | > 80% | Warning | Scale up or optimize |
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+
+## Architecture Decision Trees
+
+### Component Design Decision Tree
+```
+Does component render dynamic content from properties?
+  ├── No  → Pure template with static styles
+  └── Yes → Are properties primitive values?
+       ├── Yes → @property() with type converter
+       └── No  → @property() with custom converter or @state()
+            Does the component need to render children/slots?
+            ├── Yes → Use <slot> elements in shadow DOM
+            └── No  → Closed shadow DOM for encapsulated components
+```
+
+### Reactive Strategy Decision Tree
+```
+Does the component need to react to external state?
+  ├── No  → Static component, no reactive updates needed
+  └── Yes → Is the state from DOM events?
+       ├── Yes → @eventOptions + this.requestUpdate()
+       └── No  → Is the state coming from an observable?
+            ├── Yes → Use LitElement + rxjs with connect() pattern
+            └── No  → Use @property decorators + willUpdate lifecycle
+```

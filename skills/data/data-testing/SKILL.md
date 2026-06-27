@@ -450,6 +450,100 @@ What aspect of the data pipeline are we validating?
   - references/dbt-testing-framework.md — dbt Testing Framework
   - references/schema-testing.md — Schema Testing Reference
   - references/testing-strategy-framework.md — Testing Strategy Framework
+## Architecture Decision Trees
+
+```
+Data Testing Strategy
+├── Pipeline testing approach?
+│   ├── SQL transformation tests → dbt tests (singular + generic)
+│   ├── Python transformation tests → pytest + chispa (PySpark)
+│   └── End-to-end pipeline tests → Jenkins/GitHub Actions with test datasets
+├── Data quality testing?
+│   ├── Row-level (not null, unique) → dbt generic tests
+│   ├── Statistical (distribution, outliers) → Great Expectations
+│   └── Schema validation → dbt schema tests + protobuf schema registry
+├── Test environment?
+│   ├── Dedicated staging DB → dbt test --target staging
+│   └── CI ephemeral environment → dbt test with fresh clone
+└── Test frequency?
+    ├── On every PR → Fast smoke tests (< 5 min)
+    └── Daily → Full regression suite (sampled data)
+```
+
+**Decision criteria**: Balance test speed vs coverage, data volume limits in CI, and criticality of the data pipeline.
+
+## Implementation Patterns
+
+### PySpark Testing with Chispa
+```python
+# data_testing/pyspark_test.py
+import pytest
+from chispa import assert_df_equality
+from pyspark.sql import SparkSession
+
+def test_transform_orders():
+    spark = SparkSession.builder.getOrCreate()
+    source_data = [
+        (1, "2024-01-01", 100.0, "pending"),
+        (2, "2024-01-02", 200.0, "shipped"),
+    ]
+    source_schema = ["order_id", "order_date", "amount", "status"]
+    source_df = spark.createDataFrame(source_data, source_schema)
+
+    result = transform_orders(source_df)
+
+    expected_data = [
+        (1, "2024-01-01", 100.0, "pending", "2024-01", "Q1"),
+        (2, "2024-01-02", 200.0, "shipped", "2024-01", "Q1"),
+    ]
+    expected_schema = ["order_id", "order_date", "amount", "status", "month", "quarter"]
+    expected_df = spark.createDataFrame(expected_data, expected_schema)
+    assert_df_equality(result, expected_df)
+```
+
+### dbt Singular Test
+```sql
+-- data_testing/tests/assert_orders_total_positive.sql
+SELECT order_id, total_amount
+FROM {{ ref('orders') }}
+WHERE total_amount < 0
+```
+
+## Production Considerations
+
+- **Test data management**: Use sampled production data (1% stratified) for CI; never use full prod volume.
+- **Test isolation**: Run tests in isolated schemas/databases; tear down after completion using dbt `--target`.
+- **Seeded test data**: Maintain a `data/seeds/` directory with canonical test CSVs for deterministic outcomes.
+- **CI integration**: Run data tests as parallel CI job; fail PR on any test failure in `gold` layer tests.
+- **Test coverage targets**: Require 80%+ model coverage (each model has at least one test) for gold models.
+- **Flaky test handling**: Retry flaky tests 3x with exponential backoff; quarantine consistently failing tests.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Testing on full production data in CI | CI runs for hours | Use sampled data (1-5%) in CI |
+| No test data seed files | Non-deterministic test results | Maintain versioned seed CSVs |
+| Only testing happy path | Downstream pipelines break on edge cases | Add null, empty, boundary tests |
+| Tests without assertion on row count | Silent empty output passes | Always assert row_count > 0 |
+| Ignoring schema drift in test data | Tests pass on old schema | Regular test data refresh from prod |
+
+## Performance Optimization
+
+- **Parallel test execution**: Use pytest-xdist or dbt `--threads` for parallel model testing.
+- **Test tiering**: Run fast (< 1 min) unit tests on every commit; slow integration tests nightly.
+- **Data skipping**: Test only changed models + their downstream dependencies using `dbt test --select +model_name+`.
+- **Result caching**: Cache full-refresh model builds across test runs using ephemeral volumes.
+- **Minimal test data**: Design test cases with minimal row counts (3-10 rows per edge case).
+
+## Security Considerations
+
+- **Test data de-identification**: Use synthetic or masked data in CI; never commit production PII to test seeds.
+- **Credential isolation**: Use separate test DB credentials with read-only access; rotate CI secrets.
+- **Test artifact storage**: Encrypt test result artifacts at rest; purge CI logs after 90 days.
+- **Access control**: Restrict test environment modification to pipeline maintainers; audit test data changes.
+- **Compliance**: Ensure test data complies with data retention policies; purge test schemas after 7 days.
+
 ## Handoff
 `data-data-quality` for broader quality framework and data contract enforcement
 `data-data-observability` for production monitoring and anomaly detection

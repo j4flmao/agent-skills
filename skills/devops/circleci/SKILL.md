@@ -417,3 +417,120 @@ Putting environment variables in config.yml. Use CircleCI contexts and project e
 
 ## Handoff
 Next: **cicd-pipeline** — general pipeline concepts beyond CircleCI.
+
+## Implementation Patterns
+
+### YAML: Parallel Test Sharding with Orb
+
+```yaml
+version: 2.1
+orbs:
+  node: circleci/node@5.1.0
+
+commands:
+  restore-workspace:
+    steps:
+      - attach_workspace:
+          at: ~/project
+
+jobs:
+  test-sharded:
+    executor: node/default
+    parallelism: 4
+    steps:
+      - checkout
+      - restore-workspace
+      - run: npm ci
+      - run:
+          command: |
+            TEST_FILES=$(circleci tests glob "tests/**/*.test.ts" | circleci tests split --split-by=timings)
+            npx jest --ci --runInBand $TEST_FILES
+      - store_test_results:
+          path: junit.xml
+
+  deploy:
+    executor: node/default
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: |
+          docker build -t $DOCKER_REGISTRY/app:$CIRCLE_SHA1 .
+          docker push $DOCKER_REGISTRY/app:$CIRCLE_SHA1
+      - run: |
+          ssh deploy@$HOST "kubectl set image deployment/app \
+            app=$DOCKER_REGISTRY/app:$CIRCLE_SHA1"
+
+workflows:
+  version: 2
+  ci:
+    jobs:
+      - test-sharded
+      - deploy:
+          requires:
+            - test-sharded
+          filters:
+            branches:
+              only: main
+```
+
+### Bash: CircleCI API-driven Pipeline Trigger
+
+```bash
+#!/usr/bin/env bash
+trigger_pipeline() {
+  local project_slug=$1
+  local branch=$2
+
+  curl -X POST \
+    "https://circleci.com/api/v2/project/${project_slug}/pipeline" \
+    -H "Circle-Token: ${CIRCLE_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"branch\": \"${branch}\",
+      \"parameters\": {
+        \"run_integration_tests\": true,
+        \"deploy_to_staging\": true
+      }
+    }"
+}
+```
+
+## Production Considerations
+
+- Set **resource_class** per job based on workload needs; use `medium+` for test, `large` for builds
+- Configure **pipeline-level environment variables** in CircleCI UI, never in config files
+- Use **contexts** to share environment variables across projects with restricted access
+- Set up **Slack/Webhook notifications** for failed pipelines with links to the failing step
+- Implement **pipeline auto-cancel** for redundant builds on non-default branches
+- Configure **SSH key fingerprints** in CircleCI and bind them per-job for production access
+- Store **Docker credentials** in project environment variables, not in the config file
+
+## Anti-Patterns
+
+- Checking in **API tokens** or SSH keys to the repository — always use CircleCI contexts
+- Running **Docker builds** without remote Docker — leads to cache invalidation on every run
+- Using **`machine` executor** when `docker` executor suffices — increases setup time
+- Ignoring **test splitting** — running the full suite on one container slows pipelines unnecessarily
+- Hardcoding **resource_class** without monitoring actual usage — overpaying for idle capacity
+- Storing **large artifacts** without retention policies — fills up workspace and storage
+- Using **`setup_remote_docker`** on every job when one shared Docker context suffices
+
+## Performance Optimization
+
+- Enable **Docker Layer Caching (DLC)** for builds using `setup_remote_docker`
+- Use **circleci tests glob** with `--split-by=timings` for optimal test distribution
+- Cache **node_modules** or dependency directories with `save_cache`/`restore_cache` by lockfile checksum
+- Use **workspace persistence** for sharing built artifacts between jobs instead of re-checking out
+- Configure **resource_class auto-scaling** based on queue depth for bursting workloads
+- Reduce **job count** by merging quick sequential steps into a single job
+- Set **no_output_timeout** appropriately per step; don't let hung jobs run indefinitely
+
+## Security Considerations
+
+- Enable **SaaS or self-hosted runner** IP allowlisting for your VCS
+- Rotate **project API tokens** when a team member departs
+- Use **Docker content trust** to verify image signatures before pulling base images
+- Restrict **context access** to specific projects and teams in CircleCI organization settings
+- Scan **base images** nightly and trigger rebuilds when vulnerabilities are found
+- Never export **environment variables** in pipeline logs — mask sensitive values
+- Require **approval jobs** for production deployments with manual gate checks

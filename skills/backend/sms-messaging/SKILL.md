@@ -434,7 +434,153 @@ async function sendWhatsAppMessage(to: string, templateName: string, params: Rec
   - references/sms-messaging-testing.md — SMS Messaging Testing
   - references/sms-providers.md — SMS Providers
   - references/whatsapp-api.md — WhatsApp API
-## Handoff
-- `backend/transactional-email` — Email fallback for messaging, unified notification system
-- `security/compliance` — TCPA/GDPR documentation, data retention policies
-- `mobile/mobile-localization` — Localized message templates per locale
+## Architecture Decision Trees
+
+### Provider Selection
+```
+Message volume per month?
+├── < 10K → Single provider (Twilio/AWS SNS)
+│   Simple integration. No failover needed. Monitor manually.
+├── 10K - 1M → Primary + secondary failover
+│   Twilio primary, Vonage secondary. Automated failover on timeout.
+│   Cost-aware routing: prefer cheaper provider for non-critical.
+└── > 1M → Multi-provider with intelligent routing
+    Route by destination country, carrier, time of day.
+    Provider A for US/CA, Provider B for EU, Provider C for APAC.
+    Real-time delivery stats influence routing decisions.
+```
+
+### Channel Selection
+```
+Message urgency and content type?
+├── Time-sensitive, critical → SMS (high open rate, immediate)
+│   2FA codes, payment confirmations, fraud alerts.
+│   Fallback: SMS → Voice call → Email.
+├── Rich media, marketing → WhatsApp
+│   High engagement, images + buttons. Requires opt-in + approved templates.
+│   Best for: receipts, shipping updates, customer service.
+└── Low urgency, informational → Email
+    Newsletters, weekly summaries, account statements.
+    Cost: nearly free. Risk: spam filters, low open rates.
+```
+
+## Implementation Patterns
+
+### Pattern: Multi-Provider Failover with Circuit Breaker
+
+```typescript
+class ResilientMessagingService {
+  private providers: MessageProvider[];
+  private circuitState: Map<string, { failures: number; lastFailure: Date; open: boolean }> = new Map();
+  private readonly THRESHOLD = 3;
+  private readonly RESET_TIMEOUT = 300_000; // 5min
+
+  async send(params: SendParams): Promise<SendResult> {
+    for (const provider of this.providers) {
+      if (this.isCircuitOpen(provider.name)) continue;
+
+      try {
+        const result = await provider.send(params);
+        this.recordSuccess(provider.name);
+        return result;
+      } catch (error) {
+        this.recordFailure(provider.name);
+      }
+    }
+    throw new Error('All providers exhausted');
+  }
+
+  private isCircuitOpen(name: string): boolean {
+    const state = this.circuitState.get(name);
+    if (!state || !state.open) return false;
+    if (Date.now() - state.lastFailure.getTime() > this.RESET_TIMEOUT) {
+      state.open = false;
+      state.failures = 0;
+      return false;
+    }
+    return true;
+  }
+
+  private recordFailure(name: string): void {
+    const state = this.circuitState.get(name) || { failures: 0, lastFailure: new Date(), open: false };
+    state.failures++;
+    state.lastFailure = new Date();
+    if (state.failures >= this.THRESHOLD) state.open = true;
+    this.circuitState.set(name, state);
+  }
+}
+```
+
+### Pattern: Delivery Webhook Aggregation
+
+```typescript
+// Aggregates delivery receipts from multiple providers into normalized format
+class DeliveryAggregator {
+  async handleWebhook(provider: string, payload: any): Promise<void> {
+    const normalized = this.normalize(provider, payload);
+    await DeliveryRecord.findOneAndUpdate(
+      { messageId: normalized.messageId },
+      { status: normalized.status, providerStatus: normalized.rawStatus, updatedAt: new Date() }
+    ).exec();
+
+    if (normalized.status === 'failed') {
+      await this.triggerFailover(normalized);
+    }
+  }
+
+  private normalize(provider: string, payload: any): NormalizedEvent {
+    const mappings: Record<string, any> = {
+      twilio: { messageId: payload.MessageSid, status: this.twilioStatus(payload.MessageStatus) },
+      vonage: { messageId: payload.messageId, status: this.vonageStatus(payload.status) },
+    };
+    return { ...mappings[provider], rawStatus: payload.MessageStatus || payload.status };
+  }
+}
+```
+
+## Production Considerations
+
+### Scalability
+- Message queue all outbound sends. Never block HTTP request on SMS delivery.
+- Rate limiting per provider: stay under TPS limits (Twilio: 1/sec per phone number, AWS SNS: 300/sec per account).
+- Database writes for message logs: batch inserts every 100ms or 100 messages, whichever comes first.
+- Webhook handlers: process idempotently (store received webhook IDs, skip duplicates).
+
+### Cost Management
+- Track cost per message, per provider, per campaign. Alert on cost anomalies.
+- Route non-critical messages to cheaper providers. Reserve premium providers for 2FA and alerts.
+- Carrier lookup before sending: skip landline numbers for SMS. Saves ~5% on failed sends.
+- Concatenated messages cost per segment. Optimize message length to fit single segment (160 GSM chars).
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| Single provider | SPOF. Provider outage blocks all messaging. | Minimum 2 providers with auto-failover |
+| No delivery tracking | Blind to failures. Customers don't receive messages. | Webhook handler + real-time status dashboard |
+| OTP in plaintext database | Breach exposes all OTP codes. | bcrypt hash. In-memory TTL cache as alternative |
+| Shared short codes | Carrier filtering, reputation issues. | Dedicated long codes for transactional messaging |
+| Sending without consent check | TCPA fines up to $1500 per message. | Consent check before every send. Audit trail of consent. |
+| Blocking on send | SMS API latency adds to page load time. | Async send with queue. Webhook for status. |
+
+## Performance Optimization
+
+- Connection pooling for SMS provider APIs. Reuse HTTP clients (keep-alive).
+- Template pre-compilation: compile message templates once, cache rendered versions.
+- Redis-based rate limiter: sliding window per recipient. Single Redis call per check.
+- Batch opt-out processing: aggregate STOP replies, process in batches every 30 seconds.
+- Database indexing: message_logs on (status, sent_at), consent on (phone_number, channel).
+- CDN for MMS/media content: avoid re-uploading images per message. Reference CDN URLs.
+- Connection pooling for Twilio/Vonage HTTP clients: 10-25 connections per provider.
+
+## Security Considerations
+
+- API keys for SMS providers stored in secrets manager (AWS Secrets Manager, Vault). Never in code.
+- OTP codes: generated with `crypto.randomInt()` (Node.js) or `secrets.randbelow()` (Python). Never `Math.random()`.
+- OTP storage: bcrypt hashed in database. TTL enforced at read time. Max 3 verify attempts then invalidate.
+- Rate limiting on OTP endpoints: per phone number (max 5/min), per IP (max 20/min).
+- Message content scanning: block PII leakage (SSN, credit cards) in outbound messages. Regex patterns + ML scanning.
+- TLS for all provider API calls. mTLS for high-security environments.
+- Webhook signatures: validate Twilio `X-Twilio-Signature` header. Reject unsigned webhooks.
+- Data retention: message logs retained per regulatory requirements. Purge after compliance window.
+- Consent records: immutable append-only log. Export for regulatory audit within 24 hours.

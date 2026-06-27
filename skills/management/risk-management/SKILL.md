@@ -496,3 +496,106 @@ Decision log:
 
 ## Handoff
 sprint-retro (the risk register is reviewed at every sprint retro), create-roadmap (risk scores inform timeline adjustments and buffer allocation on the roadmap).
+
+## Architecture Decision Trees
+
+### Risk Response Strategy
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Risk severity | Accept (cost to fix > impact) | Mitigate (cost to fix < impact) | Budget, risk appetite, compliance |
+| Risk ownership | Assign to risk owner (accountable) | Transfer (insurance/outsource) | Expertise, financial capacity |
+| Monitoring frequency | Continuous (automated dashboards) | Periodic (quarterly review) | Risk volatility, regulatory requirements |
+
+### Risk Assessment Framework Selection
+- Financial/quantitative → Monte Carlo simulation + NPV analysis
+- Security → CVSS scoring + threat modeling (STRIDE)
+- Project → Probability-impact matrix + expected monetary value
+- Operational → FMEA with RPN scoring
+
+## Implementation Patterns
+
+### Risk Register Template
+`markdown
+## Risk Register: {project/department}
+
+| ID | Risk Description | Category | Probability | Impact | RPN | Owner | Response | Status |
+|---|---|---|---|---|---|---|---|---|
+| R-001 | Key developer leaving | Resource | 4/5 | 5/5 | 20 | @tech-lead | Mitigate - cross-train | Active |
+| R-002 | Vendor bankruptcy | External | 2/5 | 4/5 | 8 | @procurement | Transfer - escrow contract | Monitoring |
+| R-003 | Data breach | Security | 3/5 | 5/5 | 15 | @cso | Mitigate - security audit | Active |
+| R-004 | Schedule delay | Project | 4/5 | 3/5 | 12 | @pm | Accept - buffer in timeline | Active |
+`
+
+### Risk Report Template
+`markdown
+# Risk Report: {period}
+
+## Overview
+- Total risks: {count}
+- Critical: {count}
+- High: {count}
+- Medium: {count}
+- Low: {count}
+
+## Trends
+- New risks this period: {list}
+- Closed risks this period: {list}
+- RPN trend: {increasing/stable/decreasing}
+
+## Top 5 Risks
+1. {title} - RPN {score} - {mitigation}
+2. {title} - RPN {score} - {mitigation}
+3. {title} - RPN {score} - {mitigation}
+4. {title} - RPN {score} - {mitigation}
+5. {title} - RPN {score} - {mitigation}
+
+## Recommendations
+1. {action item}
+2. {action item}
+`
+`
+## Production Considerations
+
+### Risk Governance
+- **Review cadence**: Operational risks reviewed monthly, strategic risks quarterly. Board-level risks reviewed annually.
+- **Risk appetite**: Define quantitative risk appetite (e.g., max acceptable financial loss). Communicate to all risk owners.
+- **Escalation**: Critical risks auto-escalate to executive team. Define SLA for risk response approval.
+
+### Tooling & Automation
+- **Risk dashboard**: Maintain real-time risk dashboard with RPN trends. Use color-coded heat maps for quick status.
+- **Automated triggers**: Link risk register to monitoring tools. Auto-create risk tickets when incidents occur.
+- **Audit trail**: Log all risk register changes. Maintain version history for compliance audits.
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Solution |
+|---|---|---|
+| Risk register as shelfware | Register created, never consulted | Review risks in every sprint planning/retro |
+| Everything is high priority | No useful prioritization | Force ranking with relative scoring, not absolute |
+| Ignoring positive risks | Missed opportunities | Include opportunity register alongside threat register |
+| Risk owner doesn't know | Assigned without consent | Obtain explicit acceptance from risk owners |
+| Probability blindness | 50/50 bias in scoring | Use reference classes, historical data for calibration |
+
+## Performance Optimization
+
+### Risk Assessment Speed
+- **Risk library**: Maintain catalog of common risks with pre-assessed scores. Reduce time spent on recurring risk identification.
+- **Template risks**: Use industry risk templates (OWASP, ISO 31010). Customize to org context rather than starting from zero.
+- **Aggregate assessment**: Assess risks at program level, not per-task. Roll up to portfolio view for executive reporting.
+
+### Response Efficiency
+- **Pre-approved responses**: Define standard responses for common risk categories. Reduce approval cycle for routine mitigations.
+- **Risk budget**: Allocate contingency budget proportional to risk exposure. Release budget on trigger, not on request.
+- **Automated monitoring**: Use automated KRI (Key Risk Indicator) tracking. Alert when KRIs approach thresholds.
+
+## Security Considerations
+
+### Risk Data Security
+- **Confidentiality**: Classify risk register as confidential. Restrict access based on need-to-know and role.
+- **Vulnerability details**: Store specific vulnerability information in separate secured system. Reference from risk register without exposing details.
+- **Third-party risk**: Encrypt third-party risk assessment data. Share only anonymized risk posture with partners.
+
+### Compliance & Audit
+- **Regulatory risks**: Tag risks linked to regulatory requirements (SOX, GDPR, HIPAA). Report compliance risk exposure separately.
+- **Audit readiness**: Maintain risk register in audit-ready format. Support export to standard audit formats.
+- **Board reporting**: Sanitize risk reports for board distribution. Omit operationally sensitive details, keep strategic view.

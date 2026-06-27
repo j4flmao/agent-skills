@@ -398,8 +398,114 @@ An enterprise migrating from colo to cloud discovered that their 16-week bare-me
   - references/growth-modeling.md -- Growth Modeling -- Business to Infra Translation
   - references/headroom-math.md -- Headroom Math -- Sizing With Failures, Spikes, Maintenance
   - references/procurement.md -- Procurement -- Lead Times, Vendor Matrix, Contract Patterns
-## Handoff
-- `devops-cloud-cost-optimization` for spot/RI/savings-plan optimization within forecast.
-- `devops-finops` for chargeback, showback, multi-team allocation.
-- `enterprise-cost-governance` for org-level budget enforcement.
-- `devops-cloud-architecture` for design adjustments when forecast exceeds current arch.
+## Implementation Patterns
+
+### Pattern: Forecast Model as Code
+
+```python
+import numpy as np
+from datetime import datetime, timedelta
+
+class CapacityForecast:
+    def __init__(self, historical: list[float], timestamps: list[datetime]):
+        self.historical = np.array(historical)
+        self.timestamps = timestamps
+
+    def linear_model(self, quarters_ahead: int) -> float:
+        x = np.arange(len(self.historical))
+        coeffs = np.polyfit(x, self.historical, 1)
+        last_x = len(self.historical) - 1
+        return np.polyval(coeffs, last_x + quarters_ahead * 90)
+
+    def seasonal_multiplier(self, month: int) -> float:
+        # Compute seasonal factor from historical data
+        monthly_avgs = {}
+        for val, ts in zip(self.historical, self.timestamps):
+            monthly_avgs.setdefault(ts.month, []).append(val)
+        avg_all = np.mean(self.historical)
+        month_avg = np.mean(monthly_avgs.get(month, [avg_all]))
+        return month_avg / avg_all
+
+    def forecast_with_headroom(self, quarters_ahead: int, tier: str) -> dict:
+        base = self.linear_model(quarters_ahead)
+        seasonal = base * self.seasonal_multiplier((datetime.now().month + quarters_ahead * 3) % 12 or 12)
+        headroom = {"tier1": 1.0, "tier2": 0.5, "tier3": 0.25, "tier4": 0.1}
+        required = seasonal * (1 + headroom.get(tier, 0.25))
+        return {"forecast": round(seasonal), "required": round(required), "headroom_pct": headroom.get(tier, 0.25) * 100}
+```
+
+### Pattern: Autoscale Boundary Automation
+
+```typescript
+// terraform/hpa_template.tf
+resource "kubernetes_horizontal_pod_autoscaler_v2" "service_hpa" {
+  metadata { name = "${var.service_name}-hpa" }
+  spec {
+    min_replicas = var.min_replicas
+    max_replicas = var.max_replicas
+    metric {
+      type = "Resource"
+      resource {
+        name = "cpu"
+        target { type = "Utilization" average_utilization = var.target_cpu }
+      }
+    }
+    behavior {
+      scale_down {
+        stabilization_window_seconds = 300
+        policy { type = "Percent" value = 25 period_seconds = 60 }
+      }
+      scale_up {
+        stabilization_window_seconds = 0
+        policy { type = "Percent" value = 100 period_seconds = 60 }
+      }
+    }
+  }
+}
+```
+
+## Production Considerations
+
+### Capacity Review Cadence
+- Weekly: autoscale limit check. Raise max before forecast crosses 60% of current max.
+- Monthly: forecast vs actual comparison. Re-fit growth model if variance > 20%.
+- Quarterly: full capacity plan update. Procurement orders placed. Headroom exceptions reviewed.
+- Annual: infrastructure strategy review. Cloud vs colo vs bare-metal allocation rebalance.
+
+### Procurement Planning
+- Cloud: raise autoscale limits via API. No lead time. Monitor growth limits on service quotas.
+- Colo: 8-12 week lead time. Order when 6-month forecast crosses 70% of current capacity.
+- Bare-metal: 12-16 week lead time + 2 week burn-in. Order when 9-month forecast crosses limit.
+- Transit: 6-8 week lead time for cross-connects. Monitor p95 bandwidth vs contract.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| Forecasting from average only | Spike hidden. 40% avg CPU + 95% spikes = overloaded. | Track p95 and peak alongside average. |
+| Uniform headroom across tiers | Tier-4 over-provisioned. Tier-1 under-provisioned. | 100% headroom for Tier-1, 10% for Tier-4. |
+| Static model never re-fit | Linear model misses hockey-stick growth. | Re-fit quarterly. Immediate re-forecast on inflection. |
+| Storage modeled as linear | Compounds at 15% mo/mo but model assumes 5%. | Exponential or logistic model. Retention-based decay. |
+| Ignoring dependency cascade | 2x API traffic = 10x DB connections (N+1). | Model capacity at dependency boundaries, not entry. |
+| No what-if scenarios | 2x traffic surprises. First clue is outage. | Document bottleneck for 2x, 0.5x, region-loss scenarios. |
+
+## Performance Optimization
+
+- Prometheus recording rules: pre-compute p95/p99 percentiles hourly. Avoid query-time aggregation.
+- DDSketch for percentile aggregation across services. 1% relative error, 1/10 the storage of histograms.
+- Cost-per-unit tracker: Lambda that processes billing data daily. Updates per-service cost metrics.
+- Capacity dashboard: three views (executive, engineering, procurement) from single data source.
+- Forecast model cache: compute once per day. Cache results for capacity dashboard queries.
+- Alert on forecast vs actual: check daily. If variance > 20% for 3 consecutive days, trigger re-forecast.
+- Batch procurement: consolidate orders per quarter. Volume discounts on hardware. Fewer change windows.
+
+## Security Considerations
+
+- Capacity data classification: internal use only. Not customer-facing. May reveal business growth plans.
+- Access control: capacity plan read-only for engineering. Write for capacity planning team. Executive view.
+- Procurement credentials: hardware vendor portals accessed via SSO. No shared credentials.
+- Cloud API keys for autoscale configuration: scoped to autoscale only. No delete permissions.
+- Capacity data at rest: encrypted in database. Anonymized in dashboards (no customer-identifiable info).
+- Audit trail: all capacity limit changes logged (who, what, when, why). Reviewed quarterly.
+- Vendor financial data: treat as confidential. NDA required for sharing capacity plans with vendors.
+- What-if scenario data: stored in isolated environment. Not accessible from production systems.

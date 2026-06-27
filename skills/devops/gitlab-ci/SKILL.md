@@ -428,3 +428,158 @@ DIND: requires privileged mode, full Docker daemon, faster for multi-stage build
 After completing this skill:
 - Next skill: devops-circleci -- CircleCI CI/CD pipeline configuration
 - Pass context: Build image, test commands, artifact patterns, deployment environment names
+
+## Architecture Decision Trees
+
+### GitLab CI vs GitLab CI + External CI
+
+| Decision | GitLab CI Only | Hybrid (Jenkins/Argo) |
+|---|---|---|
+| Simplicity | Single platform | Multiple platforms to manage |
+| Pipeline as Code | Full `.gitlab-ci.yml` | Split across tools |
+| Features | Built-in registry, SAST, DAST | Specialized tool capabilities |
+| Migration | Easier (all in GitLab) | Harder (multi-tool) |
+| Cost | Same license | Additional licenses |
+| Best for | GitLab-native orgs | Existing CI investments |
+
+### Docker vs Shell Executor
+
+| Aspect | Docker Executor | Shell Executor |
+|---|---|---|
+| Isolation | Full container isolation | Same host environment |
+| Reproducibility | High (same image everywhere) | Low (depends on host state) |
+| Performance | Slight overhead | Native speed |
+| Cache | Volume mounts | Direct filesystem access |
+| Use case | Standard CI/CD | Performance-critical or hardware access |
+
+## Implementation Patterns
+
+### YAML: Multi-project Pipeline with Downstream Triggers
+
+```yaml
+stages:
+  - build
+  - test
+  - package
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - .npm/
+
+build-app:
+  stage: build
+  image: node:22
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+
+unit-test:
+  stage: test
+  image: node:22
+  script:
+    - npm ci
+    - npm run test:unit
+    - npm run test:coverage
+  coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+
+deploy-staging:
+  stage: deploy
+  image: alpine/k8s:1.28
+  script:
+    - kubectl set image deployment/app app=${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}
+  environment:
+    name: staging
+    url: https://staging.example.com
+  only:
+    - main
+
+trigger-downstream:
+  stage: deploy
+  trigger:
+    project: myorg/e2e-tests
+    branch: main
+    strategy: depend
+  only:
+    - tags
+```
+
+### Bash: GitLab CI Pipeline Status Check
+
+```bash
+#!/usr/bin/env bash
+wait_for_pipeline() {
+  local project_id=$1
+  local pipeline_id=$2
+  local token=$3
+
+  while true; do
+    status=$(curl -sf --header "PRIVATE-TOKEN: $token" \
+      "https://gitlab.com/api/v4/projects/${project_id}/pipelines/${pipeline_id}" \
+      | jq -r '.status')
+
+    echo "Pipeline status: $status"
+
+    case "$status" in
+      success) return 0 ;;
+      failed|canceled) return 1 ;;
+      *) sleep 10 ;;
+    esac
+  done
+}
+```
+
+## Production Considerations
+
+- Use **GitLab-managed Terraform state** for infrastructure provisioning within CI pipelines
+- Set **deployment freeze periods** in GitLab to prevent deployments during blackout windows
+- Enable **merge trains** for main branch — ensures only passing combinations merge
+- Configure **auto-stop** on review environments to prevent resource leak from stale MRs
+- Use **seeds** (CI_JOB_TOKEN) for authenticating API calls to GitLab from within jobs
+- Set **pipeline efficiency** badges on the repo to track and improve cycle time
+- Implement **child pipelines** with dynamic generation for monorepo microservice builds
+
+## Anti-Patterns
+
+- Using **`before_script`** for long setup that should be in the image — bloats every job
+- Ignoring **artifact expiration** — artifacts accumulate and fill up GitLab storage
+- Putting **secrets in `.gitlab-ci.yml`** — always use CI/CD Settings → Variables
+- Using **`only/except`** instead of `rules` — rules are more flexible and easier to debug
+- Running **all jobs in the same stage** — wastes parallelization opportunity
+- Forgetting to set **`needs`** dependencies — jobs wait unnecessarily for sibling completion
+- Passing **large artifacts** between stages — increases pipeline time and storage costs
+
+## Performance Optimization
+
+- Use **Docker layer caching** with `DOCKER_BUILDKIT=1` and inline cache in GitLab runners
+- Configure **distributed caching** for runner caches on S3-compatible storage (minio)
+- Split **test suites** with `parallel:matrix` to run across multiple runner instances
+- Enable **`GIT_STRATEGY: fetch`** instead of clone — saves time for large repositories
+- Use **`GIT_DEPTH: 50`** to shallow-clone only the needed commit history
+- Set up **pre-clone scripts** on self-hosted runners to pre-warm large repositories
+- Use **Kaniko** instead of Docker-in-Docker for building images without privileged mode
+
+## Security Considerations
+
+- Enable **SAST, DAST, and Secret Detection** in every pipeline via GitLab Ultimate templates
+- Use **CI_JOB_TOKEN** scope restrictions to limit which projects downstream pipelines can access
+- Rotate **group access tokens** every 30 days and use lower-privilege project tokens where possible
+- Sign **container images** with cosign and verify signatures during deployment stages
+- Enable **pipeline execution policies** to enforce security scanning before production deploy
+- Restrict **runner registration tokens** and only allow specific runners for protected branches
+- Implement **dependency scanning** (Gemnasium) for all language ecosystems in the project

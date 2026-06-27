@@ -400,3 +400,99 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 ## Handoff
 Hand off to `frontend/universal/state-management/SKILL.md` or `frontend/universal/performance/SKILL.md`.
+## Implementation Patterns
+
+### Factory Pattern for Module Creation
+`
+function createModule<T>(config: ModuleConfig): T {
+  const dependencies = initializeDependencies(config);
+  const module = new Module(dependencies);
+  module.hooks.onInit();
+  return module as T;
+}
+`
+
+### Builder Pattern for Complex Configuration
+`
+class ConfigBuilder {
+  private config: AppConfig = new AppConfig();
+  withDatabase(url: string): ConfigBuilder { ... }
+  withCache(ttl: number): ConfigBuilder { ... }
+  withLogging(level: string): ConfigBuilder { ... }
+  build(): AppConfig { return this.config; }
+}
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Production build with optimizations enabled
+- [ ] Environment variables configured per environment
+- [ ] Health check endpoint responds correctly
+- [ ] Error tracking and monitoring integrated
+- [ ] Logging level configured (not debug in production)
+- [ ] Resource limits configured
+- [ ] Database migrations applied
+- [ ] Static assets built and served from CDN or cache
+- [ ] Feature flags toggled appropriately
+- [ ] Rollback plan documented and tested
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% | Critical | Rollback or fix |
+| p95 latency | > 500ms | Warning | Profile and optimize |
+| Uptime | < 99.9% | Critical | Investigate infrastructure |
+| Memory usage | > 80% | Warning | Check for leaks |
+| CPU usage | > 80% | Warning | Scale up or optimize |
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+
+## Architecture Decision Trees
+
+### Data Loading Decision Tree
+```
+Does the data change on every request?
+  ├── No  → Can it be static at build time?
+  │    ├── Yes → `export const prerender = true` + PageData build
+  │    └── No  → Is it user-specific?
+  │         ├── Yes → load() function with fetch() + cookies
+  │         └── No  → load() with `+page.server.ts` for DB access
+  └── Yes → Should it be cached?
+       ├── Yes → `load()` with `Cache-Control` headers or `+page.server.ts` cached fetch
+       └── No  → `load()` with per-request fresh data
+```
+
+### Form Handling Decision Tree
+```
+Is the form complex (multi-step, file uploads)?
+  ├── No  → Simple form with bind:value + <form> + use:enhance
+  └── Yes → Does it need optimistic updates?
+       ├── Yes → use:enhance with custom callback for optimistic UI
+       └── No  → +page.server.ts with form actions (default, login, register)
+            Need file uploads?
+            ├── Yes → multipart/form-data + server action + file validation
+            └── No  → JSON-based form data via FormData
+```

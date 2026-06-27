@@ -410,6 +410,133 @@ Solr is older but excels at faceted search and has a mature ecosystem. Elasticse
   - references/search-relevance-tuning.md — Search Relevance Tuning
   - references/search-engine-ranking-relevance.md — Ranking, relevance tuning, and scoring strategies
   - references/search-engine-distributed-architecture.md — Distributed architecture for search clusters
+## Architecture Decision Trees
+
+```
+Search Engine Selection
+├── Full-text search focus?
+│   ├── Yes → Elasticsearch / OpenSearch (mature, ecosystem)
+│   ├── Lightweight → Meilisearch / Typesense (dev-friendly, fast)
+│   └── Typo-tolerant → Meilisearch (built-in typo tolerance)
+├── Vector search required?
+│   ├── Yes → Elasticsearch (dense vector + hybrid search)
+│   ├── Scale (> 1B vectors) → Pinecone / Qdrant (dedicated vector DB)
+│   └── No → Traditional BM25 search
+├── Real-time indexing?
+│   ├── Yes → Elasticsearch (near real-time refresh interval)
+│   └── No → Batch indexing (cron-based reindex)
+└── Self-hosted or managed?
+    ├── Managed → Elastic Cloud / Algolia / Meilisearch Cloud
+    └── Self-hosted → OpenSearch on K8s / Elasticsearch on EC2
+```
+
+**Decision criteria**: Evaluate search latency, query complexity, indexing volume, and operational expertise.
+
+## Implementation Patterns
+
+### Elasticsearch Index Mapping
+```json
+{
+  "settings": {
+    "number_of_shards": 3,
+    "number_of_replicas": 2,
+    "analysis": {
+      "analyzer": {
+        "custom_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": ["lowercase", "stop", "snowball"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "title": { "type": "text", "analyzer": "custom_analyzer", "boost": 3.0 },
+      "description": { "type": "text", "analyzer": "custom_analyzer" },
+      "category": { "type": "keyword" },
+      "price": { "type": "float" },
+      "in_stock": { "type": "boolean" },
+      "created_at": { "type": "date" },
+      "embedding": { "type": "dense_vector", "dims": 384, "index": true, "similarity": "cosine" }
+    }
+  }
+}
+```
+
+### Search Query with Hybrid Scoring
+```python
+# search_engine/hybrid_search.py
+class HybridSearch:
+    def __init__(self, client, index: str):
+        self.client = client
+        self.index = index
+
+    def search(self, query: str, vector: list[float], alpha: float = 0.5, size: int = 20):
+        bm25_weight = alpha
+        vec_weight = 1 - alpha
+        resp = self.client.search(
+            index=self.index,
+            body={
+                "query": {
+                    "bool": {
+                        "should": [
+                            {"match": {"title": {"query": query, "boost": bm25_weight}}},
+                            {"match": {"description": {"query": query, "boost": bm25_weight * 0.5}}},
+                            {
+                                "script_score": {
+                                    "query": {"match_all": {}},
+                                    "script": {
+                                        "source": f"cosineSimilarity(params.query_vector, 'embedding') + 1.0",
+                                        "params": {"query_vector": vector}
+                                    },
+                                    "boost": vec_weight
+                                }
+                            }
+                        ]
+                    }
+                },
+                "size": size
+            }
+        )
+        return resp["hits"]["hits"]
+```
+
+## Production Considerations
+
+- **Index lifecycle**: Use ILM (Index Lifecycle Management) for hot-warm-cold phases; rollover at 50 GB per shard.
+- **Shard sizing**: Target 10-50 GB per shard; too few shards = indexing bottleneck; too many = query overhead.
+- **Refresh interval**: Increase `refresh_interval` to 30s for bulk indexing; revert to 1s for serving.
+- **Circuit breaker**: Set Elasticsearch circuit breaker limits (50% heap for fielddata, 40% for request).
+- **Snapshot backup**: Daily snapshots to S3; test restore with cross-region copy.
+- **Cluster monitoring**: Monitor heap usage, query latency (p99 < 100ms), merge rate, and GC pauses.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Over-sharding (too many shards) | Cluster metadata overhead, slow recovery | 1 shard per 10-50 GB data |
+| No field boosting strategy | Irrelevant results rank high | Boost title, exact matches, recency |
+| Wildcard queries on text fields | Full scan, cluster slowdown | Use `ngram` or `edge_ngram` tokenizer |
+| No query normalization | Long queries dominate short ones | Apply query norm in scoring |
+| Ignoring index mapping design | Type conflicts, bad relevance | Define explicit mapping, not dynamic |
+
+## Performance Optimization
+
+- **Query caching**: Use Elasticsearch request cache for frequent queries with same filter context (TTL 60s).
+- **Filter caching**: Store filter results in node-level filter cache for fast subsequent access.
+- **Routing**: Route documents by tenant/region to same shard; query with `routing` to hit only relevant shards.
+- **Field data optimization**: Use `doc_values` for sorting/aggregations; avoid fielddata on high-cardinality fields.
+- **Bulk indexing**: Bulk index in batches of 5-15 MB per request; use multiple bulk workers for parallelism.
+
+## Security Considerations
+
+- **Authentication**: Enable Elasticsearch built-in security or OpenID Connect; disable anonymous access.
+- **Authorization**: Use role-based access control with index-level permissions; restrict field-level for sensitive data.
+- **Encryption**: Enable TLS for all transport and HTTP layers; encrypt at rest with Elasticsearch native encryption.
+- **Audit logging**: Enable audit logs for all search queries and index operations; forward to SIEM.
+- **Network security**: Deploy search cluster in private VPC; use WAF for public search endpoints.
+
 ## Handoff
 `data-relational-database` for source data
 `ml-feature-engineering` for text feature extraction from search data

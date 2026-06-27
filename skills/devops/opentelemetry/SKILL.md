@@ -493,3 +493,315 @@ receivers:
 After completing this skill:
 - Next skill: **devops-apm-observability** — APM platforms receiving OTel data
 - Pass context: Collector endpoint, service names, sampling config, backend URLs
+
+## Architecture Decision Trees
+
+### Agent vs Collector Architecture
+
+| Decision | Agent-only | Collector (Gateway) |
+|---|---|---|
+| Deployment | Sidecar per pod | Separate deployment/DaemonSet |
+| Scalability | Grows with app replicas | Independent scaling |
+| Processing | Per-pod batching | Global aggregation |
+| Filtering | Per-pod config | Central rules |
+| Resilience | Lost if pod dies | Buffered, retries |
+| Resource usage | Per-pod overhead | Shared, tunable |
+| Best for | Simple setups, single service | Multi-service, filtering, enrichment |
+
+### Head vs Tail Sampling
+
+| Aspect | Head Sampling | Tail Sampling |
+|---|---|---|
+| Decision point | At span creation | After full trace collected |
+| Performance | Low overhead | Higher (buffers traces) |
+| Completeness | Partial traces | Complete or none |
+| Use case | High-volume, acceptable loss | Error analysis, critical tracing |
+| Implementation | SDK sampling | Collector `tailsampling` processor |
+| Memory | Minimal | Proportional to throughput |
+
+## Implementation Patterns
+
+### YAML: OpenTelemetry Collector Pipeline
+
+```yaml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'otel-collector'
+          scrape_interval: 10s
+          static_configs:
+            - targets: ['0.0.0.0:8888']
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  attributes:
+    actions:
+      - key: environment
+        value: production
+        action: upsert
+      - key: datacenter
+        value: us-east-1
+        action: upsert
+
+  tailsampling:
+    policies:
+      - name: errors-only
+        type: status_code
+        config:
+          status_code_source: status
+          rules:
+            - status_code: ERROR
+      - name: slow-traces
+        type: latency
+        config:
+          threshold_ms: 1000
+
+exporters:
+  otlp:
+    endpoint: "https://api.honeycomb.io:443"
+    headers:
+      "x-honeycomb-team": "${HONEYCOMB_KEY}"
+
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: otel
+
+  logging:
+    verbosity: normal
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes, batch, tailsampling]
+      exporters: [otlp, logging]
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+```
+
+### Bash: Automated Instrumentation Script
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+instrument_service() {
+  local service=$1
+  local lang=$2
+
+  case "$lang" in
+    node)
+      npm install @opentelemetry/api @opentelemetry/sdk-node \
+        @opentelemetry/auto-instrumentations-node
+      cat > instrumentation.ts << EOF
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+
+const sdk = new NodeSDK({
+  traceExporter: new OTLPTraceExporter({
+    url: '${OTEL_COLLECTOR_ENDPOINT:-http://localhost:4317}',
+  }),
+  instrumentations: [getNodeAutoInstrumentations()],
+});
+
+sdk.start();
+EOF
+      ;;
+    python)
+      pip install opentelemetry-distro opentelemetry-exporter-otlp
+      opentelemetry-bootstrap -a install
+      export OTEL_TRACES_EXPORTER=otlp
+      export OTEL_METRICS_EXPORTER=otlp
+      export OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_COLLECTOR_ENDPOINT:-http://localhost:4317}"
+      ;;
+    java)
+      curl -Lo opentelemetry-javaagent.jar \
+        "https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar"
+      export JAVA_OPTS="$JAVA_OPTS -javaagent:./opentelemetry-javaagent.jar"
+      ;;
+  esac
+}
+```
+
+## Production Considerations
+
+- Deploy **Collector as DaemonSet** per node — reduces network hop and allows host-level metrics
+- Configure **memory_limiter processor** before all others — prevents OOM from high-throughput spans
+- Implement **tail sampling** for traces — head sampling loses context; tail sampling preserves full error traces
+- Enable **gRPC keepalive** on Collector (`keepalive: maxConnectionAge: 30s`) for connection rebalancing
+- Use **OTLP exporter compression** (`compression: gzip`) to reduce egress bandwidth
+- Set **service.name** as a resource attribute consistently — tag every service in CI/CD pipeline
+- Monitor **Collector health** via its internal metrics endpoint (`/metrics`) and alert on dropped spans
+
+## Anti-Patterns
+
+- Sending **raw traces without sampling** at high throughput — overwhelms both Collector and backend
+- Using **`always_on` sampler** in production — generates massive volume; use probability sampling
+- Ignoring **Collector resource limits** — under-provisioned Collector drops spans under load
+- Instrumenting **only HTTP spans** — miss database, messaging, and async operation bottlenecks
+- Using **same service name** across environments — dev vs prod traces mix in the backend
+- Neglecting **span attribute cardinality** — high-cardinality attributes (`user_id`, `request_id`) explode storage
+- Deploying **Collector without retry/backup queue** — network blips cause permanent span loss
+
+## Performance Optimization
+
+- Set **batch processor** `timeout: 1s` and `send_batch_size: 1024` for optimal throughput
+- Use **probability sampler** (`sampling.priority`) at the SDK level before exporting to Collector
+- Enable **gRPC compression** (`compression: gzip`) in both exporter and receiver
+- Tune **`memory_limiter`** to 80% of Collector's memory limit, with 20% spike allowance
+- Split **pipelines by signal type** — traces through `tailsampling`, metrics through `batch` only
+- Use **OTLP exporter with load balancing** (`balancer_name: round_robin`) for multi-collector deployment
+- Set **span attribute exclusions** for known high-volume dimensions (health check traces, liveness probes)
+
+## Security Considerations
+
+- Enable **TLS** on all OTLP endpoints — never send traces unencrypted over the network
+- Use **API key or OAuth headers** on Collector exporters to authenticate to backends
+- Restrict **Collector metrics endpoint** — expose sensitive operation metrics only to Prometheus
+- Set **redaction processor** to strip PII from span attributes (user emails, credit cards, IPs)
+- Audit **Collector configuration changes** — a misconfigured exporter can leak trace data to wrong backend
+- Run **Collector as non-root** with read-only root filesystem
+- Secure **gRPC reflection endpoint** — disable if not needed to prevent information disclosure
+## Implementation Patterns
+
+### Observer Pattern for Event Handling
+`
+interface EventObserver<T> {
+  onEvent(event: T): Promise<void>;
+}
+
+class EventBus<T> {
+  private observers: Set<EventObserver<T>> = new Set();
+  subscribe(observer: EventObserver<T>): void {
+    this.observers.add(observer);
+  }
+  unsubscribe(observer: EventObserver<T>): void {
+    this.observers.delete(observer);
+  }
+  async emit(event: T): Promise<void> {
+    const results = Array.from(this.observers).map(o => o.onEvent(event));
+    await Promise.allSettled(results);
+  }
+}
+`
+
+### Configuration-Driven Approach
+`
+config:
+  defaults:
+    timeout: 30s
+    retryCount: 3
+  overrides:
+    production:
+      timeout: 60s
+      retryCount: 5
+    development:
+      timeout: 300s
+      retryCount: 1
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Configuration validated against schema before startup
+- [ ] Health check endpoints registered and monitored
+- [ ] Graceful shutdown with draining period (30s timeout)
+- [ ] Resource limits configured (CPU, memory, file descriptors)
+- [ ] Log level set appropriate for environment
+- [ ] Metrics endpoint secured and exposed
+- [ ] Rate limiting configured per-tier
+- [ ] TLS certificates valid and auto-renewing
+- [ ] Database migrations run as separate deployment step
+- [ ] Feature flags ready for gradual rollout
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% over 5min | Critical | Page on-call |
+| p99 latency | > 2s over 5min | Warning | Investigate |
+| Throughput drop | > 50% over 1min | Critical | Check upstream |
+| Queue depth | > 1000 over 1min | Warning | Scale consumers |
+| Disk usage | > 85% | Warning | Clean or expand |
+| Memory usage | > 90% heap | Critical | Restart or scale |
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Root Cause | Solution |
+|-------------|---------|------------|----------|
+| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
+| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
+| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
+| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
+
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+## Rules
+- Default-deny security posture — allow only explicitly required access.
+- All inputs validated, all outputs encoded, all errors handled.
+- Defend in depth — multiple layers of security controls.
+- Fail securely — errors default to safe behavior.
+- Log security-relevant events for audit and investigation.
+- Keep dependencies updated — automate vulnerability scanning.
+- Design for observability from day one, not as an afterthought.
+- Document all architectural decisions with rationale.
+- Review code for security, performance, and correctness before merging.

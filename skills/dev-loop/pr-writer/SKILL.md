@@ -493,3 +493,20 @@ What's the risk level?
 - **Pre-populate PR description from commits**: Extract commit messages, file list, and diff stats automatically. Saves developer 5-10 minutes per PR.
 - **CI-integrated PR size analysis**: Automatically suggest file splits when PR exceeds 400 lines. Flag files with disproportionate change ratio.
 - **Template auto-fill**: Use HEAD commit message to pre-fill PR title and type. Use git diff to list all changed files. Developer only writes description.
+
+## Security Considerations
+
+### Sensitive Data in PRs
+- **Credential scanning**: Scan diffs for API keys, tokens, passwords before PR submission. Use pre-commit hooks with tools like detect-secrets or truffleHog.
+- **Environment file review**: Flag .env additions, config files with secrets. Require second reviewer for any credential-related changes.
+- **Screenshot sanitization**: Blur sensitive data in UI screenshots. Never include real PII, tokens, or internal URLs in images.
+
+### Code Review Security Gates
+- **Dependency changes**: Highlight new dependencies for security review. Flag direct vs transitive dependency additions.
+- **Permission changes**: Flag changes to IAM roles, ACLs, RBAC configs. Require security team approval for permission escalations.
+- **Cryptography changes**: Flag new encryption/hashing implementations. Require crypto review for custom algorithms.
+
+### CI/CD Security
+- **PR metadata exposure**: Strip sensitive CI variables from PR description and comments. Avoid pasting raw stack traces with internal paths.
+- **External contributor safety**: Use separate CI pipeline with restricted permissions for fork PRs. Mask secrets in public fork runs.
+- **Signed commits**: Enforce commit signing (GPG/SSH) in PR requirements. Automatically label unsigned commits as unverified.

@@ -398,3 +398,215 @@ Use `TEST_DATABASE_URL` for test isolation. Run tests with `--pool=forks` for pa
   - references/schema-types.md — Schema Design and Types
 ## Handoff
 Hand off to `backend/nodejs/prisma/SKILL.md` for Prisma ORM or `backend/nodejs/patterns/SKILL.md` for advanced Node patterns.
+## Implementation Patterns
+
+### Factory Pattern for Module Creation
+`
+function createModule<T>(config: ModuleConfig): T {
+  const dependencies = initializeDependencies(config);
+  const module = new Module(dependencies);
+  module.hooks.onInit();
+  return module as T;
+}
+`
+
+### Builder Pattern for Complex Configuration
+`
+class ConfigBuilder {
+  private config: AppConfig = new AppConfig();
+  withDatabase(url: string): ConfigBuilder { ... }
+  withCache(ttl: number): ConfigBuilder { ... }
+  withLogging(level: string): ConfigBuilder { ... }
+  build(): AppConfig { return this.config; }
+}
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Production build with optimizations enabled
+- [ ] Environment variables configured per environment
+- [ ] Health check endpoint responds correctly
+- [ ] Error tracking and monitoring integrated
+- [ ] Logging level configured (not debug in production)
+- [ ] Resource limits configured
+- [ ] Database migrations applied
+- [ ] Static assets built and served from CDN or cache
+- [ ] Feature flags toggled appropriately
+- [ ] Rollback plan documented and tested
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% | Critical | Rollback or fix |
+| p95 latency | > 500ms | Warning | Profile and optimize |
+| Uptime | < 99.9% | Critical | Investigate infrastructure |
+| Memory usage | > 80% | Warning | Check for leaks |
+| CPU usage | > 80% | Warning | Scale up or optimize |
+
+## Rules
+- Prefer composition over inheritance
+- Favor immutable data structures
+- Use dependency injection for testability
+- Keep functions pure when possible — no side effects
+- Fail fast with clear error messages
+- Don't repeat yourself (DRY) — extract shared logic
+- Keep it simple (KISS) — avoid unnecessary complexity
+- You aren't gonna need it (YAGNI) — build what's required
+- Separate concerns — single responsibility per module
+- Code to interfaces, not implementations
+- Write self-documenting code — clear names over comments
+- Prefer standard library over third-party dependencies
+- Handle errors explicitly — no silent failures
+- Validate inputs at boundaries
+- Log at appropriate levels (debug, info, warn, error)
+
+## Implementation Patterns
+
+### Pattern: CRUD Repository with Drizzle
+
+```typescript
+import { pgTable, serial, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { eq } from 'drizzle-orm';
+import { db } from './db';
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  uuid: uuid('uuid').defaultRandom().notNull(),
+  email: text('email').notNull().unique(),
+  name: text('name').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export class UserRepository {
+  async findById(id: number) {
+    return db.select().from(users).where(eq(users.id, id)).limit(1);
+  }
+
+  async findByEmail(email: string) {
+    return db.select().from(users).where(eq(users.email, email)).limit(1);
+  }
+
+  async create(data: { email: string; name: string }) {
+    return db.insert(users).values(data).returning();
+  }
+
+  async update(id: number, data: Partial<{ email: string; name: string }>) {
+    return db.update(users).set(data).where(eq(users.id, id)).returning();
+  }
+
+  async delete(id: number) {
+    return db.delete(users).where(eq(users.id, id)).returning();
+  }
+}
+```
+
+### Pattern: Transaction with Relation Queries
+
+```typescript
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { sql } from 'drizzle-orm';
+
+async function createOrderWithItems(orderData: OrderInput, items: ItemInput[]) {
+  return await db.transaction(async (tx) => {
+    const [order] = await tx.insert(orders).values(orderData).returning();
+
+    const orderItems = items.map(item => ({
+      ...item,
+      orderId: order.id,
+    }));
+
+    const inserted = await tx.insert(orderItems).values(orderItems).returning();
+
+    await tx.update(inventory)
+      .set({ quantity: sql`quantity - ${items.length}` })
+      .where(eq(inventory.productId, orderData.productId));
+
+    return { order, items: inserted };
+  });
+}
+```
+
+## Production Considerations
+
+- Connection pooling: use `pg` pool with Drizzle. Max 20 connections per instance.
+- Migration strategy: `drizzle-kit push` for dev. `drizzle-kit migrate` for prod. Always version-controlled.
+- Query logging: Drizzle logger in dev only. Structured logging with Pino in prod.
+- Prepared statements: Drizzle uses them by default. Cache hit ratio improves latency.
+- Connection timeout: 30s idle. 60s statement timeout. Kill hung queries.
+- Connection validation: test query on checkout. Reconnect on failure.
+- Metrics: track query count, duration, rows returned per request.
+- Migrations: generate SQL files. Review in PR. Apply via CI/CD pipeline.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| Raw SQL strings everywhere | No type safety. SQL injection risk. | Use Drizzle query builder. Raw only when absolutely needed. |
+| Over-fetching in relations | Select * with joins brings unnecessary columns. | Explicit `select` with only needed columns. |
+| N+1 in relational queries | Loop querying related entities. | Use Drizzle relations with `with` or batch loading. |
+| Missing indexes on foreign keys | Slow JOINs on large tables. | Index all FK columns. Use `EXPLAIN ANALYZE`. |
+| Migrations without review | Schema drift. Production issues. | PR review for all migrations. Test on staging first. |
+
+## Performance Optimization
+
+- Use `partial` indexes for filtered queries (`WHERE status = 'active'`).
+- `EXPLAIN ANALYZE` on all slow queries. Look for seq scans on large tables.
+- Batch inserts with `db.insert(table).values(rows)` for bulk operations.
+- Read replicas for reporting queries. Separate read/write connections.
+- JSON columns for flexible schema. Index with GIN for query performance.
+- Materialized views for dashboard queries. Refresh on schedule.
+- Use `limit` + `offset` for pagination. Keyset pagination for large datasets.
+- Prepared statement caching reduces parse overhead for repeated queries.
+
+## Security Considerations
+
+- SQL injection: Drizzle parameterizes all queries. Never use `sql` template tag with user input.
+- Input validation: Zod schemas before passing to Drizzle. Validate types and constraints.
+- Connection encryption: `ssl: true` for production. Reject unauthorized certs.
+- Credential management: environment variables or vault. Never in code or config files.
+- Row-level security: enable via `sql` template with tenant context. Enforce per query.
+- Audit logging: trigger-based tracking for sensitive tables. Log all mutations.
+- Schema access: read-only user for reports. Separate migration user. Least privilege.
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets

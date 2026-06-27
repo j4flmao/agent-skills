@@ -478,5 +478,119 @@ function handleError(error: unknown) {
   - references/web3-error-handling.md — Web3 Error Handling Patterns
   - references/multicall-batching.md — Multicall & RPC Batching
 
+## Architecture Decision Trees
+
+```
+Web3 Frontend Architecture
+├── Wallet connection?
+│   ├── Multi-wallet → Web3Modal / RainbowKit (wagmi-based)
+│   ├── Single wallet → ConnectKit / Privy (embedded wallet)
+│   └── Account abstraction → ZeroDev / Biconomy (ERC-4337)
+├── Data fetching?
+│   ├── Real-time → wagmi hooks + useQuery (TanStack Query)
+│   ├── Indexed → The Graph subgraph (GraphQL)
+│   └── Custom → ethers.js direct RPC calls
+├── Transaction management?
+│   ├── Simple → wagmi useSendTransaction
+│   ├── Complex → viem + custom state machine
+│   └── Gasless → Biconomy / OpenGSN (sponsored txs)
+└── Chain selection?
+    ├── Multi-chain → wagmi chain switching + EIP-6963
+    ├── L2-only → Specific L2 (Optimism, Arbitrum)
+    └── L1 + L2 fallback → Primary L2 with L1 fallback
+```
+
+**Decision criteria**: Evaluate target user (retail vs power), transaction complexity, data freshness needs, and wallet diversity.
+
+## Implementation Patterns
+
+### wagmi + React Query Integration
+```typescript
+// blockchain-web3/hooks/useTokenBalance.ts
+import { useReadContract, useAccount } from 'wagmi';
+import { erc20ABI } from 'wagmi-generate';
+
+export function useTokenBalance(tokenAddress: `0x${string}`) {
+  const { address } = useAccount();
+
+  return useReadContract({
+    address: tokenAddress,
+    abi: erc20ABI,
+    functionName: 'balanceOf',
+    args: [address!],
+    query: {
+      enabled: !!address,
+      refetchInterval: 10000,
+    },
+  });
+}
+```
+
+### Transaction State Machine
+```typescript
+// blockchain-web3/hooks/useTransaction.ts
+type TxState = 'idle' | 'approving' | 'pending' | 'confirmed' | 'failed';
+
+interface TransactionState {
+  status: TxState;
+  txHash?: `0x${string}`;
+  error?: string;
+}
+
+export function useTransaction() {
+  const [state, setState] = useState<TransactionState>({ status: 'idle' });
+
+  const send = useCallback(async (fn: () => Promise<`0x${string}`>) => {
+    setState({ status: 'pending' });
+    try {
+      const txHash = await fn();
+      setState({ status: 'pending', txHash });
+      const receipt = await waitForTransaction({ hash: txHash });
+      setState({ status: receipt.status === 'success' ? 'confirmed' : 'failed', txHash });
+    } catch (err) {
+      setState({ status: 'failed', error: (err as Error).message });
+    }
+  }, []);
+
+  return { state, send };
+}
+```
+
+## Production Considerations
+
+- **RPC redundancy**: Configure multiple RPC endpoints per chain; fallback on rate limit or failure.
+- **Transaction monitoring**: Track tx status via receipt polling; notify user on confirmation/failure.
+- **Gas estimation**: Use `estimateGas` with 20% buffer; handle out-of-gas errors with user notification.
+- **Error handling**: Categorize errors (user rejection, network, gas, contract revert) for user-friendly display.
+- **Wallet disconnection**: Handle account change, chain change, and disconnection events.
+- **Mobile support**: Test WalletConnect v2 for mobile browsers; responsive layouts for wallet UIs.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Direct RPC calls for every read | Rate limiting, slow UI | Use subgraph + wagmi caching |
+| No loading states | Poor UX during tx | Show tx progress with step indicators |
+| Hardcoded gas limits | Failed txs on network congestion | Dynamic gas estimation with buffer |
+| Ignoring chain switching | App breaks on wrong chain | Handle chainChanged event; prompt switch |
+| No tx simulation | Failed txs waste user gas | Simulate txs before sending (eth_call) |
+
+## Performance Optimization
+
+- **Multicall**: Batch multiple read calls into single RPC request using Multicall3 contract.
+- **Query caching**: Use TanStack Query with staleTime (30s) to reduce RPC calls.
+- **Lazy loading**: Load web3 components only when wallet connected; code-split heavy libraries.
+- **Bundle optimization**: Tree-shake wagmi/viem imports; use dynamic import for ethers as fallback.
+- **Local state cache**: Cache token balances and prices in IndexedDB; invalidate on new block.
+
+## Security Considerations
+
+- **Wallet validation**: Verify connected wallet address matches expected chain; detect wallet spoofing.
+- **Signature requests**: Never blindly sign messages; display decoded message content.
+- **Transaction simulation**: Simulate txs via `eth_call` before sending; warn user on failure.
+- **Domain validation**: Verify dApp domain in wallet requests; prevent phishing (EIP-4361).
+- **Secure RPC**: Use private RPC endpoints with API key restrictions; never expose keys in frontend.
+- **CORS policies**: Restrict API access to known domains; no public CORS on RPC endpoints.
+
 ## Phase
 blockchain → blockchain-web3

@@ -489,3 +489,98 @@ Key transition indicators:
 `sprint-retro` for improvement action items from metrics review.
 `okr-kpi` for aligning team metrics to organizational goals.
 `pm` for cross-team coordination and dependency management.
+
+## Architecture Decision Trees
+
+### Process Selection
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Cadence | Scrum (fixed sprints) | Kanban (flow-based) | Predictability vs flexibility, team maturity |
+| Planning | Sprint planning poker | Continuous backlog refinement | Estimation accuracy vs overhead |
+| Retro frequency | End of every sprint | Monthly or milestone-based | Fast feedback vs meeting fatigue |
+
+### Scaling Decision Tree
+- Team size <= 8 → Single Scrum/Kanban team
+- 9-30 people → Scrum of Scrums / LeSS
+- 30+ people → SAFe / Nexus
+
+## Implementation Patterns
+
+### Sprint Planning Template
+`markdown
+## Sprint Goal
+{one sentence describing what this sprint delivers}
+
+## Capacity
+- Team velocity: {points}
+- Planned leave: {days}
+- Sprint capacity: {adjusted points}
+
+## Commitments
+| Story | Points | Owner | Dependencies |
+|---|---|---|---|
+| {title} | {pts} | {name} | {links} |
+
+## Risks
+- {risk description} → {mitigation}
+`
+
+### Daily Standup Format
+`markdown
+## Yesterday
+- {completed tasks}
+- {blockers encountered}
+
+## Today
+- {planned tasks}
+- {collaboration needed}
+
+## Blockers
+- {blocker} → {escalation path}
+`
+
+## Production Considerations
+
+### Board Hygiene
+- **WIP limits**: Set explicit WIP limits per column (e.g., In Progress: 3 per person). Use cumulative flow diagrams to tune.
+- **Definition of Done**: Maintain a team-ratified DoD checklist. Verify each item meets DoD before moving to Done.
+- **Cycle time targets**: Set SLA for each workflow state. Alert when items exceed target cycle time.
+
+### Metrics & Reporting
+- **Velocity chart**: Track points completed per sprint over 6+ sprints. Use rolling average for planning.
+- **Lead/cycle time**: Measure from backlog entry to done. Use 85th percentile for commitment SLAs.
+- **CFD (Cumulative Flow Diagram)**: Monitor for bottlenecks. Investigate when bands widen.
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Solution |
+|---|---|---|
+| Velocity as productivity metric | Story point inflation | Use velocity only for forecasting, not evaluation |
+| Zombie standups | "What I did yesterday" without collaboration | Focus on blockers and swarm opportunities |
+| Scope creep mid-sprint | Never finishing stories | Enforce sprint scope freeze, defer new work |
+| Retro without action items | Same complaints every sprint | Generate 1-2 actionable experiments per retro |
+| Estimation as commitment | Stress and gaming of estimates | Emphasize that estimates are forecasts, not promises |
+
+## Performance Optimization
+
+### Meeting Efficiency
+- **Timeboxing**: Rigid timeboxes for all ceremonies (planning max 2hrs/week, daily max 15min, retro max 1hr).
+- **Async updates**: Use Slack/Teams bot for async daily standups. Reserve sync time for blocker resolution only.
+- **Retro formats**: Rotate retro formats (Start/Stop/Continue, Sailboat, 4Ls) to keep engagement high.
+
+### Tooling
+- **Automated reporting**: Jira/PowerBI dashboards auto-generated from board data. Eliminate manual status reports.
+- **Integration**: Connect board to GitHub/GitLab for automatic status transitions on PR/commit activity.
+- **Template automation**: Pre-populate sprint backlog from prioritized epics. Use Jira automation rules.
+
+## Security Considerations
+
+### Tool Security
+- **Access control**: Restrict board modification to team members. Use read-only view for stakeholders.
+- **External sharing**: Avoid sharing Jira/Trello links publicly. Use dedicated stakeholder views without sensitive details.
+- **Audit logging**: Enable board change audit logs. Review unexpected status changes or permission modifications.
+
+### Data Protection
+- **PII in tickets**: Never include customer PII in ticket descriptions or comments. Use anonymized references.
+- **Security stories**: Flag security-related tasks with dedicated labels. Ensure security stories are not de-prioritized without CISO approval.
+- **Vulnerability tracking**: Use private security board for vulnerability management. Restrict access to security team + relevant dev leads.

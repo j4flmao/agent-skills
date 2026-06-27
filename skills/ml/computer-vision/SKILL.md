@@ -432,3 +432,93 @@ What task?
   - references/video-analysis.md — Video Analysis
 ## Handoff
 Hand off to ml-experiment-tracking for training runs. For model deployment on edge devices, hand off to devops-ml-serving.
+
+## Architecture Decision Trees
+
+### Vision Task Selection
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Task type | Image classification (what) | Object detection (where + what) | Output requirement, localization need |
+| Model complexity | Lightweight (MobileNet, EfficientNet-B0) | Heavy (ResNet-152, ViT-L) | Edge deployment vs accuracy needs |
+| Data volume | < 10k images → Transfer learning | > 100k → Train from scratch | Dataset size, domain specificity |
+| Real-time need | Yes → YOLO, SSD (one-stage) | No → Faster R-CNN (two-stage) | Latency budget, hardware capability |
+
+### Augmentation Strategy
+- Limited data → Heavy augmentation (cutout, mixup, cutmix)
+- Sensitive to rotation → Rotation + flip augmentation
+- Varying lighting → Color jitter, brightness/contrast adjust
+- Document processing → No flips/rotations, add noise + blur
+
+## Implementation Patterns
+
+### Transfer Learning for Classification
+`python
+import tensorflow as tf
+from tensorflow.keras.applications import EfficientNetB0
+from tensorflow.keras import layers, Model
+
+base_model = EfficientNetB0(
+    weights='imagenet',
+    include_top=False,
+    input_shape=(224, 224, 3)
+)
+base_model.trainable = False
+
+x = base_model.output
+x = layers.GlobalAveragePooling2D()(x)
+x = layers.Dropout(0.2)(x)
+x = layers.Dense(128, activation='relu')(x)
+x = layers.Dropout(0.2)(x)
+outputs = layers.Dense(num_classes, activation='softmax')(x)
+
+model = Model(inputs=base_model.input, outputs=outputs)
+model.compile(
+    optimizer=tf.keras.optimizers.Adam(1e-4),
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+`
+
+### YOLO Training Setup (PyTorch)
+`python
+import torch
+from ultralytics import YOLO
+
+model = YOLO('yolov8n.pt')
+results = model.train(
+    data='dataset.yaml',
+    epochs=100,
+    imgsz=640,
+    batch=16,
+    augment=True,
+    patience=15,
+    lr0=0.01,
+    device='cuda' if torch.cuda.is_available() else 'cpu'
+)
+metrics = model.val()
+print(f'mAP50: {metrics.box.map50:.4f}, mAP50-95: {metrics.box.map:.4f}')
+`
+
+## Performance Optimization
+
+### Training Speed
+- **Mixed precision**: Use float16 training with gradient scaling. Achieves 2x training speedup on Volta+ GPUs.
+- **Multi-GPU training**: Use DDP (Distributed Data Parallel) for multi-GPU. Scale nearly linearly up to 8 GPUs.
+- **Data loading**: Use tf.data pipeline with prefetch and parallel reads. Keep GPU utilization above 90%.
+
+### Inference Speed
+- **TensorRT optimization**: Convert to TensorRT engine for 2-5x inference speedup. Essential for real-time video processing.
+- **Model pruning**: Remove low-magnitude weights, retrain. Achieve 50% sparsity with < 1% mAP loss.
+- **Input size reduction**: Downscale input resolution for faster inference. Validate accuracy trade-off carefully.
+
+## Security Considerations
+
+### Model Security
+- **Adversarial patches**: Physical-world patches fool detection models. Test model against patch attacks before deployment.
+- **Backdoor attacks**: Poisoned training data embeds triggers. Validate data provenance, inspect model activations.
+- **Model watermarking**: Embed invisible watermarks in model weights. Detect unauthorized model usage.
+
+### Data Security
+- **Private data in training**: Ensure no PII in training images. Blur faces, license plates, and personal identifiers.
+- **Video surveillance compliance**: Comply with GDPR/CCPA for video data processing. Implement data retention policies.
+- **Model inversion**: Prevent image reconstruction from model gradients. Use differential privacy for sensitive image domains.

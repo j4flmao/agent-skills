@@ -417,14 +417,243 @@ A SaaS company discovered that one of their Tier-2 vendors (analytics provider) 
 - Sub-processor changes require notification and approval within 30 days.
 - Post-exit review conducted for all vendor transitions over $50K annual value.
 
-## References
-  - references/contract-negotiation.md -- Contract Negotiation Guide
-  - references/vendor-management-advanced.md -- Vendor Management Advanced Topics
-  - references/vendor-management-fundamentals.md -- Vendor Management Fundamentals
-  - references/vendor-performance.md -- Vendor Performance Management
-  - references/vendor-risk.md -- Vendor Risk Management
-  - references/vendor-selection.md -- Vendor Selection Process
-  - references/vendor-selection-evaluation.md -- Vendor Selection and Evaluation
-  - references/vendor-performance-monitoring.md -- Vendor Performance Monitoring
+## Implementation Patterns
+
+### Pattern: Vendor Scorecard Automation
+
+```typescript
+interface VendorScore {
+  vendorId: string;
+  quarter: string;
+  functional: number;     // 1-5
+  cost: number;           // 1-5
+  security: number;       // 1-5
+  support: number;        // 1-5
+  reliability: number;    // 1-5
+}
+
+async function computeVendorScore(vendorId: string): Promise<VendorScore> {
+  const incidents = await Incident.find({ vendorId, createdAt: { $gte: quarterStart() } });
+  const supportTickets = await SupportTicket.find({ vendorId, createdAt: { $gte: quarterStart() } });
+
+  const reliability = incidents.length === 0 ? 5
+    : Math.max(1, 5 - Math.floor(incidents.filter(i => i.severity === 'critical').length * 0.5));
+
+  const support = supportTickets.length === 0 ? 5
+    : Math.max(1, 5 - Math.floor(supportTickets.filter(t => t.slaBreached).length * 0.3));
+
+  return {
+    vendorId,
+    quarter: currentQuarter(),
+    functional: await computeFunctionalFit(vendorId),
+    cost: await computeCostScore(vendorId),
+    security: await computeSecurityScore(vendorId),
+    support,
+    reliability,
+  };
+}
+```
+
+### Pattern: Contract Renewal Workflow
+
+```yaml
+renewal_workflow:
+  t-minus_90_days:
+    - "System generates renewal notification"
+    - "Procurement lead assigned to review"
+    - "Vendor performance scorecard pulled"
+    
+  t-minus_60_days:
+    - "Competitive market review completed"
+    - "Renewal negotiation strategy documented"
+    - "Internal stakeholder requirements gathered"
+    
+  t-minus_30_days:
+    - "Contract terms drafted for renewal"
+    - "Legal review completed"
+    - "Budget approval obtained"
+    
+  t-minus_7_days:
+    - "Final terms negotiated"
+    - "Executive approval obtained (if required)"
+    - "Contract executed"
+    
+  t-plus_30_days:
+    - "Post-renewal review completed"
+    - "Contract terms updated in vendor registry"
+    - "Next renewal date set in system"
+```
+
+## Production Considerations
+
+### Vendor Registry Management
+- Single source of truth for all vendor data: contracts, contacts, renewal dates, SLAs.
+- Automated renewal reminders at T-90, T-60, T-30, T-7 days. Escalation if no action within 14 days.
+- Vendor onboarding checklist must be completed before production access granted.
+- Annual vendor portfolio review: consolidations, terminations, new strategic partnerships.
+
+### Performance Monitoring
+- Automated SLA monitoring: synthetic checks for uptime. API monitoring for latency. Alert on breach.
+- Monthly operational reviews: vendor performance scorecard, incident review, ticket trends.
+- Quarterly business reviews: strategic alignment, roadmap, relationship health.
+- Annual competitive review: market alternatives, pricing benchmark, technology comparison.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| Selecting on cost alone | Cheapest vendor costs more through hidden fees, poor support. | TCO evaluation: implementation + integration + training + exit. |
+| No exit strategy | Vendor embedded. Migration cost exceeds value. | Document exit strategy before signing. Data portability terms. |
+| Skipping reference calls | Sales demo ≠ reality. Hidden costs revealed. | 3 references in similar industry. Call, don't email. |
+| No SLA monitoring | SLA is placebo without monitoring. | Automated monitoring from day one. Alert on breach. |
+| Under-resourcing vendor management | No bandwidth for QBRs. Relationship atrophies. | Dedicated vendor manager for Tier-1 vendors. |
+| No sub-processor clause | Vendor subcontracts without your knowledge. | Sub-processor list + approval rights. Monitor changes. |
+| Proprietary lock-in | Migration impossible. Vendor controls roadmap. | Standard APIs. Open data formats. Migration assistance terms. |
+
+## Performance Optimization
+
+- Vendor registry: automated renewal reminders. Single dashboard for all vendors, contracts, and contacts.
+- QBR automation: scorecard generated from monitoring data. Pre-filled meeting agenda.
+- Contract repository: full-text search on all contracts. Metadata extraction for key terms.
+- Risk dashboard: vendor risk scores aggregated by category. Trend lines for each vendor.
+- Procurement analytics: spend by category, vendor, department. Year-over-year comparison.
+- Vendor portal: self-service for status updates, document upload, SLA reporting.
+- Integration marketplace: pre-built connectors for common vendor integrations. Reduce onboarding time.
+- API-driven procurement: automated PO generation for recurring services. Invoice matching.
+
+## Security Considerations
+
+- Vendor security assessment: SOC 2 Type II report required for Tier-1 and Tier-2 vendors.
+- Data processing agreement: required for all vendors handling PII or PHI.
+- Access review: quarterly review of vendor access to internal systems. Revoke unused access.
+- Incident notification: contractual requirement for breach notification within 24 hours.
+- Right to audit: exercised annually for Tier-1 vendors. Evidence of security controls.
+- Data deletion certification: required at contract termination. Confirmed in writing.
+- Sub-processor monitoring: quarterly review of vendor sub-processor changes. Approval required.
+- Vendor penetration testing: annual pen test results required for Tier-1 vendors.
 ## Handoff
 For compliance alignment, hand off to `enterprise-compliance-audit` for vendor control mapping. For architecture impact, hand off to `enterprise-architecture-governance` for vendor technology review.
+## Implementation Patterns
+
+### Observer Pattern for Event Handling
+`
+interface EventObserver<T> {
+  onEvent(event: T): Promise<void>;
+}
+
+class EventBus<T> {
+  private observers: Set<EventObserver<T>> = new Set();
+  subscribe(observer: EventObserver<T>): void {
+    this.observers.add(observer);
+  }
+  unsubscribe(observer: EventObserver<T>): void {
+    this.observers.delete(observer);
+  }
+  async emit(event: T): Promise<void> {
+    const results = Array.from(this.observers).map(o => o.onEvent(event));
+    await Promise.allSettled(results);
+  }
+}
+`
+
+### Configuration-Driven Approach
+`
+config:
+  defaults:
+    timeout: 30s
+    retryCount: 3
+  overrides:
+    production:
+      timeout: 60s
+      retryCount: 5
+    development:
+      timeout: 300s
+      retryCount: 1
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Configuration validated against schema before startup
+- [ ] Health check endpoints registered and monitored
+- [ ] Graceful shutdown with draining period (30s timeout)
+- [ ] Resource limits configured (CPU, memory, file descriptors)
+- [ ] Log level set appropriate for environment
+- [ ] Metrics endpoint secured and exposed
+- [ ] Rate limiting configured per-tier
+- [ ] TLS certificates valid and auto-renewing
+- [ ] Database migrations run as separate deployment step
+- [ ] Feature flags ready for gradual rollout
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% over 5min | Critical | Page on-call |
+| p99 latency | > 2s over 5min | Warning | Investigate |
+| Throughput drop | > 50% over 1min | Critical | Check upstream |
+| Queue depth | > 1000 over 1min | Warning | Scale consumers |
+| Disk usage | > 85% | Warning | Clean or expand |
+| Memory usage | > 90% heap | Critical | Restart or scale |
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Root Cause | Solution |
+|-------------|---------|------------|----------|
+| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
+| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
+| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
+| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
+
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+## Rules
+- Default-deny security posture — allow only explicitly required access.
+- All inputs validated, all outputs encoded, all errors handled.
+- Defend in depth — multiple layers of security controls.
+- Fail securely — errors default to safe behavior.
+- Log security-relevant events for audit and investigation.
+- Keep dependencies updated — automate vulnerability scanning.
+- Design for observability from day one, not as an afterthought.
+- Document all architectural decisions with rationale.
+- Review code for security, performance, and correctness before merging.

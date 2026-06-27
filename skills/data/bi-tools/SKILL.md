@@ -452,6 +452,105 @@ Key question: centralized vs decentralized?
   - references/lookml-examples.md — LookML Examples
   - references/semantic-layer-patterns.md — Semantic Layer Patterns
   - references/tool-selection.md — BI Tool Selection
+## Architecture Decision Trees
+
+```
+BI Tool Selection
+├── Self-service analytics?
+│   ├── Yes → Looker (LookML semantic layer)
+│   └── No → Power BI / Tableau (managed dashboards)
+├── Real-time dashboards (< 5s latency)?
+│   ├── Yes → Superset + Druid / Pinot
+│   └── No → Traditional OLAP (Snowflake, Redshift)
+└── Embedded analytics for customers?
+    ├── Yes → ThoughtSpot / Metabase embedding SDK
+    └── No → Internal BI tool with SSO
+```
+
+**Decision criteria**: Evaluate query concurrency, data freshness requirements, user skill level, and embedding needs before selecting a BI platform.
+
+## Implementation Patterns
+
+### Semantic Layer Pattern
+```python
+# bi_tools/semantic_layer.py
+from pydantic import BaseModel
+from typing import Optional
+
+class Metric(BaseModel):
+    name: str
+    sql_expression: str
+    aggregation: str = "SUM"
+    description: Optional[str] = None
+    dimensions: list[str] = []
+
+class Dimension(BaseModel):
+    name: str
+    sql_column: str
+    description: Optional[str] = None
+
+class SemanticModel(BaseModel):
+    metrics: list[Metric]
+    dimensions: list[Dimension]
+
+    def generate_lookml(self) -> str:
+        parts = [f"view: {name} {{ ... }}" for name in self.dimensions]
+        return "\n".join(parts)
+```
+
+### Dashboard-as-Code Pattern
+```yaml
+# bi_tools/dashboard.yml
+dashboard:
+  name: "Revenue Overview"
+  refresh_interval: 3600
+  tiles:
+    - type: timeseries
+      metric: revenue
+      dimensions: [date, region]
+    - type: kpi
+      metric: total_revenue
+      format: currency
+  access:
+    roles: [analyst, finance]
+    embed: true
+```
+
+## Production Considerations
+
+- **Query governance**: Set query timeout limits (default 5 min) and cost caps per dashboard to prevent runaway queries.
+- **Caching strategy**: Use Redis (TTL 5 min) or BI-native caching to reduce warehouse load by 40-60%.
+- **Scheduled refreshes**: Align refresh schedules with source ETL completion; use status webhooks.
+- **Row-level security (RLS)**: Define RLS policies in the semantic layer, not per-dashboard.
+- **Version control**: Store dashboard definitions (LookML, dbt metrics) in Git with CI/CD validation.
+- **Usage analytics**: Track dashboard popularity, load times, and query patterns to optimize.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Hard-coded filters per user | Maintenance nightmare | RLS in semantic layer |
+| Dashboard per business question | Exploding dashboard count | Parameterized dashboards |
+| Direct DB queries from BI tool | Security risk, no governance | Always use semantic layer |
+| One BI tool for all use cases | Poor fit for embedded vs internal | Tiered BI strategy |
+
+## Performance Optimization
+
+- **Pre-aggregation**: Create materialized views at the warehouse level for BI query patterns.
+- **Query reduction**: Implement dashboard caching and avoid live queries for historical data (> 30 days).
+- **Concurrent user scaling**: Use query queuing and read replicas for high concurrency (> 50 users).
+- **Slow query analysis**: Profile BI queries with `EXPLAIN ANALYZE` and optimize table design (sort keys, partitioning).
+- **BI server sizing**: For Superset/Tableau Server, allocate 4 vCPU + 16 GB RAM per 10 concurrent users.
+
+## Security Considerations
+
+- **Authentication**: Enforce SSO (SAML/OIDC) for all BI access; disable local auth.
+- **Authorization**: Implement RLS at the semantic layer filtering by user role/region.
+- **Data masking**: Mask PII columns (email, SSN) in shared dashboards.
+- **Audit logging**: Log all query executions, dashboard views, and exports to SIEM.
+- **Network security**: Deploy BI tools in private subnets with reverse proxy (Nginx/Caddy) and WAF.
+- **Token management**: Rotate embed tokens hourly; never expose API keys in dashboards.
+
 ## Handoff
 `data-data-warehouse` for optimizing warehouse for BI queries
 `data-data-quality` for validating dashboard data accuracy

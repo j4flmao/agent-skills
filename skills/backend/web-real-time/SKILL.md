@@ -469,4 +469,63 @@ describe('WebRTC Signaling Server', () => {
 - **Multi-radio (WiFi + cellular)**: ICE may prefer wrong interface; set `iceTransportPolicy: 'relay'` for critical sessions
 - **Simulcast with bandwidth drop**: SFU should signal layer switch via `RTCRtpSender.setParameters` dynamically
 
+## Performance Optimization
+
+### Bandwidth & Bitrate Management
+- Simulcast encoding: 3 spatial layers (180p, 360p, 720p). SFU selects layer per receiver based on bandwidth.
+- SVC (Scalable Video Coding) with VP9: single encode, layered. SFU drops layers without re-encode. Lower CPU.
+- Dynamic bitrate adaptation: monitor `RTCRemoteInboundRtpStreamStats` round-trip time + packet loss. Reduce bitrate when RTT > 300ms or loss > 5%.
+- Audio red (Redundant Audio Data): send redundant packets at 50% rate. Tolerates 20% packet loss without audio drop.
+- Keyframe request burst: when a new peer joins, request keyframe from publisher. Throttle to 1 per 2 seconds.
+
+### Server-Side Performance
+- SFU pipeline: receive RTP packet → decrypt (DTLS) → demux by SSRC → queue per consumer → encrypt → send. Minimize copies: use `Buffer` pools.
+- UDP buffer sizes: `net.core.rmem_default = 26214400`, `net.core.wmem_default = 26214400`. Prevents packet drop under load.
+- Thread pinning: media worker threads pinned to dedicated CPU cores. Signaling on separate cores. No context switching for media path.
+- TURN bandwidth: one `coturn` instance handles ~1Gbps per 4 vCPU / 8GB RAM. Horizontal scale with DNS round-robin.
+
+### Client-Side Optimization
+- Hardware acceleration: `navigator.mediaDevices.getUserMedia` with `video: { width: 640, height: 480, frameRate: 30 }` — don't encode 4K for video calls.
+- Decode only visible streams in grid view: if user sees 4 tiles, receive only 4 streams. SFU stops forwarding others.
+- WebCodecs API (Chrome 94+): lower-latency encode/decode compared to browser default. Manual frame control.
+- Connection quality estimator: client measures throughput and classifies as `excellent / good / poor / degraded`. UI adapts (disable HD, hide tiles).
+
+## Security Considerations (Expanded)
+
+- **Peer authentication**: validate JWT in `connect()` callback. Token includes `roomId`, `userId`, `exp`. Reject expired tokens.
+- **Media encryption**: WebRTC mandates DTLS-SRTP (AES-128 or AES-256). No plaintext RTP. Verify `getStats()` shows `dtlsState: 'connected'`.
+- **TURN authentication**: time-limited HMAC credentials. `username = timestamp:userid`, `credential = HMAC(shared_secret, username)`. Rotate shared secret weekly.
+- **Signaling input validation**: sanitize roomId to alphanumeric + hyphen only. Reject payloads exceeding 10KB. Rate limit messages per connection.
+- **Screen sharing**: explicit `getDisplayMedia()` prompt (browser-enforced). Never auto-accept. Server can request `track.stop()` on disconnect.
+- **Recording**: server-side recording via SFU (mediasoup `rtp-parameters` → FFmpeg pipe). Recorded files encrypted at rest. Access logged.
+- **CORS**: signaling server origins restricted to known domains. `Access-Control-Allow-Origin` set per environment, never wildcard.
+- **SFU consumer admission**: consumer must present valid producer ID received via signaling. Prevent rogue peer subscribing to any stream.
+- **DoS prevention**: per-peer inbound bitrate cap (configurable, e.g. 10Mbps). Drop packets exceeding limit. Notify via signaling to reduce quality.
+- **Logging**: never log SDP payloads (may contain local IPs). Log message type, roomId, peerId, timestamps only.
+
+### Burn-Rate Alerting Configuration
+```yaml
+alerts:
+  ice_failure_rate:
+    window: 5m
+    threshold: "> 5%"
+    action: page
+  turn_bandwidth:
+    window: 10m
+    threshold: "> 80%"
+    action: page
+  signaling_latency_p99:
+    window: 5m
+    threshold: "> 200ms"
+    action: alert
+  call_success_rate:
+    window: 30m
+    threshold: "< 95%"
+    action: page
+  packet_loss_avg:
+    window: 5m
+    threshold: "> 3%"
+    action: alert
+```
+
 ## References

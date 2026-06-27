@@ -403,3 +403,232 @@ costInsights:
   - references/platform-teams.md — Platform Team Models
 ## Handoff
 Related skills: devops-sre-practices (reliability), devops-internal-developer-platform (deep IDP), devops-policy-as-code (guardrails), devops-progressive-delivery (deployment strategies).
+
+## Architecture Decision Trees
+
+### Build vs Buy Internal Developer Platform
+
+| Decision | Build (Backstage/Terraform) | Buy (Humanitec, Port, Cortex) |
+|---|---|---|
+| Customization | Full (any tech stack) | Vendor's existing integrations |
+| Time to value | 6-12 months | 1-3 months |
+| Maintenance | Internal team owns | Vendor handles SLAs |
+| Cost | Engineering salaries | Per-developer licensing |
+| Flexibility | Unlimited (any abstraction) | Limited to platform capabilities |
+| Best for | Large eng orgs (>200 devs) | Mid-size teams, rapid adoption |
+
+### Golden Paths vs Freedom of Choice
+
+| Aspect | Golden Paths | Free Choice |
+|---|---|---|
+| Developer velocity | Fast (opinionated, paved road) | Slower (every team reinvents) |
+| Operational burden | Low (standardized platform) | High (N different ways to deploy) |
+| Innovation | Standard patterns, consistent | Teams experiment freely |
+| Onboarding | Quick (one way to do things) | Steep (learn team's choices) |
+| Security | Centralized guardrails | Per-team security decisions |
+
+## Implementation Patterns
+
+### Backstage Entity Descriptor (YAML)
+
+```yaml
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: payment-service
+  description: Payment processing service
+  annotations:
+    github.com/project-slug: acme/payment-service
+    backstage.io/techdocs-ref: dir:.
+    pagerduty.com/service-id: PXXXXX
+  tags:
+    - java
+    - spring-boot
+    - mission-critical
+spec:
+  type: service
+  lifecycle: production
+  owner: team-finance
+  system: payment-platform
+  dependsOn:
+    - component:default/database
+    - resource:default/kafka-cluster
+  providesApis:
+    - payment-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: payment-api
+  description: Payment REST API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: team-finance
+  definition:
+    $text: https://github.com/acme/payment-service/blob/main/openapi.yaml
+```
+
+### Terraform: Platform Resource Abstraction
+
+```hcl
+module "microservice" {
+  source = "github.com/acme/terraform-platform-modules//microservice"
+
+  service_name = "payment-service"
+  environment  = "production"
+  team         = "team-finance"
+
+  container_port = 8080
+  cpu            = "1"
+  memory         = "2Gi"
+  replicas       = { min = 2, max = 10 }
+
+  database = {
+    engine  = "postgres"
+    version = "15"
+    size    = "db.t3.medium"
+    storage = 100
+  }
+
+  observability = {
+    log_level     = "info"
+    tracing       = true
+    alert_slack   = "#alerts-finance"
+    pagerduty     = "PXXXXX"
+  }
+}
+```
+
+## Production Considerations (Platform View)
+
+- Define **service level objectives (SLOs)** for platform API availability and latency
+- Implement **self-service catalog** so developers can provision resources without a ticket
+- Publish **platform maturity model** to communicate which features are stable, beta, or deprecated
+- Collect **developer satisfaction metrics** (DORA, SPACE, quarterly surveys) to guide investments
+- Run **migration weeks** to move teams from old patterns to new platform abstractions
+- Establish **platform SLAs**: for onboarding (24h), for incident response (15m critical)
+- Maintain **platform changelog** and deprecation policy with 3-month notice period
+
+### Observer Pattern for Event Handling
+`
+interface EventObserver<T> {
+  onEvent(event: T): Promise<void>;
+}
+
+class EventBus<T> {
+  private observers: Set<EventObserver<T>> = new Set();
+  subscribe(observer: EventObserver<T>): void {
+    this.observers.add(observer);
+  }
+  unsubscribe(observer: EventObserver<T>): void {
+    this.observers.delete(observer);
+  }
+  async emit(event: T): Promise<void> {
+    const results = Array.from(this.observers).map(o => o.onEvent(event));
+    await Promise.allSettled(results);
+  }
+}
+`
+
+### Configuration-Driven Approach
+`
+config:
+  defaults:
+    timeout: 30s
+    retryCount: 3
+  overrides:
+    production:
+      timeout: 60s
+      retryCount: 5
+    development:
+      timeout: 300s
+      retryCount: 1
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Configuration validated against schema before startup
+- [ ] Health check endpoints registered and monitored
+- [ ] Graceful shutdown with draining period (30s timeout)
+- [ ] Resource limits configured (CPU, memory, file descriptors)
+- [ ] Log level set appropriate for environment
+- [ ] Metrics endpoint secured and exposed
+- [ ] Rate limiting configured per-tier
+- [ ] TLS certificates valid and auto-renewing
+- [ ] Database migrations run as separate deployment step
+- [ ] Feature flags ready for gradual rollout
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% over 5min | Critical | Page on-call |
+| p99 latency | > 2s over 5min | Warning | Investigate |
+| Throughput drop | > 50% over 1min | Critical | Check upstream |
+| Queue depth | > 1000 over 1min | Warning | Scale consumers |
+| Disk usage | > 85% | Warning | Clean or expand |
+| Memory usage | > 90% heap | Critical | Restart or scale |
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Root Cause | Solution |
+|-------------|---------|------------|----------|
+| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
+| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
+| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
+| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
+
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+## Rules
+- Default-deny security posture — allow only explicitly required access.
+- All inputs validated, all outputs encoded, all errors handled.
+- Defend in depth — multiple layers of security controls.
+- Fail securely — errors default to safe behavior.
+- Log security-relevant events for audit and investigation.
+- Keep dependencies updated — automate vulnerability scanning.
+- Design for observability from day one, not as an afterthought.
+- Document all architectural decisions with rationale.
+- Review code for security, performance, and correctness before merging.

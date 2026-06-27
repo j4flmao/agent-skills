@@ -447,3 +447,107 @@ jobs:
   - references/dev-container-multi-service.md — Multi-Service Dev Container Reference
 ## Handoff
 Hand off to `dev-loop-git-workflow` for Git credential configuration. Hand off to `dev-loop-security-auditor` for container security.
+
+## Architecture Decision Trees
+
+### Development Environment Strategy
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Container base image | Distroless (small, secure) | Full distro (tooling-rich) | Dev experience vs attack surface |
+| Package manager | apt + pip | nix/home-manager | Reproducibility vs learning curve |
+| Shell | bash | zsh + oh-my-zsh | Portability vs productivity |
+| Dotfiles management | Manual COPY in Dockerfile | chezmoi/ dotfiles repo | Simplicity vs flexibility |
+
+### Multi-Service Topology
+- **Monorepo single container**: Simple, one DevContainer.json. Good for small projects.
+- **Docker Compose multi-container**: Service-per-container with depends_on. Use for microservices.
+- **Kubernetes Dev environment**: Dev runs in-cluster with hot-reload. For cloud-native teams.
+
+## Implementation Patterns
+
+### Dockerfile Optimization
+`dockerfile
+# Multi-stage build for smaller final image
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+EXPOSE 3000
+CMD ["node", "dist/server.js"]
+`
+
+### DevContainer Features Configuration
+`json
+{
+  "name": "Full Stack Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/git-lfs:1": {},
+    "ghcr.io/devcontainers/features/sshd:1": {}
+  },
+  "postCreateCommand": "npm install && npm run build",
+  "remoteUser": "node",
+  "mounts": [
+    "source=C:\Users\Hi/.ssh,target=/home/node/.ssh,type=bind"
+  ]
+}
+`
+
+## Production Considerations
+
+### Performance
+- **Layer caching**: Order Dockerfile layers from least to most frequently changing. Keep package installs before source copies.
+- **Image size**: Use alpine-based images where possible. Remove package manager cache in same RUN layer.
+- **Startup time**: Pre-warm application caches in postCreateCommand. Use ssd-backed volumes for node_modules.
+
+### Reliability
+- **Health checks**: Add HEALTHCHECK to Dockerfile. Configure restart policies in compose.
+- **Resource limits**: Set CPU and memory limits per container. Use docker stats for monitoring.
+- **Persistence**: Use named volumes for databases. Bind mounts for configuration.
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Solution |
+|---|---|---|
+| Dev container as production image | Bloated prod images | Use multi-stage builds, separate dev vs prod |
+| Installing everything in one layer | Poor caching, slow rebuilds | Layer strategically by change frequency |
+| Ignoring .dockerignore | Large build context, slow sends | Always include .dockerignore |
+| Root user in container | Security risk, permission issues | Use dedicated non-root user |
+| Hardcoded environment variables | Configuration drift between devs | Use .env file with .env.example template |
+
+## Performance Optimization
+
+### Build Speed
+- **Remote build cache**: Use BuildKit cache mounts and remote registry cache. Share layers across team.
+- **Parallel builds**: Use docker buildx bake for multi-service builds. Leverage --parallel flag.
+- **Selective rebuild**: Mount source as volume in dev. Only rebuild when dependencies change.
+
+### Runtime Speed
+- **Hot reload**: Use nodemon/air for auto-restart. Reduce feedback loop to < 2 seconds.
+- **Startup profiling**: Profile container startup with docker events. Identify slow initialization.
+- **Volume performance**: Use delegated/consistent mount config on macOS. Prefer named volumes for databases.
+
+## Security Considerations
+
+### Container Hardening
+- **Non-root user**: Always specify USER in Dockerfile. Use --user flag in compose.
+- **Read-only rootfs**: Set read_only: true in compose for stateless containers. Write to tmpfs for temp files.
+- **Capability dropping**: Drop ALL capabilities, add only required ones. Use --cap-drop ALL --cap-add NET_BIND_SERVICE.
+
+### Supply Chain
+- **Image scanning**: Scan base images with Trivy/Snyk before use. Pin to digest, not tag.
+- **Dependency audit**: Run npm audit/pip audit in postCreateCommand. Fail on critical vulnerabilities.
+- **Signature verification**: Verify image signatures with cosign. Use Docker Content Trust for pull.
+
+### Secrets Management
+- **Never in image**: Use Docker secrets or .env files mounted at runtime. Never COPY secrets into image.
+- **Secret scanning**: Scan for hardcoded secrets in git pre-commit hooks. Use tools like git-secrets or truffleHog.
+- **Ephemeral credentials**: Use short-lived tokens with automatic rotation. Integrate with OIDC providers.

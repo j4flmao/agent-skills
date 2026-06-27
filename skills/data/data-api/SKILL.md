@@ -467,5 +467,105 @@ Version N+1 released with backward compatibility period. Deprecation notice via 
   - references/data-api-versioning.md — Data API Versioning
   - references/graphql-for-data.md — GraphQL for Data Reference
   - references/hasura-postgrest.md — Hasura & PostgREST
+## Architecture Decision Trees
+
+```
+Data API Protocol Selection
+├── Complex nested queries with joins?
+│   ├── Yes → GraphQL (Hasura, PostgREST)
+│   └── No → REST (FastAPI, Django REST)
+├── Real-time subscriptions needed?
+│   ├── Yes → WebSocket / SSE via GraphQL subscriptions
+│   └── No → REST with polling interval
+├── Internal data mesh domains?
+│   ├── Yes → gRPC with Protobuf for interservice
+│   └── No → HTTP/JSON for external consumers
+└── Mobile/low-bandwidth clients?
+    ├── Yes → GraphQL with field selection
+    └── No → REST (simpler caching)
+```
+
+**Decision criteria**: Consider query flexibility, real-time needs, client types, and team GraphQL expertise.
+
+## Implementation Patterns
+
+### Pagination Pattern
+```python
+# data_api/pagination.py
+from fastapi import Query
+from typing import Optional
+
+class CursorPage:
+    def __init__(self, items: list, cursor: Optional[str], has_more: bool):
+        self.items = items
+        self.cursor = cursor
+        self.has_more = has_more
+
+async def list_orders(
+    cursor: Optional[str] = Query(None),
+    limit: int = Query(default=50, le=100)
+) -> CursorPage:
+    query = "SELECT * FROM orders WHERE id > :cursor ORDER BY id LIMIT :limit"
+    items = await db.fetch_all(query, {"cursor": cursor or 0, "limit": limit + 1})
+    has_more = len(items) > limit
+    return CursorPage(
+        items=items[:limit],
+        cursor=str(items[-1]["id"]) if items else None,
+        has_more=has_more
+    )
+```
+
+### GraphQL Federation Pattern
+```graphql
+# data_api/supergraph.graphql
+extend type Query {
+  order(id: ID!): Order @resolve(topic: "orders")
+  customer(id: ID!): Customer @resolve(topic: "customers")
+}
+
+type Order @key(fields: "id") {
+  id: ID!
+  total: Float!
+  customerId: ID!
+  customer: Customer @resolve(topic: "customers", key: "$.customerId")
+}
+```
+
+## Production Considerations
+
+- **Rate limiting**: Implement token bucket or sliding window per API key (1000 req/min default).
+- **Connection pooling**: Set database pool size to `(2 × CPU cores) + 1` with timeout.
+- **Circuit breaker**: Wrap external API calls with circuit breaker (5 failures → open for 30s).
+- **Idempotency**: Require `Idempotency-Key` header for mutating endpoints to prevent duplicate writes.
+- **Graceful degradation**: Return cached/stale data when upstream is unavailable.
+- **API versioning**: Use URL prefix `/v1/` or Accept header; maintain LTS versions for 6 months.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| N+1 queries in REST endpoints | Severe latency | GraphQL batching or SQL JOINs |
+| No pagination defaults | DB crashes on large scans | Always enforce cursor/offset pagination |
+| Exposing DB IDs externally | Security through obscurity | Use UUIDs or hashids |
+| Over-fetching in mobile apps | High bandwidth costs | GraphQL field selection |
+| Synchronous long-running requests | Connection pool exhaustion | Async processing with status endpoints |
+
+## Performance Optimization
+
+- **Query optimization**: Profile with `EXPLAIN ANALYZE`; add composite indexes for filter+sort patterns.
+- **Response compression**: Enable gzip/brotli on reverse proxy for JSON responses.
+- **Batch loading**: Use DataLoader pattern for GraphQL to batch DB queries.
+- **CDN caching**: Cache GET endpoints at CDN (CloudFront/Cloudflare) with short TTLs (30-60s).
+- **Connection keepalive**: Set HTTP keepalive timeout to 60s reduce TLS handshake overhead.
+
+## Security Considerations
+
+- **Authentication**: Enforce OAuth 2.0 / OIDC; issue JWTs with short expiry (15 min) and refresh tokens.
+- **Authorization**: Implement attribute-based access control (ABAC) at the API gateway.
+- **Input validation**: Validate all inputs against OpenAPI/schema; reject unexpected fields.
+- **SQL injection**: Use parameterized queries exclusively; never interpolate user input.
+- **CORS**: Restrict origins to known domains; do not use `Access-Control-Allow-Origin: *`.
+- **Secrets management**: Store API keys and DB credentials in vault (HashiCorp Vault, AWS Secrets Manager).
+
 ## Handoff
 `data-data-platform` for deployment infrastructure. `data-data-catalog` for API endpoint documentation. `data-data-observability` for API monitoring. `data-data-contracts` for API schema contracts.

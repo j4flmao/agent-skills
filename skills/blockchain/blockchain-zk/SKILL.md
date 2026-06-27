@@ -436,4 +436,118 @@ Recommended hardware:
   - references/zk-deployment.md — ZK System Deployment
   - references/circom-circuit-optimization.md — Circom Circuit Optimization
 
+## Architecture Decision Trees
+
+```
+ZK System Selection
+├── Use case?
+│   ├── Rollup (L2 scaling) → zkEVM (zkSync, Scroll, Linea)
+│   ├── Privacy → Tornado-style mixer / Aztec (private DeFi)
+│   ├── Identity → zk-SNARKs for verifiable credentials
+│   └── Scaling (validium) → StarkEx / zk-Porter (data off-chain)
+├── Proof system?
+│   ├── SNARK (small proofs) → Groth16 (fast verification, trusted setup)
+│   ├── STARK (transparent) → StarkWare / Plonky2 (no trusted setup, larger proofs)
+│   └── Recursive → Recursive SNARKs (Nova, IVC)
+├── Development framework?
+│   ├── Circom → Low-level circuit DSL (mature, large ecosystem)
+│   ├── Noir → Rust-like ZK language (Aztec)
+│   └── zkSync Era → Solidity-like (EVM compatible)
+└── Prover infrastructure?
+    ├── Cloud → AWS/GCP GPU instances (NVIDIA A100)
+    ├── Decentralized → EigenLayer AVS (decentralized proving)
+    └── Embedded → Client-side proving (mobile, browser)
+```
+
+**Decision criteria**: Evaluate proof size vs verification cost, trusted setup tolerance, developer experience, and proving time requirements.
+
+## Implementation Patterns
+
+### Circom Circuit
+```javascript
+// blockchain-zk/circuits/merkle_tree.circom
+pragma circom 2.1.0;
+
+include "circomlib/merkle_tree/MerkleTree.circom";
+
+template MerkleProofCheck(nLevels) {
+    signal input leaf;
+    signal input root;
+    signal input proof[nLevels];
+    signal input indices[nLevels];
+
+    component tree = MerkleTree(nLevels);
+    tree.leaf <== leaf;
+    tree.root <== root;
+
+    for (var i = 0; i < nLevels; i++) {
+        tree.siblings[i] <== proof[i];
+        tree.indices[i] <== indices[i];
+    }
+
+    root === tree.root;
+}
+
+component main = MerkleProofCheck(10);
+```
+
+### Verifier Contract (Solidity)
+```solidity
+// blockchain-zk/contracts/Verifier.sol
+pragma solidity ^0.8.20;
+
+contract Groth16Verifier {
+    struct Proof {
+        uint256[2] a;
+        uint256[2][2] b;
+        uint256[2] c;
+    }
+
+    function verifyProof(Proof memory proof, uint256[1] memory input) public view returns (bool) {
+        uint256[14] memory verifyingKey = [
+            0x2c0a, 0x0e09, 0x1a1b, 0x2c2d, 0x3e3f,
+            0x1234, 0x5678, 0x9abc, 0xdef0, 0xabcd,
+            0xef01, 0x2345, 0x6789, 0x0123
+        ];
+        return _verify(proof, verifyingKey, input);
+    }
+}
+```
+
+## Production Considerations
+
+- **Proving time**: Monitor proving time per block; scale GPU resources to stay within slot time.
+- **Circuit optimization**: Minimize constraint count; use lookup tables (Plookup) for range checks.
+- **Trusted setup**: Participate in multi-party ceremony (MPC) for Groth16; verify transcript publicly.
+- **Witness generation**: Optimize witness generation with parallel execution; cache intermediate values.
+- **Verification gas**: Groth16: ~200k gas per proof; STARK: ~500k-1M gas. Budget accordingly.
+- **Circuit versioning**: Version circuits; maintain backward compatibility for pending proofs.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Using Groth16 without trusted setup ceremony | Security risk from toxic waste | Complete MPC ceremony with verification |
+| Over-constrained circuits | Slow proving, high gas | Minimize constraints; optimize bottlenecks |
+| Ignoring witness generation time | Block time violations | Parallelize witness gen; optimize circuit |
+| No circuit fuzzing | Undetected soundness bugs | Fuzz circuit inputs against reference impl |
+| Single prover | Centralization, censorship risk | Decentralize proving (multiple provers) |
+
+## Performance Optimization
+
+- **Constraint reduction**: Use non-native field arithmetic tricks; batch similar operations.
+- **Recursive proofs**: Aggregate multiple proofs into single recursive proof for 10x verification savings.
+- **GPU proving**: Use parallel GPU proving for large circuits; NVIDIA A100/H100 for production.
+- **Lookup arguments**: Use Plookup/cq for range checks instead of binary decomposition constraints.
+- **Proving key caching**: Cache proving key in GPU memory; avoid disk loading per proof.
+
+## Security Considerations
+
+- **Soundness**: Formally verify circuit constraints; fuzz against naive implementation for soundness leaks.
+- **Trusted setup**: Verify MPC transcript contributions; use ceremony coordinator with transparency log.
+- **Replay protection**: Include domain separator and nullifier to prevent double-use of proofs.
+- **Oracle inputs**: Verify oracle-signed data as public inputs; validate timestamps and sources.
+- **Dependency audit**: Audit all circom/Noir library code; pin versions and verify hashes.
+- **DDoS protection**: Rate limit proof submission; verify proof cost before state changes.
+
 ## Phase: blockchain → blockchain-zk

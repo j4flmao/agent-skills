@@ -428,3 +428,90 @@ Terraform HCL (alicloud provider), Alibaba Cloud CLI commands, RAM policy JSON, 
 After completing this skill:
 - Next skill: **terraform** — Terraform for multi-cloud IaC with alicloud provider
 - Pass context: VPC ID, security group IDs, RAM role ARN, region
+
+## Implementation Patterns
+
+### Terraform: Multi-region ECS Cluster with Autoscaling
+
+```hcl
+resource "alicloud_cs_managed_kubernetes" "multi_region" {
+  for_each           = var.regions
+  name               = "k8s-${each.key}"
+  cluster_spec       = "ack.pro.small"
+  worker_vswitch_ids = each.value.vswitch_ids
+  worker_instance_types = ["ecs.g6.xlarge"]
+  load_balancer_spec = "slb.s2.small"
+  worker_disk_size   = 200
+  worker_disk_category = "cloud_essd"
+}
+
+resource "alicloud_ess_scaling_group" "cluster_asg" {
+  for_each          = alicloud_cs_managed_kubernetes.multi_region
+  scaling_group_name = "asg-${each.value.name}"
+  min_size           = 3
+  max_size           = 30
+  default_cooldown   = 300
+  vswitch_ids        = each.value.worker_vswitch_ids
+}
+```
+
+### YAML: RAM Policy for Cross-account Access
+
+```yaml
+PolicyDocument:
+  Version: "1"
+  Statement:
+    - Effect: Allow
+      Action:
+        - ecs:DescribeInstances
+        - rds:DescribeDBInstances
+        - slb:DescribeLoadBalancers
+      Resource: "*"
+    - Effect: Allow
+      Action:
+        - ram:*
+      Resource: "*"
+      Condition:
+        StringEquals:
+          acs:SourceArn: "acs:ram::${source_account}:role/cross-account-reader"
+```
+
+## Production Considerations
+
+- Enable **Resource Groups** and **Tags** on every resource for cost allocation and governance
+- Use **Resource Access Manager (RAM)** for cross-account sharing instead of copying resources
+- Configure **Alarm Contact Groups** before deploying production workloads
+- Enable **Operation Orchestration Service (OOS)** for automated patching and maintenance
+- Deploy **Cloud Monitor** dashboards for every production service with p99 latency alerts
+- Use **Terraform workspaces** to separate dev/staging/prod Alibaba Cloud accounts
+- Enable **ActionTrail** for all API call auditing and feed logs into Log Service
+
+## Anti-Patterns
+
+- Using the **root account** for daily operations — always create RAM users with least privilege
+- Hardcoding **AccessKey ID/Secret** in Terraform or application code — use RAM Roles or Secrets Manager
+- Skipping **VPC planning** — deploying all resources in the default VPC leads to network conflicts
+- Over-provisioning **ECS instances** without autoscaling — results in unnecessary cost
+- Ignoring **zone affinity** — spread instances across multiple availability zones for resilience
+- Mixing production and test resources in the same **Resource Group** — makes cost tracking impossible
+- Using **Classic Network** instead of VPC — Classic Network lacks isolation and security group support
+
+## Performance Optimization
+
+- Use **ESSD (Enhanced SSD)** for all ECS system and data disks; avoid Ultra disks
+- Enable **CDN** with Alibaba Cloud CDN for static asset delivery and DDoS shielding
+- Configure **SLB connection draining** and health checks for zero-downtime deployments
+- Use **Redis Tair** for session caching instead of local ECS memory (survives restarts)
+- Tune **RDS PG/MySQL** connection pools with `max_connections = 200` and `innodb_buffer_pool_size = 70% of RAM`
+- Deploy **Container Service for Kubernetes (ACK)** with cluster autoscaler for burst workloads
+- Set **ECS hibernate** for non-production instances to save compute costs while idle
+
+## Security Considerations
+
+- Rotate **AccessKey** every 90 days via RAM; use temporary STS tokens for short-lived access
+- Enable **Security Center** (Enterprise tier) for vulnerability scanning and baseline checks
+- Configure **WAF** for all public-facing ALB/SLB endpoints to block SQLi and XSS
+- Use **KMS** to encrypt RDS instances, OSS buckets, and disk snapshots at rest
+- Enable **ActionTrail** global trail with Log Service alerting for suspicious API activity
+- Restrict **Security Group** ingress to specific CIDR blocks; never use 0.0.0.0/0 for SSH/RDP
+- Implement **Resource Directory** with SCPs to enforce security baselines across accounts

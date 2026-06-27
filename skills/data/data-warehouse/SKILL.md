@@ -445,6 +445,117 @@ Primary workload characteristics?
   - references/warehouse-observability.md — Warehouse Observability
   - references/warehouse-platforms.md — Warehouse Platforms
   - references/warehouse-security.md — Warehouse Security
+## Architecture Decision Trees
+
+```
+Warehouse Modeling Approach
+├── Kimball (dimensional) or Inmon (3NF)?
+│   ├── Kimball → Star schema (facts + dimensions)
+│   └── Inmon → 3NF normalized + data marts
+├── Cloud-native or self-managed?
+│   ├── Cloud → Snowflake / BigQuery / Redshift / Databricks SQL
+│   └── Self-managed → ClickHouse / Greenplum / Apache Druid
+├── Real-time data?
+│   ├── Yes → Streaming warehouse (Materialize, RisingWave)
+│   └── No → Batch warehouse (Snowflake, BigQuery)
+└── Decoupled storage and compute?
+    ├── Yes → Snowflake / BigQuery / Databricks
+    └── No → Redshift / ClickHouse
+```
+
+**Decision criteria**: Assess concurrency needs, query complexity, budget, and team SQL modeling expertise.
+
+## Implementation Patterns
+
+### Star Schema Model (dbt)
+```sql
+-- data_warehouse/models/marts/fact_orders.sql
+{{
+    config(
+        materialized='incremental',
+        unique_key='order_id',
+        incremental_strategy='merge',
+        cluster_by=['order_date']
+    )
+}}
+
+SELECT
+    o.order_id,
+    o.customer_id,
+    o.order_date,
+    o.total_amount,
+    o.discount_amount,
+    o.shipping_cost,
+    o.status,
+    d.date_key,
+    c.customer_key,
+    p.product_key
+FROM {{ ref('stg_orders') }} o
+LEFT JOIN {{ ref('dim_date') }} d ON o.order_date = d.date
+LEFT JOIN {{ ref('dim_customer') }} c ON o.customer_id = c.customer_id
+LEFT JOIN {{ ref('dim_product') }} p ON o.product_id = p.product_id
+
+{% if is_incremental() %}
+    WHERE o.order_date > (SELECT max(order_date) FROM {{ this }})
+{% endif %}
+```
+
+### Slowly Changing Dimension Type 2
+```sql
+-- data_warehouse/models/dim_customer.sql
+{{
+    config(
+        materialized='incremental',
+        unique_key='customer_key',
+        strategy='SCD2',
+        updated_at='updated_at'
+    )
+}}
+
+SELECT
+    customer_id,
+    name,
+    email,
+    address,
+    created_at
+FROM {{ ref('stg_customers') }}
+```
+
+## Production Considerations
+
+- **Concurrency scaling**: Enable Snowflake/Databricks multi-cluster warehouses for > 20 concurrent queries.
+- **Materialized views**: Pre-aggregate common metrics at query time or via scheduled refresh; reduce compute cost.
+- **Clustering keys**: Define clustering on date columns and frequently filtered dimensions for faster scans.
+- **Auto-suspend**: Set warehouse auto-suspend to 5 min for dev, 30 min for prod to control cost.
+- **Query monitoring**: Track warehouse credit consumption per query/user; alert on anomalous usage.
+- **Data freshness**: Publish last-loaded timestamp per table; dashboards alert if data is stale > SLA.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| SELECT * in production queries | Full table scan, high cost | Always specify required columns |
+| No incremental modeling | Full refresh every run for large tables | dbt incremental + merge strategy |
+| Over-indexing (clustering keys) | Slower writes, more storage | 2-3 cluster keys per table max |
+| Joining raw tables in BI tool | Complex SQL, poor performance | Pre-join into star schema marts |
+| Not setting auto-suspend | 24/7 compute running idle | Set suspend on all non-production warehouses |
+
+## Performance Optimization
+
+- **Partition pruning**: Align table partitions with common query WHERE patterns (date range, region).
+- **Sort keys**: Define Redshift compound sort keys (date, partition column) for merge join efficiency.
+- **Micro-partitioning**: Snowflake/BigQuery auto-clustering is managed; ensure clustering keys are set.
+- **Query caching**: Use Snowflake result cache (24h) for repeated identical queries; avoid NOLOCAL cache bypass.
+- **CBO statistics**: Keep table statistics updated via `ANALYZE` (Redshift) or auto-vacuum settings.
+
+## Security Considerations
+
+- **Column-level security**: Mask PII columns (email, phone) via Snowflake dynamic masking or BigQuery policy tags.
+- **Access control**: Use RBAC with role hierarchy (admin → developer → analyst → viewer); never use account-level admin.
+- **Network policies**: Restrict warehouse access to corporate IP ranges; use private link for VPC access.
+- **Data encryption**: Enable automatic encryption (Snowflake Tri-Secret, BigQuery CMEK) with customer-managed keys.
+- **Audit**: Enable query logging (Snowflake ACCOUNT_USAGE, BigQuery audit logs) with 90-day retention.
+
 ## Handoff
 `data-etl-pipeline` for loading data into the warehouse schema
 `data-bi-tools` for connecting dashboards to the data model

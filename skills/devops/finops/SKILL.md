@@ -398,3 +398,121 @@ Detection: monthly RI report shows coverage dropped from 65% to 45%. Investigati
 
 ## Handoff
 Hand off to finops for cost visibility and optimization. Hand off to cloud-specific skills (aws/azure/gcp) for resource provisioning at optimized price.
+
+## Architecture Decision Trees
+
+### Reserved vs On-demand Instances
+
+| Decision | Reserved (1yr/3yr) | On-demand / Spot |
+|---|---|---|
+| Discount | 30-70% | 0-90% (spot) |
+| Commitment | 1-3 year term | None / ephemeral |
+| Flexibility | Convertible or standard | Full |
+| Workload fit | Steady-state, predictable | Variable, batch, stateless |
+| Risk | Over-provisioning if demand shrinks | Spot termination, price spikes |
+| Best for | Databases, production K8s | CI runners, dev, batch jobs |
+
+### Savings Plan vs Reserved Instances
+
+| Dimension | Savings Plan | EC2 RI |
+|---|---|---|
+| Scope | Compute ($/hr commitment) | Instance family × region |
+| Coverage | EC2, Fargate, Lambda | EC2 only |
+| Flexibility | Instance family changes okay | Locked to family |
+| Management | Simpler (single $ commitment) | Per-instance-type tracking |
+
+## Implementation Patterns
+
+### YAML: AWS Budget with Cost Anomaly Alert
+
+```yaml
+Budgets:
+  - BudgetName: "Monthly-Infrastructure"
+    BudgetType: "COST"
+    BudgetLimit:
+      Amount: 50000
+      Unit: USD
+    TimePeriod:
+      Start: "2026-01-01"
+    TimeUnit: "MONTHLY"
+    CostFilters:
+      TagKeyValue:
+        - "Environment$production"
+    NotificationThresholds:
+      - Threshold: 80
+        ComparisonOperator: GREATER_THAN
+        NotificationType: ACTUAL
+        Subscribers:
+          - Address: finops@company.com
+            SubscriptionType: EMAIL
+      - Threshold: 100
+        ComparisonOperator: GREATER_THAN
+        NotificationType: FORECASTED
+        Subscribers:
+          - Address: finops-team@company.com
+            SubscriptionType: EMAIL
+            SubscriptionType: SLACK
+```
+
+### Bash: Tag Compliance Scanner
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+check_tag_compliance() {
+  local required_tags=("Environment" "Owner" "CostCenter" "Project")
+  local violations=0
+
+  aws resourcegroupstaggingapi get-resources \
+    --query 'ResourceTagMappingList[?Tags == `null` || length(Tags) == `0`]' \
+    --output json | jq -c '.[]' | while read -r resource; do
+    arn=$(echo "$resource" | jq -r '.ResourceARN')
+    echo "UNTAGGED: $arn"
+    violations=$((violations + 1))
+  done
+
+  echo "Total untagged resources: $violations"
+  return "$violations"
+}
+```
+
+## Production Considerations
+
+- Establish a **FinOps Center of Excellence (CoE)** with engineering, finance, and operations
+- Tag **all resources** with Environment, Owner, CostCenter, and Project for chargeback/showback
+- Set up **monthly budget reviews** with engineering teams to review anomalies and optimizations
+- Implement **automated right-sizing** recommendations using AWS Compute Optimizer / Azure Advisor
+- Use **commitment-based discounts** (RIs, Savings Plans) for baseline compute; spot/on-demand for burst
+- Track **unit economics** (cost per transaction, per user, per GB stored) for business-aligned reporting
+- Publish **cost dashboards** in Grafana/Looker with daily granularity and team breakdowns
+
+## Anti-Patterns
+
+- Ignoring **data transfer costs** — cross-region, NAT gateway, and egress often exceed compute cost
+- Over-provisioning **without right-sizing** — using large instances when smaller ones suffice
+- Leaving **idle resources** running overnight/weekends — dev instances should auto-stop on schedule
+- Skipping **storage lifecycle policies** — hot storage is expensive for cold data
+- Using **premium support tiers** for non-production accounts — reduce to developer tier for dev
+- Treating **FinOps as finance-only** — engineering must be involved in cost decisions
+- Applying **blanket discounts** without per-team attribution — kills accountability
+
+## Performance Optimization (Cost-Efficiency)
+
+- Use **Spot Instances** for stateless workloads (CI runners, batch processing, canary deployments)
+- Enable **auto-scaling** with proper min/max limits — over-provisioning baseline + scale for spikes
+- Implement **storage tiering**: hot (SSD) → warm (HDD) → cold (S3 Glacier) → archive (Deep Archive)
+- Configure **lifecycle policies** on S3/Blob Storage to transition objects and expire old versions
+- Use **graviton/ARM instances** for compute workloads — 20-40% better price-performance
+- Consolidate **small workloads** into larger instances — higher density, lower per-unit cost
+- Cache **frequently accessed data** with CDN / Redis to reduce compute and bandwidth costs
+
+## Security Considerations
+
+- Control **IAM permissions** for cost data — restrict `ce:*`, `budgets:*`, `pricing:*` to FinOps team
+- Enable **AWS Organizations SCP** to prevent teams from launching expensive instance types
+- Set **billing alarms** with SNS notifications to Slack/PagerDuty on threshold breaches
+- Audit **resource creation** with CloudTrail and cross-reference with budget tag requirements
+- Use **IAM roles** for programmatic cost API access instead of long-lived access keys
+- Restrict **permissions** to modify budgets and alerts to a small admin group
+- Monitor **cost anomaly** with AWS Cost Anomaly Detection or third-party FinOps platforms

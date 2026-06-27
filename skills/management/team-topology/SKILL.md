@@ -467,3 +467,108 @@ Quarterly activity:
 
 ## Handoff
 For OKR alignment with team topology, hand off to management-okr-kpi. For agile process design, hand off to management-agile-scrum-kanban. For hiring to fill team gaps, hand off to management-hiring.
+
+## Architecture Decision Trees
+
+### Team Type Selection
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Service ownership | Stream-aligned (vertical) | Component/Platform (horizontal) | Domain complexity, team size |
+| Collaboration mode | X-as-a-Service (thin API) | X-as-a-Service + collaboration | Dependency stability, org maturity |
+| Enabling teams | Temporary (adopt and disband) | Permanent (center of excellence) | Technology maturity, adoption stage |
+
+### Organization Structure
+- Few services, small team → Start with stream-aligned teams only
+- Growing complexity → Add enabling teams for new technologies
+- Multiple services, shared concerns → Add platform team with paved roads
+- Large org, compliance needs → Add complicated-subsystem team for critical domains
+
+## Implementation Patterns
+
+### Team Charter Template
+`markdown
+# Team Charter: {team name}
+
+## Mission
+{one sentence describing team purpose}
+
+## Responsibilities
+- {responsibility}
+- {responsibility}
+- {responsibility}
+
+## Boundaries (NOT responsible for)
+- {exclusion}
+- {exclusion}
+
+## Collaborators
+- Upstream: {teams we receive from}
+- Downstream: {teams we deliver to}
+- Enabling support: {teams we rely on for enablement}
+
+## Communication
+- Slack channel: {channel}
+- Standup: {time/location}
+- Retro: {cadence}
+`
+
+### Interaction Mode Templates
+`markdown
+## Collaboration: {team A} <-> {team B}
+
+### Mode: X-as-a-Service
+- API contract: {link to spec}
+- SLA: {uptime/latency targets}
+- Review cadence: Quarterly sync
+
+### Mode: Collaboration
+- Joint ceremony: Bi-weekly sync
+- Shared artifacts: Architecture decisions, runbooks
+- Escalation: {escalation path}
+`
+
+## Production Considerations
+
+### Team Health
+- **Cognitive load**: Monitor team WIP against capacity. Split team when cognitive load consistently exceeds sustainable pace.
+- **Team stability**: Limit team membership changes to natural boundaries (sprint end). Avoid mid-sprint re-orgs.
+- **Skill diversity**: Ensure each team has T-shaped members. Pair senior with junior for knowledge transfer.
+
+### Dependency Management
+- **Dependency tracking**: Maintain team dependency map. Visualize with Team Topology diagrams.
+- **API versioning**: Teams expose APIs with version contracts. Communicate breaking changes 2 sprints ahead.
+- **Cross-team coordination**: Use communities of practice for knowledge sharing. Run guild syncs monthly.
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Solution |
+|---|---|---|
+| Conway's Law ignored | Architecture mirrors org chart poorly | Design teams to produce desired architecture |
+| Hero culture | Bus factor of 1, team dependent on individual | Rotate responsibilities, enforce pair work |
+| Too many dependencies | Every team blocked by another | Identify and split bottlenecks, add platform team |
+| Team as cost center | No ownership, no accountability | Define clear mission and measurable outcomes |
+| Re-org every quarter | Never reaching Tuckman performing stage | Allow 6-12 months for team stabilization |
+
+## Performance Optimization
+
+### Flow Efficiency
+- **Reduce handoffs**: Minimize team handoffs in value stream. Use cross-functional teams to reduce dependency chains.
+- **Team API design**: Design clear, minimal APIs between teams. Reduce collaboration surface area to essential interactions.
+- **Autonomy**: Give teams full ownership of their domain. Reduce approval requirements for within-boundary decisions.
+
+### Enablement Efficiency
+- **Self-service platforms**: Platform team builds paved roads, not gatekeeping. Reduce wait time for infrastructure requests.
+- **Communities of practice**: Enable peer learning across teams. Reduce dependency on formal training.
+- **Inner sourcing**: Apply open-source practices internally. Allow contributions across team boundaries with clear guidelines.
+
+## Security Considerations
+
+### Team Security
+- **Access control**: Implement team-based IAM roles. Follow least-privilege for cross-team access.
+- **Secrets management**: Each team manages its own secrets. No cross-team secret sharing without vault-based access.
+- **Security champions**: Designate security champion per team. Champion attends security guild and disseminates practices.
+
+### Cross-Team Security
+- **API security**: Teams secure their API endpoints independently. Central security team provides tooling and guidelines.
+- **Incident response**: Define team roles in incident response. Each team maintains its own runbook for domain-specific incidents.
+- **Secure collaboration**: Use encrypted channels for cross-team security discussions. Limit distribution of vulnerability details to relevant teams.

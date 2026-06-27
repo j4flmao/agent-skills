@@ -463,6 +463,102 @@ Source data characteristics?
   - references/dbt-core.md — dbt Core Reference
   - references/metrics-layer.md — Metrics Layer Reference
   - references/sql-analytics.md — SQL for Analytics Reference
+## Architecture Decision Trees
+
+```
+Analytics Engineering Stack
+├── Transformation tool?
+│   ├── dbt (SQL-first) → dbt Core / dbt Cloud
+│   ├── Python-heavy → SQLMesh / Dataform
+│   └── Multi-language → Dagster + dbt
+├── Warehouse target?
+│   ├── Snowflake → dbt-snowflake adapter (native features)
+│   ├── BigQuery → dbt-bigquery (partitioning, clustering)
+│   └── DuckDB → dbt-duckdb (local development)
+├── Data modeling approach?
+│   ├── Kimball → Star schema (facts + dimensions)
+│   └── Data Vault → Hubs, links, satellites
+└── CI/CD for data?
+    ├── Yes → dbt CI with GitHub Actions + slim CI
+    └── No → Manual dbt run (not recommended)
+```
+
+**Decision criteria**: Evaluate team SQL vs Python skills, warehouse platform, modeling maturity, and CI requirements.
+
+## Implementation Patterns
+
+### dbt Generic Test Pattern
+```sql
+-- analytics_engineering/tests/generic/assert_valid_email.sql
+{% test assert_valid_email(model, column_name) %}
+SELECT {{ column_name }}
+FROM {{ model }}
+WHERE {{ column_name }} IS NOT NULL
+  AND {{ column_name }} !~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
+{% endtest %}
+```
+
+### Incremental Model with dbt
+```sql
+-- analytics_engineering/models/marts/dim_customer.sql
+{{
+    config(
+        materialized='incremental',
+        unique_key='customer_key',
+        on_schema_change='append_new_columns',
+        incremental_strategy='merge',
+    )
+}}
+
+SELECT
+    customer_id,
+    customer_name,
+    email,
+    first_order_date,
+    lifetime_value,
+    updated_at
+FROM {{ ref('stg_customers') }}
+
+{% if is_incremental() %}
+    WHERE updated_at > (SELECT max(updated_at) FROM {{ this }})
+{% endif %}
+```
+
+## Production Considerations
+
+- **CI/CD pipeline**: Run `dbt build --select state:modified+` on PR for slim CI; fail on test failures.
+- **Documentation**: Generate dbt docs site; host on S3/Cloudflare Pages; refresh on every merge.
+- **Lineage**: Enable dbt docs with +model+ lineage graph for impact analysis.
+- **Source freshness**: Configure dbt source freshness tests; alert on stale sources.
+- **Environment promotion**: Promote models from dev → staging → prod via dbt environment targets.
+- **Package management**: Pin dbt packages in `packages.yml`; use semantic versioning.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| dbt models without tests | Undetected quality issues | Test every model with generic + singular tests |
+| No source freshness checks | Stale data propagated | Configure source freshness for all sources |
+| Manual dbt run in production | Inconsistent state, no audit | CI/CD for all production runs |
+| Single monolithic dbt project | Long run times, tight coupling | Split into domain-specific sub-projects |
+| Ignoring dbt performance | Full refresh on every run | Use incremental models for large tables |
+
+## Performance Optimization
+
+- **Incremental models**: Use incremental materialization for large tables; set `unique_key` for merge strategy.
+- **Slim CI**: Use `dbt build --select state:modified+` to build only changed models + downstream.
+- **Model refs**: Always use `{{ ref() }}` instead of raw table references for proper dependency resolution.
+- **CTE naming**: Prefix CTEs with descriptive names for readability and query plan analysis.
+- **Partitioning**: Align clustering keys (dbt `cluster_by`) with common query filter columns.
+
+## Security Considerations
+
+- **Credential management**: Store warehouse credentials in dbt profiles via environment variables; never commit.
+- **RBAC**: Use dbt Cloud RBAC for project-level access; service tokens for CI/CD.
+- **Data masking**: Implement Snowflake dynamic masking policies for PII in production models.
+- **Schema isolation**: Separate dev/staging/prod schemas; restrict prod write access to CI/CD service account.
+- **Audit**: Log all dbt runs with artifacts; store in cloud storage for compliance review.
+
 ## Handoff
 `data-science-statistical-analysis` for analytical statistical methods
 `data-science-experimentation` for experiment metric pipelines

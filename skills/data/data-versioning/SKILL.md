@@ -485,5 +485,102 @@ Scale and workflow?
   - references/nessie-iceberg-versioning.md — Nessie — Git for Iceberg
   - references/data-versioning-delta-lake.md — Delta Lake Deep Dive
   - references/data-versioning-lineage-tracking.md — Lineage Tracking Reference
+## Architecture Decision Trees
+
+```
+Data Versioning Strategy
+├── Table format with built-in versioning?
+│   ├── Yes → Delta Lake (time travel) / Iceberg (snapshot isolation)
+│   └── No → Custom versioning with Nessie catalog
+├── Git-like branching needed?
+│   ├── Yes → Nessie (Git-like branches on Iceberg/Delta)
+│   └── No → Snapshot-based (Spark/Databricks time travel)
+├── Dataset-level versioning?
+│   ├── Yes → DVC (data version control for ML datasets)
+│   └── No → Table-level snapshot tags
+├── ML model reproducibility?
+│   ├── Yes → DVC / LakeFS (track data + model together)
+│   └── No → Iceberg snapshot IDs suffice
+```
+
+**Decision criteria**: Evaluate table format support, branching needs, ML workflow integration, and storage overhead of snapshot retention.
+
+## Implementation Patterns
+
+### Nessie Branch Operations
+```python
+# data_versioning/nessie_branch.py
+from pynessie import NessieClient
+
+class NessieBranchManager:
+    def __init__(self, endpoint: str = "http://nessie:19120/api/v1"):
+        self.client = NessieClient(endpoint)
+
+    def create_feature_branch(self, base_branch: str = "main", branch_name: str = None):
+        base_hash = self.client.get_reference(base_branch).hash_
+        self.client.create_reference(branch_name, base_hash)
+
+    def merge_branch(self, from_branch: str, to_branch: str = "main"):
+        merge_result = self.client.merge(from_branch, to_branch)
+        return merge_result
+
+    def list_branches(self) -> list[str]:
+        refs = self.client.list_references()
+        return [ref.name for ref in refs if ref.type == "BRANCH"]
+```
+
+### DVC Dataset Versioning
+```yaml
+# data_versioning/dvc.yaml
+stages:
+  prepare_data:
+    cmd: python scripts/prepare_data.py
+    deps:
+      - scripts/prepare_data.py
+      - data/raw
+    outs:
+      - data/processed:
+          cache: true
+          persist: true
+    metrics:
+      - metrics/data_stats.json:
+          cache: false
+```
+
+## Production Considerations
+
+- **Snapshot retention**: Keep Iceberg snapshots for 7 days; expire via `expire_snapshots` weekly to manage storage.
+- **Branch lifecycle**: Delete feature branches after merge; maintain only `main`, `staging`, and `production`.
+- **Conflict resolution**: Define custom merge strategies for data conflicts (source-wins, target-wins, or manual).
+- **Tagging**: Tag production snapshots with semantic versions (`v1.2.0`) for release traceability.
+- **Garbage collection**: Run Nessie GC weekly to clean unreferenced files; test on staging first.
+- **Integration with CI**: Branch per PR; run quality checks; auto-merge to staging after approval.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Keeping all snapshots forever | Unlimited storage growth | Set TTL on snapshot retention (7-30 days) |
+| Branching without cleanup | Hundreds of stale branches | Enforce branch lifecycle policy (auto-delete 14d) |
+| Iceberg without Nessie | No branching support | Add Nessie catalog for Git-like workflows |
+| Versioning without tags | Can't reference release versions | Tag every production deployment |
+| DVC without remote storage | No sharing across team | Configure S3/GCS remote storage for DVC cache |
+
+## Performance Optimization
+
+- **Snapshot diff**: Use Nessie diff API to compute changes between branches without scanning all data.
+- **Lazy materialization**: Branch references point to same underlying files until write; zero storage overhead on create.
+- **Metadata caching**: Cache Nessie commit log in memory (Redis) for fast branch listing operations.
+- **Incremental GC**: GC only unreferenced files since last GC run; avoid full scans of storage.
+- **Parallel GC**: Parallelize Nessie GC across multiple workers; rate-limit to avoid S3 throttling.
+
+## Security Considerations
+
+- **Branch access control**: Restrict write access to `production` branch; PR-based merges only.
+- **Audit trail**: Log all Nessie branch operations (create, merge, delete) for compliance.
+- **Snapshot ACLs**: Tag snapshots with sensitivity labels; strip PII columns in non-privileged branches.
+- **Encryption**: Encrypt Nessie catalog metadata at rest; use TLS for Nessie API connections.
+- **Backup**: Backup Nessie catalog metadata daily; test restore procedure quarterly.
+
 ## Handoff
 `data-data-platform` for versioning infrastructure. `data-data-catalog` for cataloging versioned datasets. `data-data-observability` for monitoring version health. `data-data-quality` for quality gates on merge.

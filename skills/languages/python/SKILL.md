@@ -464,7 +464,110 @@ Deploying a Python web app?
 - `references/python-advanced.md` — Advanced Python Patterns
 - `references/python-fastapi.md` — FastAPI Web Framework Guide
 
-## Handoff
-- `mobile/universal/testing` — Testing patterns, CI integration
-- `mobile/universal/performance` — Python profiling, optimization
-- `mobile/universal/security` — Python security best practices
+## Implementation Patterns
+
+### Pattern: Repository with Cached Query
+
+```python
+from functools import lru_cache
+from typing import Optional
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+class UserRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def get_by_email(self, email: str) -> Optional[User]:
+        result = await self.session.execute(
+            select(User).where(User.email == email)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_active_users(self, offset: int = 0, limit: int = 50) -> list[User]:
+        result = await self.session.execute(
+            select(User)
+            .where(User.deleted_at.is_(None))
+            .order_by(User.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+```
+
+### Pattern: Background Task with Celery and Monitoring
+
+```python
+from celery import Celery, Task
+from celery.utils.log import get_task_logger
+
+logger = get_task_logger(__name__)
+app = Celery('tasks', broker='redis://localhost:6379/0')
+
+class MonitoredTask(Task):
+    def on_success(self, retval, task_id, args, kwargs):
+        logger.info(f"Task {task_id} succeeded", extra={"task_id": task_id})
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        logger.error(f"Task {task_id} failed: {exc}", extra={"task_id": task_id})
+        # Notify operations
+        notify_ops_channel(f"Task {task_id} failed: {exc}")
+
+@app.task(base=MonitoredTask, bind=True, max_retries=3, default_retry_delay=60)
+def process_order(self, order_id: int):
+    try:
+        order = get_order(order_id)
+        charge_payment(order)
+        send_confirmation(order)
+        logger.info("Order processed", extra={"order_id": order_id})
+    except PaymentError as exc:
+        raise self.retry(exc=exc)
+```
+
+## Production Considerations
+
+### ASGI Deployment with Uvicorn
+- Workers = `(2 * CPU cores) + 1` for sync workloads. `CPU cores * 2` for async.
+- `--limit-max-requests 10000` — prevents memory creep. Worker restarts after N requests.
+- Graceful shutdown: SIGTERM → Uvicorn stops accepting connections → waits for in-flight → exits.
+- Health checks: `/health` endpoint returning `{"status": "ok"}` with DB connectivity check.
+
+### Monitoring
+- Prometheus metrics with `prometheus_fastapi_instrumentator`. Track: request count, latency, error rate.
+- Structured logging: `python-json-logger` with `extra` for trace_id, user_id, tenant_id.
+- Sentry for error tracking: `sentry_sdk.init()` with `traces_sample_rate=0.1`.
+- Celery monitoring: Flower dashboard. Alert on queue depth > 1000, task failure rate > 5%.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| `from module import *` | Pollutes namespace. Breaks mypy. | Explicit imports. `__all__` in `__init__.py` |
+| `except: pass` | Swallows KeyboardInterrupt, SystemExit. | `except Exception: log.exception()` or re-raise |
+| Mutable default args | `def f(x=[])` — list shared across calls. | `def f(x=None): x = x or []` |
+| `datetime.now()` at module level | Evaluated at import time. Freezes timestamp. | Call inside function. `default_factory` in dataclasses |
+| Threading for CPU work | GIL limits to 1 core. | `multiprocessing` or `asyncio` for I/O |
+| `os.environ` in module scope | Can't mock in tests. | `os.getenv()` inside functions or pydantic-settings |
+
+## Performance Optimization
+
+- `__slots__` on dataclasses: `@dataclass(slots=True)` — 50% memory reduction per instance.
+- `asyncio.gather()` for concurrent I/O: 5x-10x throughput gain over sequential.
+- `lru_cache` on pure functions: TTL via `cachetools.TTLCache` for time-sensitive caching.
+- `io.StringIO` / `io.BytesIO` for string building in hot paths. Avoid `+=` concatenation.
+- `numpy` vectorization over Python loops for numeric operations. 10x-100x speedup.
+- `selectinload()` over `joinedload()` for to-many SQLAlchemy relationships. Prevents cartesian explosion.
+- Query coalescing: `aiocache` with `RedisCache` for identical concurrent requests.
+
+## Security Considerations
+
+- SQLAlchemy parameterized queries: `session.execute(select(User).where(User.id == user_id))`. Never f-strings.
+- JWT: `python-jose` with RS256. Validate `aud`, `iss`, `exp`, `iat`. Reject `alg: none`.
+- Password hashing: `bcrypt` or `argon2-cffi`. Minimum 12 rounds for bcrypt.
+- Secrets: pydantic-settings with `.env` file. Never commit `.env` to version control.
+- CORS: FastAPI `CORSMiddleware` with explicit `allow_origins`. Never `["*"]` in production.
+- Rate limiting: `slowapi` with in-memory or Redis backend. Apply to auth and write endpoints.
+- Input validation: Pydantic models on all API endpoints. Strip HTML with `markupsafe`.
+- HTTPS: enforce via middleware. Redirect HTTP to 301. HSTS header set.
+- CSRF: token-based for form submissions. FastAPI apps using JWT don't need CSRF for API routes.
+- Data retention: async cleanup job for expired sessions, OTP codes, temp files. GDPR compliance.

@@ -409,5 +409,115 @@ The platform tool stack must expose self-serve APIs. Domains should not need to 
   - references/mesh-principles.md — Data Mesh Principles
   - references/data-mesh-federated-governance.md — Data Mesh Federated Governance Deep Dive
   - references/data-mesh-infrastructure-platform.md — Data Mesh Infrastructure Platform
+## Architecture Decision Trees
+
+```
+Data Mesh Adoption Path
+├── Organizational readiness for domain ownership?
+│   ├── Yes → Federated governance + domain teams
+│   └── No → Start with centralized data platform first
+├── Number of domains?
+│   ├── < 5 domains → Start with single analytical domain
+│   ├── 5-15 domains → Mesh with domain squads
+│   └── > 15 domains → Full mesh with platform team
+├── Existing data lake/warehouse?
+│   ├── Yes → Migration: domain extraction from central lake
+│   └── No → Greenfield: domain-native data products
+└── Compliance requirements?
+    ├── Strict → Federated governance with central guardrails
+    └── Lenient → Domain self-governance
+```
+
+**Decision criteria**: Assess organizational maturity, domain delineation, existing infrastructure, and governance appetite.
+
+## Implementation Patterns
+
+### Data Product Contract
+```yaml
+# data_mesh/data_product_contract.yml
+data_product:
+  name: customer_360
+  domain: customer
+  owner: team-customer
+  version: "1.2.0"
+  maturity: production
+  schema:
+    - name: customer_id
+      type: string
+      required: true
+      pii: false
+    - name: email
+      type: string
+      required: true
+      pii: true
+    - name: total_spend
+      type: float
+      required: false
+  sla:
+    freshness: 1h
+    availability: 99.9%
+  access:
+    readers: [team-marketing, team-finance]
+    owners_only_write: true
+```
+
+### Domain Output Port
+```python
+# data_mesh/output_port.py
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class DataProductQuery(BaseModel):
+    filters: dict = {}
+    columns: list[str] = ["*"]
+    limit: int = 1000
+
+@app.post("/data-products/{domain}/{product}/query")
+async def query_data_product(
+    domain: str, product: str, query: DataProductQuery
+):
+    validate_access(domain, product, request.headers.get("Authorization"))
+    df = await read_data_product(domain, product)
+    result = apply_filters(df, query.filters)[query.columns].head(query.limit)
+    return result.to_dict(orient="records")
+```
+
+## Production Considerations
+
+- **Domain onboarding**: Onboard domains iteratively; provide template data product repos and CI/CD.
+- **Platform team**: Staff platform team with 1:10 ratio to domain teams; focus on infrastructure, not data.
+- **Inter-domain contracts**: Require versioned data contracts with compatibility checks before domain consumption.
+- **Global catalog**: Maintain mesh-wide catalog for data product discovery; domain teams publish metadata.
+- **Cost attribution**: Charge domain teams for storage/compute via chargeback model (AWS CUR allocation tags).
+- **SLO monitoring**: Monitor data product freshness, availability, and schema compliance centrally.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| Central governance committee | Bottleneck, defeats mesh purpose | Federated governance with minimal global rules |
+| One domain owning shared data | Single point of failure, politics | Split into sub-domains or shared product |
+| No data contract enforcement | Downstream breakage on schema change | CI checks on contract compatibility |
+| No platform team | Each domain reinvents infrastructure | Dedicated platform squad with APIs |
+| Treating mesh as tech problem only | Fails due to org resistance | Invest in change management and training |
+
+## Performance Optimization
+
+- **Domain data locality**: Keep data products in domain-owned storage (S3 prefixes, schemas) to avoid network hops.
+- **Materialized inter-domain joins**: Pre-join frequently used cross-domain data into shared materialized views.
+- **Query federation**: Use Trino/Presto for federated queries across domain data products; cache results.
+- **Compression**: Apply columnar compression (zstd) on data product outputs; use Arrow for interservice transfer.
+- **Rate limiting**: Throttle cross-domain query rates per consumer domain; prioritize SLAs.
+
+## Security Considerations
+
+- **Domain isolation**: Network isolate domain storage via VPC per domain; no cross-domain direct access.
+- **Data product auth**: Require OAuth 2.0 tokens for all data product API access; validate domain membership.
+- **PII tagging**: Require PII classification on every data product attribute; strip PII in non-privileged output ports.
+- **Audit**: Log all cross-domain data product queries and schema changes centrally.
+- **Compliance by contract**: Encode compliance rules (GDPR retention, CCPA opt-out) in data product contract.
+
 ## Handoff
 `data-data-platform` for platform infrastructure. `data-data-catalog` for discovery. `data-data-contracts` for data product contracts. `data-data-observability` for cross-domain monitoring. `data-data-quality` for quality standards.

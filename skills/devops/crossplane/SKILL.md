@@ -408,3 +408,120 @@ Using a single ProviderConfig for all environments. Create separate ProviderConf
 
 ## Handoff
 Next: **terraform** — Terraform vs Crossplane comparison for IaC.
+
+## Implementation Patterns
+
+### YAML: Composite Resource (XRD) with Composition
+
+```yaml
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+spec:
+  group: infrastructure.acme.co
+  names:
+    kind: XPostgreSQL
+    plural: xpostgresqls
+  claimNames:
+    kind: PostgreSQL
+    plural: postgresqls
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                region:
+                  type: string
+                storageGB:
+                  type: integer
+                  default: 100
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+spec:
+  compositeTypeRef:
+    apiVersion: infrastructure.acme.co/v1alpha1
+    kind: XPostgreSQL
+  resources:
+    - name: rds-instance
+      base:
+        apiVersion: database.aws.crossplane.io/v1beta1
+        kind: RDSInstance
+        spec:
+          forProvider:
+            engine: postgres
+            engineVersion: "15"
+            dbInstanceClass: db.t3.medium
+            masterUsername: postgres
+            allocatedStorage: 100
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.storageGB
+          toFieldPath: spec.forProvider.allocatedStorage
+```
+
+### Bash: Crossplane Provider Health Check
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+check_providers() {
+  kubectl get provider -o json | jq -r '
+    .items[] | select(.status.conditions[]?.type == "Healthy") |
+    "\(.metadata.name): \(.status.conditions[] | select(.type == "Healthy") | .status)"
+  '
+
+  UNHEALTHY=$(kubectl get provider -o json | jq '
+    [.items[] | select(.status.conditions[]?.type == "Healthy" and .status.conditions[]?.status != "True")] | length
+  ')
+
+  if [ "$UNHEALTHY" -gt 0 ]; then
+    echo "WARNING: $UNHEALTHY provider(s) are unhealthy"
+    exit 1
+  fi
+}
+```
+
+## Production Considerations
+
+- Use **crossplane packages** to distribute compositions across clusters via OCI registries
+- Pin provider versions with **version constraints** to prevent unexpected upgrades
+- Configure **ProviderConfig** with IRSA (IAM Roles for Service Accounts) instead of hardcoded creds
+- Enable **crossplane-rbac** to restrict which claims each namespace team can create
+- Set **resource limits** on crossplane pods — composition reconciliation is CPU intensive
+- Use **composition functions** (Go, Python) for complex transformations beyond patching
+- Monitor provider API call rates to avoid hitting AWS/GCP/Azure throttling limits
+
+## Anti-Patterns
+
+- Creating **one massive XRD** that tries to provision everything — compose smaller, reusable XRDs
+- Using **`dependsOn`** heavily — prefer composition functions or patches to order resources
+- Keeping **provider credentials** as raw Kubernetes secrets — always use external secret stores
+- Ignoring **claim namespaces** — every team deploying claims pollutes the crossplane system namespace
+- Mixing **composition versions** without migration strategies — breaking changes affect all claims
+- Overusing **`patchSets`** for simple mappings — inline patches are more readable
+- Forgetting to **prune deleted resources** — crossplane leaves orphaned cloud resources if not configured
+
+## Performance Optimization
+
+- Set **`spec.reclaimPolicy: Delete`** on managed resources to auto-clean when claims are deleted
+- Use **`provider-xxx` resource timeouts** to prevent stuck reconciliations from blocking the queue
+- Optimize **composition revision history** — keep only last 3 revisions with `revisionHistoryLimit: 3`
+- Reduce **API call rate** by batching updates in composition functions instead of per-resource patches
+- Tune **crossplane controller manager** `--max-reconcile-rate` for the cluster size
+- Use **composition function results caching** to avoid re-evaluating unchanged inputs
+- Set **readiness checks** on individual composed resources to surface provisioning status early
+
+## Security Considerations
+
+- Restrict **crossplane ServiceAccount** with least-privilege ClusterRole — never use cluster-admin
+- Rotate **provider credentials** via external secrets operator with automatic refresh
+- Enable **composition dry-run** validation in CI before applying to production
+- Use **OPA/Gatekeeper** to validate claim parameters (e.g., enforce max storage size)
+- Scan **crossplane packages** for vulnerabilities before installing from OCI registries
+- Audit **managed resource deletions** with Kubernetes audit logs and alert on mass deletions
+- Set **NetworkPolicy** to restrict crossplane pod egress to only cloud provider API endpoints

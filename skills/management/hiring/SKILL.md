@@ -413,3 +413,106 @@ Candidate: __________  Reference: __________  Relationship: __________
 ## Handoff
 `management/team-rules` for onboarding new hires
 `planning/create-roadmap` for capacity planning
+
+## Architecture Decision Trees
+
+### Interview Process Design
+| Decision Point | Option A | Option B | Decision Criteria |
+|---|---|---|---|
+| Interview format | Structured (consistent, fair) | Unstructured (conversational) | Legal compliance, scale, role type |
+| Technical assessment | Take-home project (realistic) | Live coding (pressure test) | Candidate preference, time constraints |
+| Panel size | 2-3 interviewers (efficient) | 4-5 interviewers (diverse input) | Seniority of role, bias reduction goals |
+
+### Role Leveling Decision
+- Individual Contributor → Technical screen + coding + system design + behavioral
+- Manager → Technical screen + people scenarios + case study + stakeholder panel
+- Executive → Presentation + strategy case + board panel + culture fit with CEO
+
+## Implementation Patterns
+
+### Interview Scorecard Template
+`markdown
+## Candidate: {name} | Role: {title} | Interviewer: {name}
+
+### Technical Competence (1-5)
+- Problem-solving approach: ___
+- Code quality & structure: ___
+- Edge case handling: ___
+- Communication: ___
+
+### Behavioral (1-5)
+- Collaboration examples: ___
+- Conflict resolution: ___
+- Ownership demonstrated: ___
+
+### Verdict
+- Score: ___/40
+- Recommendation: [Strong Yes / Yes / No / Strong No]
+- Notes: ___
+`
+
+### Offer Letter Template
+`markdown
+Dear {candidate},
+
+We are delighted to offer you the position of {title} at {company}.
+
+## Offer Details
+- Base salary: {amount}
+- Equity: {shares / options}
+- Start date: {date}
+- Reporting to: {manager}
+
+## Benefits
+- Health insurance: {details}
+- PTO: {days}
+- Remote policy: {details}
+
+This offer expires {date}. Please sign and return by {deadline}.
+`
+
+## Production Considerations
+
+### Pipeline Management
+- **SLA for feedback**: Require interviewer feedback within 24 hours. Use reminder automation for pending feedback.
+- **Candidate experience**: Send timely updates at each stage. Provide constructive rejection feedback when possible.
+- **Offer velocity**: Target < 5 business days from final interview to offer. Have offer approval pre-authorized for strong candidates.
+
+### Legal Compliance
+- **Structured interviews**: Use same questions for all candidates for same role. Document interview process for audit.
+- **EEO compliance**: Track diversity metrics across pipeline. Review for adverse impact on protected groups.
+- **Data retention**: Store candidate data per GDPR/CCPA requirements. Auto-delete after 12 months post-decision.
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Solution |
+|---|---|---|
+| Culture fit as excuse | Homogenous hiring | Define culture add, not culture fit. Use structured values assessment |
+| Resume screening bias | Skipping qualified non-traditional candidates | Blind resume review, skills-based assessment first |
+| Panel groupthink | First impression dominates | Collect scores independently before discussion |
+| Ghosting candidates | Bad Glassdoor reputation | Set expectations on timeline, send auto-updates |
+| Over-indexing on whiteboarding | Misses great engineers | Offer alternative assessment formats |
+
+## Performance Optimization
+
+### Time-to-Hire Reduction
+- **Asynchronous screening**: Use recorded video answers for initial screening. Review on-demand, schedule only promising candidates.
+- **Calibrated interviewers**: Quarterly calibration sessions to align scoring. Reduce false negatives from overly strict interviewers.
+- **Offer acceleration**: Pre-approve offer ranges for common roles. Delegated signing authority for hiring managers.
+
+### Quality of Hire
+- **Skills-based hiring**: Replace resume screens with work-sample tests. Validate actual ability, not credential signaling.
+- **Structured reference checks**: Use competency-based reference questions. Call references after final interview, not before.
+- **Hiring manager training**: Train managers on interviewing best practices. Reduce interviewer bias through awareness training.
+
+## Security Considerations
+
+### Data Privacy
+- **Candidate data**: Encrypt resumes and interview notes at rest. Limit access to hiring team and HR only.
+- **Background checks**: Obtain explicit consent before running background checks. Store results in separate secured system.
+- **Interview recordings**: Obtain consent for recorded interviews. Delete recordings within 30 days of decision.
+
+### Anti-Fraud
+- **Identity verification**: Verify candidate identity during video interviews. Use background checks for final candidates.
+- **Credential verification**: Verify claimed degrees and certifications. Check work history references thoroughly.
+- **Offer security**: Send offers through secure portals, not unencrypted email. Require signed acceptance with ID verification.

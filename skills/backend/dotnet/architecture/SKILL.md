@@ -435,3 +435,216 @@ Use `WebApplicationFactory<T>` for integration tests. Use `Testcontainers` for S
   - references/project-structure.md — Project Structure Reference
 ## Handoff
 Hand off to `backend/dotnet/patterns/SKILL.md` for MediatR pipelines, result pattern, and EF Core patterns.
+## Implementation Patterns
+
+### Factory Pattern for Module Creation
+`
+function createModule<T>(config: ModuleConfig): T {
+  const dependencies = initializeDependencies(config);
+  const module = new Module(dependencies);
+  module.hooks.onInit();
+  return module as T;
+}
+`
+
+### Builder Pattern for Complex Configuration
+`
+class ConfigBuilder {
+  private config: AppConfig = new AppConfig();
+  withDatabase(url: string): ConfigBuilder { ... }
+  withCache(ttl: number): ConfigBuilder { ... }
+  withLogging(level: string): ConfigBuilder { ... }
+  build(): AppConfig { return this.config; }
+}
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Production build with optimizations enabled
+- [ ] Environment variables configured per environment
+- [ ] Health check endpoint responds correctly
+- [ ] Error tracking and monitoring integrated
+- [ ] Logging level configured (not debug in production)
+- [ ] Resource limits configured
+- [ ] Database migrations applied
+- [ ] Static assets built and served from CDN or cache
+- [ ] Feature flags toggled appropriately
+- [ ] Rollback plan documented and tested
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% | Critical | Rollback or fix |
+| p95 latency | > 500ms | Warning | Profile and optimize |
+| Uptime | < 99.9% | Critical | Investigate infrastructure |
+| Memory usage | > 80% | Warning | Check for leaks |
+| CPU usage | > 80% | Warning | Scale up or optimize |
+
+## Rules
+- Prefer composition over inheritance
+- Favor immutable data structures
+- Use dependency injection for testability
+- Keep functions pure when possible — no side effects
+- Fail fast with clear error messages
+- Don't repeat yourself (DRY) — extract shared logic
+- Keep it simple (KISS) — avoid unnecessary complexity
+- You aren't gonna need it (YAGNI) — build what's required
+- Separate concerns — single responsibility per module
+- Code to interfaces, not implementations
+- Write self-documenting code — clear names over comments
+- Prefer standard library over third-party dependencies
+- Handle errors explicitly — no silent failures
+- Validate inputs at boundaries
+- Log at appropriate levels (debug, info, warn, error)
+
+## Implementation Patterns
+
+### Pattern: MediatR + CQRS Pipeline
+
+```csharp
+public class GetOrderQuery : IRequest<OrderDto>
+{
+    public Guid OrderId { get; init; }
+}
+
+public class GetOrderHandler : IRequestHandler<GetOrderQuery, OrderDto>
+{
+    private readonly IOrderRepository _repository;
+    private readonly IMapper _mapper;
+
+    public GetOrderHandler(IOrderRepository repository, IMapper mapper)
+    {
+        _repository = repository;
+        _mapper = mapper;
+    }
+
+    public async Task<OrderDto> Handle(GetOrderQuery request, CancellationToken ct)
+    {
+        var order = await _repository.GetByIdAsync(request.OrderId, ct);
+        return _mapper.Map<OrderDto>(order);
+    }
+}
+```
+
+### Pattern: FluentValidation Pipeline Behaviour
+
+```csharp
+public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : IRequest<TResponse>
+{
+    private readonly IEnumerable<IValidator<TRequest>> _validators;
+
+    public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
+    {
+        _validators = validators;
+    }
+
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
+    {
+        if (!_validators.Any()) return await next();
+
+        var context = new ValidationContext<TRequest>(request);
+        var failures = _validators
+            .Select(v => v.Validate(context))
+            .SelectMany(r => r.Errors)
+            .Where(f => f != null)
+            .ToList();
+
+        if (failures.Count != 0)
+            throw new ValidationException(failures);
+
+        return await next();
+    }
+}
+```
+
+## Production Considerations
+
+- .NET version upgrades: plan for LTS releases. Test against previews. Deprecation window: 6 months.
+- Assembly binding redirects: audit for version conflicts. Central package management with `Directory.Packages.props`.
+- Startup performance: `ReadyToRun` images. Assembly trimming for self-contained deployments.
+- Memory management: configure GC mode (Server vs Workstation). Monitor `# Gen 0/1/2 collections`.
+- Thread pool sizing: avoid thread pool starvation in async code. Use `Task.Run` only for CPU-bound work.
+- Connection pooling: default 100 per connection string. Tune based on concurrent request volume.
+- Health checks: `AddHealthChecks` with liveness (light) and readiness (deep) probes.
+- Distributed tracing: OpenTelemetry with W3C TraceContext. Export to Datadog, Jaeger, or AppInsights.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| Async void | Crash on exception. Uncatchable. | Always return `Task` or `Task<T>`. |
+| Blocking in async code | Thread pool starvation. Deadlocks. | Use `await` all the way. No `.Result` or `.Wait()`. |
+| Giant startup class | SRP violation. Hard to test. | Modular startup with `StartupFilter` or `IHostingStartup`. |
+| Stringly-typed configuration | No compile-time safety. | Strongly-typed options with `IOptions<T>`. |
+| Ignoring cancellation tokens | Hung requests on shutdown. | Pass `CancellationToken` to all async methods. |
+| Catching `Exception` broadly | Swallows critical failures. | Catch specific exceptions. Re-throw if not recoverable. |
+
+## Performance Optimization
+
+- `AsNoTracking()` for read-only queries. Skip EF change tracker overhead.
+- Compiled queries with `EF.Functions.Like` for dynamic filtering.
+- `ValueTask` for synchronous completion paths. Avoid `Task` allocation.
+- Array pool (`System.Buffers.ArrayPool<T>`) for buffer-heavy operations.
+- StringBuilder pool for string concatenation in hot paths.
+- Lazy initialization with `Lazy<T>` and `LazyInitializer`.
+- `ConcurrentDictionary` over locks for read-heavy caches.
+- Span/memory for high-performance parsing. Zero-allocation string processing.
+- `IAsyncEnumerable<T>` for streaming large result sets.
+- JSON source generators for AOT-native serialization.
+
+## Security Considerations
+
+- Data protection: `IDataProtector` for encrypting sensitive data. Key management with Azure Key Vault.
+- ASP.NET Core Data Protection API for cookie, CSRF, and anti-forgery tokens.
+- Authentication: JWT Bearer with short expiry (15 min). Refresh tokens with rotation.
+- Authorization: policy-based with claims. `[Authorize(Policy = "RequireAdmin")]`.
+- Anti-forgery: `[AutoValidateAntiforgeryToken]` on all POST endpoints.
+- CORS: restrict origins. No wildcard in production.
+- CSP: Content-Security-Policy header. Restrict script-src and style-src.
+- Input validation: `[FromBody]` with `[Required]` attributes. FluentValidation for complex rules.
+- Output encoding: Razor auto-encodes. API responses use content negotiation.
+- Secrets: User Secrets in dev. Azure Key Vault / AWS Secrets Manager in prod.
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets

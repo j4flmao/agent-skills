@@ -407,3 +407,205 @@ Use `app.request()` for HTTP testing without a server — works in Node, Bun, De
   - references/hono-testing.md — Testing Patterns
 ## Handoff
 Hand off to `backend/nodejs/drizzle/SKILL.md` for Drizzle ORM or `backend/nodejs/patterns/SKILL.md` for advanced Node patterns.
+## Implementation Patterns
+
+### Factory Pattern for Module Creation
+`
+function createModule<T>(config: ModuleConfig): T {
+  const dependencies = initializeDependencies(config);
+  const module = new Module(dependencies);
+  module.hooks.onInit();
+  return module as T;
+}
+`
+
+### Builder Pattern for Complex Configuration
+`
+class ConfigBuilder {
+  private config: AppConfig = new AppConfig();
+  withDatabase(url: string): ConfigBuilder { ... }
+  withCache(ttl: number): ConfigBuilder { ... }
+  withLogging(level: string): ConfigBuilder { ... }
+  build(): AppConfig { return this.config; }
+}
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Production build with optimizations enabled
+- [ ] Environment variables configured per environment
+- [ ] Health check endpoint responds correctly
+- [ ] Error tracking and monitoring integrated
+- [ ] Logging level configured (not debug in production)
+- [ ] Resource limits configured
+- [ ] Database migrations applied
+- [ ] Static assets built and served from CDN or cache
+- [ ] Feature flags toggled appropriately
+- [ ] Rollback plan documented and tested
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% | Critical | Rollback or fix |
+| p95 latency | > 500ms | Warning | Profile and optimize |
+| Uptime | < 99.9% | Critical | Investigate infrastructure |
+| Memory usage | > 80% | Warning | Check for leaks |
+| CPU usage | > 80% | Warning | Scale up or optimize |
+
+## Rules
+- Prefer composition over inheritance
+- Favor immutable data structures
+- Use dependency injection for testability
+- Keep functions pure when possible — no side effects
+- Fail fast with clear error messages
+- Don't repeat yourself (DRY) — extract shared logic
+- Keep it simple (KISS) — avoid unnecessary complexity
+- You aren't gonna need it (YAGNI) — build what's required
+- Separate concerns — single responsibility per module
+- Code to interfaces, not implementations
+- Write self-documenting code — clear names over comments
+- Prefer standard library over third-party dependencies
+- Handle errors explicitly — no silent failures
+- Validate inputs at boundaries
+- Log at appropriate levels (debug, info, warn, error)
+
+## Implementation Patterns
+
+### Pattern: Hono Middleware Chain
+
+```typescript
+import { Hono, MiddlewareHandler } from 'hono';
+import { getCookie, setCookie } from 'hono/cookie';
+import { cors } from 'hono/cors';
+import { jwt } from 'hono/jwt';
+
+const app = new Hono();
+
+app.use('/*', cors());
+app.use('/api/*', jwt({ secret: Bun.env.JWT_SECRET! }));
+
+const logger: MiddlewareHandler = async (c, next) => {
+  const start = Date.now();
+  await next();
+  const ms = Date.now() - start;
+  console.log(`${c.req.method} ${c.req.url} ${c.res.status} ${ms}ms`);
+};
+
+app.use('*', logger);
+```
+
+### Pattern: Validation with Zod
+
+```typescript
+import { z } from 'zod';
+import { zValidator } from '@hono/zod-validator';
+
+const userSchema = z.object({
+  name: z.string().min(2).max(100),
+  email: z.string().email(),
+  age: z.number().int().positive().optional(),
+});
+
+app.post('/users', zValidator('json', userSchema), async (c) => {
+  const data = c.req.valid('json');
+  const user = await createUser(data);
+  return c.json(user, 201);
+});
+
+// Query params validation
+const querySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().max(100).default(20),
+});
+
+app.get('/users', zValidator('query', querySchema), async (c) => {
+  const { page, limit } = c.req.valid('query');
+  const users = await listUsers(page, limit);
+  return c.json(users);
+});
+```
+
+## Production Considerations
+
+- Runtime: Hono runs on Bun, Deno, Node.js. Bun preferred for cold start < 50ms.
+- Middleware order: security middleware first (CORS, auth, rate-limit). Logger last.
+- Error handling: global `app.onError` handler. Return structured error responses.
+- Body size limits: `app.use('*', bodyLimit({ maxSize: 1024 * 1024 }))`.
+- Compression: `hono/compress` middleware for text responses.
+- Timeouts: `hono/timeout` for route groups. Stale request termination.
+- Rate limiting: `hono/rate-limiter` with in-memory or Redis storage.
+- Health checks: dedicated `/health` route. Light probe. No middleware.
+
+## Anti-Patterns
+
+| Anti-Pattern | Why It Hurts | Fix |
+|---|---|---|
+| Heavy middleware on every route | Unnecessary compute on static assets. | Apply middleware selectively. `app.use('/api/*')`. |
+| Catching all errors generically | Lost context. Hard to debug. | Specific error handlers. Zod validation errors separate. |
+| Routes without typing | Potential parameter mismatch. | `c.req.param()` typed via route template. |
+| No request ID | Can't trace across services. | Add request ID middleware. Pass to downstream calls. |
+| Mixing sync and async middleware | Missed error handling. | All middleware either sync or async. Be consistent. |
+
+## Performance Optimization
+
+- Hono is already sub-1ms overhead. Avoid wrapping in unnecessary abstractions.
+- Use `c.json()` and `c.text()` directly. Avoid Express-style `res.send()` wrappers.
+- Static files: serve via CDN or Bun's `Bun.file()`. Not through Hono in production.
+- Streaming: `c.stream()` for large responses. No buffering in memory.
+- `c.notFound()` returns early. Avoid middleware chain for unmatched routes.
+- Route grouping with `app.route('/api', api)` for logical separation.
+- JWT validation: cache public key. Verify only on mutating endpoints.
+- Edge deployment: Hono on Cloudflare Workers. Minify bundle under 1MB.
+
+## Security Considerations
+
+- JWT: `hono/jwt` middleware. Short expiry. Validate audience and issuer.
+- CORS: `hono/cors` with specific origin. No `Access-Control-Allow-Origin: *` in prod.
+- CSRF: double-submit cookie pattern for cookie-based auth.
+- Rate limiting: per-IP token bucket. Stricter limits for auth endpoints.
+- Input validation: Zod on all input sources (json, query, param, form).
+- Headers: `hono/secure-headers` for CSP, HSTS, X-Frame-Options, X-Content-Type-Options.
+- Sensitive data: never log request/response bodies. Mask in structured logs.
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets

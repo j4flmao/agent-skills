@@ -428,3 +428,272 @@ Cloud storage: higher cost per GB, no replica management, built-in HA (AWS handl
 
 ## Handoff
 Hand off to `devops/monitoring/SKILL.md` for monitoring integration. Hand off to `devops/helm-patterns/SKILL.md` for Helm deployment best practices.
+
+## Architecture Decision Trees
+
+### Longhorn vs Other K8s Storage Solutions
+
+| Decision | Longhorn | Rook/Ceph | Portworx | OpenEBS |
+|---|---|---|---|---|
+| Complexity | Low (Helm install) | High (multiple operators) | Medium | Low to medium |
+| Performance | Good (NVMe-backed) | Great (Ceph tuned) | Excellent | Varies by engine |
+| Replication | 1-3 replicas, sync/async | 1-3 replicas, sync | 1-3 replicas, sync | 1-3 replicas, async |
+| Built-in backup | Yes (S3, NFS) | Yes (RGW, OSD) | Yes (PX-Backup) | Via Velero |
+| License | Open Source (Apache 2.0) | Open Source (Apache 2.0) | Commercial | Open Source (Apache 2.0) |
+| Best for | Edge, small-medium K8s | Enterprise, large clusters | Enterprise, compliance | Simple attached storage |
+
+### Replica Count Decision
+
+| Replicas | Durability | Storage cost | Write performance |
+|---|---|---|---|
+| 1 | Low (single disk failure) | 1x | Fastest |
+| 2 | Medium (one replica failure) | 2x | Moderate |
+| 3 | High (two replica tolerance) | 3x | Slowest |
+
+## Implementation Patterns
+
+### YAML: Longhorn StorageClass with Replicas and Encryption
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-encrypted
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+parameters:
+  numberOfReplicas: "3"
+  staleReplicaTimeout: "2880"
+  fromBackup: ""
+  fsType: ext4
+  encrypted: "true"
+  unboundMountMode: "global"
+  backingImage: ""
+  backingImageURL: ""
+  diskSelector: "ssd"
+  nodeSelector: "storage-optimized"
+  recurringJobSelector: |
+    [
+      {"name": "snapshot-daily"},
+      {"name": "backup-weekly"},
+      {"name": "filesystem-trim"}
+    ]
+reclaimPolicy: Delete
+```
+
+### Bash: Longhorn Backup and Restore
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+create_longhorn_backup() {
+  local volume=$1
+  local backup_target=${2:-"s3://backups/longhorn"}
+
+  kubectl -n longhorn-system create job \
+    "manual-backup-$(date +%s)" \
+    --image=longhornio/longhorn-engine:v1.7.0 \
+    --command -- \
+    longhorn backup create \
+    --backup-target "$backup_target" \
+    --volume "$volume"
+}
+
+restore_from_backup() {
+  local backup_url=$1
+  local pvc_name=$2
+
+  kubectl apply -f - <<EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: $pvc_name-restored
+spec:
+  storageClassName: longhorn
+  dataSource:
+    name: $backup_url
+    kind: VolumeBackup
+    apiGroup: longhorn.io
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+EOF
+}
+
+monitor_longhorn_health() {
+  while true; do
+    for node in $(kubectl get nodes -o name); do
+      HEALTH=$(curl -sf "http://${node}:9500/v1/health" || echo "DOWN")
+      echo "$(date): $node → $HEALTH"
+    done
+    sleep 60
+  done
+}
+```
+
+## Production Considerations
+
+- Use **dedicated disks** for Longhorn (not OS disks) — separate data plane from system plane
+- Configure **node selectors and disk selectors** to isolate storage workloads on storage-optimized nodes
+- Set **`replica-auto-balance: best-effort`** to automatically redistribute replicas when nodes join/leave
+- Enable **snapshot pruning** with recurring jobs to prevent disk exhaustion (keep last 7 daily snapshots)
+- Deploy **Longhorn in dedicated nodes** with taints and tolerations for stable storage performance
+- Configure **Storage Network** (separate from Kubernetes cluster network) for replica traffic
+- Set **Orphaned Replica** auto-cleanup interval to 1 hour to reclaim space from failed nodes
+
+## Anti-Patterns
+
+- Using **OS disk for Longhorn storage** — I/O contention with kubelet, containerd, system logs
+- Setting **replica count = 1** on production volumes — single disk failure causes data loss
+- Running **Longhorn on unreliable network** — replica sync uses bandwidth; flapping nodes cause rebuild storms
+- Ignoring **disk pressure** — Longhorn doesn't throttle writes; full disks cause volume failures
+- Mixing **Longhorn volumes with hostPort** — port 9500 collides when running multiple engines per node
+- Using **default reclaim policy** without backup — set `reclaimPolicy: Retain` for critical data
+- Allowing **unrestricted volume expansion** — expanding too aggressively can deplete disk space across replicas
+
+## Performance Optimization
+
+- Use **NVMe SSDs** for Longhorn data disks — HDDs bottleneck sync I/O at high replica counts
+- Tune **Longhorn engine CPU requests** — each volume engine requires ~0.5 CPU core for I/O processing
+- Set **`disableRevisionCounter: true`** on volumes to reduce write amplification from metadata updates
+- Enable **IOPS and throughput limits** on volumes to prevent noisy-neighbor scenarios
+- Use **Local Volume Provisioner** for applications that don't need replication (DaemonSet logs, temp data)
+- Configure **BackupStore poll interval** to 3600s — frequent polling for S3 backup metadata is expensive
+- Increase **concurrent volume rebuild limit** per node from the default 1 for faster recovery after node failure
+
+## Security Considerations
+
+- Enable **Longhorn encryption** at the StorageClass level — uses LUKS with per-volume keys
+- Restrict **Longhorn UI** access to cluster admins only via Kubernetes Ingress with OIDC auth
+- Use **RBAC** to limit who can create/modify Longhorn volumes, snapshots, backups
+- Configure **backup target** with IAM roles (S3) or service principal (Azure Blob) — never use access keys
+- Encrypt **backup targets** with server-side encryption (SSE-S3 for AWS, AES-256 for Azure)
+- Set **network policies** to restrict Longhorn engine traffic between pods in the same namespace
+- Audit **volume snapshot and restore** operations — snapshots can bypass application-level access controls
+## Implementation Patterns
+
+### Observer Pattern for Event Handling
+`
+interface EventObserver<T> {
+  onEvent(event: T): Promise<void>;
+}
+
+class EventBus<T> {
+  private observers: Set<EventObserver<T>> = new Set();
+  subscribe(observer: EventObserver<T>): void {
+    this.observers.add(observer);
+  }
+  unsubscribe(observer: EventObserver<T>): void {
+    this.observers.delete(observer);
+  }
+  async emit(event: T): Promise<void> {
+    const results = Array.from(this.observers).map(o => o.onEvent(event));
+    await Promise.allSettled(results);
+  }
+}
+`
+
+### Configuration-Driven Approach
+`
+config:
+  defaults:
+    timeout: 30s
+    retryCount: 3
+  overrides:
+    production:
+      timeout: 60s
+      retryCount: 5
+    development:
+      timeout: 300s
+      retryCount: 1
+`
+
+## Production Considerations
+
+### Deployment Checklist
+- [ ] Configuration validated against schema before startup
+- [ ] Health check endpoints registered and monitored
+- [ ] Graceful shutdown with draining period (30s timeout)
+- [ ] Resource limits configured (CPU, memory, file descriptors)
+- [ ] Log level set appropriate for environment
+- [ ] Metrics endpoint secured and exposed
+- [ ] Rate limiting configured per-tier
+- [ ] TLS certificates valid and auto-renewing
+- [ ] Database migrations run as separate deployment step
+- [ ] Feature flags ready for gradual rollout
+
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% over 5min | Critical | Page on-call |
+| p99 latency | > 2s over 5min | Warning | Investigate |
+| Throughput drop | > 50% over 1min | Critical | Check upstream |
+| Queue depth | > 1000 over 1min | Warning | Scale consumers |
+| Disk usage | > 85% | Warning | Clean or expand |
+| Memory usage | > 90% heap | Critical | Restart or scale |
+
+## Anti-Patterns
+
+| Anti-Pattern | Symptom | Root Cause | Solution |
+|-------------|---------|------------|----------|
+| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
+| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
+| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
+| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
+
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+## Rules
+- Default-deny security posture — allow only explicitly required access.
+- All inputs validated, all outputs encoded, all errors handled.
+- Defend in depth — multiple layers of security controls.
+- Fail securely — errors default to safe behavior.
+- Log security-relevant events for audit and investigation.
+- Keep dependencies updated — automate vulnerability scanning.
+- Design for observability from day one, not as an afterthought.
+- Document all architectural decisions with rationale.
+- Review code for security, performance, and correctness before merging.

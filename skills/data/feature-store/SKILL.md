@@ -449,6 +449,112 @@ Feature freshness requirement?
   - references/feature-validation-monitoring.md — Feature Validation and Monitoring
   - references/offline-feature-computation.md — Offline Feature Computation
   - references/online-serving.md — Online Feature Serving Reference
+## Architecture Decision Trees
+
+```
+Feature Store Selection
+├── ML framework ecosystem?
+│   ├── Python-heavy → Feast (Python-native, great with scikit-learn/XGBoost)
+│   ├── Spark ecosystem → Feature Store on Databricks / SageMaker
+│   └── Multi-language → Tecton (SaaS, Python + SQL + Spark)
+├── Online serving required?
+│   ├── Yes → Feast + Redis/DynamoDB (low-latency serving)
+│   └── No → Offline-only (Feast BigQuery/Redshift)
+├── Point-in-time correct joins?
+│   ├── Yes → Feast (temporal join built-in)
+│   └── No → Custom SQL with window functions
+└── Feature sharing across teams?
+    ├── Yes → Centralized registry (Feast with GCS/S3 registry)
+    └── No → Per-team feature definitions
+```
+
+**Decision criteria**: Evaluate online/offline serving needs, team ML maturity, feature reuse goals, and infrastructure compatibility.
+
+## Implementation Patterns
+
+### Feast Feature Definition
+```python
+# feature_store/features.py
+from feast import Entity, FeatureView, ValueType, FeatureService
+from feast.infra.offline_stores.bigquery_source import BigQuerySource
+
+customer = Entity(
+    name="customer_id",
+    value_type=ValueType.INT64,
+    description="Customer identifier",
+)
+
+order_features = FeatureView(
+    name="order_features",
+    entities=[customer],
+    ttl="90d",
+    online=True,
+    source=BigQuerySource(
+        query="SELECT customer_id, order_count, avg_order_value, last_order_date FROM feature_store.order_aggregates"
+    ),
+    tags={"team": "fraud", "tier": "critical"},
+)
+```
+
+### Online Feature Serving
+```python
+# feature_store/online_serving.py
+from feast import FeatureStore
+
+class FeatureServingClient:
+    def __init__(self, repo_path: str = "./feature_repo"):
+        self.store = FeatureStore(repo_path)
+
+    def get_online_features(self, features: list[str], entities: list[dict]) -> dict:
+        feature_vector = self.store.get_online_features(
+            features=features,
+            entities=entities,
+        ).to_dict()
+        return feature_vector
+
+    def get_historical_features(self, entity_df, features: list[str]):
+        job = self.store.get_historical_features(
+            entity_df=entity_df,
+            features=features,
+        )
+        return job.to_df()
+```
+
+## Production Considerations
+
+- **Online store sizing**: Provision Redis cluster with enough memory for all active features (~2x expected size for overhead).
+- **Feature freshness**: Set TTL per feature view based on update frequency; stale features auto-expire.
+- **Feature validation**: Validate feature distributions against training baseline; alert on drift > 2σ.
+- **Registry synchronization**: Sync feature registry across environments (dev → staging → prod) via CI/CD.
+- **Point-in-time correctness**: Ensure training datasets use point-in-time joins to prevent data leakage.
+- **Monitoring**: Track online serving latency (p99 < 10ms), feature retrieval rate, and cache hit rate.
+
+## Anti-Patterns
+
+| Anti-Pattern | Consequence | Solution |
+|---|---|---|
+| No point-in-time join in training | Data leakage, inflated model accuracy | Use Feast temporal joins |
+| Features not shared between models | Duplicate computation, inconsistency | Register features in central registry |
+| Overly long TTL on features | Serving stale features for inference | Set TTL based on feature update cadence |
+| Online store without failover | Serving outage on Redis failure | Deploy Redis cluster with replica nodes |
+| Ignoring feature correlation | Colinear features degrade models | Track feature correlation matrix in registry |
+
+## Performance Optimization
+
+- **Online store caching**: Add local cache (Redis on same node) for frequently accessed features; TTL 60s.
+- **Batch feature materialization**: Pre-compute batch features hourly; use incremental materialization.
+- **Vectorized serving**: Batch entity requests into groups of 100 for reduced network round-trips.
+- **Feature embedding**: Pre-compute embedding features offline; serve from vector DB (FAISS, Pinecone).
+- **Parquet optimization**: Store offline feature data in Parquet with partition pruning by date and entity key.
+
+## Security Considerations
+
+- **Feature ACLs**: Restrict feature access by team/service account; sensitive features require approval.
+- **Online store encryption**: Enable Redis encryption in transit (TLS) and at rest (AES-256).
+- **Registry protection**: Sign feature registry commits; verify signatures in CI/CD deployment.
+- **Audit trail**: Log all feature registry changes, materialization runs, and online serving requests.
+- **Compliance**: Tag features containing PII; strip or hash PII features in non-production environments.
+
 ## Handoff
 `streaming` for real-time feature computation with Kafka and Flink
 `etl-pipeline` for batch feature engineering orchestration with Airflow
