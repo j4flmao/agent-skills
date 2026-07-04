@@ -1,165 +1,216 @@
 # Training Pipeline
 
-## Pipeline Architecture
+## 1. Advanced Strategy and Execution
 
-```
-Data Collection → Preprocessing → Tokenization → Training → Evaluation → Export
-       │               │              │             │           │           │
-       ▼               ▼              ▼             ▼           ▼           ▼
-  Raw data      Clean JSON     Token IDs      Checkpoints    Metrics    Adapter/Model
-```
+To optimize **Training Pipeline**, we enforce the following foundational rules:
 
-## Data Processing
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
 
-### Collection Sources
-- User interactions (production logs, anonymized)
-- Human-annotated data (labeling platform)
-- Synthetic generation (LLM-generated + validated)
-- Public datasets (filtered and formatted)
-
-### Preprocessing Steps
+### Core Implementation
 ```python
-def preprocess_pipeline(raw_data):
-    # 1. Deduplicate
-    data = deduplicate(raw_data, threshold=0.85)
-    
-    # 2. Filter quality
-    data = [d for d in data if quality_score(d) > 0.7]
-    
-    # 3. Anonymize
-    data = [anonymize(d) for d in data]
-    
-    # 4. Format
-    data = [format_messages(d) for d in data]
-    
-    # 5. Split
-    train, eval, test = split(data, ratios=[0.8, 0.1, 0.1])
-    
-    return train, eval, test
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### Tokenization
+---
+
+## 2. Advanced Strategy and Execution
+
+To optimize **Training Pipeline**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 3. Advanced Strategy and Execution
+
+To optimize **Training Pipeline**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 4. Advanced Strategy and Execution
+
+To optimize **Training Pipeline**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 5. Advanced Strategy and Execution
+
+To optimize **Training Pipeline**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Core Implementation
 ```python
-from transformers import AutoTokenizer
-
-tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.1-8B")
-
-def tokenize_dataset(examples):
-    return tokenizer(
-        examples["text"],
-        truncation=True,
-        max_length=2048,
-        padding="max_length",
-    )
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Training Execution
+---
 
-### Configuration
-```yaml
-model:
-  base: "meta-llama/Llama-3.1-8B"
-  method: "lora"
+## 6. Advanced Strategy and Execution
 
-training:
-  output_dir: "./checkpoints"
-  num_train_epochs: 3
-  per_device_train_batch_size: 4
-  gradient_accumulation_steps: 8
-  learning_rate: 2e-4
-  warmup_ratio: 0.03
-  lr_scheduler_type: "cosine"
-  bf16: true
-  logging_steps: 10
-  save_steps: 500
-  eval_steps: 500
-  save_total_limit: 3
+To optimize **Training Pipeline**, we enforce the following foundational rules:
 
-logging:
-  - wandb: true
-  - tensorboard: true
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-### Running the Pipeline
-```bash
-python train.py --config configs/llama-lora.yaml \
-  --dataset data/training.jsonl \
-  --output-dir ./models/my-ft-v1
-```
+---
 
-### Distributed Training
-```bash
-torchrun --nproc_per_node=8 train.py \
-  --model meta-llama/Llama-3.1-70B \
-  --method lora \
-  --deepspeed configs/ds-zero2.json
-```
+## 7. Advanced Strategy and Execution
 
-## Checkpoint Management
+To optimize **Training Pipeline**, we enforce the following foundational rules:
 
-### Save Strategy
-- Save every N steps (configurable)
-- Keep last N checkpoints (rollback support)
-- Save optimizer state for training resume
-- Export adapter separately from base model
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
 
-### Checkpoint Selection
-- Best by eval loss
-- Best by task metric
-- Last checkpoint (if no overfitting)
-- Ensemble of top-3
-
-## Evaluation Pipeline
-
-### During Training
+### Core Implementation
 ```python
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=train_dataset,
-    eval_dataset=eval_dataset,
-    compute_metrics=compute_metrics,
-)
-
-trainer.evaluate()
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### Post-Training
-```bash
-python evaluate.py \
-  --model ./models/my-ft-v1 \
-  --dataset eval-suite.jsonl \
-  --metrics accuracy faithfulness
+---
+
+## 8. Advanced Strategy and Execution
+
+To optimize **Training Pipeline**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 9. Advanced Strategy and Execution
+
+To optimize **Training Pipeline**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## Export & Versioning
+---
 
-### Export Formats
+## 10. Advanced Strategy and Execution
+
+To optimize **Training Pipeline**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 11. Advanced Strategy and Execution
+
+To optimize **Training Pipeline**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Core Implementation
 ```python
-# LoRA adapter only (recommended)
-model.save_pretrained("./export/lora-adapter-v1")
-tokenizer.save_pretrained("./export/lora-adapter-v1")
-
-# Merged model (optional)
-merged = model.merge_and_unload()
-merged.save_pretrained("./export/merged-model-v1")
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### Versioning
-```yaml
-model_version:
-  id: "ft-llama-8b-v3"
-  base_model: "meta-llama/Llama-3.1-8B"
-  method: "lora"
-  rank: 16
-  dataset:
-    name: "support-qa-v5"
-    size: 15000
-  training:
-    epochs: 3
-    learning_rate: 2e-4
-    batch_size: 32
-  metrics:
-    eval_loss: 0.45
-    task_accuracy: 0.94
-```
+---

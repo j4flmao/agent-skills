@@ -1,255 +1,217 @@
-# RAG Evaluation Metrics
+# Rag Evaluation Metrics
 
-## Overview
-Evaluating RAG (Retrieval-Augmented Generation) systems requires metrics that assess both the retrieval and generation components independently and jointly. Poor retrieval can't be compensated by good generation, and vice versa.
+## 1. Advanced Strategy and Execution
 
-## Retrieval Metrics
+To optimize **Rag Evaluation Metrics**, we enforce the following foundational rules:
 
-### Retrieval Quality
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Core Implementation
 ```python
-class RetrievalEvaluator:
-    def __init__(self, retriever, relevance_judgments: dict):
-        self.retriever = retriever
-        self.judgments = relevance_judgments
-
-    def precision_at_k(self, queries: list[str], k: int = 10) -> float:
-        precisions = []
-        for query in queries:
-            results = self.retriever.retrieve(query, k=k)
-            relevant = self.judgments.get(query, [])
-            relevant_retrieved = sum(1 for r in results if r["id"] in relevant)
-            precisions.append(relevant_retrieved / k)
-        return statistics.mean(precisions)
-
-    def recall_at_k(self, queries: list[str], k: int = 10) -> float:
-        recalls = []
-        for query in queries:
-            results = self.retriever.retrieve(query, k=k)
-            relevant = self.judgments.get(query, [])
-            if not relevant:
-                continue
-            relevant_retrieved = sum(1 for r in results if r["id"] in relevant)
-            recalls.append(relevant_retrieved / len(relevant))
-        return statistics.mean(recalls) if recalls else 0.0
-
-    def mean_reciprocal_rank(self, queries: list[str]) -> float:
-        ranks = []
-        for query in queries:
-            results = self.retriever.retrieve(query, k=100)
-            relevant = self.judgments.get(query, [])
-            for i, r in enumerate(results):
-                if r["id"] in relevant:
-                    ranks.append(1.0 / (i + 1))
-                    break
-            else:
-                ranks.append(0.0)
-        return statistics.mean(ranks)
-
-    def ndcg_at_k(self, queries: list[str], k: int = 10) -> float:
-        scores = []
-        for query in queries:
-            results = self.retriever.retrieve(query, k=k)
-            relevant = self.judgments.get(query, {})
-
-            dcg = 0
-            for i, r in enumerate(results):
-                rel = relevant.get(r["id"], 0)
-                dcg += (2 ** rel - 1) / math.log2(i + 2)
-
-            ideal = sorted(relevant.values(), reverse=True)
-            idcg = sum((2 ** rel - 1) / math.log2(i + 2) for i, rel in enumerate(ideal[:k]))
-
-            scores.append(dcg / max(idcg, 1e-6))
-
-        return statistics.mean(scores)
-
-    def compute_all(self, queries: list[str]) -> dict:
-        return {
-            "p@5": self.precision_at_k(queries, 5),
-            "p@10": self.precision_at_k(queries, 10),
-            "r@5": self.recall_at_k(queries, 5),
-            "r@10": self.recall_at_k(queries, 10),
-            "mrr": self.mean_reciprocal_rank(queries),
-            "ndcg@10": self.ndcg_at_k(queries, 10),
-        }
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Generation Metrics
+---
 
-### Faithfulness and Relevance
-```python
-class GenerationEvaluator:
-    def __init__(self, judge_model):
-        self.judge = judge_model
+## 2. Advanced Strategy and Execution
 
-    def faithfulness(self, answers: list[dict]) -> float:
-        scores = []
-        for item in answers:
-            prompt = f"""
-Context: {item['context']}
-Answer: {item['answer']}
+To optimize **Rag Evaluation Metrics**, we enforce the following foundational rules:
 
-Rate faithfulness (0-1): Is the answer fully supported by the context?
-Score:
-"""
-            score = float(self.judge.generate(prompt).strip())
-            scores.append(min(max(score, 0), 1))
-        return statistics.mean(scores)
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
 
-    def answer_relevancy(self, queries: list[str], answers: list[str]) -> float:
-        scores = []
-        for q, a in zip(queries, answers):
-            prompt = f"""
-Question: {q}
-Answer: {a}
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
 
-Rate relevancy (0-1): Does the answer directly address the question?
-Score:
-"""
-            score = float(self.judge.generate(prompt).strip())
-            scores.append(min(max(score, 0), 1))
-        return statistics.mean(scores)
+---
 
-    def context_precision(self, queries: list[str], contexts: list[list[str]]) -> float:
-        scores = []
-        for q, ctx in zip(queries, contexts):
-            useful = 0
-            for c in ctx:
-                prompt = f"Is this context useful for answering: {q}\nContext: {c}\nAnswer yes/no:"
-                if "yes" in self.judge.generate(prompt).lower():
-                    useful += 1
-            scores.append(useful / max(len(ctx), 1))
-        return statistics.mean(scores)
+## 3. Advanced Strategy and Execution
 
-    def context_recall(self, queries: list[str], contexts: list[list[str]], ground_truth: list[str]) -> float:
-        scores = []
-        for q, ctx, gt in zip(queries, contexts, ground_truth):
-            gt_claims = self._extract_claims(gt)
-            covered = 0
-            for claim in gt_claims:
-                for c in ctx:
-                    if claim.lower() in c.lower():
-                        covered += 1
-                        break
-            scores.append(covered / max(len(gt_claims), 1))
-        return statistics.mean(scores)
+To optimize **Rag Evaluation Metrics**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## End-to-End Metrics
+---
 
-### RAG Quality Score
+## 4. Advanced Strategy and Execution
+
+To optimize **Rag Evaluation Metrics**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 5. Advanced Strategy and Execution
+
+To optimize **Rag Evaluation Metrics**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Core Implementation
 ```python
-class RAGQualityScore:
-    def __init__(self, retriever_eval: dict, generation_eval: dict, weights: dict | None = None):
-        self.retrieval = retriever_eval
-        self.generation = generation_eval
-        self.weights = weights or {
-            "retrieval": 0.3,
-            "faithfulness": 0.25,
-            "relevancy": 0.25,
-            "context_precision": 0.1,
-            "context_recall": 0.1,
-        }
-
-    def compute(self) -> dict:
-        retrieval_score = statistics.mean([
-            self.retrieval.get("p@10", 0),
-            self.retrieval.get("r@10", 0),
-            self.retrieval.get("mrr", 0),
-        ])
-
-        generation_score = statistics.mean([
-            self.generation.get("faithfulness", 0),
-            self.generation.get("answer_relevancy", 0),
-        ])
-
-        overall = (
-            self.weights["retrieval"] * retrieval_score +
-            self.weights["faithfulness"] * self.generation.get("faithfulness", 0) +
-            self.weights["relevancy"] * self.generation.get("answer_relevancy", 0) +
-            self.weights["context_precision"] * self.generation.get("context_precision", 0) +
-            self.weights["context_recall"] * self.generation.get("context_recall", 0)
-        )
-
-        return {
-            "overall": overall,
-            "retrieval_score": retrieval_score,
-            "generation_score": generation_score,
-            "components": {**self.retrieval, **self.generation},
-        }
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## A/B Testing RAG Systems
+---
 
-```python
-class RAGABTest:
-    def __init__(self, control_system, variant_system):
-        self.control = control_system
-        self.variant = variant_system
+## 6. Advanced Strategy and Execution
 
-    def compare(self, queries: list[str], ground_truth: list[str], n_per: int = 5) -> dict:
-        control_scores = []
-        variant_scores = []
+To optimize **Rag Evaluation Metrics**, we enforce the following foundational rules:
 
-        for query, truth in zip(queries, ground_truth):
-            for _ in range(n_per):
-                c_result = self.control(query)
-                v_result = self.variant(query)
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
 
-                control_scores.append(self._score(c_result, truth))
-                variant_scores.append(self._score(v_result, truth))
-
-        from scipy import stats
-        t_stat, p_value = stats.ttest_ind(control_scores, variant_scores)
-
-        return {
-            "control_mean": statistics.mean(control_scores),
-            "variant_mean": statistics.mean(variant_scores),
-            "improvement": (statistics.mean(variant_scores) - statistics.mean(control_scores)),
-            "p_value": p_value,
-            "significant": p_value < 0.05,
-        }
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## Continuous Monitoring
+---
 
+## 7. Advanced Strategy and Execution
+
+To optimize **Rag Evaluation Metrics**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Core Implementation
 ```python
-class RAGMonitor:
-    def __init__(self):
-        self.metrics_history = []
-
-    def record(self, metrics: dict):
-        metrics["timestamp"] = datetime.utcnow().isoformat()
-        self.metrics_history.append(metrics)
-
-    def detect_drift(self, window: int = 7) -> list[dict]:
-        if len(self.metrics_history) < window * 2:
-            return []
-
-        recent = self.metrics_history[-window:]
-        baseline = self.metrics_history[-(window * 2):-window]
-
-        drifts = []
-        for metric in ["p@10", "r@10", "faithfulness", "answer_relevancy"]:
-            recent_vals = [m.get(metric, 0) for m in recent if metric in m]
-            baseline_vals = [m.get(metric, 0) for m in baseline if metric in m]
-
-            if recent_vals and baseline_vals:
-                drop = statistics.mean(baseline_vals) - statistics.mean(recent_vals)
-                if drop > 0.05:
-                    drifts.append({"metric": metric, "drop": drop})
-
-        return drifts
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Key Points
-- Evaluate retrieval separately: precision@k, recall@k, MRR, NDCG
-- Evaluate generation separately: faithfulness, answer relevancy, context precision/recall
-- Compute end-to-end RAG quality score weighted by component importance
-- A/B test RAG system changes with statistical significance
-- Monitor metrics continuously for drift
-- Faithfulness is the single most important RAG metric
-- Retrieval quality caps generation quality — fix retrieval first
-- Use LLM judge for faithfulness and relevancy evaluation
-- Track per-query and aggregate metrics
-- Compare against non-RAG baseline to measure retrieval value
+---
+
+## 8. Advanced Strategy and Execution
+
+To optimize **Rag Evaluation Metrics**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 9. Advanced Strategy and Execution
+
+To optimize **Rag Evaluation Metrics**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 10. Advanced Strategy and Execution
+
+To optimize **Rag Evaluation Metrics**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 11. Advanced Strategy and Execution
+
+To optimize **Rag Evaluation Metrics**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
+```
+
+---

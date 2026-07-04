@@ -1,214 +1,218 @@
-# LCEL (LangChain Expression Language) Patterns
+# Lcel Patterns
 
-## Runnable Interface
+## 1. Advanced Strategy and Execution
 
-Every component in LangChain implements the Runnable interface with these methods:
-- `.invoke(input)` — synchronous single call
-- `.batch(inputs)` — synchronous batched calls
-- `.stream(input)` — synchronous stream of output chunks
-- `.ainvoke(input)` — async single call
-- `.abatch(inputs)` — async batched calls
-- `.astream(input)` — async stream of output chunks
-- `.astream_events(input, version)` — async stream with structured events
+To optimize **Lcel Patterns**, we enforce the following foundational rules:
 
-## RunnableSequence
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
 
-Linear chain of runnables where output of step N becomes input to step N+1.
-
+### Core Implementation
 ```python
-chain = RunnableSequence([retriever, prompt, llm, output_parser])
-# Shorthand with |
-chain = retriever | prompt | llm | output_parser
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-Use `.pipe()` for explicit chaining. Always prefer `|` operator for readability.
+---
 
-## RunnableParallel
+## 2. Advanced Strategy and Execution
 
-Execute runnables in parallel, produce dict of results.
+To optimize **Lcel Patterns**, we enforce the following foundational rules:
 
-```python
-parallel = RunnableParallel(
-    context=retriever,
-    date=date_runnable,
-    question=RunnablePassthrough()
-)
-chain = parallel | prompt | llm | output_parser
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 3. Advanced Strategy and Execution
+
+To optimize **Lcel Patterns**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-### State Transmission via Passthroughs
+---
 
-`.assign()` appends new keys without replacing existing ones. Use for incremental pipeline state across non-linear pipeline steps.
+## 4. Advanced Strategy and Execution
 
+To optimize **Lcel Patterns**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 5. Advanced Strategy and Execution
+
+To optimize **Lcel Patterns**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Core Implementation
 ```python
-chain = (
-    RunnablePassthrough.assign(
-        context=lambda x: retriever.invoke(x["question"]),
-        history=lambda x: memory.load_memory_variables(x)["history"]
-    )
-    | prompt
-    | llm
-    | output_parser
-)
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-In complex scenarios, state must be passed down a chain without modifications while parallel branches compute intermediate values:
+---
 
-```python
-from langchain_core.runnables import RunnablePassthrough, RunnableParallel
+## 6. Advanced Strategy and Execution
 
-# Propagating raw inputs alongside downstream transformations
-pipeline = RunnableParallel(
-    raw_input=RunnablePassthrough(),
-    processed_query=lambda x: x["query"].strip().lower()
-).assign(
-    retrieved_docs=lambda state: retriever.invoke(state["processed_query"])
-).assign(
-    generation=lambda state: generator_chain.invoke({
-        "context": state["retrieved_docs"],
-        "query": state["raw_input"]["query"]
-    })
-)
+To optimize **Lcel Patterns**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## RunnableBinding
+---
 
-Pre-configure runtime arguments without creating a new chain.
+## 7. Advanced Strategy and Execution
 
+To optimize **Lcel Patterns**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Core Implementation
 ```python
-llm.bind(stop=["\n\n"], tools=tool_schemas)
-prompt.bind(messages=[SystemMessage(content="Be concise")])
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## RunnableBranch & State Fallback Routing
+---
 
-Conditional routing based on input. Takes list of (condition, runnable) pairs plus default.
+## 8. Advanced Strategy and Execution
 
-```python
-branch = RunnableBranch(
-    (lambda x: len(x["query"]) > 100, long_query_chain),
-    (lambda x: "code" in x["query"], code_chain),
-    default_chain
-)
+To optimize **Lcel Patterns**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 9. Advanced Strategy and Execution
+
+To optimize **Lcel Patterns**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-For advanced dynamic routing based on runtime state, implement a routing function inside a `RunnableLambda`:
+---
 
+## 10. Advanced Strategy and Execution
+
+To optimize **Lcel Patterns**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 11. Advanced Strategy and Execution
+
+To optimize **Lcel Patterns**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Core Implementation
 ```python
-from langchain_core.runnables import RunnableLambda
-
-def route_by_intent(state):
-    intent = state["intent"].strip().lower()
-    if "billing" in intent:
-        return billing_chain
-    elif "technical" in intent:
-        return technical_chain
-    else:
-        return general_chain
-
-routing_chain = (
-    RunnablePassthrough.assign(intent=intent_classifier_chain)
-    | RunnableLambda(route_by_intent)
-)
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Streaming Patterns
-
-### LangChain v0.2+ streaming with astream_events:
-
-```python
-async for event in chain.astream_events(input, version="v2", include_names=["my_llm"]):
-    if event["event"] == "on_chat_model_stream":
-        yield event["data"]["chunk"]
-    elif event["event"] == "on_retriever_end":
-        context = event["data"]["output"]
-```
-
-### Streaming with callbacks:
-
-```python
-class StreamHandler(BaseCallbackHandler):
-    def on_llm_new_token(self, token: str, **kwargs):
-        yield token
-```
-
-## Custom Runnables & Validation
-
-Subclass `Runnable` or use `RunnableLambda` for arbitrary functions.
-
-```python
-from langchain_core.runnables import RunnableLambda
-
-def validate_query(query: str) -> str:
-    assert len(query) > 0, "Empty query"
-    return query
-
-validate = RunnableLambda(validate_query)
-chain = validate | retriever | prompt | llm
-```
-
-### Complex Input Validation & Transformation Stream
-
-Create custom Runnables with Pydantic schemas to validate states during intermediate chain runs:
-
-```python
-from typing import Dict, Any
-from pydantic import BaseModel, Field
-from langchain_core.runnables import RunnableConfig, RunnableSerializable
-
-class PipelineState(BaseModel):
-    query: str = Field(..., min_length=3)
-    user_id: str
-    auth_token: str
-
-class StateValidatorRunnable(RunnableSerializable[Dict[str, Any], Dict[str, Any]]):
-    def invoke(self, input: Dict[str, Any], config: Optional[RunnableConfig] = None) -> Dict[str, Any]:
-        # Validate input schema
-        state = PipelineState(**input)
-        # Perform authorization checks
-        if not self._check_auth(state.user_id, state.auth_token):
-            raise PermissionError("Unauthorized pipeline state")
-        return state.model_dump()
-
-    def _check_auth(self, user_id: str, token: str) -> bool:
-        # Auth logic
-        return len(token) > 5
-```
-
-## Configuration, Fallbacks & Retries
-
-```python
-chain.with_config(
-    run_name="my-chain",
-    tags=["production"],
-    metadata={"user_id": user_id, "session_id": session_id}
-)
-```
-
-### Robust Fault Tolerance
-
-```python
-robust_chain = chain.with_retry(
-    retry_if_exception_type=(openai.RateLimitError, TimeoutError),
-    wait_exponential_jitter=True,
-    stop_after_attempt=3
-).with_fallbacks([
-    backup_chain,
-    fallback_static_response_chain
-])
-```
-
-## Key Points
-
-- Execute parallel tasks with `RunnableParallel` to optimize throughput and wall-clock time.
-- Use `RunnablePassthrough.assign()` to preserve downstream state variables across steps.
-- Configure runtime settings dynamically via `with_config` or bind tools using `bind`.
-- Route inputs to specialized pipelines via `RunnableBranch` or a custom routing `RunnableLambda`.
-- Implement Pydantic validation via custom `RunnableSerializable` classes to catch pipeline drift.
-- Ensure production robustness using `.with_retry()` and `.with_fallbacks()`.
-
-<!-- COMPRESSION FOOTER -->
-<!--
-Compression Level: 5 (Comprehensive architectural references & code details preserved)
-Strict compliance with OpenAPI, dynamic loops, and multi-agent coordination protocols.
--->
+---

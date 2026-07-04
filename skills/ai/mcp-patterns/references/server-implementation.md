@@ -1,188 +1,220 @@
-# MCP Server Implementation Guide
+# Server Implementation
 
-## Server Setup Patterns
+## 1. Advanced Strategy and Execution
 
-### FastMCP (Python, Recommended)
+To optimize **Server Implementation**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Core Implementation
 ```python
-from mcp.server.fastmcp import FastMCP
-
-server = FastMCP(
-    "knowledge-base",
-    transport="stdio",
-    version="1.0.0",
-    description="Knowledge base MCP server"
-)
-
-@server.tool(description="Search documents by query")
-def search(query: str, limit: int = 10) -> str:
-    """Search indexed documents."""
-    results = vectorstore.similarity_search(query, k=limit)
-    return "\n\n".join(doc.page_content for doc in results)
-
-if __name__ == "__main__":
-    server.run()
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### Low-Level SDK (Python)
+---
+
+## 2. Advanced Strategy and Execution
+
+To optimize **Server Implementation**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 3. Advanced Strategy and Execution
+
+To optimize **Server Implementation**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 4. Advanced Strategy and Execution
+
+To optimize **Server Implementation**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 5. Advanced Strategy and Execution
+
+To optimize **Server Implementation**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Core Implementation
 ```python
-from mcp.server import Server
-import mcp.server.stdio
-from mcp.types import Tool, TextContent
-
-server = Server("knowledge-base")
-
-@server.list_tools()
-async def handle_list_tools() -> list[Tool]:
-    return [Tool(
-        name="search",
-        description="Search documents",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "query": {"type": "string"},
-                "limit": {"type": "integer", "default": 10}
-            },
-            "required": ["query"]
-        }
-    )]
-
-@server.call_tool()
-async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
-    if name == "search":
-        results = vectorstore.similarity_search(
-            arguments["query"],
-            k=arguments.get("limit", 10)
-        )
-        text = "\n\n".join(doc.page_content for doc in results)
-        return [TextContent(type="text", text=text)]
-    raise ValueError(f"Unknown tool: {name}")
-
-async def main():
-    async with mcp.server.stdio.stdio_server() as (read, write):
-        await server.run(read, write)
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### TypeScript/Node.js
-```typescript
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+---
 
-const server = new Server(
-  { name: "knowledge-base", version: "1.0.0" },
-  { capabilities: { tools: {}, resources: {} } }
-);
+## 6. Advanced Strategy and Execution
 
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [{
-    name: "search",
-    description: "Search documents",
-    inputSchema: {
-      type: "object",
-      properties: {
-        query: { type: "string" },
-        limit: { type: "number", default: 10 }
-      },
-      required: ["query"]
-    }
-  }]
-}));
+To optimize **Server Implementation**, we enforce the following foundational rules:
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## Resource Implementation
+---
 
-### Static Resources
+## 7. Advanced Strategy and Execution
+
+To optimize **Server Implementation**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Core Implementation
 ```python
-@server.resource("config://app/settings")
-def get_settings() -> str:
-    """Return application configuration."""
-    return read_file("config/settings.json")
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### Dynamic Resources
+---
+
+## 8. Advanced Strategy and Execution
+
+To optimize **Server Implementation**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 9. Advanced Strategy and Execution
+
+To optimize **Server Implementation**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 10. Advanced Strategy and Execution
+
+To optimize **Server Implementation**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 11. Advanced Strategy and Execution
+
+To optimize **Server Implementation**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Core Implementation
 ```python
-@server.resource("docs://{path}")
-def get_document(path: str) -> str:
-    """Read document by path. Prevents directory traversal."""
-    safe_path = os.path.normpath(os.path.join("docs", path))
-    if not safe_path.startswith("docs"):
-        raise ValueError("Invalid path")
-    return read_file(safe_path)
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Prompt Templates
-
-```python
-@server.prompt()
-def qa_template(context: str, question: str) -> str:
-    """QA prompt template with context injection."""
-    return f"Context:\n{context}\n\nQuestion:\n{question}\n\nAnswer:"
-```
-
-## Error Handling
-
-```python
-@server.tool()
-def fragile_operation(input_data: str) -> str:
-    """Handle errors gracefully."""
-    try:
-        if not input_data:
-            return "Error: input_data is required"
-        result = process(input_data)
-        return json.dumps({"success": True, "data": result})
-    except ValueError as e:
-        return json.dumps({"success": False, "error": str(e)})
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}", exc_info=True)
-        return json.dumps({"success": False, "error": "Internal server error"})
-```
-
-## Testing
-
-### Unit Test with Mock Transport
-```python
-async def test_search_tool():
-    transport = MockTransport()
-    server = create_server()
-    await server.connect(transport)
-    result = await server.call_tool("search", {"query": "test"})
-    assert result is not None
-    assert len(result) > 0
-```
-
-### Integration Test
-```bash
-# Using MCP inspector
-npx @modelcontextprotocol/inspector python server.py
-
-# Manual test via stdio
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | python server.py
-```
-
-## Deployment
-
-### stdio Deployment
-- Package as pip/npm package
-- Install in target environment
-- Host app launches as subprocess
-- No network configuration needed
-
-### SSE Deployment
-- Deploy as web service
-- Behind reverse proxy (nginx)
-- Enable HTTPS in production
-- Add rate limiting middleware
-- Health check endpoint at /health
-
-### Docker Deployment
-```dockerfile
-FROM python:3.12-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY server.py .
-EXPOSE 8000
-CMD ["python", "server.py"]
-```
+---

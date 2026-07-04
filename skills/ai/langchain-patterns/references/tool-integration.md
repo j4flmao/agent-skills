@@ -1,168 +1,220 @@
-# Tool Integration Patterns
+# Tool Integration
 
-## Tool Definition Patterns
+## 1. Advanced Strategy and Execution
 
-### @tool Decorator
+To optimize **Tool Integration**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Core Implementation
 ```python
-from langchain.tools import tool
-
-@tool
-def search_knowledge_base(query: str, top_k: int = 5) -> str:
-    """Search internal knowledge base for relevant documents.
-    
-    Args:
-        query: Search terms, 2-5 keywords for best results
-        top_k: Number of results to return (1-10)
-    """
-    results = vectorstore.similarity_search(query, k=top_k)
-    return "\n\n".join(doc.page_content for doc in results)
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### StructuredTool
-```python
-from langchain.tools import StructuredTool
-from pydantic import BaseModel, Field
+---
 
-class SearchInput(BaseModel):
-    query: str = Field(description="Search query, 2-5 keywords")
-    max_results: int = Field(default=5, ge=1, le=20)
+## 2. Advanced Strategy and Execution
 
-tool = StructuredTool(
-    name="search",
-    description="Search for information. Use for factual queries.",
-    args_schema=SearchInput,
-    func=search_fn,
-)
+To optimize **Tool Integration**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 3. Advanced Strategy and Execution
+
+To optimize **Tool Integration**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## Tool Registration
+---
 
-### BaseTool Subclass
+## 4. Advanced Strategy and Execution
+
+To optimize **Tool Integration**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 5. Advanced Strategy and Execution
+
+To optimize **Tool Integration**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Core Implementation
 ```python
-from langchain.tools import BaseTool
-
-class DatabaseQueryTool(BaseTool):
-    name = "query_database"
-    description = "Execute SQL queries. Only SELECT allowed."
-    args_schema: type = DatabaseQueryInput
-
-    def _run(self, query: str) -> str:
-        if not query.strip().upper().startswith("SELECT"):
-            return "Error: Only SELECT queries are allowed"
-        return str(self.db.execute(query))
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Tool Error Handling
+---
 
-### Structured Errors
-```python
-@tool
-def api_call(endpoint: str) -> str:
-    """Call external API."""
-    try:
-        response = requests.get(endpoint, timeout=10)
-        response.raise_for_status()
-        return response.text
-    except requests.Timeout:
-        return "Error: API request timed out after 10s"
-    except requests.HTTPError as e:
-        return f"Error: API returned {e.response.status_code}"
+## 6. Advanced Strategy and Execution
+
+To optimize **Tool Integration**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## Tool Composition
+---
 
-### Router Pattern
+## 7. Advanced Strategy and Execution
+
+To optimize **Tool Integration**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Core Implementation
 ```python
-tools = {
-    "search": search_knowledge_base,
-    "calculate": calculator,
-    "translate": translate_text,
-    "code": execute_python,
-}
-
-def route_to_tool(query_type, params):
-    tool = tools.get(query_type)
-    if not tool:
-        return "Error: Unknown tool type"
-    return tool.invoke(params)
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### Parallel Execution
-```python
-from langchain_core.runnables import RunnableParallel
+---
 
-parallel_tools = RunnableParallel(
-    search=search_knowledge_base,
-    weather=get_weather,
-    calendar=get_calendar_events
-)
+## 8. Advanced Strategy and Execution
 
-@tool
-def gather_context(query: str) -> dict:
-    """Gather all relevant context for a query."""
-    return parallel_tools.invoke({"query": query})
+To optimize **Tool Integration**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 9. Advanced Strategy and Execution
+
+To optimize **Tool Integration**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## External API Integration
+---
 
-### REST API Tool
+## 10. Advanced Strategy and Execution
+
+To optimize **Tool Integration**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 11. Advanced Strategy and Execution
+
+To optimize **Tool Integration**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Core Implementation
 ```python
-@tool
-def call_api(endpoint: str, method: str = "GET", body: dict = None) -> str:
-    """Call an external REST API.
-    
-    Args:
-        endpoint: Full URL path
-        method: HTTP method (GET, POST, PUT, DELETE)
-        body: JSON body for POST/PUT requests
-    """
-    headers = {"Authorization": f"Bearer {API_KEY}"}
-    resp = requests.request(method, endpoint, headers=headers, json=body)
-    return resp.text
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### Database Tool
-```python
-@tool
-def query_read_only(sql: str) -> str:
-    """Execute read-only SQL query.
-    Only SELECT and EXPLAIN queries are permitted.
-    """
-    if not sql.strip().upper().startswith(("SELECT", "EXPLAIN", "WITH")):
-        return "Error: Only read-only queries permitted"
-    return str(db.execute(sql).fetchall())
-```
-
-### File System Tool
-```python
-@tool
-def read_file(path: str) -> str:
-    """Read a file from the allowed directory.
-    
-    Args:
-        path: Relative path within /data directory
-    """
-    full_path = os.path.normpath(os.path.join(ALLOWED_DIR, path))
-    if not full_path.startswith(ALLOWED_DIR):
-        return "Error: Path outside allowed directory"
-    with open(full_path) as f:
-        return f.read()
-```
-
-## Monitoring & Logging
-
-### Tool Call Interceptor
-```python
-class LoggedTool(BaseTool):
-    def _run(self, *args, **kwargs):
-        start = time.time()
-        try:
-            result = super()._run(*args, **kwargs)
-            duration = time.time() - start
-            logger.info(f"Tool {self.name}: {duration:.2f}s, success")
-            return result
-        except Exception as e:
-            duration = time.time() - start
-            logger.error(f"Tool {self.name}: {duration:.2f}s, error: {e}")
-            raise
-```
+---

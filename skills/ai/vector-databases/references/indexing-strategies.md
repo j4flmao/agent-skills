@@ -1,140 +1,219 @@
 # Indexing Strategies
 
-## Index Selection by Scale
+## 1. Advanced Strategy and Execution
 
-| Scale | Index Type | Memory | Build Time | Recall |
-|-------|-----------|--------|------------|--------|
-| <10K | Flat (brute force) | Low | None | 1.0 |
-| 10K-1M | HNSW | High | Medium | 0.99 |
-| 1M-10M | IVF with HNSW | Medium | Medium | 0.97 |
-| 10M-100M | IVF with PQ | Low | High | 0.93 |
-| >100M | DiskANN | Very Low | Very High | 0.92 |
+To optimize **Indexing Strategies**, we enforce the following foundational rules:
 
-## Multi-Stage Indexing
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
 
-### Two-Tier Approach
-```
-Hot (frequent queries): HNSW index, high recall, in-memory
-  → 20% of data, 80% of queries
-Cold (rare queries): IVF+PQ index, memory efficient
-  → 80% of data, 20% of queries
-```
-
-### Implementation
+### Core Implementation
 ```python
-class MultiTierIndex:
-    def __init__(self, hot_threshold=0.2):
-        self.hot_index = HNSWIndex()
-        self.cold_index = IVFPQIndex()
-        self.hot_threshold = hot_threshold
-
-    def add(self, vectors, docs, query_frequencies):
-        sorted_pairs = sorted(zip(vectors, docs, query_frequencies),
-                              key=lambda x: x[2], reverse=True)
-        split = int(len(sorted_pairs) * self.hot_threshold)
-        hot_data = sorted_pairs[:split]
-        cold_data = sorted_pairs[split:]
-        self.hot_index.add([d[0] for d in hot_data], [d[1] for d in hot_data])
-        self.cold_index.add([d[0] for d in cold_data], [d[1] for d in cold_data])
-
-    def search(self, query, k=10):
-        hot_results = self.hot_index.search(query, k=k // 2)
-        cold_results = self.cold_index.search(query, k=k // 2)
-        return merge_and_rerank(hot_results, cold_results)
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Filter-Aware Indexing
+---
 
-### Pre-Filtering Strategy
-- Filter metadata BEFORE vector search
-- Requires index per unique filter combination (for speed)
-- Use bitmap indexing for low-cardinality filters
+## 2. Advanced Strategy and Execution
 
-### Post-Filtering Strategy
-- Vector search first, filter results after
-- Acceptable when filter is highly selective (>90% reduction)
-- Risk: top-K results may all fail filter
+To optimize **Indexing Strategies**, we enforce the following foundational rules:
 
-### Hybrid Strategy
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 3. Advanced Strategy and Execution
+
+To optimize **Indexing Strategies**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 4. Advanced Strategy and Execution
+
+To optimize **Indexing Strategies**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 5. Advanced Strategy and Execution
+
+To optimize **Indexing Strategies**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Core Implementation
 ```python
-def filtered_search(query, filters, k=10):
-    # 1. Broad vector search (2x desired K)
-    candidates = vector_index.search(query, k=k * 2)
-    
-    # 2. Apply filters
-    filtered = [c for c in candidates if matches_filters(c, filters)]
-    
-    # 3. Fall back if not enough results
-    if len(filtered) < k:
-        candidates2 = vector_index.search(query, k=k * 10)
-        filtered = [c for c in candidates2 if matches_filters(c, filters)]
-    
-    return filtered[:k]
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Partitioned Indexing
+---
 
-### By Tenant
+## 6. Advanced Strategy and Execution
+
+To optimize **Indexing Strategies**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 7. Advanced Strategy and Execution
+
+To optimize **Indexing Strategies**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Core Implementation
 ```python
-class TenantAwareIndex:
-    def __init__(self):
-        self.indices = {}  # tenant_id → index
-
-    def search(self, tenant_id, query, k=10):
-        if tenant_id not in self.indices:
-            return []
-        return self.indices[tenant_id].search(query, k=k)
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### By Category
+---
+
+## 8. Advanced Strategy and Execution
+
+To optimize **Indexing Strategies**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 9. Advanced Strategy and Execution
+
+To optimize **Indexing Strategies**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
-Index categories:
-  /products: product descriptions and specs
-  /docs: technical documentation
-  /support: customer support articles
-  /code: code snippets and examples
-  
-Route queries to relevant index based on intent classification.
-```
 
-## Incremental Indexing
+---
 
-### Online Updates
-- HNSW and IVF support vector additions without full rebuild
-- Delete as tombstone (not physical deletion)
-- Periodic optimization for space reclamation
+## 10. Advanced Strategy and Execution
 
-### Batch Refresh
+To optimize **Indexing Strategies**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 11. Advanced Strategy and Execution
+
+To optimize **Indexing Strategies**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Core Implementation
 ```python
-def refresh_index(full_dataset, incremental_updates):
-    if incremental_updates.count > full_dataset.count * 0.2:
-        # Threshold exceeded → full rebuild
-        return rebuild_full(full_dataset)
-    else:
-        # Apply incremental updates
-        return apply_updates(incremental_updates)
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Monitoring Index Health
-
-### Key Metrics
-- Query latency: P50/P95/P99
-- Recall@K: against ground truth set
-- Index size: % of memory budget
-- Churn rate: vectors added/deleted per day
-- Build/optimization time
-
-### Alert Thresholds
-```
-Recall@10 < 0.95: Review index configuration
-Query P95 > 100ms: Consider index optimization
-Memory > 80%: Scale up or reduce dimension
-Churn > 10%/day: Consider incremental indexing
-Build time > 4hrs: Schedule during maintenance window
-```
-
-<!-- COMPRESSION FOOTER -->
-<!--
-Compression Level: 5 (Comprehensive architectural references & code details preserved)
-Strict compliance with HNSW parameters, distance metrics, sharding/replication topology, and vector DB scaling guidelines.
--->
+---

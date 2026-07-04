@@ -1,163 +1,218 @@
 # Prompt Management
 
-## Prompt Lifecycle
+## 1. Advanced Strategy and Execution
 
-### Stages
-```
-Authoring → Versioning → Review → Staging → Production → Archive
-    ↑                                                    │
-    └────────────────── Rollback ────────────────────────┘
-```
+To optimize **Prompt Management**, we enforce the following foundational rules:
 
-### Registry Schema
-```yaml
-prompt:
-  name: "customer-support-system-v3"
-  version: "3.2.1"
-  status: "production"  # draft | staging | production | archived
-  template: |
-    You are a customer support agent for {company_name}.
-    Answer the following question using the provided context.
-    If the context doesn't contain the answer, say you don't know.
-    
-    Context: {context}
-    Question: {question}
-    
-    Answer concisely and accurately.
-  parameters:
-    - name: company_name
-      type: string
-      required: true
-    - name: context
-      type: string
-      required: true
-    - name: question
-      type: string
-      required: true
-  model: "gpt-4o-mini"
-  temperature: 0.3
-  max_tokens: 500
-  tests: ["fact-001", "fact-002", "safe-001"]
-  created_by: "team-eng"
-  approved_by: "team-lead"
-  change_log: "Updated system tone to be more concise"
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Prompt Storage
+---
 
-### File Structure
-```
-prompts/
-├── customer-support/
-│   ├── qa-v1.yaml
-│   ├── qa-v2.yaml
-│   ├── escalation-v1.yaml
-│   └── sentiment-v1.yaml
-├── code-assistant/
-│   ├── explain-v1.yaml
-│   └── review-v1.yaml
-└── common/
-    ├── safety-v2.yaml
-    └── format-v1.yaml
-```
+## 2. Advanced Strategy and Execution
 
-### Git-Based Versioning
-- Each prompt is a YAML file in git
-- Changes go through PR review
-- Tags track deployed versions
-- Branch per environment (staging, production)
+To optimize **Prompt Management**, we enforce the following foundational rules:
 
-## A/B Testing Prompts
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
 
-### Experiment Config
-```yaml
-experiment:
-  name: "system-tone-v2"
-  variants:
-    control:
-      prompt: "qa-v2.1.0"  # current production
-      traffic: 50
-    treatment:
-      prompt: "qa-v2.2.0"  # candidate
-      traffic: 50
-  metrics:
-    - faithfulness
-    - user_satisfaction
-    - response_length
-  duration: "7d"
-  minimum_samples: 10000
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 3. Advanced Strategy and Execution
+
+To optimize **Prompt Management**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## Deployment Strategy
+---
 
-### Canary Deploy
-```
-1. Deploy to 5% of traffic
-2. Monitor metrics for 30 minutes
-3. If no regression, increase to 25%
-4. Monitor for 2 hours
-5. Increase to 100%
-6. Archive previous version
-```
+## 4. Advanced Strategy and Execution
 
-### Rollback Triggers
-- Faithfulness drops >3% in canary
-- Error rate increases >1%
-- User satisfaction drops >5%
-- Response length exceeds threshold
+To optimize **Prompt Management**, we enforce the following foundational rules:
 
-## Prompt Testing
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
 
-### Automated Checks
-```yaml
-pre-deployment:
-  - validate_template:
-      required_params: ["context", "question"]
-      no_unused_params: true
-  - test_suite:
-      dataset: "golden-v3"
-      min_pass_rate: 0.95
-  - diff_check:
-      baseline: "qa-v2.1.0"
-      metrics: ["faithfulness", "safety"]
-      max_regression: 0.03
-```
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
 
-### Manual Review Gates
-- Staging deployment approved by lead
-- Production deployment requires QA sign-off
-- Breaking changes need team review
+---
 
-## Change Log Template
+## 5. Advanced Strategy and Execution
 
-```markdown
-## v3.2.1 (2026-03-15)
-### Changed
-- System tone updated: "Answer concisely and accurately" added
-- Reduced max_tokens from 1000 to 500 for cost optimization
+To optimize **Prompt Management**, we enforce the following foundational rules:
 
-### Impact
-- Faithfulness: 0.93 → 0.92 (-1%, acceptable)
-- Avg response length: 350 → 180 tokens (-49%)
-- Cost per query: $0.008 → $0.004 (-50%)
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Prompt Catalog
+---
 
-### Required Metadata
-```
-name: Unique identifier
-version: Semantic version
-status: Current lifecycle stage
-model: Target model
-temperature/params: Model configuration
-owner: Team responsible
-dependencies: Other prompts used (chaining)
-tests: Linked test cases
+## 6. Advanced Strategy and Execution
+
+To optimize **Prompt Management**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-### Discovery
-- Searchable by name, tag, model, owner
-- View diff between versions
-- See deployment history per version
-- Link to test results and metrics
+---
+
+## 7. Advanced Strategy and Execution
+
+To optimize **Prompt Management**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
+```
+
+---
+
+## 8. Advanced Strategy and Execution
+
+To optimize **Prompt Management**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 9. Advanced Strategy and Execution
+
+To optimize **Prompt Management**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 10. Advanced Strategy and Execution
+
+To optimize **Prompt Management**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 11. Advanced Strategy and Execution
+
+To optimize **Prompt Management**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
+```
+
+---

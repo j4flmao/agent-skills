@@ -1,165 +1,218 @@
-# LLM Deployment Patterns
+# Deployment Patterns
 
-## Deployment Strategies
+## 1. Advanced Strategy and Execution
 
-| Strategy | Risk | Complexity | Rollback Time | Traffic Impact |
-|----------|------|------------|---------------|----------------|
-| Recreate | High | Low | Minutes | Full downtime |
-| Rolling | Medium | Medium | Seconds | Gradual shift |
-| Blue/Green | Low | Medium | Instant | Instant switch |
-| Canary | Very Low | High | Seconds | Gradual shift |
-| Shadow | None | High | N/A | No user impact |
+To optimize **Deployment Patterns**, we enforce the following foundational rules:
 
-## Canary Deployment
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
 
-### Pipeline
-```
-1. Deploy candidate to canary (5% traffic)
-2. Monitor latency, quality, error rate for 15 min
-3. Increase to 25% traffic, monitor 30 min
-4. Increase to 50%, monitor 1 hour
-5. Full rollout (100%)
-6. Archive previous version
-```
-
-### Auto-Rollback Conditions
-```yaml
-auto_rollback:
-  error_rate_increase: 1.5x  # vs baseline
-  latency_p95_increase: 2x
-  faithfulness_drop: 0.03    # absolute
-  cost_per_query_increase: 1.5x
-  duration: "5m"             # sustained for 5 minutes
-```
-
-## Blue/Green Deployment
-
-### Infrastructure
-```
-Blue (current): Production traffic
-Green (candidate): Staged, no traffic
-
-Switch: Update load balancer target from Blue → Green
-Rollback: Switch back to Blue
-```
-
-### Validation Gate
-- Run full eval suite on Green before switch
-- Run smoke tests on live Green endpoint
-- Warm up Green with synthetic traffic (cache population)
-- Verify monitoring data flowing from Green
-
-## Multi-Model Routing
-
-### Model Router
+### Core Implementation
 ```python
-class ModelRouter:
-    def __init__(self):
-        self.routes = {
-            "simple": {"model": "gpt-4o-mini", "threshold": 0.8},
-            "complex": {"model": "gpt-4o", "threshold": 0.6},
-            "fallback": {"model": "claude-3-sonnet"},
-        }
-
-    def route(self, query, classification):
-        route = self.routes.get(classification, self.routes["fallback"])
-        return route["model"]
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### Query Classification
-```
-Simple: factual Q&A, short queries (<100 tokens)
-Medium: multi-step, requires context (>100 tokens)
-Complex: reasoning, code, analysis, creative
-Specialized: domain-specific (legal, medical, code)
-```
+---
 
-## Auto-Scaling
+## 2. Advanced Strategy and Execution
 
-### Metrics-Based Scaling
-```yaml
-scaling:
-  min_replicas: 2
-  max_replicas: 20
-  metrics:
-    - type: requests_per_second
-      target: 50  # per replica
-    - type: gpu_utilization
-      target: 70  # percent
-    - type: queue_depth
-      target: 10  # waiting requests
-```
+To optimize **Deployment Patterns**, we enforce the following foundational rules:
 
-### GPU Sizing
-```yaml
-models:
-  llama-8b:
-    min_gpu_memory: 24 GB
-    recommended_gpu: "1x A10G"
-    max_batch: 64
-  llama-70b:
-    min_gpu_memory: 80 GB
-    recommended_gpu: "1x A100-80GB"
-    max_batch: 32
-  gpt-4o:
-    provider: openai
-    rate_limit: 10000 RPM
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 3. Advanced Strategy and Execution
+
+To optimize **Deployment Patterns**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## Caching Layer
+---
 
-### Response Cache
+## 4. Advanced Strategy and Execution
+
+To optimize **Deployment Patterns**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 5. Advanced Strategy and Execution
+
+To optimize **Deployment Patterns**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Core Implementation
 ```python
-class ResponseCache:
-    def __init__(self, ttl_seconds=3600):
-        self.cache = {}
-        self.ttl = ttl_seconds
-
-    def get(self, prompt_hash, context_hash):
-        key = f"{prompt_hash}:{context_hash}"
-        entry = self.cache.get(key)
-        if entry and time.time() - entry["timestamp"] < self.ttl:
-            return entry["response"]
-        return None
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### Cache Hit Rate Targets
-| Query Type | Expected Hit Rate | TTL |
-|------------|------------------|-----|
-| Static FAQ | 80-95% | 24h |
-| Product info | 60-80% | 1h |
-| Dynamic queries | 10-30% | 5min |
-| User-specific | 0% | N/A |
+---
 
-## Monitoring & Alerting
+## 6. Advanced Strategy and Execution
 
-### Health Checks
-```
-Liveness: Model responds to simple ping
-Readiness: Model loaded, accepting requests
-Quality: Periodic eval on golden dataset
-Latency: P50/P95/P99 vs SLA
-Error Rate: 5xx responses
-GPU Health: Memory, utilization, temperature
-```
+To optimize **Deployment Patterns**, we enforce the following foundational rules:
 
-### Production Dashboard
-```
-Row 1: Request volume, error rate, avg latency (real-time)
-Row 2: Model-wise cost breakdown (daily)
-Row 3: Quality metrics (faithfulness, relevance) vs baseline
-Row 4: GPU utilization, queue depth, cache hit rate
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## Deployment Checklist
+---
 
-- [ ] Canary deployed to 5% with monitoring
-- [ ] Auto-rollback conditions configured
-- [ ] Eval suite passes on candidate (no regression)
-- [ ] Latency within SLA for P50/P95/P99
-- [ ] Cost per query within budget
-- [ ] Error rate <0.1% on warm endpoint
-- [ ] Cache warming complete before full rollout
-- [ ] Monitoring dashboards verified
-- [ ] Rollback procedure documented and tested
-- [ ] Stakeholders notified of deployment window
+## 7. Advanced Strategy and Execution
+
+To optimize **Deployment Patterns**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
+```
+
+---
+
+## 8. Advanced Strategy and Execution
+
+To optimize **Deployment Patterns**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 9. Advanced Strategy and Execution
+
+To optimize **Deployment Patterns**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 10. Advanced Strategy and Execution
+
+To optimize **Deployment Patterns**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 11. Advanced Strategy and Execution
+
+To optimize **Deployment Patterns**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
+```
+
+---

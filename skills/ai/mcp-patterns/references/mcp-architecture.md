@@ -1,116 +1,212 @@
-# MCP Architecture & Protocol
+# Mcp Architecture
 
-## Overview
+## 1. Advanced Strategy and Execution
 
-Model Context Protocol (MCP) is a standard protocol for communication between LLM applications and external tools/resources/prompts. It defines a server-client architecture with a JSON-RPC message format.
+To optimize **Mcp Architecture**, we enforce the following foundational rules:
 
-## Protocol Structure
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
 
-MCP uses JSON-RPC 2.0 over a transport layer. Messages are structured as:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/list",
-  "params": {}
-}
-```
-
-### Server Lifecycle
-1. **Initialize**: Client sends `initialize` with protocol version and capabilities
-2. **List**: Client calls `tools/list`, `resources/list`, `prompts/list` to discover capabilities
-3. **Call**: Client calls `tools/call`, `resources/read`, `prompts/get` for operations
-4. **Shutdown**: Clean disconnect
-
-### Client Lifecycle
-1. **Connect**: Establish transport and send initialize
-2. **Discover**: Fetch available tools, resources, prompts
-3. **Invoke**: Call specific tools/resources/prompts
-4. **Disconnect**: Graceful shutdown
-
-## Transports
-
-### stdio Transport
-Server runs as a child process. Communication via stdin/stdout. Fast, secure (no network exposure).
-
+### Core Implementation
 ```python
-# Server side
-server = FastMCP("my-server", transport="stdio")
-
-# Client side
-client = Client("my-server", transport="stdio")
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-Pros: simplest, no auth needed, lowest latency. Cons: local only, one client.
+---
 
-### SSE (Server-Sent Events) Transport
-Server exposes HTTP endpoints. Client connects via SSE for server-to-client messages and HTTP POST for client-to-server.
+## 2. Advanced Strategy and Execution
 
+To optimize **Mcp Architecture**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 3. Advanced Strategy and Execution
+
+To optimize **Mcp Architecture**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
-GET /sse  → SSE stream (server → client)
-POST /messages → JSON-RPC messages (client → server)
-```
 
-Pros: remote access, multiple clients. Cons: network latency, needs auth in production.
+---
 
-### Remote MCP Transport
-SSE + authentication layer. Adds API key validation or OAuth 2.0 flow. Endpoint discovery via well-known URL.
+## 4. Advanced Strategy and Execution
 
+To optimize **Mcp Architecture**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 5. Advanced Strategy and Execution
+
+To optimize **Mcp Architecture**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Core Implementation
 ```python
-server = FastMCP("my-server", transport="sse", host="0.0.0.0", port=8000)
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Capabilities
+---
 
-### Tools
-Functions that LLMs can invoke. Defined by:
-- name: snake_case identifier
-- description: natural language description for LLM routing
-- inputSchema: JSON Schema defining parameters
-- output: string or structured content
+## 6. Advanced Strategy and Execution
 
-CLI-based MCP servers let the LLM control local tools (shell, filesystem, database).
+To optimize **Mcp Architecture**, we enforce the following foundational rules:
 
-### Resources
-Data exposed to LLMs via URI scheme. Two types:
-- **Static**: Fixed content at a URI (`config://app/settings`)
-- **Dynamic**: URI template with parameters (`db://{table}/schema`)
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
 
-Resources have MIME types for content negotiation.
-
-### Prompts
-Server-side prompt templates with argument interpolation. Arguments defined by: name, type (string/number), required flag, description. Template uses `{{argument}}` syntax.
-
-## Response Types
-
-All tool/resource/prompts responses use `Content` types:
-
-```json
-{
-  "content": [
-    {"type": "text", "text": "result"},
-    {"type": "resource", "resource": {"uri": "file://result.txt", "text": "content"}}
-  ],
-  "isError": false
-}
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## Error Handling
+---
 
-Errors return structured response with `isError: true` and descriptive message. Never return raw exceptions.
+## 7. Advanced Strategy and Execution
 
-```json
-{
-  "content": [{"type": "text", "text": "Error: tool failed - insufficient permissions"}],
-  "isError": true
-}
+To optimize **Mcp Architecture**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Notifications
+---
 
-Server can send notifications to client without request. Used for: resource updates, tool list changes, prompt updates. Client subscribes to specific resources for change notifications.
+## 8. Advanced Strategy and Execution
 
-## Rate Limiting
+To optimize **Mcp Architecture**, we enforce the following foundational rules:
 
-SSE/remote servers should implement rate limiting. Per-client or global limits. Return 429 or structured error on limit exceeded.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 9. Advanced Strategy and Execution
+
+To optimize **Mcp Architecture**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 10. Advanced Strategy and Execution
+
+To optimize **Mcp Architecture**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 11. Advanced Strategy and Execution
+
+To optimize **Mcp Architecture**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
+```
+
+---

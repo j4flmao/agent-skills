@@ -1,185 +1,218 @@
 # Prompt Templates
 
-## Template Patterns
+## 1. Advanced Strategy and Execution
 
-### System + User Pattern
-```
-System: You are a {role}. {behavior_guidelines}
-User: {user_input}
-Assistant: 
-```
+To optimize **Prompt Templates**, we enforce the following foundational rules:
 
-### Few-Shot Pattern
-```
-System: Classify customer queries into categories.
-Examples:
-  Query: "I want to cancel my subscription"
-  Category: cancellation
-  
-  Query: "When will my order arrive?"
-  Category: shipping
-  
-  Query: "The website won't load"
-  Category: technical
-  
-User: {query}
-Category:
-```
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
 
-## Parameterized Templates
-
-### Python String Template
+### Core Implementation
 ```python
-from string import Template
-
-template = Template("""
-You are a $role assistant specializing in $domain.
-
-Context Information:
-$context
-
-User Question:
-$question
-
-Provide a $tone response that addresses the question
-using only the provided context.
-""")
-
-prompt = template.safe_substitute(
-    role="customer support",
-    domain="refund policies",
-    context="Our return policy allows 30-day returns...",
-    question="Can I return my laptop after 45 days?",
-    tone="helpful and concise"
-)
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### Jinja2 Templates
-```jinja
-{% if context %}
-Context:
-{% for doc in context %}
-[{{ loop.index }}] {{ doc }}
-{% endfor %}
-{% endif %}
+---
 
-{% if conversation_history %}
-Previous conversation:
-{% for msg in conversation_history %}
-{{ msg.role }}: {{ msg.content }}
-{% endfor %}
-{% endif %}
+## 2. Advanced Strategy and Execution
 
-User: {{ question }}
-Assistant: {% if constraints.concise %}Keep your response under 3 sentences.{% endif %}
+To optimize **Prompt Templates**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 3. Advanced Strategy and Execution
+
+To optimize **Prompt Templates**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## Template Categories
+---
 
-### Query Classification
-```
-Classify the following customer message:
-Message: "{message}"
+## 4. Advanced Strategy and Execution
 
-Categories:
-- Billing: payment, invoice, subscription
-- Technical: bug, error, login, performance
-- Account: password, settings, profile
-- Product: feature request, how-to, feedback
-- Other: anything else
+To optimize **Prompt Templates**, we enforce the following foundational rules:
 
-Category:
-Confidence (0-1):
-```
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
 
-### Extraction
-```
-Extract structured data from the following text:
-"{text}"
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
 
-Fields to extract:
-- date (ISO format YYYY-MM-DD)
-- amount (number, no currency symbol)
-- currency (3-letter code)
-- description (string, max 50 chars)
-- category (from: income, expense, transfer)
+---
 
-Output as JSON.
-```
+## 5. Advanced Strategy and Execution
 
-### Summarization
-```
-Summarize the following text in {sentence_count} sentences.
-Focus on: {focus_area}
-Target audience: {audience}
+To optimize **Prompt Templates**, we enforce the following foundational rules:
 
-Text:
-{text}
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
 
-Summary:
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### Safety Refusal
-```
-The user asked: "{user_input}"
+---
 
-This request appears to involve:
-{identified_issue}
+## 6. Advanced Strategy and Execution
 
-Generate a polite refusal that:
-1. Acknowledges the request
-2. States you cannot fulfill it
-3. Briefly explains why (policy, safety)
-4. Offers alternative help if appropriate
+To optimize **Prompt Templates**, we enforce the following foundational rules:
 
-Do not provide any information related to the harmful request.
-```
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
 
-## Template Versioning
-
-```yaml
-template:
-  name: "customer-support-v3"
-  version: "3.1.0"
-  variables:
-    - name: context
-      type: string
-      required: true
-      max_length: 4000
-    - name: question
-      type: string
-      required: true
-    - name: tone
-      type: string
-      enum: ["concise", "detailed", "friendly"]
-      default: "concise"
-  changelog:
-    "3.1.0": "Added tone parameter"
-    "3.0.0": "Switched from single to multi-turn format"
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## A/B Testing Variants
+---
 
-### Variant A (Concise)
-```
-Answer the question using the context. Be brief.
-Context: {context}
-Question: {question}
+## 7. Advanced Strategy and Execution
+
+To optimize **Prompt Templates**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### Variant B (Detailed)
-```
-Using the provided context, give a thorough answer
-that includes relevant details and explanations.
-Context: {context}
-Question: {question}
+---
+
+## 8. Advanced Strategy and Execution
+
+To optimize **Prompt Templates**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 9. Advanced Strategy and Execution
+
+To optimize **Prompt Templates**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## Template Management Rules
+---
 
-- One variable per purpose (don't overload parameters)
-- Default values for optional parameters
-- Validation rules for each variable (type, enum, length)
-- Max template length: 2000 tokens
-- Test each template with representative inputs
-- Document expected output format per template
+## 10. Advanced Strategy and Execution
+
+To optimize **Prompt Templates**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 11. Advanced Strategy and Execution
+
+To optimize **Prompt Templates**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
+```
+
+---

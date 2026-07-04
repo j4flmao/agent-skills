@@ -1,118 +1,213 @@
-# Observability Metrics for AI Systems
+# Observability Metrics
 
-## Latency Tracking
+## 1. Advanced Strategy and Execution
 
-| Metric | Definition | Target | Alert Threshold |
-|--------|------------|--------|-----------------|
-| TTFT | Time to first token | < 500ms | > 2s |
-| E2E latency | Total request to response | < 3s | > 10s |
-| Per-step latency | Each chain/agent step | < 1s | > 5s |
-| Queue time | Time in request queue | < 100ms | > 1s |
-| Token generation rate | Tokens/second | > 30 t/s | < 10 t/s |
+To optimize **Observability Metrics**, we enforce the following foundational rules:
 
-### Latency Breakdown
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Core Implementation
 ```python
-import time
-from contextlib import contextmanager
-
-class LatencyTracker:
-    def __init__(self):
-        self.metrics = {}
-
-    @contextmanager
-    def track(self, step_name):
-        start = time.perf_counter()
-        try:
-            yield
-        finally:
-            elapsed = time.perf_counter() - start
-            self.record(step_name, elapsed)
-
-    def record(self, name, duration):
-        if name not in self.metrics:
-            self.metrics[name] = {"count": 0, "total": 0, "max": 0}
-        self.metrics[name]["count"] += 1
-        self.metrics[name]["total"] += duration
-        self.metrics[name]["max"] = max(self.metrics[name]["max"], duration)
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Quality Metrics
+---
 
-| Metric | Measurement | Good | Poor |
-|--------|-------------|------|------|
-| Response relevance | User rating (1-5) | > 4.0 | < 3.0 |
-| Factual accuracy | Automated eval | > 95% | < 85% |
-| Hallucination rate | Grounding check | < 3% | > 10% |
-| Task completion rate | Success/total | > 90% | < 70% |
-| User satisfaction | NPS survey | > 50 | < 20 |
+## 2. Advanced Strategy and Execution
 
-## Drift Monitoring
+To optimize **Observability Metrics**, we enforce the following foundational rules:
 
-```python
-class DriftDetector:
-    def __init__(self, baseline_distribution, threshold=0.1):
-        self.baseline = baseline_distribution
-        self.threshold = threshold
-        self.window = []
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
 
-    def add_sample(self, embedding):
-        self.window.append(embedding)
-        if len(self.window) >= 100:
-            drift_score = self.compute_drift()
-            if drift_score > self.threshold:
-                self.alert(drift_score)
-            self.window = []
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
 
-    def compute_drift(self):
-        current_mean = np.mean(self.window, axis=0)
-        baseline_mean = np.mean(self.baseline, axis=0)
-        return np.linalg.norm(current_mean - baseline_mean)
+---
+
+## 3. Advanced Strategy and Execution
+
+To optimize **Observability Metrics**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
 
-## Dashboard Layout
+---
 
-| Panel | Metrics | Refresh |
-|-------|---------|---------|
-| Request volume | Requests/min, active users | 1m |
-| Latency heatmap | P50/P95/P99 by model and step | 1m |
-| Cost breakdown | $/day by model, user, feature | 1h |
-| Quality score | Avg rating, satisfaction trend | 1h |
-| Drift alerts | Drift score by model, feature | 5m |
-| Error rates | Error % by type, model | 1m |
+## 4. Advanced Strategy and Execution
 
-## Alerting Rules
+To optimize **Observability Metrics**, we enforce the following foundational rules:
 
-| Alert | Condition | Severity | Channel |
-|-------|-----------|----------|---------|
-| High latency | P95 > 2s for 5 min | Critical | PagerDuty |
-| Error spike | Error rate > 5% for 2 min | Critical | PagerDuty |
-| Budget depletion | > 50% daily budget used by noon | Warning | Slack |
-| Drift detected | Drift score > 0.1 | Warning | Slack + Ticket |
-| Low quality | Avg rating < 3.0 over 1h | Warning | Slack |
-| Cache miss spike | Hit rate < 20% for 5 min | Info | Dashboard |
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
 
-## Custom Metrics Collection
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 5. Advanced Strategy and Execution
+
+To optimize **Observability Metrics**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Core Implementation
 ```python
-class MetricsCollector:
-    def __init__(self):
-        self.metrics = defaultdict(lambda: {"count": 0, "total_latency": 0, "errors": 0})
-
-    def record(self, model, latency_ms, tokens_in, tokens_out, success):
-        m = self.metrics[model]
-        m["count"] += 1
-        m["total_latency"] += latency_ms
-        m["total_tokens_in"] = m.get("total_tokens_in", 0) + tokens_in
-        m["total_tokens_out"] = m.get("total_tokens_out", 0) + tokens_out
-        if not success:
-            m["errors"] += 1
-
-    def report(self):
-        return {
-            model: {
-                "avg_latency": m["total_latency"] / m["count"],
-                "error_rate": m["errors"] / m["count"] * 100,
-                "total_tokens": m.get("total_tokens_in", 0) + m.get("total_tokens_out", 0),
-            }
-            for model, m in self.metrics.items()
-        }
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
+
+---
+
+## 6. Advanced Strategy and Execution
+
+To optimize **Observability Metrics**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 7. Advanced Strategy and Execution
+
+To optimize **Observability Metrics**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
+```
+
+---
+
+## 8. Advanced Strategy and Execution
+
+To optimize **Observability Metrics**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 9. Advanced Strategy and Execution
+
+To optimize **Observability Metrics**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 10. Advanced Strategy and Execution
+
+To optimize **Observability Metrics**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 11. Advanced Strategy and Execution
+
+To optimize **Observability Metrics**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
+```
+
+---

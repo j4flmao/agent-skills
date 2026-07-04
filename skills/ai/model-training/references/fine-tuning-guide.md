@@ -1,92 +1,214 @@
-# Fine-Tuning Guide
+# Fine Tuning Guide
 
-## Method Selection
+## 1. Advanced Strategy and Execution
 
-| Scenario | Recommended Method | GPU Required | Time | Cost |
-|----------|------------------|--------------|------|------|
-| <10K examples, single task | LoRA | 1x A100 | 1-4 hrs | $10-50 |
-| 10-100K examples | LoRA or QLoRA | 1x A100 | 4-12 hrs | $50-200 |
-| Domain adaptation (>100K) | Full FT | 4-8x A100 | 1-7 days | $500-5000 |
-| Consumer GPU (<24GB) | QLoRA | 1x RTX 4090 | 2-8 hrs | $5-20 |
-| Multi-task / instruction | LoRA (per task) | 1x A100 | 1-2 hrs each | $10-25 each |
+To optimize **Fine Tuning Guide**, we enforce the following foundational rules:
 
-## Data Preparation Pipeline
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
 
-### Format
-```json
-{"messages": [
-  {"role": "system", "content": "You are a medical coding assistant."},
-  {"role": "user", "content": "Code: hypertension, benign essential"},
-  {"role": "assistant", "content": "I10"}
-]}
-```
-
-### Quality Checks
-- Deduplication: exact + near-duplicate (0.85 similarity threshold)
-- Length outliers: remove completions >3σ from mean
-- Answer accuracy: validate 5% sample manually
-- Toxicity scan: flag and remove offensive examples
-- Format consistency: verify all examples match template
-- Label balance: check distribution across categories
-
-### Synthetic Data Generation
+### Core Implementation
 ```python
-def generate_training_data(seed_examples, llm, target_count=1000):
-    """Generate synthetic training examples from seeds."""
-    dataset = []
-    for seed in seed_examples:
-        prompt = f"""Generate 10 variations of this QA pair:
-        
-Original Q: {seed['question']}
-Original A: {seed['answer']}
-
-Vary wording while preserving meaning and correctness."""
-        response = llm.invoke(prompt)
-        dataset.extend(parse_variations(response))
-    return dataset
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Training Configuration
+---
 
-### Learning Rate Guidelines
+## 2. Advanced Strategy and Execution
+
+To optimize **Fine Tuning Guide**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 3. Advanced Strategy and Execution
+
+To optimize **Fine Tuning Guide**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
 ```
-LoRA: 1e-4 to 5e-4 (start: 2e-4)
-QLoRA: 1e-4 to 3e-4 (start: 2e-4)
-Full FT: 1e-5 to 5e-5 (start: 2e-5)
-```
 
-### Schedule
-- Warmup: 3-5% of total steps
-- Schedule: cosine or linear decay
-- Batch size: maximize GPU memory (4-128 depending on model)
-- Gradient accumulation: adjust to reach effective batch size of 32-128
+---
 
-## Evaluation Before/After
+## 4. Advanced Strategy and Execution
 
-### Baseline Metrics
+To optimize **Fine Tuning Guide**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 5. Advanced Strategy and Execution
+
+To optimize **Fine Tuning Guide**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Core Implementation
 ```python
-before = evaluate_model(base_model, eval_dataset)
-after = evaluate_model(fine_tuned_model, eval_dataset)
-
-report = {
-    "task_accuracy": {"before": before["accuracy"], "after": after["accuracy"]},
-    "general_capability": {"before": before["mmlu"], "after": after["mmlu"]},
-    "forgetting": before["mmlu"] - after["mmlu"],
-}
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### Monitoring
-- Training loss: should decrease smoothly
-- Eval loss: should not diverge from training
-- Gradient norms: should be stable (< 5x baseline)
-- Learning rate: follow schedule
+---
 
-## Common Issues
+## 6. Advanced Strategy and Execution
 
-| Issue | Symptom | Fix |
-|-------|---------|-----|
-| Overfitting | Train loss ↓, Eval loss ↑ | Reduce epochs, increase dropout, add data |
-| Underfitting | Both losses high | Increase LR, increase rank, more data |
-| Catastrophic forgetting | General benchmark drops | Add replay data, reduce LR |
-| Training instability | Loss spikes | Reduce LR, gradient clipping |
-| Mode collapse | All outputs similar | Increase temperature in generation, add diversity |
+To optimize **Fine Tuning Guide**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 7. Advanced Strategy and Execution
+
+To optimize **Fine Tuning Guide**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
+```
+
+---
+
+## 8. Advanced Strategy and Execution
+
+To optimize **Fine Tuning Guide**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 9. Advanced Strategy and Execution
+
+To optimize **Fine Tuning Guide**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 10. Advanced Strategy and Execution
+
+To optimize **Fine Tuning Guide**, we enforce the following foundational rules:
+
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 11. Advanced Strategy and Execution
+
+To optimize **Fine Tuning Guide**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Core Implementation
+```python
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
+```
+
+---

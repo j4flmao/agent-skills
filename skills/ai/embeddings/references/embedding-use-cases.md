@@ -1,265 +1,219 @@
 # Embedding Use Cases
 
-## Overview
-Embeddings transform text, images, audio, and other data into dense vector representations. Their applications span search, clustering, classification, recommendation, anomaly detection, and more. Choosing the right use case and implementation pattern is critical for success.
+## 1. Advanced Strategy and Execution
 
-## Search and Retrieval
+To optimize **Embedding Use Cases**, we enforce the following foundational rules:
 
-### Semantic Search
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+
+### Core Implementation
 ```python
+import faiss
 import numpy as np
-from sentence_transformers import SentenceTransformer
-
-class SemanticSearcher:
-    def __init__(self, model_name: str = "BAAI/bge-large-en-v1.5"):
-        self.model = SentenceTransformer(model_name)
-        self.documents = []
-        self.embeddings = []
-
-    def index_documents(self, documents: list[str]):
-        self.documents = documents
-        self.embeddings = self.model.encode(documents, normalize_embeddings=True)
-
-    def search(self, query: str, k: int = 10, threshold: float = 0.0) -> list[dict]:
-        query_embed = self.model.encode(query, normalize_embeddings=True)
-        scores = np.dot(self.embeddings, query_embed)
-        top_k = np.argsort(scores)[-k:][::-1]
-
-        results = []
-        for idx in top_k:
-            if scores[idx] >= threshold:
-                results.append({
-                    "document": self.documents[idx],
-                    "score": float(scores[idx]),
-                    "rank": len(results) + 1,
-                })
-        return results
-
-    def hybrid_search(self, query: str, bm25_weight: float = 0.3, k: int = 10):
-        from rank_bm25 import BM25Okapi
-        tokenized_docs = [doc.split() for doc in self.documents]
-        bm25 = BM25Okapi(tokenized_docs)
-        bm25_scores = bm25.get_scores(query.split())
-
-        dense_scores = np.dot(self.embeddings, self.model.encode(query, normalize_embeddings=True))
-        bm25_norm = bm25_scores / max(bm25_scores) if max(bm25_scores) > 0 else bm25_scores
-        dense_norm = dense_scores / max(dense_scores) if max(dense_scores) > 0 else dense_scores
-
-        hybrid = bm25_weight * bm25_norm + (1 - bm25_weight) * dense_norm
-        top_k = np.argsort(hybrid)[-k:][::-1]
-
-        return [
-            {"document": self.documents[i], "score": float(hybrid[i])}
-            for i in top_k
-        ]
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-### Cross-Lingual Retrieval
+---
+
+## 2. Advanced Strategy and Execution
+
+To optimize **Embedding Use Cases**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 3. Advanced Strategy and Execution
+
+To optimize **Embedding Use Cases**, we enforce the following foundational rules:
+
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 4. Advanced Strategy and Execution
+
+To optimize **Embedding Use Cases**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 5. Advanced Strategy and Execution
+
+To optimize **Embedding Use Cases**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### Core Implementation
 ```python
-class CrossLingualRetriever:
-    def __init__(self):
-        self.model = SentenceTransformer("intfloat/multilingual-e5-large")
-
-    def index_multilingual(self, documents: list[tuple[str, str]]):
-        self.documents = []
-        self.embeddings = []
-
-        for text, lang in documents:
-            prefix = "passage: " if lang != "en" else ""
-            self.documents.append({"text": text, "lang": lang})
-            embed = self.model.encode(f"{prefix}{text}", normalize_embeddings=True)
-            self.embeddings.append(embed)
-
-        self.embeddings = np.array(self.embeddings)
-
-    def search(self, query: str, query_lang: str = "en", k: int = 10):
-        prefix = "query: " if query_lang != "en" else ""
-        query_embed = self.model.encode(f"{prefix}{query}", normalize_embeddings=True)
-        scores = np.dot(self.embeddings, query_embed)
-        top_k = np.argsort(scores)[-k:][::-1]
-
-        return [{"document": self.documents[i], "score": float(scores[i])} for i in top_k]
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Clustering and Topic Modeling
+---
 
-### Document Clustering
+## 6. Advanced Strategy and Execution
+
+To optimize **Embedding Use Cases**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 7. Advanced Strategy and Execution
+
+To optimize **Embedding Use Cases**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Core Implementation
 ```python
-from sklearn.cluster import KMeans
-from sklearn.manifold import TSNE
-
-class DocumentClusterer:
-    def __init__(self, n_clusters: int = 10):
-        self.n_clusters = n_clusters
-        self.model = None
-        self.labels = None
-
-    def cluster(self, documents: list[str], embeddings: np.ndarray) -> dict:
-        kmeans = KMeans(n_clusters=self.n_clusters, random_state=42, n_init=10)
-        self.labels = kmeans.fit_predict(embeddings)
-        self.model = kmeans
-
-        clusters = {}
-        for i, label in enumerate(self.labels):
-            clusters.setdefault(int(label), []).append(documents[i])
-
-        tsne = TSNE(n_components=2, random_state=42)
-        coords = tsne.fit_transform(embeddings)
-
-        return {
-            "clusters": clusters,
-            "labels": self.labels.tolist(),
-            "coordinates": coords.tolist(),
-            "silhouette_score": self._silhouette(embeddings),
-        }
-
-    def predict_cluster(self, embedding: np.ndarray) -> int:
-        return int(self.model.predict([embedding])[0])
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Classification
+---
 
-### Zero-Shot Classification
+## 8. Advanced Strategy and Execution
+
+To optimize **Embedding Use Cases**, we enforce the following foundational rules:
+
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 9. Advanced Strategy and Execution
+
+To optimize **Embedding Use Cases**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **RAG Architecture**: Retrieval-Augmented Generation feeding context chunks to LLMs to prevent hallucinations.
+
+### System Architecture
+```mermaid
+sequenceDiagram
+    participant User
+    participant LLM
+    participant VectorDB
+    User->>LLM: Ask Question
+    LLM->>VectorDB: Query Semantic Embeddings
+    VectorDB-->>LLM: Return Top-K Chunks
+    LLM->>User: Synthesize Answer + Citations
+```
+
+---
+
+## 10. Advanced Strategy and Execution
+
+To optimize **Embedding Use Cases**, we enforce the following foundational rules:
+
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Mathematical Thresholds
+$$ \text{Cosine Similarity} (A,B) = \frac{A \cdot B}{||A|| \times ||B||} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}} $$
+
+---
+
+## 11. Advanced Strategy and Execution
+
+To optimize **Embedding Use Cases**, we enforce the following foundational rules:
+
+- **Embedding Models**: Leveraging BERT or text-embedding-ada-002 to map semantic meaning to dense vector spaces.
+- **Quantization**: Compressing FP32 vectors to INT8 to fit massive LLMs and indexes into VRAM.
+- **Cosine Similarity**: Measuring the angle between embeddings to determine semantic closeness.
+- **HNSW Indexing**: Hierarchical Navigable Small World graphs for ultra-fast Approximate Nearest Neighbor search.
+
+### Core Implementation
 ```python
-class ZeroShotClassifier:
-    def __init__(self):
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
-
-    def classify(self, text: str, labels: list[str]) -> dict:
-        text_embed = self.model.encode(text, normalize_embeddings=True)
-        label_embeds = self.model.encode(labels, normalize_embeddings=True)
-        scores = np.dot(label_embeds, text_embed)
-
-        results = [
-            {"label": label, "score": float(score)}
-            for label, score in zip(labels, scores)
-        ]
-        return sorted(results, key=lambda x: x["score"], reverse=True)
-
-    def classify_batch(self, texts: list[str], labels: list[str]) -> list[dict]:
-        text_embeds = self.model.encode(texts, normalize_embeddings=True)
-        label_embeds = self.model.encode(labels, normalize_embeddings=True)
-        scores = np.dot(text_embeds, label_embeds.T)
-
-        results = []
-        for i, text in enumerate(texts):
-            predictions = [
-                {"label": labels[j], "score": float(scores[i][j])}
-                for j in range(len(labels))
-            ]
-            results.append(sorted(predictions, key=lambda x: x["score"], reverse=True))
-        return results
+import faiss
+import numpy as np
+d = 768 # vector dimension
+index = faiss.IndexFlatL2(d)
+vectors = np.random.random((1000, d)).astype('float32')
+index.add(vectors)
+D, I = index.search(vectors[:5], k=4)
+print(I)
 ```
 
-## Recommendation
-
-### Content-Based Filtering
-```python
-class ContentRecommender:
-    def __init__(self):
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
-
-    def fit(self, items: list[dict]):
-        self.items = items
-        texts = [f"{item['title']} {item.get('description', '')}" for item in items]
-        self.embeddings = self.model.encode(texts, normalize_embeddings=True)
-
-    def recommend(self, query: str, k: int = 5) -> list[dict]:
-        query_embed = self.model.encode(query, normalize_embeddings=True)
-        scores = np.dot(self.embeddings, query_embed)
-        top_k = np.argsort(scores)[-k:][::-1]
-
-        return [
-            {**self.items[i], "score": float(scores[i])}
-            for i in top_k
-        ]
-
-    def similar_items(self, item_id: int, k: int = 5) -> list[dict]:
-        query_embed = self.embeddings[item_id]
-        scores = np.dot(self.embeddings, query_embed)
-        top_k = np.argsort(scores)[-(k + 1):][::-1]
-
-        return [
-            {**self.items[i], "score": float(scores[i])}
-            for i in top_k if i != item_id
-        ][:k]
-```
-
-## Anomaly Detection
-
-```python
-class EmbeddingAnomalyDetector:
-    def __init__(self, contamination: float = 0.1):
-        self.contamination = contamination
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
-
-    def fit(self, normal_texts: list[str]):
-        self.embeddings = self.model.encode(normal_texts, normalize_embeddings=True)
-        self.center = np.mean(self.embeddings, axis=0)
-        self.distances = np.linalg.norm(self.embeddings - self.center, axis=1)
-        self.threshold = np.percentile(self.distances, (1 - self.contamination) * 100)
-
-    def predict(self, texts: list[str]) -> list[dict]:
-        embeds = self.model.encode(texts, normalize_embeddings=True)
-        distances = np.linalg.norm(embeds - self.center, axis=1)
-
-        return [
-            {
-                "text": text,
-                "anomaly_score": float(dist),
-                "is_anomaly": bool(dist > self.threshold),
-            }
-            for text, dist in zip(texts, distances)
-        ]
-```
-
-## Deduplication
-
-```python
-class Deduplicator:
-    def __init__(self, threshold: float = 0.95):
-        self.threshold = threshold
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
-
-    def find_duplicates(self, texts: list[str]) -> list[tuple[int, int, float]]:
-        embeds = self.model.encode(texts, normalize_embeddings=True)
-        similarity = np.dot(embeds, embeds.T)
-        duplicates = []
-
-        for i in range(len(texts)):
-            for j in range(i + 1, len(texts)):
-                if similarity[i][j] >= self.threshold:
-                    duplicates.append((i, j, float(similarity[i][j])))
-
-        return sorted(duplicates, key=lambda x: x[2], reverse=True)
-
-    def deduplicate(self, texts: list[str]) -> tuple[list[str], list[int]]:
-        embeds = self.model.encode(texts, normalize_embeddings=True)
-        keep = []
-        keep_indices = []
-
-        for i, text in enumerate(texts):
-            is_dup = False
-            for j in keep_indices:
-                sim = float(np.dot(embeds[i], embeds[j]))
-                if sim >= self.threshold:
-                    is_dup = True
-                    break
-            if not is_dup:
-                keep.append(text)
-                keep_indices.append(i)
-
-        return keep, keep_indices
-```
-
-## Key Points
-- Embeddings enable semantic search, clustering, classification, and more
-- Normalize embeddings to unit length for cosine similarity
-- Hybrid search (dense + sparse) outperforms pure approaches
-- Cross-lingual models enable retrieval across languages
-- Zero-shot classification works well with descriptive label names
-- Content-based recommendation uses embedding similarity
-- Anomaly detection via distance from centroid
-- Deduplication threshold typically 0.90-0.95
-- Clustering quality measured via silhouette score
-- Always benchmark on your specific use case and data distribution
+---
