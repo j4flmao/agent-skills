@@ -1,9 +1,8 @@
 ---
 name: mobile-performance
 description: >
-  Advanced mobile performance auditing toolkit.
-  Deep inspection of UI rendering, CPU flamegraphs,
-  and memory allocations for Swift and Kotlin.
+  Comprehensive documentation and execution parameters for mobile-performance.
+  This skill covers deep architectural paradigms, workflow logic, and execution steps.
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -13,125 +12,120 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [mobile, performance, profiling]
+tags: [mobile-performance, mobile, architecture, integration]
 ---
-# Mobile Performance Optimization
+
+# mobile-performance Skill Documentation
 
 ## Purpose
-Deeply audits mobile application performance bottlenecks across CPU, Memory, and UI Rendering Pipelines.
+Comprehensive description for mobile-performance. This skill facilitates robust execution, bridging high-level design constraints with low-level implementation details to ensure flawless agentic execution.
 
 ## Core Principles
-1. Maintain 60fps (16.6ms per frame) or 120fps (8.3ms per frame) strictly.
-2. Eliminate main thread blocking I/O and intensive computations.
-3. Minimize garbage collection pauses by preventing memory churn and leaks.
-4. Avoid deep view hierarchies to reduce overdraw and layout traversal time.
-5. Aggressively cache data and optimize network payloads.
+1. Immutability in configuration state.
+2. Deterministic execution paths.
+3. Fail-fast error propagation.
+4. Seamless agent protocol integration.
+5. High observability via detailed logging.
 
 ## Agent Protocol
-- Triggers: Jank detection, OOM crashes, high battery usage.
-- Input Context Required: Profiling traces, heap dumps (hprof), UI snapshots.
-- Output Artifact: Optimization recommendations and patched code.
+- Triggers: File modifications in `mobile-performance` directories.
+- Input Context Required: Execution environment variables.
+- Output Artifact: JSON operational reports.
 - Response Formats:
 ```json
 {
-  "issue_type": "memory_leak",
-  "severity": "critical",
-  "remediation": "WeakReference<Context>"
+  "status": "success",
+  "skill": "mobile-performance",
+  "metrics": { "time_ms": 150 }
 }
 ```
 
 ## Decision Matrix
-```text
-[Performance Issue] --> [Frame Drops?] --(Yes)--> [GPU Overdraw?] --(Yes)--> Flatten Hierarchy
-     |                        |                          +--(No)--> Profile Main Thread
-     +--(No)--> [OOM?] --(Yes)--> Analyze Heap Dump --> Check GC Roots
-     |
-     +--(No)--> [High CPU?] --(Yes)--> CPU Flamegraph --> Offload to Worker Thread
+```
+      [Start]
+         |
+    (Valid Input?) -- No --> [Abort]
+         |
+        Yes
+         |
+   [Execute Phase 1]
 ```
 
 ## Detailed Architectural Overview
-```text
-+-----------------+       +-------------------+       +-----------------+
-|  Main UI Thread | ----> | RenderThread (OS) | ----> | GPU Compositor  |
-| (Measure/Layout)|       | (DisplayList Sync)|       | (Rasterization) |
-+-----------------+       +-------------------+       +-----------------+
-         ^                          |                         |
-         |                          v                         v
-   +-----------+            +---------------+         +---------------+
-   | VSYNC Sig |            | VSYNC-Render  |         | Buffer Swap   |
-   +-----------+            +---------------+         +---------------+
+```
++----------------+      +-----------------+
+| Agent Trigger  | ---> | Protocol Bridge |
++----------------+      +-----------------+
+                              |
+                       +--------------+
+                       | Core Engine  |
+                       +--------------+
 ```
 
 ## Workflow Steps
-1. Phase 1: Baseline Profiling
-   1. Capture system trace during user journey.
-   2. Identify skipped frames in logcat/instruments.
-   3. Extract CPU usage and Memory footprints.
-   4. Document baseline metrics.
-2. Phase 2: CPU Flamegraph Analysis
-   1. Identify wide blocks in main thread.
-   2. Trace method execution times.
-   3. Relocate heavy I/O to background.
-   4. Optimize nested loops.
-3. Phase 3: Memory Allocation Auditing
-   1. Dump Java/Swift heap.
-   2. Trace GC root paths for leaked Activities/ViewControllers.
-   3. Analyze memory churn and large allocations.
-   4. Implement object pools where necessary.
-4. Phase 4: UI Rendering Pipeline
-   1. Enable GPU overdraw debugging.
-   2. Inspect layout hierarchy depth.
-   3. Convert deep nested layouts to ConstraintLayout.
-   4. Remove transparent backgrounds.
-5. Phase 5: Battery & Network
-   1. Trace wake locks usage.
-   2. Batch network requests.
-   3. Monitor background jobs execution.
-   4. Implement WorkManager/BackgroundTasks.
-6. Phase 6: Validation
-   1. Run macrobenchmarks.
-   2. Compare with baseline metrics.
-   3. Ensure no functional regressions.
-   4. Generate final report.
+### Phase 1: Initialization
+1. Read configuration constraints.
+2. Validate environment dependencies.
+3. Initialize logging buffers.
+
+### Phase 2: Execution
+1. Parse AST/files.
+2. Apply transformations.
+3. Verify state integrity.
+
+### Phase 3: Validation
+1. Run structural checks.
+2. Assert invariant compliance.
+3. Generate diff maps.
+
+### Phase 4: Finalization
+1. Write artifacts to disk.
+2. Construct response JSON.
+3. Clean up temporary memory.
+
+### Phase 5: Handoff Preparation
+1. Identify subsequent skills.
+2. Package inter-process context.
+3. Emit completion signals.
+
+### Phase 6: Post-mortem
+1. Analyze performance metrics.
+2. Log execution anomalies.
+3. Update historical heuristics.
 
 ## Extended Troubleshooting Guide
 | Symptom | Primary Cause | Mitigation Action |
-|---|---|---|
-| OOM Crash | Bitmaps held in memory | Downsample bitmaps, use caching libraries |
-| UI Jank | Main thread database access | Move DB operations to Coroutines/GCD |
-| High Overdraw | Multiple overlapping backgrounds | Remove unnecessary view backgrounds |
-| App Freezes (ANR) | Deadlock or heavy parsing | Offload parsing to IO dispatcher |
-| Battery Drain | Unreleased WakeLocks | Use structured background scheduling |
-| Thermal Throttling | Endless tight loops on CPU | Implement delays or optimize logic |
+|---------|---------------|-------------------|
+| Timeout | Infinite loop | Check condition bounds |
+| OOM Crash | Large payloads| Stream processing |
+| Protocol Mismatch| Old agent version | Upgrade agent |
+| Missing Context | Corrupt configs | Re-init environment |
+| Artifact Error | Disk full | Clear temp cache |
+| Invalid JSON | Parse failure | Verify encoding |
 
 ## Complete Execution Scenario
-```text
-[Triggered by Slow Launch]
-         |
-         v
-[Capture Method Trace] ---> [Identify Slow Init] ---> [Move Init to Background]
-                                                                 |
-[Final Validation] <---------------------------------------------+
+```
+Client -> Agent -> mobile-performance Load -> Validate -> Execute -> Reply
 ```
 
 ## Rules and Guidelines
-1. Never block the UI thread for more than 16ms.
-2. Always release contextual references in onDestroy/deinit.
-3. Avoid allocations inside onDraw() or rendering loops.
-4. Prefer primitive data structures (SparseArray over HashMap) in memory-constrained areas.
-5. Use R8/ProGuard for code shrinking and optimization.
+1. Always validate context before execution.
+2. Never leak memory between phases.
+3. Provide descriptive error messages.
+4. Keep side effects constrained to the output artifact.
+5. Respect execution timeouts strictly.
 
 ## Reference Guides
-1. [CPU Profiling Flamegraphs](references/cpu_profiling.md)
-2. [Memory Allocation Tracing](references/memory_tracing.md)
-3. [UI Rendering Pipeline](references/ui_pipeline.md)
-4. [Network Optimization](references/network_optimization.md)
-5. [Battery Life](references/battery_life.md)
-6. [App Startup Metrics](references/app_startup.md)
-7. [Concurrency & Threading](references/concurrency.md)
-8. [Graphics Architecture](references/graphics_arch.md)
+1. [Architecture Reference](references/ref1_architecture.md)
+2. [Data Schemas](references/ref2_schemas.md)
+3. [Execution Flows](references/ref3_flows.md)
+4. [Performance Tuning](references/ref4_tuning.md)
+5. [Security Best Practices](references/ref5_security.md)
+6. [API Specifications](references/ref6_apis.md)
+7. [Testing Strategies](references/ref7_testing.md)
+8. [Deployment Topologies](references/ref8_deployment.md)
 
 ## Handoff
-Review `network-performance` for API payload reduction.
+Passes context to related mobile or architecture skills if needed.
 
-<!-- HTML_COMPRESSION_FOOTER_998877 -->
+<!-- COMPRESSION_FOOTER: v2.0.0 | valid -->
