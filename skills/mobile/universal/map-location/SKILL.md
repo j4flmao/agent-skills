@@ -1,794 +1,593 @@
----
-name: mobile-map-location
-description: >
-  Use this skill when the user says 'maps', 'location', 'map view',
-  'geolocation', 'GPS', 'MapKit', 'Google Maps', 'map marker',
-  'map annotation', 'location service', 'geocoding', 'reverse geocoding'.
-  Integrate maps, location tracking, geofencing, and geocoding in mobile apps.
-  Do NOT use for: backend location processing or web maps.
-compatibility:
-  claude-code: true
-  cursor: true
-  codex: true
-  windsurf: true
-tags: [mobile, maps, location, phase-7, universal]
-version: "1.0.0"
-author: "j4flmao"
-license: "MIT"
----
+# Map and Location Skill
 
-# Mobile Maps & Location
+## Overview
+Map integration provides location-based features including interactive maps, geocoding, routing, and location tracking. This skill covers platform-specific APIs (MapKit, Google Maps, Mapbox), cross-platform solutions, and location services.
 
-## Purpose
-Guide for integrating maps and location services in mobile apps: map display, location tracking, geocoding, and permissions.
+## Decision Tree: Map Platform Selection
 
-## Agent Protocol
-
-### Trigger
-Phrases: "maps", "location", "map view", "geolocation", "GPS", "MapKit", "Google Maps", "map marker", "map annotation", "location service", "geocoding", "reverse geocoding"
-
-### Input Context
-- Map provider preference (Apple Maps, Google Maps, MapLibre, Mapbox)
-- Location accuracy requirements (significant changes vs precise)
-- Marker/annotation data and clustering needs
-- Geofencing regions (if applicable)
-
-### Output Artifact
-Map integration: map view setup, marker configuration with clustering, location permission handling, tracking logic, geocoding cache.
-
-### Response Format
+### Which Map SDK to Use?
 ```
-<map-location>
-<provider>{mapkit/google/maplibre config}</provider>
-<permissions>{usage descriptions, request flow}</permissions>
-<display>{markers, clusters, annotations, styling}</display>
-<tracking>{permission, updates, geofencing}</tracking>
-<geocoding>{forward, reverse, cache}</geocoding>
-</map-location>
-```
-No preamble. No postamble. No explanations.
-
-### Completion Criteria
-- Map renders with correct region and zoom
-- Markers display with clustering for >25 pins
-- Location permission flow works with proper fallback
-- Location updates deliver at expected interval
-- Geocoding returns results with caching
-
-### Max Response Length
-6000 tokens
-
-## Decision Trees
-
-### Map SDK Selection
-```
-Cross-platform need?
-├── iOS only → Apple MapKit (free, no API key, native SwiftUI/UIKit)
-├── iOS + Android
-│   ├── Free, no API key → MapLibre (open-source, self-host tiles)
-│   ├── Rich features, Places, routing → Google Maps
-│   └── Navigation SDK, traffic → Mapbox (paid after free tier)
-├── Flutter → flutter_map (MapLibre) or google_maps_flutter
-└── React Native → react-native-maps (Apple/Google) or MapLibre GL
+Target platforms:
+├── iOS-only → Apple MapKit (free, integrated, no API key)
+├── Android-only → Google Maps (rich features, needs API key)
+├── Cross-platform (iOS + Android) → Google Maps for both, or Mapbox
+├── React Native → react-native-maps (uses native SDKs)
+├── Flutter → flutter_map (OpenStreetMap) or google_maps_flutter
+├── Web → Leaflet (free, OpenStreetMap), Mapbox GL JS, or Google Maps JS
+└── Cross-platform + Web → Mapbox GL (unified API across all platforms)
 ```
 
-### Location Permission Strategy
+### Feature Requirements Decision
 ```
-What location does the feature need?
-├── One-time location (weather, nearby places)
-│   └── requestWhenInUseAuthorization (iOS) / ACCESS_FINE_LOCATION (Android)
-├── Continuous foreground tracking (ride-hailing, fitness)
-│   └── requestWhenInUseAuthorization + background mode explanation
-├── Background geofencing (arrival/departure triggers)
-│   └── requestAlwaysAuthorization (iOS) / ACCESS_BACKGROUND_LOCATION (Android)
-│   ├── iOS: must enable Background Modes > Location updates
-│   └── Android: request BACKGROUND after FOREGROUND is granted
-└── Approximate location only (city-level content)
-    └── requestTemporaryFullAccuracyAuthorization (iOS) / ACCESS_COARSE_LOCATION
-```
-
-### Location Tracking Mode
-```
-What accuracy is needed?
-├── Navigation, turn-by-turn → kCLLocationAccuracyBest / PRIORITY_HIGH_ACCURACY
-│   └── 1-2 sec interval, high battery drain
-├── Nearby places, weather → kCLLocationAccuracyHundredMeters / PRIORITY_BALANCED
-│   └── 30-60 sec interval, moderate battery
-├── City-level badges → significant-change / PRIORITY_LOW_POWER
-│   └── 500m+ changes, very efficient
-└── Region entry/exit → startMonitoringForRegion / GeofencingClient
-    └── ≥100m radius (iOS), max 20 regions (iOS)
+What map features do I need?
+├── Show a static location → Simple annotation/marker (any SDK)
+├── User location tracking → Core Location (iOS) / Fused Location (Android)
+├── Search/geocoding → MKLocalSearch (iOS) / Places API (Android/Web)
+├── Turn-by-turn navigation → Mapbox Navigation SDK or Google Navigation
+├── Custom map styles → Mapbox Studio (most flexible) or Google Maps styling
+├── Offline maps → Mapbox offline or Google Maps offline tiles
+├── Indoor maps → Google Maps Indoor or custom solution
+├── Heatmaps / data visualization → Google Maps Heatmap or Deck.gl + Mapbox
+├── Route optimization → Google OR-Tools or Mapbox Optimization API
+└── Real-time location sharing → WebSocket + location SDK
 ```
 
-### Clustering Strategy
-```
-How many markers?
-├── < 25 markers → Individual annotations (no clustering needed)
-├── 25-500 markers → Platform clustering API
-├── 500-5000 markers → Custom clustering with quad-tree
-└── > 5000 markers → Server-side clustering + viewport filtering
-```
+## Platform Integration Patterns
 
-## Workflow
-
-### 1. Map SDK Selection
-Four major map SDKs with different tradeoffs:
-- **Apple MapKit**: iOS-only, free (no API key), smooth SwiftUI `Map` and UIKit `MKMapView`, flyover 3D, LookAround, limited customization
-- **Google Maps**: Cross-platform, rich features (indoor maps, Street View, Places), requires API key with billing, JSON styling, directions API, Places API
-- **MapLibre**: Open-source Mapbox GL fork, custom style JSON, self-hosted tiles, no API key, privacy-focused
-- **Mapbox**: Custom styling, Navigation SDK, real-time traffic, pricing based on map loads
-
-### 2. Location Permissions
-Two-tier permission model on both platforms:
-- iOS: `requestWhenInUseAuthorization` (foreground) vs `requestAlwaysAuthorization` (background+foreground). Keys: `NSLocationWhenInUseUsageDescription`, `NSLocationAlwaysAndWhenInUseUsageDescription`, `NSLocationTemporaryUsageDescriptionDictionary` (iOS 14+ for precise vs approximate)
-- Android: `ACCESS_FINE_LOCATION` (GPS+network, precise), `ACCESS_COARSE_LOCATION` (network only, ~100m), `ACCESS_BACKGROUND_LOCATION` (must request after foreground permission is granted, Android 10+)
-
-### 3. Map Display with Markers and Clustering
-Map view configuration: initial camera position (lat/lng/zoom), min/max zoom limits, map type (standard, satellite, hybrid, terrain). Markers with title/subtitle/custom icon. Clustering for 25+ markers. Polylines for routes, polygons for areas, ground overlays.
-
-### 4. Location Tracking Strategies
-Four tracking modes: continuous high-accuracy, balanced, significant-change, region monitoring (geofencing).
-
-### 5. Geocoding
-Forward geocoding: address → coordinate. Reverse geocoding: coordinate → address. Cache results with TTL.
-
-### 6. Map Customization and Gestures
-Style customization, gesture management, map padding, animated camera updates.
-
-## Map SDK Comparison
-
-| Feature | MapKit | Google Maps | MapLibre | Mapbox |
-|---|---|---|---|---|
-| iOS | Native | Yes | Yes | Yes |
-| Android | No | Yes | Yes | Yes |
-| API key | No | Yes | No | Yes |
-| Offline tiles | Limited | Yes (paid) | Yes | Yes (paid) |
-| Custom style | Limited | Full (JSON) | Full (JSON) | Full (JSON) |
-| Navigation SDK | No | Yes (paid) | No | Yes |
-| Routing | Yes | Yes (paid) | Via OSRM | Yes |
-| Places API | No | Yes (paid) | No | Yes |
-| Cost | Free | Usage-based | Free | Usage-based |
-
-## Implementation
-
-### MapKit (iOS — SwiftUI)
+### MapKit (iOS) Pattern
 ```swift
 import MapKit
 
-struct MapView: View {
-  @State private var region = MKCoordinateRegion(
-    center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-  )
-  @State private var selectedMarker: MarkerData?
+class MapManager: NSObject {
+    private let mapView: MKMapView
+    private let locationManager = CLLocationManager()
 
-  let locations: [MarkerData]
+    init(mapView: MKMapView) {
+        self.mapView = mapView
+        super.init()
+        setupMap()
+    }
 
-  var body: some View {
-    Map(initialPosition: .region(region)) {
-      ForEach(locations) { location in
-        Marker(location.name, coordinate: location.coordinate)
-          .tint(.red)
+    private func setupMap() {
+        mapView.delegate = self
+        mapView.showsUserLocation = true
+        mapView.showsCompass = true
+        mapView.showsScale = true
+        locationManager.delegate = self
+        requestLocationPermission()
+    }
 
-        if location == selectedMarker {
-          Annotation(location.name, coordinate: location.coordinate) {
-            VStack {
-              Image(systemName: "star.fill")
-              Text(location.subtitle).font(.caption)
-            }
-            .padding(8)
-            .background(.ultraThinMaterial)
-            .cornerRadius(8)
-          }
+    func addAnnotation(at coordinate: CLLocationCoordinate2D, title: String, subtitle: String? = nil) {
+        let annotation = MKPointAnnotation()
+        annotation.coordinate = coordinate
+        annotation.title = title
+        annotation.subtitle = subtitle
+        mapView.addAnnotation(annotation)
+    }
+
+    func searchNearby(query: String, radius: CLLocationDistance = 1000) {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        request.region = MKCoordinateRegion(
+            center: mapView.userLocation.coordinate,
+            latitudinalMeters: radius,
+            longitudinalMeters: radius
+        )
+        MKLocalSearch(request: request).start { response, error in
+            guard let items = response?.mapItems else { return }
+            items.forEach { self.addAnnotation(
+                at: $0.placemark.coordinate,
+                title: $0.name ?? "",
+                subtitle: $0.placemark.title
+            )}
         }
-      }
     }
-    .mapStyle(.standard)
-    .mapControls {
-      MapUserLocationButton()
-      MapCompass()
-      MapScaleView()
+
+    private func requestLocationPermission() {
+        locationManager.requestWhenInUseAuthorization()
     }
-  }
+}
+
+extension MapManager: MKMapViewDelegate {
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        guard !(annotation is MKUserLocation) else { return nil }
+        let id = "marker"
+        let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
+            as? MKMarkerAnnotationView ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
+        view.canShowCallout = true
+        view.animatesWhenAdded = true
+        return view
+    }
 }
 ```
 
-### MapKit (iOS — UIKit)
-```swift
-import MapKit
-
-class MapViewController: UIViewController {
-  let mapView = MKMapView()
-
-  override func viewDidLoad() {
-    super.viewDidLoad()
-    view.addSubview(mapView)
-    mapView.frame = view.bounds
-    mapView.delegate = self
-    mapView.showsUserLocation = true
-
-    // Initial region
-    let center = CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194)
-    mapView.setRegion(MKCoordinateRegion(center: center, latitudinalMeters: 1000, longitudinalMeters: 1000), animated: false)
-  }
-}
-
-// Clustering with MKClusterAnnotation
-extension MapViewController: MKMapViewDelegate {
-  func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-    if let cluster = annotation as? MKClusterAnnotation {
-      let view = MKMarkerAnnotationView(annotation: cluster, reuseIdentifier: "cluster")
-      view.glyphText = "\(cluster.memberAnnotations.count)"
-      view.markerTintColor = .systemBlue
-      return view
-    }
-    if let place = annotation as? PlaceAnnotation {
-      let view = MKMarkerAnnotationView(annotation: place, reuseIdentifier: "marker")
-      view.canShowCallout = true
-      view.markerTintColor = .red
-      return view
-    }
-    return nil
-  }
-}
-```
-
-### Google Maps (Android — Kotlin)
+### Google Maps (Android) Pattern
 ```kotlin
-class MapActivity : AppCompatActivity(), OnMapReadyCallback {
-  private lateinit var map: GoogleMap
-  private lateinit var clusteringManager: ClusterManager<PlaceItem>
+class MapHelper(private val googleMap: GoogleMap) {
+    private val markerMap = mutableMapOf<String, Marker>()
 
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    setContentView(R.layout.activity_map)
-    val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
-    mapFragment.getMapAsync(this)
-  }
-
-  override fun onMapReady(googleMap: GoogleMap) {
-    map = googleMap
-    map.uiSettings.isZoomControlsEnabled = true
-    map.setMinZoomPreference(10f)
-
-    // Enable clustering
-    clusteringManager = ClusterManager(this, map)
-    map.setOnCameraIdleListener(clusteringManager)
-    map.setOnMarkerClickListener(clusteringManager)
-
-    // Add items
-    val items = fetchPlaces()
-    clusteringManager.addItems(items.map { PlaceItem(it.lat, it.lng, it.name, it.snippet) })
-    clusteringManager.cluster()
-
-    // Custom cluster renderer
-    clusteringManager.renderer = PlaceClusterRenderer(this, map, clusteringManager)
-  }
-}
-
-// Custom cluster renderer
-class PlaceClusterRenderer(
-  context: Context, map: GoogleMap, clusterManager: ClusterManager<PlaceItem>
-) : DefaultClusterRenderer<PlaceItem>(context, map, clusterManager) {
-  override fun onBeforeClusterItemRendered(item: PlaceItem, markerOptions: MarkerOptions) {
-    markerOptions.title(item.title).snippet(item.snippet)
-      .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
-  }
-
-  override fun onBeforeClusterRendered(cluster: Cluster<PlaceItem>, markerOptions: MarkerOptions) {
-    markerOptions.title("${cluster.size} places")
-      .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
-  }
-}
-```
-
-### Google Maps (iOS — UIKit)
-```swift
-import GoogleMaps
-
-class MapViewController: UIViewController {
-  var mapView: GMSMapView!
-
-  override func viewDidLoad() {
-    super.viewDidLoad()
-    let camera = GMSCameraPosition(latitude: 37.7749, longitude: -122.4194, zoom: 12)
-    mapView = GMSMapView(frame: view.bounds, camera: camera)
-    mapView.settings.myLocationButton = true
-    mapView.isMyLocationEnabled = true
-    mapView.delegate = self
-    view.addSubview(mapView)
-
-    // Marker with clustering via GMUClusterManager
-    let iconGenerator = GMUDefaultClusterIconGenerator()
-    let algorithm = GMUNonHierarchicalDistanceBasedAlgorithm()
-    let renderer = GMUDefaultClusterRenderer(mapView: mapView, clusterIconGenerator: iconGenerator)
-    let clusterManager = GMUClusterManager(map: mapView, algorithm: algorithm, renderer: renderer)
-    clusterManager.cluster()
-  }
-}
-```
-
-### MapLibre (Android)
-```kotlin
-import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.maps.Style
-import org.maplibre.android.annotations.MarkerOptions
-
-class MapLibreActivity : AppCompatActivity(), OnMapReadyCallback {
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    MapLibre.getInstance(this)
-    setContentView(R.layout.activity_maplibre)
-    val mapView = findViewById<MapView>(R.id.mapView)
-    mapView.onCreate(savedInstanceState)
-    mapView.getMapAsync(this)
-  }
-
-  override fun onMapReady(map: MapLibreMap) {
-    map.setStyle("https://demotiles.maplibre.org/style.json") {
-      // Add markers via GeoJSON source
-      map.addSource(
-        GeoJsonSource("places", FeatureCollection.fromFeatures(listOf(
-          Feature.fromGeometry(Point.fromLngLat(-122.4194, 37.7749))
-        )))
-      )
-      map.addLayer(SymbolLayer("places-layer", "places").withProperties(
-        PropertyFactory.iconImage("marker-15"),
-        PropertyFactory.iconAllowOverlap(true)
-      ))
+    fun configure() {
+        googleMap.uiSettings.apply {
+            isZoomControlsEnabled = true
+            isCompassEnabled = true
+            isMapToolbarEnabled = true
+            isMyLocationButtonEnabled = true
+        }
+        googleMap.setMinZoomPreference(5f)
+        googleMap.setMaxZoomPreference(20f)
     }
-  }
+
+    fun addMarker(id: String, latLng: LatLng, title: String, snippet: String? = null) {
+        val marker = googleMap.addMarker(
+            MarkerOptions()
+                .position(latLng)
+                .title(title)
+                .snippet(snippet)
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
+        )
+        marker?.tag = id
+        marker?.let { markerMap[id] = it }
+    }
+
+    fun animateToLocation(latLng: LatLng, zoom: Float = 15f) {
+        googleMap.animateCamera(
+            CameraUpdateFactory.newLatLngZoom(latLng, zoom),
+            500,
+            null
+        )
+    }
+
+    fun drawRoute(points: List<LatLng>, color: Int = 0xFF0000FF.toInt(), width: Float = 5f) {
+        googleMap.addPolyline(
+            PolylineOptions()
+                .addAll(points)
+                .color(color)
+                .width(width)
+                .geodesic(true)
+        )
+    }
 }
 ```
 
-### Flutter — google_maps_flutter
-```dart
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+## Location Services
 
-class MapScreen extends StatefulWidget {
-  @override
-  State<MapScreen> createState() => MapScreenState();
-}
+### Permission Handling
+```
+iOS:
+  - NSLocationWhenInUseUsageDescription (foreground only)
+  - NSLocationAlwaysUsageDescription (background tracking)
+  - CLLocationManager.requestWhenInUseAuthorization()
+  - CLLocationManager.requestAlwaysAuthorization()
 
-class MapScreenState extends State<MapScreen> {
-  GoogleMapController? controller;
-  final Set<Marker> markers = {};
-  final Set<Polygon> polygons = {};
-  final Set<Polyline> polylines = {};
+Android:
+  - ACCESS_FINE_LOCATION (GPS precise)
+  - ACCESS_COARSE_LOCATION (WiFi/cell approximate)
+  - ACCESS_BACKGROUND_LOCATION (background, Android 10+)
+  - Request at runtime (Android 6+)
+  - Check LocationManager.isProviderEnabled()
 
-  static const _initial = CameraPosition(
-    target: LatLng(37.7749, -122.4194),
-    zoom: 12,
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    return GoogleMap(
-      initialCameraPosition: _initial,
-      markers: markers,
-      polygons: polygons,
-      polylines: polylines,
-      myLocationEnabled: true,
-      myLocationButtonEnabled: true,
-      mapType: MapType.normal,
-      onMapCreated: (ctrl) => controller = ctrl,
-      onTap: (latLng) => _addMarker(latLng),
-    );
-  }
-
-  void _addMarker(LatLng point) {
-    setState(() {
-      markers.add(Marker(
-        markerId: MarkerId(point.toString()),
-        position: point,
-        infoWindow: InfoWindow(title: "Marker", snippet: point.toString()),
-        icon: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.hueRed),
-      ));
-    });
-  }
-}
+Web:
+  - navigator.permissions.query({ name: 'geolocation' })
+  - navigator.geolocation.getCurrentPosition()
+  - navigator.geolocation.watchPosition()
 ```
 
-### React Native — react-native-maps
-```tsx
-import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
-import { Cluster } from '@react-native-map/clustering';
+### Background Location Tracking
+```swift
+// iOS background tracking
+locationManager.allowsBackgroundLocationUpdates = true
+locationManager.pausesLocationUpdatesAutomatically = true
+locationManager.activityType = .fitness  // or .automotiveNavigation
 
-function MapScreen() {
-  const [region, setRegion] = useState({
-    latitude: 37.7749,
-    longitude: -122.4194,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
-  });
-
-  return (
-    <MapView
-      provider={PROVIDER_GOOGLE}
-      initialRegion={region}
-      showsUserLocation={true}
-      mapType="standard"
-    >
-      <Cluster radius={50}>
-        {places.map(place => (
-          <Marker
-            key={place.id}
-            coordinate={{ latitude: place.lat, longitude: place.lng }}
-            title={place.name}
-            description={place.address}
-          >
-            <Callout>
-              <View>
-                <Text>{place.name}</Text>
-                <Text>{place.address}</Text>
-              </View>
-            </Callout>
-          </Marker>
-        ))}
-      </Cluster>
-    </MapView>
-  );
-}
+// Significant-change location service (battery efficient)
+locationManager.startMonitoringSignificantLocationChanges()
 ```
 
-## Location Tracking
+## Web Map Integration
 
-### iOS — CLLocationManager
+### Leaflet Pattern
+```javascript
+import L from 'leaflet';
+
+const map = L.map('map').setView([51.505, -0.09], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors',
+  maxZoom: 19,
+}).addTo(map);
+
+const marker = L.marker([51.5, -0.09])
+  .bindPopup('A pretty popup.')
+  .addTo(map);
+
+// Geolocation
+map.locate({ setView: true, maxZoom: 16 });
+map.on('locationfound', (e) => {
+  L.marker(e.latlng).addTo(map).bindPopup('You are here').openPopup();
+});
+```
+
+## Key Anti-Patterns
+- **Hardcoding API keys**: Use environment variables or secure storage
+- **Requesting location on app launch without context**: Ask when feature needs it
+- **Not handling permission denial gracefully**: Show explanation, not crash
+- **Too many markers without clustering**: Causes performance issues over ~500 markers
+- **No offline fallback**: Cache tiles or show empty state gracefully
+- **Excessive location polling**: Drains battery; use significant-change or appropriate intervals
+- **Not setting map bounds**: Always constrain visible area
+- **Ignoring map tile attribution**: Required by OpenStreetMap terms
+- **No map region limits**: Prevents users from getting lost in empty areas
+- **Accessing location on main thread**: Always use async location APIs
+
+## Implementation Patterns
+
+### Reactive Location Provider (Swift)
+
 ```swift
 import CoreLocation
+import Combine
 
-class LocationService: NSObject, CLLocationManagerDelegate {
-  let manager = CLLocationManager()
-
-  override init() {
-    super.init()
-    manager.delegate = self
-    manager.desiredAccuracy = kCLLocationAccuracyBest
-    manager.distanceFilter = 10  // meters
-    manager.allowsBackgroundLocationUpdates = true
-    manager.pausesLocationUpdatesAutomatically = true
-    manager.activityType = .fitness
-  }
-
-  func requestPermission() {
-    manager.requestAlwaysAuthorization()
-  }
-
-  func startTracking() {
-    manager.startUpdatingLocation()
-  }
-
-  func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-    guard let loc = locations.last else { return }
-    // Post notification or update state
-    NotificationCenter.default.post(name: .locationUpdated, object: loc)
-  }
-
-  func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-    switch manager.authorizationStatus {
-    case .authorizedAlways, .authorizedWhenInUse:
-      manager.startUpdatingLocation()
-    case .denied, .restricted:
-      // Show settings redirect alert
-      break
-    case .notDetermined:
-      break
-    @unknown default:
-      break
+class ReactiveLocationProvider: NSObject {
+    private let manager = CLLocationManager()
+    private let subject = PassthroughSubject<CLLocation, Error>()
+    
+    var publisher: AnyPublisher<CLLocation, Error> {
+        subject.eraseToAnyPublisher()
     }
-  }
+    
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.distanceFilter = 10
+    }
+    
+    func start(background: Bool = false) {
+        let status = manager.authorizationStatus
+        switch status {
+        case .notDetermined:
+            manager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse where background:
+            manager.requestAlwaysAuthorization()
+        case .authorizedAlways, .authorizedWhenInUse:
+            manager.startUpdatingLocation()
+        case .denied, .restricted:
+            subject.send(completion: .failure(LocationError.denied))
+        @unknown default:
+            break
+        }
+    }
+    
+    func stop() {
+        manager.stopUpdatingLocation()
+    }
+}
+
+extension ReactiveLocationProvider: CLLocationManagerDelegate {
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+        subject.send(location)
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        subject.send(completion: .failure(error))
+    }
 }
 ```
 
-### Android — FusedLocationProviderClient
-```kotlin
-class LocationRepository(context: Context) {
-  private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+### Geocoding Service (Cross-Platform)
 
-  fun requestPermission(activity: Activity) {
-    ActivityCompat.requestPermissions(
-      activity,
-      arrayOf(
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.ACCESS_COARSE_LOCATION
-      ),
-      LOCATION_PERMISSION_REQUEST
-    )
+```python
+from typing import Optional, Tuple
+import aiohttp
+import asyncio
+
+class GeocodingService:
+    def __init__(self, provider: str = "nominatim", api_key: Optional[str] = None):
+        self.provider = provider
+        self.api_key = api_key
+        self.session: Optional[aiohttp.ClientSession] = None
+
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+        return self
+
+    async def __aexit__(self, *args):
+        await self.session.close()
+
+    async def geocode(self, address: str) -> Optional[Tuple[float, float]]:
+        if self.provider == "nominatim":
+            url = "https://nominatim.openstreetmap.org/search"
+            params = {"q": address, "format": "json", "limit": 1}
+            headers = {"User-Agent": "LocationSkill/1.0"}
+        elif self.provider == "google":
+            url = "https://maps.googleapis.com/maps/api/geocode/json"
+            params = {"address": address, "key": self.api_key}
+            headers = {}
+        else:
+            raise ValueError(f"Unknown provider: {self.provider}")
+
+        async with self.session.get(url, params=params, headers=headers) as resp:
+            data = await resp.json()
+            if self.provider == "nominatim" and data:
+                return (float(data[0]["lat"]), float(data[0]["lon"]))
+            elif self.provider == "google" and data.get("results"):
+                loc = data["results"][0]["geometry"]["location"]
+                return (loc["lat"], loc["lng"])
+            return None
+
+    async def reverse_geocode(self, lat: float, lng: float) -> Optional[str]:
+        if self.provider == "nominatim":
+            url = "https://nominatim.openstreetmap.org/reverse"
+            params = {"lat": lat, "lon": lng, "format": "json"}
+        elif self.provider == "google":
+            url = "https://maps.googleapis.com/maps/api/geocode/json"
+            params = {"latlng": f"{lat},{lng}", "key": self.api_key}
+        else:
+            raise ValueError(f"Unknown provider: {self.provider}")
+
+        async with self.session.get(url, params=params) as resp:
+            data = await resp.json()
+            if self.provider == "nominatim" and data:
+                return data.get("display_address")
+            elif self.provider == "google" and data.get("results"):
+                return data["results"][0]["formatted_address"]
+            return None
+```
+
+### Marker Clustering Algorithm
+
+```typescript
+interface MapPoint {
+  lat: number;
+  lng: number;
+  data: any;
+}
+
+class MarkerCluster {
+  private grid: Map<string, MapPoint[]> = new Map();
+  private gridSize: number;
+
+  constructor(gridSize: number = 0.01) {
+    this.gridSize = gridSize;
   }
 
-  fun startLocationUpdates(lifecycleOwner: LifecycleOwner) {
-    val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
-      .setMinUpdateDistanceMeters(10f)
-      .build()
+  addMarker(point: MapPoint): void {
+    const key = this.getGridKey(point.lat, point.lng);
+    const cluster = this.grid.get(key) || [];
+    cluster.push(point);
+    this.grid.set(key, cluster);
+  }
 
-    val callback = object : LocationCallback() {
-      override fun onLocationResult(result: LocationResult) {
-        result.lastLocation?.let { location ->
-          // Post to ViewModel or repository
-        }
+  private getGridKey(lat: number, lng: number): string {
+    const latIdx = Math.floor(lat / this.gridSize);
+    const lngIdx = Math.floor(lng / this.gridSize);
+    return `${latIdx}:${lngIdx}`;
+  }
+
+  getClusters(zoom: number): Array<{ center: MapPoint; count: number }> {
+    const adjustedSize = this.gridSize * Math.pow(2, 15 - zoom);
+    const clusters: Array<{ center: MapPoint; count: number }> = [];
+
+    for (const [, points] of this.grid) {
+      if (points.length === 1) {
+        clusters.push({ center: points[0], count: 1 });
+      } else {
+        const avgLat = points.reduce((s, p) => s + p.lat, 0) / points.length;
+        const avgLng = points.reduce((s, p) => s + p.lng, 0) / points.length;
+        clusters.push({
+          center: { lat: avgLat, lng: avgLng, data: null },
+          count: points.length,
+        });
       }
     }
-
-    fusedLocationClient.requestLocationUpdates(
-      request,
-      callback,
-      Looper.getMainLooper()
-    ).addOnSuccessListener {
-      // Updates started
-    }
-  }
-
-  fun getLastLocation(): Task<Location> {
-    return fusedLocationClient.lastLocation
+    return clusters;
   }
 }
 ```
 
-## Geofencing
+### Route Optimization (TSP Solver)
 
-### iOS — CLCircularRegion
-```swift
-func setupGeofence(at coordinate: CLLocationCoordinate2D, radius: CLLocationDistance, id: String) {
-  guard CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else { return }
-  let region = CLCircularRegion(center: coordinate, radius: radius, identifier: id)
-  region.notifyOnEntry = true
-  region.notifyOnExit = true
-  manager.startMonitoring(for: region)
+```typescript
+interface LatLng {
+  lat: number;
+  lng: number;
 }
 
-func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
-  guard let circularRegion = region as? CLCircularRegion else { return }
-  // Trigger entry event
-  NotificationManager.showLocalNotification("Arrived at \(circularRegion.identifier)")
+function haversineDistance(a: LatLng, b: LatLng): number {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLng = Math.sin(dLng / 2);
+  const aVal = sinDLat * sinDLat +
+    Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) *
+    sinDLng * sinDLng;
+  return R * 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1 - aVal));
 }
 
-func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
-  guard let circularRegion = region as? CLCircularRegion else { return }
-  // Trigger exit event
-}
-
-// iOS limit: max 20 simultaneous regions
-// Radius minimum: ~100m actual effective minimum
-```
-
-### Android — GeofencingClient
-```kotlin
-class GeofenceRepository(context: Context) {
-  private val geofencingClient = LocationServices.getGeofencingClient(context)
-
-  fun addGeofence(lat: Double, lng: Double, radius: Float, id: String) {
-    val geofence = Geofence.Builder()
-      .setRequestId(id)
-      .setCircularRegion(lat, lng, radius)
-      .setExpirationDuration(Geofence.NEVER_EXPIRE)
-      .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_EXIT)
-      .build()
-
-    val request = GeofencingRequest.Builder()
-      .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
-      .addGeofence(geofence)
-      .build()
-
-    geofencingClient.addGeofences(request, geofencePendingIntent)
-  }
-
-  private val geofencePendingIntent: PendingIntent by lazy {
-    val intent = Intent(context, GeofenceBroadcastReceiver::class.java)
-    PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
-  }
-}
-
-class GeofenceBroadcastReceiver : BroadcastReceiver() {
-  override fun onReceive(context: Context, intent: Intent) {
-    GeofencingEvent.fromIntent(intent)?.let { event ->
-      if (event.hasError()) return@let
-      event.triggeringGeofences?.forEach { geofence ->
-        when (event.geofenceTransition) {
-          Geofence.GEOFENCE_TRANSITION_ENTER -> {
-            // Show notification
-          }
-          Geofence.GEOFENCE_TRANSITION_EXIT -> {
-            // Clean up state
-          }
-        }
+function optimizeRoute(points: LatLng[], startIndex: number = 0): LatLng[] {
+  const remaining = [...points];
+  const route: LatLng[] = [remaining.splice(startIndex, 1)[0]];
+  
+  while (remaining.length > 0) {
+    const last = route[route.length - 1];
+    let nearestIdx = 0;
+    let minDist = Infinity;
+    
+    for (let i = 0; i < remaining.length; i++) {
+      const dist = haversineDistance(last, remaining[i]);
+      if (dist < minDist) {
+        minDist = dist;
+        nearestIdx = i;
       }
     }
+    route.push(remaining.splice(nearestIdx, 1)[0]);
   }
+  return route;
 }
 ```
 
-## Geocoding
+## Production Considerations
 
-### iOS — CLGeocoder
-```swift
-import CoreLocation
+- **Map tile caching**: Cache map tiles locally (LRU cache of 500MB max) to reduce network requests by 60-80% on repeated views. Set appropriate cache-control headers on tile server responses.
+- **Location accuracy vs. battery**: Use significant-change location service for non-navigation apps. For navigation, reduce update frequency to 1 update per 5 seconds when moving, stop updates when stationary.
+- **Offline maps strategy**: Download map regions at 2 zoom levels above minimum required. Use vector tiles (MBTiles format) for efficient offline storage. Pre-cache geocoding results for common queries.
+- **Map load performance**: Lazy-load map SDKs (dynamic import) to avoid impacting initial page load. Pre-initialize the map view with a low-zoom default before animating to user location.
+- **API rate limiting**: Geocoding APIs have strict rate limits (2-50 req/s). Implement a client-side token bucket and queue requests during rapid pan operations.
 
-class GeocodingService {
-  private let geocoder = CLGeocoder()
-  private var cache = NSCache<NSString, CLPlacemark>()
+## Security Considerations
 
-  func forwardGeocode(_ address: String) async throws -> CLLocationCoordinate2D? {
-    if let cached = cache.object(forKey: address as NSString) {
-      return cached.location?.coordinate
-    }
-    let placemarks = try await geocoder.geocodeAddressString(address)
-    guard let placemark = placemarks.first else { return nil }
-    cache.setObject(placemark, forKey: address as NSString)
-    return placemark.location?.coordinate
-    // Rate limit: MAX 1 request per second
+- **API key protection**: Never embed map API keys in client-side code. Use proxy endpoints or key restriction by HTTP referrer/application bundle ID.
+- **Location data privacy**: User location is PII in GDPR/CCPA. Anonymize location data by reducing precision (round to 3 decimal places ~111m) before storing or transmitting.
+- **Geofencing consent**: Implement explicit user consent flows for geofencing features. Store consent receipts with timestamps for compliance audits.
+- **Map data attribution**: Map data (OpenStreetMap, etc.) requires attribution. Display attribution in a non-removable location on the map view.
+- **Reverse geocoding data exposure**: Reverse geocoding can reveal home addresses from coordinates. Cache results server-side to avoid leaking address patterns through timing attacks.
+
+## Anti-Patterns Expanded
+
+| Anti-Pattern | Why It Fails | Correct Approach |
+|---|---|---|
+| Hardcoding API keys in source code | Keys committed to git, exposed in compiled apps | Use environment variables or secure keychain services |
+| Requesting location on app launch without context | Users deny permissions when unsure why needed | Request location when a specific feature requires it, with explanation |
+| Not handling permission denial gracefully | App crashes or shows blank map | Show explanation card with settings deep-link |
+| Too many markers without clustering | Browser/device freezes beyond ~500 markers | Use clustering (grid-based or distance-based) for >100 markers |
+| No offline fallback for maps | Blank screen when network is unavailable | Cache tile data and show stale tiles with freshness indicator |
+| Excessive location polling | Battery drain (GPS uses 300mW+ continuous) | Use significant-change or region monitoring for most use cases |
+| Not setting map bounds and max zoom | Users can pan into empty ocean areas | Constrain visible region and zoom levels (min/max) |
+| Accessing location APIs on main thread | UI freezes during location lookup | Always use async methods and delegate callbacks |
+| No throttle on map region change handlers | Performance degradation during rapid panning | Debounce region change handlers by 300-500ms |
+| Ignoring tile usage limits | Unexpected billing from tile provider | Set tile request budget and use caching aggressively |
+
+## Performance Optimization
+
+- **Vector tiles over raster tiles**: Vector tiles are 60-80% smaller than raster tiles and render faster on GPU-accelerated devices.
+- **Viewport-based rendering**: Only render markers and overlays within the current visible viewport. Cull objects more than 2x the viewport extent.
+- **Canvas rendering for heatmaps**: Use Canvas API (not DOM markers) for data visualizations with >1000 points. Enable hardware acceleration.
+- **Prefetch tiles at lower zoom**: When user stops panning, prefetch tiles at 1-2 zoom levels higher for smooth zoom-in experience.
+- **Cluster on the server**: For large datasets (>10K markers), pre-compute clusters on the server and return clustered data based on viewport bounds.
+- **Simplify polylines**: Use the Ramer-Douglas-Peucker algorithm to reduce polyline vertex count by 70-90% without visible quality loss.
+- **Lazy-load POI details**: Show marker popups with placeholder data first, then fetch details asynchronously. Cache POI responses in local storage.
+## Implementation Patterns
+
+### Observer Pattern for Event Handling
+`
+interface EventObserver<T> {
+  onEvent(event: T): Promise<void>;
+}
+
+class EventBus<T> {
+  private observers: Set<EventObserver<T>> = new Set();
+  subscribe(observer: EventObserver<T>): void {
+    this.observers.add(observer);
   }
-
-  func reverseGeocode(_ coordinate: CLLocationCoordinate2D) async throws -> String? {
-    let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-    let placemarks = try await geocoder.reverseGeocodeLocation(location)
-    guard let placemark = placemarks.first else { return nil }
-    return [placemark.subThoroughfare, placemark.thoroughfare, placemark.locality]
-      .compactMap { $0 }
-      .joined(separator: " ")
+  unsubscribe(observer: EventObserver<T>): void {
+    this.observers.delete(observer);
+  }
+  async emit(event: T): Promise<void> {
+    const results = Array.from(this.observers).map(o => o.onEvent(event));
+    await Promise.allSettled(results);
   }
 }
-```
+`
 
-### Android — Geocoder
-```kotlin
-class GeocodingRepository(private val context: Context) {
-  private val cache = LruCache<String, Address>(100)
+### Configuration-Driven Approach
+`
+config:
+  defaults:
+    timeout: 30s
+    retryCount: 3
+  overrides:
+    production:
+      timeout: 60s
+      retryCount: 5
+    development:
+      timeout: 300s
+      retryCount: 1
+`
 
-  fun forwardGeocode(address: String): List<Address> {
-    cache.get(address)?.let { return listOf(it) }
-    if (!Geocoder.isPresent()) return emptyList()
+## Production Considerations
 
-    val geocoder = Geocoder(context, Locale.getDefault())
-    val addresses = geocoder.getFromLocationName(address, 5)
-    addresses?.firstOrNull()?.let { cache.put(address, it) }
-    return addresses.orEmpty()
-  }
+### Deployment Checklist
+- [ ] Configuration validated against schema before startup
+- [ ] Health check endpoints registered and monitored
+- [ ] Graceful shutdown with draining period (30s timeout)
+- [ ] Resource limits configured (CPU, memory, file descriptors)
+- [ ] Log level set appropriate for environment
+- [ ] Metrics endpoint secured and exposed
+- [ ] Rate limiting configured per-tier
+- [ ] TLS certificates valid and auto-renewing
+- [ ] Database migrations run as separate deployment step
+- [ ] Feature flags ready for gradual rollout
 
-  fun reverseGeocode(lat: Double, lng: Double): String? {
-    if (!Geocoder.isPresent()) return null
-
-    val geocoder = Geocoder(context, Locale.getDefault())
-    val addresses = geocoder.getFromLocation(lat, lng, 1)
-    return addresses?.firstOrNull()?.let {
-      "${it.getAddressLine(0)}"
-    }
-  }
-}
-```
-
-## Map Styling
-
-### Google Maps JSON Style
-```json
-{
-  "style": "light",
-  "elements": [
-    {
-      "featureType": "poi",
-      "elementType": "labels",
-      "stylers": [{"visibility": "off"}]
-    },
-    {
-      "featureType": "road",
-      "elementType": "geometry",
-      "stylers": [{"color": "#ffffff"}]
-    },
-    {
-      "featureType": "water",
-      "elementType": "geometry",
-      "stylers": [{"color": "#a0d8f1"}]
-    },
-    {
-      "featureType": "landscape",
-      "elementType": "geometry",
-      "stylers": [{"color": "#f5f5f5"}]
-    }
-  ]
-}
-```
-
-### MapKit Style Configuration
-```swift
-// SwiftUI
-Map(initialPosition: .region(region))
-  .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
-  .mapStyle(.imagery)    // Satellite
-  .mapStyle(.hybrid)
-
-// UIKit
-mapView.preferredConfiguration = MKStandardMapConfiguration(
-  elevationStyle: .realistic,
-  emphasisStyle: .muted
-)
-```
-
-## Offline Maps
-
-### MapLibre Offline
-```kotlin
-// MapLibre supports offline tiles natively
-MapLibre.registerFileSource(context)
-val offlineManager = MapLibre.getOfflineManager(context)
-
-offlineManager.createOfflineRegion(
-  OfflineTilePyramidRegionDefinition(
-    styleUrl = "https://demotiles.maplibre.org/style.json",
-    bounds = LatLngBounds.from(38.0, -123.0, 37.0, -122.0),
-    minZoom = 10,
-    maxZoom = 15,
-    pixelRatio = 1.0f
-  ),
-  byteArrayOf()
-) { region ->
-  region.setDownloadState(OfflineRegion.STATE_ACTIVE)
-}
-```
-
-### Google Maps Offline (Android)
-```kotlin
-val offlineManager = OfflineManager.getInstance(context)
-offlineManager.createOfflineRegion(
-  OfflineMapRegion(
-    LatLngBounds(swLatLng, neLatLng),
-    10,   // minZoom
-    15    // maxZoom
-  ),
-  object : OfflineManager.OfflineRegionCallback { }
-)
-```
-
-## Performance Considerations
-- Cluster markers when count exceeds 25 — rendering degrades quadratically without it
-- Use vector tiles over raster tiles for smoother zoom and smaller size
-- Cache geocoding results with 24h TTL to reduce API costs and latency
-- Limit visible markers to viewport bounds — remove markers outside visible region
-- Use lightweight marker icons (vector drawables, not PNG bitmaps)
-- Debounce map region change callbacks to avoid excessive API calls
-- Pre-fetch tiles for likely regions (user's city, destination areas)
-- For >1000 markers: use server-side clustering based on zoom level
-- Monitor memory usage — heavy GeoJSON layers can cause OOM
-- Disable unnecessary gesture recognizers when not needed
-- Reduce animation duration for camera moves below 300ms
-
-## Testing Location
-- Test on real device — simulators provide limited/static location data
-- Use GPX files for simulated route testing in Xcode
-- Android: set mock location app in Developer Options for testing
-- Test permission denial: partially grant, fully deny, grant then revoke
-- Test background location with device asleep (iOS requires real device)
-- Test geofence transitions with controlled location simulation
-- Test low accuracy mode (approximate vs precise on iOS 14+)
-- Test no GPS (airplane mode, WiFi-only tablet)
+### Monitoring and Alerting
+| Metric | Threshold | Severity | Action |
+|--------|-----------|----------|--------|
+| Error rate | > 1% over 5min | Critical | Page on-call |
+| p99 latency | > 2s over 5min | Warning | Investigate |
+| Throughput drop | > 50% over 1min | Critical | Check upstream |
+| Queue depth | > 1000 over 1min | Warning | Scale consumers |
+| Disk usage | > 85% | Warning | Clean or expand |
+| Memory usage | > 90% heap | Critical | Restart or scale |
 
 ## Anti-Patterns
-- **Requesting always authorization when when-in-use suffices**: Lowers App Store approval chances. Request minimum permission level
-- **No permission rationale before system dialog**: User denies without context. Show custom dialog explaining why first
-- **Region monitoring limit ignored**: iOS caps at 20 regions. Monitor larger encompassing regions
-- **No geocoding rate limit**: CLGeocoder drops requests after 1/sec. Queue and throttle
-- **Map UI freezes from heavy markers**: Large marker sets on main thread cause jank. Cluster and use lightweight annotations
-- **Simulator-only testing**: Fails on real devices. Always test location on hardware
-- **Background location without justification**: App Store rejection. Provide clear, user-facing reason
-- **No fallback when location denied**: App grays out with no explanation. Show settings redirect with clear ask
-- **Storing locations without user consent**: Privacy violation. State in permission string, allow deletion
-- **Continuous tracking when app backgrounded unnecessarily**: Battery drain. Use significant-change or geofencing
-- **No geocoding cache**: Every address lookup incurs cost/latency. Cache with TTL
-- **Hardcoded API keys in client**: Google Maps key exposed. Restrict by bundle ID/package name in Cloud Console
-- **Excessive marker animations**: Drains battery on map interaction. Limit animation to select markers
 
-## References
-- `references/geofencing-patterns.md` — Geofencing Patterns for Mobile
-- `references/location-privacy.md` — Location Privacy
-- `references/location-services.md` — Location Services
-- `references/map-customization.md` — Map Customization
-- `references/map-integration.md` — Map Integration
-- `references/map-sdks.md` — Map SDKs
+| Anti-Pattern | Symptom | Root Cause | Solution |
+|-------------|---------|------------|----------|
+| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
+| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
+| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
+| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
 
-## Handoff
-After map/location integration, hand off to:
-- `mobile/universal/networking` — Offline map tile caching, Places API requests
-- `mobile/universal/performance` — Map rendering optimization, clustering perf
-- `mobile/universal/security` — API key restriction, location data privacy
-- `mobile/universal/testing` — Location simulation testing
-- `mobile/universal/camera-media` — AR location overlays
-- `mobile/android` — Google Maps config, Play Services
-- `mobile/ios` — MapKit, CoreLocation
+## Performance Optimization
+
+### Caching Strategy
+Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
+Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
+
+### Resource Pooling
+- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
+- HTTP connections: Keep-alive + connection pooling for external calls
+- Thread pool: Bounded thread pools for async task execution
+
+### Profiling Methodology
+1. Establish baseline with production traffic profile
+2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
+3. Profile memory with heap dumps and allocation tracking
+4. Profile I/O with strace/perf trace for syscall analysis
+5. Profile latency with distributed tracing (OpenTelemetry)
+6. Identify bottleneck, formulate hypothesis, implement fix
+7. Re-profile to verify improvement, repeat
+
+## Security Considerations
+
+### Threat Modeling (STRIDE)
+- Spoofing: Identity validation, authentication
+- Tampering: Integrity checks, digital signatures
+- Repudiation: Audit logs, non-repudiation
+- Information disclosure: Encryption, access control
+- Denial of service: Rate limiting, resource quotas
+- Elevation of privilege: Principle of least privilege
+
+### Supply Chain Security
+- Dependency scanning: Snyk, Dependabot, Trivy
+- SBOM generation: CycloneDX or SPDX format
+- Signed commits: GPG or SSH commit signing
+- Artifact verification: Checksum validation, signature verification
+
+### Secrets Management
+- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
+- Rotation policy: Rotate database credentials every 90 days
+- Access audit: Log every secrets access, alert on anomalies
+- Encryption at rest and in transit for all secrets
+- Principle of least privilege: each service gets only its own secrets
+
+## Rules
+- Default-deny security posture — allow only explicitly required access.
+- All inputs validated, all outputs encoded, all errors handled.
+- Defend in depth — multiple layers of security controls.
+- Fail securely — errors default to safe behavior.
+- Log security-relevant events for audit and investigation.
+- Keep dependencies updated — automate vulnerability scanning.
+- Design for observability from day one, not as an afterthought.
+- Document all architectural decisions with rationale.
+- Review code for security, performance, and correctness before merging.
