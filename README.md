@@ -1,6 +1,6 @@
 # @j4flmao/agent-skills
 
-454 agent skills for software development — planning, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, data-science, design, quality, blockchain, prompt-engineering, cloud-native, system-design, site-reliability-engineering. Each skill is a `SKILL.md` defining triggers, rules, and response format.
+390 agent skills for software development — planning, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, data-science, design, quality, blockchain, prompt-engineering, cloud-native, system-design, site-reliability-engineering, game. Each skill is a `SKILL.md` defining triggers, rules, and response format.
 
 ## Installation
 
@@ -54,7 +54,7 @@ cp -r ~/skills/skills/devops/docker-patterns /path/to/project/skills/
 
 ```bash
 # Requires the repo to be pushed to GitHub
-npx skills add j4flmao/agent-skills            # all 437 skills
+npx skills add j4flmao/agent-skills            # all 390 skills
 npx skills add j4flmao/agent-skills --bundle backend-only
 npx skills add j4flmao/agent-skills -g          # global (every project)
 ```
@@ -68,6 +68,7 @@ npx skills add j4flmao/agent-skills --bundle <name>
 | Bundle | Skills | Description |
 |--------|--------|-------------|
 | `blockchain-all` | 16+ | All blockchain: core, cryptography, Ethereum, Bitcoin, patterns, application, web3, testing, infrastructure, security, management, Solana, DeFi, cross-chain, ZK, data indexing |
+| `game-dev` | 4+ | Godot, Unity, Cocos2d, Unreal |
 | `fullstack-nestjs-react` | 230+ | NestJS + React |
 | `fullstack-golang-vue` | 230+ | Go + Vue |
 | `fullstack-rust-angular` | 230+ | Rust + Angular |
@@ -135,6 +136,7 @@ No keyword match? Agent routes through `master-orchestrator`, detects the projec
 | **9 — Enterprise** | `enterprise-compliance-audit`, `enterprise-cost-governance`, `enterprise-data-governance`, `enterprise-identity-provider`, `enterprise-integration-patterns`, `enterprise-legacy-migration`, `enterprise-multi-tenant`, `enterprise-sla-management`, `enterprise-high-availability`, `enterprise-business-continuity`, `enterprise-capacity-planning`, `togaf-zachman`, `itil-service-mgmt`, `vendor-management`, `architecture-governance` |
 | **10 — Product** | `product-ab-testing`, `product-analytics`, `product-feature-prioritization`, `product-go-to-market`, `product-growth-engineering`, `product-onboarding-flow`, `product-pricing-strategy`, `product-user-research`, `customer-journey`, `persona-development` |
 | **11 — Blockchain** (16) | `blockchain-core`, `blockchain-cryptography`, `blockchain-ethereum`, `blockchain-bitcoin`, `blockchain-patterns`, `blockchain-application`, `blockchain-web3`, `blockchain-testing`, `blockchain-infrastructure`, `blockchain-security`, `blockchain-management`, `blockchain-solana`, `blockchain-defi`, `blockchain-cross-chain`, `blockchain-zk`, `blockchain-data-indexing` |
+| **12 — Game** (4) | `game-godot`, `game-unity`, `game-cocos2d`, `game-unreal` |
 
 Mobile universal skills apply across all platforms: patterns, testing, performance, security, networking, storage, deployment, push-notifications, in-app-purchase, crash-reporting, deep-linking, offline-first, biometrics, map-location, camera-media, analytics, widgets, localization.
 
@@ -261,7 +263,11 @@ Agent config files contain the compression rules:
     └── bundle-definitions.json
 ```
 
-Total: **454 SKILL.md** + **3486 reference .md files** + **18 docs/ guides** + **agent configs** = **3958+ files** (900k+ lines). Avg **7.6 refs/skill** — all skills 6+ refs. **solution-architecture** deepened to **22 refs** covering system design methodology, C4 model, evaluation methods (ATAM/CBAM), fitness functions, reference architectures, modernization, technology radar, architecture debt, leadership, metrics, risk quantification, API strategy, security architecture, and startup-vs-enterprise patterns.
+**Current Scale:** 509 Ultra-Deep Technical Skills | ~4,072+ Reference Files
+
+This repository contains the most exhaustive, hardcore collection of AI agent coding skills.
+Generated via an advanced **20-Subagent Mega Architecture** focusing heavily on SA, Cloud, AI, Data, and Blockchain.
+From traditional Web/Mobile to the extreme depths of Hardware, Low-Level Kernels, Game Engines, and Quantum Computing.
 
 ## License
 
