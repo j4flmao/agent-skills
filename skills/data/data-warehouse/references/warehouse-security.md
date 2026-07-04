@@ -1,158 +1,42 @@
-# Warehouse Security
+# Data Warehouse Security & Governance
+## 1. Deep Architectural Analysis
+Zero-trust architecture in DW involves IAM assumed roles for compute clusters, KMS Envelope Encryption for resting data, and Dynamic Data Masking (DDM) for PII. RBAC models must be federated via SSO (e.g., Okta via SAML 2.0).
 
-## Security Architecture
-Cloud data warehouse security requires defense in depth: network security, identity and access management, data protection, and audit capabilities.
-
-## Network Security
-
-### Private Connectivity
-```yaml
-# Snowflake private connectivity
-network_policy:
-  name: prod_network_policy
-  allowed_ip_list:
-    - "10.0.0.0/8"
-    - "172.16.0.0/12"
-  blocked_ip_list:
-    - "0.0.0.0/0"
-
-# AWS PrivateLink setup
-privatelink:
-  - service: "com.amazonaws.vpce.us-east-1.vpce-svc-xxxxx"
-    vpc_endpoint: "vpce-xxxxx"
-    allowed_principals:
-      - "arn:aws:iam::123456789012:role/DataEngineerRole"
+## 2. System Architecture
+```mermaid
+graph LR
+    A[User via SSO] --> B(IdP)
+    B --> C{RBAC Policy Engine}
+    C --> D[Compute Engine]
+    D -->|KMS Decrypt| E[(Encrypted Storage)]
 ```
 
-### VPC Configuration
-```hcl
-resource "snowflake_network_policy" "prod" {
-  name                = "prod_policy"
-  allowed_ip_list     = var.allowed_cidr_blocks
-  blocked_ip_list     = ["0.0.0.0/0"]
-  comment             = "Production network policy"
-}
+## 3. Mathematical Formulas
+Entropy of encryption key generation:
+$$ H(K) = - \sum p(k) \log_2 p(k) \ge 256 \text{ bits} $$
+Ensuring AES-256 GCM compliance.
 
-resource "snowflake_network_policy_attachment" "prod" {
-  network_policy_name = snowflake_network_policy.prod.name
-  users               = ["data_engineer", "analyst_prod"]
-}
+## 4. Code Implementations
+
+### PySpark
+```python
+def decrypt_df(df, key):
+    from pyspark.sql.functions import expr
+    return df.withColumn("ssn", expr(f"aes_decrypt(unbase64(ssn_enc), '{key}')"))
 ```
 
-## Authentication and Access Control
-
-### RBAC Implementation
+### SQL
 ```sql
--- Role hierarchy
-CREATE ROLE data_engineer;
-CREATE ROLE analyst;
-CREATE ROLE bi_user;
-CREATE ROLE read_only;
-
--- Warehouse access
-GRANT USAGE ON WAREHOUSE analytics_wh TO ROLE analyst;
-GRANT OPERATE ON WAREHOUSE analytics_wh TO ROLE data_engineer;
-
--- Database access
-GRANT USAGE ON DATABASE analytics_db TO ROLE analyst;
-GRANT CREATE SCHEMA ON DATABASE analytics_db TO ROLE data_engineer;
-
--- Schema access
-GRANT USAGE ON SCHEMA analytics_db.public TO ROLE analyst;
-GRANT SELECT ON ALL TABLES IN SCHEMA analytics_db.public TO ROLE bi_user;
-
--- Future grants
-GRANT SELECT ON FUTURE TABLES IN SCHEMA analytics_db.public TO ROLE bi_user;
-
--- Role assignment
-GRANT ROLE analyst TO USER alice;
-GRANT ROLE data_engineer TO USER bob;
-```
-
-### MFA Enforcement
-```sql
--- Set MFA for production users
-ALTER USER alice SET MINS_TO_UNLOCK = 60;
-ALTER USER bob SET MINS_TO_MFA_EXPIRATION = 1440;
-ALTER USER charlie SET MINS_TO_UNLOCK = 60;
-```
-
-## Data Protection
-
-### Column-Level Security
-```sql
--- Dynamic data masking
-CREATE OR REPLACE MASKING POLICY email_mask AS (val STRING) RETURNS STRING ->
-  CASE
-    WHEN CURRENT_ROLE() IN ('DATA_ENGINEER', 'COMPLIANCE_OFFICER')
-      THEN val
-    ELSE CONCAT(SUBSTR(val, 1, 3), '***@***', SUBSTR(val, INSTR(val, '.') - 2))
+CREATE MASKING POLICY ssn_mask AS (val string) RETURNS string ->
+  CASE 
+    WHEN current_role() IN ('HR', 'ADMIN') THEN val
+    ELSE '***-**-****'
   END;
-
--- Apply masking policy
-ALTER TABLE customers MODIFY COLUMN email
-  SET MASKING POLICY email_mask;
 ```
 
-### Row-Level Security
-```sql
--- Snowflake row-level security
-CREATE OR REPLACE SECURE VIEW customer_data AS
-SELECT *
-FROM raw_customers
-WHERE
-  region = CURRENT_ACCOUNT()  -- Restrict by region
-  OR CURRENT_ROLE() IN ('DATA_ENGINEER', 'ADMIN');
+### Java
+```java
+// AWS KMS decryption
+DecryptRequest request = new DecryptRequest().withCiphertextBlob(buffer);
+DecryptResult result = kmsClient.decrypt(request);
 ```
-
-## Audit and Compliance
-
-### Audit Logging
-```sql
--- Query audit trail
-SELECT
-    query_id,
-    query_text,
-    user_name,
-    role_name,
-    warehouse_name,
-    database_name,
-    schema_name,
-    start_time,
-    total_elapsed_time / 1000 as elapsed_seconds,
-    rows_produced,
-    bytes_scanned
-FROM snowflake.account_usage.query_history
-WHERE start_time >= DATEADD('day', -7, CURRENT_TIMESTAMP())
-  AND query_type = 'SELECT'
-  AND user_name != 'SYSTEM'
-ORDER BY start_time DESC;
-```
-
-### Access History
-```sql
--- Table access audit
-SELECT
-    user_name,
-    objects_accessed,
-    query_text,
-    start_time
-FROM snowflake.account_usage.access_history
-WHERE
-    start_time >= DATEADD('day', -30, CURRENT_TIMESTAMP())
-    AND ARRAY_SIZE(objects_accessed) > 0
-ORDER BY start_time DESC
-LIMIT 100;
-```
-
-## Key Points
-- Implement network policies restricting access to trusted IP ranges
-- Use private connectivity (AWS PrivateLink, Azure Private Link, GCP Private Service Connect)
-- Apply RBAC with least privilege principle
-- Enable MFA for all production users
-- Use dynamic data masking for PII/PHI columns
-- Implement row-level security for multi-tenant isolation
-- Enable and monitor audit logging
-- Regular access reviews and permission cleanup
-- Encrypt data at rest and in transit
-- Use key rotation and customer-managed keys where required
