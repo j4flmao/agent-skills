@@ -8,18 +8,18 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 ### System Architecture
 ```mermaid
 graph TD
-    KMS_Auth["KMS_Auth Layer"] -->|Stream| SecurityBestPractices_C["SecurityBestPractices_C Processor"]
-    SecurityBestPractices_C -->|Checkpoint| ORC_Writer
-    SecurityBestPractices_C -->|Optimize| S3_Bucket["S3_Bucket Engine"]
-    S3_Bucket -->|Write| SecurityBestPractices_B
-    SecurityBestPractices_B -->|Persist| RocksDB_State
-    SecurityBestPractices_A -.->|Authenticate| S3_Bucket
+    KMS_Auth["KMS_Auth Layer"] -->|Stream| SecurityBestPractices_A["SecurityBestPractices_A Processor"]
+    SecurityBestPractices_A -->|Checkpoint| S3_Bucket
+    SecurityBestPractices_A -->|Optimize| ORC_Writer["ORC_Writer Engine"]
+    ORC_Writer -->|Write| SecurityBestPractices_C
+    SecurityBestPractices_C -->|Persist| RocksDB_State
+    SecurityBestPractices_B -.->|Authenticate| ORC_Writer
 ```
 
 ### Mathematical Thresholds
 To determine the optimal configuration for Security Best Practices, we apply the following mathematical formula to calculate the system threshold:
 
-$$ \tau_{latency} = \frac{1}{\mu - \lambda} + \sigma_{I/O}^2 $$
+$$ \text{Threshold}_{compaction} = \sum_{i=1}^{N} \frac{S_i}{T_{merge}} \times e^{-\lambda t} $$
 
 ### Code Implementation
 Below is a highly optimized production-grade implementation addressing Security Best Practices:

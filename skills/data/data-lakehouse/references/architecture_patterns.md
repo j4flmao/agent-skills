@@ -8,12 +8,12 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 ### System Architecture
 ```mermaid
 graph TD
-    ArchitecturePatterns_C["ArchitecturePatterns_C Layer"] -->|Stream| KMS_Auth["KMS_Auth Processor"]
-    KMS_Auth -->|Checkpoint| ArchitecturePatterns_A
-    KMS_Auth -->|Optimize| ORC_Writer["ORC_Writer Engine"]
-    ORC_Writer -->|Write| S3_Bucket
-    S3_Bucket -->|Persist| ArchitecturePatterns_B
-    RocksDB_State -.->|Authenticate| ORC_Writer
+    S3_Bucket["S3_Bucket Layer"] -->|Stream| ORC_Writer["ORC_Writer Processor"]
+    ORC_Writer -->|Checkpoint| RocksDB_State
+    ORC_Writer -->|Optimize| ArchitecturePatterns_C["ArchitecturePatterns_C Engine"]
+    ArchitecturePatterns_C -->|Write| ArchitecturePatterns_B
+    ArchitecturePatterns_B -->|Persist| KMS_Auth
+    ArchitecturePatterns_A -.->|Authenticate| ArchitecturePatterns_C
 ```
 
 ### Mathematical Thresholds

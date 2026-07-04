@@ -8,18 +8,18 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 ### System Architecture
 ```mermaid
 graph TD
-    KMS_Auth["KMS_Auth Layer"] -->|Stream| SecurityBestPractices_C["SecurityBestPractices_C Processor"]
-    SecurityBestPractices_C -->|Checkpoint| ORC_Writer
-    SecurityBestPractices_C -->|Optimize| S3_Bucket["S3_Bucket Engine"]
-    S3_Bucket -->|Write| SecurityBestPractices_B
-    SecurityBestPractices_B -->|Persist| RocksDB_State
-    SecurityBestPractices_A -.->|Authenticate| S3_Bucket
+    SecurityBestPractices_C["SecurityBestPractices_C Layer"] -->|Stream| SecurityBestPractices_B["SecurityBestPractices_B Processor"]
+    SecurityBestPractices_B -->|Checkpoint| KMS_Auth
+    SecurityBestPractices_B -->|Optimize| ORC_Writer["ORC_Writer Engine"]
+    ORC_Writer -->|Write| S3_Bucket
+    S3_Bucket -->|Persist| RocksDB_State
+    SecurityBestPractices_A -.->|Authenticate| ORC_Writer
 ```
 
 ### Mathematical Thresholds
 To determine the optimal configuration for Security Best Practices, we apply the following mathematical formula to calculate the system threshold:
 
-$$ \tau_{latency} = \frac{1}{\mu - \lambda} + \sigma_{I/O}^2 $$
+$$ Mem_{JVM} = \max\left( \frac{\text{Heap}_{max} \times 0.75}{1 + \alpha}, \sum ( \mu_{state} \times P_{degree} ) \right) $$
 
 ### Code Implementation
 Below is a highly optimized production-grade implementation addressing Security Best Practices:

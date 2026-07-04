@@ -8,18 +8,18 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 ### System Architecture
 ```mermaid
 graph TD
-    KMS_Auth["KMS_Auth Layer"] -->|Stream| RocksDB_State["RocksDB_State Processor"]
-    RocksDB_State -->|Checkpoint| S3_Bucket
-    RocksDB_State -->|Optimize| ArchitecturePatterns_B["ArchitecturePatterns_B Engine"]
-    ArchitecturePatterns_B -->|Write| ORC_Writer
-    ORC_Writer -->|Persist| ArchitecturePatterns_C
-    ArchitecturePatterns_A -.->|Authenticate| ArchitecturePatterns_B
+    S3_Bucket["S3_Bucket Layer"] -->|Stream| ArchitecturePatterns_A["ArchitecturePatterns_A Processor"]
+    ArchitecturePatterns_A -->|Checkpoint| ArchitecturePatterns_C
+    ArchitecturePatterns_A -->|Optimize| ORC_Writer["ORC_Writer Engine"]
+    ORC_Writer -->|Write| ArchitecturePatterns_B
+    ArchitecturePatterns_B -->|Persist| KMS_Auth
+    RocksDB_State -.->|Authenticate| ORC_Writer
 ```
 
 ### Mathematical Thresholds
 To determine the optimal configuration for Architecture Patterns, we apply the following mathematical formula to calculate the system threshold:
 
-$$ \tau_{latency} = \frac{1}{\mu - \lambda} + \sigma_{I/O}^2 $$
+$$ \Omega(n) = \lim_{x \to \infty} \left( \int_{0}^{x} P(t) dt - \frac{C}{1-r} \right) $$
 
 ### Code Implementation
 Below is a highly optimized production-grade implementation addressing Architecture Patterns:
