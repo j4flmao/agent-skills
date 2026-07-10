@@ -1,7 +1,7 @@
 {
   "name": "@j4flmao/agent-skills",
   "version": "1.0.0",
-  "description": "105 agent skills for software development — planning, backend, frontend, mobile, devops, management. Works with Claude Code, OpenCode, Cursor, Codex CLI, Copilot, Gemini, Amp, Windsurf.",
+  "description": "Central mega-repository of 399 AI agent skills.",
   "keywords": [
     "agent-skills",
     "claude-code",
@@ -66,5 +66,6 @@
   "scripts": {
     "validate": "pwsh -NoProfile -Command \"exit (Get-ChildItem skills -Recurse -Filter SKILL.md | Where-Object { (Get-Content $_.FullName -Raw) -notmatch '^---' }).Count\"",
     "lint": "pwsh -NoProfile -Command \"exit (Get-ChildItem skills -Recurse -Filter SKILL.md | ForEach-Object { $c=Get-Content $_.FullName -Raw; $d=$_.DirectoryName; [regex]::Matches($c,'references/[\\w-]+\\.md') | Where-Object { -not (Test-Path (Join-Path $d $_.Value)) } }).Count\""
-  }
+  },
+  "skillCount": 399
 }
