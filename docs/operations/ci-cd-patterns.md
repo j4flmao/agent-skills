@@ -9,7 +9,7 @@ Validate skill suite integrity in CI pipeline — catch frontmatter gaps, broken
 ## Architecture
 
 ```mermaid
-graph LR
+graph TD
     A[Push to Branch] --> B(GitHub Actions / GitLab CI)
     B --> C{CI Pipeline Triggered}
     C -->|Stage 1| D[Frontmatter Validation]

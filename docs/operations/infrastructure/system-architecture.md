@@ -4,28 +4,28 @@
 
 ```mermaid
 graph TD
-    subgraph L7 - Governance & Strategy
+    subgraph L7 ["Governance & Strategy"]
     A[Cloud Architecture, FinOps, Cost]
     end
-    subgraph L6 - Security & Compliance
+    subgraph L6 ["Security & Compliance"]
     A --> B[IAM, Secrets, Zero-Trust, Audit]
     end
-    subgraph L5 - Observability & Incident
+    subgraph L5 ["Observability & Incident"]
     B --> C[Monitoring, Logging, Tracing]
     end
-    subgraph L4 - Service Mesh & Networking
+    subgraph L4 ["Service Mesh & Networking"]
     C --> D[Ingress, DNS, CDN, mTLS]
     end
-    subgraph L3 - Compute & Orchestration
+    subgraph L3 ["Compute & Orchestration"]
     D --> E[Kubernetes, Serverless, Nomad]
     end
-    subgraph L2 - Infrastructure as Code
+    subgraph L2 ["Infrastructure as Code"]
     E --> F[Terraform, Pulumi, GitOps]
     end
-    subgraph L1 - Cloud & Physical Infrastructure
+    subgraph L1 ["Cloud & Physical Infrastructure"]
     F --> G[AWS, Azure, GCP, Bare-Metal]
     end
-    subgraph L0 - Network, Storage, Compute Foundations
+    subgraph L0 ["Network, Storage, Compute Foundations"]
     G --> H[VPC, Storage, Backup-DR]
     end
     
