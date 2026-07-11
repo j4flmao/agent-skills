@@ -80,8 +80,7 @@ Consider the CAP theorem: consistency, availability, and partition tolerance. In
 
 ### Mathematical Model
 
-$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
-ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} \right) $$
 
 When optimizing for security-best-practices in git-workflow, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -722,8 +721,7 @@ pub fn process_stream(stream: TcpStream) -> io::Result<()> {
 
 ### Mathematical Model
 
-$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
-ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} \right) $$
 
 When optimizing for security-best-practices in git-workflow, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -826,8 +824,7 @@ pub fn process_stream(stream: TcpStream) -> io::Result<()> {
 
 ### Mathematical Model
 
-$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
-ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} \right) $$
 
 When optimizing for security-best-practices in git-workflow, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1087,8 +1084,7 @@ Data locality is the silent killer of performance. When computing over large dat
 
 ### Mathematical Model
 
-$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
-ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} \right) $$
 
 When optimizing for security-best-practices in git-workflow, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1305,8 +1301,7 @@ Idempotency keys are mandatory for all state-mutating operations. Without them, 
 
 ### Mathematical Model
 
-$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
-ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} \right) $$
 
 When optimizing for security-best-practices in git-workflow, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1398,8 +1393,7 @@ pub fn process_stream(stream: TcpStream) -> io::Result<()> {
 
 ### Mathematical Model
 
-$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
-ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} \right) $$
 
 When optimizing for security-best-practices in git-workflow, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1766,8 +1760,7 @@ async def concurrent_fetch(urls):
 
 ### Mathematical Model
 
-$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
-ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} \right) $$
 
 When optimizing for security-best-practices in git-workflow, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 

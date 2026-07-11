@@ -303,8 +303,7 @@ export class ResilienceService {
 
 ### Mathematical Model
 
-$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
-ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} \right) $$
 
 When optimizing for error-handling in kde, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -596,8 +595,7 @@ Data locality is the silent killer of performance. When computing over large dat
 
 ### Mathematical Model
 
-$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
-ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} \right) $$
 
 When optimizing for error-handling in kde, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1115,8 +1113,7 @@ Memory management in long-running processes is non-trivial. Garbage collection p
 
 ### Mathematical Model
 
-$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
-ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} \right) $$
 
 When optimizing for error-handling in kde, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1534,8 +1531,7 @@ Idempotency keys are mandatory for all state-mutating operations. Without them, 
 
 ### Mathematical Model
 
-$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
-ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} \right) $$
 
 When optimizing for error-handling in kde, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1545,8 +1541,7 @@ A Zero Trust architecture assumes breach. Micro-segmentation, mutual TLS (mTLS),
 
 ### Mathematical Model
 
-$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
-ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} \right) $$
 
 When optimizing for error-handling in kde, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1755,8 +1750,7 @@ Consider the CAP theorem: consistency, availability, and partition tolerance. In
 
 ### Mathematical Model
 
-$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
-ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} \right) $$
 
 When optimizing for error-handling in kde, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1906,8 +1900,7 @@ async def concurrent_fetch(urls):
 
 ### Mathematical Model
 
-$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
-ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} \right) $$
 
 When optimizing for error-handling in kde, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
