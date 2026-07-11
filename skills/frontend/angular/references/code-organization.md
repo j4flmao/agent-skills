@@ -49,7 +49,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
@@ -112,7 +112,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
@@ -175,7 +175,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
@@ -238,7 +238,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
@@ -301,7 +301,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
@@ -364,7 +364,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
@@ -427,7 +427,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
@@ -490,7 +490,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
@@ -553,7 +553,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
@@ -616,7 +616,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
@@ -679,7 +679,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
@@ -742,7 +742,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
@@ -805,7 +805,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
@@ -868,7 +868,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
@@ -931,7 +931,7 @@ export class ExampleComponent {
 `
 
 ### Architectural Diagram
-`	ext
+`\text
 +---------------------------------------------------+
 |                  Application                      |
 |                                                   |
