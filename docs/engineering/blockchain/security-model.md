@@ -14,28 +14,35 @@ graph TD
         Infra1[RPC Frontrunning / Censorship]
         Infra2[Key Management / HSM Compromise]
         Infra3[MEV-Boost Relay Failures]
+        Infra1 ~~~ Infra2 ~~~ Infra3
     end
     
     subgraph "Layer 3: Cross-Chain"
         Bridge1[Validator Key Theft]
         Bridge2[Message Replay Attacks]
         Bridge3[Finality Reversion]
+        Bridge1 ~~~ Bridge2 ~~~ Bridge3
     end
     
     subgraph "Layer 2: Smart Contract"
         SC1[Reentrancy & Logic Bugs]
         SC2[Oracle Manipulation]
         SC3[Access Control Failures]
+        SC1 ~~~ SC2 ~~~ SC3
     end
     
     subgraph "Layer 1: Protocol / Consensus"
         L1A[51% Attack / Double Spend]
         L1B[Long-Range Attacks]
         L1C[Liveness Denial]
+        L1A ~~~ L1B ~~~ L1C
     end
     
     Infra1 -.-> SC2
     Bridge1 -.-> L1A
+    
+    Infra3 ~~~ Bridge1
+    SC3 ~~~ L1A
 ```
 
 > [!CAUTION]

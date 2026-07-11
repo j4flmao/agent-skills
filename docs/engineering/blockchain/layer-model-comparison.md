@@ -7,7 +7,7 @@
 ## Monolithic vs Modular Architectures
 
 ```mermaid
-graph TD
+flowchart TD
     subgraph "Monolithic (Solana / Bitcoin)"
         M_Exec[Execution]
         M_Sett[Settlement]
@@ -28,6 +28,8 @@ graph TD
         L2 -->|Tx Data| DA
         L1_Sett --> L1_Cons
     end
+
+    M_DA ~~~ L2
 ```
 
 > [!TIP]
