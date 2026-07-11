@@ -1,91 +1,65 @@
 # Blockchain Interoperability Landscape
 
-## Interoperability Models
+> **A Comprehensive Reference for Principal Blockchain Engineers**
+>
+> An architectural guide to cross-chain communication, bridging models, and atomic composability across isolated state machines.
 
+## Interoperability Architectures
+
+Modern interoperability is divided into asynchronous message passing (bridges) and synchronous execution (shared sequencers/intents).
+
+```mermaid
+graph TD
+    subgraph "Asynchronous Messaging (Bridges)"
+        ChainA[Chain A] -->|Emit Event| Relayer[Off-chain Relayer]
+        Relayer -->|Generate Proof| Validator[Validator Network / Oracle]
+        Validator -->|Submit & Verify| ChainB[Chain B]
+    end
+    
+    subgraph "Synchronous / Atomic Composability"
+        User[User Intent] --> Solvers[Solver Network]
+        Solvers -->|Match| SharedSeq[Shared Sequencer]
+        SharedSeq --> L2A[Rollup A]
+        SharedSeq --> L2B[Rollup B]
+    end
 ```
-Atomic Composability         Cross-Chain Messaging
-(Shared State)               (Asynchronous)
-┌──────────────┐            ┌──────┐   ┌──────┐
-│  Single L2   │            │ChainA│   │ChainB│
-│  (Arbitrum)  │            │  L1  │   │  L1  │
-│  L1          │            └──┬───┘   └──┬───┘
-│  (Ethereum)  │               │          │
-└──────────────┘               │  Bridge  │
-                               └──────────┘
-                          
-       vs                          vs
-                          
-Intents                     Shared Sequencer
-(Off-Chain Matching)       (Cross-Chain Ordering)
-┌──────────────┐            ┌─────────────────┐
-│  User signs  │            │ Shared Sequencer │
-│  intent off  │            │   (Espresso)     │
-│  Relayer     │            ├────────┬────────┤
-│  executes    │            │ L2 A   │ L2 B   │
-│  on-chain    │            │        │        │
-└──────────────┘            └────────┴────────┘
-```
+
+> [!WARNING]
+> **Bridge Trust Assumptions**: Never blindly trust arbitrary cross-chain messages. If a bridge validator network is compromised (e.g., Ronin, Wormhole incidents), an attacker can mint infinite bridged assets. Always implement strict rate limits and anomaly detection in your application's receiving contract.
 
 ## Bridge Architecture Types
 
-| Type | Verification | Trust Model | Latency | Examples |
+| Type | Verification Mechanism | Trust Model | Latency | Examples |
 |------|-------------|-------------|---------|----------|
-| External Validator | Multi-sig | N-of-M validators | Minutes | Wormhole, Multichain |
+| External Validator | Multi-sig / MPC | N-of-M validators | Minutes | Wormhole, Axelar |
 | Optimistic | Fraud proof | 1 honest watcher | Hours (dispute window) | Nomad, Across |
-| ZK / Light Client | Validity proof | 1 honest prover | Minutes | zkBridge, IBC, CCIP |
-| Liquidity Network | Atomic swap | Liquidity providers | Seconds | Stargate, Hop |
+| ZK / Light Client | Validity proof (SNARK) | Math (1 honest prover) | Minutes | zkBridge, IBC, CCIP |
+| Liquidity Network | Atomic swap / HTLC | Liquidity providers | Seconds | Stargate, Hop |
 | Native / Canonical | L1 validator | L1 security | Minutes | Arbitrum Bridge |
 
 ## Protocol Deep Dives
 
 ### IBC (Inter-Blockchain Communication)
+- **Architecture**: A gold standard for trust-minimized bridging. Uses light clients embedded in the destination chain to verify the consensus state of the source chain.
+- **Security**: If the source chain's consensus is secure, the bridge is secure.
+- **Limitation**: Highly complex to implement on chains without deterministic finality (like Ethereum PoW, though PoS makes this easier) or without cheap signature verification.
 
-- Transport layer: light clients (verify headers), connections (handshake), channels (packet delivery)
-- Application layer: ICS-20 (token transfer), ICS-27 (interchain accounts), ICS-721 (NFT)
-- Relayer: permissionless, watches packet events, submits proofs
-- Security: Each chain validates light client of counterparty
-- Ecosystem: 80+ chains (Cosmos hubs, Osmosis, Injective, etc.)
+### LayerZero V2
+- **Architecture**: Decouples verification from execution. V2 introduces Decentralized Verifier Networks (DVNs) replacing the V1 Oracle.
+- **Workflow**: DVN verifies the block payload, Executors deliver the payload.
+- **Security**: Applications can configure *exactly* which DVNs they trust (e.g., Require Chainlink DVN + Google DVN + EigenLayer AVS DVN). 
 
-### LayerZero
+### Chainlink CCIP (Cross-Chain Interoperability Protocol)
+- **Architecture**: Employs an independent Active Risk Management (ARM) network that monitors the primary oracle network.
+- **Workflow**: Commitment phase (message locked) -> ARM validation -> Execution phase.
+- **Programmable Token Transfers (PTT)**: Send tokens and execute logic in a single transaction securely.
 
-- UltraLight Node: only needed block header (not full chain state)
-- Oracle: reports block hash (Chainlink, Google, etc.)
-- Relayer: submits transaction proof to destination
-- Stargate: first omnichain DEX using LayerZero
-- Security tradeoff: trust in oracle + relayer (unless both corrupt)
+## Workflow: Integrating Cross-Chain Messaging Safely
 
-### Wormhole
-
-- Guardians: 19 validators observing messages
-- VAA (Verified Action Approval): signed by 2/3+ guardians
-- NFT bridge, token bridge, native token transfer (NTT)
-- Governor: rate limits, automatic pause on abnormal volume
-- Risk: 13/19 guardians need to be honest
-
-### Chainlink CCIP
-
-- ARM (Risk Management Network): independent verification
-- Commitment: message committed to source chain
-- Execution: after ARM validates commitment → executor delivers
-- Programmable token transfer (PTT): token + arbitrary calldata
-- Rate limits: per-lane, per-message caps
-- Emergency: pause any lane via governance
-
-### Axelar
-
-- Gateway: smart contract on each connected chain
-- Validators run Amplifier: cross-chain message verification
-- GasService: pay gas in any token
-- General message passing (GMP): call any contract on any chain
-
-## Atomic Composability Solutions
-
-| Solution | Type | Composability Scope | Latency |
-|----------|------|-------------------|---------|
-| Single Rollup | Shared sequencing | Within rollup | Seconds |
-| Shared Sequencer | Cross-rollup | Participating rollups | Seconds |
-| Based Sequencing | L1-driven | L1 + rollups | L1 block time |
-| Intents | Off-chain matching | Across any chains | Variable |
+1. **Isolate State**: Do not let a malicious message from Chain B corrupt the state of users on Chain A.
+2. **Implement Rate Limiting**: Limit the maximum TVL that can flow out of your contract per hour.
+3. **Use Multiple Bridges**: For massive TVL, do not rely on one bridge. Use a 2-of-3 multisig bridging architecture (e.g., require Wormhole AND LayerZero to attest to the same message before minting).
+4. **Pause Functionality**: Always include an emergency pause circuit breaker that a watchtower bot can trigger automatically upon detecting a state anomaly.
 
 ## Standardization Landscape
 
@@ -94,32 +68,4 @@ Intents                     Shared Sequencer
 | EIP-7683 | Cross-chain intents | Draft | Standardized intent format |
 | ERC-7281 | xERC-20 | Final | Burn/mint for bridged tokens |
 | ERC-5164 | Cross-chain exec | Draft | L1 → L2 execution |
-| ERC-6170 | Cross-chain msg | Draft | Messaging interface |
 | ICS-20 | Token transfer | Live | IBC token standard |
-| ICS-27 | Interchain accts | Live | Cross-chain account control |
-| ICS-721 | NFT transfer | Draft | IBC NFT standard |
-
-## Trust Comparison by Protocol
-
-```
-Trust Required
-Low ←────────────────────────────────────→ High
-IBC    zkBridge  CCIP    Axelar  LayerZero  Wormhole
- │        │        │        │        │          │
- │   ZK proof   Multi-   Val +   Oracle+   Guardian
- │   of state   chain    Amt    Relayer   multisig
- │              verif                         
- │
-Self-validating
-```
-
-## Related Skills
-
-- Cross-chain comprehensive → `blockchain-cross-chain/`
-- IBC deep → `blockchain-cross-chain/references/ibc-deep.md`
-- LayerZero/Wormhole → `blockchain-cross-chain/references/layerzero-wormhole.md`
-- CCIP → `blockchain-cross-chain/references/ccip-chainlink.md`
-- Bridge security → `blockchain-cross-chain/references/bridge-security.md`
-- Shared sequencer → `blockchain-cross-chain/references/shared-sequencer.md`
-- Atomic composability → `blockchain-cross-chain/references/atomic-composability.md`
-- Ethereum L2 → `blockchain-ethereum/references/layer2-scaling.md`

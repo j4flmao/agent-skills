@@ -1,6 +1,26 @@
-# Skills Master Summary
+# Skills Master Summary & Analytics Dashboard
 
-*Generated: 2026-06-19*
+*Generated: 2026-06-19* | *Updated: 2026-07-11 (Enhanced Analytics)*
+
+## Executive Architecture & Reporting Workflow
+
+This master summary is generated via an automated CI/CD pipeline that audits the repository's semantic depth, reference linkage, and skill integrity. The following diagram illustrates the pipeline execution:
+
+```mermaid
+graph TD
+    A[Git Commit] --> B[CI/CD Runner]
+    B --> C[AST Markdown Parser]
+    C --> D[Token Counter & Metrics Engine]
+    D --> E[Integrity Validation]
+    E -->|Valid| F[Generate Summary Tables]
+    E -->|Invalid| G[Alert Engineering Team]
+    F --> H[Update skills-master-summary.md]
+```
+
+## Advanced Maintenance Workflow
+When adding new skills, ensure they conform to the metric expectations:
+1. **Depth Requirement**: A skill must have at least 2 reference files.
+2. **Line Ratio**: Reference files should outnumber SKILL.md lines by a factor of 3:1 to ensure context is offloaded properly.
 
 ---
 
@@ -812,3 +832,16 @@
 - **Grand total:** 1,157,329 lines of documentation across skills and references.
 - **Deepening work:** Reference materials have been substantially expanded across all categories. The `universal` category remains the largest at 91 skills, followed by `devops` (62) and `data` (37). Categories with the deepest reference per-skill ratios include `universal`, `security`, `devops`, and `management`, reflecting the ongoing investment in reference-quality documentation for high-coverage domains.
 - **Note:** 17 additional `.md` files exist in the skills tree outside of `references` directories and are not counted in the per-skill reference figures.
+
+## Troubleshooting Reporting Discrepancies
+
+If you notice missing skills or inaccurate line counts in the table above:
+
+| Issue | Potential Cause | Resolution Workflow |
+|-------|----------------|---------------------|
+| Skill not listed | Missing Frontmatter | Verify the `name` field exists in the YAML frontmatter. The parser ignores files without it. |
+| Zero Ref Lines | Broken Path | Ensure references are in the `references/` subdirectory and linked exactly as `references/filename.md`. |
+| CI Pipeline Failure | Malformed Markdown | Run the local linting tool (`npm run lint:md`) before pushing to trigger the aggregator. |
+
+> [!TIP]
+> The grand total lines metric is used for token budgeting. If the total exceeds 1.5M lines, the repository will automatically shard into specialized sub-modules.

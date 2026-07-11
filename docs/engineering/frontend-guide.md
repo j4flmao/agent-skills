@@ -1,6 +1,38 @@
 # Frontend Skills Guide
 
-37+ skills covering the complete frontend development lifecycle: architecture, patterns, rendering strategies, state management, styling, testing, and performance across 8+ framework ecosystems.
+> **A Comprehensive Reference for Principal & Senior Frontend Engineers**
+>
+> 37+ skills covering the complete frontend development lifecycle: architecture, patterns, rendering strategies, state management, styling, testing, and performance across 8+ framework ecosystems. This guide dives deep into modern web vitals, build optimizations, and scaling frontend applications.
+
+## System Architecture Overview
+
+Modern frontends are no longer just HTML/CSS. They are complex distributed systems that manage state, coordinate APIs, and optimize delivery via various rendering strategies.
+
+```mermaid
+graph TD
+    Client[Browser / Client] -->|HTTP Request| CDN[CDN Edge]
+    
+    subgraph "Rendering & Delivery"
+    CDN -->|Cache Hit| Static[Static Assets / SSG]
+    CDN -->|Cache Miss| Edge[Edge Functions / Middleware]
+    Edge --> SSR[SSR Server Node.js / Deno]
+    end
+    
+    subgraph "Application State & UI"
+    Client --> Hydration[Hydration / Resumability]
+    Hydration --> Router[Client-Side Router]
+    Router --> State[Global State Management]
+    Router --> Components[UI Components]
+    end
+    
+    subgraph "Data Fetching Layer"
+    Components --> SWR[Query Cache TanStack/Apollo]
+    SWR -->|GraphQL / REST| API[Backend APIs]
+    end
+```
+
+> [!TIP]
+> **Push Computation to the Edge**: Utilize Edge middleware (e.g., Next.js Middleware, Cloudflare Workers) to handle personalization, A/B testing, and auth verification before the request even hits your SSR server. This dramatically reduces Time To First Byte (TTFB).
 
 ## Skill Map
 
@@ -46,42 +78,42 @@
 
 ```
 Need maximum ecosystem and jobs?
-  ├─ React — largest ecosystem, Next.js, huge community
+  ├─ React — largest ecosystem, Next.js standard, huge community
   ├─ Vue — gentle learning curve, great DX, versatile
-  └─ Angular — enterprise, opinionated, full-featured
+  └─ Angular — enterprise scale, opinionated, full-featured
 
 Need best performance and minimal JS?
   ├─ Svelte — compiled, no virtual DOM, tiny bundles
   ├─ SolidJS — fine-grained reactivity, closest to vanilla
   ├─ Qwik — resumable, near-zero JS, instant loading
-  └─ Astro — islands, zero JS by default
+  └─ Astro — islands architecture, zero JS by default
 
 Need content-focused site?
-  ├─ Astro — best SSG, islands architecture
+  ├─ Astro — best SSG, islands architecture, content collections
   ├─ Next.js — SSG + SSR, file-based routing
-  └─ Remix — web standards, progressive enhancement
+  └─ Remix — web standards, progressive enhancement, native fetch API
 
 Need web components?
   ├─ Lit — Google's standard, lightweight
-  └─ Svelte — compiles to WC too
+  └─ Svelte — compiles to WC natively
 ```
 
 ### Choose Your Rendering Strategy
 
 ```
 Need SEO and fast FCP?
-  ├─ SSR → Next.js, Nuxt, SvelteKit, Remix
-  ├─ SSG → Astro, Next.js, Nuxt (static)
-  └─ ISR → Next.js (hybrid)
+  ├─ SSR → Next.js, Nuxt, SvelteKit, Remix (Dynamic data)
+  ├─ SSG → Astro, Next.js, Nuxt (Static at build time)
+  └─ ISR → Next.js (Hybrid, revalidate in background)
 
-Need interactivity and auth?
-  ├─ SPA → React, Vue, Angular (CSR)
+Need interactivity and auth behind a login?
+  ├─ SPA → React, Vue, Angular (CSR, no SEO required)
   └─ MPA → Remix, traditional forms
 
-Need both?
-  ├─ Islands → Astro (partial hydration)
-  ├─ Resumable → Qwik (lazy hydration)
-  └─ RSC → Next.js (React Server Components)
+Need the best of both worlds?
+  ├─ Islands → Astro (partial hydration of only interactive bits)
+  ├─ Resumable → Qwik (lazy hydration on user interaction)
+  └─ RSC → Next.js (React Server Components, fetch on server, pass to client)
 ```
 
 ### Choose Your State Management
@@ -89,45 +121,82 @@ Need both?
 ```
 Need simple global state?
   ├─ Context API (React) / provide-inject (Vue)
-  ├─ Zustand / Pinia
-  └─ Signals (Solid, Qwik, Angular)
+  ├─ Zustand / Pinia (Lightweight, unopinionated)
+  └─ Signals (Solid, Qwik, Angular, Preact)
 
 Need server state?
-  ├─ TanStack Query (React Query)
-  ├─ SWR / Apollo Client
-  └─ tRPC (end-to-end typesafe)
+  ├─ TanStack Query (React Query) (Caching, deduping, background fetch)
+  ├─ SWR / Apollo Client (GraphQL)
+  └─ tRPC (End-to-end typesafe with monorepos)
 
 Need complex client state?
-  ├─ Zustand + Immer
-  ├─ Pinia / NgRx
-  └─ Jotai / Recoil (atomic)
+  ├─ Zustand + Immer (Immutable updates)
+  ├─ Pinia / NgRx (Redux-like patterns)
+  └─ Jotai / Recoil (Atomic, bottom-up state)
 ```
 
 ## Architecture Layers
 
+```mermaid
+classDiagram
+    class RoutingLayer {
+        +File-based Routing
+        +Loaders / Actions
+        +Middleware
+    }
+    class RenderingEngine {
+        +SSR / SSG
+        +Hydration / RSC
+    }
+    class StateLayer {
+        +Server Cache (TanStack)
+        +Client Store (Zustand)
+    }
+    class ComponentLayer {
+        +Smart Containers
+        +Dumb Presentational
+        +Design System
+    }
+    class NetworkLayer {
+        +Fetch API
+        +Interceptors
+        +GraphQL Clients
+    }
+    
+    RoutingLayer --> RenderingEngine
+    RenderingEngine --> ComponentLayer
+    ComponentLayer --> StateLayer
+    StateLayer --> NetworkLayer
 ```
-┌──────────────────────────────────────────┐
-│              UI Components                 │
-│  design-system, patterns, accessibility,  │
-│  animation, theming                       │
-├──────────────────────────────────────────┤
-│           Application State               │
-│  state-management, data-fetching          │
-├──────────────────────────────────────────┤
-│              Routing Layer                │
-│  framework-specific (Next, Nuxt, etc.)    │
-├──────────────────────────────────────────┤
-│            Rendering Engine               │
-│  SSR / SSG / CSR / ISR / RSC / Islands    │
-├──────────────────────────────────────────┤
-│         Build & Optimization              │
-│  bundler-tools, performance, image-opt    │
-├──────────────────────────────────────────┤
-│         Cross-Cutting Concerns            │
-│  seo, pwa, storybook, testing,            │
-│  microfrontend, form-handling             │
-└──────────────────────────────────────────┘
-```
+
+## Step-by-Step Workflows
+
+### Workflow: Optimizing Core Web Vitals (LCP, CLS, INP)
+1. **LCP (Largest Contentful Paint)**: Preload your hero image. Ensure the text font is self-hosted with `font-display: swap`. Use modern formats like WebP or AVIF.
+2. **CLS (Cumulative Layout Shift)**: Provide explicit `width` and `height` attributes to all images and iframes. Pre-allocate space for dynamic content (like ads) using CSS aspect-ratio.
+3. **INP (Interaction to Next Paint)**: Break up long tasks. If you have heavy JS execution, yield to the main thread using `setTimeout` or the `scheduler.yield()` API so the browser can paint UI updates.
+4. **Bundle Analysis**: Use `@next/bundle-analyzer` or `rollup-plugin-visualizer` to find heavy dependencies (e.g., replace moment.js with date-fns).
+5. **Code Splitting**: Dynamically import heavy, non-critical components (e.g., modals, rich-text editors) using `React.lazy` or Next.js `dynamic()`.
+
+> [!WARNING]
+> **Prop Drilling vs Global State**: Do not default to global state (Redux/Zustand) for everything. If state is only shared between a parent and its direct children, prop drilling or Composition is cleaner. Reserve global state for user sessions, themes, and cross-cutting data.
+
+## Advanced Troubleshooting
+
+### 1. Hydration Mismatches
+**Symptom**: Console errors stating "Text content did not match. Server: X Client: Y" and the UI flashing.
+**Root Cause**: The HTML rendered on the server differs from what the client expects on its first render. Often caused by using `window` or `Date.now()` without ensuring it only runs on the client.
+**Resolution**:
+- Suppress hydration warnings selectively only if unavoidable.
+- Use a `useIsMounted` hook to delay rendering browser-specific UI until after hydration.
+
+### 2. Infinite Re-renders
+**Symptom**: The browser tab freezes, memory spikes, and React/Vue throws maximum update depth exceeded errors.
+**Root Cause**: Updating state directly inside the render body, or non-memoized objects/functions being passed into dependency arrays of `useEffect`/`watch`.
+**Resolution**:
+- Move object creation outside the component if it's static.
+- Use `useMemo` or `useCallback` to stabilize references.
+- Use React Developer Tools Profiler to pinpoint the exact component triggering the loop.
 
 ## By Common Scenarios
 

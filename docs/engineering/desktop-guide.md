@@ -1,6 +1,35 @@
 # Desktop Skills Guide
 
-Skills covering desktop application development across all major platforms: cross-platform frameworks, Windows-native, macOS-native, and Linux-native toolkits.
+> **A Comprehensive Reference for Principal & Senior Desktop Engineers**
+>
+> Skills covering desktop application development across all major platforms: cross-platform frameworks, Windows-native, macOS-native, and Linux-native toolkits. This guide covers system integration, memory management, native bridging, and cross-platform architecture patterns.
+
+## System Architecture Overview
+
+When building robust desktop applications, separating the UI from core logic and native APIs is critical to maintaining a responsive interface and enabling testability.
+
+```mermaid
+graph TD
+    UI[User Interface Thread] -->|IPC / Async Calls| Core[Core Application Logic]
+    
+    subgraph "Native Platform Boundary"
+    Core -->|FFI / Bridge| Native[Native OS APIs]
+    Native --> FS[File System]
+    Native --> Reg[Registry / Plist]
+    Native --> Hardware[Hardware / GPU]
+    end
+    
+    subgraph "Background Processing"
+    Core --> Worker1[Background Thread 1]
+    Core --> Worker2[Background Thread 2]
+    end
+    
+    Worker1 --> LocalDB[(SQLite Local Storage)]
+    Worker2 --> Sync[Cloud Sync Service]
+```
+
+> [!TIP]
+> **Keep the Main Thread Clean**: The most common cause of desktop app lag is doing I/O or heavy computation on the main thread. Always offload these to background workers or threads and use message passing (like IPC in Electron/Tauri or `DispatchQueue` in Swift) to return results.
 
 ## Skill Map
 
@@ -42,51 +71,94 @@ Skills covering desktop application development across all major platforms: cros
 
 ```
 Need cross-platform with web skills?
-  ├─ Electron — mature, full Chrome, large bundles
-  ├─ Tauri — smaller, faster, Rust backend
-  └─ Qt (with QML or WebEngine)
+  ├─ Electron — mature, full Chrome, large bundles, great DX
+  ├─ Tauri — smaller, faster, Rust backend, uses system webview
+  └─ Qt (with QML or WebEngine) — C++ performance with web-like UI
 
 Need native Windows look and feel?
-  ├─ WPF — mature, .NET Framework/.NET, MVVM
+  ├─ WPF — mature, .NET Framework/.NET, MVVM pattern standard
   ├─ WinUI 3 — modern, Fluent Design, WinAppSDK
-  └─ Windows Forms — legacy, quick forms
+  └─ Windows Forms — legacy, quick forms, internal tools
 
 Need native macOS look and feel?
-  ├─ SwiftUI — modern, Swift, App Intents
-  └─ AppKit — mature, full control, Objective-C/Swift
+  ├─ SwiftUI — modern, Swift, App Intents, fast iterations
+  └─ AppKit — mature, full control, Objective-C/Swift legacy
 
 Need Linux-first?
-  ├─ GTK — GNOME standard, C/Python/Rust
+  ├─ GTK — GNOME standard, C/Python/Rust bindings
   ├─ Qt — KDE standard, C++/Python
-  └─ Tauri — Linux bundles, web UI
+  └─ Tauri — Linux bundles, web UI, system webkit2gtk
 
 Need maximum performance?
-  ├─ Qt (C++) — native, OpenGL/Vulkan
-  ├─ GTK (C) — lightweight, native
-  └─ Tauri (Rust) — zero-cost abstractions
+  ├─ Qt (C++) — native, OpenGL/Vulkan access
+  ├─ GTK (C) — lightweight, native rendering
+  └─ Tauri (Rust) — zero-cost abstractions in backend
 ```
 
 ## Architecture Layers
 
+```mermaid
+classDiagram
+    class UI_Layer {
+        +XAML / QML / SwiftUI / HTML / GTK
+        +Controls
+        +Styles
+    }
+    class View_Logic {
+        +MVVM
+        +MVC
+        +Redux / Signals
+    }
+    class App_Logic {
+        +Services
+        +State Management
+        +Commands
+    }
+    class Platform_Layer {
+        +IPC
+        +File System
+        +Notifications
+    }
+    class Native_Integration {
+        +WinRT / Cocoa / D-Bus
+        +Registry / C-Bindings
+    }
+    
+    UI_Layer --> View_Logic
+    View_Logic --> App_Logic
+    App_Logic --> Platform_Layer
+    Platform_Layer --> Native_Integration
 ```
-┌──────────────────────────────────────────┐
-│              UI Layer                      │
-│  XAML / QML / SwiftUI / HTML / GTK        │
-│  Controls, Layouts, Styles                │
-├──────────────────────────────────────────┤
-│           View Logic / ViewModel          │
-│  MVVM / MVC / Redux / Signals             │
-├──────────────────────────────────────────┤
-│            Application Logic              │
-│  Services, Commands, State               │
-├──────────────────────────────────────────┤
-│            Platform Layer                 │
-│  IPC, File System, Notifications, Menu   │
-├──────────────────────────────────────────┤
-│            Native Integration             │
-│  WinRT / Cocoa / D-Bus / FS, Registry    │
-└──────────────────────────────────────────┘
-```
+
+## Step-by-Step Workflows
+
+### Workflow: Implementing Secure IPC in Hybrid Apps (Electron/Tauri)
+1. **Disable Node Integration**: In the renderer process, ensure Node integration is completely disabled.
+2. **Context Isolation**: Enable context isolation to prevent prototype pollution between the renderer and main process.
+3. **Define a Strict Preload Script**: Create a bridge using `contextBridge` that only exposes specific, whitelisted functions.
+4. **Validate IPC Messages**: On the main process (or Rust backend), sanitize and validate all inputs coming from the UI layer. Never trust the renderer.
+5. **Handle Large Data Safely**: For large files, avoid passing buffers through IPC. Instead, pass file paths and read the file natively in the main process, or use streams.
+
+> [!WARNING]
+> **XSS in Desktop Apps is RCE**: In hybrid apps like Electron, a Cross-Site Scripting (XSS) vulnerability can escalate to Remote Code Execution (RCE) if IPC is not strictly secured. Always sanitize inputs and strictly control your preload bridges.
+
+## Advanced Troubleshooting
+
+### 1. Memory Leaks in the UI Thread
+**Symptom**: The application consumes increasing amounts of RAM over time and eventually crashes or slows down significantly.
+**Root Cause**: Unsubscribed event listeners, closure traps keeping objects alive, or unreleased native graphical resources (e.g., GDI objects in Windows).
+**Resolution**:
+- Use platform-specific profiling tools (Xcode Instruments, Visual Studio Profiler, Chrome DevTools Memory tab).
+- Implement Weak References where appropriate.
+- Ensure proper cleanup in component teardown/destructor phases.
+
+### 2. IPC Bottlenecks
+**Symptom**: UI freezing during data-heavy operations despite offloading logic to the main/backend process.
+**Root Cause**: Sending massive JSON payloads over the IPC channel blocks serialization/deserialization.
+**Resolution**:
+- Use shared memory arrays (e.g., `SharedArrayBuffer` in Electron).
+- Send minimal data; paginate or stream data in chunks.
+- If processing a file, pass the file path via IPC and let the backend read it directly.
 
 ## Skills List
 

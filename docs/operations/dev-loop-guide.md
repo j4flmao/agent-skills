@@ -21,6 +21,8 @@
 
 ## Decision Framework
 
+To build a robust internal developer platform (IDP), standardizing these decisions prevents cognitive overload. 
+
 ```
 Starting a new feature?
   1. dev-loop/git-workflow — branch from main
@@ -45,23 +47,48 @@ Shipping a project?
 
 ## Dev Loop Flow
 
+A structured inner dev loop minimizes friction. By integrating these skills into developer tooling natively, teams can ship faster with higher confidence.
+
+```mermaid
+graph TD
+    A[Plan] --> B(Dev Container Setup)
+    B --> C[Write Code]
+    C --> D{Tests Pass?}
+    D -->|No| E[Debugging Strategy]
+    E --> C
+    D -->|Yes| F[Code Review / Self-Review]
+    F --> G[Security Auditor]
+    G --> H[Performance Profiler]
+    H --> I[PR Writer]
+    I --> J{Approved?}
+    J -->|No| C
+    J -->|Yes| K[Merge & Changelog Generator]
+    K --> L[Deploy]
+    
+    subgraph Technical Debt Management
+    M[Tech Debt Tracker] -.-> A
+    end
 ```
-┌─────────────────────────────────────────────────────┐
-│                  INNER DEV LOOP                       │
-│                                                       │
-│  Plan → [Dev Container] → Code → [Debug] → Test      │
-│                                          │            │
-│  ┌────────────────────────────────────────┘           │
-│  ▼                                                     │
-│  Code Review → [Security] → [Perf] → PR Writer        │
-│                                          │            │
-│  ┌────────────────────────────────────────┘           │
-│  ▼                                                     │
-│  Merge → Changelog → [Readme] → Deploy                │
-│                                                       │
-│  [Tech Debt] ← periodic backlog review                │
-└─────────────────────────────────────────────────────┘
-```
+
+> [!TIP]
+> **Production Best Practice**: Tie your `Tech Debt Tracker` into Jira or Linear directly. Un-tracked debt within the repository often goes forgotten. Periodically allocate 15-20% of sprint capacity specifically for repaying cataloged tech debt.
+
+### Advanced Troubleshooting
+- **Dev Container Fails to Build**: Often caused by underlying OS architecture mismatches (e.g., Apple Silicon vs x86_64). Explicitly define the `--platform` flag in your Dockerfiles.
+- **Git Rebase Conflicts**: Rebase frequently during development using `dev-loop/git-workflow`. If conflicts span multiple commits, squash locally before rebasing to minimize conflict resolution overhead.
+- **Profiling Overhead**: When using `dev-loop/performance-profiler`, ensure you are profiling optimized/release builds. Profiling debug builds yields inaccurate latency and memory metrics.
+
+## Step-By-Step Workflow: The Refactor Cycle
+
+When touching legacy code, execute the following workflow to ensure stability:
+1. **Baseline Profiling**: Run `performance-profiler` and capture flame graphs of the current state.
+2. **Audit Security**: Run `security-auditor` to ensure dependencies aren't harboring known vulnerabilities that you might accidentally expose.
+3. **Write/Verify Tests**: Do not refactor without a test harness. If missing, apply `debugging-strategy` to trace execution and write characterization tests.
+4. **Iterative Extraction**: Use `refactor-guide` to extract methods and classes incrementally.
+5. **Self-Review Diff**: Use `code-review` checks on your local git diff before committing.
+
+> [!IMPORTANT]
+> **Code Review Philosophy**: Code reviews should not be the primary mechanism for finding bugs. That is what tests are for. Code reviews should focus on architectural alignment, readability, and security.
 
 ## Skills List
 

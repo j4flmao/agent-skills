@@ -1,194 +1,127 @@
-# Agent Reference
+# Universal Agent Reference & Orchestration Guide
 
-## Agent Config Matrix
+This reference provides exhaustive documentation on the configuration matrices, hook architectures, and operational policies for the AI agents supported in this ecosystem. It serves as the master blueprint for deploying and customizing multi-agent orchestration.
 
-| Agent | Config File | Auto-loaded | Hooks | Skills |
-|-------|-------------|-------------|-------|--------|
-| Claude Code | `.claude/CLAUDE.md` | Yes | 6 (Bash + PowerShell) | 4 |
-| OpenCode | `.opencode/AGENTS.md` | Yes | - | - |
-| Amp | `.amp/AGENTS.md` | Yes | - | - |
-| Copilot | `.github/copilot-instructions.md` | Yes | - | - |
-| Gemini | `.gemini/INSTRUCTIONS.md` | Yes | - | - |
-| Cursor | `.cursor/rules/agent-skills.mdc` | Yes | - | - |
-| Codex CLI | `.codex/AGENTS.md` | Yes | 5 (Python) | - |
-| Windsurf | `.windsurf/rules/*.md` | Yes | - | - |
+## Enterprise Agent Config Matrix
 
-## Claude Code
+Understanding the operational boundaries of your agent is crucial for system stability.
 
-Config: `.claude/CLAUDE.md` + `.claude/rules/`
+| Agent Framework | Config Path | Auto-loaded | Extensibility | Ideal Use Case | Native Compression | Context Limits |
+|-------|-------------|-------------|-------|--------|---|---|
+| **Claude Code** | `.claude/CLAUDE.md` | Yes | Bash / PS Hooks | Autonomous CLI operations | High | 200k+ tokens |
+| **OpenCode** | `.opencode/AGENTS.md` | Yes | Custom Scripting | Local, privacy-first models | Custom | VRAM dependent |
+| **Amp** | `.amp/AGENTS.md` | Yes | Subagent REST | Complex distributed workflows | High | Variable |
+| **Cursor** | `.cursor/rules/*.mdc`| Yes | Pre/Post Commands | Real-time IDE assistance | Native | IDE limits |
+| **Windsurf** | `.windsurf/rules/*.md`| Yes | Cascade | Context-aware codebase editing | High | Native |
+| **Codex CLI** | `.codex/AGENTS.md` | Yes | Python Hooks | Legacy CLI integrations | Medium | 128k tokens |
+| **Copilot** | `.github/copilot-instructions.md`| Yes | N/A | Quick snippet generation | Low | 32k tokens |
+| **Gemini** | `.gemini/INSTRUCTIONS.md` | Yes | Ext-based | Deep architectural planning | High | 1M+ tokens |
 
-Skills (`.claude/skills/`):
-- `commit` — Stage and commit with conventional format. Trigger: `/commit`
-- `deep-research` — Forked Explore agent deep-dive. Trigger: `/deep-research`
-- `deploy` — Production deploy checklist. Trigger: `/deploy`
-- `fix-issue` — GitHub issue fix by number. Trigger: `/fix-issue 123`
+> [!IMPORTANT]
+> Ensure that only one primary agent configuration is actively routing at the root level per repository to prevent conflict loops during automated task execution.
 
-Hooks (`.claude/hooks/`):
-- `PreToolUse` — Blocks `rm -rf` in Bash commands
-- `PostToolUse` — Logs all Write/Edit changes to `.claude/hooks/logs/`
-- `SessionStart` — Creates session timestamp log on startup
-- Scripts in `.claude/hooks/scripts/` (`.sh` + `.ps1`)
+## System Architecture & Hook Lifecycle
 
-## OpenCode
+The orchestration layer relies on a universal lifecycle hook pattern. Supported agents (like Claude Code and Codex CLI) utilize this to guarantee deterministic execution, safety, and observability.
 
-Config: `.opencode/AGENTS.md`
-
-Commands (`.opencode/commands/`):
-- `routes.md` — Lists all 105 skills grouped by phase
-- `add-skill.md` — Creates a new skill scaffold
-- `help.md` — OpenCode usage guide
-
-Compression optimized for local models (qwen2.5-coder:14b).
-
-## Amp
-
-Config: `.amp/AGENTS.md` + `.amp/agent-skills.md` + `.amp/subagents.md`
-
-Subagents defined in `.amp/subagents.md` for specialized routing.
-
-## Codex CLI
-
-Config: `.codex/AGENTS.md` + `.codex/rules/`
-
-Rules:
-- `compression.md` — Output compression directives
-- `routing.md` — All 105 skills with trigger keywords and full skill table
-- `exec-policy.md` — Execution safety policies
-
-Hooks (`.codex/hooks/`):
-- `readme.py` — README generation hook
-- `session-start.py` — Session initialization
-- `pre-tool-use.py` — Pre-execution validation
-- `post-tool-use.py` — Change logging
-- `stop.py` — Cleanup on session end
-
-Skills mapped in `.codex/skills/skill-map.json`.
-
-## Cursor
-
-Config: `.cursor/rules/agent-skills.mdc` + `.cursor/rules/compression.mdc`
-
-Rules loaded by glob scope for all files.
-
-## Windsurf
-
-Config: `.windsurf/rules/*.md`
-
-Rules:
-- `compression.md` — Output compression directives
-- `routing.md` — Skill routing keywords
-
-Auto-loaded by Windsurf Cascade agent.
-
-## SKILL.md Standard Format
-
-Every skill in the repository follows a standardized template (`SKILL.md`). This ensures skills are parseable by agents across all platforms.
-
-### Frontmatter (YAML)
-
-```yaml
----
-name: <category>-<skill-name>
-description: >
-  Use this skill when... <trigger keywords>. This skill enforces: <rules>.
-  Do NOT use for: <exclusions>.
-version: "1.0.0"
-author: "j4flmao"
-license: "MIT"
-compatibility:
-  claude-code: true
-  cursor: true
-  codex: true
-  windsurf: true
-tags: [<category>, <domain>, <phase-N>]
----
+```mermaid
+sequenceDiagram
+    participant User
+    participant Agent
+    participant PreHook as Pre-Tool Hook
+    participant Tool as System Tool
+    participant PostHook as Post-Tool Hook
+    
+    User->>Agent: Request Execution
+    Agent->>PreHook: Validate Intent
+    alt Unsafe Execution
+        PreHook-->>Agent: Abort (Exit 1)
+        Agent-->>User: Permission Denied
+    else Safe Execution
+        PreHook-->>Agent: Proceed (Exit 0)
+        Agent->>Tool: Execute Command
+        Tool-->>Agent: Output
+        Agent->>PostHook: Audit & Log
+        PostHook-->>Agent: Logging Complete
+        Agent-->>User: Response Delivered
+    end
 ```
 
-Fields:
-- `name` — unique identifier, prefixed by category (`ml-`, `ai-`, `security-`, etc.)
-- `description` — single paragraph: trigger keywords, enforced rules, exclusions
-- `version` — semver string
-- `compatibility` — agent platforms the skill supports
-- `tags` — routing tags including the pipeline phase (`phase-11`)
+## Deep Dive: Platform Configurations
 
-### Agent Protocol
+### 1. Claude Code
+Configuration is primarily handled via `.claude/CLAUDE.md` and supplementary files in `.claude/rules/`.
 
-Each skill defines a protocol section with:
+**Advanced Skills Map (`.claude/skills/`):**
+- `commit`: Conventional commit enforcer. Stages all files, runs linters, and applies semantic commit syntax.
+- `deep-research`: Forks the Explore agent for autonomous internet and internal documentation deep-dives, outputting structured markdown artifacts.
+- `deploy`: Validates deployment checklists before executing CI/CD pipelines.
+- `fix-issue`: Integrates with the GitHub CLI to automatically pull, analyze, and resolve issues locally.
 
-1. **Trigger** — Exact user phrases that activate the skill (agent should match before routing)
-2. **Input Context** — Information the skill needs before activating (framework, scale, constraints)
-3. **Protocol / Steps** — Ordered procedure the agent follows
-4. **Output** — What the skill produces (code, config, plan, report)
-5. **Handoffs** — Skills to invoke after this one completes
+**Hook Security Architecture (`.claude/hooks/`):**
+Claude Code enforces strict security boundaries using scripts in `.claude/hooks/scripts/` (`.sh` + `.ps1`).
+- `PreToolUse`: A regex-based AST analyzer that aggressively blocks destructive commands (`rm -rf`, network exposure scripts, `DROP TABLE`).
+- `PostToolUse`: Asynchronously pipes AST changes and `git diff` outputs to `.claude/hooks/logs/` for security auditing and rollback tracking.
+- `SessionStart`: Bootstraps session analytics, injects `.env` proxies, and warms up the context cache with the core routing schema.
 
-### Workflow / Response Format
+> [!CAUTION]
+> Bypassing the `PreToolUse` hook on production workstations can lead to catastrophic file deletion during autonomous agent loops.
 
-Skills specify a response convention:
-- **Workflow** — Multi-step process if the skill involves a sequence of operations
-- **Response Format** — Rules for formatting output (code blocks, sections, diagrams)
-- **Validation** — Checkpoints to verify correctness before presenting results
+### 2. OpenCode
+Optimized specifically for local models (e.g., `qwen2.5-coder:14b` and `llama3`).
+- **Commands**: Stored in `.opencode/commands/`. Includes `routes.md` (105 mapped skills), `add-skill.md` (scaffolding), and `help.md`.
+- **Optimization**: Uses extreme token compression techniques, stripping markdown headers and redundant phrasing to fit within local VRAM constraints.
 
-### References Section
+### 3. Cursor & Windsurf (IDE Agents)
+These agents operate within the IDE ecosystem and utilize global routing rules parsed upon file load.
+- **Cursor**: Uses `.cursor/rules/agent-skills.mdc`. The MDC format allows the agent to dynamically attach rules based on the active file extension or glob pattern. Rules are loaded by glob scope for all files.
+- **Windsurf**: Uses `.windsurf/rules/compression.md` and `routing.md`. Integrated deeply into the Cascade engine for unified file tracking and multi-file semantic edits.
 
-Every skill links to reference files:
+### 4. Amp & Multi-Agent Topologies
+Amp relies on a distributed subagent architecture defined in `.amp/subagents.md` and `.amp/agent-skills.md`. 
+Instead of a single monolithic prompt, Amp routes requests to specific LLM instances tuned for distinct tasks (e.g., a specific instance tuned purely for SQL generation, another for CSS rendering).
 
-```markdown
-## References
-- [Reference File 1](references/filename-1.md) — brief description
-- [Reference File 2](references/filename-2.md) — brief description
-```
+### 5. Codex CLI
+Configuration: `.codex/AGENTS.md` + `.codex/rules/`
+- **Routing**: All 105 skills mapped in `.codex/skills/skill-map.json` and triggered via `routing.md`.
+- **Hooks**: Python-based event triggers (`readme.py`, `session-start.py`, `pre-tool-use.py`, `post-tool-use.py`, `stop.py`).
 
-## Reference Files Pattern
+## Bundling & Distribution System
 
-Each skill directory contains **2-4 reference files** in `references/`:
+To prevent context exhaustion and latency spikes, do not load all 400+ skills simultaneously. Use Bundles. Bundles define pre-configured skill collections for specific project archetypes in `bundles/*.json`.
 
-```
-skills/<category>/<skill-name>/
-  SKILL.md
-  references/
-    <topic-1>.md
-    <topic-2>.md
-```
-
-**Convention:** Two references per skill — one covering **core concepts / architecture**, the other covering **implementation patterns / operations**. For example:
-
-| Skill | Reference 1 | Reference 2 |
-|---|---|---|
-| `ai/ai-agents` | `agent-architectures.md` | `orchestration.md` |
-| `ai/embeddings` | `embedding-models.md` | `embedding-training.md` |
-| `ai/ai-safety` | `bias-alignment.md` | `red-teaming-guardrails.md` |
-| `security/sast-dast` | (static analysis patterns) | (dynamic analysis patterns) |
-
-Reference files are depth-technical — they contain detailed guidelines, code snippets, configuration templates, and decision trees. They are loaded by the agent when the SKILL.md references section is followed.
-
-## Bundle System
-
-Bundles define **pre-configured skill collections** for specific project archetypes. They live in `bundles/*.json`:
-
-| Bundle | Description |
+| Enterprise Bundle | Target Architecture |
 |---|---|
-| `fullstack-nestjs-react` | NestJS backend + React frontend |
-| `fullstack-nestjs-react-complete` | Full-stack with all supporting skills |
-| `fullstack-golang-vue` | Go backend + Vue frontend |
-| `fullstack-rust-angular` | Rust backend + Angular frontend |
-| `backend-only` | Backend skills only |
-| `frontend-only` | Frontend skills only |
-| `devops-only` | DevOps & infrastructure skills |
-| `management-only` | Management & planning skills |
+| `fullstack-nestjs-react` | Enterprise microservices (NestJS + React SPA) |
+| `fullstack-nestjs-react-complete` | Full-stack with all supporting Devops/QA skills |
+| `fullstack-golang-vue` | High-throughput systems (Go + Vue3) |
+| `fullstack-rust-angular` | Secure, low-level financial systems |
+| `backend-only` | SRE, API, DB skills |
+| `frontend-only` | UI/UX, Component systems |
+| `devops-only` | Platform Engineering teams |
+| `management-only` | Product Managers and Agile leaders |
 
-Each bundle is defined in `bundles/bundle-definitions.json` with:
-
+**Bundle Definition Schema (`bundles/bundle-definitions.json`):**
 ```json
 {
   "name": "fullstack-nestjs-react",
   "description": "Full stack: NestJS backend + React frontend",
-  "skills": ["master-orchestrator", "project-init", "create-brief", ...]
+  "skills": ["master-orchestrator", "project-init", "create-brief", "nestjs-architecture", "react-patterns"]
 }
 ```
 
 During setup the user selects a bundle, and skill files are copied from `skills/` into the project. Bundles compose with kits (see `kits/` directory) for domain-specific add-ons.
 
-## Copying Config to Another Project
+## Migration & Configuration Portability
+
+To propagate agent behaviors across your microservices, use standard UNIX utilities. Copying configurations effectively transplants the agent's "brain" to the new repository.
+
+```mermaid
+graph LR
+    A[Central Agent Skills Repo] -->|cp -r| B(Microservice A)
+    A -->|cp -r| C(Microservice B)
+    A -->|cp -r| D(Frontend Monorepo)
+```
 
 ```bash
 # Claude Code
@@ -215,3 +148,18 @@ cp -r .gemini /path/to/project/
 # Windsurf
 cp -r .windsurf /path/to/project/
 ```
+
+## Advanced Troubleshooting
+
+If an agent misbehaves, it is almost always a configuration or routing issue. Use this diagnostic table:
+
+| Symptom | Diagnosis | Fix |
+|---|---|---|
+| Claude Code enters infinite loop | `PostToolUse` hook failing | Check shell script syntax and ensure `exit 0` is strictly enforced on success. |
+| Cursor ignores `.mdc` rules | Glob mismatch | Verify the glob pattern in the MDC header matches the active file tree exactly. Ensure `.cursor/` is at project root. |
+| Out of Context Errors | Bundle too large | Reduce the number of loaded skills. Utilize `context-compressor` to summarize references. |
+| Unsafe commands executing | Missing Hook permissions | Ensure your OS allows script execution (e.g., `chmod +x` for Bash, `Set-ExecutionPolicy` for PS). |
+| Copilot gives generic answers | Instructions not respected | Move `.github/copilot-instructions.md` exactly to `.github/` folder. It does not work if placed in root. |
+
+> [!TIP]
+> Always maintain a `master-orchestrator` skill in your bundle. It acts as the primary router and safety net for ambiguous prompts, preventing the agent from guessing which domain skill to use.

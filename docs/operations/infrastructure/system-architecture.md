@@ -2,39 +2,35 @@
 
 ## Layered Model
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                     L7 — Governance & Strategy                │
-│  (cloud-architecture, multi-cloud, migration, finops, cost)  │
-├──────────────────────────────────────────────────────────────┤
-│                   L6 — Security & Compliance                  │
-│  (iam, network-policy, secrets, audit, compliance, zero-trust)│
-├──────────────────────────────────────────────────────────────┤
-│                  L5 — Observability & Incident                │
-│  (monitoring, logging, tracing, incident-response, runbooks)  │
-├──────────────────────────────────────────────────────────────┤
-│               L4 — Service Mesh & Networking                   │
-│  (service-mesh, ingress, dns, cdn, load-balancing, mTLS)      │
-├──────────────────────────────────────────────────────────────┤
-│               L3 — Compute & Orchestration                     │
-│  (kubernetes, nomad, serverless, docker, helm, autoscaling)   │
-├──────────────────────────────────────────────────────────────┤
-│                L2 — Infrastructure as Code                     │
-│  (terraform, pulumi, crossplane, gitops/argo-cd, policy-code) │
-├──────────────────────────────────────────────────────────────┤
-│              L1 — Cloud & Physical Infrastructure              │
-│  (aws, azure, gcp, datacenter, bare-metal, hybrid-cloud)      │
-├──────────────────────────────────────────────────────────────┤
-│             L0 — Network, Storage, Compute Foundations         │
-│  (vpc, storage, cdn-edge, backup-dr, network-infrastructure)  │
-└──────────────────────────────────────────────────────────────┘
-
- Cross-Cutting:
- ┌───────────┐ ┌────────────┐ ┌───────────────┐ ┌──────────┐
- │   CI/CD   │ │    IaC     │ │    Chaos /     │ │  On-Call │
- │  (cicd,   │ │ (terraform,│ │  Resilience    │ │ (incident│
- │  argo-cd) │ │  pulumi)   │ │   Testing      │ │ response)│
- └───────────┘ └────────────┘ └───────────────┘ └──────────┘
+```mermaid
+graph TD
+    subgraph L7 - Governance & Strategy
+    A[Cloud Architecture, FinOps, Cost]
+    end
+    subgraph L6 - Security & Compliance
+    A --> B[IAM, Secrets, Zero-Trust, Audit]
+    end
+    subgraph L5 - Observability & Incident
+    B --> C[Monitoring, Logging, Tracing]
+    end
+    subgraph L4 - Service Mesh & Networking
+    C --> D[Ingress, DNS, CDN, mTLS]
+    end
+    subgraph L3 - Compute & Orchestration
+    D --> E[Kubernetes, Serverless, Nomad]
+    end
+    subgraph L2 - Infrastructure as Code
+    E --> F[Terraform, Pulumi, GitOps]
+    end
+    subgraph L1 - Cloud & Physical Infrastructure
+    F --> G[AWS, Azure, GCP, Bare-Metal]
+    end
+    subgraph L0 - Network, Storage, Compute Foundations
+    G --> H[VPC, Storage, Backup-DR]
+    end
+    
+    cross[Cross-Cutting: CI/CD, Chaos Engineering, On-Call] -.-> A
+    cross -.-> H
 ```
 
 ## Layer Descriptions
@@ -46,8 +42,11 @@ The lowest layer provides raw infrastructure building blocks: virtual networks (
 
 **Skills:** `network-infrastructure`, `storage-infrastructure`, `datacenter`, `bare-metal`, `cdn-edge`, `backup-dr`
 
+> [!IMPORTANT]
+> **Production Best Practice**: Avoid overlapping CIDR blocks across environments or VPCs. Use IP Address Management (IPAM) tools to enforce contiguous non-overlapping subnets to ensure VPC peering or Transit Gateway routing remains trivial in the future.
+
 ### L1 — Cloud & Physical Infrastructure
-Cloud provider-specific services and configurations. This layer includes landing zones, organization structure, IAM hierarchy, billing/account structure, and servicequotas. Multi-cloud strategy lives here — which workload goes to which provider based on cost, compliance, and capability.
+Cloud provider-specific services and configurations. This layer includes landing zones, organization structure, IAM hierarchy, billing/account structure, and service quotas. Multi-cloud strategy lives here — which workload goes to which provider based on cost, compliance, and capability.
 
 **Key decisions:** Single vs multi-cloud, landing zone design, account/org structure, region strategy, reserved instances vs on-demand.
 
@@ -74,6 +73,9 @@ Service-to-service communication: traffic routing, mTLS, observability, circuit 
 
 **Skills:** `service-mesh`, `cilium-ebpf`, `network-infrastructure`, `cdn-edge`
 
+> [!TIP]
+> **Production Best Practice**: Enable strict mTLS only after confirming all workload readiness. Use Permissive mode during migrations. Control outbound/egress traffic tightly using egress gateways to prevent data exfiltration.
+
 ### L5 — Observability & Incident
 Metrics, logs, traces, and alerting — the "three pillars" plus incident management. This layer tells you what's happening, what went wrong, and how to fix it. Incident response runbooks, postmortems, and metrics (MTTD/MTTR) close the feedback loop.
 
@@ -95,22 +97,13 @@ Cost governance, capacity planning, architecture governance, SLA management, ven
 
 **Skills:** `cloud-cost-optimization`, `finops`, `capacity-planning`, `sla-management`, `vendor-management`, `enterprise/architecture-governance`
 
-## Cross-Cutting Concerns
+## Advanced Troubleshooting Workflows
 
-### CI/CD Pipeline
-Spans L2 (IaC applies via CI/CD) to L5 (deployment observability). Every layer change flows through CI/CD: infrastructure changes via Terraform in CI, application changes via Helm in ArgoCD.
-
-**Skills:** `cicd-pipeline`, `github-actions`, `gitlab-ci`, `circleci`, `jenkins`, `argo-cd`
-
-### Chaos & Resilience Testing
-Validates the entire stack. Pod kill (L3), network latency (L4), certificate expiry (L6), DNS failure (L0). Chaos experiments are the only holistic test of all layers working together.
-
-**Skills:** `chaos-engineering`, `resilience-patterns`
-
-### Cost Optimization
-Every layer has cost implications: L0 storage tier, L1 instance type/reservation, L3 cluster overhead, L5 data retention, L7 finops.
-
-**Skills:** `cloud-cost-optimization`, `finops`, `data-cost-optimization`
+### Multi-Region Outage Remediation
+1. Verify L0 Network State (Transit Gateways, BGP peering).
+2. Validate Global Load Balancer / DNS health probes. Route traffic statically if health probes are failing falsely.
+3. Scale L3 Node Pools in the healthy region immediately.
+4. Scale Workloads dynamically using HPA/KEDA.
 
 ## Common Failure Scenarios
 

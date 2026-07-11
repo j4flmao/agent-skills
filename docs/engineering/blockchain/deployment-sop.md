@@ -1,146 +1,66 @@
 # Smart Contract Deployment Standard Operating Procedure
 
-## Scope
+> **A Comprehensive Reference for Principal Smart Contract Engineers**
+>
+> This SOP covers all smart contract deployments across devnet, testnet, staging, and mainnet environments. It details multisig orchestration, timelock queueing, upgradeability mechanics, and verifiable builds.
 
-This SOP covers all smart contract deployments across devnet, testnet, staging, and mainnet environments. Every deployment must follow this procedure regardless of chain or tooling.
+## System Architecture: Deployment Topology
 
----
+Deploying smart contracts securely involves layers of administration and operational security (OpSec). The following model outlines a standard secure production topology:
+
+```mermaid
+graph TD
+    Deployer[Deployer EOA / CI Bot] -->|Creates| Proxy[Transparent/UUPS Proxy]
+    Proxy -->|Delegates| Impl1[Implementation V1]
+    
+    Multisig[Gnosis Safe Multisig 3-of-5] -->|Proposes/Executes| Timelock[Timelock Controller 7 days]
+    Timelock -->|Owns| ProxyAdmin[Proxy Admin]
+    ProxyAdmin -->|Upgrades| Proxy
+    ProxyAdmin -->|Upgrades| Impl2[Implementation V2]
+    
+    Timelock -->|Owns| Config[Protocol Config / AccessControl]
+    
+    PauseManager[Pause Multisig 2-of-3] -->|Emergency Action| Config
+```
+
+> [!WARNING]
+> **Compromised Deployer Keys**: A CI bot's private key used for deployment should NEVER be the owner or admin of the protocol on Mainnet. The CI bot deploys the implementation, and immediately transfers ownership of the ProxyAdmin to the multisig/timelock.
 
 ## Pre-Deployment Checklist
 
 ### Code Readiness
-
-- [ ] Contracts compiled with correct Solidity version (specified in `pragma` and `foundry.toml`/`hardhat.config.ts`)
-- [ ] Solidity optimizer settings match production intent: runs >= 200, enabled = true
-- [ ] All unit tests pass: `forge test` or `npx hardhat test`
-- [ ] Integration tests pass against forked mainnet: `forge test --fork-url $RPC_URL`
-- [ ] Fuzz tests run with at least 10000 runs: `FOUNDRY_FUZZ_RUNS=10000 forge test`
-- [ ] Invariant tests run with at least 1000 runs: `forge test --invoke-runs 1000`
-- [ ] Slither analysis clean: `slither . --exclude-dependencies --filter-paths "lib/"` — no high/critical findings
-- [ ] External audit completed for contracts being deployed (at least 1 audit, 2 recommended for mainnet)
-- [ ] Bug bounty program active on Immunefi or Hats Finance (mainnet only)
-- [ ] Gas snapshot generated and compared to previous baseline: `forge snapshot`
+- [ ] Contracts compiled with correct Solidity version.
+- [ ] Solidity optimizer settings match production intent: runs >= 200, enabled = true.
+- [ ] All unit tests pass: `forge test`.
+- [ ] Integration tests pass against forked mainnet: `forge test --fork-url $RPC_URL`.
+- [ ] External audit completed.
+- [ ] Gas snapshot generated and compared to baseline.
 
 ### Operational Readiness
-
-- [ ] Deployment configuration file prepared: `deploy/config/<network>.yaml` with all addresses
-- [ ] Deployer account funded with sufficient native token for gas
-  - Devnet: funded automatically
-  - Testnet: minimum 0.5 ETH per deployment
-  - Mainnet: minimum 5 ETH per deployment (calculate: `gas_limit * gas_price`)
-- [ ] For upgrades: proxy admin address known, implementation address prepared
-- [ ] Upgrades: storage layout checked via `forge inspect MyContract storageLayout`
-- [ ] For mainnet: timelock delay configured (minimum 7 days), queue prepared
-- [ ] Multisig signers confirmed available for signing window (mainnet)
-- [ ] Explorer API keys set (Etherscan, Polygonscan, Arbiscan, Sourcify)
-- [ ] Monitoring dashboard configured (Tenderly, Forta, Defender)
-
-### Gas Calculation Template
-
-```bash
-# Estimated gas cost = gas_used * gas_price
-forge create src/MyContract.sol:MyContract --gas-estimate
-# For Hardhat:
-npx hardhat run scripts/deploy.ts --network sepolia --gas
-```
-
-| Component | Est. Gas | Est. Cost (50 gwei ETH = $2500) |
-|---|---|---|
-| Simple ERC20 deploy | ~1,500,000 | $187.50 |
-| Upgradeable proxy deploy | ~2,500,000 | $312.50 |
-| Complex DeFi protocol (all contracts) | ~10,000,000 | $1,250.00 |
-| Multisig transaction | ~50,000 | $6.25 |
-
----
+- [ ] Deployment configuration file prepared: `deploy/config/<network>.yaml`
+- [ ] Multisig signers confirmed available for signing window (mainnet).
+- [ ] Upgrades: storage layout checked via `forge inspect MyContract storageLayout`.
+- [ ] Timelock delay configured (minimum 7 days).
 
 ## Deployment Flow by Environment
 
 ### 1. Devnet
-
-```bash
-# Start local node with fork
-anvil --fork-url $FORK_URL --fork-block-number 19500000
-
-# Deploy via Foundry
-forge script script/Deploy.s.sol:DeployScript \
-  --rpc-url http://127.0.0.1:8545 \
-  --broadcast \
-  --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-
-# Deploy via Hardhat
-npx hardhat run scripts/deploy.ts --network localhost
-```
-
 Validation:
 - [ ] Contracts deployed and addresses logged
 - [ ] Constructor args correct
-- [ ] Owner set to deployer address
-- [ ] Basic state reads work (totalSupply, balanceOf)
+- [ ] Basic state reads work
 
 ### 2. Testnet
-
-```bash
-# Deploy with Foundry (single contract)
-forge create src/MyContract.sol:MyContract \
-  --rpc-url sepolia \
-  --private-key $DEPLOYER_PRIVATE_KEY \
-  --constructor-args 0x... 1000000 \
-  --verify \
-  --etherscan-api-key $ETHERSCAN_API_KEY
-
-# Deploy with Foundry script
-forge script script/Deploy.s.sol:DeployScript \
-  --rpc-url sepolia \
-  --broadcast \
-  --verify \
-  --private-key $DEPLOYER_PRIVATE_KEY \
-  -vvvv
-
-# Deploy with Hardhat
-npx hardhat run scripts/deploy.ts \
-  --network sepolia \
-  --verify
-```
-
 Validation:
-- [ ] Contract verified on explorer
-- [ ] Constructor args match expected values
-- [ ] Owner set to deployer (or test multisig)
-- [ ] Integration tests pass against deployed contracts
-- [ ] Transactions submitted with correct gas parameters
+- [ ] Contract verified on explorer automatically via Etherscan API.
+- [ ] Integration tests pass against deployed contracts.
 
-### 3. Staging
-
+### 3. Staging (Live Rehearsal)
 Staging deploys through a test multisig to the testnet fork.
-
-```bash
-# 1. Create deployment transaction data
-forge script script/Deploy.s.sol:DeployScript \
-  --rpc-url staging \
-  --json > deploy_data.json
-
-# 2. Submit to test Safe
-npx hardhat run scripts/submit-to-safe.ts \
-  --network staging \
-  --safe $STAGING_SAFE \
-  --data deploy_data.json
-
-# 3. Collect signatures (3-of-5 threshold)
-npx hardhat run scripts/collect-signatures.ts \
-  --safe $STAGING_SAFE \
-  --nonce $NONCE
-
-# 4. Execute via Safe
-npx hardhat run scripts/execute-safe.ts \
-  --network staging \
-  --safe $STAGING_SAFE
-```
-
-Validation:
-- [ ] Same process as mainnet (live rehearsal)
-- [ ] All monitoring alerts configured and tested
-- [ ] Subgraph indexing working correctly
-- [ ] dApp integration tested against staging contracts
+- [ ] Generate deployment transaction payload (`forge script ... --json`)
+- [ ] Submit to test Safe
+- [ ] Collect signatures (3-of-5)
+- [ ] Execute via Safe
 
 ### 4. Mainnet
 
@@ -151,253 +71,62 @@ forge script script/Deploy.s.sol:DeployScript \
   --json \
   --sig "run()" > mainnet_deploy.json
 
-# 2. Create Safe transaction (via Safe{Wallet} UI or CLI)
+# 2. Create Safe transaction (via Safe CLI or TxBuilder)
 safe-tx create \
   --safe $MAINNET_SAFE \
   --to $DEPLOYER_CONTRACT \
   --data $(cat mainnet_deploy.json | jq -r '.transaction.data') \
   --value 0
 
-# 3. Sign with hardware wallets (3-of-5 threshold)
-# Each signer connects via Ledger/Trezor to Safe{Wallet}
-
+# 3. Sign with hardware wallets (Ledger/Trezor)
 # 4. Execute after threshold met
-safe-tx execute \
-  --safe $MAINNET_SAFE \
-  --nonce $NONCE
-
-# 5. Verify on explorer
-forge verify-contract \
-  $DEPLOYED_ADDRESS \
-  src/MyContract.sol:MyContract \
-  --chain-id 1 \
-  --etherscan-api-key $ETHERSCAN_API_KEY
+# 5. Verify on Etherscan
 ```
 
-Validation (Mainnet):
-- [ ] Contract verified on Etherscan
-- [ ] Ownership transferred to multisig
-- [ ] Proxy admin owned by timelock/multisig
-- [ ] Emergency pause functions callable by pauser role
-- [ ] No unexpected renounced ownership
-- [ ] All events emitted correctly
+> [!TIP]
+> **Deterministic Deployments**: Use `CREATE2` via a factory (like Nick's method or OpenZeppelin's `Create2` utility) to ensure the contract address is identical across all chains (Mainnet, Arbitrum, Optimism). This drastically simplifies cross-chain UI integrations.
 
----
+## Step-by-Step Workflows
 
-## Post-Deployment Procedure
+### Workflow: Executing a Protocol Upgrade
+1. **Develop and Audit**: Write the V2 implementation. Prove it does not corrupt the V1 storage layout. Get it audited.
+2. **Deploy V2 Implementation**: Use CI to deploy the V2 logic contract. *This has no state and is harmless.*
+3. **Verify Implementation**: Verify the V2 source code on Etherscan so the community can inspect it.
+4. **Propose Upgrade**: Create a transaction on the Multisig calling `Timelock.schedule(ProxyAdmin, 0, "upgrade(address,address)", proxy, v2Impl)`.
+5. **Wait the Timelock**: The 7-day timelock elapses. The community is notified.
+6. **Execute Upgrade**: The Multisig executes the transaction in the Timelock. The Proxy now points to V2.
 
-### Verification
+## Advanced Troubleshooting
 
-```bash
-# Foundry verification
-forge verify-contract \
-  $ADDRESS \
-  src/MyContract.sol:MyContract \
-  --chain-id $CHAIN_ID \
-  --constructor-args $(cast abi-encode "constructor(address,uint256)" $OWNER 1000000) \
-  --etherscan-api-key $ETHERSCAN_API_KEY
+### 1. Verification Fails on Etherscan
+**Symptom**: `forge verify-contract` fails with "Bytecode does not match".
+**Root Cause**: The compiler version, optimizer runs, EVM version, or constructor arguments used during verification differ slightly from the deployment.
+**Resolution**:
+- Ensure the `foundry.toml` exactly matches the environment used for deployment.
+- Pass the ABI-encoded constructor arguments correctly using `$(cast abi-encode "constructor(address)" $OWNER)`.
+- Sometimes metadata hashes differ. Try using `--via-ir` or check the `--metadata` flag.
 
-# Hardhat verification
-npx hardhat verify \
-  --network $NETWORK \
-  $ADDRESS \
-  $OWNER 1000000
-
-# Sourcify verification (auto via Hardhat/Foundry plugin)
-# Blockscout (for Polygon, BSC, etc.)
-npx hardhat verify --network polygon $ADDRESS $ARGS
-```
-
-### Monitoring Setup
-
-```bash
-# Tenderly: add contract to dashboard
-tenderly contract add \
-  --network $NETWORK \
-  --address $ADDRESS \
-  --project $TENDERLY_PROJECT
-
-# Defender Sentinels
-npx hardhat run scripts/setup-sentinels.ts --network mainnet
-
-# Forta bot
-npm run forta:deploy -- --bot-id $FORTABOT_ID --network $NETWORK
-```
-
-### Deployment Registry
-
-Record every deployment in `deployments/registry.json`:
-
-```json
-{
-  "MyContract": {
-    "address": "0x...",
-    "chainId": 1,
-    "network": "mainnet",
-    "version": "v1.0.0",
-    "gitCommit": "a1b2c3d4e5f6...",
-    "gitTag": "MyContract-v1.0.0-mainnet",
-    "deployer": "0x... (multisig address)",
-    "timestamp": "2026-05-24T10:00:00Z",
-    "txHash": "0x...",
-    "verificationTx": "0x...",
-    "auditReport": "https://...",
-    "dependencies": {
-      "proxyAdmin": "0x...",
-      "proxy": "0x..."
-    },
-    "notes": "Initial production deployment"
-  }
-}
-```
-
-### dApp Configuration Update
-
-```bash
-# Update frontend config
-cat > src/config/contracts.ts << EOF
-export const CONTRACTS = {
-  MyContract: {
-    [ChainId.MAINNET]: "0x...",
-    [ChainId.SEPOLIA]: "0x...",
-    [ChainId.HOLESKY]: "0x..."
-  }
-};
-EOF
-```
-
-### Post-Deployment Integration Tests
-
-```bash
-# Run against live contracts
-forge test --match-path test/integration/*.t.sol \
-  --rpc-url $RPC_URL \
-  --chain-id $CHAIN_ID \
-  -vvv
-
-# Verify all state variables
-npx hardhat run scripts/verify-state.ts --network $NETWORK
-```
-
----
+### 2. Gas Spikes During Mainnet Deployment
+**Symptom**: Deployment transaction hangs in the mempool or gets dropped.
+**Root Cause**: Network base fee spiked, and the `maxFeePerGas` was set too low.
+**Resolution**:
+- Never use legacy `gasPrice` transactions. Always use EIP-1559 (`maxFeePerGas` and `maxPriorityFeePerGas`).
+- If stuck, use the same deployer nonce to submit a replacement transaction (cancel or speed-up) with a `maxPriorityFeePerGas` at least 10% higher.
 
 ## Emergency Procedures
 
+| Action | Multisig Threshold | Timelock |
+|---|---|---|
+| Pause Protocol | 2-of-5 (Ops Multisig) | Bypass (Immediate) |
+| Unpause Protocol | 3-of-5 (Main Multisig)| 0 delay |
+| Upgrade Logic | 3-of-5 | 7 days |
+| Change Ownership| 5-of-8 | 14 days |
+
 ### Emergency Pause
-
 ```bash
-# Call pause via multisig
-cast send $CONTRACT_ADDRESS "pause()" \
-  --rpc-url $RPC_URL \
-  --private-key $SIGNER_KEY
-
-# Or via Safe
+# Call pause via SafeTx
 safe-tx create \
   --safe $MULTISIG \
   --to $CONTRACT_ADDRESS \
   --data "0x8456cb59" # keccak("pause()")
-```
-
-| Action | Multisig Threshold | Timelock |
-|---|---|---|
-| Pause | 2-of-5 | Bypass (immediate) |
-| Unpause | 3-of-5 | 0 delay |
-| Upgrade | 3-of-5 or 5-of-8 | 7 days |
-| Fund recovery | 5-of-8 | 14 days |
-
-### Upgrade Flow
-
-```
-1. Deploy new implementation → record address
-2. Create upgrade proposal via multisig
-3. Queue in timelock → 7-day waiting period
-4. Execute upgrade → ProxyAdmin.upgradeTo(newImpl)
-5. Verify storage compatibility
-6. Deploy new implementation to all environments
-7. Update deployment registry
-```
-
-### Fund Recovery
-
-```bash
-# If contract has withdraw function:
-cast send $CONTRACT_ADDRESS "withdraw(address,uint256)" \
-  $RECIPIENT $AMOUNT \
-  --rpc-url $RPC_URL \
-  --private-key $MULTISIG_SIGNER
-
-# Emergency drain (if implemented):
-cast send $CONTRACT_ADDRESS "emergencyDrain(address,address)" \
-  $TOKEN $RECIPIENT \
-  --rpc-url $RPC_URL
-```
-
----
-
-## Forge Deployment Script Template
-
-```solidity
-// script/Deploy.s.sol
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
-
-import {Script} from "forge-std/Script.sol";
-import {MyContract} from "../src/MyContract.sol";
-
-contract DeployScript is Script {
-    function run() external {
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address owner = vm.envAddress("MULTISIG_ADDRESS");
-        uint256 initialSupply = vm.envUint("INITIAL_SUPPLY");
-
-        vm.startBroadcast(deployerPrivateKey);
-
-        MyContract contract_ = new MyContract(owner, initialSupply);
-        vm.label(address(contract_), "MyContract");
-
-        vm.stopBroadcast();
-
-        console2.log("MyContract deployed at:", address(contract_));
-        console2.log("Owner:", owner);
-        console2.log("Initial supply:", initialSupply);
-    }
-}
-```
-
-## Hardhat Deployment Script Template
-
-```typescript
-// scripts/deploy.ts
-import { ethers, network, run } from "hardhat";
-
-async function main() {
-  const [deployer] = await ethers.getSigners();
-  console.log("Deploying with:", deployer.address);
-  console.log("Balance:", ethers.formatEther(await ethers.provider.getBalance(deployer.address)));
-
-  const MyContract = await ethers.getContractFactory("MyContract");
-  const multisig = process.env.MULTISIG_ADDRESS!;
-  const supply = ethers.parseEther("1000000");
-
-  const contract = await MyContract.deploy(multisig, supply, {
-    maxFeePerGas: ethers.parseUnits("50", "gwei"),
-    maxPriorityFeePerGas: ethers.parseUnits("2", "gwei"),
-  });
-
-  await contract.waitForDeployment();
-  const address = await contract.getAddress();
-  console.log("MyContract deployed to:", address);
-
-  if (network.name !== "hardhat" && network.name !== "localhost") {
-    await run("verify:verify", {
-      address,
-      constructorArguments: [multisig, supply],
-    });
-  }
-}
-
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
 ```

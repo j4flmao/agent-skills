@@ -1,6 +1,31 @@
 # DevOps Skills Guide
 
-32 skills covering the complete DevOps lifecycle: CI/CD, container orchestration, infrastructure as code, cloud platforms, monitoring, security, cost optimization, and platform engineering.
+32 skills covering the complete DevOps lifecycle: CI/CD, container orchestration, infrastructure as code, cloud platforms, monitoring, security, cost optimization, and platform engineering. 
+
+This guide serves as the backbone for establishing a mature Site Reliability Engineering (SRE) and DevOps culture, bridging the gap between development teams and operational infrastructure.
+
+## Architecture: DevOps Platform Ecosystem
+
+```mermaid
+graph TD
+    subgraph CI/CD & GitOps
+        A[GitHub Actions / Jenkins] --> B[Argo CD / Flux]
+    end
+    subgraph Cloud Platforms & Infrastructure
+        B --> C{Terraform / OpenTofu}
+        C --> D[AWS / Azure / GCP]
+        D --> E[Kubernetes / Nomad]
+    end
+    subgraph Observability
+        E --> F[Prometheus / Grafana]
+        E --> G[OTel Collector]
+        F --> H[Incident Response / On-Call]
+    end
+    subgraph Security & FinOps
+        C -.-> I[Vault Secrets]
+        D -.-> J[Cloud Cost Optimization]
+    end
+```
 
 ## Skill Map
 
@@ -143,6 +168,19 @@ Need deployment strategies?
 │ SAST     │   │ scan     │   │ perf     │   │ rollback │   │ traces   │
 └──────────┘   └──────────┘   └──────────┘   └──────────┘   └──────────┘
 ```
+
+> [!IMPORTANT]
+> **Production Best Practice**: Enforce immutable artifacts. The container image built in the `BUILD` phase must be the exact same SHA digest promoted through `TEST`, `DEPLOY (Staging)`, and `DEPLOY (Prod)`. Do not rebuild images for production.
+
+### Advanced Troubleshooting
+- **Terraform State Locks**: When CI/CD pipelines crash abruptly, state lock files (e.g., in DynamoDB or GCS) can remain locked. Always run `terraform force-unlock` with extreme caution after verifying no other jobs are running.
+- **Argo CD Sync Loops**: If resources are continually out of sync, ensure Mutating Webhooks aren't modifying manifests injected by Argo CD. Use `ignoreDifferences` in the Application spec to ignore fields modified at runtime.
+
+### High-Availability Kubernetes Step-by-Step Workflow
+1. **Control Plane Redundancy**: Deploy clusters with a minimum of 3 control plane nodes across diverse Availability Zones (AZs).
+2. **Pod Anti-Affinity**: Use `podAntiAffinity` rules to ensure replicas of critical deployments aren't scheduled onto the same physical node.
+3. **Pod Disruption Budgets (PDB)**: Enforce PDBs to guarantee a minimum availability during voluntary disruptions (e.g., node upgrades).
+4. **Auto-scaling**: Configure both Cluster Autoscaler (for nodes) and HPA (for pods based on CPU/Memory/Custom Metrics).
 
 ## Skills List
 
