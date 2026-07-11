@@ -3,7 +3,7 @@
 We implement Lambda architecture to balance Kafka streams and Spark batch jobs using ORC compression for historical data.
 ## 2. System Architecture
 ```mermaid
-graph LR
+graph TD
 A[Kafka] --> B[Flink Stream]
 A --> C[Spark Batch]
 ```

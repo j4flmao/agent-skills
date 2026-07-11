@@ -13,7 +13,7 @@ Secrets management is the practice of securely storing, accessing, rotating, and
 
 ### Concept 2: Secrets Lifecycle
 ```mermaid
-graph LR
+graph TD
     Create[Create] --> Store[Store]
     Store --> Access[Access]
     Access --> Rotate[Rotate]

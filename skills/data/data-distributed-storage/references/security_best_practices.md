@@ -49,7 +49,7 @@ resource "aws_s3_bucket_policy" "secure_lake" {
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[User/Service Role] -->|AssumeRole| B[AWS STS]
     B -->|Temp Credentials| C[S3 API]
     C -->|Request KMS Key| D[AWS KMS]

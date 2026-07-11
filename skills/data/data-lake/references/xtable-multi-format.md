@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     XtableMultiFormat_C["XtableMultiFormat_C Layer"] -->|Stream| ORC_Writer["ORC_Writer Processor"]
     ORC_Writer -->|Checkpoint| S3_Bucket
     ORC_Writer -->|Optimize| XtableMultiFormat_A["XtableMultiFormat_A Engine"]

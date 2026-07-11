@@ -18,7 +18,7 @@ def find_slow_queries(log_file):
 
 ## System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser Profiler] --> B[Network Waterfall]
     C[Query Logs] --> D[Log Analyzer]
     B --> E[Root Cause Analysis]

@@ -18,7 +18,7 @@ GROUP BY 1, 2;
 
 ## System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Data Warehouse] --> B[Semantic Layer (dbt)]
     B --> C[In-Memory Cache (Redis)]
     C --> D[Visualization Engine]

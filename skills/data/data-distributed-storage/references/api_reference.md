@@ -33,7 +33,7 @@ table.updateSpec()
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Catalog - Hive Metastore] --> B[Iceberg Metadata JSON]
     B --> C[Manifest List]
     C --> D[Manifest File 1]

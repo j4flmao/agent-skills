@@ -84,7 +84,7 @@
 ### ADR Lifecycle
 
 ```mermaid
-flowchart LR
+flowchart TD
     Proposed --> Accepted
     Proposed --> Rejected
     Accepted --> Superseded

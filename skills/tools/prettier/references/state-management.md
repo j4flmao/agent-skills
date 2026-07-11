@@ -51,7 +51,7 @@ To optimize **State Management**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
     C -->|Yes| D[Deploy to Staging]
@@ -112,7 +112,7 @@ To optimize **State Management**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
     C -->|Yes| D[Deploy to Staging]
@@ -169,7 +169,7 @@ To optimize **State Management**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
     C -->|Yes| D[Deploy to Staging]

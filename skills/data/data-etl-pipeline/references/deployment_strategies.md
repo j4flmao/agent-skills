@@ -14,7 +14,7 @@ metadata:
 
 ## System Architecture Diagram
 ```mermaid
-graph LR
+graph TD
     A[Client] -->|Request| B(API Gateway)
     B --> C{deployment_strategies Service}
     C -->|Read/Write| D[(State Store)]

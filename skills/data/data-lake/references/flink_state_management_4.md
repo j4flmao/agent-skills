@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     FlinkStateManagement4_B["FlinkStateManagement4_B Layer"] -->|Stream| RocksDB_State["RocksDB_State Processor"]
     RocksDB_State -->|Checkpoint| KMS_Auth
     RocksDB_State -->|Optimize| ORC_Writer["ORC_Writer Engine"]

@@ -7,7 +7,7 @@
 This master summary is generated via an automated CI/CD pipeline that audits the repository's semantic depth, reference linkage, and skill integrity. The following diagram illustrates the pipeline execution:
 
 ```mermaid
-graph LR
+graph TD
     A[Git Commit] --> B[CI/CD Runner]
     B --> C[AST Markdown Parser]
     C --> D[Token Counter & Metrics Engine]

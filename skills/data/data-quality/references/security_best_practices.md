@@ -116,7 +116,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 ### System Architecture
 
 ```mermaid
-graph LR
+graph TD
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]
@@ -176,7 +176,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 ### System Architecture
 
 ```mermaid
-graph LR
+graph TD
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]
@@ -306,7 +306,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 ### System Architecture
 
 ```mermaid
-graph LR
+graph TD
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]

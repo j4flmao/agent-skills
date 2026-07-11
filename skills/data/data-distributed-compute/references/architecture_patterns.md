@@ -29,7 +29,7 @@ def process_data(spark: SparkSession, is_streaming: bool):
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Event Sources] --> B[Kafka Log]
     B --> C{Kappa Processing Engine}
     C --> D[Real-time Path - Flink]

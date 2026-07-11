@@ -54,7 +54,7 @@ To optimize **Deployment Pipelines**, we enforce the following foundational rule
 ### System Architecture
 
 ```mermaid
-graph LR
+graph TD
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
     C -->|Round Robin| D[App Server 1]
@@ -123,7 +123,7 @@ To optimize **Deployment Pipelines**, we enforce the following foundational rule
 ### System Architecture
 
 ```mermaid
-graph LR
+graph TD
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
     C -->|Round Robin| D[App Server 1]

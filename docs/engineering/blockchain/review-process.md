@@ -7,7 +7,7 @@
 ## Security Review Lifecycle
 
 ```mermaid
-graph LR
+graph TD
     PR[Developer Opens PR] --> CI[Automated CI/CD Checks]
     CI -->|Slither/Tests Pass| Peer[Line-by-Line Peer Review]
     CI -->|Fail| Dev[Return to Developer]

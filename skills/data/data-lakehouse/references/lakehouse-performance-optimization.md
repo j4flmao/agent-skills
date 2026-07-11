@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     LakehousePerformanceOptimization_C["LakehousePerformanceOptimization_C Layer"] -->|Stream| RocksDB_State["RocksDB_State Processor"]
     RocksDB_State -->|Checkpoint| LakehousePerformanceOptimization_A
     RocksDB_State -->|Optimize| LakehousePerformanceOptimization_B["LakehousePerformanceOptimization_B Engine"]

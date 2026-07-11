@@ -31,7 +31,7 @@ HDFS configurations in `hdfs-site.xml` for block size and topology-aware replica
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Client Write] --> B[DataNode 1 Rack A]
     B -->|Replicate| C[DataNode 2 Rack B]
     C -->|Replicate| D[DataNode 3 Rack B]

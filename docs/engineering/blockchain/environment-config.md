@@ -7,7 +7,7 @@
 ## Environment Progression Architecture
 
 ```mermaid
-graph LR
+graph TD
     Dev[Devnet Local Fork] -->|CI/CD Test| Testnet[Sepolia / Holesky]
     Testnet -->|Integration & QA| Staging[Mainnet Fork Staging]
     Staging -->|Audited & Approved| Mainnet[Mainnet Production]

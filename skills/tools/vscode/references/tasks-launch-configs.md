@@ -50,7 +50,7 @@ To optimize **Tasks Launch Configs**, we enforce the following foundational rule
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
     C -->|Yes| D[Deploy to Staging]
@@ -111,7 +111,7 @@ To optimize **Tasks Launch Configs**, we enforce the following foundational rule
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
     C -->|Yes| D[Deploy to Staging]
@@ -169,7 +169,7 @@ To optimize **Tasks Launch Configs**, we enforce the following foundational rule
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
     C -->|Yes| D[Deploy to Staging]

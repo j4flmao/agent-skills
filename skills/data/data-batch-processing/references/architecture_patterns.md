@@ -17,7 +17,7 @@ public class KappaProcessor {
 
 ## System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Data Source] --> B[Event Log]
     B --> C[Unified Processor]
     C --> D[Serving Layer]

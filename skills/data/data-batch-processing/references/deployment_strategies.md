@@ -17,7 +17,7 @@ spec:
 
 ## System Architecture
 ```mermaid
-graph LR
+graph TD
     A[CI/CD Pipeline] --> B[K8s Operator]
     B --> C[Blue Cluster]
     B --> D[Green Cluster]

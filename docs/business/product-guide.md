@@ -60,7 +60,7 @@ graph LR
 This flowchart visualizes the highly iterative nature of product development, highlighting feedback loops and cross-functional synchronization points.
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph DISCOVERY
         UR[User Research] --> ANA[Analytics]
         ANA --> FP[Feature Prioritization]

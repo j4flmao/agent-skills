@@ -112,7 +112,7 @@ def get_weight(store: Store, root: Root, justified_slot: Slot) -> int:
 ## Attestation Flow
 
 ```mermaid
-flowchart LR
+flowchart TD
     V[Validator] -->|create attestation| A[Aggregation]
     A -->|gossip| AA[Aggregation pool]
     AA -->|aggregate| AT[Attestation]

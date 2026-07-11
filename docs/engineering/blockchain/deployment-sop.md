@@ -9,7 +9,7 @@
 Deploying smart contracts securely involves layers of administration and operational security (OpSec). The following model outlines a standard secure production topology:
 
 ```mermaid
-graph LR
+graph TD
     Deployer[Deployer EOA / CI Bot] -->|Creates| Proxy[Transparent/UUPS Proxy]
     Proxy -->|Delegates| Impl1[Implementation V1]
     

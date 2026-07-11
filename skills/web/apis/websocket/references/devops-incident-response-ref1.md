@@ -43,7 +43,7 @@ To optimize **Devops Incident Response Ref1**, we enforce the following foundati
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -95,7 +95,7 @@ To optimize **Devops Incident Response Ref1**, we enforce the following foundati
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -148,7 +148,7 @@ To optimize **Devops Incident Response Ref1**, we enforce the following foundati
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

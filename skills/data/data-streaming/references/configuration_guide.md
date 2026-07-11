@@ -13,7 +13,7 @@ server:
 
 ## System Architecture Diagram
 ```mermaid
-graph LR
+graph TD
     A[Client] -->|Request| B(API Gateway)
     B --> C{configuration_guide Service}
     C -->|Read/Write| D[(State Store)]

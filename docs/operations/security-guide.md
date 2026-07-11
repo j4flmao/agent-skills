@@ -6,7 +6,7 @@ The Security skill set provides a defense-in-depth approach covering the full so
 ## Security Workflow Architecture
 
 ```mermaid
-graph LR
+graph TD
     A[Source Code] --> B[SAST / DAST]
     B --> C[SBOM Generation]
     C --> D[Secrets Scanning]

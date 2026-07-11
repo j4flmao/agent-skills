@@ -134,7 +134,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 ### System Architecture
 
 ```mermaid
-graph LR
+graph TD
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
     C -->|Round Robin| D[App Server 1]

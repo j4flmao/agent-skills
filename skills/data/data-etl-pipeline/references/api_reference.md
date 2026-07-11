@@ -14,7 +14,7 @@ def status(): return {'status': 'healthy'}
 
 ## System Architecture Diagram
 ```mermaid
-graph LR
+graph TD
     A[Client] -->|Request| B(API Gateway)
     B --> C{api_reference Service}
     C -->|Read/Write| D[(State Store)]

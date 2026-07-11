@@ -8,7 +8,7 @@ Gradually replace legacy system functionality with new implementation while rout
 ### Architecture
 
 ```mermaid
-graph LR
+graph TD
     Client --> API_Gateway
     API_Gateway --> Router
     Router -->|Feature Flag ON| New_Service

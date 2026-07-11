@@ -126,7 +126,7 @@ Scenario Outline: Login with valid credentials
 Document workflows as structured steps:
 
 ```mermaid
-flowchart LR
+flowchart TD
   A[User submits order] --> B{Payment valid?}
   B -->|Yes| C[Create order]
   B -->|No| D[Show error]

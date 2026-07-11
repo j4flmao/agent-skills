@@ -5,7 +5,7 @@
 ## The MEV Supply Chain
 
 ```mermaid
-flowchart LR
+flowchart TD
     S[Searchers] -->|tx bundles| B[Builders]
     B -->|execution payloads| R[Relays]
     R -->|blinded headers| V[Validators/Proposers]
@@ -280,7 +280,7 @@ sequenceDiagram
 ### Architecture
 
 ```mermaid
-flowchart LR
+flowchart TD
     U[User] -->|intent| SUITE[SUAVE Chain]
     SUITE -->|TEE execution| EG[Execution Grid]
     EG -->|builds payload| REL[Relay Network]
@@ -380,7 +380,7 @@ Total block reward:
 ### Centralized Relay Risk
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph "Relay Concentration"
         F[Flashbots Relay ~35%]
         U[UltraSound ~20%]

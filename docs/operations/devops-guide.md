@@ -7,7 +7,7 @@ This guide serves as the backbone for establishing a mature Site Reliability Eng
 ## Architecture: DevOps Platform Ecosystem
 
 ```mermaid
-graph LR
+graph TD
     subgraph CI/CD & GitOps
         A[GitHub Actions / Jenkins] --> B[Argo CD / Flux]
     end

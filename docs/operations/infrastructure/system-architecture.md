@@ -3,7 +3,7 @@
 ## Layered Model
 
 ```mermaid
-graph LR
+graph TD
     subgraph L7 - Governance & Strategy
     A[Cloud Architecture, FinOps, Cost]
     end

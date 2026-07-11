@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     ORC_Writer["ORC_Writer Layer"] -->|Stream| MedallionArchitecture_C["MedallionArchitecture_C Processor"]
     MedallionArchitecture_C -->|Checkpoint| MedallionArchitecture_B
     MedallionArchitecture_C -->|Optimize| S3_Bucket["S3_Bucket Engine"]

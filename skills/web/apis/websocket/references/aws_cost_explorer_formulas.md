@@ -45,7 +45,7 @@ To optimize **Aws Cost Explorer Formulas**, we enforce the following foundationa
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -97,7 +97,7 @@ To optimize **Aws Cost Explorer Formulas**, we enforce the following foundationa
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -147,7 +147,7 @@ To optimize **Aws Cost Explorer Formulas**, we enforce the following foundationa
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

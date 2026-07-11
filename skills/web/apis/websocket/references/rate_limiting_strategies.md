@@ -41,7 +41,7 @@ To optimize **Rate Limiting Strategies**, we enforce the following foundational 
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -92,7 +92,7 @@ To optimize **Rate Limiting Strategies**, we enforce the following foundational 
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -145,7 +145,7 @@ To optimize **Rate Limiting Strategies**, we enforce the following foundational 
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

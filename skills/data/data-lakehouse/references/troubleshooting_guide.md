@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     TroubleshootingGuide_B["TroubleshootingGuide_B Layer"] -->|Stream| TroubleshootingGuide_A["TroubleshootingGuide_A Processor"]
     TroubleshootingGuide_A -->|Checkpoint| KMS_Auth
     TroubleshootingGuide_A -->|Optimize| RocksDB_State["RocksDB_State Engine"]

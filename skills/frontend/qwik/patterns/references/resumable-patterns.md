@@ -13,7 +13,7 @@
 ## How Resumability Works
 
 ```mermaid
-flowchart LR
+flowchart TD
     A[Server renders HTML] --> B[State serialized in data-qwik attributes]
     B --> C[Browser renders HTML immediately]
     C --> D[User clicks button]

@@ -17,7 +17,7 @@ while True:
 
 ## System Architecture
 ```mermaid
-graph LR
+graph TD
     A[PostgreSQL] --> B[Debezium]
     B --> C[Kafka]
     C --> D[Spark Streaming]

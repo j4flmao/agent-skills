@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     LakeOperations_C["LakeOperations_C Layer"] -->|Stream| LakeOperations_A["LakeOperations_A Processor"]
     LakeOperations_A -->|Checkpoint| S3_Bucket
     LakeOperations_A -->|Optimize| KMS_Auth["KMS_Auth Engine"]

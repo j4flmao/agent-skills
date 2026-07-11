@@ -27,7 +27,7 @@ spec:
 
 ## System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Load Balancer] --> B[BI Node 1]
     A --> C[BI Node 2]
     B --> D[(Metadata DB)]

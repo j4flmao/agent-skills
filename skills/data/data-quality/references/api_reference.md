@@ -3,7 +3,7 @@
 The API gateway manages JVM tuning and garbage collection to process incoming quality rules efficiently.
 ## 2. System Architecture
 ```mermaid
-graph LR
+graph TD
 A[API Gateway] --> B[Data Quality Engine]
 B --> C[RocksDB State]
 ```

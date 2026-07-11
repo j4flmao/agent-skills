@@ -51,7 +51,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
     C -->|Yes| D[Deploy to Staging]
@@ -109,7 +109,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
     C -->|Yes| D[Deploy to Staging]
@@ -169,7 +169,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
     C -->|Yes| D[Deploy to Staging]

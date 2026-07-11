@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     S3_Bucket["S3_Bucket Layer"] -->|Stream| ArchitecturePatterns_A["ArchitecturePatterns_A Processor"]
     ArchitecturePatterns_A -->|Checkpoint| ArchitecturePatterns_C
     ArchitecturePatterns_A -->|Optimize| ORC_Writer["ORC_Writer Engine"]

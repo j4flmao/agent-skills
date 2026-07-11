@@ -43,7 +43,7 @@ To optimize **Versioning Strategies**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -96,7 +96,7 @@ To optimize **Versioning Strategies**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -146,7 +146,7 @@ To optimize **Versioning Strategies**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

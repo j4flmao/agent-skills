@@ -42,7 +42,7 @@ To optimize **Spark Rdd Lineage**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -97,7 +97,7 @@ To optimize **Spark Rdd Lineage**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -152,7 +152,7 @@ To optimize **Spark Rdd Lineage**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

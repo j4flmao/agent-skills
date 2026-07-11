@@ -9,7 +9,7 @@
 A blockchain system operates as a replicated state machine across a distributed network.
 
 ```mermaid
-graph LR
+graph TD
     subgraph "Application Layer (DApps)"
         UI[Frontend UI] --> Web3[Web3 Provider / RPC]
         Web3 --> SmartContract[Smart Contracts / Defi / NFTs]

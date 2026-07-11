@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     ORC_Writer["ORC_Writer Layer"] -->|Stream| KMS_Auth["KMS_Auth Processor"]
     KMS_Auth -->|Checkpoint| S3_Bucket
     KMS_Auth -->|Optimize| TableFormats_A["TableFormats_A Engine"]

@@ -59,7 +59,7 @@ To optimize **Error Handling**, we enforce the following foundational rules:
 ### System Architecture
 
 ```mermaid
-graph LR
+graph TD
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
     C -->|Round Robin| D[App Server 1]
@@ -125,7 +125,7 @@ To optimize **Error Handling**, we enforce the following foundational rules:
 ### System Architecture
 
 ```mermaid
-graph LR
+graph TD
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
     C -->|Round Robin| D[App Server 1]
