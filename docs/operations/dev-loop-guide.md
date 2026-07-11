@@ -50,7 +50,7 @@ Shipping a project?
 A structured inner dev loop minimizes friction. By integrating these skills into developer tooling natively, teams can ship faster with higher confidence.
 
 ```mermaid
-graph TD
+graph LR
     A[Plan] --> B(Dev Container Setup)
     B --> C[Write Code]
     C --> D{Tests Pass?}

@@ -13,7 +13,7 @@ class LambdaArchitecture:
 
 ## System Architecture Diagram
 ```mermaid
-graph TD
+graph LR
     A[Client] -->|Request| B(API Gateway)
     B --> C{architecture_patterns Service}
     C -->|Read/Write| D[(State Store)]

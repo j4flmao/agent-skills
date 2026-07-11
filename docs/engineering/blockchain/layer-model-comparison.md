@@ -7,7 +7,7 @@
 ## Monolithic vs Modular Architectures
 
 ```mermaid
-graph TD
+graph LR
     subgraph "Monolithic (Solana / Bitcoin)"
         M_Exec[Execution]
         M_Sett[Settlement]

@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     LakeGovAccess_B["LakeGovAccess_B Layer"] -->|Stream| LakeGovAccess_C["LakeGovAccess_C Processor"]
     LakeGovAccess_C -->|Checkpoint| S3_Bucket
     LakeGovAccess_C -->|Optimize| LakeGovAccess_A["LakeGovAccess_A Engine"]

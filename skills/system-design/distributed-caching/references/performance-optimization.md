@@ -58,7 +58,7 @@ To optimize **Performance Optimization**, we enforce the following foundational 
 ### System Architecture
 
 ```mermaid
-graph TD
+graph LR
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
     C -->|Round Robin| D[App Server 1]
@@ -129,7 +129,7 @@ To optimize **Performance Optimization**, we enforce the following foundational 
 ### System Architecture
 
 ```mermaid
-graph TD
+graph LR
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
     C -->|Round Robin| D[App Server 1]
@@ -200,7 +200,7 @@ To optimize **Performance Optimization**, we enforce the following foundational 
 ### System Architecture
 
 ```mermaid
-graph TD
+graph LR
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
     C -->|Round Robin| D[App Server 1]

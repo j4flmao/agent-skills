@@ -18,7 +18,7 @@ const server = new ApolloServer({ typeDefs, resolvers });
 
 ## System Architecture
 ```mermaid
-graph TD
+graph LR
     A[BI Dashboard] --> B[GraphQL Gateway]
     B --> C[ClickHouse Cluster]
     B --> D[Druid Cluster]

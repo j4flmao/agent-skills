@@ -36,7 +36,7 @@ spec:
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[K8s API Server] --> B[Spark Operator]
     B --> C[Driver Pod]
     C --> D[Executor Pod 1]

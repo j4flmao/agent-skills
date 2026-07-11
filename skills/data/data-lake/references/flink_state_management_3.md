@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     FlinkStateManagement3_C["FlinkStateManagement3_C Layer"] -->|Stream| S3_Bucket["S3_Bucket Processor"]
     S3_Bucket -->|Checkpoint| FlinkStateManagement3_A
     S3_Bucket -->|Optimize| ORC_Writer["ORC_Writer Engine"]

@@ -6,7 +6,7 @@ The AI/ML skill set covers the end-to-end lifecycle of AI-powered features: prom
 ## AI Architecture Pipeline
 
 ```mermaid
-graph TD
+graph LR
     A[User Request] --> B{Agent Routing}
     B -->|Task: Search| C[RAG Pipeline]
     B -->|Task: Execute| D[Tool Call / MCP]

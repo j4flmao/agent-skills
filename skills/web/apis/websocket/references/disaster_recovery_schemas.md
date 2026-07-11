@@ -44,7 +44,7 @@ To optimize **Disaster Recovery Schemas**, we enforce the following foundational
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -95,7 +95,7 @@ To optimize **Disaster Recovery Schemas**, we enforce the following foundational
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -147,7 +147,7 @@ To optimize **Disaster Recovery Schemas**, we enforce the following foundational
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

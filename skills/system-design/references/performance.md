@@ -132,7 +132,7 @@ To optimize **Performance**, we enforce the following foundational rules:
 ### System Architecture
 
 ```mermaid
-graph TD
+graph LR
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
     C -->|Round Robin| D[App Server 1]

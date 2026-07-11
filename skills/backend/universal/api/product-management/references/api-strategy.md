@@ -10,7 +10,7 @@ API strategy defines how an organization leverages APIs to achieve business goal
 The API Strategy Canvas aligns business objectives with developer needs and technical constraints:
 
 ```mermaid
-graph TD
+graph LR
     A[Business Objectives] --> B[Value Proposition]
     B --> C[Target Audience]
     C --> D[Developer Segments]

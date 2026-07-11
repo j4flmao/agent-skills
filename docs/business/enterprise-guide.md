@@ -21,7 +21,7 @@ Before diving into architectural decisions, assess your organization's position 
 The following diagram illustrates a mature, federated skill architecture supporting multiple autonomous teams while maintaining centralized governance.
 
 ```mermaid
-graph TD
+graph LR
     subgraph Core Platform
         CS[Core Skills Repo]
         CB[Central Bundles]

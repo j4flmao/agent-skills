@@ -9,7 +9,7 @@
 Modern interoperability is divided into asynchronous message passing (bridges) and synchronous execution (shared sequencers/intents).
 
 ```mermaid
-graph TD
+graph LR
     subgraph "Asynchronous Messaging (Bridges)"
         ChainA[Chain A] -->|Emit Event| Relayer[Off-chain Relayer]
         Relayer -->|Generate Proof| Validator[Validator Network / Oracle]

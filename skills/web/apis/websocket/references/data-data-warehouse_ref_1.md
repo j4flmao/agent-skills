@@ -46,7 +46,7 @@ To optimize **Data Data Warehouse Ref 1**, we enforce the following foundational
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -99,7 +99,7 @@ To optimize **Data Data Warehouse Ref 1**, we enforce the following foundational
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -150,7 +150,7 @@ To optimize **Data Data Warehouse Ref 1**, we enforce the following foundational
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     StateManagement_C["StateManagement_C Layer"] -->|Stream| S3_Bucket["S3_Bucket Processor"]
     S3_Bucket -->|Checkpoint| RocksDB_State
     S3_Bucket -->|Optimize| KMS_Auth["KMS_Auth Engine"]

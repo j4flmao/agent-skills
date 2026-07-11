@@ -12,7 +12,7 @@ def setup_cdc(connector_config):
 
 ## System Architecture Diagram
 ```mermaid
-graph TD
+graph LR
     A[Client] -->|Request| B(API Gateway)
     B --> C{integration_guide Service}
     C -->|Read/Write| D[(State Store)]

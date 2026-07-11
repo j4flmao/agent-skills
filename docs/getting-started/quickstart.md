@@ -7,7 +7,7 @@ Welcome to the definitive guide for bootstrapping the Agent Skills ecosystem. Th
 Before initializing the skills framework, it's critical to understand the architecture of how user intents are mapped to skill execution.
 
 ```mermaid
-flowchart TD
+flowchart LR
     User([Developer / CI System]) --> Agent(AI Agent Context)
     Agent --> Router{Skill Router}
     Router --> |Matches Bundle| Bundle(Bundle Config)

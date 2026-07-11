@@ -49,7 +49,7 @@ spec:
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[S3 Client] --> B[MinIO Service / Ingress]
     B --> C[Pod 0 - Node A]
     B --> D[Pod 1 - Node B]

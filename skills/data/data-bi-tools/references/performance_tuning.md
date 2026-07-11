@@ -19,7 +19,7 @@ WITH NO DATA;
 
 ## System Architecture
 ```mermaid
-graph TD
+graph LR
     A[BI Tool] -->|SQL Query| B[Query Parser]
     B --> C{Is Materialized?}
     C -->|Yes| D[Materialized View]

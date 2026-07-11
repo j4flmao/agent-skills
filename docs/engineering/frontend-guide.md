@@ -9,7 +9,7 @@
 Modern frontends are no longer just HTML/CSS. They are complex distributed systems that manage state, coordinate APIs, and optimize delivery via various rendering strategies.
 
 ```mermaid
-graph TD
+graph LR
     Client[Browser / Client] -->|HTTP Request| CDN[CDN Edge]
     
     subgraph "Rendering & Delivery"

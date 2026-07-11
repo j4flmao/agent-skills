@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     CodeOrganization_A["CodeOrganization_A Layer"] -->|Stream| S3_Bucket["S3_Bucket Processor"]
     S3_Bucket -->|Checkpoint| CodeOrganization_B
     S3_Bucket -->|Optimize| RocksDB_State["RocksDB_State Engine"]

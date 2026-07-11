@@ -42,7 +42,7 @@ To optimize **Devops Monorepo Bazel**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -96,7 +96,7 @@ To optimize **Devops Monorepo Bazel**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -149,7 +149,7 @@ To optimize **Devops Monorepo Bazel**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

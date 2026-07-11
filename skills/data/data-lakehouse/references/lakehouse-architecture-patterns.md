@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     LakehouseArchitecturePatterns_C["LakehouseArchitecturePatterns_C Layer"] -->|Stream| KMS_Auth["KMS_Auth Processor"]
     KMS_Auth -->|Checkpoint| LakehouseArchitecturePatterns_A
     KMS_Auth -->|Optimize| ORC_Writer["ORC_Writer Engine"]

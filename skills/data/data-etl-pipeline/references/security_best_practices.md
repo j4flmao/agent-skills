@@ -13,7 +13,7 @@ def encrypt_payload(data, kms_key):
 
 ## System Architecture Diagram
 ```mermaid
-graph TD
+graph LR
     A[Client] -->|Request| B(API Gateway)
     B --> C{security_best_practices Service}
     C -->|Read/Write| D[(State Store)]

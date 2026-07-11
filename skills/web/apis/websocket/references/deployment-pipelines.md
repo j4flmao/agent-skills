@@ -44,7 +44,7 @@ To optimize **Deployment Pipelines**, we enforce the following foundational rule
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -94,7 +94,7 @@ To optimize **Deployment Pipelines**, we enforce the following foundational rule
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -147,7 +147,7 @@ To optimize **Deployment Pipelines**, we enforce the following foundational rule
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

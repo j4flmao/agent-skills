@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     ApiReference_C["ApiReference_C Layer"] -->|Stream| ORC_Writer["ORC_Writer Processor"]
     ORC_Writer -->|Checkpoint| ApiReference_B
     ORC_Writer -->|Optimize| KMS_Auth["KMS_Auth Engine"]

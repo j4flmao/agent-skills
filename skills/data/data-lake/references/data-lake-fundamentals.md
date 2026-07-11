@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     S3_Bucket["S3_Bucket Layer"] -->|Stream| DataLakeFundamentals_A["DataLakeFundamentals_A Processor"]
     DataLakeFundamentals_A -->|Checkpoint| KMS_Auth
     DataLakeFundamentals_A -->|Optimize| RocksDB_State["RocksDB_State Engine"]

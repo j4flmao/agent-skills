@@ -41,7 +41,7 @@ Our management skills are rigorously structured to address every facet of engine
 Use this advanced decision tree to dynamically route management challenges to the correct skill domains.
 
 ```mermaid
-graph TD
+graph LR
     Start[Identify Management Need] --> Plan[Need to plan work?]
     Start --> Exec[Need to execute work?]
     Start --> Qual[Need to ensure quality?]

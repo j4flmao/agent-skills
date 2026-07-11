@@ -380,7 +380,7 @@ Total block reward:
 ### Centralized Relay Risk
 
 ```mermaid
-flowchart TD
+flowchart LR
     subgraph "Relay Concentration"
         F[Flashbots Relay ~35%]
         U[UltraSound ~20%]

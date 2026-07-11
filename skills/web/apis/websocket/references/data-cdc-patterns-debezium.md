@@ -43,7 +43,7 @@ To optimize **Data Cdc Patterns Debezium**, we enforce the following foundationa
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -95,7 +95,7 @@ To optimize **Data Cdc Patterns Debezium**, we enforce the following foundationa
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -148,7 +148,7 @@ To optimize **Data Cdc Patterns Debezium**, we enforce the following foundationa
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

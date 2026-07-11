@@ -42,7 +42,7 @@ To optimize **Backend Search Optimizations**, we enforce the following foundatio
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -94,7 +94,7 @@ To optimize **Backend Search Optimizations**, we enforce the following foundatio
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -146,7 +146,7 @@ To optimize **Backend Search Optimizations**, we enforce the following foundatio
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

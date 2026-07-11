@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     S3_Bucket["S3_Bucket Layer"] -->|Stream| PerformanceOptimization_C["PerformanceOptimization_C Processor"]
     PerformanceOptimization_C -->|Checkpoint| RocksDB_State
     PerformanceOptimization_C -->|Optimize| ORC_Writer["ORC_Writer Engine"]

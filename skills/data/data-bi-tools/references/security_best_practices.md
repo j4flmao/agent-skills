@@ -16,7 +16,7 @@ http
 
 ## System Architecture
 ```mermaid
-graph TD
+graph LR
     A[User Request] --> B[Auth Filter]
     B --> C[RBAC Evaluator]
     C --> D[Dashboard Object]

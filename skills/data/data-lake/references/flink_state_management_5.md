@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     FlinkStateManagement5_B["FlinkStateManagement5_B Layer"] -->|Stream| FlinkStateManagement5_A["FlinkStateManagement5_A Processor"]
     FlinkStateManagement5_A -->|Checkpoint| S3_Bucket
     FlinkStateManagement5_A -->|Optimize| FlinkStateManagement5_C["FlinkStateManagement5_C Engine"]

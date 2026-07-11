@@ -4,7 +4,7 @@ Cost-based Optimizers (CBO) and Vectorized Query Execution (e.g., Apache Arrow i
 
 ## 2. System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Parser] --> B[Logical Plan]
     B --> C[Catalyst Optimizer]
     C --> D[Physical Plan]

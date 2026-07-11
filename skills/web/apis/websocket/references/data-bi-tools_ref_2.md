@@ -44,7 +44,7 @@ To optimize **Data Bi Tools Ref 2**, we enforce the following foundational rules
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -94,7 +94,7 @@ To optimize **Data Bi Tools Ref 2**, we enforce the following foundational rules
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -145,7 +145,7 @@ To optimize **Data Bi Tools Ref 2**, we enforce the following foundational rules
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

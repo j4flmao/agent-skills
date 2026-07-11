@@ -9,7 +9,7 @@
 To effectively secure a decentralized application, you must apply STRIDE-like threat modeling across four distinct layers.
 
 ```mermaid
-graph TD
+graph LR
     subgraph "Layer 4: Infrastructure"
         Infra1[RPC Frontrunning / Censorship]
         Infra2[Key Management / HSM Compromise]

@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     FlinkStateManagement6_B["FlinkStateManagement6_B Layer"] -->|Stream| FlinkStateManagement6_C["FlinkStateManagement6_C Processor"]
     FlinkStateManagement6_C -->|Checkpoint| ORC_Writer
     FlinkStateManagement6_C -->|Optimize| FlinkStateManagement6_A["FlinkStateManagement6_A Engine"]

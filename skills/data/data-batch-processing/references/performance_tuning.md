@@ -12,7 +12,7 @@ spark.conf.set("spark.memory.fraction", "0.8")
 
 ## System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Data In] --> B[Catalyst Optimizer]
     B --> C[Physical Plan]
     C --> D[Tungsten Execution]

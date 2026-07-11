@@ -12,7 +12,7 @@ ALTER WAREHOUSE batch_wh SET WAREHOUSE_SIZE = 'X-LARGE';
 
 ## System Architecture
 ```mermaid
-graph TD
+graph LR
     A[etcd Cluster] --> B[Config Agent]
     B --> C[Batch Job 1]
     B --> D[Batch Job 2]

@@ -13,7 +13,7 @@ FileSystem fs = FileSystem.get(conf);
 
 ## System Architecture
 ```mermaid
-graph TD
+graph LR
     A[User] --> B[Apache Knox]
     B --> C[Apache Ranger]
     C --> D[HDFS / Hive]

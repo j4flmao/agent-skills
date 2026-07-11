@@ -143,7 +143,7 @@ Agents rely on positional parsing. The exact order must be preserved:
 Reference files provide the "depth" that prevents context window bloating in the primary skill file. 
 
 ```mermaid
-graph TD
+graph LR
     A[SKILL.md] -->|Loads on demand| B[references/architecture.md]
     A -->|Loads on demand| C[references/patterns.md]
     B --> D{Provides}

@@ -50,7 +50,7 @@ To optimize **Troubleshooting Guide**, we enforce the following foundational rul
 ### System Architecture
 
 ```mermaid
-graph TD
+graph LR
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]
@@ -180,7 +180,7 @@ To optimize **Troubleshooting Guide**, we enforce the following foundational rul
 ### System Architecture
 
 ```mermaid
-graph TD
+graph LR
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]
@@ -238,7 +238,7 @@ To optimize **Troubleshooting Guide**, we enforce the following foundational rul
 ### System Architecture
 
 ```mermaid
-graph TD
+graph LR
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]

@@ -25,7 +25,7 @@ Where $f$ is the number of tolerated node failures. For $f=1$, 3 ZooKeeper nodes
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     A[Active NameNode] <-->|Write Edits| B(JournalNode 1)
     A <-->|Write Edits| C(JournalNode 2)
     A <-->|Write Edits| D(JournalNode 3)

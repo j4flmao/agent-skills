@@ -32,7 +32,7 @@ The skills in this guide primarily bridge the gap between these tracks, ensuring
 Use this framework to navigate ambiguity and decide which product skill to apply based on your current phase.
 
 ```mermaid
-graph TD
+graph LR
     Start[Product Challenge] --> Disc[Need to discover what to build?]
     Start --> Prior[Need to decide what to build next?]
     Start --> Launch[Need to launch a product?]

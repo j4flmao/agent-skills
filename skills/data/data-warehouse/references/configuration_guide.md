@@ -50,7 +50,7 @@ To optimize **Configuration Guide**, we enforce the following foundational rules
 ### System Architecture
 
 ```mermaid
-graph TD
+graph LR
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]
@@ -246,7 +246,7 @@ To optimize **Configuration Guide**, we enforce the following foundational rules
 ### System Architecture
 
 ```mermaid
-graph TD
+graph LR
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]
@@ -303,7 +303,7 @@ To optimize **Configuration Guide**, we enforce the following foundational rules
 ### System Architecture
 
 ```mermaid
-graph TD
+graph LR
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]

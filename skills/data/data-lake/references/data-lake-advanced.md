@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-graph TD
+graph LR
     ORC_Writer["ORC_Writer Layer"] -->|Stream| DataLakeAdvanced_A["DataLakeAdvanced_A Processor"]
     DataLakeAdvanced_A -->|Checkpoint| DataLakeAdvanced_B
     DataLakeAdvanced_A -->|Optimize| DataLakeAdvanced_C["DataLakeAdvanced_C Engine"]

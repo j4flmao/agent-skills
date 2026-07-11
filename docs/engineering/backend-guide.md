@@ -9,7 +9,7 @@
 When designing at scale, a layered, distributed approach is often necessary. The following diagram illustrates a typical highly-available backend topology:
 
 ```mermaid
-graph TD
+graph LR
     Client[Client Applications] -->|HTTPS / WSS| WAF[Web Application Firewall]
     WAF --> LB[Load Balancer]
     LB --> APIG[API Gateway / Ingress]
