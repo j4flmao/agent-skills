@@ -30,7 +30,7 @@ public class VirtualThreadService {
 
 ### Mathematical Formulas & Decision Matrix
 When deciding on concurrency models, consider the throughput formula:
-$$ Throughput = rac{Concurrency}{Latency} $$
+$$ Throughput = \frac{Concurrency}{Latency} $$
 With virtual threads, Concurrency can approach infinity without blowing up heap size (typically 1MB per platform thread vs. bytes for virtual thread).
 
 Decision Matrix:
@@ -105,7 +105,7 @@ public class VirtualThreadService {
 
 ### Mathematical Formulas & Decision Matrix
 When deciding on concurrency models, consider the throughput formula:
-$$ Throughput = rac{Concurrency}{Latency} $$
+$$ Throughput = \frac{Concurrency}{Latency} $$
 With virtual threads, Concurrency can approach infinity without blowing up heap size (typically 1MB per platform thread vs. bytes for virtual thread).
 
 Decision Matrix:
@@ -180,7 +180,7 @@ public class VirtualThreadService {
 
 ### Mathematical Formulas & Decision Matrix
 When deciding on concurrency models, consider the throughput formula:
-$$ Throughput = rac{Concurrency}{Latency} $$
+$$ Throughput = \frac{Concurrency}{Latency} $$
 With virtual threads, Concurrency can approach infinity without blowing up heap size (typically 1MB per platform thread vs. bytes for virtual thread).
 
 Decision Matrix:
@@ -255,7 +255,7 @@ public class VirtualThreadService {
 
 ### Mathematical Formulas & Decision Matrix
 When deciding on concurrency models, consider the throughput formula:
-$$ Throughput = rac{Concurrency}{Latency} $$
+$$ Throughput = \frac{Concurrency}{Latency} $$
 With virtual threads, Concurrency can approach infinity without blowing up heap size (typically 1MB per platform thread vs. bytes for virtual thread).
 
 Decision Matrix:
@@ -330,7 +330,7 @@ public class VirtualThreadService {
 
 ### Mathematical Formulas & Decision Matrix
 When deciding on concurrency models, consider the throughput formula:
-$$ Throughput = rac{Concurrency}{Latency} $$
+$$ Throughput = \frac{Concurrency}{Latency} $$
 With virtual threads, Concurrency can approach infinity without blowing up heap size (typically 1MB per platform thread vs. bytes for virtual thread).
 
 Decision Matrix:
@@ -405,7 +405,7 @@ public class VirtualThreadService {
 
 ### Mathematical Formulas & Decision Matrix
 When deciding on concurrency models, consider the throughput formula:
-$$ Throughput = rac{Concurrency}{Latency} $$
+$$ Throughput = \frac{Concurrency}{Latency} $$
 With virtual threads, Concurrency can approach infinity without blowing up heap size (typically 1MB per platform thread vs. bytes for virtual thread).
 
 Decision Matrix:
@@ -480,7 +480,7 @@ public class VirtualThreadService {
 
 ### Mathematical Formulas & Decision Matrix
 When deciding on concurrency models, consider the throughput formula:
-$$ Throughput = rac{Concurrency}{Latency} $$
+$$ Throughput = \frac{Concurrency}{Latency} $$
 With virtual threads, Concurrency can approach infinity without blowing up heap size (typically 1MB per platform thread vs. bytes for virtual thread).
 
 Decision Matrix:
@@ -555,7 +555,7 @@ public class VirtualThreadService {
 
 ### Mathematical Formulas & Decision Matrix
 When deciding on concurrency models, consider the throughput formula:
-$$ Throughput = rac{Concurrency}{Latency} $$
+$$ Throughput = \frac{Concurrency}{Latency} $$
 With virtual threads, Concurrency can approach infinity without blowing up heap size (typically 1MB per platform thread vs. bytes for virtual thread).
 
 Decision Matrix:
@@ -630,7 +630,7 @@ public class VirtualThreadService {
 
 ### Mathematical Formulas & Decision Matrix
 When deciding on concurrency models, consider the throughput formula:
-$$ Throughput = rac{Concurrency}{Latency} $$
+$$ Throughput = \frac{Concurrency}{Latency} $$
 With virtual threads, Concurrency can approach infinity without blowing up heap size (typically 1MB per platform thread vs. bytes for virtual thread).
 
 Decision Matrix:
@@ -705,7 +705,7 @@ public class VirtualThreadService {
 
 ### Mathematical Formulas & Decision Matrix
 When deciding on concurrency models, consider the throughput formula:
-$$ Throughput = rac{Concurrency}{Latency} $$
+$$ Throughput = \frac{Concurrency}{Latency} $$
 With virtual threads, Concurrency can approach infinity without blowing up heap size (typically 1MB per platform thread vs. bytes for virtual thread).
 
 Decision Matrix:

@@ -321,7 +321,7 @@ Memory management in long-running processes is non-trivial. Garbage collection p
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -428,7 +428,7 @@ Horizontal Pod Autoscaling (HPA) must be driven by custom metrics (e.g., queue d
 
 ### Mathematical Model
 
-$$ S = rac{1}{(1-f) + rac{f}{N}} 	ext{ (Amdahl's Law)} $$
+$$ S = \frac{1}{(1-f) + \frac{f}{N}} 	ext{ (Amdahl's Law)} $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -444,7 +444,7 @@ Consider the CAP theorem: consistency, availability, and partition tolerance. In
 
 ### Mathematical Model
 
-$$ S = rac{1}{(1-f) + rac{f}{N}} 	ext{ (Amdahl's Law)} $$
+$$ S = \frac{1}{(1-f) + \frac{f}{N}} 	ext{ (Amdahl's Law)} $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -546,7 +546,7 @@ func (s *Server) HandleRequest(ctx context.Context, req *pb.Request) (*pb.Respon
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -678,7 +678,8 @@ Consider the CAP theorem: consistency, availability, and partition tolerance. In
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -753,7 +754,8 @@ Horizontal Pod Autoscaling (HPA) must be driven by custom metrics (e.g., queue d
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -908,7 +910,8 @@ A Zero Trust architecture assumes breach. Micro-segmentation, mutual TLS (mTLS),
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -977,7 +980,8 @@ func (s *Server) HandleRequest(ctx context.Context, req *pb.Request) (*pb.Respon
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -987,7 +991,8 @@ eBPF (Extended Berkeley Packet Filter) allows us to run sandboxed programs in th
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1103,7 +1108,8 @@ eBPF (Extended Berkeley Packet Filter) allows us to run sandboxed programs in th
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1235,7 +1241,8 @@ eBPF (Extended Berkeley Packet Filter) allows us to run sandboxed programs in th
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1503,7 +1510,8 @@ pub fn process_stream(stream: TcpStream) -> io::Result<()> {
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1586,7 +1594,7 @@ Horizontal Pod Autoscaling (HPA) must be driven by custom metrics (e.g., queue d
 
 ### Mathematical Model
 
-$$ S = rac{1}{(1-f) + rac{f}{N}} 	ext{ (Amdahl's Law)} $$
+$$ S = \frac{1}{(1-f) + \frac{f}{N}} 	ext{ (Amdahl's Law)} $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1596,7 +1604,7 @@ Memory management in long-running processes is non-trivial. Garbage collection p
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1705,7 +1713,8 @@ eBPF (Extended Berkeley Packet Filter) allows us to run sandboxed programs in th
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1804,7 +1813,7 @@ Memory management in long-running processes is non-trivial. Garbage collection p
 
 ### Mathematical Model
 
-$$ S = rac{1}{(1-f) + rac{f}{N}} 	ext{ (Amdahl's Law)} $$
+$$ S = \frac{1}{(1-f) + \frac{f}{N}} 	ext{ (Amdahl's Law)} $$
 
 When optimizing for code-organization in opentelemetry, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 

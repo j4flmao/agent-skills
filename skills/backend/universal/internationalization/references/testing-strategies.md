@@ -25,7 +25,7 @@ pub fn process_stream(stream: TcpStream) -> io::Result<()> {
 
 ### Mathematical Model
 
-$$ S = rac{1}{(1-f) + rac{f}{N}} 	ext{ (Amdahl's Law)} $$
+$$ S = \frac{1}{(1-f) + \frac{f}{N}} 	ext{ (Amdahl's Law)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -41,7 +41,7 @@ Memory management in long-running processes is non-trivial. Garbage collection p
 
 ### Mathematical Model
 
-$$ S = rac{1}{(1-f) + rac{f}{N}} 	ext{ (Amdahl's Law)} $$
+$$ S = \frac{1}{(1-f) + \frac{f}{N}} 	ext{ (Amdahl's Law)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -51,7 +51,7 @@ A Zero Trust architecture assumes breach. Micro-segmentation, mutual TLS (mTLS),
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -61,7 +61,7 @@ In highly distributed, event-driven architectures, we often observe that unbound
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -214,7 +214,7 @@ export class ResilienceService {
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -257,7 +257,8 @@ Consider the CAP theorem: consistency, availability, and partition tolerance. In
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -281,7 +282,7 @@ async def concurrent_fetch(urls):
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -403,7 +404,7 @@ Consider the CAP theorem: consistency, availability, and partition tolerance. In
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -742,7 +743,7 @@ Data locality is the silent killer of performance. When computing over large dat
 
 ### Mathematical Model
 
-$$ S = rac{1}{(1-f) + rac{f}{N}} 	ext{ (Amdahl's Law)} $$
+$$ S = \frac{1}{(1-f) + \frac{f}{N}} 	ext{ (Amdahl's Law)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -752,7 +753,7 @@ Memory management in long-running processes is non-trivial. Garbage collection p
 
 ### Mathematical Model
 
-$$ S = rac{1}{(1-f) + rac{f}{N}} 	ext{ (Amdahl's Law)} $$
+$$ S = \frac{1}{(1-f) + \frac{f}{N}} 	ext{ (Amdahl's Law)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -918,7 +919,7 @@ export class ResilienceService {
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -934,7 +935,7 @@ A Zero Trust architecture assumes breach. Micro-segmentation, mutual TLS (mTLS),
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1020,7 +1021,8 @@ eBPF (Extended Berkeley Packet Filter) allows us to run sandboxed programs in th
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1036,7 +1038,7 @@ Memory management in long-running processes is non-trivial. Garbage collection p
 
 ### Mathematical Model
 
-$$ S = rac{1}{(1-f) + rac{f}{N}} 	ext{ (Amdahl's Law)} $$
+$$ S = \frac{1}{(1-f) + \frac{f}{N}} 	ext{ (Amdahl's Law)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1207,7 +1209,7 @@ Idempotency keys are mandatory for all state-mutating operations. Without them, 
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1235,7 +1237,8 @@ func (s *Server) HandleRequest(ctx context.Context, req *pb.Request) (*pb.Respon
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1245,7 +1248,7 @@ In highly distributed, event-driven architectures, we often observe that unbound
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1275,7 +1278,8 @@ Memory management in long-running processes is non-trivial. Garbage collection p
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1518,7 +1522,7 @@ A Zero Trust architecture assumes breach. Micro-segmentation, mutual TLS (mTLS),
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1528,7 +1532,7 @@ Data locality is the silent killer of performance. When computing over large dat
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1596,7 +1600,7 @@ Consider the CAP theorem: consistency, availability, and partition tolerance. In
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1680,7 +1684,7 @@ func (s *Server) HandleRequest(ctx context.Context, req *pb.Request) (*pb.Respon
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -1967,7 +1971,7 @@ Idempotency keys are mandatory for all state-mutating operations. Without them, 
 
 ### Mathematical Model
 
-$$ S = rac{1}{(1-f) + rac{f}{N}} 	ext{ (Amdahl's Law)} $$
+$$ S = \frac{1}{(1-f) + \frac{f}{N}} 	ext{ (Amdahl's Law)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -2093,7 +2097,7 @@ In highly distributed, event-driven architectures, we often observe that unbound
 
 ### Mathematical Model
 
-$$ R = rac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
+$$ R = \frac{V}{I} 	ext{ (Electrical engineering analog for flow)} $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -2149,7 +2153,8 @@ async def concurrent_fetch(urls):
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
@@ -2177,7 +2182,8 @@ func (s *Server) HandleRequest(ctx context.Context, req *pb.Request) (*pb.Respon
 
 ### Mathematical Model
 
-$$ \lambda = rac{1}{\mu} \ln \left( rac{1}{1-p} ight) $$
+$$ \lambda = \frac{1}{\mu} \ln \left( \frac{1}{1-p} 
+ight) $$
 
 When optimizing for testing-strategies in internationalization, the interaction between the kernel and user space must be minimized. System calls such as `epoll_wait` or `io_uring` should be utilized for asynchronous I/O. Furthermore, memory alignment and CPU cache locality (L1/L2 cache hits) significantly out-weigh algorithmic improvements at scale.
 
