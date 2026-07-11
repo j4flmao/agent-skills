@@ -23,7 +23,7 @@ Transform Layer (Style Dictionary / Token Transformer)
 ```
 tokens/color/primary.json -> Style Dictionary -> tailwind.config.js import
 ```
-Style Dictionary outputs a JS object that you spread into `theme.extend`.
+
 
 **Approach 2: CSS @theme with Token References (Recommended for v4)**
 ```

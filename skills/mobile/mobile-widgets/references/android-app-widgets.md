@@ -435,7 +435,7 @@ fun SmallWidget(data: DashboardSummary) {
         ))
         Text(
             text = formatCurrency(data.totalRevenue),
-            style = TextStyle(
+
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = ColorProvider.primary
@@ -454,7 +454,7 @@ fun SmallWidget(data: DashboardSummary) {
             )
             Text(
                 text = "${data.orderCount} orders",
-                style = TextStyle(
+
                     fontSize = 11.sp,
                     color = ColorProvider.secondary
                 ),

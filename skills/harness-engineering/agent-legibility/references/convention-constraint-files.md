@@ -994,4 +994,4 @@ jobs:
 
 <!-- Compression: Convention and constraint files reference covering .editorconfig,
      .prettierrc, ESLint (flat config and legacy), TypeScript strict mode, CONTRIBUTING.md,
-     style guides, lint-staged, pre-commit hooks, and CI enforcement -->
+

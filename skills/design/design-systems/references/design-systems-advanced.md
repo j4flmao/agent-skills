@@ -43,7 +43,7 @@ module.exports = (file, api) => {
 Core theme (light/dark mode) + brand themes (multi-brand) + user overrides. Themes cascade: system defaults → brand overrides → user preferences. Implement via CSS custom properties or React context.
 
 ### Build-Time Token Transformations
-Style Dictionary transforms: color values to rgba, px to rem, camelCase to kebab-case. Platform outputs: CSS, JS/TS, Swift, Kotlin/Compose, XML. CI generates platform packages on token change.
+
 
 ## Anti-Patterns
 

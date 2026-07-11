@@ -67,7 +67,6 @@ graph TD
     Oper --> Alert[Alerting: On-call, incident response]
     Oper --> Sec[Security: Policy, audits]
 
-    style Start fill:#f9d0c4,stroke:#333,stroke-width:2px
 ```
 
 ---

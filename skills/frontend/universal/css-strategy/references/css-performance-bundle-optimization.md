@@ -403,7 +403,7 @@ Total CSS (gzipped)   < 15KB
 Critical CSS (inline) < 4KB
 Render-blocking CSS   0 (async or inline)
 First paint           < 1.5s
-Style recalc time     < 10ms
+
 Layout time           < 5ms
 Selector matching     < 2ms
 ```

@@ -51,7 +51,6 @@ graph TD
     Grow --> GE[Growth Engineering: AARRR metrics]
     Grow --> Ana2[Analytics: Cohort retention]
 
-    style Start fill:#d4e1f9,stroke:#333,stroke-width:2px
 ```
 
 ---
@@ -83,11 +82,10 @@ flowchart LR
         GE --> ANA_LOOP[Analytics Review]
         ANA_LOOP -.->|New Insights| UR
     end
-    
-    style DISCOVERY fill:#f5f5f5,stroke:#333
-    style VALIDATION fill:#e8f4f8,stroke:#333
-    style LAUNCH fill:#e8f8ec,stroke:#333
-    style GROWTH fill:#f8e8f8,stroke:#333
+
+
+
+
 ```
 
 ---

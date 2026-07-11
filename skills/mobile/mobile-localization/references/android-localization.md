@@ -192,18 +192,18 @@ fun DashboardScreen() {
     ) {
         Text(
             text = stringResource(R.string.sales_title),
-            style = MaterialTheme.typography.h4
+
         )
 
         Text(
             text = stringResource(R.string.revenue_total),
-            style = MaterialTheme.typography.caption,
+
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Text(
             text = formatCurrency(revenue),
-            style = MaterialTheme.typography.headlineLarge,
+
             fontWeight = FontWeight.Bold
         )
 
@@ -211,7 +211,7 @@ fun DashboardScreen() {
             text = resources.getQuantityString(
                 R.plurals.order_count, orderCount, orderCount
             ),
-            style = MaterialTheme.typography.bodyLarge
+
         )
     }
 }

@@ -46,9 +46,8 @@ graph TD
     CB --> TA_B
 
     TA_B --> |CI/CD| ArtifactRegistry[Artifact Registry]
-    
-    style CS fill:#f9f,stroke:#333,stroke-width:2px
-    style ArtifactRegistry fill:#bbf,stroke:#333,stroke-width:2px
+
+
 ```
 
 ---
