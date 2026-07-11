@@ -9,7 +9,7 @@
 When writing smart contracts, view the system as adversarial. Every external call is a potential attack vector.
 
 ```mermaid
-graph LR
+graph TD
     User[User / Attacker] -->|Tx| Contract[Smart Contract]
     Contract -->|1. Check| State1[(Local State)]
     Contract -->|2. Effect| State1

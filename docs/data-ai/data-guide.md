@@ -23,7 +23,7 @@
 ## End-to-End Data Platform Architecture
 
 ```mermaid
-graph LR
+graph TD
     subgraph Sources
     S1[SaaS APIs]
     S2[OLTP DBs]

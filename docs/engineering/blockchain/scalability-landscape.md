@@ -9,7 +9,7 @@
 Blockchains must balance Decentralization, Security, and Scalability. Pushing scalability too hard at the L1 layer invariably sacrifices decentralization (requiring data center nodes).
 
 ```mermaid
-graph LR
+graph TD
     subgraph "Layer 1 Scaling (Vertical & Sharding)"
         L1[L1 Base Chain]
         L1 -->|Larger Blocks| BS[Block Size Increase]

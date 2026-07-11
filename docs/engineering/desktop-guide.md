@@ -9,7 +9,7 @@
 When building robust desktop applications, separating the UI from core logic and native APIs is critical to maintaining a responsive interface and enabling testability.
 
 ```mermaid
-graph LR
+graph TD
     UI[User Interface Thread] -->|IPC / Async Calls| Core[Core Application Logic]
     
     subgraph "Native Platform Boundary"

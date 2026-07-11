@@ -9,7 +9,7 @@
 Mobile applications require careful handling of constrained resources (battery, memory, bandwidth) and unreliable networks. A robust mobile architecture strictly separates UI from data logic and relies heavily on local caching.
 
 ```mermaid
-graph LR
+graph TD
     UI[UI Layer / Views & Widgets] -->|Action / Event| Presentation[Presentation / ViewModel / BLoC]
     Presentation -->|State / Stream| UI
     
