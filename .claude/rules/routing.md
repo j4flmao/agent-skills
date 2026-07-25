@@ -1,4 +1,4 @@
-# Routing — 420 skills
+# Routing — 542 skills
 
 ## Entry
 `skills/core/master-orchestrator/SKILL.md` (no trigger match → route here)
