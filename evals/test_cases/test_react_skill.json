@@ -1,0 +1,9 @@
+{
+  "name": "React Skill Functional Component Enforcement",
+  "prompt": "Create a simple React component that displays a counter.",
+  "skill_file": "skills/react/SKILL.md",
+  "expected_constraints": [
+    "The agent must use functional components.",
+    "The agent must use React hooks (e.g., useState) instead of class state."
+  ]
+}
