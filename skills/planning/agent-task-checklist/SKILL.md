@@ -20,11 +20,11 @@ description: "Rules for breaking down complex projects into granular checklists 
 ```mermaid
 flowchart TD
     A[Start Project] --> B[Break down into granular tasks]
-    B --> C[Create/Update task.md with `[ ]` notation]
+    B --> C["Create/Update task.md with `[ ]` notation"]
     C --> D{Select next task}
-    D --> E[Mark task as In-Progress `[/]`]
+    D --> E["Mark task as In-Progress `[/]`"]
     E --> F[Execute task]
-    F --> G[Mark task as Completed `[x]`]
+    F --> G["Mark task as Completed `[x]`"]
     G --> H{More tasks?}
     H -- Yes --> D
     H -- No --> I[Project Complete]
