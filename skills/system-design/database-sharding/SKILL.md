@@ -41,7 +41,7 @@ class ConsistentHash:
 
 ## Architecture
 ```mermaid
-graph LR
+graph TD
     A[Client] --> B(Load Balancer)
     B --> C{Consistent Hashing Router}
     C --> D[(Shard 1)]

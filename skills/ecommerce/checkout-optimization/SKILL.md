@@ -48,7 +48,7 @@ if (window.PaymentRequest) {
 
 ## Optimization Strategy Tree
 ```mermaid
-graph LR
+graph TD
     A[Checkout Optimization] --> B(Friction Reduction)
     A --> C(Performance)
     A --> D(Trust & Recovery)

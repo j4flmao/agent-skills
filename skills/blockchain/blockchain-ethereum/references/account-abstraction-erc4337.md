@@ -35,7 +35,7 @@
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TD
     U[User] -->|constructs + signs| OP[UserOperation]
     OP -->|submits to| MEM[UserOp Mempool]
     MEM -->|bundler picks ops| BUNDLER[Bundler]

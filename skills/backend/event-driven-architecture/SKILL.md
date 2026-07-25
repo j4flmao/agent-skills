@@ -11,7 +11,7 @@ description: Best practices for Kafka/RabbitMQ message brokering and event sourc
 
 ## Diagram
 ```mermaid
-flowchart LR
+flowchart TD
     A[Producer] --> B(Message Broker)
     B --> C[Consumer 1]
     B --> D[Consumer 2]

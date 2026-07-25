@@ -12,7 +12,7 @@ description: Optimization strategies for Core Web Vitals (LCP, FID/INP, CLS).
 
 ## Mermaid Diagram
 ```mermaid
-flowchart LR
+flowchart TD
     A[Performance Optimization] --> B[Improve LCP]
     A --> C[Improve INP]
     A --> D[Improve CLS]

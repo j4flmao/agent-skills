@@ -96,7 +96,7 @@ Scenario: Complete a single product purchase
 Identify actors, systems, and steps:
 
 ```mermaid
-flowchart LR
+flowchart TD
     Customer -->|Browses| Catalog
     Customer -->|Adds to| Cart
     Customer -->|Checks out| Checkout

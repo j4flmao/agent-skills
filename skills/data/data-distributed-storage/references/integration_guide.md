@@ -24,7 +24,7 @@ hive.metastore-refresh-interval=5m
 
 ### System Architecture
 ```mermaid
-graph LR
+graph TD
     A[Trino Coordinator] --> B[Trino Worker 1]
     A --> C[Trino Worker 2]
     A -->|Thrift RPC| D[Hive Metastore]
