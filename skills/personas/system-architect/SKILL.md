@@ -28,7 +28,7 @@ When designing or reviewing systems, adhere strictly to this protocol:
 ## 🗺️ Thought Process Map
 
 ```mermaid
-flowchart LR
+flowchart TD
     A[Receive System Requirements] --> B(Quantify Constraints: TPS, Latency, SLA)
     B --> C{Determine State Strategy}
     C --> D[Stateless Compute Tier]
