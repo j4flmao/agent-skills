@@ -24,14 +24,14 @@ $l^{(x)} = l^{(x-1)} e^{m^{(x-1)} - m^{(x)}} + \sum e^{x - m^{(x)}}$
 ## Data Flow
 ```mermaid
 flowchart TD
-    HBM_QKV[HBM: Q, K, V Matrices]
-    subgraph GPU_SRAM[SRAM Compute Blocks]
-        TileLoad[Load Block of Q, K, V to SRAM]
-        DotProd[S = Q * K^T]
-        Softmax[P = softmax_online(S)]
-        Attention[O_block = P * V]
+    HBM_QKV["HBM: Q, K, V Matrices"]
+    subgraph GPU_SRAM["SRAM Compute Blocks"]
+        TileLoad["Load Block of Q, K, V to SRAM"]
+        DotProd["S = Q * K^T"]
+        Softmax["P = softmax_online(S)"]
+        Attention["O_block = P * V"]
     end
-    HBM_Out[HBM: Final Output O]
+    HBM_Out["HBM: Final Output O"]
 
     HBM_QKV --> TileLoad
     TileLoad --> DotProd
