@@ -48,6 +48,7 @@ To optimize **Langchain Patterns Fundamentals**, we enforce the following founda
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -107,6 +108,7 @@ To optimize **Langchain Patterns Fundamentals**, we enforce the following founda
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -168,6 +170,7 @@ To optimize **Langchain Patterns Fundamentals**, we enforce the following founda
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

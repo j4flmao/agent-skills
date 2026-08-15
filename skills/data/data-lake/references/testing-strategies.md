@@ -7,6 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     TestingStrategies_A["TestingStrategies_A Layer"] -->|Stream| TestingStrategies_B["TestingStrategies_B Processor"]
     TestingStrategies_B -->|Checkpoint| TestingStrategies_C

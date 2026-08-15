@@ -41,6 +41,7 @@ To optimize **Rate Limiting Strategies**, we enforce the following foundational 
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
@@ -92,6 +93,7 @@ To optimize **Rate Limiting Strategies**, we enforce the following foundational 
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
@@ -145,6 +147,7 @@ To optimize **Rate Limiting Strategies**, we enforce the following foundational 
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]

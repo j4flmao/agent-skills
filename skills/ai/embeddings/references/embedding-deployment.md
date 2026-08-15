@@ -49,6 +49,7 @@ To optimize **Embedding Deployment**, we enforce the following foundational rule
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -109,6 +110,7 @@ To optimize **Embedding Deployment**, we enforce the following foundational rule
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -168,6 +170,7 @@ To optimize **Embedding Deployment**, we enforce the following foundational rule
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

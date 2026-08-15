@@ -58,6 +58,7 @@ To optimize **Performance**, we enforce the following foundational rules:
 ### System Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant Client
     participant OrderService
@@ -132,6 +133,7 @@ To optimize **Performance**, we enforce the following foundational rules:
 ### System Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
@@ -202,6 +204,7 @@ To optimize **Performance**, we enforce the following foundational rules:
 ### System Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant Client
     participant OrderService

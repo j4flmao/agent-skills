@@ -48,6 +48,7 @@ To optimize **Eval Frameworks**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -111,6 +112,7 @@ To optimize **Eval Frameworks**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -171,6 +173,7 @@ To optimize **Eval Frameworks**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

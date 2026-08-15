@@ -47,6 +47,7 @@ To optimize **Model Training Fundamentals**, we enforce the following foundation
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -105,6 +106,7 @@ To optimize **Model Training Fundamentals**, we enforce the following foundation
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -167,6 +169,7 @@ To optimize **Model Training Fundamentals**, we enforce the following foundation
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

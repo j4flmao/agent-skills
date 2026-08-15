@@ -34,6 +34,7 @@ test('renders correctly', async ({ mount }) => {
 
 ## Testing Strategy
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Test Suite] --> B(E2E Tests)
     A --> C(Component Tests)

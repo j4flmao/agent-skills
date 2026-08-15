@@ -7,6 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     RocksDB_State["RocksDB_State Layer"] -->|Stream| CodeOrganization_A["CodeOrganization_A Processor"]
     CodeOrganization_A -->|Checkpoint| CodeOrganization_C

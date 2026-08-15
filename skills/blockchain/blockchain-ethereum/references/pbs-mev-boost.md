@@ -5,6 +5,7 @@
 ## The MEV Supply Chain
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     S[Searchers] -->|tx bundles| B[Builders]
     B -->|execution payloads| R[Relays]
@@ -41,6 +42,7 @@ Searcher profit: $100
 ### Protocol Flow
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant V as Validator
     participant R as Relay
@@ -245,6 +247,7 @@ Relays are **custodians** of execution payloads during the blinded period:
 - Builder may add additional txs, but cannot omit listed txs
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant C as FOCIL Committee
     participant B as Builder
@@ -280,6 +283,7 @@ sequenceDiagram
 ### Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     U[User] -->|intent| SUITE[SUAVE Chain]
     SUITE -->|TEE execution| EG[Execution Grid]
@@ -380,6 +384,7 @@ Total block reward:
 ### Centralized Relay Risk
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     subgraph "Relay Concentration"
         F[Flashbots Relay ~35%]

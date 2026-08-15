@@ -37,6 +37,7 @@ except KeyboardInterrupt:
 
 ## Trace Diagram
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A["User Space App"] -->|"Syscall"| B("Kernel Space")
     B --> C{"eBPF Program"}

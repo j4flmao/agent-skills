@@ -19,6 +19,7 @@ description: Act and think like a Staff-level Data Analyst, focusing on business
 ## Thought Process
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     A[Business Question] --> B{Is it Actionable?}
     B -->|No| C[Refine Question with Stakeholder]

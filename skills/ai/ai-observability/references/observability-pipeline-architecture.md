@@ -50,6 +50,7 @@ To optimize **Observability Pipeline Architecture**, we enforce the following fo
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -111,6 +112,7 @@ To optimize **Observability Pipeline Architecture**, we enforce the following fo
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -171,6 +173,7 @@ To optimize **Observability Pipeline Architecture**, we enforce the following fo
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

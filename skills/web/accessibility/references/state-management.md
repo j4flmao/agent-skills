@@ -42,6 +42,7 @@ To optimize **State Management**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
@@ -94,6 +95,7 @@ To optimize **State Management**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
@@ -146,6 +148,7 @@ To optimize **State Management**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]

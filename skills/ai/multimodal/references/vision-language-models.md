@@ -47,6 +47,7 @@ To optimize **Vision Language Models**, we enforce the following foundational ru
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -107,6 +108,7 @@ To optimize **Vision Language Models**, we enforce the following foundational ru
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -168,6 +170,7 @@ To optimize **Vision Language Models**, we enforce the following foundational ru
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

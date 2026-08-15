@@ -7,6 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     SecurityBestPractices_C["SecurityBestPractices_C Layer"] -->|Stream| SecurityBestPractices_B["SecurityBestPractices_B Processor"]
     SecurityBestPractices_B -->|Checkpoint| KMS_Auth

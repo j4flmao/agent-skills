@@ -50,6 +50,7 @@ To optimize **Ai Observability Fundamentals**, we enforce the following foundati
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -109,6 +110,7 @@ To optimize **Ai Observability Fundamentals**, we enforce the following foundati
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -166,6 +168,7 @@ To optimize **Ai Observability Fundamentals**, we enforce the following foundati
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

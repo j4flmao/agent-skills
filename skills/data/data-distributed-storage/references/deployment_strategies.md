@@ -49,6 +49,7 @@ spec:
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[S3 Client] --> B[MinIO Service / Ingress]
     B --> C[Pod 0 - Node A]

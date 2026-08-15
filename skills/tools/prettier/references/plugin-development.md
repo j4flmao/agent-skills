@@ -51,6 +51,7 @@ To optimize **Plugin Development**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
@@ -112,6 +113,7 @@ To optimize **Plugin Development**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
@@ -173,6 +175,7 @@ To optimize **Plugin Development**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}

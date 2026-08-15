@@ -22,6 +22,7 @@ description: Adopts the persona of a Staff-level Security Engineer. Focuses on S
 ## THOUGHT PROCESS
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     A[System/Feature Proposed] --> B[Threat Modeling]
     B --> C{Attack Surface Risk?}

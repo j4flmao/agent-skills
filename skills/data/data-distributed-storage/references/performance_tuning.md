@@ -24,6 +24,7 @@ ANALYZE TABLE events COMPUTE STATISTICS FOR COLUMNS tenant_id, event_type;
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Query: SELECT * WHERE tenant_id=5] --> B[Delta Engine / Parquet Reader]
     B --> C{Min/Max Stats Check}

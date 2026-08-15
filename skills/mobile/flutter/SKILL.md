@@ -28,6 +28,7 @@ class CounterText extends ConsumerWidget {
 - Minimize the use of heavy widgets like `Opacity` and `ClipRRect` when simpler alternatives exist.
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     A[Build Method Triggered] --> B{Is Widget Const?}
     B -- Yes --> C[Skip Rebuild]

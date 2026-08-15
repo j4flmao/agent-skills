@@ -50,6 +50,7 @@ To optimize **Configuration Guide**, we enforce the following foundational rules
 ### System Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
@@ -108,6 +109,7 @@ To optimize **Configuration Guide**, we enforce the following foundational rules
 ### System Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant API
     participant WorkerNode
@@ -178,6 +180,7 @@ To optimize **Configuration Guide**, we enforce the following foundational rules
 ### System Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant API
     participant WorkerNode
@@ -246,6 +249,7 @@ To optimize **Configuration Guide**, we enforce the following foundational rules
 ### System Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
@@ -303,6 +307,7 @@ To optimize **Configuration Guide**, we enforce the following foundational rules
 ### System Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}

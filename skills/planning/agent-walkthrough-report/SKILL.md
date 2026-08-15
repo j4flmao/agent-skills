@@ -10,6 +10,7 @@ description: Instructions for creating stunning walkthrough reports using advanc
 ## Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     A[Analyze Completed Work] --> B{Determine Key Artifacts}
     B -->|Code Changes| C[Generate Diff Blocks]

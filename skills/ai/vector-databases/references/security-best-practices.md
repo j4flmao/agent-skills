@@ -46,6 +46,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -107,6 +108,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -165,6 +167,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

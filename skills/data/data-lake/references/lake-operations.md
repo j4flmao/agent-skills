@@ -7,6 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     LakeOperations_C["LakeOperations_C Layer"] -->|Stream| LakeOperations_A["LakeOperations_A Processor"]
     LakeOperations_A -->|Checkpoint| S3_Bucket

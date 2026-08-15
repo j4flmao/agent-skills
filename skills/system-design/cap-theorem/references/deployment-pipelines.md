@@ -55,6 +55,7 @@ To optimize **Deployment Pipelines**, we enforce the following foundational rule
 ### System Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant Client
     participant OrderService
@@ -131,6 +132,7 @@ To optimize **Deployment Pipelines**, we enforce the following foundational rule
 ### System Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant Client
     participant OrderService
@@ -208,6 +210,7 @@ To optimize **Deployment Pipelines**, we enforce the following foundational rule
 ### System Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant Client
     participant OrderService

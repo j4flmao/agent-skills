@@ -18,6 +18,7 @@ const server = new ApolloServer({ typeDefs, resolvers });
 
 ## System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[BI Dashboard] --> B[GraphQL Gateway]
     B --> C[ClickHouse Cluster]

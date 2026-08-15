@@ -49,6 +49,7 @@ To optimize **Budget Monitoring Alerting**, we enforce the following foundationa
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -106,6 +107,7 @@ To optimize **Budget Monitoring Alerting**, we enforce the following foundationa
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -165,6 +167,7 @@ To optimize **Budget Monitoring Alerting**, we enforce the following foundationa
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

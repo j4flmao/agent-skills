@@ -7,6 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     KMS_Auth["KMS_Auth Layer"] -->|Stream| IntegrationGuide_C["IntegrationGuide_C Processor"]
     IntegrationGuide_C -->|Checkpoint| IntegrationGuide_A

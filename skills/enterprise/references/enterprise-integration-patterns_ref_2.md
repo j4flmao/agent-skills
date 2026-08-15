@@ -44,6 +44,7 @@ To optimize **Enterprise Integration Patterns Ref 2**, we enforce the following 
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
@@ -95,6 +96,7 @@ To optimize **Enterprise Integration Patterns Ref 2**, we enforce the following 
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
@@ -148,6 +150,7 @@ To optimize **Enterprise Integration Patterns Ref 2**, we enforce the following 
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]

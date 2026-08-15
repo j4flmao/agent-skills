@@ -106,6 +106,7 @@ fastlane run upload_to_testflight \
 
 ### App Review Process Flow
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 Submission → Wait (1-48h) → Review → 
   ├── Approved → Release on App Store
   └── Rejected → Read reason → Fix → Appeal or Resubmit

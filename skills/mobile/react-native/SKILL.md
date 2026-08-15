@@ -45,6 +45,7 @@ OTA updates allow you to ship bug fixes and small features instantly.
 - Ensure critical paths handle update download failures gracefully.
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     A[Trigger OTA Update] --> B{Check Native Version}
     B -- Matches --> C[Download JS Bundle]

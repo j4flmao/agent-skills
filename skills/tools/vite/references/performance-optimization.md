@@ -48,6 +48,7 @@ To optimize **Performance Optimization**, we enforce the following foundational 
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
@@ -107,6 +108,7 @@ To optimize **Performance Optimization**, we enforce the following foundational 
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
@@ -164,6 +166,7 @@ To optimize **Performance Optimization**, we enforce the following foundational 
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}

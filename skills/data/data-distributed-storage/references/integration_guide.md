@@ -24,6 +24,7 @@ hive.metastore-refresh-interval=5m
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Trino Coordinator] --> B[Trino Worker 1]
     A --> C[Trino Worker 2]

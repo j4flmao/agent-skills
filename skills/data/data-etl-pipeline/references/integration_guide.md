@@ -12,6 +12,7 @@ def setup_cdc(connector_config):
 
 ## System Architecture Diagram
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Client] -->|Request| B(API Gateway)
     B --> C{integration_guide Service}

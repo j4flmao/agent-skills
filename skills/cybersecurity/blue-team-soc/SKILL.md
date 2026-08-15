@@ -24,6 +24,7 @@ Proactive threat hunting transcends automated alerting. It requires the formulat
 Conceptual log analysis demands parsing unstructured security events into actionable structured data. It involves correlating disparate timestamped entries across disparate systems (e.g., EDR, NDR, IAM) to reconstruct temporal attack vectors.
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     A[Telemetry Sources] --> B[Log Aggregation]
     B --> C[SIEM Correlation Engine]

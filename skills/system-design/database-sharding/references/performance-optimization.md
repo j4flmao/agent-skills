@@ -59,6 +59,7 @@ To optimize **Performance Optimization**, we enforce the following foundational 
 ### System Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant Client
     participant OrderService
@@ -134,6 +135,7 @@ To optimize **Performance Optimization**, we enforce the following foundational 
 ### System Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant Client
     participant OrderService
@@ -208,6 +210,7 @@ To optimize **Performance Optimization**, we enforce the following foundational 
 ### System Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant Client
     participant OrderService

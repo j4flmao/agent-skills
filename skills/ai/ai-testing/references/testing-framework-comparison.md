@@ -48,6 +48,7 @@ To optimize **Testing Framework Comparison**, we enforce the following foundatio
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -108,6 +109,7 @@ To optimize **Testing Framework Comparison**, we enforce the following foundatio
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -169,6 +171,7 @@ To optimize **Testing Framework Comparison**, we enforce the following foundatio
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

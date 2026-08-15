@@ -47,6 +47,7 @@ To optimize **Observability Incident Response**, we enforce the following founda
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -106,6 +107,7 @@ To optimize **Observability Incident Response**, we enforce the following founda
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -163,6 +165,7 @@ To optimize **Observability Incident Response**, we enforce the following founda
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

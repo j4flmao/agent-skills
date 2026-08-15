@@ -49,6 +49,7 @@ To optimize **Model Training Advanced**, we enforce the following foundational r
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -109,6 +110,7 @@ To optimize **Model Training Advanced**, we enforce the following foundational r
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -168,6 +170,7 @@ To optimize **Model Training Advanced**, we enforce the following foundational r
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

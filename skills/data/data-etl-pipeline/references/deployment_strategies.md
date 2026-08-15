@@ -14,6 +14,7 @@ metadata:
 
 ## System Architecture Diagram
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Client] -->|Request| B(API Gateway)
     B --> C{deployment_strategies Service}

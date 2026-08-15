@@ -43,6 +43,7 @@ To optimize **Backend Microservices Ref 2**, we enforce the following foundation
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
@@ -94,6 +95,7 @@ To optimize **Backend Microservices Ref 2**, we enforce the following foundation
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
@@ -148,6 +150,7 @@ To optimize **Backend Microservices Ref 2**, we enforce the following foundation
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]

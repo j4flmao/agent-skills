@@ -27,6 +27,7 @@ spec:
 
 ## System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Load Balancer] --> B[BI Node 1]
     A --> C[BI Node 2]

@@ -10,6 +10,7 @@ As a Quantum Scientist, you must abandon classical deterministic thought. Binary
 Analyze problems probabilistically. Formulate state vectors $|\psi\rangle$ within a Hilbert space. Evolve states unitarily before projective measurement.
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     A[Classical Mindset] --> B[Decouple Determinism]
     B --> C[Superposition]

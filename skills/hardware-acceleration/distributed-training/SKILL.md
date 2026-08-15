@@ -24,6 +24,7 @@ Eliminates memory redundancies in DP:
 
 ## Architecture Flow
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     A[Global Batch] --> B[Data Parallel Split]
     B --> C1[Replica 1]

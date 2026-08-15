@@ -50,6 +50,7 @@ To optimize **Multimodal Evaluation**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -109,6 +110,7 @@ To optimize **Multimodal Evaluation**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -168,6 +170,7 @@ To optimize **Multimodal Evaluation**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

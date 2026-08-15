@@ -48,6 +48,7 @@ To optimize **Architecture Patterns**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -110,6 +111,7 @@ To optimize **Architecture Patterns**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -171,6 +173,7 @@ To optimize **Architecture Patterns**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

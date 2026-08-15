@@ -48,6 +48,7 @@ To optimize **Prompt Engineering Advanced**, we enforce the following foundation
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -108,6 +109,7 @@ To optimize **Prompt Engineering Advanced**, we enforce the following foundation
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -169,6 +171,7 @@ To optimize **Prompt Engineering Advanced**, we enforce the following foundation
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

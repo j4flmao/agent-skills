@@ -27,6 +27,7 @@ These structures transcend frameworks. They are the mathematical and sociologica
 
 ### 1. Hierarchical Topology
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     S((Supervisor)) -->|Decomposes| W1(Worker: Analyze)
     S -->|Decomposes| W2(Worker: Synthesize)
@@ -36,6 +37,7 @@ flowchart TD
 
 ### 2. Pipeline Topology
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     P1[Agent: Ingestion] -->|Raw Context| P2[Agent: Processing]
     P2 -->|Structured Data| P3[Agent: Final Output]
@@ -43,6 +45,7 @@ flowchart TD
 
 ### 3. Swarm Topology
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     Gen(Generator) -->|Proposes Idea| Crit{Critic}
     Crit -->|Defect Found| Gen

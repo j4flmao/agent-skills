@@ -35,6 +35,7 @@
 ## Architecture
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     U[User] -->|constructs + signs| OP[UserOperation]
     OP -->|submits to| MEM[UserOp Mempool]
@@ -134,6 +135,7 @@ interface IEntryPoint {
 ### `handleOps` Lifecycle
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant Bundler
     participant EntryPoint

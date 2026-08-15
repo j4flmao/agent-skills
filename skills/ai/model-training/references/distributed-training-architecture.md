@@ -49,6 +49,7 @@ To optimize **Distributed Training Architecture**, we enforce the following foun
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -109,6 +110,7 @@ To optimize **Distributed Training Architecture**, we enforce the following foun
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -170,6 +172,7 @@ To optimize **Distributed Training Architecture**, we enforce the following foun
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

@@ -49,6 +49,7 @@ To optimize **Observability Tooling Comparison**, we enforce the following found
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -112,6 +113,7 @@ To optimize **Observability Tooling Comparison**, we enforce the following found
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -174,6 +176,7 @@ To optimize **Observability Tooling Comparison**, we enforce the following found
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

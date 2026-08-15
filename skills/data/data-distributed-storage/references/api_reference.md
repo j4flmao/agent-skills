@@ -33,6 +33,7 @@ table.updateSpec()
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Catalog - Hive Metastore] --> B[Iceberg Metadata JSON]
     B --> C[Manifest List]

@@ -53,6 +53,7 @@ export default async function webhookHandler(req, res) {
 
 ## Subscription Lifecycle Flow
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     A[Checkout] -->|Create Subscription| B(Stripe API)
     B -->|Webhook: subscription.created| C[Update DB Status: Active]

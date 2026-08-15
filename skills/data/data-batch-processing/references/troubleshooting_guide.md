@@ -14,6 +14,7 @@ df_salted = df.withColumn("salt", (rand() * 10).cast("int"))
 
 ## System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Executors] --> B[Fluentd]
     B --> C[ElasticSearch]

@@ -49,6 +49,7 @@ To optimize **Model Distillation Cost Strategies**, we enforce the following fou
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -106,6 +107,7 @@ To optimize **Model Distillation Cost Strategies**, we enforce the following fou
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -167,6 +169,7 @@ To optimize **Model Distillation Cost Strategies**, we enforce the following fou
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 sequenceDiagram
     participant User
     participant LLM

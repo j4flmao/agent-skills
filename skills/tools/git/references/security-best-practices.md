@@ -51,6 +51,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
@@ -109,6 +110,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
@@ -169,6 +171,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 
 ### System Architecture
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}

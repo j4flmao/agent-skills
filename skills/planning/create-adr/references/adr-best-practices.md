@@ -84,6 +84,7 @@
 ### ADR Lifecycle
 
 ```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
 flowchart TD
     Proposed --> Accepted
     Proposed --> Rejected
