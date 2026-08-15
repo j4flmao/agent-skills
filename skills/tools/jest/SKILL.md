@@ -49,7 +49,7 @@ To optimize **Skill**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
@@ -109,7 +109,7 @@ To optimize **Skill**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
@@ -168,7 +168,7 @@ To optimize **Skill**, we enforce the following foundational rules:
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}

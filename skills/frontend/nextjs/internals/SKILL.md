@@ -8,7 +8,7 @@ Streaming SSR leverages React's `Suspense` and the Node.js/Edge streams API to i
 ## Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     Req[Incoming HTTP Request] --> Router[Next.js App Router]
     Router --> RSC_Render[Server Component Rendering]

@@ -71,7 +71,7 @@ The scheduler assigns priorities to updates:
 ## 4. Architectural Diagram
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     Root[React Root] --> Schedule[Scheduler / Time Slicing]
     

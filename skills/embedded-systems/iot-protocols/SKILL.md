@@ -5,7 +5,7 @@ MQTT is a lightweight publish-subscribe protocol running over TCP/IP. It defines
 CoAP (Constrained Application Protocol) is designed for UDP-based networks. It maps HTTP semantics to a compact binary format, utilizing a fixed 4-byte header. CoAP supports request/response patterns and multicast, making it suitable for lossy networks (LLNs) where TCP overhead is prohibitive.
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     subgraph PubPublisher ["Publisher<br><br><br>"]
         A[Sensor] -->|"Publish(QoS1)"| B[MQTT Broker]

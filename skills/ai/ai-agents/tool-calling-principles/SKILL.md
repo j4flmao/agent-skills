@@ -26,7 +26,7 @@ To call a tool is not merely to execute a function; it is to collapse a wave of 
 ## II. The Actuation Cycle
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     Thought((Cognitive Intent)) -->|Schema Mapping| Validate{Pre-call Validation}
     Validate -- Valid --> Action[Tool Execution]

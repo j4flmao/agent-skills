@@ -16,7 +16,7 @@ Error detection occurs without measuring the logical state via syndrome extracti
 
 ```mermaid
 flowchart TD
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
     subgraph SyndromeExtractionSyndromeExtraction ["Syndrome Extraction<br><br><br>"]
         Data[Data Qubits] -->|"CNOT(Data, Ancilla)"| Ancilla[Measure Qubit]
         Ancilla -->|"Measure(Z)"| Syndrome[Syndrome Graph]

@@ -46,7 +46,7 @@ async function triggerAction() {
 ## Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     UI[Frontend UI HTML/JS] <-->|IPC Commands| Core[Rust Core]
     Core <--> OS[OS Native APIs]

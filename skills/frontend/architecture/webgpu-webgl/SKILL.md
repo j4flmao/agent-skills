@@ -10,7 +10,7 @@ GPU memory optimization necessitates careful management of buffers (VBO, UBO, SS
 ## Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     CPU[CPU / JS Thread] -->|Encodes Commands| CB[Command Buffer]
     CB -->|Submits| GPUQ[GPU Queue]

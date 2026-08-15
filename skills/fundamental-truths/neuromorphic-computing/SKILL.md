@@ -17,7 +17,7 @@ The memristor (memory resistor) acts as a physical analog to a biological synaps
 Clock distribution networks in classical silicon consume up to 30% of total dynamic power. Neuromorphic fabrics utilize Address Event Representation (AER) for asynchronous spike routing. Components remain completely dormant (consuming zero dynamic power) until triggered by incoming spike events.
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     A[Input Stimulus / Sensor Data] --> B[Event-Driven Encoding]
     B --> C{Membrane Potential Integration}

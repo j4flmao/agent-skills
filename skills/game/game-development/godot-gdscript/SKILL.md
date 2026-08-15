@@ -15,7 +15,7 @@ Signals implement the Observer pattern at the engine core. When `emit_signal()` 
 
 ```mermaid
 flowchart TD
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
     subgraph SceneTreeHighLevelLogic ["High-Level Logic<br><br><br>"]
         NodeA -->|"emit_signal()"| MessageQueue
         NodeB -->|"set_transform()"| ServerAPI

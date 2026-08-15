@@ -5,7 +5,7 @@ Durable Functions extend Azure Functions by enabling stateful workflows in a ser
 Azure Event Grid provides an event-routing backplane. It uses a push-based model with built-in retry mechanisms, ensuring reliable delivery. 
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     subgraph EGEventGrid ["Event Grid<br><br><br>"]
         A[Publisher] -->|"PublishEvent()"| B[Topic]

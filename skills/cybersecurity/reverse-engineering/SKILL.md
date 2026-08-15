@@ -39,7 +39,7 @@ Modern operating systems employ robust mitigations to break the predictability r
 ## Memory Mitigation Lifecycle
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     A[Program Execution Start] --> B[OS Loader Maps Binary]
     B --> C[ASLR Randomizes Segments]

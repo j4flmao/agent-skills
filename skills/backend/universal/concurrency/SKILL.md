@@ -26,7 +26,7 @@ A race condition is an unprotected non-atomic read-modify-write sequence.
 **Memory Barriers (Fences):** Hardware instructions that enforce ordering constraints on memory operations. Modern CPUs employ Out-of-Order (OoO) execution and store buffers. A memory fence (e.g., `mfence` on x86) flushes store buffers to L1 cache and invalidates other cores' cache lines via cache coherence protocols (MESI), ensuring sequential consistency for atomic operations or mutex boundaries.
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     A[Concurrency Models]
     

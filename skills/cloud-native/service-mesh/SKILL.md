@@ -17,7 +17,7 @@ The overhead of traversing the Linux networking stack (TCP/IP stack, netfilter h
 ## Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     App[Application Container] -->|"Syscall: send()"| Kernel[Linux Kernel]
     Kernel -->|iptables nat OUTPUT| Iptables[Netfilter/iptables]

@@ -39,7 +39,7 @@ void OnServerStateReceived(ServerState state) {
 ## Architecture Flow
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     Client[Client Input] --> Server[Server Auth]
     Client --> Predict[Local Prediction]

@@ -15,7 +15,7 @@ description: Playbook for building a High-Scale E-Commerce platform.
 ## 2. System Flow
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     SEO[Organic SEO Traffic] --> CDN[Edge CDN / WAF]
     CDN --> LB[Load Balancer]

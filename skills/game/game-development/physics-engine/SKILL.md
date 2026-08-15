@@ -17,7 +17,7 @@ Once forces are accumulated and collisions resolved, the engine must integrate e
 
 ```mermaid
 flowchart TD
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
     subgraph PipelinePhysicsStep ["Physics Step<br><br><br>"]
         IntegrateForces -->|"update_AABB()"| BroadPhase
         BroadPhase -->|"generate_pairs()"| NarrowPhase

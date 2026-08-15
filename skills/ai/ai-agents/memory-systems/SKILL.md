@@ -26,7 +26,7 @@ The chronological sequence of past events, actions, and outcomes. This is the ag
 - **First Principle**: Raw logs are not episodic memory. True episodic memory requires the distillation of continuous state transitions into discrete, semantic narratives ("experiences") that can be queried by similarity or sequence.
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     subgraph CognitiveEngineCognitiveEngineCognitiveEngineCognitiveEngine ["CognitiveEngine ['Cognitive Engine<br><br><br>"]
         WM[Working Memory / Context Window]

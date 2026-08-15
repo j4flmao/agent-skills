@@ -31,7 +31,7 @@ DSPy abstains from manual prompt engineering, treating LLM pipelines as differen
 ## 3. Architecture Topology
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     A[Query Formulation] -->|DSPy Optimizer| B{Self-RAG Routing}
     B -->|Generate [Retrieve]=Yes| C[Vector Database]

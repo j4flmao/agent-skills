@@ -21,7 +21,7 @@ Deploying FP32 is computationally negligent.
 Large Language Models are uniformly memory-bandwidth bound during generation. Optimization mandates maximizing KV cache locality and utilizing Inflight Batching (Continuous Batching) to saturate SMs while amortizing memory fetches across request queues. PagedAttention paradigms should be coupled with TRT-LLM to eliminate memory fragmentation.
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     A[Network Definition / ONNX] --> B[Graph Optimization]
     B --> C[Layer & Tensor Fusion]

@@ -22,7 +22,7 @@ At the silicon level, RoCEv2 encapsulates InfiniBand (IB) transport headers with
 ## Mermaid Flowchart: RoCEv2 GPU-to-GPU Datapath
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     subgraph NodeASenderNodeNodeASenderNode ["Node_A['Sender Node<br><br><br>"]
         direction TB

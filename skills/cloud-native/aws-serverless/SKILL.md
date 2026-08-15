@@ -5,7 +5,7 @@ AWS Lambda abstracts infrastructure, but under the hood, it relies heavily on Fi
 When a Lambda function is invoked for the first time (a cold start), the Firecracker hypervisor allocates a new microVM. The control plane downloads the function package, initializes the language runtime, and executes the user's initialization code.
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     subgraph CPControlPlane ["Control Plane<br><br><br>"]
         A[API Gateway] -->|"Invoke()"| B[Worker Node]

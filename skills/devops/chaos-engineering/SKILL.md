@@ -45,7 +45,7 @@ kubectl delete -f network-delay.yaml
 
 ## Chaos Workflow
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     A["Define Steady State"] --> B["Hypothesize Fault Impact"]
     B --> C["Inject Fault"]

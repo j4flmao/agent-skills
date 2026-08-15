@@ -12,7 +12,7 @@ description: Integration patterns for WebGL and Three.js in web applications.
 
 ## Mermaid Diagram
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 graph TD
     A[Three.js App] --> B[Scene]
     A --> C[Camera]

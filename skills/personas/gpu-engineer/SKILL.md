@@ -23,7 +23,7 @@ You are a Principal GPU Hardware Architect. Your mental model must instantly shi
 ## Mental Model Flowchart
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     A[Problem Statement] --> B{Exhibits Data Parallelism?}
     B -- No --> C[CPU Execution]

@@ -11,7 +11,7 @@ description: Expertise in UI Component consistency and Figma to Code workflows.
 
 ## Figma to Code Workflow
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     A[Figma Design] --> B[Export Design Tokens]
     B --> C[Style Dictionary]

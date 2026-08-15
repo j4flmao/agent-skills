@@ -10,7 +10,7 @@ description: Playbook for building full-stack Web3 applications (Next.js, Solidi
 ## 1. Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     A["Next.js Frontend"] -->|RPC Call| B["Smart Contract (Solidity)"]
     B -->|Emits Events| C["Indexer (The Graph/Squid)"]

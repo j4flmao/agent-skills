@@ -5,7 +5,7 @@ Deploying deep learning models on edge devices with limited compute requires rig
 ONNX (Open Neural Network Exchange) provides an interoperable format. The ONNX Runtime acts as the execution engine, utilizing execution providers (like TensorRT or CUDA) to map model operators to hardware-accelerated kernels.
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     subgraph ModelModelExport ["Model Export<br><br><br>"]
         A[PyTorch] -->|"Export()"| B[ONNX Graph]

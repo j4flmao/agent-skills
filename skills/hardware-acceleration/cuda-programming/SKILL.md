@@ -15,7 +15,7 @@ Parallel Thread Execution (PTX) is NVIDIA's intermediate instruction set archite
 
 ```mermaid
 flowchart TD
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
     subgraph SMStreamingMultiprocessor ["Streaming Multiprocessor<br><br><br>"]
         WarpScheduler -->|"dispatch()"| ExecutionUnits
         ExecutionUnits -->|"stall()"| MemoryFetch

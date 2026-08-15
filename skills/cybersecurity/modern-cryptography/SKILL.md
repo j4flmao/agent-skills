@@ -46,7 +46,7 @@ Shor's algorithm, running on a sufficiently powerful quantum computer, can solve
 ## Architecture Mapping
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     subgraph Alice
         dA[Generate Ephemeral Private Key dA] --> QA[Compute Public Key QA = dA * G]
