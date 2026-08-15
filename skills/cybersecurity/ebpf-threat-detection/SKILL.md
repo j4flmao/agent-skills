@@ -47,7 +47,7 @@ flowchart TD
     UserSpace[User Space Application] -->|"1. Executes Syscall (e.g., execve)"| KernelSyscall[Kernel Syscall Interface]
     KernelSyscall -->|2. Triggers Hook| eBPFHook{eBPF Hook: kprobe / tracepoint / LSM}
     
-    subgraph KernelSpaceKernelSpace ["KernelSpace ['Kernel Space']"]
+    subgraph KernelSpaceKernelSpace ["Kernel Space<br/>"]
         eBPFHook -->|3. Executes| eBPFProg[eBPF Program]
         eBPFProg -->|4. Evaluates Policy| PolicyEval{Policy Match?}
         PolicyEval -->|5a. Block: Return Error| LSMEnforce[Syscall Denied - ENOPERM]
@@ -56,7 +56,7 @@ flowchart TD
     
     LSMEnforce -.-> UserSpace
     
-    subgraph SecurityAgentegTetragonFalcoSecurityAgentegTetragonFalco ["SecurityAgentegTetragonFalco ['Security Agent (e.g., Tetragon/Falco)']"]
+    subgraph SecurityAgentegTetragonFalcoSecurityAgentegTetragonFalco ["Security Agent (e.g., Tetragon/Falco)<br/>"]
         eBPFMap -->|6. Async Event Stream| AgentEngine[User-Space Rules Engine]
         AgentEngine -->|7. Correlate with K8s Metadata| ContextualEvent[Contextualized Security Event]
         ContextualEvent -->|8. Alert / Log| SIEM[SIEM / Log Aggregator]

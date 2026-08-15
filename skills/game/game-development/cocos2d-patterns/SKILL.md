@@ -14,12 +14,12 @@ During the rendering phase, the `Director` visits the active `Scene` node recurs
 ```mermaid
 flowchart TD
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
-    subgraph CoreLoopDirectorMainLoop ["CoreLoop ['Director Main Loop']"]
+    subgraph CoreLoopDirectorMainLoop ["Director Main Loop<br/>"]
         Start -->|"update()"| Timers
         Timers -->|"drawScene()"| SceneGraph
         SceneGraph -->|"visit()"| NodeTree
     end
-    subgraph RenderingRenderQueue ["Rendering ['Render Queue']"]
+    subgraph RenderingRenderQueue ["Render Queue<br/>"]
         NodeTree -->|"pushCommand()"| CommandQueue
         CommandQueue -->|"sort()"| RenderBatching
         RenderBatching -->|"flush()"| GPU

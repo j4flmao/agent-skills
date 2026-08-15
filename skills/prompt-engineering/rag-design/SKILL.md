@@ -20,12 +20,12 @@ Raw user queries are often heavily underspecified, containing lexical ambiguitie
 flowchart TD
     User["Raw User Query"] -->|"Send()"| Rewriter["LLM Query Rewriter"]
     
-    subgraph PreProcessingQueryTransformations ["PreProcessing ['Query Transformations']"]
+    subgraph PreProcessingQueryTransformations ["Query Transformations<br/>"]
         Rewriter -->|"HyDE / Expand"| Vectors["Search Vectors"]
         Rewriter -->|"Decompose"| SubQueries["Sub-Queries"]
     end
     
-    subgraph RetrievalMultiHopEngine ["Retrieval ['Multi-Hop Engine']"]
+    subgraph RetrievalMultiHopEngine ["Multi-Hop Engine<br/>"]
         Vectors --> Router["Index Router"]
         SubQueries --> Router
         Router -->|"Search(Dense)"| VectorDB["Vector DB"]

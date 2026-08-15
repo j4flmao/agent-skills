@@ -16,11 +16,11 @@ Signals implement the Observer pattern at the engine core. When `emit_signal()` 
 ```mermaid
 flowchart TD
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
-    subgraph SceneTreeHighLevelLogic ["SceneTree ['High-Level Logic']"]
+    subgraph SceneTreeHighLevelLogic ["High-Level Logic<br/>"]
         NodeA -->|"emit_signal()"| MessageQueue
         NodeB -->|"set_transform()"| ServerAPI
     end
-    subgraph ServersLowLevelServers ["Servers ['Low-Level Servers']"]
+    subgraph ServersLowLevelServers ["Low-Level Servers<br/>"]
         MessageQueue -->|"flush()"| DeferredCall
         ServerAPI -->|"update_RID()"| RenderingServer
         RenderingServer -->|"render_frame()"| VulkanBackend

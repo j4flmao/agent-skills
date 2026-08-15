@@ -15,11 +15,11 @@ In ToT BFS, we maintain a frontier of size $b$. At step $k$, we expand each of t
 ```mermaid
 flowchart TD
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
-    subgraph SearchBFSStateSearch ["Search ['BFS State Search']"]
+    subgraph SearchBFSStateSearch ["BFS State Search<br/>"]
         State_0[State 0] -->|"GenerateThoughts(k=3)"| T1[Thought 1]
         State_0 -->|"GenerateThoughts(k=3)"| T2[Thought 2]
     end
-    subgraph EvaluationStateEvaluationLayer ["Evaluation ['State Evaluation Layer']"]
+    subgraph EvaluationStateEvaluationLayer ["State Evaluation Layer<br/>"]
         T1 -->|"Evaluate(T1)"| E1[Score: 0.9]
         T2 -->|"Evaluate(T2)"| E2[Score: 0.4]
     end

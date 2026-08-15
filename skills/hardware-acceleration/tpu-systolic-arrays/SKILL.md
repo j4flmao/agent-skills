@@ -31,7 +31,7 @@ flowchart TD
     UB["Unified Buffer (SRAM)"]
     Control["Control Unit / Instruction Fetch"]
     
-    subgraph MXUMatrixMultiplicationUnitSystolicArrayMXUMatrixMultiplicationUnitSystolicArray ["MXUMatrixMultiplicationUnitSystolicArray ['MXU['Matrix Multiplication Unit (Systolic Array)']']"]
+    subgraph MXUMatrixMultiplicationUnitSystolicArrayMXUMatrixMultiplicationUnitSystolicArray ["MXU['Matrix Multiplication Unit (Systolic Array)<br/>"]
         direction TB
         Weight_FIFO["Weight FIFO"]
         Activation_FIFO["Activation FIFO"]

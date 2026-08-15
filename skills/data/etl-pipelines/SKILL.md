@@ -16,7 +16,7 @@ flowchart TD
     D --> E[Core Models / Marts]
     E --> F[Analytics & Reporting]
     
-    subgraph AirflowOrchestrationAirflowOrchestrationAirflowOrchestrationAirflowOrchestration ["AirflowOrchestrationAirflowOrchestration ['AirflowOrchestration ['Airflow Orchestration']']"]
+    subgraph AirflowOrchestrationAirflowOrchestrationAirflowOrchestrationAirflowOrchestration ["AirflowOrchestration ['Airflow Orchestration<br/>"]
     A
     B
     C

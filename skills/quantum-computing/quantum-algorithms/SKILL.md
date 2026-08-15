@@ -16,7 +16,7 @@ Grover's algorithm achieves quadratic speedup for unstructured search using ampl
 ```mermaid
 flowchart TD
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
-    subgraph AmplitudeAmplificationAmplitudeAmplification ["AmplitudeAmplification ['Amplitude Amplification']"]
+    subgraph AmplitudeAmplificationAmplitudeAmplification ["Amplitude Amplification<br/>"]
         Init[Superposition State |s>] --> Phase[Phase Inversion Oracle]
         Phase -->|"ApplyOracle()"| Diffuse[Diffusion Operator]
         Diffuse -->|"InvertMean()"| Measure[Measurement]

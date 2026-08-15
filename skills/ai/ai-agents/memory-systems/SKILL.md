@@ -28,12 +28,12 @@ The chronological sequence of past events, actions, and outcomes. This is the ag
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    subgraph CognitiveEngineCognitiveEngineCognitiveEngineCognitiveEngine ["CognitiveEngineCognitiveEngine ['CognitiveEngine ['Cognitive Engine']']"]
+    subgraph CognitiveEngineCognitiveEngineCognitiveEngineCognitiveEngine ["CognitiveEngine ['Cognitive Engine<br/>"]
         WM[Working Memory / Context Window]
         Processor[Reasoning Processor]
     end
 
-    subgraph MemorySubsystemsMemorySubsystemsMemorySubsystemsMemorySubsystems ["MemorySubsystemsMemorySubsystems ['MemorySubsystems ['Memory Subsystems']']"]
+    subgraph MemorySubsystemsMemorySubsystemsMemorySubsystemsMemorySubsystems ["MemorySubsystems ['Memory Subsystems<br/>"]
         SM[(Semantic Memory\nVector Space)]
         EM[(Episodic Memory\nTemporal Logs)]
     end
