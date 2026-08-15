@@ -14,12 +14,12 @@ Tools like eBPF (Extended Berkeley Packet Filter) and Linux `tc` (Traffic Contro
 ```mermaid
 flowchart TD
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
-    subgraph InjectionLayerKernelLayerInjection ["<div style='padding-bottom: 40px;'>Kernel Layer Injection</div>"]
+    subgraph InjectionLayerKernelLayerInjection ["Kernel Layer Injection<br><br><br>"]
         App[Application] -->|"syscall()"| Kernel[Linux Kernel]
         Kernel -->|"eBPF_Hook(Syscall)"| ErrorGen[Synthetic Error]
         Kernel -->|"tc_qdisc(eth0)"| NetDelay[Packet Delay]
     end
-    subgraph SafetyBlastRadiusContainment ["<div style='padding-bottom: 40px;'>Blast Radius Containment</div>"]
+    subgraph SafetyBlastRadiusContainment ["Blast Radius Containment<br><br><br>"]
         Target[Target Selection] --> Namespace[Network Namespaces]
         Namespace --> CGroups[Control Groups]
     end

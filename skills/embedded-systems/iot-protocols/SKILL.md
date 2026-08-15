@@ -7,10 +7,10 @@ CoAP (Constrained Application Protocol) is designed for UDP-based networks. It m
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    subgraph PubPublisher ["<div style='padding-bottom: 40px;'>Publisher</div>"]
+    subgraph PubPublisher ["Publisher<br><br><br>"]
         A[Sensor] -->|"Publish(QoS1)"| B[MQTT Broker]
     end
-    subgraph SubSubscriber ["<div style='padding-bottom: 40px;'>Subscriber</div>"]
+    subgraph SubSubscriber ["Subscriber<br><br><br>"]
         B -->|"Deliver()"| C[Backend Service]
         C -->|"PUBACK()"| B
     end

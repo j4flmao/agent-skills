@@ -24,7 +24,7 @@ At the silicon level, RoCEv2 encapsulates InfiniBand (IB) transport headers with
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    subgraph NodeASenderNodeNodeASenderNode ["<div style='padding-bottom: 40px;'>Node_A['Sender Node</div>"]
+    subgraph NodeASenderNodeNodeASenderNode ["Node_A['Sender Node<br><br><br>"]
         direction TB
         GPU_A["GPU HBM (Source Buffer)"]
         PCIe_A["PCIe Switch"]
@@ -35,7 +35,7 @@ flowchart TD
         NIC_A -->|WQE Polling| Doorbell_A["Doorbell Register"]
     end
 
-    subgraph FabricSpineLeafEthernetFabricFabricSpineLeafEthernetFabric ["<div style='padding-bottom: 40px;'>Fabric['Spine-Leaf Ethernet Fabric</div>"]
+    subgraph FabricSpineLeafEthernetFabricFabricSpineLeafEthernetFabric ["Fabric['Spine-Leaf Ethernet Fabric<br><br><br>"]
         direction TB
         ToR_A["ToR Switch (PFC/ECN)"]
         Spine["Spine Switch"]
@@ -45,7 +45,7 @@ flowchart TD
         Spine --> ToR_B
     end
 
-    subgraph NodeBReceiverNodeNodeBReceiverNode ["<div style='padding-bottom: 40px;'>Node_B['Receiver Node</div>"]
+    subgraph NodeBReceiverNodeNodeBReceiverNode ["Node_B['Receiver Node<br><br><br>"]
         direction TB
         NIC_B["RNIC (RoCEv2 Hardware)"]
         PCIe_B["PCIe Switch"]

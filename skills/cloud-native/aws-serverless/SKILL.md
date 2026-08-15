@@ -7,10 +7,10 @@ When a Lambda function is invoked for the first time (a cold start), the Firecra
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    subgraph CPControlPlane ["<div style='padding-bottom: 40px;'>Control Plane</div>"]
+    subgraph CPControlPlane ["Control Plane<br><br><br>"]
         A[API Gateway] -->|"Invoke()"| B[Worker Node]
     end
-    subgraph VMFirecrackermicroVM ["<div style='padding-bottom: 40px;'>Firecracker microVM</div>"]
+    subgraph VMFirecrackermicroVM ["Firecracker microVM<br><br><br>"]
         B --> C[MicroVM Init]
         C -->|"LoadRuntime()"| D[Language Runtime]
         D -->|"ExecuteHandler()"| E[Function Code]

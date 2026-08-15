@@ -7,10 +7,10 @@ The core mechanism is the reconciliation loop. The Operator watches for changes 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    subgraph APIK8sAPIServer ["<div style='padding-bottom: 40px;'>K8s API Server</div>"]
+    subgraph APIK8sAPIServer ["K8s API Server<br><br><br>"]
         A[User] -->|"Apply(CRD)"| B[API Server]
     end
-    subgraph OpOperator ["<div style='padding-bottom: 40px;'>Operator</div>"]
+    subgraph OpOperator ["Operator<br><br><br>"]
         B -->|"WatchEvent()"| C[Informer]
         C --> D[Work Queue]
         D -->|"Reconcile()"| E[Controller Logic]

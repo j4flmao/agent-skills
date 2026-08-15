@@ -16,11 +16,11 @@ During autoregressive generation, Transformers cache the Key (K) and Value (V) t
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    subgraph ICLInContextLearning ["<div style='padding-bottom: 40px;'>In-Context Learning</div>"]
+    subgraph ICLInContextLearning ["In-Context Learning<br><br><br>"]
         Demonstrations["Few-Shot Examples"] -->|"Embed()"| QKV["Q, K, V Tensors"]
     end
     
-    subgraph InferenceAutoregressiveEngine ["<div style='padding-bottom: 40px;'>Autoregressive Engine</div>"]
+    subgraph InferenceAutoregressiveEngine ["Autoregressive Engine<br><br><br>"]
         QKV -->|"Store(K, V)"| KVCache["KV Cache (Memory)"]
         Query["Current Query Token"] -->|"Compute(Q)"| AttentionHead
         KVCache -->|"Read()"| AttentionHead["Attention Mechanism"]

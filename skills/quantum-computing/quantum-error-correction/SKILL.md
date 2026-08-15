@@ -17,11 +17,11 @@ Error detection occurs without measuring the logical state via syndrome extracti
 ```mermaid
 flowchart TD
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
-    subgraph SyndromeExtractionSyndromeExtraction ["<div style='padding-bottom: 40px;'>Syndrome Extraction</div>"]
+    subgraph SyndromeExtractionSyndromeExtraction ["Syndrome Extraction<br><br><br>"]
         Data[Data Qubits] -->|"CNOT(Data, Ancilla)"| Ancilla[Measure Qubit]
         Ancilla -->|"Measure(Z)"| Syndrome[Syndrome Graph]
     end
-    subgraph DecoderMWPMDecoder ["<div style='padding-bottom: 40px;'>MWPM Decoder</div>"]
+    subgraph DecoderMWPMDecoder ["MWPM Decoder<br><br><br>"]
         Syndrome -->|"MapToGraph()"| Match[Minimum Weight Perfect Matching]
         Match -->|"ApplyCorrection()"| Recovery[Recovery Operations]
     end

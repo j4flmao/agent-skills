@@ -13,11 +13,11 @@ Prometheus utilizes a custom Time Series Database (TSDB) optimized for fast inge
 ```mermaid
 flowchart TD
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
-    subgraph TSDBPrometheusTSDB ["<div style='padding-bottom: 40px;'>Prometheus TSDB</div>"]
+    subgraph TSDBPrometheusTSDB ["Prometheus TSDB<br><br><br>"]
         Mem[In-Memory Head] -->|"Flush(2h)"| Block1[2h Block]
         Block1 -->|"Compact(Level 1)"| Block2[8h Block]
     end
-    subgraph TracingOpenTelemetry ["<div style='padding-bottom: 40px;'>OpenTelemetry</div>"]
+    subgraph TracingOpenTelemetry ["OpenTelemetry<br><br><br>"]
         Req[Incoming Request] -->|"Extract(TraceContext)"| Span1[Root Span]
         Span1 -->|"Inject(W3C Headers)"| Downstream[Downstream RPC]
     end

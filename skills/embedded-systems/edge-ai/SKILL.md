@@ -7,10 +7,10 @@ ONNX (Open Neural Network Exchange) provides an interoperable format. The ONNX R
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    subgraph ModelModelExport ["<div style='padding-bottom: 40px;'>Model Export</div>"]
+    subgraph ModelModelExport ["Model Export<br><br><br>"]
         A[PyTorch] -->|"Export()"| B[ONNX Graph]
     end
-    subgraph ExecEdgeRuntime ["<div style='padding-bottom: 40px;'>Edge Runtime</div>"]
+    subgraph ExecEdgeRuntime ["Edge Runtime<br><br><br>"]
         B -->|"Optimize()"| C[TensorRT Engine]
         C -->|"ExecuteInference()"| D[GPU Cores]
     end

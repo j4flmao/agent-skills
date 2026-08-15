@@ -16,12 +16,12 @@ Standard Data Parallelism duplicates the entire model state across all GPUs, whi
 ```mermaid
 flowchart TD
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
-    subgraph CommunicationRingAllReducePhase ["<div style='padding-bottom: 40px;'>Ring All-Reduce Phase</div>"]
+    subgraph CommunicationRingAllReducePhase ["Ring All-Reduce Phase<br><br><br>"]
         GPU_0 -->|"send_chunk()"| GPU_1
         GPU_1 -->|"accumulate()"| GPU_2
         GPU_2 -->|"forward()"| GPU_0
     end
-    subgraph ZeROStagesZeROPartitioning ["<div style='padding-bottom: 40px;'>ZeRO Partitioning</div>"]
+    subgraph ZeROStagesZeROPartitioning ["ZeRO Partitioning<br><br><br>"]
         Stage1 -->|"partition_adam()"| MemorySave
         Stage2 -->|"partition_grads()"| ReduceScatter
         Stage3 -->|"partition_weights()"| AllGather

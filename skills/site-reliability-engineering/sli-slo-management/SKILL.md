@@ -13,11 +13,11 @@ Service Level Indicators (SLIs) must be quantifiable fractions of good events ov
 ```mermaid
 flowchart TD
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
-    subgraph ModelingSLIMathematics ["<div style='padding-bottom: 40px;'>SLI Mathematics</div>"]
+    subgraph ModelingSLIMathematics ["SLI Mathematics<br><br><br>"]
         Events[Raw Telemetry] -->|"Aggregate(1m)"| Metric[Prometheus Metric]
         Metric -->|"Calculate(Good/Total)"| SLI[SLI Value]
     end
-    subgraph ErrorBudgetErrorBudgetPolicies ["<div style='padding-bottom: 40px;'>Error Budget Policies</div>"]
+    subgraph ErrorBudgetErrorBudgetPolicies ["Error Budget Policies<br><br><br>"]
         SLI -->|"Compare(SLO)"| Budget[Burn Rate]
         Budget -->|"Check(Burn > 14x)"| Page[PagerDuty Alert]
     end
