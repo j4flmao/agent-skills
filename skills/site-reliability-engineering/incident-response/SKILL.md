@@ -12,12 +12,12 @@ Modern IR heavily relies on event-driven automation for alert correlation, dedup
 ```mermaid
 flowchart TD
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
-    subgraph TriagePipelineAutomatedTriage ["TriagePipeline ["Automated Triage"]"]
+    subgraph TriagePipelineAutomatedTriage ["TriagePipeline ['Automated Triage']"]
         Alert[Raw Alerts] -->|"Cluster(Temporal, Labels)"| MetaAlert[Correlated Incident]
         MetaAlert -->|"Trigger(Runbook)"| AutoDiag[Auto-Diagnostics]
         AutoDiag -->|"Escalate(Pager)"| OnCall[On-Call Engineer]
     end
-    subgraph PostMortemBlamelessPostMortem ["PostMortem ["Blameless Post-Mortem"]"]
+    subgraph PostMortemBlamelessPostMortem ["PostMortem ['Blameless Post-Mortem']"]
         Resolve[Incident Resolution] --> Timeline[Timeline Generation]
         Timeline --> Action[Action Item Tracking]
     end

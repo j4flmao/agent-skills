@@ -26,18 +26,18 @@ Hardware interrupts trigger an asynchronous context switch.
 flowchart TD
     HW["Hardware Event"] -->|"Raise(IRQ)"| CPU
     
-    subgraph ISRInterruptHandling ["ISR ["Interrupt Handling"]"]
+    subgraph ISRInterruptHandling ["ISR ['Interrupt Handling']"]
         CPU --> TopHalf["Top Half (Fast ISR)"]
         TopHalf -->|"Schedule()"| BottomHalf["Bottom Half (SoftIRQ)"]
     end
     
-    subgraph SchedulerProcessManagement ["Scheduler ["Process Management"]"]
+    subgraph SchedulerProcessManagement ["Scheduler ['Process Management']"]
         BottomHalf --> Wake["Wake Process"]
         Wake --> PCB["Update PCB (task_struct)"]
         PCB --> Switch["Context Switch"]
     end
     
-    subgraph MemoryMemoryManagement ["Memory ["Memory Management"]"]
+    subgraph MemoryMemoryManagement ["Memory ['Memory Management']"]
         Switch -->|"Load(CR3)"| PageTable["Root Page Table (PML4)"]
         PageTable --> MMU["MMU / TLB"]
     end

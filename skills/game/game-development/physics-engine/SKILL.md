@@ -18,13 +18,13 @@ Once forces are accumulated and collisions resolved, the engine must integrate e
 ```mermaid
 flowchart TD
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
-    subgraph PipelinePhysicsStep ["Pipeline ["Physics Step"]"]
+    subgraph PipelinePhysicsStep ["Pipeline ['Physics Step']"]
         IntegrateForces -->|"update_AABB()"| BroadPhase
         BroadPhase -->|"generate_pairs()"| NarrowPhase
         NarrowPhase -->|"solve()"| ConstraintSolver
         ConstraintSolver -->|"integrate_velocity()"| PositionUpdate
     end
-    subgraph BroadPhaseAlgBroadPhaseDBVH ["BroadPhaseAlg ["Broad-Phase DBVH"]"]
+    subgraph BroadPhaseAlgBroadPhaseDBVH ["BroadPhaseAlg ['Broad-Phase DBVH']"]
         InsertLeaf -->|"balance_tree()"| CheckOverlaps
     end
 ```

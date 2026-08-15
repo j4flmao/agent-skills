@@ -18,13 +18,13 @@ Congestion control modulates the Congestion Window (`cwnd`) to avoid network col
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    subgraph TCPStateTCPStateMachine ["TCP_State ["TCP State Machine"]"]
+    subgraph TCPStateTCPStateMachine ["TCP_State ['TCP State Machine']"]
         CLOSED -->|"Send(SYN)"| SYN_SENT
         SYN_SENT -->|"Recv(SYN-ACK)"| ESTABLISHED
         ESTABLISHED -->|"Send(FIN)"| FIN_WAIT_1
     end
     
-    subgraph CongestionCongestionControl ["Congestion ["Congestion Control"]"]
+    subgraph CongestionCongestionControl ["Congestion ['Congestion Control']"]
         ESTABLISHED --> CC_Algo["Algorithm Selection"]
         CC_Algo --> Cubic["CUBIC (Loss-based)"]
         CC_Algo --> BBR["BBR (Model-based)"]

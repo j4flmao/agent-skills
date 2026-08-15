@@ -37,7 +37,7 @@ flowchart TD
     B -->|Generate [Retrieve]=Yes| C[Vector Database]
     B -->|Generate [Retrieve]=No| D[Direct Generation]
     
-    subgraph VectorRetrievalEngineVectorRetrievalEngine ["VectorRetrievalEngine ["Vector Retrieval Engine"]"]
+    subgraph VectorRetrievalEngineVectorRetrievalEngine ["VectorRetrievalEngine ['Vector Retrieval Engine']"]
         C --> E{Index Selection}
         E -->|High Recall| F[HNSW Multi-layer Graph]
         E -->|Low Memory/High QPS| G[IVF-PQ]

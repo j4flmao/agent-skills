@@ -21,7 +21,7 @@ Once verified, the bytecode is translated into native machine code by the kernel
 flowchart TD
     Bytecode["eBPF Bytecode"] -->|"bpf(LOAD)"| Kernel
     
-    subgraph KernelSpaceKernelSpace ["KernelSpace ["Kernel Space"]"]
+    subgraph KernelSpaceKernelSpace ["KernelSpace ['Kernel Space']"]
         Kernel --> Verifier["BPF Verifier"]
         Verifier -->|"DAG_Check()"| DAG["CFG Analysis"]
         DAG -->|"Simulate()"| Memory["State & Memory Tracking"]
