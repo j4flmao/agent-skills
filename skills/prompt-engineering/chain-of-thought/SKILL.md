@@ -18,13 +18,13 @@ By generating $z_i$, the attention mechanism shifts probability mass toward logi
 flowchart TD
     Prompt["Input Prompt"] -->|"Encode()"| Embeddings
     
-    subgraph TransformerTransformerBlock ["Transformer Block<br/>"]
+    subgraph TransformerTransformerBlock ["<div style='padding-bottom: 40px;'>Transformer Block</div>"]
         Embeddings --> Attention["Self-Attention"]
         Attention --> FFN["Feed Forward Network"]
         FFN --> Logits["Token Logits"]
     end
     
-    subgraph CoTChainofThought ["Chain of Thought<br/>"]
+    subgraph CoTChainofThought ["<div style='padding-bottom: 40px;'>Chain of Thought</div>"]
         Logits -->|"Sample()"| Token_Z["Intermediate Reasoning Token (z_i)"]
         Token_Z -->|"Append()"| Context["Updated Context"]
         Context -->|"AutoRegressive()"| Attention

@@ -17,12 +17,12 @@ Memory is allocated in `Chunks` (typically 16KB). A Chunk exclusively stores Ent
 ```mermaid
 flowchart TD
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
-    subgraph MemoryLayoutArchetypeChunkLayout ["Archetype Chunk Layout<br/>"]
+    subgraph MemoryLayoutArchetypeChunkLayout ["<div style='padding-bottom: 40px;'>Archetype Chunk Layout</div>"]
         EntityID -->|"alloc()"| ChunkHeader
         ChunkHeader -->|"array[]"| ComponentA
         ChunkHeader -->|"array[]"| ComponentB
     end
-    subgraph ExecutionSystemExecution ["System Execution<br/>"]
+    subgraph ExecutionSystemExecution ["<div style='padding-bottom: 40px;'>System Execution</div>"]
         Query -->|"schedule()"| JobSystem
         JobSystem -->|"execute()"| BurstCompiler
     end

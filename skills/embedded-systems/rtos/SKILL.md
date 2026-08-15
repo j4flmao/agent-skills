@@ -13,11 +13,11 @@ To prevent priority inversion, FreeRTOS implements priority inheritance for its 
 ```mermaid
 flowchart TD
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
-    subgraph SchedulerFreeRTOSScheduler ["FreeRTOS Scheduler<br/>"]
+    subgraph SchedulerFreeRTOSScheduler ["<div style='padding-bottom: 40px;'>FreeRTOS Scheduler</div>"]
         Tick[SysTick Interrupt] -->|"xTaskIncrementTick()"| UnblockCheck[Check Delayed Lists]
         UnblockCheck -->|"Yield()"| SwitchContext[Context Switch PendSV]
     end
-    subgraph TaskStateTaskStateMachine ["Task State Machine<br/>"]
+    subgraph TaskStateTaskStateMachine ["<div style='padding-bottom: 40px;'>Task State Machine</div>"]
         Running -->|"vTaskDelay()"| Blocked
         Blocked -->|"xSemaphoreGive()"| Ready
         Ready -->|"Schedule()"| Running

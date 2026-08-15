@@ -78,14 +78,14 @@ flowchart TD
     Schedule --> WorkLoop
     WorkLoop --> RenderPhase
     
-    subgraph RenderPhaseRenderPhaseInterruptibleRenderPhaseRenderPhaseInterruptible ["RenderPhase ['Render Phase (Interruptible)<br/>"]
+    subgraph RenderPhaseRenderPhaseInterruptibleRenderPhaseRenderPhaseInterruptible ["<div style='padding-bottom: 40px;'>RenderPhase ['Render Phase (Interruptible)</div>"]
         RenderPhase --> BeginWork[beginWork: Diffing & state updates]
         BeginWork --> CompleteWork[completeWork: Construct Effect List]
     end
     
     CompleteWork --> CommitPhase
     
-    subgraph CommitPhaseCommitPhaseSynchronousCommitPhaseCommitPhaseSynchronous ["CommitPhase ['Commit Phase (Synchronous)<br/>"]
+    subgraph CommitPhaseCommitPhaseSynchronousCommitPhaseCommitPhaseSynchronous ["<div style='padding-bottom: 40px;'>CommitPhase ['Commit Phase (Synchronous)</div>"]
         CommitPhase --> DOMMutations[Mutate DOM]
         DOMMutations --> LifecycleHooks[Fire useLayoutEffect/useEffect]
     end

@@ -25,10 +25,10 @@ Because logical-to-physical mapping is abstracted, multiple sequences (e.g., bea
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     LogicalSeq[Logical Token Sequence]
-    subgraph BlockTableBlockTableMappingBlockTableBlockTableMapping ["BlockTable[Block Table Mapping]<br/>"]
+    subgraph BlockTableBlockTableMappingBlockTableBlockTableMapping ["<div style='padding-bottom: 40px;'>BlockTable[Block Table Mapping]</div>"]
         LogicalToPhysical[Logical Page -> Physical Block Index]
     end
-    subgraph PhysicalMemoryHBMPhysicalMemoryPhysicalMemoryHBMPhysicalMemory ["PhysicalMemory[HBM Physical Memory]<br/>"]
+    subgraph PhysicalMemoryHBMPhysicalMemoryPhysicalMemoryHBMPhysicalMemory ["<div style='padding-bottom: 40px;'>PhysicalMemory[HBM Physical Memory]</div>"]
         Block1[Physical Block 1: Tokens 0-15]
         Block2[Physical Block 2: Tokens 16-31]
         Block5[Physical Block 5: Tokens 32-47]

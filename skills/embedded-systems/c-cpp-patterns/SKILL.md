@@ -7,11 +7,11 @@ RAII (Resource Acquisition Is Initialization) ties resource management to object
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    subgraph ScopeFunctionScope ["Function Scope<br/>"]
+    subgraph ScopeFunctionScope ["<div style='padding-bottom: 40px;'>Function Scope</div>"]
         A[Enter Scope] -->|"Construct()"| B[RAII Object]
         B -->|"AcquireMutex()"| C[Hardware Resource]
     end
-    subgraph ExitScopeExit ["Scope Exit<br/>"]
+    subgraph ExitScopeExit ["<div style='padding-bottom: 40px;'>Scope Exit</div>"]
         B -->|"Destruct()"| D[Release Mutex]
     end
 ```

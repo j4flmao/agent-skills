@@ -7,11 +7,11 @@ Data is stored in Colossus using the Capacitor columnar format. Capacitor optimi
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    subgraph EngineDremelEngine ["Dremel Engine<br/>"]
+    subgraph EngineDremelEngine ["<div style='padding-bottom: 40px;'>Dremel Engine</div>"]
         A[Root Server] -->|"Distribute()"| B[Intermediate Server]
         B -->|"Scan()"| C[Leaf Worker]
     end
-    subgraph StorageCapacitorStorage ["Capacitor Storage<br/>"]
+    subgraph StorageCapacitorStorage ["<div style='padding-bottom: 40px;'>Capacitor Storage</div>"]
         C -->|"ReadColumn()"| D[Capacitor File]
     end
 ```

@@ -23,7 +23,7 @@ flowchart TD
     Tokens -->|"Parse()"| AST
     AST -->|"Lower()"| IR["LLVM IR"]
     
-    subgraph PassesLLVMOptimizationPasses ["LLVM Optimization Passes<br/>"]
+    subgraph PassesLLVMOptimizationPasses ["<div style='padding-bottom: 40px;'>LLVM Optimization Passes</div>"]
         IR -->|"Run(Analysis)"| Analysis["Analysis Passes"]
         Analysis --> Transform["Transform Passes"]
         Transform --> IR_Opt["Optimized IR"]

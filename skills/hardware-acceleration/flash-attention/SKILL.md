@@ -26,7 +26,7 @@ $l^{(x)} = l^{(x-1)} e^{m^{(x-1)} - m^{(x)}} + \sum e^{x - m^{(x)}}$
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
     HBM_QKV["HBM: Q, K, V Matrices"]
-    subgraph GPUSRAMSRAMComputeBlocksGPUSRAMSRAMComputeBlocks ["GPU_SRAM['SRAM Compute Blocks<br/>"]
+    subgraph GPUSRAMSRAMComputeBlocksGPUSRAMSRAMComputeBlocks ["<div style='padding-bottom: 40px;'>GPU_SRAM['SRAM Compute Blocks</div>"]
         TileLoad["Load Block of Q, K, V to SRAM"]
         DotProd["S = Q * K^T"]
         Softmax["P = softmax_online(S)"]

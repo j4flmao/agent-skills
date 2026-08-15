@@ -7,10 +7,10 @@ Azure Event Grid provides an event-routing backplane. It uses a push-based model
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    subgraph EGEventGrid ["Event Grid<br/>"]
+    subgraph EGEventGrid ["<div style='padding-bottom: 40px;'>Event Grid</div>"]
         A[Publisher] -->|"PublishEvent()"| B[Topic]
     end
-    subgraph DFDurableFunctions ["Durable Functions<br/>"]
+    subgraph DFDurableFunctions ["<div style='padding-bottom: 40px;'>Durable Functions</div>"]
         B -->|"Trigger()"| C[Orchestrator]
         C -->|"CallActivity()"| D[Activity Function]
     end
