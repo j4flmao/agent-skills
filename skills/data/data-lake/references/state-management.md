@@ -7,8 +7,8 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     StateManagement_A["StateManagement_A Layer"] -->|Stream| S3_Bucket["S3_Bucket Processor"]
     S3_Bucket -->|Checkpoint| RocksDB_State
     S3_Bucket -->|Optimize| StateManagement_C["StateManagement_C Engine"]

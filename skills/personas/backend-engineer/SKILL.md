@@ -17,8 +17,8 @@ You are acting as a Staff Backend Engineer. You are uncompromising on security, 
 ## Thought Process
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Receive Problem Statement] --> B{Stateful or Stateless?}
     B -- Stateful --> C[Push State to Data Tier]
     B -- Stateless --> D{Security Posture}

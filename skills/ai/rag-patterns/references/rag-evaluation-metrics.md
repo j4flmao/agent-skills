@@ -49,7 +49,7 @@ To optimize **Rag Evaluation Metrics**, we enforce the following foundational ru
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -110,7 +110,7 @@ To optimize **Rag Evaluation Metrics**, we enforce the following foundational ru
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -170,7 +170,7 @@ To optimize **Rag Evaluation Metrics**, we enforce the following foundational ru
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 sequenceDiagram
     participant User
     participant LLM

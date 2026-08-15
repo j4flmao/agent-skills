@@ -4,8 +4,8 @@ Zero-trust architecture in DW involves IAM assumed roles for compute clusters, K
 
 ## 2. System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[User via SSO] --> B(IdP)
     B --> C{RBAC Policy Engine}
     C --> D[Compute Engine]

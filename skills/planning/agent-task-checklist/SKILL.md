@@ -18,8 +18,8 @@ description: "Rules for breaking down complex projects into granular checklists 
 ## Lifecycle Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Start Project] --> B[Break down into granular tasks]
     B --> C["Create/Update task.md with `[ ]` notation"]
     C --> D{Select next task}

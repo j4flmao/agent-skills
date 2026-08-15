@@ -7,8 +7,8 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     RocksDB_State["RocksDB_State Layer"] -->|Stream| ApiReference_A["ApiReference_A Processor"]
     ApiReference_A -->|Checkpoint| KMS_Auth
     ApiReference_A -->|Optimize| ApiReference_B["ApiReference_B Engine"]

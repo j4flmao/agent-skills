@@ -16,8 +16,8 @@ async def submit_job(job_id: str, background_tasks: BackgroundTasks):
 
 ## System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[API Gateway] --> B[Job Controller]
     B --> C[Kafka Topic]
     C --> D[Spark Cluster]

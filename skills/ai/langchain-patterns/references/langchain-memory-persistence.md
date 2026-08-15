@@ -48,7 +48,7 @@ To optimize **Langchain Memory Persistence**, we enforce the following foundatio
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -110,7 +110,7 @@ To optimize **Langchain Memory Persistence**, we enforce the following foundatio
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -170,7 +170,7 @@ To optimize **Langchain Memory Persistence**, we enforce the following foundatio
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 sequenceDiagram
     participant User
     participant LLM

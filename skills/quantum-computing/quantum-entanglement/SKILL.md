@@ -15,8 +15,8 @@ Entanglement is the quintessential quantum resource, violating Bell inequalities
   4. Bob applies conditional Pauli operations ($I, X, Z, XZ$) to his half of the pair, perfectly reconstructing $|\psi\rangle$.
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     Start[Unknown State & Shared EPR Pair] --> A[Alice's Local Operations]
     A --> B[Bell-Basis Measurement]
     B --> C[Collapse to 4 Possible Outcomes]

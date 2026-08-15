@@ -15,8 +15,8 @@ A qubit is a two-level quantum system defined in a complex vector space $\mathbb
 - **CNOT**: The fundamental two-qubit entangling gate. Flips the target qubit conditionally based on the control qubit's state.
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     Q[Qubit State in Bloch Sphere] --> U[Apply Unitary Gate]
     U --> H[Hadamard Gate]
     U --> P[Pauli Gates]

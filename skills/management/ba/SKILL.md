@@ -126,8 +126,8 @@ Scenario Outline: Login with valid credentials
 Document workflows as structured steps:
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
   A[User submits order] --> B{Payment valid?}
   B -->|Yes| C[Create order]
   B -->|No| D[Show error]

@@ -4,8 +4,8 @@ Data Vault 2.0 implementations combined with dbt require strict separation of co
 
 ## 2. System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Staging] --> B[Hubs / Links]
     B --> C[Satellites]
     C --> D[Information Marts]

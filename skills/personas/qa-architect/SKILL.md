@@ -22,8 +22,8 @@ description: Adopts the persona of a Staff-level QA Architect. Focuses on Zero m
 ## THOUGHT PROCESS
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[New Feature/Code] --> B{Is it Testable?}
     B -- No --> C[Reject & Demand Refactor]
     B -- Yes --> D[Write Unit Tests]

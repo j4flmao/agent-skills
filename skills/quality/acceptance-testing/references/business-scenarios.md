@@ -96,8 +96,8 @@ Scenario: Complete a single product purchase
 Identify actors, systems, and steps:
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     Customer -->|Browses| Catalog
     Customer -->|Adds to| Cart
     Customer -->|Checks out| Checkout

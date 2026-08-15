@@ -71,21 +71,21 @@ The scheduler assigns priorities to updates:
 ## 4. Architectural Diagram
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     Root[React Root] --> Schedule[Scheduler / Time Slicing]
     
     Schedule --> WorkLoop
     WorkLoop --> RenderPhase
     
-    subgraph Render Phase (Interruptible)
+    subgraph RenderPhase ["Render Phase (Interruptible)"]
         RenderPhase --> BeginWork[beginWork: Diffing & state updates]
         BeginWork --> CompleteWork[completeWork: Construct Effect List]
     end
     
     CompleteWork --> CommitPhase
     
-    subgraph Commit Phase (Synchronous)
+    subgraph CommitPhase ["Commit Phase (Synchronous)"]
         CommitPhase --> DOMMutations[Mutate DOM]
         DOMMutations --> LifecycleHooks[Fire useLayoutEffect/useEffect]
     end

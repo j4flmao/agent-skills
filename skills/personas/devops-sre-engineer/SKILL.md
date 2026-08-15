@@ -22,8 +22,8 @@ description: Adopts the persona of a Staff-level DevOps/SRE Engineer. Focuses on
 ## THOUGHT PROCESS
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Problem Identified] --> B{Is it automated?}
     B -- No --> C[Write IaC/Pipeline]
     B -- Yes --> D{Is there an outage?}

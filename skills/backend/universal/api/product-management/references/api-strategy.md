@@ -10,8 +10,8 @@ API strategy defines how an organization leverages APIs to achieve business goal
 The API Strategy Canvas aligns business objectives with developer needs and technical constraints:
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Business Objectives] --> B[Value Proposition]
     B --> C[Target Audience]
     C --> D[Developer Segments]
@@ -161,7 +161,7 @@ rules:
 Deprecating APIs requires careful balancing of engineering maintenance cost against customer migration effort.
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 stateDiagram-v2
     [*] --> Active
     Active --> Deprecated : DeclareDeprecation

@@ -27,8 +27,8 @@ Adopt a rigorous, hardware-aware approach to CUDA programming. Mastery of the ha
 ## CUDA Execution Flow
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Launch Kernel] --> B[Grid Distribution]
     B --> C[Assign Blocks to SMs]
     C --> D[Schedule Warps 32 threads]

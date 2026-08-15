@@ -10,8 +10,8 @@ description: Forces the agent to research and write a structured implementation 
 ## 1. THE PLANNING WORKFLOW
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Task Received] --> B[Codebase Research]
     B --> C[Draft implementation_plan.md]
     C --> D{User Approval?}

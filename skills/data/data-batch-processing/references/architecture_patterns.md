@@ -17,8 +17,8 @@ public class KappaProcessor {
 
 ## System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Data Source] --> B[Event Log]
     B --> C[Unified Processor]
     C --> D[Serving Layer]

@@ -3,8 +3,8 @@
 Dynamic config loading via ZooKeeper to update Spark and Flink topologies without downtime.
 ## 2. System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
 A[ZooKeeper] --> B[Spark Node]
 A --> C[Flink TaskManager]
 ```

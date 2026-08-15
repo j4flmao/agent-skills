@@ -13,8 +13,8 @@ FileSystem fs = FileSystem.get(conf);
 
 ## System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[User] --> B[Apache Knox]
     B --> C[Apache Ranger]
     C --> D[HDFS / Hive]

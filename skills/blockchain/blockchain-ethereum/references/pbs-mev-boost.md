@@ -5,8 +5,8 @@
 ## The MEV Supply Chain
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     S[Searchers] -->|tx bundles| B[Builders]
     B -->|execution payloads| R[Relays]
     R -->|blinded headers| V[Validators/Proposers]
@@ -42,7 +42,7 @@ Searcher profit: $100
 ### Protocol Flow
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 sequenceDiagram
     participant V as Validator
     participant R as Relay
@@ -247,7 +247,7 @@ Relays are **custodians** of execution payloads during the blinded period:
 - Builder may add additional txs, but cannot omit listed txs
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 sequenceDiagram
     participant C as FOCIL Committee
     participant B as Builder
@@ -283,8 +283,8 @@ sequenceDiagram
 ### Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     U[User] -->|intent| SUITE[SUAVE Chain]
     SUITE -->|TEE execution| EG[Execution Grid]
     EG -->|builds payload| REL[Relay Network]
@@ -384,8 +384,8 @@ Total block reward:
 ### Centralized Relay Risk
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     subgraph "Relay Concentration"
         F[Flashbots Relay ~35%]
         U[UltraSound ~20%]

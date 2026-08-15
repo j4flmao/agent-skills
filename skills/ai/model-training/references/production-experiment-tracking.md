@@ -48,7 +48,7 @@ To optimize **Production Experiment Tracking**, we enforce the following foundat
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -111,7 +111,7 @@ To optimize **Production Experiment Tracking**, we enforce the following foundat
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 sequenceDiagram
     participant User
     participant LLM
@@ -171,7 +171,7 @@ To optimize **Production Experiment Tracking**, we enforce the following foundat
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 sequenceDiagram
     participant User
     participant LLM

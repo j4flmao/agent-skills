@@ -7,8 +7,8 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     PerformanceTuning_A["PerformanceTuning_A Layer"] -->|Stream| KMS_Auth["KMS_Auth Processor"]
     KMS_Auth -->|Checkpoint| RocksDB_State
     KMS_Auth -->|Optimize| PerformanceTuning_C["PerformanceTuning_C Engine"]

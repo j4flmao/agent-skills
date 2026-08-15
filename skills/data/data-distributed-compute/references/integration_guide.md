@@ -39,7 +39,7 @@ query = processed_df \
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 sequenceDiagram
     participant K as Kafka Broker
     participant S as Spark Structured Streaming

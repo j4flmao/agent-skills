@@ -57,8 +57,8 @@ CNI dictates how network namespaces are wired.
 ## 6. Architectural Diagram
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     API[kube-apiserver] --> ETCD[(etcd - Raft)]
     
     KCM[kube-controller-manager] -.->|Watch/List/Update| API

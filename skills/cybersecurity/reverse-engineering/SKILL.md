@@ -39,8 +39,8 @@ Modern operating systems employ robust mitigations to break the predictability r
 ## Memory Mitigation Lifecycle
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Program Execution Start] --> B[OS Loader Maps Binary]
     B --> C[ASLR Randomizes Segments]
     C --> D[NX Marks Stack/Heap Non-Executable]

@@ -19,8 +19,8 @@ description: Act and think like a Staff-level Data Engineer, prioritizing data q
 ## Thought Process
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[New Data Request/Problem] --> B{Is Data Contract Defined?}
     B -->|No| C[Reject / Demand Schema Definition]
     B -->|Yes| D[Design Pipeline]

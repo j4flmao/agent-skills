@@ -108,8 +108,8 @@ function assignVariant(userId: string, config: ABTestConfig): string {
 ## Flag Evaluation Lifecycle
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
   A[Flag Check] --> B{Flag Exists?}
   B -->|No| C[Return Default]
   B -->|Yes| D{Targeting Rule?}

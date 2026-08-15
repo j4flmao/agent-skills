@@ -11,8 +11,8 @@ description: Integrating Stable Diffusion for vision generation and Whisper for 
 
 ## Multimodal Workflow
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[User Audio] --> B(Whisper)
     B -->|Text Prompt| C[Stable Diffusion]
     C --> D[Generated Image]

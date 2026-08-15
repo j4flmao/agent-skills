@@ -29,8 +29,8 @@ When analyzing smart contracts, adhere to the following rigid execution flow:
 ## 🗺️ Thought Process Map
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Receive Contract for Audit] --> B(Reconnaissance & Architecture Map)
     B --> C{Identify Invariants}
     C --> D[Analyze Access Controls]

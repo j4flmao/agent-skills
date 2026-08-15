@@ -9,8 +9,8 @@ Embed security directly into CI/CD pipelines to catch vulnerabilities early. Foc
 ## Pipeline Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Push Code] --> B[Lint & Unit Test]
     B --> C{Security Scans}
     C -->|SAST| D[Semgrep / CodeQL]

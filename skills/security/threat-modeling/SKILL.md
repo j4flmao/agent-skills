@@ -18,8 +18,8 @@ Identify and mitigate architectural security flaws during the design phase, befo
 ## Threat Modeling Process
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Decompose Application] --> B[Identify Threats]
     B --> C[Determine Mitigations]
     C --> D[Validate]

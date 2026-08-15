@@ -26,8 +26,8 @@ Physical registers are partitioned into banks. SASS instructions attempting to r
 ### SASS SM Execution Pipeline
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[SASS Instruction Fetch] --> B[Instruction Cache]
     B --> C[Decode & Dependency Check]
     C --> D{Warp Scheduler}

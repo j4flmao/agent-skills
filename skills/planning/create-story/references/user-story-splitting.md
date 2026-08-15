@@ -369,7 +369,7 @@ STORY-406: Dashboard supports date range filtering
 ## Splitting Workflow
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 1. Identify large story during backlog grooming
 2. Apply splitting patterns to break it down
 3. Validate each split story independently:

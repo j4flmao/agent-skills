@@ -58,8 +58,8 @@ spec:
 
 ## Architecture Diagram
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A["CRD Created"] --> B{"Operator Watches"}
     B -->|"Event triggered"| C["Reconcile Loop"]
     C --> D["Update Status"]

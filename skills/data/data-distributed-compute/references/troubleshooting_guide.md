@@ -24,8 +24,8 @@ jhat -port 7401 /var/log/flink/heap_dumps/java_pid12345.hprof
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[JobManager] -->|Trigger Checkpoint| B(TaskManager 1)
     A -->|Trigger Checkpoint| C(TaskManager 2)
     B -->|Sync Phase| D[State Snapshot]

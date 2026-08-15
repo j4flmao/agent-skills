@@ -10,8 +10,8 @@ Ensuring AI-generated content meets EEAT (Experience, Expertise, Authoritativene
 ## Optimization Pipeline
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[AI Draft Generation] --> B[Information Gain & Fact Checking]
     B --> C[Inject Personal/Brand Experience]
     C --> D[Human Editorial Review]

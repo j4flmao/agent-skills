@@ -27,8 +27,8 @@ spec:
 
 ## System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Load Balancer] --> B[BI Node 1]
     A --> C[BI Node 2]
     B --> D[(Metadata DB)]

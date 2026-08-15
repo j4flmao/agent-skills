@@ -40,8 +40,8 @@ public partial class MovementSystem : SystemBase {
 ## ECS Data Flow
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     E[Entity] -->|Has| C[Component Data]
     S[System] -->|Iterates| C
     S -->|Updates| C

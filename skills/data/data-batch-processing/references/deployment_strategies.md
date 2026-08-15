@@ -17,8 +17,8 @@ spec:
 
 ## System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[CI/CD Pipeline] --> B[K8s Operator]
     B --> C[Blue Cluster]
     B --> D[Green Cluster]

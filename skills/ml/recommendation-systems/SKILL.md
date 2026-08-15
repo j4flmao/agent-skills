@@ -8,8 +8,8 @@ description: Implementation of Collaborative Filtering for recommendation system
 ## Architecture Overview
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[User-Item Interactions] --> B[Data Preprocessing]
     B --> C[Collaborative Filtering Model]
     C --> D{Model Type}

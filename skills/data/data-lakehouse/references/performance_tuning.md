@@ -7,8 +7,8 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     PerformanceTuning_B["PerformanceTuning_B Layer"] -->|Stream| KMS_Auth["KMS_Auth Processor"]
     KMS_Auth -->|Checkpoint| PerformanceTuning_C
     KMS_Auth -->|Optimize| S3_Bucket["S3_Bucket Engine"]

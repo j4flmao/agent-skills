@@ -20,8 +20,8 @@ Database consistency relies on MVCC (Multi-Version Concurrency Control) and lock
 - **Serializable:** The highest isolation. Guarantees operations act as if executed serially. Implemented via Strict Two-Phase Locking (SS2PL) or Serializable Snapshot Isolation (SSI). SSI detects cyclic read-write dependencies and aborts transactions to prevent anomalies.
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Database Engine]
     
     A --> B[Storage Structures]

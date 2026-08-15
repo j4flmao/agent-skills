@@ -18,8 +18,8 @@ def find_slow_queries(log_file):
 
 ## System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Browser Profiler] --> B[Network Waterfall]
     C[Query Logs] --> D[Log Analyzer]
     B --> E[Root Cause Analysis]

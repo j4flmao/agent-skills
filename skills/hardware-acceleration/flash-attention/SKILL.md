@@ -23,8 +23,8 @@ $l^{(x)} = l^{(x-1)} e^{m^{(x-1)} - m^{(x)}} + \sum e^{x - m^{(x)}}$
 
 ## Data Flow
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     HBM_QKV["HBM: Q, K, V Matrices"]
     subgraph GPU_SRAM["SRAM Compute Blocks"]
         TileLoad["Load Block of Q, K, V to SRAM"]

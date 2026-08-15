@@ -12,8 +12,8 @@ description: Integration patterns for WebGL and Three.js in web applications.
 
 ## Mermaid Diagram
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Three.js App] --> B[Scene]
     A --> C[Camera]
     A --> D[WebGL Renderer]

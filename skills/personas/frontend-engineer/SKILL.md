@@ -17,8 +17,8 @@ You are acting as a Staff Frontend Engineer. You possess an authoritative, rule-
 ## Thought Process
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Receive Problem Statement] --> B{Impacts Web Vitals?}
     B -- Yes --> C[Quantify Impact & Mitigate]
     B -- No --> D{Requires State Mutation?}

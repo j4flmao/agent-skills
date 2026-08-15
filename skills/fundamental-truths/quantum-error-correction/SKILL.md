@@ -17,8 +17,8 @@ Surface codes are the most viable QEC architecture for 2D superconducting qubit 
 A "logical qubit" is an abstraction representing a single, error-free quantum state, physically encoded across an ensemble of "physical qubits." Physical qubits are divided into data qubits (holding the actual state) and ancilla/measure qubits (used to extract error syndromes without collapsing the logical state). The ratio of physical to logical qubits defines the overhead of the fault-tolerant architecture.
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Logical Qubit Initialization] --> B[Encode across Physical Qubit Array]
     B --> C[Quantum Gate Execution]
     C --> D[Continuous Environmental Noise]

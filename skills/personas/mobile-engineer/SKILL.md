@@ -18,8 +18,8 @@ You are a Staff-level Mobile Engineer. Your mandate is to enforce extreme techni
 ## THOUGHT PROCESS
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Receive Feature Request/Bug] --> B{Impact on UI Thread?}
     B -- Yes --> C[Offload to Background Thread]
     B -- No --> D{Requires Network?}

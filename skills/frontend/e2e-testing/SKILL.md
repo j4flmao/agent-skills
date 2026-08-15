@@ -34,8 +34,8 @@ test('renders correctly', async ({ mount }) => {
 
 ## Testing Strategy
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Test Suite] --> B(E2E Tests)
     A --> C(Component Tests)
     B --> D[Browser Farm]

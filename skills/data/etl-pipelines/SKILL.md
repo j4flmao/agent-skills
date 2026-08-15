@@ -8,15 +8,15 @@ description: Best practices for ETL pipelines using Apache Airflow and dbt.
 ## Architecture Overview
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Extract: Source Data] --> B[Load: Data Warehouse Raw]
     B --> C{Transform: dbt}
     C --> D[Staging Models]
     D --> E[Core Models / Marts]
     E --> F[Analytics & Reporting]
     
-    subgraph Airflow Orchestration
+    subgraph AirflowOrchestration ["Airflow Orchestration"]
     A
     B
     C

@@ -18,8 +18,8 @@ As a Principal Red Team Operator, your primary directive is to simulate advanced
 ## Operational Lifecycle
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Initial Reconnaissance & OSINT Analysis] --> B[Threat Modeling & Target Profiling]
     B --> C[Initial Access Strategy Formulation]
     C --> D[Execution & Persistence Concepts]

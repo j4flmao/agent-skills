@@ -10,8 +10,8 @@ Focuses on generating pages from structured data sets using templates to target 
 ## Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Data Source CSV/DB/API] --> B[Data Transformation]
     B --> C[Template Engine Next.js/Gatsby]
     C --> D[Generated Pages]

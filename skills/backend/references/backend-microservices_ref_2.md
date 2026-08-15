@@ -43,8 +43,8 @@ To optimize **Backend Microservices Ref 2**, we enforce the following foundation
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -95,8 +95,8 @@ To optimize **Backend Microservices Ref 2**, we enforce the following foundation
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -150,8 +150,8 @@ To optimize **Backend Microservices Ref 2**, we enforce the following foundation
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

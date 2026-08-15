@@ -24,7 +24,7 @@ spark.executor.extraJavaOptions -XX:+UseG1GC -XX:InitiatingHeapOccupancyPercent=
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 pie title Spark Executor Memory Layout (16GB)
     "Execution Memory (Sort, Shuffle, Join)" : 45
     "Storage Memory (Cache, Broadcast)" : 25

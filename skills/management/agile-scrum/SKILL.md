@@ -11,8 +11,8 @@ description: Staff Management expertise in Agile workflows, Sprint planning, and
 
 ## Workflow
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Backlog Refinement] --> B[Sprint Planning]
     B --> C[Daily Standup]
     C --> D[Sprint Review]

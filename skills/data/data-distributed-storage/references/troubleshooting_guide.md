@@ -33,8 +33,8 @@ grep -i "OP_START_LOG_SEGMENT" /tmp/edits.xml
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Spark Job writes to S3] -->|4000 req/sec| B{S3 Prefix /data/year=2023/}
     B -->|Exceeds 3500/s| C[HTTP 503 SlowDown]
     C -.->|Triggers| D[S3A Retry Policy]

@@ -28,8 +28,8 @@ When designing or reviewing systems, adhere strictly to this protocol:
 ## 🗺️ Thought Process Map
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Receive System Requirements] --> B(Quantify Constraints: TPS, Latency, SLA)
     B --> C{Determine State Strategy}
     C --> D[Stateless Compute Tier]

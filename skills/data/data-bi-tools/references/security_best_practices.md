@@ -16,8 +16,8 @@ http
 
 ## System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[User Request] --> B[Auth Filter]
     B --> C[RBAC Evaluator]
     C --> D[Dashboard Object]

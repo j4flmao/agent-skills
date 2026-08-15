@@ -50,7 +50,7 @@ To optimize **Architecture Patterns**, we enforce the following foundational rul
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 sequenceDiagram
     participant API
     participant WorkerNode
@@ -120,8 +120,8 @@ To optimize **Architecture Patterns**, we enforce the following foundational rul
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]
@@ -179,8 +179,8 @@ To optimize **Architecture Patterns**, we enforce the following foundational rul
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]
@@ -239,8 +239,8 @@ To optimize **Architecture Patterns**, we enforce the following foundational rul
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]
@@ -296,7 +296,7 @@ To optimize **Architecture Patterns**, we enforce the following foundational rul
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 sequenceDiagram
     participant API
     participant WorkerNode

@@ -29,8 +29,8 @@ Natural data—whether retinal images, auditory waveforms, or tokenized semantic
 ## III. Epistemological Flow of Information
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Ambient Space: Raw High-Dimensional Data in R^N]
     B[Entropy Minimization: Compression of Information]
     C[Variational Projection: KL Divergence Optimization]

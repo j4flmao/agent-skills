@@ -7,8 +7,8 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     RocksDB_State["RocksDB_State Layer"] -->|Stream| ORC_Writer["ORC_Writer Processor"]
     ORC_Writer -->|Checkpoint| LakehouseEcosystemTools_C
     ORC_Writer -->|Optimize| S3_Bucket["S3_Bucket Engine"]

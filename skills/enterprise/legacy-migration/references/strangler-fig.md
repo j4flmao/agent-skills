@@ -8,8 +8,8 @@ Gradually replace legacy system functionality with new implementation while rout
 ### Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+graph TD
     Client --> API_Gateway
     API_Gateway --> Router
     Router -->|Feature Flag ON| New_Service

@@ -22,8 +22,8 @@ Because logical-to-physical mapping is abstracted, multiple sequences (e.g., bea
 
 ## Architecture Data Flow
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     LogicalSeq[Logical Token Sequence]
     subgraph BlockTable[Block Table Mapping]
         LogicalToPhysical[Logical Page -> Physical Block Index]

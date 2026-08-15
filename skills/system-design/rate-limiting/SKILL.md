@@ -49,8 +49,8 @@ end
 
 ## Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart LR
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
     A[Client Request] --> B{Rate Limiter}
     B -- Allowed --> C[API Gateway]
     C --> D[Backend Service]
