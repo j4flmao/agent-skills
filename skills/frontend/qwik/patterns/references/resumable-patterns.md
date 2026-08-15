@@ -14,7 +14,7 @@
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Server renders HTML] --> B[State serialized in data-qwik attributes]
     B --> C[Browser renders HTML immediately]
     C --> D[User clicks button]

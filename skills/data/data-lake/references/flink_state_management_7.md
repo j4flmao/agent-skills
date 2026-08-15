@@ -8,7 +8,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 ### System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     KMS_Auth["KMS_Auth Layer"] -->|Stream| FlinkStateManagement7_A["FlinkStateManagement7_A Processor"]
     FlinkStateManagement7_A -->|Checkpoint| FlinkStateManagement7_B
     FlinkStateManagement7_A -->|Optimize| S3_Bucket["S3_Bucket Engine"]

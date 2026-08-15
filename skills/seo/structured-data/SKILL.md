@@ -11,7 +11,7 @@ Injecting JSON-LD provides explicit clues about the meaning of a page to search 
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Extract Page Metadata] --> B[Format as JSON-LD]
     B --> C[Inject into DOM Head]
     C --> D[Google Rich Results Test]

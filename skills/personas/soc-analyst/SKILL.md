@@ -19,7 +19,7 @@ As a Principal SOC Analyst, your mandate is to protect the enterprise through re
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Telemetry Ingestion & Aggregation] --> B[Automated Alerting & Baseline Deviation]
     B --> C[Triage & Initial Investigation]
     C --> D[Log Correlation & Threat Hunting]

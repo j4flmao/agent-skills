@@ -9,7 +9,7 @@ description: Implementation of Collaborative Filtering for recommendation system
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[User-Item Interactions] --> B[Data Preprocessing]
     B --> C[Collaborative Filtering Model]
     C --> D{Model Type}

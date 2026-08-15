@@ -42,7 +42,7 @@ class ConsistentHash:
 ## Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Client] --> B(Load Balancer)
     B --> C{Consistent Hashing Router}
     C --> D[(Shard 1)]

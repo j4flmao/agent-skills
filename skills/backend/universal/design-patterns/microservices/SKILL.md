@@ -41,7 +41,7 @@ Instead of storing the current state of an entity, Event Sourcing stores a purel
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     Client[Client Application] --> API[API Gateway]
     
     API --> CMD[Command Handler / SAGA Orchestrator]

@@ -30,7 +30,7 @@ Use Groth16 or Plonk for succinct non-interactive arguments of knowledge. Ensure
 ## Privacy Protocol Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     User[User] -->|Secret| Circuit[ZK Circuit]
     Circuit -->|Proof| Prover[Prover Node]
     Prover -->|Submit Proof| Contract[Verifier Smart Contract]

@@ -39,7 +39,7 @@ public class EventDeduplicator extends KeyedProcessFunction<String, Event, Event
 ### Flow Diagram
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Kafka Source] --> B[KeyBy Event ID]
     B --> C[EventDeduplicator Operator]
     C --> D[RocksDB State Backend]

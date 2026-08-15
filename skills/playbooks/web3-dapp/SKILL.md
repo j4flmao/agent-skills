@@ -11,7 +11,7 @@ description: Playbook for building full-stack Web3 applications (Next.js, Solidi
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A["Next.js Frontend"] -->|RPC Call| B["Smart Contract (Solidity)"]
     B -->|Emits Events| C["Indexer (The Graph/Squid)"]
     C -->|GraphQL Query| A

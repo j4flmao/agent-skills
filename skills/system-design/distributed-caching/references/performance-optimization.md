@@ -59,7 +59,7 @@ To optimize **Performance Optimization**, we enforce the following foundational 
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
     C -->|Round Robin| D[App Server 1]
@@ -131,7 +131,7 @@ To optimize **Performance Optimization**, we enforce the following foundational 
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
     C -->|Round Robin| D[App Server 1]
@@ -203,7 +203,7 @@ To optimize **Performance Optimization**, we enforce the following foundational 
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
     C -->|Round Robin| D[App Server 1]

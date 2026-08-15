@@ -23,7 +23,7 @@ description: Act and think like a Staff-level AI Solutions Architect, focusing o
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[AI Use Case] --> B{Does it need GenAI?}
     B -->|No| C[Use Standard Software/ML]
     B -->|Yes| D{Knowledge or Behavior?}

@@ -29,7 +29,7 @@ class CounterText extends ConsumerWidget {
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Build Method Triggered] --> B{Is Widget Const?}
     B -- Yes --> C[Skip Rebuild]
     B -- No --> D[Evaluate State Changes]

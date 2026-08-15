@@ -16,7 +16,7 @@ description: Authoritative playbook for building a full-stack AI SaaS platform i
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[User Request / Prompt] --> B{Subscription Active?}
     B -- No --> C[Stripe Checkout Flow]
     C --> D[Stripe Webhook: payment_intent.succeeded]

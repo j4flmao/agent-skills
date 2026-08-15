@@ -58,7 +58,7 @@ CNI dictates how network namespaces are wired.
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     API[kube-apiserver] --> ETCD[(etcd - Raft)]
     
     KCM[kube-controller-manager] -.->|Watch/List/Update| API

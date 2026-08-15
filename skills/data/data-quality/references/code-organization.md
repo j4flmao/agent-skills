@@ -4,7 +4,7 @@ Monorepo vs Polyrepo. Managing dependencies across Spark clusters and Flink apps
 ## 2. System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
 A[Git] --> B[CI/CD]
 B --> C[Artifactory]
 ```

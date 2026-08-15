@@ -24,7 +24,7 @@ Quantum circuits in Qiskit are represented as DAGs (Directed Acyclic Graphs). A 
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Start] --> B[Initialize QuantumCircuit]
     B --> C[Allocate Quantum and Classical Registers]
     C --> D[Apply Unitary Gates]

@@ -11,7 +11,7 @@ The API Strategy Canvas aligns business objectives with developer needs and tech
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Business Objectives] --> B[Value Proposition]
     B --> C[Target Audience]
     C --> D[Developer Segments]

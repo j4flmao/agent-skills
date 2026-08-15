@@ -113,7 +113,7 @@ def get_weight(store: Store, root: Root, justified_slot: Slot) -> int:
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     V[Validator] -->|create attestation| A[Aggregation]
     A -->|gossip| AA[Aggregation pool]
     AA -->|aggregate| AT[Attestation]

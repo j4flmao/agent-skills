@@ -85,7 +85,7 @@
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     Proposed --> Accepted
     Proposed --> Rejected
     Accepted --> Superseded

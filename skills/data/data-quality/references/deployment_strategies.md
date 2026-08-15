@@ -187,7 +187,7 @@ To optimize **Deployment Strategies**, we enforce the following foundational rul
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]

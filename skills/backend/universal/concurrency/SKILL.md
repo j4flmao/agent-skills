@@ -27,7 +27,7 @@ A race condition is an unprotected non-atomic read-modify-write sequence.
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Concurrency Models]
     
     A --> B[1:1 OS Threading]

@@ -22,7 +22,7 @@ Large Language Models are uniformly memory-bandwidth bound during generation. Op
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Network Definition / ONNX] --> B[Graph Optimization]
     B --> C[Layer & Tensor Fusion]
     C --> D[Precision Calibration]

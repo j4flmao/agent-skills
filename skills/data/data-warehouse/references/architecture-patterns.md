@@ -5,7 +5,7 @@ The Lakehouse architecture bridges data lakes and warehouses. Utilizing Delta La
 ## 2. System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Raw S3 Bucket] -->|Auto Loader| B(Delta Bronze)
     B -->|Structured Streaming| C(Delta Silver)
     C -->|Spark SQL Merge| D(Delta Gold)

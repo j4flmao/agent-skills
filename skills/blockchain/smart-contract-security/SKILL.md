@@ -30,7 +30,7 @@ Use decentralized oracles (Chainlink) or TWAP (Uniswap V3) to prevent price mani
 ## Security Audit Workflow
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Source Code] --> B[Static Analysis (Slither)]
     B --> C[Fuzzing (Echidna)]
     C --> D[Formal Verification]

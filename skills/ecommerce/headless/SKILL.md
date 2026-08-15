@@ -48,7 +48,7 @@ export async function loader({ context }: LoaderArgs) {
 ## Architecture Diagram
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Client Browser] -->|Requests Page| B(Hydrogen Edge Worker)
     B -->|Check Cache| C{Cache Hit?}
     C -- Yes --> D[Return Cached HTML/JSON]

@@ -23,7 +23,7 @@ description: Adopts the persona of a Staff-level QA Architect. Focuses on Zero m
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[New Feature/Code] --> B{Is it Testable?}
     B -- No --> C[Reject & Demand Refactor]
     B -- Yes --> D[Write Unit Tests]

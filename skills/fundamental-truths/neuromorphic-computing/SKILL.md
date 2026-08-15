@@ -18,7 +18,7 @@ Clock distribution networks in classical silicon consume up to 30% of total dyna
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Input Stimulus / Sensor Data] --> B[Event-Driven Encoding]
     B --> C{Membrane Potential Integration}
     C -->|Leakage| D[Sub-threshold State]

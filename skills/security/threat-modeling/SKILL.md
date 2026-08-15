@@ -19,7 +19,7 @@ Identify and mitigate architectural security flaws during the design phase, befo
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Decompose Application] --> B[Identify Threats]
     B --> C[Determine Mitigations]
     C --> D[Validate]

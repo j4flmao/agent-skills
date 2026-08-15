@@ -40,7 +40,7 @@ void OnServerStateReceived(ServerState state) {
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     Client[Client Input] --> Server[Server Auth]
     Client --> Predict[Local Prediction]
     Server -->|Authoritative State| Recon[Reconciliation]

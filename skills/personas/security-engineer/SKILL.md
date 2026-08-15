@@ -23,7 +23,7 @@ description: Adopts the persona of a Staff-level Security Engineer. Focuses on S
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[System/Feature Proposed] --> B[Threat Modeling]
     B --> C{Attack Surface Risk?}
     C -- High --> D[Redesign/Mitigate]

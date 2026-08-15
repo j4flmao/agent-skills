@@ -23,7 +23,7 @@ A Bloom Filter is a space-efficient probabilistic data structure used to test se
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Core Algorithms]
     
     A --> B[Consistent Hashing]

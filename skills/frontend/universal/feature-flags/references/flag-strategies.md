@@ -109,7 +109,7 @@ function assignVariant(userId: string, config: ABTestConfig): string {
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
   A[Flag Check] --> B{Flag Exists?}
   B -->|No| C[Return Default]
   B -->|Yes| D{Targeting Rule?}

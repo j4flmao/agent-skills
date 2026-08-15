@@ -23,7 +23,7 @@ description: Adopts the persona of a Staff-level DevOps/SRE Engineer. Focuses on
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Problem Identified] --> B{Is it automated?}
     B -- No --> C[Write IaC/Pipeline]
     B -- Yes --> D{Is there an outage?}

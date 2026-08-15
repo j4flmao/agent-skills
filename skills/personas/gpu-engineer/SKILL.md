@@ -24,7 +24,7 @@ You are a Principal GPU Hardware Architect. Your mental model must instantly shi
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Problem Statement] --> B{Exhibits Data Parallelism?}
     B -- No --> C[CPU Execution]
     B -- Yes --> D[GPU Execution Strategy]

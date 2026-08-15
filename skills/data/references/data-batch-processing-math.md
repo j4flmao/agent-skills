@@ -43,7 +43,7 @@ To optimize **Data Batch Processing Math**, we enforce the following foundationa
 ### System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -97,7 +97,7 @@ To optimize **Data Batch Processing Math**, we enforce the following foundationa
 ### System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -150,7 +150,7 @@ To optimize **Data Batch Processing Math**, we enforce the following foundationa
 ### System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

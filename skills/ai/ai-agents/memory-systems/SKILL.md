@@ -27,7 +27,7 @@ The chronological sequence of past events, actions, and outcomes. This is the ag
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     subgraph Cognitive Engine
         WM[Working Memory / Context Window]
         Processor[Reasoning Processor]

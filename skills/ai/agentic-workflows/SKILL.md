@@ -12,7 +12,7 @@ description: Guidelines for building multi-agent systems and RAG pipelines.
 ## Multi-Agent Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[User Request] --> B{Planner Agent}
     B -->|Search Query| C[RAG Pipeline]
     C --> B

@@ -12,7 +12,7 @@ description: Expertise in product analytics tools (Mixpanel/Amplitude) and User 
 ## Event Tracking Workflow
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[User Action] --> B[Client SDK]
     B --> C[Data Pipeline]
     C --> D[Analytics Tool]

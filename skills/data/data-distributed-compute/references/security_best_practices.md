@@ -26,7 +26,7 @@ spark.ssl.keyStore /etc/security/keystores/server.keystore
 ### System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Client UI] -- HTTPS --> B[Spark Driver]
     B -- TLS + SASL --> C[Executor 1]
     B -- TLS + SASL --> D[Executor 2]

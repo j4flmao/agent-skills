@@ -25,7 +25,7 @@ Conceptual log analysis demands parsing unstructured security events into action
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Telemetry Sources] --> B[Log Aggregation]
     B --> C[SIEM Correlation Engine]
     C --> D{Alert Generation}

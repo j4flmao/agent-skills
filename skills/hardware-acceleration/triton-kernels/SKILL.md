@@ -22,7 +22,7 @@ Implementing attention demands block-level softmax formulations (e.g., FlashAtte
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Triton Kernel Launch] --> B[Block Grid Definition]
     B --> C[Pointer Arithmetic & Masking]
     C --> D[SRAM Staging via tl.load]

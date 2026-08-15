@@ -31,7 +31,7 @@ joined_df = skewed_df_salted.join(
 ### System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Skewed Data] --> B[Add Random Salt 0-N]
     C[Dimension Data] --> D[Replicate N times]
     B --> E[Hash Shuffle on Key+Salt]

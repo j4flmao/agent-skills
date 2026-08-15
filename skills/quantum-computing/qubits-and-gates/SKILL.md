@@ -16,7 +16,7 @@ A qubit is a two-level quantum system defined in a complex vector space $\mathbb
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     Q[Qubit State in Bloch Sphere] --> U[Apply Unitary Gate]
     U --> H[Hadamard Gate]
     U --> P[Pauli Gates]

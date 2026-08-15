@@ -26,7 +26,7 @@ The Grover diffusion operator $D = 2|s\rangle\langle s| - I$ performs inversion 
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Start] --> B[Initialize Uniform Superposition]
     B --> C[Apply Phase Oracle]
     C --> D[Apply Grover Diffusion Operator]

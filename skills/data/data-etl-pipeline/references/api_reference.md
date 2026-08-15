@@ -15,7 +15,7 @@ def status(): return {'status': 'healthy'}
 ## System Architecture Diagram
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Client] -->|Request| B(API Gateway)
     B --> C{api_reference Service}
     C -->|Read/Write| D[(State Store)]

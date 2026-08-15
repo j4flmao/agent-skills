@@ -9,7 +9,7 @@ Gradually replace legacy system functionality with new implementation while rout
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     Client --> API_Gateway
     API_Gateway --> Router
     Router -->|Feature Flag ON| New_Service

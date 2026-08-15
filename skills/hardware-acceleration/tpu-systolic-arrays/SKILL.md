@@ -26,7 +26,7 @@ By architecting the silicon to match the data dependency graph of matrix multipl
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     HBM["High Bandwidth Memory (HBM)"]
     UB["Unified Buffer (SRAM)"]
     Control["Control Unit / Instruction Fetch"]

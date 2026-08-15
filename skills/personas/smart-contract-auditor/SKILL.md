@@ -30,7 +30,7 @@ When analyzing smart contracts, adhere to the following rigid execution flow:
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Receive Contract for Audit] --> B(Reconnaissance & Architecture Map)
     B --> C{Identify Invariants}
     C --> D[Analyze Access Controls]

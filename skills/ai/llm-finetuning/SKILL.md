@@ -12,7 +12,7 @@ description: Best practices for dataset preparation and PEFT/LoRA fine-tuning.
 ## Fine-Tuning Pipeline
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Raw Data] --> B[Formatting & Tokenization]
     B --> C[Base Model]
     C --> D{Apply LoRA Adapters}

@@ -49,7 +49,7 @@ To optimize **Integration Guide**, we enforce the following foundational rules:
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]
@@ -248,7 +248,7 @@ To optimize **Integration Guide**, we enforce the following foundational rules:
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]
@@ -307,7 +307,7 @@ To optimize **Integration Guide**, we enforce the following foundational rules:
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
     C -->|RocksDB| D[(S3 Checkpoints)]

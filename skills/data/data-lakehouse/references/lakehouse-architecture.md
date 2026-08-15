@@ -8,7 +8,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 ### System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     LakehouseArchitecture_B["LakehouseArchitecture_B Layer"] -->|Stream| ORC_Writer["ORC_Writer Processor"]
     ORC_Writer -->|Checkpoint| LakehouseArchitecture_A
     ORC_Writer -->|Optimize| S3_Bucket["S3_Bucket Engine"]

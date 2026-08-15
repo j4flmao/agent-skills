@@ -47,7 +47,7 @@ To optimize **Data Data Warehouse Ref 2**, we enforce the following foundational
 ### System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -102,7 +102,7 @@ To optimize **Data Data Warehouse Ref 2**, we enforce the following foundational
 ### System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -156,7 +156,7 @@ To optimize **Data Data Warehouse Ref 2**, we enforce the following foundational
 ### System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

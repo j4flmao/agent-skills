@@ -16,7 +16,7 @@ description: Playbook for building a High-Scale E-Commerce platform.
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     SEO[Organic SEO Traffic] --> CDN[Edge CDN / WAF]
     CDN --> LB[Load Balancer]
     LB --> FE[Headless Frontend]

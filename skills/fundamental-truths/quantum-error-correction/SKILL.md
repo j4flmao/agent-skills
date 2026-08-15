@@ -18,7 +18,7 @@ A "logical qubit" is an abstraction representing a single, error-free quantum st
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Logical Qubit Initialization] --> B[Encode across Physical Qubit Array]
     B --> C[Quantum Gate Execution]
     C --> D[Continuous Environmental Noise]

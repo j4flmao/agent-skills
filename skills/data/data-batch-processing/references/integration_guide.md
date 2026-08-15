@@ -18,7 +18,7 @@ while True:
 ## System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[PostgreSQL] --> B[Debezium]
     B --> C[Kafka]
     C --> D[Spark Streaming]

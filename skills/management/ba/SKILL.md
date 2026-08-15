@@ -127,7 +127,7 @@ Document workflows as structured steps:
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
   A[User submits order] --> B{Payment valid?}
   B -->|Yes| C[Create order]
   B -->|No| D[Show error]

@@ -16,7 +16,7 @@ Entanglement is the quintessential quantum resource, violating Bell inequalities
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     Start[Unknown State & Shared EPR Pair] --> A[Alice's Local Operations]
     A --> B[Bell-Basis Measurement]
     B --> C[Collapse to 4 Possible Outcomes]

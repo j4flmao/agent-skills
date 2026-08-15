@@ -20,7 +20,7 @@ WITH NO DATA;
 ## System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[BI Tool] -->|SQL Query| B[Query Parser]
     B --> C{Is Materialized?}
     C -->|Yes| D[Materialized View]

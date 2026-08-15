@@ -26,7 +26,7 @@ Warp execution is logically synchronous but physically subject to divergent sche
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[PTX Virtual Instruction] --> B[State Space Resolution]
     B --> C{Memory Space}
     C -->|.global| D[Global Memory Queue]

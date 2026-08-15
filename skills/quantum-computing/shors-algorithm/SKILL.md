@@ -26,7 +26,7 @@ $$ QFT|x\rangle = \frac{1}{\sqrt{Q}} \sum_{y=0}^{Q-1} e^{2\pi i x y / Q} |y\rang
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Start] --> B[Initialize Qubit Registers]
     B --> C[Apply Hadamard Transform]
     C --> D[Apply Controlled Modular Exponentiation]

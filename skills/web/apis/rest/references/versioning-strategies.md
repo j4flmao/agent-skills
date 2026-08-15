@@ -44,7 +44,7 @@ To optimize **Versioning Strategies**, we enforce the following foundational rul
 ### System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -98,7 +98,7 @@ To optimize **Versioning Strategies**, we enforce the following foundational rul
 ### System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]
@@ -149,7 +149,7 @@ To optimize **Versioning Strategies**, we enforce the following foundational rul
 ### System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Browser] --> B{Service Worker}
     B -->|Cache Hit| C[(Cache Storage)]
     B -->|Cache Miss| D[Network]

@@ -6,7 +6,7 @@
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     S[Searchers] -->|tx bundles| B[Builders]
     B -->|execution payloads| R[Relays]
     R -->|blinded headers| V[Validators/Proposers]
@@ -284,7 +284,7 @@ sequenceDiagram
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     U[User] -->|intent| SUITE[SUAVE Chain]
     SUITE -->|TEE execution| EG[Execution Grid]
     EG -->|builds payload| REL[Relay Network]
@@ -385,7 +385,7 @@ Total block reward:
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     subgraph "Relay Concentration"
         F[Flashbots Relay ~35%]
         U[UltraSound ~20%]

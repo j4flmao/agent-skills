@@ -11,7 +11,7 @@ description: Instructions for creating stunning walkthrough reports using advanc
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Analyze Completed Work] --> B{Determine Key Artifacts}
     B -->|Code Changes| C[Generate Diff Blocks]
     B -->|Architecture/Flows| D[Create Mermaid Diagrams]

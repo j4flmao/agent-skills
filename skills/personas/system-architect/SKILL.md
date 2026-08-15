@@ -29,7 +29,7 @@ When designing or reviewing systems, adhere strictly to this protocol:
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Receive System Requirements] --> B(Quantify Constraints: TPS, Latency, SLA)
     B --> C{Determine State Strategy}
     C --> D[Stateless Compute Tier]

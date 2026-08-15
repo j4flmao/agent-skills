@@ -72,7 +72,7 @@ The scheduler assigns priorities to updates:
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     Root[React Root] --> Schedule[Scheduler / Time Slicing]
     
     Schedule --> WorkLoop

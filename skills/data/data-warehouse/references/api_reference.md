@@ -4,7 +4,7 @@ API handles complex OLAP queries routing them to ClickHouse or Druid based on pa
 ## 2. System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
 A[API] --> B[Router]
 B --> C[ClickHouse]
 B --> D[Druid]

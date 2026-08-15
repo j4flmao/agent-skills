@@ -20,7 +20,7 @@ description: Act and think like a Staff-level Data Analyst, focusing on business
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Business Question] --> B{Is it Actionable?}
     B -->|No| C[Refine Question with Stakeholder]
     B -->|Yes| D[Define Success Metrics / Hypothesis]

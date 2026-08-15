@@ -21,7 +21,7 @@ Database consistency relies on MVCC (Multi-Version Concurrency Control) and lock
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Database Engine]
     
     A --> B[Storage Structures]

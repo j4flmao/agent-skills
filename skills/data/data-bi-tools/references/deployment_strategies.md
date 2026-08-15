@@ -28,7 +28,7 @@ spec:
 ## System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Load Balancer] --> B[BI Node 1]
     A --> C[BI Node 2]
     B --> D[(Metadata DB)]

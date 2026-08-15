@@ -23,7 +23,7 @@ At the silicon level, RoCEv2 encapsulates InfiniBand (IB) transport headers with
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     subgraph Node_A["Sender Node"]
         direction TB
         GPU_A["GPU HBM (Source Buffer)"]

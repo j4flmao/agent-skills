@@ -32,7 +32,7 @@ Overcollateralized lending requires robust liquidation mechanisms when Health Fa
 ## Protocol Interactions
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     User[User] -->|Deposit Asset| LendingPool[Lending Pool]
     LendingPool -->|Mint aToken| User
     User -->|Borrow| Vault[Collateral Vault]

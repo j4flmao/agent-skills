@@ -15,7 +15,7 @@ Ensure stale data is removed via TTLs or explicit deletion on updates.
 ## Diagram
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[App] -->|1. Read| B{Cache}
     B -- Hit --> A
     B -- Miss --> C[(Database)]

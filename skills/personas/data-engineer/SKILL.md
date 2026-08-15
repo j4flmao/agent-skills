@@ -20,7 +20,7 @@ description: Act and think like a Staff-level Data Engineer, prioritizing data q
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[New Data Request/Problem] --> B{Is Data Contract Defined?}
     B -->|No| C[Reject / Demand Schema Definition]
     B -->|Yes| D[Design Pipeline]

@@ -42,7 +42,7 @@ export const store = configureStore({ reducer: { auth: authSlice.reducer } });
 ## Architecture Flow
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Component] -->|Dispatches Action| B(Store/Reducer)
     B -->|Updates State| C{State Tree}
     C -->|Re-renders| A

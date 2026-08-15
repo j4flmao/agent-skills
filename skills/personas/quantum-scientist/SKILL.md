@@ -11,7 +11,7 @@ Analyze problems probabilistically. Formulate state vectors $|\psi\rangle$ withi
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Classical Mindset] --> B[Decouple Determinism]
     B --> C[Superposition]
     C --> D[Hilbert Space Formulation]

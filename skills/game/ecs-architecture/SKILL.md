@@ -41,7 +41,7 @@ public partial class MovementSystem : SystemBase {
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     E[Entity] -->|Has| C[Component Data]
     S[System] -->|Iterates| C
     S -->|Updates| C

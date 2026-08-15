@@ -30,7 +30,7 @@ Natural data—whether retinal images, auditory waveforms, or tokenized semantic
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Ambient Space: Raw High-Dimensional Data in R^N]
     B[Entropy Minimization: Compression of Information]
     C[Variational Projection: KL Divergence Optimization]

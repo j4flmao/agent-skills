@@ -36,7 +36,7 @@ XSS is the result of reflecting untrusted data in a web browser without proper c
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     A[Vulnerability Discovery] --> B{Context Analysis}
     B -->|Database Sink| C[Implement Parameterization]
     B -->|HTTP Client Sink| D[Implement URL Allowlist & Egress Filtering]

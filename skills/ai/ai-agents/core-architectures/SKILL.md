@@ -29,7 +29,7 @@ Without self-reflection, an agent is an open-loop controller doomed to terminal 
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     Start([Goal Initialization]) --> Perceive
     Perceive[Perceive Environment State] --> Reflect{Reflection/Evaluation}
     Reflect -- "State aligns with Goal" --> Success([Terminal Success])

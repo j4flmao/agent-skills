@@ -97,7 +97,7 @@ Identify actors, systems, and steps:
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-flowchart TD
+flowchart LR
     Customer -->|Browses| Catalog
     Customer -->|Adds to| Cart
     Customer -->|Checks out| Checkout

@@ -4,7 +4,7 @@ We implement Lambda architecture to balance Kafka streams and Spark batch jobs u
 ## 2. System Architecture
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
 A[Kafka] --> B[Flink Stream]
 A --> C[Spark Batch]
 ```

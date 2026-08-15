@@ -61,7 +61,7 @@ To optimize **Deployment**, we enforce the following foundational rules:
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
     C -->|Round Robin| D[App Server 1]
@@ -212,7 +212,7 @@ To optimize **Deployment**, we enforce the following foundational rules:
 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "24px"}}}%%
-graph TD
+graph LR
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
     C -->|Round Robin| D[App Server 1]
