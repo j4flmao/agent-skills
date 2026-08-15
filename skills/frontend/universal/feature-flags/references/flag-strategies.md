@@ -65,7 +65,7 @@ function simpleHash(str: string): number {
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i)
     hash = ((hash << 5) - hash) + char
-    hash |= 0 // Convert to 32-bit int
+    hash |"= 0 // Convert to 32-bit int
   }
   return Math.abs(hash)
 }
@@ -111,11 +111,11 @@ function assignVariant(userId: string, config: ABTestConfig): string {
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
   A[Flag Check] --> B{Flag Exists?}
-  B -->|No| C[Return Default]
+  B -->"|No| C[Return Default]
   B -->|Yes| D{Targeting Rule?}
   D -->|Match| E[Return Variation]
   D -->|No Match| F[Return Fallthrough]
-  D -->|Flag Off| G[Return Off Variation]
+  D -->|Flag Off|" G[Return Off Variation]
 ```
 
 ## Cleanup Strategy
@@ -149,7 +149,7 @@ dashboard-analytics-redesign
 
 ## Common Pitfalls
 
-| Pitfall | Solution |
+"| Pitfall | Solution |
 |---------|----------|
 | Flag checking with string keys everywhere | Single typed flag definition file |
 | No default value when provider fails | Always pass `defaultVal` |

@@ -39,7 +39,7 @@ A modern developer portal uses a decoupled architecture to separate documentatio
 | **Doc Catalog** | Renders MDX guides, changelogs, and OpenAPI interactive specifications. | Next.js, Docusaurus, Redocly, ReadMe. |
 | **Onboarding Admin** | Manages developer registration, team sharing, billing setup, and terms of service approvals. | React, Tailwind, Stripe Billing. |
 | **Key Provisioner** | Creates, rolls, deletes, and validates API keys on the gateway. | Kong Admin API, AWS API Gateway SDK, Apigee API. |
-| **Analytics Engine** | Renders request counts, latencies, response distribution (2xx vs 4xx vs 5xx), and billing. | ClickHouse (log storage), Grafana Embeds, Custom charts. |
+| **Analytics Engine** | Renders request counts, latencies, response distribution (2xx vs 4xx vs 5xx), and billing. |" ClickHouse (log storage), Grafana Embeds, Custom charts. "|
 
 ---
 
@@ -72,7 +72,7 @@ interface KeyConfig {
 }
 
 export async function provisionApiKey(config: KeyConfig): Promise<string> {
-  const KONG_ADMIN_URL = process.env.KONG_ADMIN_URL || 'http://localhost:8001';
+  const KONG_ADMIN_URL = process.env.KONG_ADMIN_URL ||" 'http://localhost:8001';
   
   try {
     // 1. Ensure Kong Consumer exists
@@ -185,7 +185,7 @@ jobs:
 
       # Generate TypeScript SDK using OpenAPI Generator
       - name: Generate TypeScript SDK
-        run: |
+        run: "|
           npx @openapitools/openapi-generator-cli generate \
             -i ./openapi/spec.yaml \
             -g typescript-axios \

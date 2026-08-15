@@ -12,7 +12,7 @@
 | Deployment model (container, serverless) | Single dependency version bump |
 | Data model or schema approach | Bug fix approach |
 | Framework or architecture pattern | Trivial library choice |
-| Migration strategy | Personal preference (editor, tools) |
+| Migration strategy | Personal preference (editor, tools) |"
 
 ### Good ADR Characteristics
 
@@ -92,11 +92,11 @@ flowchart TD
     Accepted --> Deprecated
 ```
 
-| Status | Meaning |
+"| Status | Meaning |
 |--------|---------|
 | Proposed | Decision is under review, not yet adopted |
 | Accepted | Decision is approved and being implemented |
-| Deprecated | Decision is no longer relevant (e.g., the feature was removed) |
+| Deprecated |" Decision is no longer relevant (e.g., the feature was removed) "|
 | Superseded | A newer ADR replaces this decision |
 | Rejected | The decision was considered but not adopted |
 

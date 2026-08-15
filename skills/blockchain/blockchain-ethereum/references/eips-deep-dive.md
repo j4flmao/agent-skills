@@ -10,7 +10,7 @@
 |--------|-------------------------------|-----------|
 | Fee visibility | Opaque (bid what others bid) | Public base fee |
 | Fee burning | None | Base fee burned |
-| Validator revenue | Full tx fee | Priority fee (tip) |
+| Validator revenue | Full tx fee |" Priority fee (tip) "|
 | Block fullness | Up to 30M gas | Target 15M, limit 30M |
 | User experience | Overpay or stall | Predictable fees |
 | Wallet complexity | Manual gas price | Wallet estimates tip |
@@ -63,7 +63,7 @@ New transaction type `BLOB_TX_TYPE = 0x03`:
 
 ```
 TransactionType || TransactionPayload
-0x03 || rlp([chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas,
+0x03 ||" rlp([chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas,
              gas_limit, to, value, data, access_list,
              max_fee_per_blob_gas, blob_versioned_hashes, y_parity, r, s])
 ```
@@ -106,13 +106,13 @@ When blob count > target, excess increases, base fee grows exponentially (about 
 
 ### Comparison
 
-| Metric | Calldata (pre-4844) | Blob (4844) |
+"| Metric |" Calldata (pre-4844) "| Blob (4844) |
 |--------|---------------------|-------------|
 | Cost per byte | ~16 gas | ~1 gas (blob gas) |
-| Persistence | Forever (in calldata) | ~18 days |
+| Persistence |" Forever (in calldata) "| ~18 days |
 | L2 cost reduction | — | ~10x cheaper |
 | Verification | Consensus layer | EL blob gas market |
-| Data availability | On-chain | On-chain (pruned) |
+| Data availability | On-chain | On-chain (pruned) |"
 
 ---
 
@@ -125,11 +125,11 @@ When blob count > target, excess increases, base fee grows exponentially (about 
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    U[User] -->|signs UserOperation| B[Bundler]
+    U[User] -->"|signs UserOperation| B[Bundler]
     B -->|submits UserOperation| E[EntryPoint]
     E -->|verify + execute| A[Account Contract]
     A -->|pays fee (may use)| P[Paymaster]
-    P -->|validates payment| E
+    P -->|validates payment|" E
 ```
 
 ### UserOperation
@@ -162,11 +162,11 @@ struct UserOperation {
 
 ### Paymaster Patterns
 
-| Type | Description |
+"| Type | Description |
 |------|-------------|
 | **Verifying** | Off-chain signature validates payment |
 | **Token** | Paymaster swaps ERC-20 to ETH, pays fees |
-| **Sponsor** | Paymaster covers gas (dApp subsidized) |
+| **Sponsor** |" Paymaster covers gas (dApp subsidized) "|
 
 ---
 
@@ -177,7 +177,7 @@ struct UserOperation {
 ### Format
 
 ```
-Transaction = TransactionType || TransactionPayload
+Transaction = TransactionType ||" TransactionPayload
 
 TransactionType  = 1 byte (0x00–0x7f)
 TransactionPayload = byte array (RLP-encoded for legacy typed)
@@ -185,12 +185,12 @@ TransactionPayload = byte array (RLP-encoded for legacy typed)
 
 ### Transaction Type Registry
 
-| Type | Name | EIP | Payload |
+"| Type | Name | EIP | Payload |
 |------|------|-----|---------|
-| `0x00` | Legacy | — | `rlp([nonce, gp, gl, to, v, r, s])` |
+| `0x00` | Legacy | — |" `rlp([nonce, gp, gl, to, v, r, s])` "|
 | `0x01` | Access List | 2930 | `rlp([chain, nonce, gp, gl, to, v, data, access_list, y, r, s])` |
-| `0x02` | EIP-1559 | 1559 | `rlp([chain, nonce, mprio, mfee, gl, to, v, data, access, y, r, s])` |
-| `0x03` | Blob Tx | 4844 | `rlp([chain, nonce, mprio, mfee, gl, to, v, data, access, blob_fee, blob_hashes, y, r, s])` |
+| `0x02` | EIP-1559 | 1559 |" `rlp([chain, nonce, mprio, mfee, gl, to, v, data, access, y, r, s])` "|
+| `0x03` | Blob Tx | 4844 | `rlp([chain, nonce, mprio, mfee, gl, to, v, data, access, blob_fee, blob_hashes, y, r, s])` |"
 
 Backward compatibility: legacy code can still decode 0x00–0x7f prefix; `0x00` is NOT a TransactionType (it's already a valid RLP byte for legacy format).
 
@@ -202,11 +202,11 @@ Backward compatibility: legacy code can still decode 0x00–0x7f prefix; `0x00` 
 
 ### Before vs After
 
-| Opcode | Pre-3529 Refund | Post-3529 Refund |
+"| Opcode | Pre-3529 Refund | Post-3529 Refund |
 |--------|----------------|------------------|
 | SELFDESTRUCT (used) | 24000 | 0 |
 | SSTORE (nonzero→0) | 15000 | 4800 (capped) |
-| Max refund per tx | 50% of gas used | 20% of gas used (or 1/5) |
+| Max refund per tx | 50% of gas used | 20% of gas used (or 1/5) |"
 
 ### Why
 
@@ -238,7 +238,7 @@ Post-3529:
 
 **Cold SLOAD/SSTORE cost increase:**
 
-| Access | Pre-2929 | Post-2929 |
+"| Access | Pre-2929 | Post-2929 |
 |--------|----------|-----------|
 | Any SLOAD | 800 | 2100 (cold), 100 (warm) |
 | SSTORE (cold) | 20000/5000 | +2100 cold access |

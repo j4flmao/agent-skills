@@ -213,7 +213,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 - **Columnar Storage (Parquet/ORC)**: Drastically reduces disk I/O through projection pushdown.
 
 ### Mathematical Thresholds
-$$ \mathcal{L}_{checkpoint} = \sum_{i=1}^{N} \frac{1}{B} \int_{t=0}^{T} || S_i(t) - S_{commit}(t) ||_2^2 dt $$
+$$ \mathcal{L}_{checkpoint} = \sum_{i=1}^{N} \frac{1}{B} \int_{t=0}^{T} ||" S_i(t) - S_{commit}(t) "||"_2^2 dt $$
 
 ---
 
@@ -253,10 +253,10 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 graph TD
-    A[Kafka Source] -->|Stream| B(Flink Window Operator)
+    A[Kafka Source] -->"|Stream|" B(Flink Window Operator)
     B --> C{State Backend}
-    C -->|RocksDB| D[(S3 Checkpoints)]
-    B -->|Sink| E[Iceberg Table]
+    C -->"|RocksDB|" D[(S3 Checkpoints)]
+    B -->"|Sink|" E[Iceberg Table]
 ```
 
 
@@ -310,10 +310,10 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 graph TD
-    A[Kafka Source] -->|Stream| B(Flink Window Operator)
+    A[Kafka Source] -->"|Stream|" B(Flink Window Operator)
     B --> C{State Backend}
-    C -->|RocksDB| D[(S3 Checkpoints)]
-    B -->|Sink| E[Iceberg Table]
+    C -->"|RocksDB|" D[(S3 Checkpoints)]
+    B -->"|Sink| E[Iceberg Table]
 ```
 
 

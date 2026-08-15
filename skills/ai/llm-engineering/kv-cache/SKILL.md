@@ -29,19 +29,19 @@ Upon initialization, vLLM profiles the model to determine static VRAM requiremen
 flowchart TD
     A[Request Queue] --> B[Continuous Batching Scheduler]
     
-    subgraph PagedAttention Memory Manager
+    subgraph PagedAttentionMemoryManager ["PagedAttention Memory Manager"]
         B --> C{Block Allocator}
         C -->|Logical to Physical Mapping| D[Block Table]
         C -->|No Free Blocks| E[Evict to CPU Swap]
     end
     
-    subgraph GPU VRAM
+    subgraph GPUVRAM ["GPU VRAM"]
         D -->|Pointers| F[Physical Block 1]
         D -->|Pointers| G[Physical Block 34]
         D -->|Pointers| H[Physical Block 12]
     end
     
-    subgraph CUDA Attention Kernel
+    subgraph CUDAAttentionKernel ["CUDA Attention Kernel"]
         I[Query Tensor] --> J[Compute QK^T]
         F -->|Fetch K/V| J
         G -->|Fetch K/V| J

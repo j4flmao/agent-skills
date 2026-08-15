@@ -74,7 +74,7 @@ Ask and document:
 | What do they need to achieve? | Define the goal |
 | Why is this valuable? | Define the benefit |
 | What could go wrong? | Edge cases and error paths |
-| How will we know it's done? | Acceptance criteria |
+| How will we know it's done? | Acceptance criteria |"
 
 ### Step 2: Write User Stories
 
@@ -109,7 +109,7 @@ Scenario Outline: Login with valid credentials
   Then they are redirected to the dashboard
 
   Examples:
-    | email              | password    |
+    "| email              | password    |
     | user@example.com   | Pass123!    |
     | admin@example.com  | Admin@456   |
 
@@ -165,8 +165,8 @@ Use a structured prioritization framework:
 | MoSCoW | Must have, Should have, Could have, Won't have | Time-boxed delivery |
 | Kano Model | Basic, Performance, Excitement factors | Customer satisfaction |
 | Value vs Effort | Business value against implementation effort | Resource-constrained |
-| Weighted Scoring | Multi-criteria scoring (value, risk, cost, dependency) | Portfolio decisions |
-| RICE | Reach, Impact, Confidence, Effort | Growth and product features |
+| Weighted Scoring |" Multi-criteria scoring (value, risk, cost, dependency) "| Portfolio decisions |
+| RICE | Reach, Impact, Confidence, Effort | Growth and product features |"
 
 ### Step 8: Requirements Validation
 
@@ -195,13 +195,13 @@ Refine large stories into sprint-sized pieces. Use splitting heuristics:
 
 ### Business Analysis Framework Comparison
 
-| Framework | Focus | Artifacts | Best For | Process |
+"| Framework | Focus | Artifacts | Best For | Process |
 |-----------|-------|-----------|----------|---------|
 | BABOK (IIBA) | Comprehensive BA practice | 30+ techniques across 6 knowledge areas | Enterprise BA, certification prep | Multi-phase, adaptive |
 | Agile/Scrum BA | Iterative delivery | User stories, acceptance criteria, backlog | Scrum teams | Continuous refinement |
 | Design Thinking | User-centric problem solving | Personas, journey maps, prototypes | Innovation and new products | Divergent → Convergent |
 | Lean BA | Waste reduction, value focus | Value stream map, minimal spec | Process improvement | Value stream analysis |
-| Use Case (UML) | System interaction modeling | Use case diagrams, scenarios, flows | Complex systems, formal specs | Actor-goal oriented |
+| Use Case (UML) | System interaction modeling | Use case diagrams, scenarios, flows | Complex systems, formal specs | Actor-goal oriented |"
 
 ### Decision Tree: Requirements Approach
 
@@ -223,7 +223,7 @@ What is the project type?
 
 ### Requirements Elicitation Technique Selection
 
-| Technique | Best For | Participants | Time | Artifact |
+"| Technique | Best For | Participants | Time | Artifact |
 |-----------|----------|--------------|------|----------|
 | Interview | Deep understanding of individual perspectives | BA + single stakeholder | 30-60 min | Interview notes |
 | Workshop | Collaborative requirement definition | BA + multiple stakeholders | 2-4 hours | Workshop output document |
@@ -234,7 +234,7 @@ What is the project type?
 | Brainstorming | Generating ideas and possibilities | BA + creative team | 1-2 hours | Idea list |
 | Focus group | Validating concepts with representative users | Facilitator + 6-10 users | 1-2 hours | Focus group report |
 | Interface analysis | Understanding system boundaries | BA + technical team | 2-4 hours | Interface specification |
-| Root cause analysis | Understanding underlying problems | BA + stakeholders | 1-3 hours | Root cause diagram |
+| Root cause analysis | Understanding underlying problems | BA + stakeholders | 1-3 hours | Root cause diagram |"
 
 ## Common Pitfalls
 
@@ -289,7 +289,7 @@ Over-analyzing requirements before development starts delays delivery and doesn'
 story:
   id: US-{n}
   title: {concise description}
-  description: |
+  description: "|
     As a {role}
     I want {goal}
     So that {benefit}
@@ -439,9 +439,9 @@ After completing this skill:
 ### Requirements Elicitation Method
 | Decision Point | Option A | Option B | Decision Criteria |
 |---|---|---|---|
-| Stakeholder access | Direct interviews (rich detail) | Document analysis (async) | Stakeholder availability, project timeline |
-| Problem complexity | User story mapping (end-to-end view) | Use case specs (detailed flows) | Team familiarity with agile vs formal methods |
-| Validation method | Prototyping (interactive feedback) | Written sign-off (formal approval) | Speed of iteration, regulatory requirements |
+| Stakeholder access | Direct interviews (rich detail) |" Document analysis (async) "| Stakeholder availability, project timeline |
+| Problem complexity |" User story mapping (end-to-end view) "| Use case specs (detailed flows) | Team familiarity with agile vs formal methods |
+| Validation method | Prototyping (interactive feedback) |" Written sign-off (formal approval) "| Speed of iteration, regulatory requirements |
 
 ### Requirements Structuring
 - Simple feature → Single user story with acceptance criteria

@@ -28,7 +28,7 @@ graph TD
 | **Developer Segments** | What are the technical profiles of our users? | Indie developers, startup engineering teams, enterprise architects |
 | **Monetization Model** | How does the API capture value? | Indirect value, usage-based billing, subscription tiers, revenue share |
 | **Go-To-Market** | How do we drive awareness and adoption? | Developer evangelism, SEO/content marketing, integration partnerships |
-| **KPIs & Metrics** | How do we measure success? | Time-To-First-Call (TTFC), Monthly Active Developers (MAD), uptime, churn rate |
+| **KPIs & Metrics** | How do we measure success? |" Time-To-First-Call (TTFC), Monthly Active Developers (MAD), uptime, churn rate "|
 
 ---
 
@@ -46,10 +46,10 @@ Gross Margin = (API Price per 1M Requests - API COGS per 1M Requests) / API Pric
 | Model | Value Capture Metric | Financial Profile | Best Suited For |
 | :--- | :--- | :--- | :--- |
 | **Direct Metered / Pay-as-you-go** | Per million API calls, per GB transferred, per compute second | High variable margins, matches costs directly to consumption. | Infrastructure APIs (e.g., Twilio, AWS, Stripe). |
-| **Tiered Subscription** | Fixed monthly fee for allocated request volumes (e.g., 50k, 500k calls). | Highly predictable MRR (Monthly Recurring Revenue), lower risk of cost shocks. | SaaS integrations, data feed APIs (e.g., weather, stocks). |
+| **Tiered Subscription** |" Fixed monthly fee for allocated request volumes (e.g., 50k, 500k calls). "| Highly predictable MRR (Monthly Recurring Revenue), lower risk of cost shocks. |" SaaS integrations, data feed APIs (e.g., weather, stocks). "|
 | **Transaction Percentage** | A percentage fee of transaction value flowing through the API. | Massive revenue scale potential, closely aligned to consumer success. | Payment gateways, marketplaces, ordering platforms. |
-| **Indirect / Ecosystem** | Zero API fee; value realized through core platform signup/retention. | Harder to attribute directly, but drives customer lifetime value (LTV). | Integrations (e.g., HubSpot, Salesforce, Slack apps). |
-| **Freemium** | Free tier for sandbox/dev, paid tiers for production access. | Low initial barrier, drives bottom-up developer adoption. | APIs looking to capture developer mindshare quickly. |
+| **Indirect / Ecosystem** | Zero API fee; value realized through core platform signup/retention. | Harder to attribute directly, but drives customer lifetime value (LTV). |" Integrations (e.g., HubSpot, Salesforce, Slack apps). "|
+| **Freemium** | Free tier for sandbox/dev, paid tiers for production access. | Low initial barrier, drives bottom-up developer adoption. | APIs looking to capture developer mindshare quickly. |"
 
 ---
 
@@ -122,7 +122,7 @@ rules:
     then:
       function: pattern
       functionOptions:
-        match: "^/([a-z0-9-]+s|v[0-9]+/[a-z0-9-]+s)($|/)"
+        match: "^/([a-z0-9-]+s"|v[0-9]+/[a-z0-9-]+s)($|"/)"
 
   # Enforce RFC 7807 Error compliance
   rfc7807-error-responses:
@@ -151,7 +151,7 @@ rules:
     given: $.paths.*.get
     then:
       function: truthy
-      given: $.parameters[?(@.name === 'limit' || @.name === 'cursor')]
+      given: $.parameters[?(@.name === 'limit' "|| @.name === 'cursor')]
 ```
 
 ---

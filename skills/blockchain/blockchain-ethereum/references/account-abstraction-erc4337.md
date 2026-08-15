@@ -53,12 +53,12 @@ flowchart TD
 | Component | Role |
 |-----------|------|
 | **UserOperation** | Pseudotransaction object signed by user |
-| **Alt Mempool** | P2P network of UserOps (not in txpool) |
+| **Alt Mempool** |" P2P network of UserOps (not in txpool) "|
 | **Bundler** | Validates, bundles, submits UserOps to EntryPoint |
 | **EntryPoint** | Singleton contract, handles op lifecycle |
 | **Account Contract** | User's smart wallet (validate + execute) |
-| **Paymaster** | Pays gas on user's behalf (optional) |
-| **Aggregator** | Batches signature verification across ops |
+| **Paymaster** |" Pays gas on user's behalf (optional) "|
+| **Aggregator** | Batches signature verification across ops |"
 
 ---
 
@@ -82,12 +82,12 @@ struct UserOperation {
 
 ### Field Details
 
-| Field | Constraints | Notes |
+"| Field | Constraints | Notes |
 |-------|-------------|-------|
 | `sender` | Must be a contract | Derivable via CREATE2 from initCode |
 | `nonce` | Sequential per key | `packed = (key << 64) \| sequence` |
 | `initCode` | `20 bytes addr + calldata` or empty | First 20 bytes = factory address |
-| `callData` | Any ABI | Usually `execute(to, val, data)` or `executeBatch(...)` |
+| `callData` | Any ABI |" Usually `execute(to, val, data)` or `executeBatch(...)` "|
 | `callGasLimit` | >= execute cost | Bundler rejects if too low |
 | `verificationGasLimit` | >= validateUserOp cost | Must leave 3000 buffer for EntryPoint |
 | `preVerificationGas` | Fixed overhead per op | Covers tx intrinsic gas, calldata cost |
@@ -326,10 +326,10 @@ interface IPaymaster {
 
 | Type | Mechanism | Gas Cost | Trust Assumption |
 |------|-----------|----------|------------------|
-| **Standard (Verifying)** | Off-chain signature, paymaster deposits ETH | Low | User trusts paymaster sig oracle |
+|" **Standard (Verifying)** "| Off-chain signature, paymaster deposits ETH | Low | User trusts paymaster sig oracle |
 | **ERC-20 Token** | Paymaster swaps user tokens, covers gas | High (swap + transfer) | User trusts paymaster & oracle |
-| **Sponsor (dApp)** | Paymaster covers all gas, no user cost | Medium | dApp trusts users (rate limit) |
-| **Post-op** | Executes post-operation logic (e.g. token mint) | Medium | None extra |
+|" **Sponsor (dApp)** "| Paymaster covers all gas, no user cost | Medium | dApp trusts users (rate limit) |
+| **Post-op** |" Executes post-operation logic (e.g. token mint) "| Medium | None extra |
 
 ### Minimal Verifying Paymaster
 
@@ -422,7 +422,7 @@ interface IAggregator {
 | **Chain ID** | `userOpHash` includes `block.chainid` |
 | **EntryPoint** | UserOpHash unique per entryPoint address |
 | **Paymaster context** | Paymasters include validUntil/validAfter timestamps |
-| **Aggregator binding** | Sig includes aggregator address |
+| **Aggregator binding** | Sig includes aggregator address |"
 
 ### Signature Validation
 
@@ -432,12 +432,12 @@ interface IAggregator {
 
 ### Reentrancy (Cross-Function)
 
-| Attack | Mitigation |
+"| Attack | Mitigation |
 |--------|------------|
-| Re-enter `handleOps` from `validateUserOp` | EntryPoint locks per sender (nonce-based ordering) |
+| Re-enter `handleOps` from `validateUserOp` |" EntryPoint locks per sender (nonce-based ordering) "|
 | Re-enter from execution | Staked paymaster, no state changes during validation |
 | Storage collisions | Simulation disallows writes to non-associated slots |
-| Delegatecall to arbitrary | Account contract must restrict to trusted targets |
+| Delegatecall to arbitrary | Account contract must restrict to trusted targets |"
 
 ### Storage Access Rules (Simulation)
 
@@ -512,7 +512,7 @@ contract UpgradeableAccount is IAccount, UUPSUpgradeable {
 
 ## Wallet Examples
 
-| Project | Key Features |
+"| Project | Key Features |
 |---------|-------------|
 | **ZeroDev** | Kernel-based, session keys, ERC-20 gas, social recovery |
 | **Biconomy** | Nexus, multi-chain, bundler-as-a-service, gas station |

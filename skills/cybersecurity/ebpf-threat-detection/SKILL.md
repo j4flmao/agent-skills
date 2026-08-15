@@ -44,10 +44,10 @@ Tetragon (by Isovalent/Cilium) leverages advanced eBPF capabilities for both dee
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    UserSpace[User Space Application] -->|1. Executes Syscall (e.g., execve)| KernelSyscall[Kernel Syscall Interface]
+    UserSpace[User Space Application] -->|"1. Executes Syscall (e.g., execve)"| KernelSyscall[Kernel Syscall Interface]
     KernelSyscall -->|2. Triggers Hook| eBPFHook{eBPF Hook: kprobe / tracepoint / LSM}
     
-    subgraph Kernel Space
+    subgraph KernelSpace ["Kernel Space"]
         eBPFHook -->|3. Executes| eBPFProg[eBPF Program]
         eBPFProg -->|4. Evaluates Policy| PolicyEval{Policy Match?}
         PolicyEval -->|5a. Block: Return Error| LSMEnforce[Syscall Denied - ENOPERM]
@@ -56,7 +56,7 @@ flowchart TD
     
     LSMEnforce -.-> UserSpace
     
-    subgraph Security Agent (e.g., Tetragon/Falco)
+    subgraph SecurityAgentegTetragonFalco ["Security Agent (e.g., Tetragon/Falco)"]
         eBPFMap -->|6. Async Event Stream| AgentEngine[User-Space Rules Engine]
         AgentEngine -->|7. Correlate with K8s Metadata| ContextualEvent[Contextualized Security Event]
         ContextualEvent -->|8. Alert / Log| SIEM[SIEM / Log Aggregator]

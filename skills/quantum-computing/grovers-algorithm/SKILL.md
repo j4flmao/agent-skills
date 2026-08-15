@@ -10,7 +10,7 @@ Grover's algorithm provides a quadratic speedup for unstructured search problems
 ## Theoretical Foundation
 
 Let $f(x) = 1$ for the target state $x_0$ and $f(x) = 0$ otherwise. An oracle $O$ flips the phase of the target state:
-$$ O|x\rangle = (-1)^{f(x)}|x\rangle $$
+$$ O|"x\rangle = (-1)^{f(x)}"|x\rangle $$
 
 The Grover diffusion operator $D = 2|s\rangle\langle s| - I$ performs inversion about the mean, amplifying the probability amplitude of the marked state. Here $|s\rangle$ is the uniform superposition state.
 

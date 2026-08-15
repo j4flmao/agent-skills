@@ -7,8 +7,8 @@ description: "Advanced sub-8-bit quantization methodologies, including AWQ, GPTQ
 
 ## Mathematics of Sub-8-bit Quantization
 Precision reduction targets $W$ (weights) and $A$ (activations) to compress memory footprint and accelerate compute-bound matrix multiplications.
-- **GPTQ (Post-Training Quantization)**: Utilizes inverse Hessian approximation to iteratively quantize weights, minimizing the mean squared error (MSE) of layer-wise outputs. Mathematically solves $\min_Q ||WX - QX||_2^2$ via Cholesky decomposition.
-- **AWQ (Activation-aware Weight Quantization)**: Identifies a subset of salient weights based on activation magnitudes ($|X|$). Applies optimal scaling to protect salient weights, exploiting the Pareto principle where <1% of weights dominate output variance.
+- **GPTQ (Post-Training Quantization)**: Utilizes inverse Hessian approximation to iteratively quantize weights, minimizing the mean squared error (MSE) of layer-wise outputs. Mathematically solves $\min_Q ||WX - QX||"_2^2$ via Cholesky decomposition.
+- **AWQ (Activation-aware Weight Quantization)**: Identifies a subset of salient weights based on activation magnitudes ($"|X|"$). Applies optimal scaling to protect salient weights, exploiting the Pareto principle where <1% of weights dominate output variance.
 
 ## Activation vs Weight Quantization
 - **Weight-Only (e.g., INT4/INT8)**: Alleviates memory bandwidth bottlenecks in memory-bound autoregressive decoding.
@@ -26,7 +26,7 @@ Transformer Engine seamlessly casts FP16/BF16 to FP8, leveraging hardware-native
 flowchart TD
     A[FP16/BF16 Model] --> B{Quantization Target}
     
-    B -->|Weights Only| C[Memory-Bound Optimization]
+    B -->"|Weights Only| C[Memory-Bound Optimization]
     C --> D1[GPTQ: Hessian-based Inverse]
     C --> D2[AWQ: Activation-aware Scaling]
     D1 --> E[INT4/INT8 Weights]

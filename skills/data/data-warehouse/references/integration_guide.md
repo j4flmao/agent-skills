@@ -200,7 +200,7 @@ To optimize **Integration Guide**, we enforce the following foundational rules:
 - **Data Quality Assertions**: Prevents pipeline corruption via schema validation.
 
 ### Mathematical Thresholds
-$$ \mathcal{L}_{checkpoint} = \sum_{i=1}^{N} \frac{1}{B} \int_{t=0}^{T} || S_i(t) - S_{commit}(t) ||_2^2 dt $$
+$$ \mathcal{L}_{checkpoint} = \sum_{i=1}^{N} \frac{1}{B} \int_{t=0}^{T} ||" S_i(t) - S_{commit}(t) "||_2^2 dt $$
 
 ---
 

@@ -12,7 +12,7 @@ Use **Zustand** for lightweight, decentralized state, and **Redux Toolkit (RTK)*
 import { create } from 'zustand';
 
 interface UserState {
-  user: string | null;
+  user: string |" null;
   login: (user: string) => void;
   logout: () => void;
 }
@@ -30,7 +30,7 @@ import { createSlice, configureStore, PayloadAction } from '@reduxjs/toolkit';
 
 const authSlice = createSlice({
   name: 'auth',
-  initialState: { user: null as string | null },
+  initialState: { user: null as string "| null },
   reducers: {
     login: (state, action: PayloadAction<string>) => { state.user = action.payload; },
   },

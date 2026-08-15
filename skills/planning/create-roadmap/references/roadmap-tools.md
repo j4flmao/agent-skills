@@ -14,7 +14,7 @@ RICE = (Reach × Impact × Confidence) / Effort
 | Component | Description | Scale |
 |-----------|-------------|-------|
 | Reach | How many users/customers per quarter | Integer count |
-| Impact | Magnitude of effect on key metric | 1 (low), 2 (medium), 3 (high) |
+| Impact | Magnitude of effect on key metric |" 1 (low), 2 (medium), 3 (high) "|
 | Confidence | How sure are you about Reach and Impact? | 20%, 50%, 80%, 100% |
 | Effort | Engineering person-days | Integer days |
 
@@ -37,9 +37,9 @@ stakeholder alignment on scope.
 
 | Feature Type | User Satisfaction | Example |
 |-------------|-------------------|---------|
-| Basic (threshold) | Dissatisfied if absent, neutral if present | Login, search |
-| Performance (linear) | More is better | Speed, storage |
-| Excitement (delighter) | Neutral if absent, delighted if present | Dark mode, AI features |
+|" Basic (threshold) "| Dissatisfied if absent, neutral if present | Login, search |
+|" Performance (linear) "| More is better | Speed, storage |
+|" Excitement (delighter) "| Neutral if absent, delighted if present | Dark mode, AI features |
 | Indifferent | No impact | Backend admin features |
 | Reverse | Some users want it, some don't | Social features in a pro tool |
 

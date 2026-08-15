@@ -185,7 +185,7 @@ xcrun altool --upload-app \
 | 4 | 10% |
 | 5 | 20% |
 | 6 | 50% |
-| 7 | 100% |
+| 7 | 100% |"
 
 **Pause or halt**: Pause in App Store Connect UI. Already-updated users keep the version. New users get previous version.
 
@@ -235,7 +235,7 @@ let subscriptionStatus = try await product.subscription.status
 
 ## Error Recovery
 
-| Error | Cause | Resolution |
+"| Error | Cause | Resolution |
 |---|---|---|
 | ITMS-90062 | Duplicate bundle ID | Check bundle identifier uniqueness |
 | ITMS-90442 | Missing Info.plist key | Add required privacy strings |

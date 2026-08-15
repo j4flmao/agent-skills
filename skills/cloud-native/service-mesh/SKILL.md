@@ -19,7 +19,7 @@ The overhead of traversing the Linux networking stack (TCP/IP stack, netfilter h
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    App[Application Container] -->|Syscall: send()| Kernel[Linux Kernel]
+    App[Application Container] -->|"Syscall: send()"| Kernel[Linux Kernel]
     Kernel -->|iptables nat OUTPUT| Iptables[Netfilter/iptables]
     Iptables -->|REDIRECT| EnvoyIn[Envoy Proxy Sidecar - Port 15001]
     
@@ -30,7 +30,7 @@ flowchart TD
     EnvoyIn --> FilterChain[Envoy Filter Chains: HTTP/TCP]
     FilterChain --> Cluster[Upstream Cluster Selection]
     Cluster --> Endpoint[Endpoint Resolution]
-    Endpoint -->|Syscall: connect()| Out[Outbound Network Interface]
+    Endpoint -->|"Syscall: connect()"| Out[Outbound Network Interface]
     
     Istiod[Istiod Control Plane] -. xDS gRPC .-> EnvoyIn
 ```

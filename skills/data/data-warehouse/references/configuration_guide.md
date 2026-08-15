@@ -33,7 +33,7 @@ To optimize **Configuration Guide**, we enforce the following foundational rules
 - **Compute/Storage Separation**: Allows infinite concurrent scaling via independent virtual warehouses.
 
 ### Mathematical Thresholds
-$$ \mathcal{L}_{checkpoint} = \sum_{i=1}^{N} \frac{1}{B} \int_{t=0}^{T} || S_i(t) - S_{commit}(t) ||_2^2 dt $$
+$$ \mathcal{L}_{checkpoint} = \sum_{i=1}^{N} \frac{1}{B} \int_{t=0}^{T} ||" S_i(t) - S_{commit}(t) "||_2^2 dt $$
 
 ---
 
@@ -52,10 +52,10 @@ To optimize **Configuration Guide**, we enforce the following foundational rules
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 graph TD
-    A[Kafka Source] -->|Stream| B(Flink Window Operator)
+    A[Kafka Source] -->|Stream|" B(Flink Window Operator)
     B --> C{State Backend}
-    C -->|RocksDB| D[(S3 Checkpoints)]
-    B -->|Sink| E[Iceberg Table]
+    C -->"|RocksDB|" D[(S3 Checkpoints)]
+    B -->"|Sink|" E[Iceberg Table]
 ```
 
 
@@ -164,7 +164,7 @@ To optimize **Configuration Guide**, we enforce the following foundational rules
 - **Exactly-once Semantics**: Utilizes Chandy-Lamport distributed snapshots.
 
 ### Mathematical Thresholds
-$$ \mathcal{L}_{checkpoint} = \sum_{i=1}^{N} \frac{1}{B} \int_{t=0}^{T} || S_i(t) - S_{commit}(t) ||_2^2 dt $$
+$$ \mathcal{L}_{checkpoint} = \sum_{i=1}^{N} \frac{1}{B} \int_{t=0}^{T} "||" S_i(t) - S_{commit}(t) "||"_2^2 dt $$
 
 ---
 
@@ -251,10 +251,10 @@ To optimize **Configuration Guide**, we enforce the following foundational rules
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 graph TD
-    A[Kafka Source] -->|Stream| B(Flink Window Operator)
+    A[Kafka Source] -->"|Stream|" B(Flink Window Operator)
     B --> C{State Backend}
-    C -->|RocksDB| D[(S3 Checkpoints)]
-    B -->|Sink| E[Iceberg Table]
+    C -->"|RocksDB|" D[(S3 Checkpoints)]
+    B -->"|Sink|" E[Iceberg Table]
 ```
 
 
@@ -309,10 +309,10 @@ To optimize **Configuration Guide**, we enforce the following foundational rules
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 graph TD
-    A[Kafka Source] -->|Stream| B(Flink Window Operator)
+    A[Kafka Source] -->"|Stream|" B(Flink Window Operator)
     B --> C{State Backend}
-    C -->|RocksDB| D[(S3 Checkpoints)]
-    B -->|Sink| E[Iceberg Table]
+    C -->"|RocksDB|" D[(S3 Checkpoints)]
+    B -->"|Sink| E[Iceberg Table]
 ```
 
 

@@ -11,7 +11,7 @@ Epoch boundary = first slot of each epoch
 ```
 slot_0      slot_1      ...  slot_31        slot_32
 [  epoch 0   ][            ][  epoch 1   ][
-|--12s--|--12s--|--12s--|--12s--|--12s--|--12s--|
+|--12s--|--12s--|--12s--|--12s--|--12s--|--12s--|"
 ```
 
 ## Committees
@@ -25,12 +25,12 @@ slot_0      slot_1      ...  slot_31        slot_32
 
 Casper FFG uses **checkpoints** (epoch boundary blocks) and **votes** (attestations):
 
-| Concept | Description |
+"| Concept | Description |
 |---------|-------------|
 | Source | Last justified checkpoint |
 | Target | Current epoch boundary |
 | Justified | Checkpoint with 2/3 of validators attesting *source→target* |
-| Finalized | Direct child of a justified checkpoint that gets justified |
+| Finalized | Direct child of a justified checkpoint that gets justified |"
 
 ### Justification & Finalization Rules
 
@@ -114,11 +114,11 @@ def get_weight(store: Store, root: Root, justified_slot: Slot) -> int:
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    V[Validator] -->|create attestation| A[Aggregation]
+    V[Validator] -->"|create attestation| A[Aggregation]
     A -->|gossip| AA[Aggregation pool]
     AA -->|aggregate| AT[Attestation]
     AT -->|include in block| BL[Block]
-    BL -->|process in state transition| ST
+    BL -->|process in state transition|" ST
 ```
 
 Attestation data:
@@ -151,11 +151,11 @@ def get_block_proposal(state, slot, proposer_index):
 
 ## Slashing Conditions
 
-| Condition | Type | Description |
+"| Condition | Type | Description |
 |-----------|------|-------------|
 | Double vote | `PROPOSER_SLASHING` | Two attestations with same target epoch, different blocks |
 | Surround vote | `ATTESTER_SLASHING` | Attestation A's source < B's source < B's target < A's target |
-| Proposer slashing | `PROPOSER_SLASHING` | Proposer signs two different blocks at same slot |
+| Proposer slashing | `PROPOSER_SLASHING` | Proposer signs two different blocks at same slot |"
 
 ### Slashing Penalty Calculation
 
@@ -179,7 +179,7 @@ Deposit → Pending → Activation (after 4 epochs) → Active →
 
 ### Withdrawal Credentials
 
-| Prefix | Type | Description |
+"| Prefix | Type | Description |
 |--------|------|-------------|
 | `0x00` + BLS pubkey (47 bytes) | BLS withdrawal | Legacy, must update |
 | `0x01` + 0x00*11 + execution_address (20 bytes) | Execution withdrawal | Enables automatic withdrawals |

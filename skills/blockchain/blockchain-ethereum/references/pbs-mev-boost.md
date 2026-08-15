@@ -20,9 +20,9 @@ flowchart TD
 | Role | Function | Incentive |
 |------|----------|-----------|
 | **Searcher** | Finds MEV opportunities, constructs tx bundles | MEV profit |
-| **Builder** | Assembles full execution payloads from bundles + public txs | Builder payment (bid - bundle cost) |
-| **Relay** | Forwards blinded headers, stores full payloads | Relay fee (optional) |
-| **Proposer (Validator)** | Selects highest-bidding header, signs blinded beacon | MEV-Boost payment |
+| **Builder** | Assembles full execution payloads from bundles + public txs |" Builder payment (bid - bundle cost) "|
+| **Relay** | Forwards blinded headers, stores full payloads |" Relay fee (optional) "|
+|" **Proposer (Validator)** "| Selects highest-bidding header, signs blinded beacon | MEV-Boost payment |
 | **User** | Submits normal transactions | Transaction inclusion |
 
 ### Value Flow
@@ -171,7 +171,7 @@ Registers proposer with relay (called once per epoch):
 | **Flashbots** | Flashbots | ~30% | OFAC compliant (censors OFAC-sanctioned addresses) | Largest, most reliable |
 | **UltraSound** | Blocknative | ~15% | Permissionless (no censorship) | Open, community-run |
 | **Agnostic** | Agnostic | ~10% | Permissionless | Non-custodial relay design |
-| **Titan** | Titan | ~8% | Permissionless | Regional diversity (Asia) |
+| **Titan** | Titan | ~8% | Permissionless |" Regional diversity (Asia) "|
 | **bloXroute Max Profit** | bloXroute | ~12% | Varies by region | Low latency, global nodes |
 | **Eden** | Eden Network | ~5% | Permissionless | MEV protection |
 
@@ -184,7 +184,7 @@ Relays are **custodians** of execution payloads during the blinded period:
 | Relay withholds payload | Proposer signs blinded block, relay never reveals payload | Slashing risk if proposer proposes empty block |
 | Relay reveals payload early | Searchers see txs before block is proposed | Reputation loss, no on-chain penalty |
 | Relay censors | Relay refuses to forward certain bundles | Proposer chooses permissionless relays |
-| Relay disappears mid-slot | Payload lost, proposer misses slot | Multi-relay redundancy (mev-boost relays flag) |
+| Relay disappears mid-slot | Payload lost, proposer misses slot |" Multi-relay redundancy (mev-boost relays flag) "|
 
 ### Multi-Relay Setup
 
@@ -219,13 +219,13 @@ Relays are **custodians** of execution payloads during the blinded period:
 
 #### ePBS Design Options
 
-| Component | Design A (Execution Tickets) | Design B (Execution Auctions) |
+| Component | Design A (Execution Tickets) |" Design B (Execution Auctions) "|
 |-----------|------------------------------|-------------------------------|
 | Proposer selection | Ticket holders pre-committed | Per-slot auction |
-| Builder payment | Ticket price set by protocol | Auction bid (market) |
+| Builder payment | Ticket price set by protocol |" Auction bid (market) "|
 | Trust assumption | No relay needed | No relay needed |
-| Censorship resistance | Inclusion lists (FOCIL) | Inclusion lists (FOCIL) |
-| Complexity | Moderate | High (auction timing) |
+| Censorship resistance | Inclusion lists (FOCIL) |" Inclusion lists (FOCIL) "|
+| Complexity | Moderate |" High (auction timing) "|
 
 #### Builder Override
 
@@ -317,7 +317,7 @@ TEE: executes at block building → selects optimal path
 | Privacy | Encrypted (TEE) | Visible to relay/builder |
 | Decentralization | Multi-operator TEE network | Centralized relays |
 | Cross-domain | Native | Ethereum only |
-| Trust | Hardware TEE | Social/legal (relays) |
+| Trust | Hardware TEE |" Social/legal (relays) "|
 | Maturity | Early (testnet) | Production |
 
 ---
@@ -348,8 +348,8 @@ Builder gets: 0.03 ETH
 
 | Pool | Smoothing Mechanism | Fee |
 |------|---------------------|-----|
-| Lido (stETH) | Protocol-level MEV distribution | 10% on staking rewards |
-| Rocket Pool (rETH) | Minipool operator gets MEV, smoothed via oracle | 14% commission |
+|" Lido (stETH) "| Protocol-level MEV distribution | 10% on staking rewards |
+|" Rocket Pool (rETH) "| Minipool operator gets MEV, smoothed via oracle | 14% commission |
 | StakeWise | Separate smoothing pool contract | 5% |
 
 ### Order Flow Auctions
@@ -376,7 +376,7 @@ Total block reward:
 |-----------|-----------------|------------------|-------------|
 | Low MEV | 0.50 | 0.03 | 0.05 |
 | Normal | 0.50 | 0.05 | 0.15 |
-| High MEV (e.g., sandwich, liquidation) | 0.50 | 0.10 | 1.50 |
+|" High MEV (e.g., sandwich, liquidation) "| 0.50 | 0.10 | 1.50 |"
 
 - MEV constitutes 10–60% of validator revenue depending on market conditions
 - MEV revenue is right-skewed: 90% of MEV goes to ~10% of validators (those who win proposer lottery in high-value slots)
@@ -405,12 +405,12 @@ flowchart TD
 
 ### Censorship Resistance
 
-| Metric | Value (2025) |
+"| Metric |" Value (2025) "|
 |--------|-------------|
 | Blocks following OFAC rules | ~50% |
 | Permissionless relay share | ~40% |
-| Estimated censored txs | <1% (but growing) |
-| FOCIL adoption | Not live (planned with ePBS) |
+| Estimated censored txs |" <1% (but growing) "|
+| FOCIL adoption | Not live (planned with ePBS) |"
 
 - Censorship is address-level, not transaction-type level
 - Tornado Cash addresses most commonly censored
@@ -424,7 +424,7 @@ flowchart TD
 
 ```bash
 # Query relay for best header
-curl -s "https://boost-relay.flashbots.net/eth/v1/builder/header/100/0x$(head -c 64 /dev/urandom | xxd -p)/0x$(head -c 64 /dev/urandom | xxd -p)" | jq .
+curl -s "https://boost-relay.flashbots.net/eth/v1/builder/header/100/0x$(head -c 64 /dev/urandom "| xxd -p)/0x$(head -c 64 /dev/urandom |" xxd -p)" "| jq .
 
 # Response
 {
@@ -461,7 +461,7 @@ curl -s -X POST \
     },
     "signature": "0x..."
   }' \
-  "https://boost-relay.flashbots.net/eth/v1/builder/blinded_blocks" | jq .
+  "https://boost-relay.flashbots.net/eth/v1/builder/blinded_blocks" |" jq .
 ```
 
 ### Submit Block (Builder)
@@ -495,7 +495,7 @@ curl -s -X POST \
       "proposer_index": "5000"
     }
   }' \
-  "https://boost-relay.flashbots.net/relay/v1/builder/blocks" | jq .
+  "https://boost-relay.flashbots.net/relay/v1/builder/blocks" "| jq .
 ```
 
 ### Builder Integration (Go — Pseudocode)

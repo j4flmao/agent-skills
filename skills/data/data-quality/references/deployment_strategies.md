@@ -80,7 +80,7 @@ To optimize **Deployment Strategies**, we enforce the following foundational rul
 - **ACID Transactions on Object Storage**: Leverages Apache Iceberg for concurrent schema evolution.
 
 ### Mathematical Thresholds
-$$ \mathcal{L}_{checkpoint} = \sum_{i=1}^{N} \frac{1}{B} \int_{t=0}^{T} || S_i(t) - S_{commit}(t) ||_2^2 dt $$
+$$ \mathcal{L}_{checkpoint} = \sum_{i=1}^{N} \frac{1}{B} \int_{t=0}^{T} ||" S_i(t) - S_{commit}(t) "||"_2^2 dt $$
 
 ---
 
@@ -188,10 +188,10 @@ To optimize **Deployment Strategies**, we enforce the following foundational rul
 ```mermaid
 %%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 graph TD
-    A[Kafka Source] -->|Stream| B(Flink Window Operator)
+    A[Kafka Source] -->"|Stream|" B(Flink Window Operator)
     B --> C{State Backend}
-    C -->|RocksDB| D[(S3 Checkpoints)]
-    B -->|Sink| E[Iceberg Table]
+    C -->"|RocksDB|" D[(S3 Checkpoints)]
+    B -->"|Sink| E[Iceberg Table]
 ```
 
 

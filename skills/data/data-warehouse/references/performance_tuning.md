@@ -284,7 +284,7 @@ To optimize **Performance Tuning**, we enforce the following foundational rules:
 - **Data Mesh Paradigm**: Decentralizes ownership into domain-oriented data products.
 
 ### Mathematical Thresholds
-$$ \mathcal{L}_{checkpoint} = \sum_{i=1}^{N} \frac{1}{B} \int_{t=0}^{T} || S_i(t) - S_{commit}(t) ||_2^2 dt $$
+$$ \mathcal{L}_{checkpoint} = \sum_{i=1}^{N} \frac{1}{B} \int_{t=0}^{T} ||" S_i(t) - S_{commit}(t) "||_2^2 dt $$
 
 ---
 

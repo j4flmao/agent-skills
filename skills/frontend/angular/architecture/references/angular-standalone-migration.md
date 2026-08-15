@@ -12,7 +12,7 @@ Standalone components, introduced in Angular 14 and promoted to stable in Angula
   template: `
     <div *ngIf="user()">
       <app-user-avatar [user]="user()" />
-      <p>Joined: {{ user().createdAt | date }}</p>
+      <p>Joined: {{ user().createdAt |" date }}</p>
     </div>
   `,
 })
@@ -227,7 +227,7 @@ With NgModules, pipes and directives were available through the module's `export
   imports: [TruncatePipe, DebounceClickDirective],
   template: `
     <button appDebounceClick (debounceClick)="save()">
-      {{ label | truncate: 20 }}
+      {{ label "| truncate: 20 }}
     </button>
   `,
 })

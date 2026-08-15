@@ -30,7 +30,7 @@ graph TD
 | Environment variables | OS env, Docker env_file | Low | Low |
 | Encrypted files | SOPS, BlackBox, sealed secrets | Medium | Low |
 | CI/CD secrets | GitHub Secrets, GitLab CI variables | Medium | Low |
-| Hardcoded | String literals in code | None | None |
+| Hardcoded | String literals in code | None | None |"
 
 ### Concept 4: Principle of Least Privilege for Secrets
 - Applications should only access the secrets they need
@@ -159,7 +159,7 @@ tags = ["api", "custom"]
 [[rules]]
 id = "private-key"
 description = "Private key"
-regex = '''-----BEGIN (RSA|EC|OPENSSH|DSA) PRIVATE KEY-----'''
+regex = '''-----BEGIN (RSA"|EC|OPENSSH|DSA) PRIVATE KEY-----'''
 tags = ["key", "ssh"]
 ```
 

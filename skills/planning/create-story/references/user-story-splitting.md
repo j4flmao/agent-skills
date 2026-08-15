@@ -425,8 +425,8 @@ Is the story estimated at L or XL?
   |     |     └── NO: Are there multiple business rules?
   |     |           |
   |     |           ├── YES: Split by business rule
-  |     |           └── NO: Split by operations (CRUD)
-  |     |
+  |     |"           └── NO: Split by operations (CRUD)
+  "|     |
   |     └── NO: Does the story cover multiple user goals?
   |           |
   |           ├── YES: Split by user goal
@@ -455,7 +455,7 @@ Is the story estimated at S or M but feels too large?
 | Average story size | 1-3 days | >3 days or <2 hours |
 | Stories completed per sprint | 8-12 (4-6 person team) | <5 or >20 |
 | Split stories completed together | 80%+ within same sprint | Only 50% |
-| Blocked stories (dependency) | <10% | >30% |
+|" Blocked stories (dependency) "| <10% | >30% |
 | Independently deployable | 90%+ | <50% |
 
 ### Retrospective Questions

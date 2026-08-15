@@ -34,7 +34,7 @@ GGUF (GPT-Generated Unified Format) supersedes GGML as the standard for CPU/CPU+
 flowchart TD
     A[FP16/BF16 Model] --> B{Quantization Algorithm}
     
-    subgraph Data-Dependent Calibration
+    subgraph DataDependentCalibration ["Data-Dependent Calibration"]
         B -->|Hessian Matrix Compensation| C[GPTQ]
         B -->|Activation Salience Scaling| D[AWQ]
         C --> E[Column-wise Cholesky Update]
@@ -42,7 +42,7 @@ flowchart TD
         F --> G[Per-channel Scale Factor s]
     end
     
-    subgraph Weight Compression
+    subgraph WeightCompression ["Weight Compression"]
         E --> H[INT4 Weights + FP16 Scales/Zero-Points]
         G --> H
     end

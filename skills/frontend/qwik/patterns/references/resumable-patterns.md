@@ -2,7 +2,7 @@
 
 ## Resumability vs Hydration
 
-| Aspect | Hydration (React/Vue) | Resumability (Qwik) |
+| Aspect | Hydration (React/Vue) |" Resumability (Qwik) "|
 |--------|----------------------|---------------------|
 | Initial JS | Must download and replay all component code | Zero JS needed for page to be interactive |
 | State restoration | Re-execute all components to rebuild virtual DOM | State serialized in HTML, resumed without replay |
