@@ -1,16 +1,18 @@
----
-name: aws-serverless
-type: skill
-category: cloud-native
-compatibility: Universal
-tags: [cloud-native, aws-serverless, advanced]
----
+# AWS Serverless: Deep Dive into Lambda and Firecracker
 
-# aws-serverless
+AWS Lambda abstracts infrastructure, but under the hood, it relies heavily on Firecracker microVMs. Firecracker uses the KVM (Kernel-based Virtual Machine) to provision and manage secure, lightweight microVMs. A microVM has a minimal device model, stripping away unnecessary hardware emulation to achieve boot times of <125ms and a memory footprint of <5MB per VM. 
 
-## Purpose
-Mastery of aws-serverless within the cloud-native domain. This skill equips the agent with advanced capabilities.
+When a Lambda function is invoked for the first time (a cold start), the Firecracker hypervisor allocates a new microVM. The control plane downloads the function package, initializes the language runtime, and executes the user's initialization code.
 
-## Rules & Constraints
-1. Always prioritize safety and performance.
-2. Refer to the 8 deep reference files in the eferences/ directory for specific guidance.
+```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
+    subgraph CPControlPlane ["CP ["Control Plane"]"]
+        A[API Gateway] -->|"Invoke()"| B[Worker Node]
+    end
+    subgraph VMFirecrackermicroVM ["VM ["Firecracker microVM"]"]
+        B --> C[MicroVM Init]
+        C -->|"LoadRuntime()"| D[Language Runtime]
+        D -->|"ExecuteHandler()"| E[Function Code]
+    end
+```

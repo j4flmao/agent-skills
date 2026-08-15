@@ -1,41 +1,29 @@
 ---
-name: distributed-training-mastery
-description: "Mastery of extreme-scale AI distributed training, encompassing 3D Parallelism, DeepSpeed ZeRO, and advanced network topologies."
+name: distributed-training
+description: Distributed Training Optimization
 ---
+# Distributed Deep Learning Mechanics
 
-# Hardware Acceleration: Distributed Training
+## Ring All-Reduce
+Synchronous data parallel training requires gradients from all GPUs to be averaged before the optimizer step. Instead of a parameter server bottleneck, Ring All-Reduce organizes N GPUs into a logical ring. The gradient tensors are split into N chunks. During the scatter-reduce phase, GPUs pass chunks around the ring, accumulating sums. After N-1 steps, each GPU holds one fully accumulated chunk. In the subsequent all-gather phase, these complete chunks are circulated. Total network transfer per GPU is 2*(N-1)/N * Size, making it bandwidth-optimal and highly scalable.
 
-## Theoretical Foundation
-Scaling beyond single-node boundaries necessitates orthogonal partitioning strategies across data, tensor, and pipeline dimensions.
-1. **Data Parallelism (DP)**: Orthogonal to model topology; replicates models across devices, synchronizing gradients via `AllReduce`.
-2. **Tensor Parallelism (TP)**: Intra-layer partitioning. Matrix multiplications are sharded across devices. Requires high-bandwidth interconnects (NVLink) due to synchronous communication overhead.
-3. **Pipeline Parallelism (PP)**: Inter-layer partitioning. Sequential execution across devices with micro-batching to mitigate pipeline bubbles (1F1B scheduling).
+## ZeRO Optimizer (Zero Redundancy Optimizer)
+Standard Data Parallelism duplicates the entire model state across all GPUs, which is impossible for LLMs like GPT-3. ZeRO eliminates this memory redundancy by partitioning the state.
+- **ZeRO Stage 1**: Partitions Optimizer States (e.g., Adam momentum/variance). Cuts memory footprint by 4x.
+- **ZeRO Stage 2**: Partitions Gradients. Each GPU only holds gradients for its parameter partition, reducing memory by 8x.
+- **ZeRO Stage 3**: Partitions Parameters. Model weights are scattered. Forward/backward passes use dynamic collective communications (All-Gather) to fetch required parameters just-in-time for a layer's computation, and immediately discard them, allowing training of trillion-parameter models.
 
-## DeepSpeed ZeRO (Zero Redundancy Optimizer)
-Eliminates memory redundancies in DP:
-- **ZeRO-1**: Shards Optimizer States.
-- **ZeRO-2**: Shards Gradients (+ ZeRO-1).
-- **ZeRO-3**: Shards Parameters (+ ZeRO-2). Enables models exceeding aggregated GPU VRAM via dynamic prefetching (`AllGather`) and eviction.
-
-## Network Topology & Communication
-- **NCCL (NVIDIA Collective Communications Library)**: Optimizes primitives (`AllReduce`, `AllGather`, `ReduceScatter`).
-- **Intra-Node**: NVLink yields ultra-high bandwidth (>900 GB/s) essential for TP.
-- **Inter-Node**: Infiniband (RDMA) minimizes latency, strictly required for PP and ZeRO-3 parameter synchronization.
-
-## Architecture Flow
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
 flowchart TD
-    A[Global Batch] --> B[Data Parallel Split]
-    B --> C1[Replica 1]
-    B --> C2[Replica 2]
-    
-    C1 --> D1[Pipeline Stage 1]
-    D1 --> E1[Tensor Parallel Partition A]
-    D1 --> E2[Tensor Parallel Partition B]
-    
-    E1 --> F[AllReduce Gradients]
-    E2 --> F
-    F --> G[ZeRO Optimizer Sharding]
-    G --> H[Update Weights]
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+    subgraph CommunicationRingAllReducePhase ["Communication ["Ring All-Reduce Phase"]"]
+        GPU_0 -->|"send_chunk()"| GPU_1
+        GPU_1 -->|"accumulate()"| GPU_2
+        GPU_2 -->|"forward()"| GPU_0
+    end
+    subgraph ZeROStagesZeROPartitioning ["ZeRO_Stages ["ZeRO Partitioning"]"]
+        Stage1 -->|"partition_adam()"| MemorySave
+        Stage2 -->|"partition_grads()"| ReduceScatter
+        Stage3 -->|"partition_weights()"| AllGather
+    end
 ```

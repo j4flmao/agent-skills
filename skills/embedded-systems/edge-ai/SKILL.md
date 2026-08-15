@@ -1,16 +1,17 @@
----
-name: edge-ai
-description: Deploying lightweight Machine Learning models on Edge devices (TinyML).
----
+# Edge AI: TensorRT and ONNX
 
-# edge-ai Guidelines
+Deploying deep learning models on edge devices with limited compute requires rigorous optimization. NVIDIA TensorRT performs graph optimizations, layer fusion (e.g., merging convolution, bias, and ReLU layers), and precision calibration (quantizing FP32 weights to FP16 or INT8 without significant accuracy loss). 
 
-## References
-- [ architecture-patterns.md ](references/architecture-patterns.md)
-- [ state-management.md ](references/state-management.md)
-- [ performance-optimization.md ](references/performance-optimization.md)
-- [ security-best-practices.md ](references/security-best-practices.md)
-- [ testing-strategies.md ](references/testing-strategies.md)
-- [ deployment-pipelines.md ](references/deployment-pipelines.md)
-- [ error-handling.md ](references/error-handling.md)
-- [ code-organization.md ](references/code-organization.md)
+ONNX (Open Neural Network Exchange) provides an interoperable format. The ONNX Runtime acts as the execution engine, utilizing execution providers (like TensorRT or CUDA) to map model operators to hardware-accelerated kernels.
+
+```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
+    subgraph ModelModelExport ["Model ["Model Export"]"]
+        A[PyTorch] -->|"Export()"| B[ONNX Graph]
+    end
+    subgraph ExecEdgeRuntime ["Exec ["Edge Runtime"]"]
+        B -->|"Optimize()"| C[TensorRT Engine]
+        C -->|"ExecuteInference()"| D[GPU Cores]
+    end
+```

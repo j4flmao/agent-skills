@@ -1,16 +1,28 @@
 ---
 name: godot-gdscript
-description: Godot engine architecture, GDExtension, and GDScript performance tuning.
+description: Godot Engine Architecture
 ---
+# Godot Engine internal Architecture
 
-# godot-gdscript Guidelines
+## Server Architecture
+Godot completely separates the scene graph (Nodes, Tree) from the low-level processing by delegating hardware interaction and heavy lifting to "Servers". Servers are singletons (e.g., `RenderingServer`, `PhysicsServer3D`, `AudioServer`) that run highly optimized C++ code, often on separate threads. The SceneTree is essentially a high-level frontend that issues commands to these servers. 
 
-## References
-- [ architecture-patterns.md ](references/architecture-patterns.md)
-- [ state-management.md ](references/state-management.md)
-- [ performance-optimization.md ](references/performance-optimization.md)
-- [ security-best-practices.md ](references/security-best-practices.md)
-- [ testing-strategies.md ](references/testing-strategies.md)
-- [ deployment-pipelines.md ](references/deployment-pipelines.md)
-- [ error-handling.md ](references/error-handling.md)
-- [ code-organization.md ](references/code-organization.md)
+## VisualServer (RenderingServer) Internals
+The `RenderingServer` handles all drawing operations. Nodes like `MeshInstance3D` do not render themselves. Instead, they register a resource (e.g., an RID for a mesh) with the `RenderingServer` and update their transform matrices. The Server maintains its own spatial partitioning structure (like a BVH) to perform culling and rendering, allowing thread-safe decoupling from game logic execution.
+
+## Signal Event Loop
+Signals implement the Observer pattern at the engine core. When `emit_signal()` is called, it iterates over connected callables in the `Object`'s connection map. For deferred signals (using `CONNECT_DEFERRED`), Godot pushes the signal emission payload into a `MessageQueue`. The queue is flushed at the end of the current frame (during `SceneTree::process`), ensuring that state modifications do not corrupt iterative processes like physics callbacks.
+
+```mermaid
+flowchart TD
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+    subgraph SceneTreeHighLevelLogic ["SceneTree ["High-Level Logic"]"]
+        NodeA -->|"emit_signal()"| MessageQueue
+        NodeB -->|"set_transform()"| ServerAPI
+    end
+    subgraph ServersLowLevelServers ["Servers ["Low-Level Servers"]"]
+        MessageQueue -->|"flush()"| DeferredCall
+        ServerAPI -->|"update_RID()"| RenderingServer
+        RenderingServer -->|"render_frame()"| VulkanBackend
+    end
+```

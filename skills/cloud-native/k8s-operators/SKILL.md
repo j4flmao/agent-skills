@@ -1,16 +1,19 @@
----
-name: k8s-operators
-type: skill
-category: cloud-native
-compatibility: Universal
-tags: [cloud-native, k8s-operators, advanced]
----
+# Kubernetes Operators and CRDs
 
-# k8s-operators
+Kubernetes Operators encode human operational knowledge into software. They build upon Custom Resource Definitions (CRDs), which extend the Kubernetes API.
 
-## Purpose
-Mastery of k8s-operators within the cloud-native domain. This skill equips the agent with advanced capabilities.
+The core mechanism is the reconciliation loop. The Operator watches for changes to its CRD via the Kubernetes API server (using watch requests). When an event (Add, Update, Delete) is detected, the resource is placed in a work queue. The worker pulls from the queue and executes the reconcile function, comparing the current state of the cluster with the desired state declared in the CRD, and taking actions (e.g., creating Pods, Services) to align them.
 
-## Rules & Constraints
-1. Always prioritize safety and performance.
-2. Refer to the 8 deep reference files in the eferences/ directory for specific guidance.
+```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
+    subgraph APIK8sAPIServer ["API ["K8s API Server"]"]
+        A[User] -->|"Apply(CRD)"| B[API Server]
+    end
+    subgraph OpOperator ["Op ["Operator"]"]
+        B -->|"WatchEvent()"| C[Informer]
+        C --> D[Work Queue]
+        D -->|"Reconcile()"| E[Controller Logic]
+        E -->|"UpdateState()"| B
+    end
+```

@@ -1,16 +1,17 @@
----
-name: azure-functions
-type: skill
-category: cloud-native
-compatibility: Universal
-tags: [cloud-native, azure-functions, advanced]
----
+# Azure Functions: Durable Execution and Event Grid
 
-# azure-functions
+Durable Functions extend Azure Functions by enabling stateful workflows in a serverless environment. It uses the Event Sourcing pattern, where the framework stores the complete history of function executions in an Azure Storage Table. When a workflow is suspended (e.g., waiting for an external event), the orchestrator function stops execution. Once the event occurs, the orchestrator replays from the beginning, using the event history to skip already completed steps.
 
-## Purpose
-Mastery of azure-functions within the cloud-native domain. This skill equips the agent with advanced capabilities.
+Azure Event Grid provides an event-routing backplane. It uses a push-based model with built-in retry mechanisms, ensuring reliable delivery. 
 
-## Rules & Constraints
-1. Always prioritize safety and performance.
-2. Refer to the 8 deep reference files in the eferences/ directory for specific guidance.
+```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
+    subgraph EGEventGrid ["EG ["Event Grid"]"]
+        A[Publisher] -->|"PublishEvent()"| B[Topic]
+    end
+    subgraph DFDurableFunctions ["DF ["Durable Functions"]"]
+        B -->|"Trigger()"| C[Orchestrator]
+        C -->|"CallActivity()"| D[Activity Function]
+    end
+```

@@ -1,16 +1,17 @@
----
-name: iot-protocols
-description: Deep dive into IoT network architecture: MQTT, CoAP, BLE, LoRaWAN.
----
+# IoT Protocols: MQTT and CoAP
 
-# iot-protocols Guidelines
+MQTT is a lightweight publish-subscribe protocol running over TCP/IP. It defines three Quality of Service (QoS) levels: QoS 0 (at most once), QoS 1 (at least once, requiring a PUBACK), and QoS 2 (exactly once, using a four-step handshake). 
 
-## References
-- [ architecture-patterns.md ](references/architecture-patterns.md)
-- [ state-management.md ](references/state-management.md)
-- [ performance-optimization.md ](references/performance-optimization.md)
-- [ security-best-practices.md ](references/security-best-practices.md)
-- [ testing-strategies.md ](references/testing-strategies.md)
-- [ deployment-pipelines.md ](references/deployment-pipelines.md)
-- [ error-handling.md ](references/error-handling.md)
-- [ code-organization.md ](references/code-organization.md)
+CoAP (Constrained Application Protocol) is designed for UDP-based networks. It maps HTTP semantics to a compact binary format, utilizing a fixed 4-byte header. CoAP supports request/response patterns and multicast, making it suitable for lossy networks (LLNs) where TCP overhead is prohibitive.
+
+```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
+    subgraph PubPublisher ["Pub ["Publisher"]"]
+        A[Sensor] -->|"Publish(QoS1)"| B[MQTT Broker]
+    end
+    subgraph SubSubscriber ["Sub ["Subscriber"]"]
+        B -->|"Deliver()"| C[Backend Service]
+        C -->|"PUBACK()"| B
+    end
+```

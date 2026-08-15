@@ -1,16 +1,25 @@
 ---
 name: rtos
-description: Real-Time Operating Systems architecture (FreeRTOS, Zephyr) and thread management.
+description: RTOS Internals
 ---
+# Real-Time Operating Systems (RTOS) Mechanics
 
-# rtos Guidelines
+## Preemptive Scheduling and FreeRTOS Internals
+FreeRTOS utilizes a priority-based, preemptive scheduling algorithm. The core data structure is `pxReadyTasksLists`, an array of `List_t` structures, one for each priority level up to `configMAX_PRIORITIES - 1`. The scheduler always selects the highest priority task in the ready state. Context switching is architecture-specific but fundamentally involves saving the CPU context onto the task's stack, updating the TCB (Task Control Block) stack pointer, and restoring the context of the newly selected task via a `PendSV` handler in ARM Cortex-M architectures.
 
-## References
-- [ architecture-patterns.md ](references/architecture-patterns.md)
-- [ state-management.md ](references/state-management.md)
-- [ performance-optimization.md ](references/performance-optimization.md)
-- [ security-best-practices.md ](references/security-best-practices.md)
-- [ testing-strategies.md ](references/testing-strategies.md)
-- [ deployment-pipelines.md ](references/deployment-pipelines.md)
-- [ error-handling.md ](references/error-handling.md)
-- [ code-organization.md ](references/code-organization.md)
+## Priority Inheritance in Mutexes
+To prevent priority inversion, FreeRTOS implements priority inheritance for its Mutex objects (which are specialized semaphores). When a high-priority task attempts to acquire a Mutex held by a lower-priority task, the scheduler temporarily elevates the priority of the mutex holder to match the blocked high-priority task. Upon releasing the mutex, the holder's original base priority is restored.
+
+```mermaid
+flowchart TD
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+    subgraph SchedulerFreeRTOSScheduler ["Scheduler ["FreeRTOS Scheduler"]"]
+        Tick[SysTick Interrupt] -->|"xTaskIncrementTick()"| UnblockCheck[Check Delayed Lists]
+        UnblockCheck -->|"Yield()"| SwitchContext[Context Switch PendSV]
+    end
+    subgraph TaskStateTaskStateMachine ["TaskState ["Task State Machine"]"]
+        Running -->|"vTaskDelay()"| Blocked
+        Blocked -->|"xSemaphoreGive()"| Ready
+        Ready -->|"Schedule()"| Running
+    end
+```

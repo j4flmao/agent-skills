@@ -1,16 +1,17 @@
----
-name: gcp-bigquery
-type: skill
-category: cloud-native
-compatibility: Universal
-tags: [cloud-native, gcp-bigquery, advanced]
----
+# GCP BigQuery: Dremel and Capacitor
 
-# gcp-bigquery
+BigQuery separates compute and storage. The execution engine, Dremel, uses a multi-level execution tree. A root server receives the query, rewrites it, and distributes it to intermediate servers, which then distribute it to leaf nodes (workers) that scan the data.
 
-## Purpose
-Mastery of gcp-bigquery within the cloud-native domain. This skill equips the agent with advanced capabilities.
+Data is stored in Colossus using the Capacitor columnar format. Capacitor optimizes data access by utilizing advanced encoding (e.g., dictionary encoding, run-length encoding) and maintaining statistical metadata. This metadata allows Dremel workers to prune unnecessary blocks without reading them.
 
-## Rules & Constraints
-1. Always prioritize safety and performance.
-2. Refer to the 8 deep reference files in the eferences/ directory for specific guidance.
+```mermaid
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+flowchart TD
+    subgraph EngineDremelEngine ["Engine ["Dremel Engine"]"]
+        A[Root Server] -->|"Distribute()"| B[Intermediate Server]
+        B -->|"Scan()"| C[Leaf Worker]
+    end
+    subgraph StorageCapacitorStorage ["Storage ["Capacitor Storage"]"]
+        C -->|"ReadColumn()"| D[Capacitor File]
+    end
+```

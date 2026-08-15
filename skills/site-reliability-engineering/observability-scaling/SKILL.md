@@ -1,16 +1,29 @@
 ---
-name: observability-scaling
-type: skill
-category: site-reliability-engineering
-compatibility: Universal
-tags: [site-reliability-engineering, observability-scaling, advanced]
+name: Observability and Scaling
+description: Prometheus TSDB compaction and OpenTelemetry trace context propagation.
 ---
+# Observability & Scaling: Core Mechanics
 
-# observability-scaling
+## Prometheus TSDB Compaction
+Prometheus utilizes a custom Time Series Database (TSDB) optimized for fast ingestion and querying.
+- **Head Block**: Active data is stored in memory and a Write-Ahead Log (WAL).
+- **Compaction**: Persistent blocks (default 2h) are compacted logarithmically into larger blocks (e.g., 2h -> 8h -> 32h) to reduce index overhead and improve query performance.
+- **Index Structure**: Inverted index mapping label matchers to series IDs.
 
-## Purpose
-Mastery of observability-scaling within the site-reliability-engineering domain. This skill equips the agent with advanced capabilities.
+```mermaid
+flowchart TD
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+    subgraph TSDBPrometheusTSDB ["TSDB ["Prometheus TSDB"]"]
+        Mem[In-Memory Head] -->|"Flush(2h)"| Block1[2h Block]
+        Block1 -->|"Compact(Level 1)"| Block2[8h Block]
+    end
+    subgraph TracingOpenTelemetry ["Tracing ["OpenTelemetry"]"]
+        Req[Incoming Request] -->|"Extract(TraceContext)"| Span1[Root Span]
+        Span1 -->|"Inject(W3C Headers)"| Downstream[Downstream RPC]
+    end
+```
 
-## Rules & Constraints
-1. Always prioritize safety and performance.
-2. Refer to the 8 deep reference files in the eferences/ directory for specific guidance.
+## OpenTelemetry Trace Context Propagation
+Distributed tracing relies on propagating metadata across network boundaries.
+- **W3C Trace Context Specification**: Standardizes HTTP headers `traceparent` (Trace ID, Span ID, Flags) and `tracestate` (vendor-specific data).
+- **Context Implantation**: Language-specific agents dynamically instrument RPC libraries (e.g., gRPC interceptors) to inject/extract context automatically.
