@@ -1,0 +1,857 @@
+--- SUSPICIOUS FILES (BOILERPLATE) ---
+d:\j4flmao-org\skills\ai\ai-agents\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\agent-architectures.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\agent-memory-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\agent-multi-agent.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\agent-observability.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\agent-performance.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\agent-planning-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\agent-security-governance.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\agent-testing-evaluation.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\ai-agents-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\ai-agents-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\orchestration.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-agents\references\tool-use-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\ai-cost-optimization-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\ai-cost-optimization-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\batching-throughput.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\budget-monitoring-alerting.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\cache-optimization-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\cost-optimization-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\enterprise-cost-governance.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\inference-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\model-distillation-cost-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\model-selection-guide.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\prompt-compression-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-cost-optimization\references\token-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\ai-evals-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\ai-evals-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\eval-data-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\eval-datasets.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\eval-frameworks.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\eval-infrastructure.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\eval-metrics.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\eval-pipeline.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\eval-quality-assurance.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\eval-workflow-automation.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\llm-judge-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\metrics-reference.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-evals\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\ai-observability-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\ai-observability-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\cost-tracking.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\dashboard-alerting.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\feedback-collection.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\llm-monitoring.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\llm-tracing.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\observability-incident-response.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\observability-metrics.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\observability-pipeline-architecture.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\observability-tooling-comparison.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\privacy-data-governance.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-observability\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\ai-safety-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\ai-safety-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\bias-alignment.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\compliance-frameworks.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\content-moderation.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\guardrails.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\red-teaming-guardrails.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\red-teaming.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\safety-monitoring.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\safety-policy-frameworks.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\safety-policy-templates.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\safety-testing-automation.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-safety\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\ai-testing-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\ai-testing-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\assertion-library.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\ci-cd-for-llm.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\llm-testing.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\model-comparison.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\non-determinism-testing.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\regression-testing.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\test-cases.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\test-infrastructure.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\testing-data-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\testing-framework-comparison.md -> To optimize **
+d:\j4flmao-org\skills\ai\ai-testing\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\chunking-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\embedding-api-integration.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\embedding-deployment.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\embedding-evaluation.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\embedding-models.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\embedding-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\embedding-training.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\embedding-use-cases.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\embeddings-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\embeddings-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\hybrid-search.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\multi-modal-embeddings.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\embeddings\references\vector-indexing.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\callback-streaming.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\custom-components.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\document-pipeline.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\langchain-memory-persistence.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\langchain-patterns-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\langchain-patterns-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\langchain-production.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\langchain-testing.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\lcel-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\llm-comparison.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\migration-guides.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\retriever-agent-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\langchain-patterns\references\tool-integration.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\deployment-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\fine-tuning.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\llm-ops-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\llm-ops-cost-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\llm-ops-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\llm-ops-guardrails.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\llm-ops-incident-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\model-ab-testing.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\model-serving.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\prompt-cicd.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\prompt-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\llm-ops\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\mcp-antipatterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\mcp-architecture.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\mcp-client-integration.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\mcp-patterns-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\mcp-patterns-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\mcp-production-operations.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\mcp-security-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\mcp-servers.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\server-implementation.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\mcp-patterns\references\transport-options.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\anti-patterns-troubleshooting.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\distributed-training-architecture.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\fine-tuning-guide.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\fine-tuning-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\hyperparameter-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\model-training-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\model-training-data-prep.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\model-training-evaluation.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\model-training-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\production-experiment-tracking.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\rlhf-dpo.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\training-infrastructure-design.md -> To optimize **
+d:\j4flmao-org\skills\ai\model-training\references\training-pipeline.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\audio-models.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\multimodal-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\multimodal-deployment.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\multimodal-evaluation.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\multimodal-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\multimodal-rag.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\vision-language-models.md -> To optimize **
+d:\j4flmao-org\skills\ai\multimodal\references\vision-models.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\prompt-anti-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\prompt-decision-trees.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\prompt-engineering-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\prompt-engineering-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\prompt-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\prompt-performance-tuning.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\prompt-production-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\prompt-security.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\prompt-techniques.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\prompt-templates.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\prompt-testing-framework.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\prompt-engineering\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\chunking-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\rag-advanced-patterns-deep.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\rag-evaluation-metrics.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\rag-hybrid.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\rag-indexing-pipeline.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\rag-patterns-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\rag-patterns-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\rag-production-deployment.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\rag-query-enhancement.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\retrieval-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\retrieval-techniques.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\rag-patterns\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\references\ai-ai-agents-ref1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\ai-ai-agents-ref2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\ai-ai-evals-1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\ai-ai-evals-2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\ai-ai-safety-1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\ai-ai-safety-2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\ai-llm-ops_ref1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\ai-llm-ops_ref2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\ai-prompt-engineering_ref1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\ai-prompt-engineering_ref2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\ai-rag-patterns_ref1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\ai-rag-patterns_ref2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\ai-vector-databases_ref1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\ai-vector-databases_ref2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\embeddings_best_practices.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\embeddings_math.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\langchain_advanced_chains.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\langchain_lcel_core.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\multimodal_advanced.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\references\multimodal_clip_fusion.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ai\vector-databases\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\anti-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\code-examples.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\cost-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\evaluation-benchmarking.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\index-types.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\indexing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\operations.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\vector-databases-advanced.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\vector-databases-fundamentals.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\vector-db-comparison.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\vector-db-scaling.md -> To optimize **
+d:\j4flmao-org\skills\ai\vector-databases\references\vector-db-security.md -> To optimize **
+d:\j4flmao-org\skills\backend\references\api-gateway-kong.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\api-gateway-plugins.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\architecture-patterns.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\backend-api-design_ref_1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\backend-api-design_ref_2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\backend-caching-lru.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\backend-caching-patterns.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\backend-graphql-apollo.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\backend-graphql-schema.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\backend-microservices_ref_1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\backend-microservices_ref_2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\backend_event_driven_arch.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\backend_event_driven_patterns.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\backend_resilience_circuit_breaker.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\backend_resilience_retry_bulkhead.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\backend_search_es_dsl.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\backend_search_optimizations.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\message-queue-advanced.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\message-queue-kafka.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\backend\references\storage-replication.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\blockchain_core_ref_1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\blockchain_core_ref_2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\blockchain_core_ref_3.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\blockchain_core_ref_4.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\blockchain_core_ref_5.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\blockchain_core_ref_6.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\blockchain_core_ref_7.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\blockchain_core_ref_8.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\btc-script.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\btc-utxo.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\core-merkle.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\crypto-ecdsa.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\crypto-hash.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\eth-evm.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\blockchain\references\eth-solidity.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\aws_ci_cd.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\aws_cost_explorer_formulas.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\aws_infra_code.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\cloud-cost-optimization-ref1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\cloud-cost-optimization-ref2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\cloud_native_architecture.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\cloud_native_patterns.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\ebpf-core.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\istio_envoy_routing.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\k8s-webhooks.md -> To optimize **
+d:\j4flmao-org\skills\cloud-native\references\k8s_networking.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\k8s_operators.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\mesh_topology_algos.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\promql-adv.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\serverless_design.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\serverless_performance.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\sidecar-patterns.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\telemetry-mesh.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\cloud-native\references\tracing-scenarios.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\core\references\code-organization.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\core\references\error-handling.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\core\references\performance-optimization.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\core\references\state-management.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\core\references\testing-strategies.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\data-quality\references\deployment_strategies.md -> To optimize **
+d:\j4flmao-org\skills\data\data-quality\references\integration_guide.md -> To optimize **
+d:\j4flmao-org\skills\data\data-quality\references\performance_tuning.md -> To optimize **
+d:\j4flmao-org\skills\data\data-quality\references\security_best_practices.md -> To optimize **
+d:\j4flmao-org\skills\data\data-quality\references\troubleshooting_guide.md -> To optimize **
+d:\j4flmao-org\skills\data\data-warehouse\references\architecture_patterns.md -> To optimize **
+d:\j4flmao-org\skills\data\data-warehouse\references\configuration_guide.md -> To optimize **
+d:\j4flmao-org\skills\data\data-warehouse\references\deployment_strategies.md -> To optimize **
+d:\j4flmao-org\skills\data\data-warehouse\references\integration_guide.md -> To optimize **
+d:\j4flmao-org\skills\data\data-warehouse\references\performance_tuning.md -> To optimize **
+d:\j4flmao-org\skills\data\data-warehouse\references\security_best_practices.md -> To optimize **
+d:\j4flmao-org\skills\data\data-warehouse\references\troubleshooting_guide.md -> To optimize **
+d:\j4flmao-org\skills\data\references\data-batch-processing-math.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-batch-processing-patterns.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-bi-tools_ref_1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-bi-tools_ref_2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-cdc-patterns-arch.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-cdc-patterns-debezium.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-data-lakehouse-hudi.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-data-lakehouse-iceberg.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-data-replication-conflict.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-data-replication-latency.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-data-warehouse_ref_1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-data-warehouse_ref_2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-etl-pipeline_ref_1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-etl-pipeline_ref_2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-quality-ge-specs.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-quality-metrics.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-streaming_ref_1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\data-streaming_ref_2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\hdfs-block-allocation.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\lake-metadata-schema.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\s3-partition-strategies.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data\references\spark-rdd-lineage.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data-science\references\time_series_arima.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\data-science\references\time_series_prophet.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\alert-configs.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\chaos_mesh_config.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\chaos_theory_math.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\deployment-pipelines.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\devops-azure-arm.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\devops-azure-network.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\devops-database-migration-ref1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\devops-database-migration-ref2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\devops-gcp-iam.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\devops-gcp-spanner.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\devops-incident-response-ref1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\devops-incident-response-ref2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\devops-monorepo-bazel.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\devops-monorepo-ci.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\devops-nomad-ref1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\devops-nomad-ref2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\devops-vault-auth.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\devops-vault-transit.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\disaster_recovery_schemas.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\devops\references\rto_rpo_math.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\frontend\qwik\patterns\references\qwik-city-patterns.md -> navigator.serviceWorker.register
+d:\j4flmao-org\skills\frontend\universal\browser-caching\references\service-worker-caching.md -> navigator.serviceWorker.register
+d:\j4flmao-org\skills\frontend\universal\browser-caching\references\sw-caching.md -> navigator.serviceWorker.register
+d:\j4flmao-org\skills\frontend\universal\pwa\references\pwa-audit.md -> Lighthouse Score
+d:\j4flmao-org\skills\frontend\universal\pwa\references\pwa-fundamentals.md -> navigator.serviceWorker.register
+d:\j4flmao-org\skills\frontend\universal\pwa\references\pwa-service-worker-lifecycle.md -> navigator.serviceWorker.register
+d:\j4flmao-org\skills\frontend\universal\pwa\references\pwa-testing.md -> navigator.serviceWorker.register
+d:\j4flmao-org\skills\frontend\universal\pwa\references\service-worker.md -> navigator.serviceWorker.register
+d:\j4flmao-org\skills\ml\references\ml-classical-ml-ref1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ml\references\ml-classical-ml-ref2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ml\references\ml-deep-learning-ref1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ml\references\ml-deep-learning-ref2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ml\references\ml-experiment-tracking-ref1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ml\references\ml-experiment-tracking-ref2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ml\references\ml-feature-engineering-1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ml\references\ml-feature-engineering-2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ml\references\ml-model-serving-1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\ml\references\ml-model-serving-2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\security\references\security-authentication.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\security\references\security-best-practices.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\security\references\security-guidelines.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\system-design\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\system-design\cap-theorem\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\system-design\cap-theorem\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\system-design\cap-theorem\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\system-design\cap-theorem\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\system-design\cap-theorem\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\system-design\cap-theorem\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\system-design\cap-theorem\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\system-design\cap-theorem\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\system-design\cap-theorem\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\system-design\database-sharding\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\system-design\database-sharding\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\system-design\database-sharding\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\system-design\database-sharding\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\system-design\database-sharding\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\system-design\database-sharding\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\system-design\database-sharding\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\system-design\database-sharding\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\system-design\distributed-caching\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\system-design\distributed-caching\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\system-design\distributed-caching\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\system-design\distributed-caching\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\system-design\distributed-caching\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\system-design\distributed-caching\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\system-design\distributed-caching\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\system-design\distributed-caching\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\system-design\distributed-caching\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\system-design\event-sourcing\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\system-design\event-sourcing\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\system-design\event-sourcing\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\system-design\event-sourcing\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\system-design\event-sourcing\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\system-design\event-sourcing\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\system-design\event-sourcing\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\system-design\event-sourcing\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\system-design\event-sourcing\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\system-design\references\api.md -> To optimize **
+d:\j4flmao-org\skills\system-design\references\architecture.md -> To optimize **
+d:\j4flmao-org\skills\system-design\references\compute-shuffle-arch.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\system-design\references\core-architecture.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\system-design\references\deployment.md -> To optimize **
+d:\j4flmao-org\skills\system-design\references\governance.md -> To optimize **
+d:\j4flmao-org\skills\system-design\references\patterns.md -> To optimize **
+d:\j4flmao-org\skills\system-design\references\performance.md -> To optimize **
+d:\j4flmao-org\skills\system-design\references\rate_limiting_strategies.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\system-design\references\rate_limiting_token_bucket.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\system-design\references\reconnection-scaling.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\system-design\references\security.md -> To optimize **
+d:\j4flmao-org\skills\system-design\references\state.md -> To optimize **
+d:\j4flmao-org\skills\system-design\references\system-design_ref_1.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\system-design\references\system-design_ref_2.md -> To optimize **, Lighthouse Score, navigator.serviceWorker.register
+d:\j4flmao-org\skills\tools\eslint\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\tools\eslint\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\tools\eslint\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\tools\eslint\references\custom-rules.md -> To optimize **
+d:\j4flmao-org\skills\tools\eslint\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\tools\eslint\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\tools\eslint\references\flat-config.md -> To optimize **
+d:\j4flmao-org\skills\tools\eslint\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\tools\eslint\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\tools\eslint\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\tools\eslint\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\tools\git\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\tools\git\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\tools\git\references\branching-strategies.md -> To optimize **
+d:\j4flmao-org\skills\tools\git\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\tools\git\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\tools\git\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\tools\git\references\hooks-automation.md -> To optimize **
+d:\j4flmao-org\skills\tools\git\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\tools\git\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\tools\git\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\tools\git\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\tools\jest\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\tools\jest\references\advanced-matchers.md -> To optimize **
+d:\j4flmao-org\skills\tools\jest\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\tools\jest\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\tools\jest\references\custom-reporters.md -> To optimize **
+d:\j4flmao-org\skills\tools\jest\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\tools\jest\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\tools\jest\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\tools\jest\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\tools\jest\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\tools\jest\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\tools\prettier\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\tools\prettier\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\tools\prettier\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\tools\prettier\references\config-sharing.md -> To optimize **
+d:\j4flmao-org\skills\tools\prettier\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\tools\prettier\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\tools\prettier\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\tools\prettier\references\plugin-development.md -> To optimize **
+d:\j4flmao-org\skills\tools\prettier\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\tools\prettier\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\tools\prettier\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\tools\vite\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\tools\vite\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\tools\vite\references\build-optimization.md -> To optimize **
+d:\j4flmao-org\skills\tools\vite\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\tools\vite\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\tools\vite\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\tools\vite\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\tools\vite\references\plugin-system.md -> To optimize **
+d:\j4flmao-org\skills\tools\vite\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\tools\vite\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\tools\vite\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\tools\vscode\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\tools\vscode\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\tools\vscode\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\tools\vscode\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\tools\vscode\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\tools\vscode\references\extension-development.md -> To optimize **
+d:\j4flmao-org\skills\tools\vscode\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\tools\vscode\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\tools\vscode\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\tools\vscode\references\tasks-launch-configs.md -> To optimize **
+d:\j4flmao-org\skills\tools\vscode\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\web\accessibility\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\web\accessibility\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\web\accessibility\references\aria-patterns.md -> To optimize **
+d:\j4flmao-org\skills\web\accessibility\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\web\accessibility\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\web\accessibility\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\web\accessibility\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\web\accessibility\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\web\accessibility\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\web\accessibility\references\testing-auditing.md -> To optimize **
+d:\j4flmao-org\skills\web\accessibility\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\web\apis\SKILL.md -> To optimize **
+d:\j4flmao-org\skills\web\apis\references\architecture-patterns.md -> To optimize **
+d:\j4flmao-org\skills\web\apis\references\code-organization.md -> To optimize **
+d:\j4flmao-org\skills\web\apis\references\deployment-pipelines.md -> To optimize **
+d:\j4flmao-org\skills\web\apis\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\web\apis\references\performance-optimization.md -> To optimize **
+d:\j4flmao-org\skills\web\apis\references\security-best-practices.md -> To optimize **
+d:\j4flmao-org\skills\web\apis\references\state-management.md -> To optimize **
+d:\j4flmao-org\skills\web\apis\references\testing-strategies.md -> To optimize **
+d:\j4flmao-org\skills\web\apis\rest\references\error-handling.md -> To optimize **
+d:\j4flmao-org\skills\web\apis\rest\references\versioning-strategies.md -> To optimize **
+
+--- DUPLICATE CONTENT GROUPS ---
+
+GROUP (2 files):
+  - d:\j4flmao-org\skills\backend\kotlin\architecture\references\coroutines-guide.md
+  - d:\j4flmao-org\skills\backend\kotlin\patterns\references\coroutines-guide.md
+
+GROUP (2 files):
+  - d:\j4flmao-org\skills\backend\kotlin\architecture\references\kotlin-backend-patterns.md
+  - d:\j4flmao-org\skills\backend\kotlin\patterns\references\kotlin-backend-patterns.md
+
+GROUP (2 files):
+  - d:\j4flmao-org\skills\backend\kotlin\architecture\references\ktor-setup.md
+  - d:\j4flmao-org\skills\backend\kotlin\patterns\references\ktor-setup.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\backend\universal\api-gateway\references\deployment.md
+  - d:\j4flmao-org\skills\backend\universal\api-gateway\references\envoy_base.md
+  - d:\j4flmao-org\skills\backend\universal\api-gateway\references\gql_fed.md
+  - d:\j4flmao-org\skills\backend\universal\api-gateway\references\observability.md
+  - d:\j4flmao-org\skills\backend\universal\api-gateway\references\performance.md
+  - d:\j4flmao-org\skills\backend\universal\api-gateway\references\rate_limiting.md
+  - d:\j4flmao-org\skills\backend\universal\api-gateway\references\routing_strategies.md
+  - d:\j4flmao-org\skills\backend\universal\api-gateway\references\security_auth.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-application\references\reference_guide_1.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-application\references\reference_guide_2.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-application\references\reference_guide_3.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-application\references\reference_guide_4.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-application\references\reference_guide_5.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-application\references\reference_guide_6.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-application\references\reference_guide_7.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-application\references\reference_guide_8.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-bitcoin\references\reference_guide_1.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-bitcoin\references\reference_guide_2.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-bitcoin\references\reference_guide_3.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-bitcoin\references\reference_guide_4.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-bitcoin\references\reference_guide_5.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-bitcoin\references\reference_guide_6.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-bitcoin\references\reference_guide_7.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-bitcoin\references\reference_guide_8.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-core\references\reference_guide_1.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-core\references\reference_guide_2.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-core\references\reference_guide_3.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-core\references\reference_guide_4.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-core\references\reference_guide_5.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-core\references\reference_guide_6.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-core\references\reference_guide_7.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-core\references\reference_guide_8.md
+
+GROUP (2 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-cross-chain\references\layerzero_bridge_logic.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-cross-chain\references\layerzero_messaging_protocol.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-cryptography\references\reference_guide_1.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-cryptography\references\reference_guide_2.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-cryptography\references\reference_guide_3.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-cryptography\references\reference_guide_4.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-cryptography\references\reference_guide_5.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-cryptography\references\reference_guide_6.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-cryptography\references\reference_guide_7.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-cryptography\references\reference_guide_8.md
+
+GROUP (2 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-data-indexing\references\subgraph_mapping_handlers.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-data-indexing\references\the_graph_graphql_schemas.md
+
+GROUP (2 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-defi\references\blockchain-defi-ref-1.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-defi\references\blockchain-defi-ref-2.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-ethereum\references\reference_guide_1.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-ethereum\references\reference_guide_2.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-ethereum\references\reference_guide_3.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-ethereum\references\reference_guide_4.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-ethereum\references\reference_guide_5.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-ethereum\references\reference_guide_6.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-ethereum\references\reference_guide_7.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-ethereum\references\reference_guide_8.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-infrastructure\references\reference_guide_1.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-infrastructure\references\reference_guide_2.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-infrastructure\references\reference_guide_3.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-infrastructure\references\reference_guide_4.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-infrastructure\references\reference_guide_5.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-infrastructure\references\reference_guide_6.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-infrastructure\references\reference_guide_7.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-infrastructure\references\reference_guide_8.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-patterns\references\reference_guide_1.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-patterns\references\reference_guide_2.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-patterns\references\reference_guide_3.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-patterns\references\reference_guide_4.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-patterns\references\reference_guide_5.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-patterns\references\reference_guide_6.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-patterns\references\reference_guide_7.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-patterns\references\reference_guide_8.md
+
+GROUP (2 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-security\references\reentrancy_attack_mitigation.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-security\references\smart_contract_auditing.md
+
+GROUP (2 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-solana\references\blockchain-solana-ref-1.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-solana\references\blockchain-solana-ref-2.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-testing\references\reference_guide_1.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-testing\references\reference_guide_2.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-testing\references\reference_guide_3.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-testing\references\reference_guide_4.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-testing\references\reference_guide_5.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-testing\references\reference_guide_6.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-testing\references\reference_guide_7.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-testing\references\reference_guide_8.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-web3\references\reference_guide_1.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-web3\references\reference_guide_2.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-web3\references\reference_guide_3.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-web3\references\reference_guide_4.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-web3\references\reference_guide_5.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-web3\references\reference_guide_6.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-web3\references\reference_guide_7.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-web3\references\reference_guide_8.md
+
+GROUP (2 files):
+  - d:\j4flmao-org\skills\blockchain\blockchain-zk\references\zk_snarks_groth16_implementation.md
+  - d:\j4flmao-org\skills\blockchain\blockchain-zk\references\zk_snarks_polynomial_math.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\devops\api-documentation\references\api_reference.md
+  - d:\j4flmao-org\skills\devops\api-documentation\references\architecture_patterns.md
+  - d:\j4flmao-org\skills\devops\api-documentation\references\best_practices.md
+  - d:\j4flmao-org\skills\devops\api-documentation\references\configuration_templates.md
+  - d:\j4flmao-org\skills\devops\api-documentation\references\deployment_strategies.md
+  - d:\j4flmao-org\skills\devops\api-documentation\references\performance_tuning.md
+  - d:\j4flmao-org\skills\devops\api-documentation\references\security_guidelines.md
+  - d:\j4flmao-org\skills\devops\api-documentation\references\troubleshooting_matrix.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\api_reference.md
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\architecture_patterns.md
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\compliance_matrix.md
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\configuration_templates.md
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\deployment_strategies.md
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\performance_tuning.md
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\security_policies.md
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\troubleshooting_guide.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\ref1.md
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\ref2.md
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\ref3.md
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\ref4.md
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\ref5.md
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\ref6.md
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\ref7.md
+  - d:\j4flmao-org\skills\devops\cloud-cost-optimization\references\ref8.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\devops\dependency-management\references\api_reference.md
+  - d:\j4flmao-org\skills\devops\dependency-management\references\architecture_patterns.md
+  - d:\j4flmao-org\skills\devops\dependency-management\references\best_practices.md
+  - d:\j4flmao-org\skills\devops\dependency-management\references\configuration_templates.md
+  - d:\j4flmao-org\skills\devops\dependency-management\references\deployment_strategies.md
+  - d:\j4flmao-org\skills\devops\dependency-management\references\performance_tuning.md
+  - d:\j4flmao-org\skills\devops\dependency-management\references\security_guidelines.md
+  - d:\j4flmao-org\skills\devops\dependency-management\references\troubleshooting_matrix.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\management\agile-scrum-kanban\references\ref_1.md
+  - d:\j4flmao-org\skills\management\agile-scrum-kanban\references\ref_2.md
+  - d:\j4flmao-org\skills\management\agile-scrum-kanban\references\ref_3.md
+  - d:\j4flmao-org\skills\management\agile-scrum-kanban\references\ref_4.md
+  - d:\j4flmao-org\skills\management\agile-scrum-kanban\references\ref_5.md
+  - d:\j4flmao-org\skills\management\agile-scrum-kanban\references\ref_6.md
+  - d:\j4flmao-org\skills\management\agile-scrum-kanban\references\ref_7.md
+  - d:\j4flmao-org\skills\management\agile-scrum-kanban\references\ref_8.md
+
+GROUP (16 files):
+  - d:\j4flmao-org\skills\mobile\react-native\references\ref1_architecture.md
+  - d:\j4flmao-org\skills\mobile\react-native\references\ref2_schemas.md
+  - d:\j4flmao-org\skills\mobile\react-native\references\ref3_flows.md
+  - d:\j4flmao-org\skills\mobile\react-native\references\ref4_tuning.md
+  - d:\j4flmao-org\skills\mobile\react-native\references\ref5_security.md
+  - d:\j4flmao-org\skills\mobile\react-native\references\ref6_apis.md
+  - d:\j4flmao-org\skills\mobile\react-native\references\ref7_testing.md
+  - d:\j4flmao-org\skills\mobile\react-native\references\ref8_deployment.md
+  - d:\j4flmao-org\skills\mobile\universal\mobile-performance\references\ref1_architecture.md
+  - d:\j4flmao-org\skills\mobile\universal\mobile-performance\references\ref2_schemas.md
+  - d:\j4flmao-org\skills\mobile\universal\mobile-performance\references\ref3_flows.md
+  - d:\j4flmao-org\skills\mobile\universal\mobile-performance\references\ref4_tuning.md
+  - d:\j4flmao-org\skills\mobile\universal\mobile-performance\references\ref5_security.md
+  - d:\j4flmao-org\skills\mobile\universal\mobile-performance\references\ref6_apis.md
+  - d:\j4flmao-org\skills\mobile\universal\mobile-performance\references\ref7_testing.md
+  - d:\j4flmao-org\skills\mobile\universal\mobile-performance\references\ref8_deployment.md
+
+GROUP (5 files):
+  - d:\j4flmao-org\skills\mobile\universal\mobile-performance\references\app_startup.md
+  - d:\j4flmao-org\skills\mobile\universal\mobile-performance\references\battery_life.md
+  - d:\j4flmao-org\skills\mobile\universal\mobile-performance\references\concurrency.md
+  - d:\j4flmao-org\skills\mobile\universal\mobile-performance\references\graphics_arch.md
+  - d:\j4flmao-org\skills\mobile\universal\mobile-performance\references\network_optimization.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\mobile\universal\references\architecture-patterns.md
+  - d:\j4flmao-org\skills\mobile\universal\references\code-organization.md
+  - d:\j4flmao-org\skills\mobile\universal\references\deployment-pipelines.md
+  - d:\j4flmao-org\skills\mobile\universal\references\error-handling.md
+  - d:\j4flmao-org\skills\mobile\universal\references\performance-optimization.md
+  - d:\j4flmao-org\skills\mobile\universal\references\security-best-practices.md
+  - d:\j4flmao-org\skills\mobile\universal\references\state-management.md
+  - d:\j4flmao-org\skills\mobile\universal\references\testing-strategies.md
+
+GROUP (8 files):
+  - d:\j4flmao-org\skills\security\zero-trust\references\cert-rotation.md
+  - d:\j4flmao-org\skills\security\zero-trust\references\jwt-flows.md
+  - d:\j4flmao-org\skills\security\zero-trust\references\mtls-config.md
+  - d:\j4flmao-org\skills\security\zero-trust\references\oauth2-schemas.md
+  - d:\j4flmao-org\skills\security\zero-trust\references\pki-management.md
+  - d:\j4flmao-org\skills\security\zero-trust\references\policies.md
+  - d:\j4flmao-org\skills\security\zero-trust\references\token-introspection.md
+  - d:\j4flmao-org\skills\security\zero-trust\references\trust-store.md
+
+--- EMPTY OR STUB FILES (< 50 chars) ---
+  - d:\j4flmao-org\skills\backend\universal\data-streaming\references\consumer_internals.md
+  - d:\j4flmao-org\skills\backend\universal\data-streaming\references\deployment.md
+  - d:\j4flmao-org\skills\backend\universal\data-streaming\references\exact_once.md
+  - d:\j4flmao-org\skills\backend\universal\data-streaming\references\flink_state.md
+  - d:\j4flmao-org\skills\backend\universal\data-streaming\references\kafka_partitioning.md
+  - d:\j4flmao-org\skills\backend\universal\data-streaming\references\rocksdb_tuning.md
+  - d:\j4flmao-org\skills\backend\universal\data-streaming\references\watermarks.md
+  - d:\j4flmao-org\skills\backend\universal\data-streaming\references\windowing.md
+  - d:\j4flmao-org\skills\devops\kubernetes-patterns\references\sidecar_pattern.md
+  - d:\j4flmao-org\skills\security\rbac\references\oidc_flow_auth_code.md
+  - d:\j4flmao-org\skills\security\rbac\references\oidc_flow_implicit.md
+  - d:\j4flmao-org\skills\security\rbac\references\oidc_token_validation.md
+  - d:\j4flmao-org\skills\security\rbac\references\rbac_audit_logging.md
+  - d:\j4flmao-org\skills\security\rbac\references\rbac_core_logic.md
+  - d:\j4flmao-org\skills\security\rbac\references\rbac_decision_matrix.md
+  - d:\j4flmao-org\skills\security\rbac\references\rbac_integration_patterns.md
+  - d:\j4flmao-org\skills\security\rbac\references\rbac_policy_evaluation.md
