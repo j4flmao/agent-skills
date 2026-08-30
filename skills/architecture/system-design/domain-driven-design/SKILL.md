@@ -16,7 +16,7 @@ An Aggregate is a cluster of domain objects treated as a single unit. The **Aggr
 ### DDD Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph ECommerce ["E-Commerce Domain"]
         

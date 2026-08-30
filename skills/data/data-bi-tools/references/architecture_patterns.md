@@ -18,7 +18,7 @@ GROUP BY 1, 2;
 
 ## System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Data Warehouse] --> B[Semantic Layer (dbt)]
     B --> C[In-Memory Cache (Redis)]

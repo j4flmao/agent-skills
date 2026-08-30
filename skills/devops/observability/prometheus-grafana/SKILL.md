@@ -16,7 +16,7 @@ Prometheus actively "scrapes" (pulls) metrics from target services via HTTP endp
 ### Monitoring Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Targets ["Application Workloads"]
         A["Microservice 1 (/metrics)"]

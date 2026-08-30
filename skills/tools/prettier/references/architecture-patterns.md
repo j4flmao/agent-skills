@@ -51,7 +51,7 @@ To optimize **Architecture Patterns**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
@@ -111,7 +111,7 @@ To optimize **Architecture Patterns**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}
@@ -172,7 +172,7 @@ To optimize **Architecture Patterns**, we enforce the following foundational rul
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Developer] -->|git push| B(CI Pipeline)
     B --> C{Tests Pass?}

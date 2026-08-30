@@ -13,7 +13,7 @@
 ## How Resumability Works
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     A[Server renders HTML] --> B[State serialized in data-qwik attributes]
     B --> C[Browser renders HTML immediately]

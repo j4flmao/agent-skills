@@ -25,7 +25,7 @@ Upon initialization, vLLM profiles the model to determine static VRAM requiremen
 ## 4. Decoding Execution Topology
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     A[Request Queue] --> B[Continuous Batching Scheduler]
     

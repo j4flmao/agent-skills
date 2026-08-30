@@ -47,7 +47,7 @@ export async function loader({ context }: LoaderArgs) {
 
 ## Architecture Diagram
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     A[Client Browser] -->|Requests Page| B(Hydrogen Edge Worker)
     B -->|Check Cache| C{Cache Hit?}

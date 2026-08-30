@@ -16,7 +16,7 @@ Sharding splits a large table across multiple databases based on a Shard Key (e.
 ### Consistent Hashing Ring Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Ring ["Consistent Hash Ring"]
         A["Node A (Hash 0-100)"]

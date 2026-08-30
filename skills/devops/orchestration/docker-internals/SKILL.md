@@ -14,7 +14,7 @@ Docker images are built in Read-Only layers. When a container runs, Docker adds 
 ### Docker Layer Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Host ["Linux Host Kernel"]
         A["Namespaces (Isolation)"]

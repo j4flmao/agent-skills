@@ -16,7 +16,7 @@ Memory is allocated in `Chunks` (typically 16KB). A Chunk exclusively stores Ent
 
 ```mermaid
 flowchart TD
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
     subgraph MemoryLayoutArchetypeChunkLayout ["Archetype Chunk Layout<br><br><br>"]
         EntityID -->|"alloc()"| ChunkHeader
         ChunkHeader -->|"array[]"| ComponentA

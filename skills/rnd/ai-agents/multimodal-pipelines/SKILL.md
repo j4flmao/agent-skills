@@ -12,7 +12,7 @@ This PoC explores the bridging mechanisms required to feed images (Vision) and A
 ### Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Inputs ["Multimodal Inputs"]
         A["Image Pixels"]

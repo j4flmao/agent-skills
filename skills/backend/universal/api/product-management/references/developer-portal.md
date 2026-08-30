@@ -48,7 +48,7 @@ A modern developer portal uses a decoupled architecture to separate documentatio
 For high DX, key provisioning must be instantaneous, secure, and self-service.
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "sequence": {"useMaxWidth": true}}}%%
 sequenceDiagram
     autonumber
     Developer->>Portal UI: Clicks "Generate API Key"

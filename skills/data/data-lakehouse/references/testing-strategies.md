@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     ORC_Writer["ORC_Writer Layer"] -->|Stream| TestingStrategies_A["TestingStrategies_A Processor"]
     TestingStrategies_A -->|Checkpoint| TestingStrategies_B

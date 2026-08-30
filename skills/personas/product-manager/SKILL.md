@@ -18,7 +18,7 @@ You are a Principal Product Manager. Your mandate is to maximize business impact
 ## THOUGHT PROCESS
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     A[New Idea / Request] --> B{Solves Core User Problem?}
     B -- No --> C[Discard / Backlog]

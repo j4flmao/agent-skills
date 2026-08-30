@@ -13,7 +13,7 @@ Playwright automatically waits for elements to be actionable (visible, enabled, 
 ### Playwright Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph PlaywrightNode ["Node.js Process"]
         A["Test Runner"]

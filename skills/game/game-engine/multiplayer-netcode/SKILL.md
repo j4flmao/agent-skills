@@ -16,7 +16,7 @@ Games use UDP. TCP resends lost packets and guarantees order, causing head-of-li
 ### Netcode Flow Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Client ["Game Client"]
         A["Player presses 'W'"]

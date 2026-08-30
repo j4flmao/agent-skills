@@ -13,7 +13,7 @@ Introduced in Webpack 5, Module Federation allows a JavaScript application to dy
 ### Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Browser ["User Browser"]
         A["App Shell (Host)"]

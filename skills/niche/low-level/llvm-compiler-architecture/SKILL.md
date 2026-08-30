@@ -16,7 +16,7 @@ A strongly typed, RISC-like virtual instruction set. It uses SSA (Static Single 
 ### Compiler Flow Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Frontend ["Frontend (Language Specific)"]
         A["Source Code (Rust/C)"]

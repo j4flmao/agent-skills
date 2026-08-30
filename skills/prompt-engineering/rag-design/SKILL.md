@@ -16,7 +16,7 @@ Raw user queries are often heavily underspecified, containing lexical ambiguitie
 - **Routing:** A small classifier or LLM router directs the rewritten queries to specific indices (e.g., tabular SQL DB, dense vector index, BM25 keyword index).
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     User["Raw User Query"] -->|"Send()"| Rewriter["LLM Query Rewriter"]
     

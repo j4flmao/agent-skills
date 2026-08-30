@@ -13,7 +13,7 @@ GPU threads are organized into Workgroups. Threads within the same Workgroup can
 ### Compute Shader Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph JS ["JavaScript (CPU)"]
         A["Allocate Float32Array"]

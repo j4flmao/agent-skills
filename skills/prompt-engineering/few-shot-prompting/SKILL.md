@@ -14,7 +14,7 @@ During autoregressive generation, Transformers cache the Key (K) and Value (V) t
 - **Prefix Caching:** Modern serving infrastructure (e.g., vLLM) leverages PagedAttention to share KV cache blocks for the few-shot prefix across multiple requests, turning the large context into a highly optimized, amortized cost.
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph ICLInContextLearning ["In-Context Learning<br><br><br>"]
         Demonstrations["Few-Shot Examples"] -->|"Embed()"| QKV["Q, K, V Tensors"]

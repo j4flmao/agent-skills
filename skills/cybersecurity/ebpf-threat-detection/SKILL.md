@@ -42,7 +42,7 @@ Tetragon (by Isovalent/Cilium) leverages advanced eBPF capabilities for both dee
 ## Architecture Mapping
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     UserSpace[User Space Application] -->|"1. Executes Syscall (e.g., execve)"| KernelSyscall[Kernel Syscall Interface]
     KernelSyscall -->|2. Triggers Hook| eBPFHook{eBPF Hook: kprobe / tracepoint / LSM}

@@ -16,7 +16,7 @@ Kubernetes is a distributed system for managing container workloads. It consists
 ### Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph ControlPlane ["Control Plane (Master)"]
         A["kube-apiserver"]

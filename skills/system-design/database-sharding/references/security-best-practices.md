@@ -59,7 +59,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Client] -->|HTTP| B(API Gateway)
     B -->|Route| C{Load Balancer}
@@ -129,7 +129,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "sequence": {"useMaxWidth": true}}}%%
 sequenceDiagram
     participant Client
     participant OrderService
@@ -208,7 +208,7 @@ To optimize **Security Best Practices**, we enforce the following foundational r
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "sequence": {"useMaxWidth": true}}}%%
 sequenceDiagram
     participant Client
     participant OrderService

@@ -8,7 +8,7 @@ Gradually replace legacy system functionality with new implementation while rout
 ### Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     Client --> API_Gateway
     API_Gateway --> Router

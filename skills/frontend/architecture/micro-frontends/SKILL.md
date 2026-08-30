@@ -8,7 +8,7 @@ Rspack, utilizing the Rust-based swc compiler, achieves near parity with Webpack
 ## Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     Host[Host Application] -->|Fetches| RE[remoteEntry.js]
     RE -->|Instantiates| RC[Remote Container]

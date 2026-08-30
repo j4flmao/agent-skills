@@ -11,7 +11,7 @@ React Server Components (RSC) represent a fundamental shift in how React apps ar
 ### Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph ServerNode ["Server Environment"]
         A["Server Component (Async)"]

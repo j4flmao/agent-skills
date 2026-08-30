@@ -1499,7 +1499,7 @@ export class HybridFormComponent {}
 ### Transition Phases
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     Phase1[Phase 1: Audit] --> Phase2[Phase 2: Pipes & Directives]
     Phase2 --> Phase3[Phase 3: Shared Components]

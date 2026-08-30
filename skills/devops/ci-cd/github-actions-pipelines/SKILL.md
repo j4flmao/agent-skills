@@ -14,7 +14,7 @@ Avoid storing long-lived AWS/GCP static credentials in GitHub. Use OIDC to estab
 ### Pipeline Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Repo ["GitHub Repository"]
         A["Developer Push/PR"]

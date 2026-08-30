@@ -12,7 +12,7 @@ This PoC analyzes adversarial attack vectors against LLM systems, focusing on Pr
 ### Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Attacker ["Adversary"]
         A["Malicious Payload (Ignore previous instructions)"]

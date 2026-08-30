@@ -123,7 +123,7 @@ When blob count > target, excess increases, base fee grows exponentially (about 
 ### Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     U[User] -->"|signs UserOperation| B[Bundler]
     B -->|submits UserOperation| E[EntryPoint]

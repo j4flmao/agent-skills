@@ -19,7 +19,7 @@ Configuration of BI tools centers on concurrency limits and memory pools for ana
 
 ## System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Query Coordinator] --> B[Resource Group Manager]
     B --> C[Dashboard Queue]

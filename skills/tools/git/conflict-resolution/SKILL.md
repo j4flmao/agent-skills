@@ -21,7 +21,7 @@ When rebasing or merging, Git compares the current branch, the incoming branch, 
 ### Rebase & Conflict Flow
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Git_Rebase ["Rebase Operation"]
         A["git rebase main"]

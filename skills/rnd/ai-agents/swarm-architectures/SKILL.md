@@ -12,7 +12,7 @@ This Proof of Concept (PoC) explores hierarchical Multi-Agent Swarms, emphasizin
 ### Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Client ["Client Layer"]
         A["User Request"]

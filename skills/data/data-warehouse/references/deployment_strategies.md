@@ -49,7 +49,7 @@ To optimize **Deployment Strategies**, we enforce the following foundational rul
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Kafka Source] -->|Stream| B(Flink Window Operator)
     B --> C{State Backend}
@@ -109,7 +109,7 @@ To optimize **Deployment Strategies**, we enforce the following foundational rul
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "sequence": {"useMaxWidth": true}}}%%
 sequenceDiagram
     participant API
     participant WorkerNode
@@ -181,7 +181,7 @@ To optimize **Deployment Strategies**, we enforce the following foundational rul
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Kafka Source] -->|Stream|" B(Flink Window Operator)
     B --> C{State Backend}
@@ -244,7 +244,7 @@ To optimize **Deployment Strategies**, we enforce the following foundational rul
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Kafka Source] -->"|Stream|" B(Flink Window Operator)
     B --> C{State Backend}
@@ -302,7 +302,7 @@ To optimize **Deployment Strategies**, we enforce the following foundational rul
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Kafka Source] -->"|Stream|" B(Flink Window Operator)
     B --> C{State Backend}

@@ -34,7 +34,7 @@ test('renders correctly', async ({ mount }) => {
 
 ## Testing Strategy
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Test Suite] --> B(E2E Tests)
     A --> C(Component Tests)

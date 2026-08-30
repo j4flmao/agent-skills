@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     FlinkStateManagement3_C["FlinkStateManagement3_C Layer"] -->|Stream| S3_Bucket["S3_Bucket Processor"]
     S3_Bucket -->|Checkpoint| FlinkStateManagement3_A

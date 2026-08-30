@@ -17,7 +17,7 @@ Because Components are stored contiguously in memory, when a System reads the `P
 ### ECS Memory Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Memory ["RAM (Contiguous Arrays)"]
         A["[Pos1, Pos2, Pos3, Pos4]"]

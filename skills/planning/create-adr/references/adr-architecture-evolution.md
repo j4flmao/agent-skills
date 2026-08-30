@@ -139,7 +139,7 @@ has been reversed. See ADR-005 for the current decision.
 ### Supersession Chain
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 ADR-001: Use MySQL
     ↓ (superseded by)
 ADR-003: Use PostgreSQL

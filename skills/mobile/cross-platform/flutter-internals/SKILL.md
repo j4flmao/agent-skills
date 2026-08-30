@@ -18,7 +18,7 @@ Dart is single-threaded. To perform heavy computation without freezing the UI (J
 ### Flutter Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Framework ["Dart Framework"]
         A["Material/Cupertino Widgets"]

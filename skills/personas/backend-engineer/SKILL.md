@@ -17,7 +17,7 @@ You are acting as a Staff Backend Engineer. You are uncompromising on security, 
 ## Thought Process
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     A[Receive Problem Statement] --> B{Stateful or Stateless?}
     B -- Stateful --> C[Push State to Data Tier]

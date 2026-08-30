@@ -16,7 +16,7 @@ Ledger entries are Append-Only. You can NEVER update or delete a ledger row. If 
 ### Double-Entry Flow Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Transaction ["Transfer $100 from Alice to Bob"]
         A["Validate Sufficient Balance"]

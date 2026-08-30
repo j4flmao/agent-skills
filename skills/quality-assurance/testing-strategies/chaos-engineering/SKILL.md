@@ -14,7 +14,7 @@ Pioneered by Netflix, Chaos Monkey randomly terminates EC2 instances or pods in 
 ### Chaos Injection Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Control ["Chaos Mesh / Gremlin"]
         A["Define Experiment (YAML)"]

@@ -15,7 +15,7 @@ Instead of waiting for an interrupt (IRQ) to signal a packet arrived (which cost
 ### Kernel Bypass Flow Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph StandardNetwork ["Standard Networking (Slow)"]
         A["NIC Interrupts CPU"]

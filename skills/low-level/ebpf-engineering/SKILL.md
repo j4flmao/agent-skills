@@ -17,7 +17,7 @@ Before execution, the kernel's eBPF verifier performs a static analysis of the b
 Once verified, the bytecode is translated into native machine code by the kernel's JIT compiler. This eliminates the overhead of the interpreter. The JIT maps eBPF registers to physical CPU registers and translates eBPF instructions (ALU, jumps) directly to architecture-specific instructions (e.g., x86_64, ARM64), enabling near-native performance for packet filtering and tracing.
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     Bytecode["eBPF Bytecode"] -->|"bpf(LOAD)"| Kernel
     

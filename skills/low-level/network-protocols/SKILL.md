@@ -16,7 +16,7 @@ Congestion control modulates the Congestion Window (`cwnd`) to avoid network col
 - **Delay-based (BBR - Bottleneck Bandwidth and Round-trip propagation time):** Models the network path. It continuously measures the maximum delivery rate (Bottleneck Bandwidth) and minimum RTT. BBR controls sending rate to match the estimated BDP, minimizing queue buildup (bufferbloat) and operating near the optimal Kleinrock point, rather than reacting solely to loss.
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph TCPStateTCPStateMachine ["TCP State Machine<br><br><br>"]
         CLOSED -->|"Send(SYN)"| SYN_SENT

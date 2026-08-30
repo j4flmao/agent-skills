@@ -16,7 +16,7 @@ Instead of services sending data directly to vendors (Datadog/Jaeger), they send
 ### Distributed Tracing Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Microservices ["Service Mesh"]
         A["Frontend Service<br/>(Generates Trace ID)"]

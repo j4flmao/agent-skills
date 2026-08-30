@@ -13,7 +13,7 @@ Dataloader batches and caches requests to the database.
 
 ## Diagram
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Resolvers] -->|Individual Requests| B(Dataloader)
     B -->|Batched Request| C[(Database)]

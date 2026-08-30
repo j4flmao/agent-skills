@@ -11,7 +11,7 @@ Edge computing moves backend logic as close to the user as possible (to CDN edge
 ### Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph EdgeNode ["Cloudflare Edge Node (Single OS Process)"]
         A["V8 Engine Instance"]

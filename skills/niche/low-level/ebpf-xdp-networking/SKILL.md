@@ -18,7 +18,7 @@ To prevent a custom script from crashing the kernel, the eBPF Verifier analyzes 
 ### eBPF/XDP Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph UserSpace ["User Space"]
         A["eBPF Program (C/Rust)"]

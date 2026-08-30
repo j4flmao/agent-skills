@@ -25,7 +25,7 @@ By architecting the silicon to match the data dependency graph of matrix multipl
 ## Mermaid Flowchart: TPU Systolic Array Datapath
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     HBM["High Bandwidth Memory (HBM)"]
     UB["Unified Buffer (SRAM)"]

@@ -15,7 +15,7 @@ The Disruptor respects hardware. By padding data structures to 64 bytes (the siz
 ### Ring Buffer Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph DataStructure ["Pre-allocated Ring Buffer"]
         A["Slot 0"]

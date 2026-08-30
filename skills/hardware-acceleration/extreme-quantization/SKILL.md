@@ -22,7 +22,7 @@ Transformer Engine seamlessly casts FP16/BF16 to FP8, leveraging hardware-native
 
 ## Architecture Flow
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     A[FP16/BF16 Model] --> B{Quantization Target}
     

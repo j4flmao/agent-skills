@@ -41,7 +41,7 @@ class ConsistentHash:
 
 ## Architecture
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Client] --> B(Load Balancer)
     B --> C{Consistent Hashing Router}

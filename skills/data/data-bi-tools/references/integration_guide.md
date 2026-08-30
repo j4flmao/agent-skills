@@ -14,7 +14,7 @@ def get_rls_filters(user_token):
 
 ## System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Client App] -->|OIDC Token| B[BI Embedded SDK]
     B --> C[BI Auth Gateway]

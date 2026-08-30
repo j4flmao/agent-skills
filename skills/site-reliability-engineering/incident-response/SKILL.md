@@ -11,7 +11,7 @@ Modern IR heavily relies on event-driven automation for alert correlation, dedup
 
 ```mermaid
 flowchart TD
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
     subgraph TriagePipelineAutomatedTriage ["Automated Triage<br><br><br>"]
         Alert[Raw Alerts] -->|"Cluster(Temporal, Labels)"| MetaAlert[Correlated Incident]
         MetaAlert -->|"Trigger(Runbook)"| AutoDiag[Auto-Diagnostics]

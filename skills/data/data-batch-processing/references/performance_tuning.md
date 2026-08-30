@@ -12,7 +12,7 @@ spark.conf.set("spark.memory.fraction", "0.8")
 
 ## System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Data In] --> B[Catalyst Optimizer]
     B --> C[Physical Plan]

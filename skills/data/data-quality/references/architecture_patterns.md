@@ -3,7 +3,7 @@
 Kappa architecture focusing on exactly-once semantics using Flink and Kafka.
 ## 2. System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
 A[Kafka] --> B[Flink]
 B --> C[Delta Lake]

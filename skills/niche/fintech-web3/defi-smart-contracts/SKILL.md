@@ -16,7 +16,7 @@ A classic vector for stealing funds. If a contract calls an external untrusted c
 ### AMM Swap Flow Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph User ["Trader"]
         A["Swap 10 Token A for Token B"]

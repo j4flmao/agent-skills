@@ -12,7 +12,7 @@ spark.conf.set('spark.sql.shuffle.partitions', '200')
 
 ## System Architecture Diagram
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Client] -->|Request| B(API Gateway)
     B --> C{performance_tuning Service}

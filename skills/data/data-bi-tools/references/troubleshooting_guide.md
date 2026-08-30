@@ -18,7 +18,7 @@ def find_slow_queries(log_file):
 
 ## System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Browser Profiler] --> B[Network Waterfall]
     C[Query Logs] --> D[Log Analyzer]

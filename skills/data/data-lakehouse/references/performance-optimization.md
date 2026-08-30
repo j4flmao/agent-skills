@@ -7,7 +7,7 @@ To further guarantee ACID compliance and low-latency reads, the system implement
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     S3_Bucket["S3_Bucket Layer"] -->|Stream| PerformanceOptimization_A["PerformanceOptimization_A Processor"]
     PerformanceOptimization_A -->|Checkpoint| PerformanceOptimization_C

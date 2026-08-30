@@ -1974,7 +1974,11 @@
       "digitalocean",
       "ibm-cloud",
       "alibaba-cloud",
-      "hetzner"
+      "hetzner",
+      "distributed-tracing",
+      "event-driven-scaling",
+      "gitops-workflows",
+      "serverless-cold-starts"
     ]
   },
   {
@@ -2013,7 +2017,11 @@
       "cloud-migration",
       "cloud-cost-optimization",
       "hybrid-cloud",
-      "platform-engineering"
+      "platform-engineering",
+      "distributed-tracing",
+      "event-driven-scaling",
+      "gitops-workflows",
+      "serverless-cold-starts"
     ]
   },
   {
@@ -2794,7 +2802,18 @@
       "threat-intelligence",
       "soar-automation",
       "siem-engineering",
-      "soc-operations"
+      "soc-operations",
+      "redteam-operations",
+      "attack-patterns",
+      "exploit-development-concepts",
+      "blueteam-operations",
+      "detection-engineering",
+      "purpleteam-collaboration",
+      "cloud-security-offensive",
+      "cloud-security-defensive",
+      "reverse-engineering",
+      "advanced-binary-exploitation",
+      "malware-analysis-internals"
     ]
   },
   {
@@ -2817,6 +2836,23 @@
       "blockchain-cross-chain",
       "blockchain-zk",
       "blockchain-data-indexing"
+    ]
+  },
+  {
+    "name": "advanced-security-bundle",
+    "description": "Advanced security skills including red team, blue team, and cloud attacks (educational)",
+    "skills": [
+      "redteam-operations",
+      "attack-patterns",
+      "exploit-development-concepts",
+      "blueteam-operations",
+      "detection-engineering",
+      "purpleteam-collaboration",
+      "cloud-security-offensive",
+      "cloud-security-defensive",
+      "reverse-engineering",
+      "advanced-binary-exploitation",
+      "malware-analysis-internals"
     ]
   }
 ]

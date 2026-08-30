@@ -15,7 +15,7 @@ description: Authoritative playbook for building a full-stack AI SaaS platform i
 ## 2. System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     A[User Request / Prompt] --> B{Subscription Active?}
     B -- No --> C[Stripe Checkout Flow]

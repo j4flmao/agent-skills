@@ -21,7 +21,7 @@ Enforces the Conventional Commits specification.
 ### Hook Lifecycle Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Action ["Developer Action"]
         A["git commit -m '...'"]

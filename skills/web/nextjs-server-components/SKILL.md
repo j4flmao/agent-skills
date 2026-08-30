@@ -12,7 +12,7 @@ description: Best practices for SSR, Streaming, and hydration optimization in Ne
 
 ## Mermaid Diagram
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     A[Request] --> B[Next.js Server]
     B --> C{Component Type?}

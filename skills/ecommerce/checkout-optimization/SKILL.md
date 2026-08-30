@@ -48,7 +48,7 @@ if (window.PaymentRequest) {
 
 ## Optimization Strategy Tree
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Checkout Optimization] --> B(Friction Reduction)
     A --> C(Performance)

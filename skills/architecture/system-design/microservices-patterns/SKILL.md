@@ -15,7 +15,7 @@ If a downstream service is struggling, hitting it repeatedly will cause a cascad
 ### Saga Orchestration Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Client ["Frontend"]
         A["Checkout Request"]

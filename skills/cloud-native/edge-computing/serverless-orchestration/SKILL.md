@@ -14,7 +14,7 @@ Step Functions natively support try/catch blocks, exponential backoff retries, a
 ### Orchestration Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Orchestrator ["AWS Step Functions (State Machine)"]
         A["Start"]

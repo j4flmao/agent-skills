@@ -18,7 +18,7 @@ Every commit MUST follow the `<type>(<scope>): <subject>` format to enable autom
 ### Branching Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Repository ["Central Repository"]
         A["main (Stable / Deployable)"]

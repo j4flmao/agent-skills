@@ -5,7 +5,7 @@ In embedded C/C++, precise memory layout control is critical. Memory alignment e
 RAII (Resource Acquisition Is Initialization) ties resource management to object lifetime. When an object is instantiated, its constructor acquires the resource (e.g., a hardware mutex). When the object goes out of scope, its destructor is automatically called, releasing the resource. Pointer arithmetic allows direct manipulation of memory addresses, essential for interacting with memory-mapped peripheral registers.
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph ScopeFunctionScope ["Function Scope<br><br><br>"]
         A[Enter Scope] -->|"Construct()"| B[RAII Object]

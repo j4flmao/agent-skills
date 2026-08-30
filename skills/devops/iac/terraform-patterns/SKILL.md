@@ -14,7 +14,7 @@ Encapsulate complex resource combinations (VPC + Subnets + NatGateway) into reus
 ### Terraform Lifecycle Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Local ["Developer Workspace"]
         A["Write HCL Code (.tf)"]

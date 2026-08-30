@@ -12,7 +12,7 @@ This PoC details the mechanics of running Small Language Models (SLMs) locally u
 ### Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Storage ["Disk Storage"]
         A["GGUF File (Quantized INT4)"]

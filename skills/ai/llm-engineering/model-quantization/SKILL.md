@@ -30,7 +30,7 @@ GGUF (GPT-Generated Unified Format) supersedes GGML as the standard for CPU/CPU+
 ## 4. Quantization Topology
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     A[FP16/BF16 Model] --> B{Quantization Algorithm}
     

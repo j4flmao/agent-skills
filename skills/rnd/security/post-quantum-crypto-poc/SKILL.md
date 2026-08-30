@@ -12,7 +12,7 @@ This PoC outlines the integration of Post-Quantum Cryptographic algorithms (such
 ### Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Client ["Client Protocol"]
         A["ClientHello"]

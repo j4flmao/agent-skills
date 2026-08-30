@@ -12,7 +12,7 @@ description: Implementing Module Federation for scaling frontend teams.
 
 ## Mermaid Diagram
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Host App Shell] --> B[Remote App 1: Auth]
     A --> C[Remote App 2: Dashboard]

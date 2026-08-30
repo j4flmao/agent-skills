@@ -5,7 +5,7 @@ BigQuery separates compute and storage. The execution engine, Dremel, uses a mul
 Data is stored in Colossus using the Capacitor columnar format. Capacitor optimizes data access by utilizing advanced encoding (e.g., dictionary encoding, run-length encoding) and maintaining statistical metadata. This metadata allows Dremel workers to prune unnecessary blocks without reading them.
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph EngineDremelEngine ["Dremel Engine<br><br><br>"]
         A[Root Server] -->|"Distribute()"| B[Intermediate Server]

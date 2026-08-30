@@ -13,7 +13,7 @@ During the rendering phase, the `Director` visits the active `Scene` node recurs
 
 ```mermaid
 flowchart TD
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
     subgraph CoreLoopDirectorMainLoop ["Director Main Loop<br><br><br>"]
         Start -->|"update()"| Timers
         Timers -->|"drawScene()"| SceneGraph

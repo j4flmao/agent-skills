@@ -14,7 +14,7 @@ Combines the cheap storage of Data Lakes with the ACID transactions of Data Ware
 ### Data Pipeline Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Ingestion ["Data Sources"]
         A["Postgres (CDC via Debezium)"]

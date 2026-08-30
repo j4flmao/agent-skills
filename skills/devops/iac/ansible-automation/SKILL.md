@@ -15,7 +15,7 @@ Unlike Chef or Puppet, Ansible requires NO agents installed on target nodes. It 
 ### Execution Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph ControlNode ["Ansible Control Node"]
         A["Inventory (Hosts list)"]

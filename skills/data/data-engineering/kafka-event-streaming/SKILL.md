@@ -15,7 +15,7 @@ A Consumer Group is a cluster of workers. Each partition in a topic is assigned 
 ### Kafka Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Producers ["Event Producers"]
         A["Web Server (Clickstream)"]

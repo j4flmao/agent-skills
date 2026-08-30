@@ -56,7 +56,7 @@ To optimize **Skill**, we enforce the following foundational rules:
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "sequence": {"useMaxWidth": true}}}%%
 sequenceDiagram
     participant Client
     participant OrderService
@@ -137,7 +137,7 @@ To optimize **Skill**, we enforce the following foundational rules:
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "sequence": {"useMaxWidth": true}}}%%
 sequenceDiagram
     participant Client
     participant OrderService
@@ -212,7 +212,7 @@ To optimize **Skill**, we enforce the following foundational rules:
 ### System Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "sequence": {"useMaxWidth": true}}}%%
 sequenceDiagram
     participant Client
     participant OrderService

@@ -24,7 +24,7 @@ ArgoCD computes the delta. If structural or value differences exist (excluding i
 ## Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     GitRepo[Git Repository - Source of Truth] -->|Webhook/Poll| RepoServer[ArgoCD Repo Server]
     RepoServer -->|Manifest Generation: Helm/Kustomize| DesiredState[Desired State YAML]

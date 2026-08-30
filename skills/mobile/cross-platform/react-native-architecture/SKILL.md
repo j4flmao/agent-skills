@@ -17,7 +17,7 @@ The New Architecture replaces the Bridge with JSI. JSI allows the C++ core to ex
 ### React Native New Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph JSRuntime ["JavaScript Thread (Hermes)"]
         A["React App Code"]

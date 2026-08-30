@@ -29,7 +29,7 @@ def process_data(spark: SparkSession, is_streaming: bool):
 
 ### System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Event Sources] --> B[Kafka Log]
     B --> C{Kappa Processing Engine}

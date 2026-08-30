@@ -12,7 +12,7 @@ This PoC details the implementation of robust defense architectures for LLM syst
 ### Architecture Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph InputPhase ["Input Processing"]
         A["Raw User Input"]

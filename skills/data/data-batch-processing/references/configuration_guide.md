@@ -12,7 +12,7 @@ ALTER WAREHOUSE batch_wh SET WAREHOUSE_SIZE = 'X-LARGE';
 
 ## System Architecture
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[etcd Cluster] --> B[Config Agent]
     B --> C[Batch Job 1]

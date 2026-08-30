@@ -13,7 +13,7 @@ The CI pipeline no longer needs cluster admin credentials. It only needs permiss
 ### GitOps Flow Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph CI_Pipeline ["CI Pipeline"]
         A["Build Image"]

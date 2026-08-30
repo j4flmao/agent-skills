@@ -15,7 +15,7 @@ Checking every ray against millions of triangles is computationally impossible. 
 ### Raytracing Flow Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Camera ["Virtual Camera"]
         A["Shoot Ray through Pixel(x,y)"]

@@ -15,7 +15,7 @@ Before Postgres writes changes to the actual data files, it writes the changes s
 ### MVCC & WAL Flow Map
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     subgraph Client ["Database Client"]
         A["UPDATE users SET age = 30"]

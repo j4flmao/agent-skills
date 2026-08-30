@@ -35,7 +35,7 @@
 ## Architecture
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
     U[User] -->|constructs + signs| OP[UserOperation]
     OP -->|submits to| MEM[UserOp Mempool]
@@ -135,7 +135,7 @@ interface IEntryPoint {
 ### `handleOps` Lifecycle
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "sequence": {"useMaxWidth": true}}}%%
 sequenceDiagram
     participant Bundler
     participant EntryPoint

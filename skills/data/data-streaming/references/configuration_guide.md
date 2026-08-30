@@ -13,7 +13,7 @@ server:
 
 ## System Architecture Diagram
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Client] -->|Request| B(API Gateway)
     B --> C{configuration_guide Service}

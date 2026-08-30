@@ -88,7 +88,7 @@ Feature,Theme,RICE,MoSCoW,Q,Status,Notes
 ### Mermaid Timeline (for README/docs)
 
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 gantt
     title Q1-Q2 Product Roadmap
     dateFormat  YYYY-MM-DD

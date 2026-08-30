@@ -12,7 +12,7 @@ Prometheus utilizes a custom Time Series Database (TSDB) optimized for fast inge
 
 ```mermaid
 flowchart TD
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
     subgraph TSDBPrometheusTSDB ["Prometheus TSDB<br><br><br>"]
         Mem[In-Memory Head] -->|"Flush(2h)"| Block1[2h Block]
         Block1 -->|"Compact(Level 1)"| Block2[8h Block]

@@ -38,7 +38,7 @@ public class EventDeduplicator extends KeyedProcessFunction<String, Event, Event
 
 ### Flow Diagram
 ```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": false}}}%%
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
 graph TD
     A[Kafka Source] --> B[KeyBy Event ID]
     B --> C[EventDeduplicator Operator]
