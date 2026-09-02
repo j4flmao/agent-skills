@@ -21,6 +21,9 @@ The effort required to integrate two branches does not grow linearly with time; 
 ## 5. References
 - `references/advanced-conflict-resolution.md` — Git Surgery, `rerere`, and `diff3`.
 - `references/branching-strategies-at-scale.md` — Scaled Trunk-Based Development.
-- `references/feature-toggles.md` — Dark launching and routing. (Batch 2)
-- `references/branch-by-abstraction.md` — Safe architecture rewrites. (Batch 2)
-- `references/release-trains.md` — Cross-team release management. (Batch 3)
+- `references/feature-toggles.md` — Dark launching and routing.
+- `references/branch-by-abstraction.md` — Safe architecture rewrites.
+- `references/release-trains.md` — Cross-team release management.
+- `references/monorepo-collaboration.md` — Codeowners and Bounded Contexts.
+- `references/zero-downtime-migrations.md` — Expand/Contract DB Pattern.
+- `references/concurrent-migration-management.md` — Flyway/Liquibase collision handling.
