@@ -65,3 +65,21 @@ Produce the artifact directly. No preamble, no postamble, no explanations.
 ## Compress Output
 
 Strip: a/an/the, just/really/basically, sure/happy/glad/please, I think/I believe, as you know, however/moreover, code explanations (show code only), preamble/postamble.
+
+## [MANDATORY] CORE ENGINEERING STANDARDS
+1. **Commit Standards**: ALL commits must use Conventional Commits (eat:, ix:, chore:, etc.).
+2. **Coding Guidelines**: 
+   - NEVER leave // TODO or placeholders. Write the full implementation.
+   - Fail Fast: Throw exceptions immediately, do not swallow errors.
+   - Use Structured Logging with context.
+3. **Testing Requirements (Zero-Prompt)**: 
+   - ALWAYS write unit tests for new logic using the Arrange-Act-Assert (AAA) pattern.
+   - Test edge cases (nulls, out-of-bounds), not just happy paths.
+4. **RAG & Vector Search**:
+   - ALWAYS implement Hybrid Search (Dense + BM25). Pure Dense search is forbidden.
+   - ALWAYS use Semantic or Parent-Child Chunking. Naive character chunking is forbidden.
+   - MUST implement a Cross-Encoder Re-ranking stage (Two-Stage Retrieval).
+5. **Multi-Agent Architecture**:
+   - Anti-God Agent: Max 5 tools per agent. Use orchestrators for complex tasks.
+   - Principle of Least Privilege: e.g., Reviewers get ead_file, not write_file.
+   - HITL (Human-in-the-loop): Destructive actions (SQL DROP, Deploy) MUST have a pause/checkpoint for human approval.
