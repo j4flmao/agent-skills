@@ -1,44 +1,21 @@
----
-name: Kernel Development
-description: Academic reference on PCB, Page Tables, and Interrupt Handlers.
----
-# Kernel Development Mechanics
+# Kernel Development & OS Internals
 
-## Process Control Block (PCB)
-The PCB (e.g., `task_struct` in Linux) is the foundational data structure representing a thread of execution. It encapsulates:
-- Execution state (runnable, sleeping, stopped).
-- CPU context (register values saved during context switches).
-- Memory management information (pointer to the page directory `mm_struct`).
-- Open file descriptors and signal handlers.
+## 1. Skill Context
+**Focus**: Understanding how an Operating System manages hardware, isolates processes, and provides safe abstractions for user applications.
+**Triggers**: kernel, os, ring-0, linux-kernel, bare-metal-os.
 
-## Page Tables and Virtual Memory
-Virtual memory abstraction relies on hardware MMU and OS page tables.
-- **Hierarchical Paging:** Modern systems use multi-level page tables (e.g., 4-level paging in x86_64: PML4, PDP, PD, PT) to sparse-map the vast 64-bit address space efficiently.
-- **TLB & Context Switches:** The Translation Lookaside Buffer caches recent translations. A context switch usually involves writing a new physical address to the CR3 register, flushing non-global TLB entries.
+## 2. Protection Rings (Privilege Levels)
+Modern CPUs implement hardware-enforced privilege levels. x86_64 has 4 rings, but OSes typically only use two:
+- **Ring 3 (User Space)**: Unprivileged. Applications (browsers, databases) run here. They cannot execute hardware I/O instructions (like `in`/`out` or `cli`), nor can they modify Page Tables.
+- **Ring 0 (Kernel Space)**: Absolute power. The OS Kernel runs here. It can access any memory address and execute any CPU instruction.
 
-## Interrupt Handlers (ISRs)
-Hardware interrupts trigger an asynchronous context switch.
-- **Top Half:** Executes immediately in interrupt context with interrupts disabled. Aims to acknowledge the hardware and schedule deferred work, maintaining ultra-low latency.
-- **Bottom Half (SoftIRQs, Tasklets, Workqueues):** Executes deferred, non-time-critical processing in process context or with interrupts enabled, preventing system starvation.
+If a User Space process tries to execute a privileged instruction, the CPU hardware generates a **General Protection Fault (Exception)**, and the Kernel kills the process (Segfault).
 
-```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
-flowchart TD
-    HW["Hardware Event"] -->|"Raise(IRQ)"| CPU
-    
-    subgraph ISRInterruptHandling ["Interrupt Handling<br><br><br>"]
-        CPU --> TopHalf["Top Half (Fast ISR)"]
-        TopHalf -->|"Schedule()"| BottomHalf["Bottom Half (SoftIRQ)"]
-    end
-    
-    subgraph SchedulerProcessManagement ["Process Management<br><br><br>"]
-        BottomHalf --> Wake["Wake Process"]
-        Wake --> PCB["Update PCB (task_struct)"]
-        PCB --> Switch["Context Switch"]
-    end
-    
-    subgraph MemoryMemoryManagement ["Memory Management<br><br><br>"]
-        Switch -->|"Load(CR3)"| PageTable["Root Page Table (PML4)"]
-        PageTable --> MMU["MMU / TLB"]
-    end
-```
+## 3. The Kernel Architecture
+- **Monolithic Kernel (e.g., Linux, Windows)**: The entire OS (Scheduler, File System, Network Stack, Device Drivers) runs in Ring 0. It is extremely fast (minimal context switching) but vulnerable—a bug in a graphics driver can crash the entire OS (Kernel Panic / BSOD).
+- **Microkernel (e.g., MINIX, QNX, L4)**: Only the bare minimum (Scheduler, IPC) runs in Ring 0. Drivers and File Systems run in Ring 3 as isolated processes. Highly secure and stable, but heavily penalized by constant IPC context switching.
+
+## 4. References
+- `references/interrupts-exceptions.md` — Hardware signals and IDT.
+- `references/syscall-mechanism.md` — Crossing the User/Kernel boundary.
+- `references/kernel-synchronization.md` — Spinlocks, Atomics, and RCU.
