@@ -38,55 +38,7 @@ See @bundles/bundle-definitions.json for 15 skill bundles.
 - `.cursor/` — Cursor (rules/)
 - `.codex/` — Codex CLI (AGENTS.md + rules/ + hooks/ + skills/)
 
-## [MANDATORY] CORE ENGINEERING STANDARDS
-1. **Commit Standards**: ALL commits must use Conventional Commits (eat:, ix:, chore:, etc.).
-2. **Coding Guidelines**: 
-   - NEVER leave // TODO or placeholders. Write the full implementation.
-   - Fail Fast: Throw exceptions immediately, do not swallow errors.
-   - Use Structured Logging with context.
-3. **Testing Requirements (Zero-Prompt)**: 
-   - ALWAYS write unit tests for new logic using the Arrange-Act-Assert (AAA) pattern.
-   - Test edge cases (nulls, out-of-bounds), not just happy paths.
-4. **RAG & Vector Search**:
-   - ALWAYS implement Hybrid Search (Dense + BM25). Pure Dense search is forbidden.
-   - ALWAYS use Semantic or Parent-Child Chunking. Naive character chunking is forbidden.
-   - MUST implement a Cross-Encoder Re-ranking stage (Two-Stage Retrieval).
-5. **Multi-Agent Architecture**:
-   - Anti-God Agent: Max 5 tools per agent. Use orchestrators for complex tasks.
-   - Principle of Least Privilege: e.g., Reviewers get ead_file, not write_file.
-   - HITL (Human-in-the-loop): Destructive actions (SQL DROP, Deploy) MUST have a pause/checkpoint for human approval.
 
-## [MANDATORY] ML & GPU STANDARDS
-- Never load large models in FP32. Always use 	orch.float16 or 	orch.bfloat16 to prevent OOM.
-- For production LLM APIs, never use 	ransformers.pipeline(). Must use LLM or TGI for PagedAttention and continuous batching.
-- Never hardcode cuda:0. Use dynamic device selection.
-
-## [MANDATORY] DISTRIBUTED SYSTEMS STANDARDS
-- Assume the network will fail. ALL cross-service HTTP/gRPC calls MUST implement Retries with Exponential Backoff and explicitly defined Timeouts.
-- All state-changing operations (POST/PUT/DELETE) MUST be strictly idempotent (e.g., use an Idempotency-Key) to prevent duplicate processing on network retries.
-
-## [MANDATORY] CRYPTOGRAPHY & SECURITY STANDARDS
-- NEVER use MD5 or SHA-1. Use SHA-256 or SHA-3.
-- NEVER use RSA-1024. Use Ed25519 or RSA-2048/4096 (with OAEP/PSS padding).
-- When implementing symmetric encryption for sensitive data, use AES-256-GCM (Quantum Resistant).
-- NEVER use normal hashes for passwords. MUST use Argon2id or bcrypt.
-
-## [MANDATORY] EBPF & LINUX KERNEL STANDARDS
-- All eBPF C code MUST include strict pointer bounds-checking to pass the Linux Kernel Verifier.
-- Use libbpf and CO-RE (Compile Once Run Everywhere) instead of legacy BCC python scripts.
-- Use BPF Maps (like RINGBUF) for user-space to kernel-space communication.
-
-## [MANDATORY] DATABASE DESIGN STANDARDS
-- NEVER use random UUIDv4 as Primary Keys in relational databases (causes B-Tree fragmentation). Use UUIDv7, ULID, or sequential IDs.
-- Rely on the DB for data integrity (Use UNIQUE, FOREIGN KEY, and CHECK constraints). Do not just rely on app-level validation.
-- ALWAYS use batching (e.g. DataLoader) or JOINs to prevent N+1 query problems.
-
-## [MANDATORY] ZERO-KNOWLEDGE (ZK) STANDARDS
-- When writing ZK circuits (Circom/Halo2), ALL signals must be explicitly mathematically constrained. Do not just assign values.
-- Never leak Private Witnesses into public outputs unless properly hashed.
-- Explicitly constrain boolean signals (e.g.,  * (b - 1) === 0).
-
-## [MANDATORY] EMBEDDED & RTOS STANDARDS (MISRA-C)
-- NEVER use dynamic memory allocation (malloc/ree) in embedded code. All memory must be statically allocated to prevent heap fragmentation.
-- NEVER put blocking code (Mutexes, printf, massive loops) inside an Interrupt Service Routine (ISR).
-- Bare-metal main() functions must never return (always end with an infinite loop).
+## [MANDATORY] CORE STANDARDS
+You MUST abide by all engineering rules defined in the ules/ directory of this agent configuration folder. 
+These rules cover Code Quality, Testing, RAG, Multi-Agent architectures, ML/GPU, Distributed Systems, Cryptography, eBPF, Databases, ZKP, and Embedded systems.
