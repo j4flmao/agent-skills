@@ -61,3 +61,8 @@ Total technical markdown references available: 9145.
    - Anti-God Agent: Max 5 tools per agent. Use orchestrators for complex tasks.
    - Principle of Least Privilege: e.g., Reviewers get ead_file, not write_file.
    - HITL (Human-in-the-loop): Destructive actions (SQL DROP, Deploy) MUST have a pause/checkpoint for human approval.
+
+## [MANDATORY] ML & GPU STANDARDS
+- Never load large models in FP32. Always use 	orch.float16 or 	orch.bfloat16 to prevent OOM.
+- For production LLM APIs, never use 	ransformers.pipeline(). Must use LLM or TGI for PagedAttention and continuous batching.
+- Never hardcode cuda:0. Use dynamic device selection.
