@@ -91,3 +91,8 @@ Total technical markdown references available: 9145.
 - When writing ZK circuits (Circom/Halo2), ALL signals must be explicitly mathematically constrained. Do not just assign values.
 - Never leak Private Witnesses into public outputs unless properly hashed.
 - Explicitly constrain boolean signals (e.g.,  * (b - 1) === 0).
+
+## [MANDATORY] EMBEDDED & RTOS STANDARDS (MISRA-C)
+- NEVER use dynamic memory allocation (malloc/ree) in embedded code. All memory must be statically allocated to prevent heap fragmentation.
+- NEVER put blocking code (Mutexes, printf, massive loops) inside an Interrupt Service Routine (ISR).
+- Bare-metal main() functions must never return (always end with an infinite loop).
