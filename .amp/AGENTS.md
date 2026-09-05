@@ -64,3 +64,9 @@ See @bundles/bundle-definitions.json for 15 skill bundles.
 ## [MANDATORY] DISTRIBUTED SYSTEMS STANDARDS
 - Assume the network will fail. ALL cross-service HTTP/gRPC calls MUST implement Retries with Exponential Backoff and explicitly defined Timeouts.
 - All state-changing operations (POST/PUT/DELETE) MUST be strictly idempotent (e.g., use an Idempotency-Key) to prevent duplicate processing on network retries.
+
+## [MANDATORY] CRYPTOGRAPHY & SECURITY STANDARDS
+- NEVER use MD5 or SHA-1. Use SHA-256 or SHA-3.
+- NEVER use RSA-1024. Use Ed25519 or RSA-2048/4096 (with OAEP/PSS padding).
+- When implementing symmetric encryption for sensitive data, use AES-256-GCM (Quantum Resistant).
+- NEVER use normal hashes for passwords. MUST use Argon2id or bcrypt.

@@ -1,38 +1,22 @@
----
-name: "Shor's Algorithm"
-description: "Quantum period finding, Quantum Fourier Transform (QFT), and RSA vulnerability."
----
-
 # Shor's Algorithm
 
-Shor's algorithm achieves exponential speedup over classical algorithms for integer factorization. The core mechanism hinges on reducing factorization to the order-finding problem, subsequently solved via quantum phase estimation utilizing the Quantum Fourier Transform (QFT).
+## 1. Skill Context
+**Focus**: Understanding the theoretical quantum algorithm that threatens classical asymmetric cryptography.
+**Triggers**: shors-algorithm, quantum-computing, prime-factorization, rsa-breaking.
 
-## Theoretical Foundation
+## 2. The RSA Security Premise
+RSA encryption relies on a simple mathematical asymmetry: it is trivially easy for a computer to multiply two extremely large prime numbers together (e.g., $P \times Q = N$), but it is practically impossible for a classical computer to take the massive number $N$ and figure out what $P$ and $Q$ were. 
+For a 2048-bit RSA key, classical algorithms (like the General Number Field Sieve) would take billions of years to factor it.
 
-Given an integer $N$ and a co-prime $a$, the algorithm finds the period $r$ of the function $f(x) = a^x \pmod N$. 
-If $r$ is even and $a^{r/2} \not\equiv -1 \pmod N$, the factors of $N$ are $\gcd(a^{r/2} \pm 1, N)$.
+## 3. How Shor's Algorithm Works
+In 1994, Peter Shor formulated a quantum algorithm that finds the prime factors of an integer in polynomial time. It transforms the problem of factoring into a problem of finding the *period* of a function.
 
-The QFT transforms the computational basis state $|x\rangle$ into a superposition:
-$$ QFT|x\rangle = \frac{1}{\sqrt{Q}} \sum_{y=0}^{Q-1} e^{2\pi i x y / Q} |y\rangle $$
+1. **Classical Reduction**: The problem of factoring $N$ is reduced (using classical math) to finding the period of a modular exponential function: $f(x) = a^x \pmod N$.
+2. **Quantum Superposition**: The quantum computer creates a massive superposition of all possible values of $x$ simultaneously.
+3. **Quantum Fourier Transform (QFT)**: This is the magic step. The quantum computer applies QFT to the superposition. QFT interferes the probability amplitudes—canceling out the wrong answers (destructive interference) and amplifying the correct period (constructive interference).
+4. **Measurement**: When the quantum state is measured, it collapses and yields the correct period with extremely high probability.
+5. **Classical Extraction**: The period is plugged back into a classical formula (using the Greatest Common Divisor) to extract the prime factors $P$ and $Q$.
 
-## Actionable Execution
-
-1. **State Preparation:** Initialize two registers. Apply Hadamard gates to create a uniform superposition in the evaluation register.
-2. **Modular Exponentiation:** Apply a controlled unitary operation $U|y\rangle = |a y \bmod N\rangle$.
-3. **Inverse QFT:** Apply QFT$^\dagger$ to the evaluation register to extract the phase (period $r$).
-4. **Measurement & Classical Post-processing:** Measure the state, yielding a fraction $c/r$. Use continued fractions to deduce $r$.
-
-## Execution Flow
-
-```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
-flowchart TD
-    A[Start] --> B[Initialize Qubit Registers]
-    B --> C[Apply Hadamard Transform]
-    C --> D[Apply Controlled Modular Exponentiation]
-    D --> E[Apply Inverse QFT]
-    E --> F[Measure Register]
-    F --> G[Classical Continued Fractions Algorithm]
-    G --> H[Extract Factors gcd]
-    H --> I[End]
-```
+## 4. Hardware Limitations
+To break RSA-2048, Shor's algorithm requires thousands of *Logical Qubits*. Because quantum states are incredibly fragile and prone to errors (decoherence), creating 1 Logical Qubit requires millions of *Physical Qubits* for error correction. 
+Currently, quantum computers only have a few hundred noisy physical qubits. The mathematical threat is absolute, but the hardware is currently decades away.
