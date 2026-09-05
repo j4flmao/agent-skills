@@ -66,3 +66,7 @@ Total technical markdown references available: 9145.
 - Never load large models in FP32. Always use 	orch.float16 or 	orch.bfloat16 to prevent OOM.
 - For production LLM APIs, never use 	ransformers.pipeline(). Must use LLM or TGI for PagedAttention and continuous batching.
 - Never hardcode cuda:0. Use dynamic device selection.
+
+## [MANDATORY] DISTRIBUTED SYSTEMS STANDARDS
+- Assume the network will fail. ALL cross-service HTTP/gRPC calls MUST implement Retries with Exponential Backoff and explicitly defined Timeouts.
+- All state-changing operations (POST/PUT/DELETE) MUST be strictly idempotent (e.g., use an Idempotency-Key) to prevent duplicate processing on network retries.
