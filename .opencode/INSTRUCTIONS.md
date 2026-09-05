@@ -81,3 +81,8 @@ Total technical markdown references available: 9145.
 - All eBPF C code MUST include strict pointer bounds-checking to pass the Linux Kernel Verifier.
 - Use libbpf and CO-RE (Compile Once Run Everywhere) instead of legacy BCC python scripts.
 - Use BPF Maps (like RINGBUF) for user-space to kernel-space communication.
+
+## [MANDATORY] DATABASE DESIGN STANDARDS
+- NEVER use random UUIDv4 as Primary Keys in relational databases (causes B-Tree fragmentation). Use UUIDv7, ULID, or sequential IDs.
+- Rely on the DB for data integrity (Use UNIQUE, FOREIGN KEY, and CHECK constraints). Do not just rely on app-level validation.
+- ALWAYS use batching (e.g. DataLoader) or JOINs to prevent N+1 query problems.
