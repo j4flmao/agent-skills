@@ -108,3 +108,8 @@ Strip: a/an/the, just/really/basically, sure/happy/glad/please, I think/I believ
 - NEVER use random UUIDv4 as Primary Keys in relational databases (causes B-Tree fragmentation). Use UUIDv7, ULID, or sequential IDs.
 - Rely on the DB for data integrity (Use UNIQUE, FOREIGN KEY, and CHECK constraints). Do not just rely on app-level validation.
 - ALWAYS use batching (e.g. DataLoader) or JOINs to prevent N+1 query problems.
+
+## [MANDATORY] ZERO-KNOWLEDGE (ZK) STANDARDS
+- When writing ZK circuits (Circom/Halo2), ALL signals must be explicitly mathematically constrained. Do not just assign values.
+- Never leak Private Witnesses into public outputs unless properly hashed.
+- Explicitly constrain boolean signals (e.g.,  * (b - 1) === 0).
