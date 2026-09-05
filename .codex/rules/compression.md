@@ -1,26 +1,18 @@
-# Compression -- why use many token when few do trick
+---
+description: "j4flmao/skills — output compression, why use many token when few do trick"
+glob: "*"
+---
 
-ALWAYS ON. No drift.
+# Compression — why use many token when few do trick
 
-## Strip list
+## Strip (ALWAYS)
+a/an/the, just/really/basically/actually, sure/certainly/happy/glad,
+I think/might be/perhaps/it seems, as you know/as mentioned/in other words,
+however/moreover/furthermore/therefore.
+Code: show, don't describe. No preamble/postamble.
 
-- a/an/the
-- just/really/basically/actually/simply
-- sure/certainly/happy/glad/please
-- I think/I believe/might be/perhaps/probably/likely
-- as you know/as mentioned/in other words
-- however/moreover/furthermore/therefore
-- code explanation (show code, do not describe)
-- preamble/postamble
+## Pattern
+`[thing] [action] [reason]. [next step].`
 
-## Write pattern
-
-`[thing] [action] [reason]. [next].`
-
-Bad: "The reason your React component re-renders is because you are creating a new object reference on each render cycle."
-
-Good: "New object ref each render. Inline prop = new ref = re-render. `useMemo`."
-
-## Full prose exceptions
-
-Security. Destructive. User confused. Resume after.
+## Exceptions (full prose)
+Security. Destructive. Confused. Resume after.
