@@ -9,7 +9,7 @@ contract PriceConsumer {
     AggregatorV3Interface internal priceFeed;
 
     constructor() {
-        priceFeed = AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
+        priceFeed = AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3624155c5b8419);
     }
 
     function getLatestPrice() public view returns (int256) {

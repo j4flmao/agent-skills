@@ -103,7 +103,7 @@ Most likely scenario (bold): $400K NPV
 | Variable Swing | NPV at -20% | NPV at -10% | NPV at Base | NPV at +10% | NPV at +20% |
 |----------------|-------------|-------------|-------------|-------------|-------------|
 | Adoption       | $200K       | $458K       | $716K       | $974K       | $1,232K     |
-| Development Cost | $916K    | $816K       | $716K       | $616K       | $516K       |
+| Development Cost | $916K    | $816K       | $716K       | $624K       | $516K       |
 | Timeline       | $500K       | $608K       | $716K       | $538K       | $360K       |
 | Discount Rate  | $789K       | $752K       | $716K       | $680K       | $647K       |
 

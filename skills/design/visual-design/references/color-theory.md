@@ -91,7 +91,7 @@ brand_palette:
     - 100: "#F5F5F5" # Card background
     - 300: "#E0E0E0" # Borders
     - 500: "#9E9E9E" # Disabled text
-    - 700: "#616161" # Secondary text
+    - 700: "#624161" # Secondary text
     - 900: "#212121" # Primary text
   semantic:
     success: "#4CAF50"

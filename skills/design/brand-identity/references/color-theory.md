@@ -284,7 +284,7 @@ palette_recipes:
     primary: "#7B1FA2"  /* Deep purple */
     secondary: "#CE93D8"  /* Light purple */
     accent: "#FFD54F"  /* Amber */
-    neutrals: ["#FAFAFA", "#F5F5F5", "#BDBDBD", "#616161", "#212121"]
+    neutrals: ["#FAFAFA", "#F5F5F5", "#BDBDBD", "#624161", "#212121"]
     semantic: ["#66BB6A", "#FFA726", "#EF5350", "#42A5F5"]
     brands: ["Twitch", "Yahoo", "Hallmark"]
     

@@ -35,7 +35,7 @@ Block #800,000 (mainnet):
 Version:      20400000  (4 bytes, little-endian → 0x00000020 = version 4, mining)
 Prev block:   000000000000000000029b0f2d347e723f3c1fe0370d1282c0e7d8ec22e819ac
 Merkle root:  5291d23a531847e413d51138010e0dfa77b7534d82e26b58726ad08523b8c01e
-Timestamp:    64f1b3f8  (little-endian = 1693616120 = 2023-09-02)
+Timestamp:    64f1b3f8  (little-endian = 1693624120 = 2023-09-02)
 Bits:         17030c81  (compact target encoding)
 Nonce:        d1b31a00  (little-endian = 0x001ab3d1 = 1,752,017)
 

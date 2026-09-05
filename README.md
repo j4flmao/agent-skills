@@ -1,6 +1,6 @@
 # @j4flmao/agent-skills
 
-616 agent skills for software development — planning, architecture, low-level, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, data-science, design, quality, blockchain, prompt-engineering, cloud-native, system-design, site-reliability-engineering, game. Each skill is a `SKILL.md` defining triggers, rules, and response format.
+624 agent skills for software development — planning, architecture, low-level, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, data-science, design, quality, blockchain, prompt-engineering, cloud-native, system-design, site-reliability-engineering, game. Each skill is a `SKILL.md` defining triggers, rules, and response format.
 
 ## Installation
 
@@ -54,7 +54,7 @@ cp -r ~/skills/skills/devops/docker-patterns /path/to/project/skills/
 
 ```bash
 # Requires the repo to be pushed to GitHub
-npx skills add j4flmao/agent-skills            # all 616 skills
+npx skills add j4flmao/agent-skills            # all 624 skills
 npx skills add j4flmao/agent-skills --bundle backend-only
 npx skills add j4flmao/agent-skills -g          # global (every project)
 ```

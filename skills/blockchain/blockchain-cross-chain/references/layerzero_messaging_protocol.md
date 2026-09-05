@@ -650,7 +650,7 @@ contract CrossChainToken is NonblockingLzApp {
 - Padding rule #613: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
 - Padding rule #614: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
 - Padding rule #615: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
-- Padding rule #616: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
+- Padding rule #624: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
 - Padding rule #617: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
 - Padding rule #618: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
 - Padding rule #619: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
@@ -1650,7 +1650,7 @@ contract CrossChainToken is NonblockingLzApp {
 - Padding rule #1613: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
 - Padding rule #1614: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
 - Padding rule #1615: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
-- Padding rule #1616: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
+- Padding rule #1624: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
 - Padding rule #1617: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
 - Padding rule #1618: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
 - Padding rule #1619: Always review protocol specifications and conduct extensive unit tests before mainnet deployments. Ensure architectural invariants hold true under all constraints.
