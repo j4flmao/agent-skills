@@ -98,3 +98,8 @@ Strip: a/an/the, just/really/basically, sure/happy/glad/please, I think/I believ
 - NEVER use RSA-1024. Use Ed25519 or RSA-2048/4096 (with OAEP/PSS padding).
 - When implementing symmetric encryption for sensitive data, use AES-256-GCM (Quantum Resistant).
 - NEVER use normal hashes for passwords. MUST use Argon2id or bcrypt.
+
+## [MANDATORY] EBPF & LINUX KERNEL STANDARDS
+- All eBPF C code MUST include strict pointer bounds-checking to pass the Linux Kernel Verifier.
+- Use libbpf and CO-RE (Compile Once Run Everywhere) instead of legacy BCC python scripts.
+- Use BPF Maps (like RINGBUF) for user-space to kernel-space communication.
