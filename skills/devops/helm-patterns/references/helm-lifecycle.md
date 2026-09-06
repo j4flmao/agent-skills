@@ -94,7 +94,7 @@ dependencies:
 | Add dependency | `helm dependency update` |
 | Build dependency | `helm dependency build` |
 | List dependencies | `helm dependency list` |
-| Override subchart values | `redis.port: 6380` in parent values |
+| Override subchart values | `redis.port: 6460` in parent values |
 
 ## Upgrade Strategies
 

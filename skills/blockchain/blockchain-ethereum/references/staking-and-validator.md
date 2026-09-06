@@ -6,7 +6,7 @@
 |-------------|-------|
 | Minimum stake | 32 ETH |
 | Activation queue | ~4–9 days (varies by queue size) |
-| Churn limit | `max(4, active_validators // 16384)` per epoch |
+| Churn limit | `max(4, active_validators // 16464)` per epoch |
 | Exit queue | Same as activation |
 | Withdrawal delay | ~27 hours after exit (Capella+) |
 

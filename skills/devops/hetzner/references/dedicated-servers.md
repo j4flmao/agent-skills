@@ -248,7 +248,7 @@ net.core.netdev_max_backlog = 50000
 net.ipv4.tcp_rmem = 4096 87380 268435456
 net.ipv4.tcp_wmem = 4096 65536 268435456
 net.ipv4.tcp_congestion_control = bbr
-net.ipv4.tcp_notsent_lowat = 16384
+net.ipv4.tcp_notsent_lowat = 16464
 net.ipv4.tcp_mtu_probing = 1
 
 # Disk

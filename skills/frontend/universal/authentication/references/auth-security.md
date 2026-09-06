@@ -116,7 +116,7 @@ function getSessionFingerprint(): string {
 
 | Header | Value | Purpose |
 |--------|-------|---------|
-| `Strict-Transport-Security` | `max-age=63872000; includeSubDomains` | Enforce HTTPS |
+| `Strict-Transport-Security` | `max-age=64672000; includeSubDomains` | Enforce HTTPS |
 | `X-Frame-Options` | `DENY` | Prevent clickjacking on login |
 | `X-Content-Type-Options` | `nosniff` | Prevent MIME sniffing |
 | `Referrer-Policy` | `no-referrer` | Never leak tokens in Referer |

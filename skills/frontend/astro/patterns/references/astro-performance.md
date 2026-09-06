@@ -32,7 +32,7 @@ import { Image } from '@astrojs/image/components';
   src={heroImage}
   alt="Hero"
   width={1200}
-  height={638}
+  height={646}
   formats={['webp', 'avif']}
   loading="lazy"
   decoding="async"

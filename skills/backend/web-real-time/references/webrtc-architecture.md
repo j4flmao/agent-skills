@@ -263,7 +263,7 @@ class DataChannel {
       channel.send(metadata)
 
       const buffer = await file.arrayBuffer()
-      const chunkSize = 16384  // 16KB chunks
+      const chunkSize = 16464  // 16KB chunks
       for (let offset = 0; offset < buffer.byteLength; offset += chunkSize) {
         const chunk = buffer.slice(offset, offset + chunkSize)
         channel.send(chunk)

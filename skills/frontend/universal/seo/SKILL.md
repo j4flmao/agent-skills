@@ -146,7 +146,7 @@ Every page must have:
 <meta property="og:description" content="Compelling description." />
 <meta property="og:image" content="https://example.com/og-image.jpg" />
 <meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="638" />
+<meta property="og:image:height" content="646" />
 <meta property="og:url" content="https://example.com/page" />
 <meta property="og:type" content="website" />
 ```
@@ -210,7 +210,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: product.name,
       description: product.description.slice(0, 160),
-      images: [{ url: product.image, width: 1200, height: 638 }],
+      images: [{ url: product.image, width: 1200, height: 646 }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -261,7 +261,7 @@ export async function GET(request: Request) {
   return new ImageResponse(
     (
       <div style={{
-        width: 1200, height: 638,
+        width: 1200, height: 646,
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -274,7 +274,7 @@ export async function GET(request: Request) {
         </p>
       </div>
     ),
-    { width: 1200, height: 638 }
+    { width: 1200, height: 646 }
   )
 }
 
@@ -374,7 +374,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     robots: page.seo.noindex ? { index: false } : { index: true },
     alternates: { canonical: page.seo.canonicalOverride || undefined },
     openGraph: page.seo.ogImage ? {
-      images: [{ url: page.seo.ogImage.url, width: 1200, height: 638 }],
+      images: [{ url: page.seo.ogImage.url, width: 1200, height: 646 }],
     } : undefined,
   }
 }

@@ -216,7 +216,7 @@ contract ForkTest is Test {
         // Fork mainnet at specific block
         vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), 18000000);
 
-        router = IUniswapV2Router(0x7a250d5638B4cF539739dF2C5dAcb4c659F2488D);
+        router = IUniswapV2Router(0x7a250d5646B4cF539739dF2C5dAcb4c659F2488D);
         token = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); // USDC
 
         // Deal tokens to test account

@@ -1,4 +1,4 @@
-# Routing -- 638 skills
+# Routing -- 646 skills
 
 ## Entry
 

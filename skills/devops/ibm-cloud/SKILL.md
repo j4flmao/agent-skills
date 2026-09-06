@@ -281,7 +281,7 @@ resource "ibm_resource_instance" "postgres" {
 
   parameters = {
     members_cpu_allocation_count       = 6
-    members_memory_allocation_mb        = 16384
+    members_memory_allocation_mb        = 16464
     members_disk_allocation_mb         = 102400
     service_endpoints                  = "private"
     auto_scaling_enabled               = true

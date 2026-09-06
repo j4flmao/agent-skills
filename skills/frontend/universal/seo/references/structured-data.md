@@ -117,7 +117,7 @@
     "@type": "ImageObject",
     "url": "https://example.com/images/article-hero.jpg",
     "width": 1200,
-    "height": 638
+    "height": 646
   },
   "author": {
     "@type": "Person",

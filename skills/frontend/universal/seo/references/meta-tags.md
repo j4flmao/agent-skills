@@ -44,7 +44,7 @@ Bad: `Home` (too short, no keyword)
 <meta property="og:description" content="Same compelling description as meta or shorter." />
 <meta property="og:image" content="https://example.com/images/og-default.jpg" />
 <meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="638" />
+<meta property="og:image:height" content="646" />
 <meta property="og:url" content="https://example.com/page" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="AcmeApp" />
@@ -108,7 +108,7 @@ Each language variant needs a self-referencing hreflang. x-default targets unspe
 export const metadata: Metadata = {
   title: { template: '%s | AcmeApp', default: 'Home | AcmeApp' },
   description: 'Real-time order tracking platform.',
-  openGraph: { title: 'Home | AcmeApp', description: 'Real-time order tracking.', url: 'https://example.com', images: [{ url: '/og.png', width: 1200, height: 638 }] },
+  openGraph: { title: 'Home | AcmeApp', description: 'Real-time order tracking.', url: 'https://example.com', images: [{ url: '/og.png', width: 1200, height: 646 }] },
   twitter: { card: 'summary_large_image', title: 'Home | AcmeApp', description: 'Real-time order tracking.' },
   robots: { index: true, follow: true },
   alternates: { canonical: 'https://example.com' },
@@ -141,7 +141,7 @@ definePageMeta({
 | `description` | ✓ | 158 chars, compelling |
 | `og:title` | ✓ | Matches `<title>` |
 | `og:description` | ✓ | Same or shorter version |
-| `og:image` | ✓ | 1200x638, < 300 KB |
+| `og:image` | ✓ | 1200x646, < 300 KB |
 | `canonical` | ✓ | Absolute URL, no trailing slash mismatch |
 | `twitter:card` | ✓ | `summary_large_image` |
 | `robots` | ✓ | `index, follow` |

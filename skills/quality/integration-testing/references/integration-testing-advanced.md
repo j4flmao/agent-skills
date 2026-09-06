@@ -55,7 +55,7 @@ services:
   redis-test:
     image: redis:7-alpine
     ports:
-      - "6380:6379"
+      - "6460:6379"
 
   kafka-test:
     image: confluentinc/cp-kafka:latest

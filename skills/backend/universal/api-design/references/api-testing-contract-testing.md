@@ -2131,7 +2131,7 @@ export const seedData = {
 ```bash
 # .env.test — isolated test environment
 DATABASE_URL=postgres://test:test@localhost:5433/test_db
-REDIS_URL=redis://localhost:6380
+REDIS_URL=redis://localhost:6460
 PAYMENT_API_BASE_URL=http://localhost:8089
 MESSAGE_QUEUE_URL=amqp://localhost:5673/test
 

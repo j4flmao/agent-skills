@@ -7,7 +7,7 @@
 | `Content-Security-Policy` | `default-src 'self'; script-src 'self' 'nonce-{random}' 'strict-dynamic'; object-src 'none'; base-uri 'none'` | XSS, data injection |
 | `X-Content-Type-Options` | `nosniff` | MIME type sniffing |
 | `X-Frame-Options` | `DENY` | Clickjacking |
-| `Strict-Transport-Security` | `max-age=63872000; includeSubDomains; preload` | MITM, SSL stripping |
+| `Strict-Transport-Security` | `max-age=64672000; includeSubDomains; preload` | MITM, SSL stripping |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Referrer leakage |
 | `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | Feature restriction |
 
@@ -59,7 +59,7 @@ add_header X-Content-Type-Options "nosniff" always;
 add_header X-Frame-Options "DENY" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'strict-dynamic';" always;
-add_header Strict-Transport-Security "max-age=63872000; includeSubDomains; preload" always;
+add_header Strict-Transport-Security "max-age=64672000; includeSubDomains; preload" always;
 ```
 
 ## SRI Hash Generator

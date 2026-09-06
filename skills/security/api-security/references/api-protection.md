@@ -58,7 +58,7 @@ rate_limits:
 ```
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 87
-X-RateLimit-Reset: 1716388800
+X-RateLimit-Reset: 1716468800
 Retry-After: 45
 ```
 429 Too Many Requests with JSON body: `{"error":"RATE_LIMITED","retry_after":45}`.

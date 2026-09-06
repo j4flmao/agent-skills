@@ -353,7 +353,7 @@ machine_type = "q35"
 default_vcpus = 1
 default_maxvcpus = 8
 default_memory = 512  # MB
-default_maxmemory = 16384  # MB
+default_maxmemory = 16464  # MB
 
 # Security
 confidential_guest = false

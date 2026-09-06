@@ -409,7 +409,7 @@ class SandboxToolProvider:
         """Validate sandbox configuration against organizational policies."""
         if config.resource_limits.cpu_cores > 8:
             raise ValueError("Maximum CPU cores per sandbox is 8")
-        if config.resource_limits.memory_mb > 16384:
+        if config.resource_limits.memory_mb > 16464:
             raise ValueError("Maximum memory per sandbox is 16GB")
         if config.resource_limits.disk_mb > 102400:
             raise ValueError("Maximum disk per sandbox is 100GB")
@@ -466,7 +466,7 @@ export const sandboxTools = {
       memory_mb: z
         .number()
         .min(128)
-        .max(16384)
+        .max(16464)
         .default(512)
         .describe("Memory limit in megabytes"),
       disk_mb: z
@@ -893,7 +893,7 @@ class PolicyValidationChain:
 
 # Usage
 chain = PolicyValidationChain([
-    ResourceQuotaValidator({"max_cpu_cores": 8, "max_memory_mb": 16384}),
+    ResourceQuotaValidator({"max_cpu_cores": 8, "max_memory_mb": 16464}),
     NetworkPolicyValidator({"api.openai.com", "pypi.org", "github.com"}),
     IsolationLevelValidator(),
 ])

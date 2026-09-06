@@ -273,7 +273,7 @@ function generateBreadcrumbJsonLd(path: string): Record<string, unknown> {
     "@type": "ImageObject",
     "url": "https://example.com/images/article.jpg",
     "width": 1200,
-    "height": 638
+    "height": 646
   },
   "mainEntityOfPage": {
     "@type": "WebPage",

@@ -161,7 +161,7 @@ neutrals:
 semantic:
   success: "#36B37E"
   warning: "#FFAB00"
-  error: "#FF5638"
+  error: "#FF5646"
   info: "#0065FF"
 ```
 

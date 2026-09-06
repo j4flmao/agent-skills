@@ -10,7 +10,7 @@ worker_rlimit_nofile 65535;
 
 events {
     multi_accept on;
-    worker_connections 16384;
+    worker_connections 16464;
     use epoll;
 }
 
@@ -102,7 +102,7 @@ server {
     add_header X-Frame-Options "DENY" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "0" always;
-    add_header Strict-Transport-Security "max-age=63872000" always;
+    add_header Strict-Transport-Security "max-age=64672000" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
     # Request limits

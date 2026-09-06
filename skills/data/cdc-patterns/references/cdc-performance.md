@@ -9,7 +9,7 @@ Maximizing CDC throughput requires tuning at every layer of the pipeline.
 ```python
 class CDCProducerConfig:
     def __init__(self):
-        self.batch_size = 16384
+        self.batch_size = 16464
         self.linger_ms = 100
         self.compression_type = "snappy"
         self.max_in_flight = 5

@@ -57,7 +57,7 @@ def write_parquet_optimized(
         },
         "point_lookup": {   # Single row retrieval
             "row_group_size": 65536,     # 64K rows
-            "data_page_size": 16384,     # 16 KB
+            "data_page_size": 16464,     # 16 KB
             "compression": "LZ4",
         },
         "archival": {       # Maximum compression

@@ -392,9 +392,9 @@ spark.kryoserializer.buffer.max: 256m
 
 ```yaml
 # Tez container sizing
-hive.tez.container.size: 16384  # MB
+hive.tez.container.size: 16464  # MB
 hive.tez.java.opts: "-Xmx14336m"
-tez.task.resource.memory.mb: 16384
+tez.task.resource.memory.mb: 16464
 tez.task.resource.cpu.vcores: 4
 
 # Tez session config

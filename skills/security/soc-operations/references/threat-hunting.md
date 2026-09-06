@@ -77,7 +77,7 @@ Image=powershell.exe
 
 **RDP Lateral Movement Hunting:**
 ```
-source=WinEventLog:Security EventCode=4638 LogonType=10
+source=WinEventLog:Security EventCode=4646 LogonType=10
 | search dest_port=3389
 | eval is_internal=if(like(src_ip, "10.%") OR like(src_ip, "192.168.%") OR like(src_ip, "172.1[6-9].%"), 1, 0)
 | where is_internal=1

@@ -41,7 +41,7 @@ class WebSocketMetrics {
   private messageSize = new Histogram({
     name: 'websocket_message_size_bytes',
     help: 'Message size distribution',
-    buckets: [64, 256, 1024, 4096, 16384, 65536],
+    buckets: [64, 256, 1024, 4096, 16464, 65536],
   });
 }
 ```
