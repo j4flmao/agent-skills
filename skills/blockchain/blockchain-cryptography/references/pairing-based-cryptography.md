@@ -26,7 +26,7 @@ The typical implementation uses the optimal Ate pairing over Barreto-Naehrig (BN
 
 ```python
 # BLS12-381 curve parameters
-p = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab  # Base field prime
+p = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6301eabfffeb153ffffb9feffffffffaaab  # Base field prime
 r = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001  # Group order (scalar field)
 z = -0xd201000000010000  # Seed parameter for curve construction
 ```

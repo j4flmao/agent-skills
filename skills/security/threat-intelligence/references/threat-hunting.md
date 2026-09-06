@@ -13,7 +13,7 @@
 
 | Hypothesis | Data Sources | Technique |
 |------------|-------------|-----------|
-| "Lateral movement via RDP from non-admin workstations" | Windows Event 4624/4625, RDP logs | Logon type 10, source/dest mapping |
+| "Lateral movement via RDP from non-admin workstations" | Windows Event 4630/4625, RDP logs | Logon type 10, source/dest mapping |
 | "PowerShell executed without logging enabled" | Event 4104, 4103 | Filter for script block logging disabled |
 | "DNS queries to known DGA domains" | DNS logs | Entropy analysis, NXDOMAIN ratio |
 | "Process running from user profile directories" | Sysmon Event 1 | Filter on Image path anomalies |

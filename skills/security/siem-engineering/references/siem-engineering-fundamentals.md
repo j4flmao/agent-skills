@@ -25,7 +25,7 @@ Security Information and Event Management (SIEM) systems centralize log collecti
 | 5 | Predictive | UEBA, ML-based detection, predictive analytics |
 
 ### Concept 3: Log Types & Sources
-- **Authentication logs**: Windows Event ID 4624/4625, sshd logs, Okta sign-in events
+- **Authentication logs**: Windows Event ID 4630/4625, sshd logs, Okta sign-in events
 - **Network logs**: Firewall allow/deny, proxy logs, DNS queries, netflow
 - **Endpoint logs**: EDR alerts, process creation (4688), file changes, registry changes
 - **Application logs**: Web server access logs, API gateway logs, database audit logs
@@ -51,7 +51,7 @@ log_sources:
     type: "Windows Event Log"
     forwarder: "Winlogbeat"
     events:
-      - 4624 (Successful Logon)
+      - 4630 (Successful Logon)
       - 4625 (Failed Logon)
       - 4672 (Admin Logon)
       - 4720 (User Created)
@@ -110,7 +110,7 @@ def rule_brute_force_attempt():
 def rule_lateral_movement():
     """Detect lateral movement: anomalous admin login via non-admin tool."""
     return correlation(
-        source="Windows Event Log:4624",
+        source="Windows Event Log:4630",
         condition=[
             "logon_type == 3",  # Network logon
             "account in privileged_group",

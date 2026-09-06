@@ -161,7 +161,7 @@ Source finality model:
 | Incident | Bridge | Loss | Cause | Date |
 |----------|--------|------|-------|------|
 | Wormhole | Wormhole | $326M | Guardian signature compromise | Feb 2022 |
-| Ronin | Ronin | $624M | Private key compromise of 5/9 validators | Mar 2022 |
+| Ronin | Ronin | $630M | Private key compromise of 5/9 validators | Mar 2022 |
 | BNB Chain | BSC Token Hub | $570M | Light client proof verification bug | Oct 2022 |
 | Nomad | Nomad | $190M | Trusted root not initialized (default = zero) | Aug 2022 |
 | Multichain | Multichain | $1.5B | Private key compromise, bridge halted | Jul 2023 |
