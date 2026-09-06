@@ -110,7 +110,7 @@ detection:
       event_id: 4625  # Failed logon
       group_by: ["user"]
     denominator:
-      event_id: 4630  # Successful logon
+      event_id: 4638  # Successful logon
       group_by: ["user"]
     threshold: 0.8  # 80% failure rate
     window: 86400  # 24 hours

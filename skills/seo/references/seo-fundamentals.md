@@ -30,7 +30,7 @@ Search Engine Optimization improves organic search visibility and traffic. This 
   <meta property="og:description" content="Discover the best product for your needs.">
   <meta property="og:image" content="https://example.com/images/product-og.jpg">
   <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
+  <meta property="og:image:height" content="638">
   <meta property="og:url" content="https://example.com/product">
   <meta property="og:type" content="product">
   <meta property="og:site_name" content="Brand Name">

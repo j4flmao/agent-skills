@@ -40,7 +40,7 @@ contract ForkTest is Test {
         vm.startPrank(whale);
         deal(whale, 100 ether);
 
-        IUniswapV2Router02 router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        IUniswapV2Router02 router = IUniswapV2Router02(0x7a250d5638B4cF539739dF2C5dAcb4c659F2488D);
         address[] memory path = new address[](2);
         path[0] = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
         path[1] = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // DAI

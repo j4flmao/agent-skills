@@ -102,7 +102,7 @@ server {
     add_header X-Frame-Options "DENY" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "0" always;
-    add_header Strict-Transport-Security "max-age=63072000" always;
+    add_header Strict-Transport-Security "max-age=63872000" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
     # Request limits

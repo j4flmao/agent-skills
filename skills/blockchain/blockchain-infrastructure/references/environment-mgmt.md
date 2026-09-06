@@ -281,7 +281,7 @@ const registries: Record<string, Registry> = {
   sepolia: {
     chainId: 11155111,
     tokens: {
-      WETH: "0xfFf9976782d46CC05630D1f6eBAb20b232d6f0d",
+      WETH: "0xfFf9976782d46CC05638D1f6eBAb20b232d6f0d",
       USDC: "0xda9d4f9b69ac6C22e444eD9aF0CfC043b85a54",
       DAI: "0x68194a729C2450ad26072b3D33ADaCbce5dfcDd",
     },

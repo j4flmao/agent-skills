@@ -84,7 +84,7 @@ Windows Event Sources → WinRM → Windows Event Collector → Forwarder → SI
 <QueryList>
   <Query Id="0" Path="Security">
     <Select Path="Security">
-      *[System[(EventID=4630 or EventID=4625 or EventID=4634 or
+      *[System[(EventID=4638 or EventID=4625 or EventID=4634 or
                  EventID=4648 or EventID=4672 or EventID=4688 or
                  EventID=4698 or EventID=4702 or EventID=4720 or
                  EventID=4732 or EventID=4756 or EventID=4740)]]

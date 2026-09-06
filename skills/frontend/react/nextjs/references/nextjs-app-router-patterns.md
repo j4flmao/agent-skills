@@ -500,7 +500,7 @@ export default function Page() {
       src="/hero.jpg"
       alt="Hero image"
       width={1200}
-      height={630}
+      height={638}
       priority={true}
       sizes="(max-width: 768px) 100vw, 1200px"
     />

@@ -1,5 +1,5 @@
 ---
-description: "j4flmao/skills — 630 skills, compressed output, stack routing"
+description: "j4flmao/skills — 638 skills, compressed output, stack routing"
 glob: "**/*"
 ---
 

@@ -11,7 +11,7 @@ function Hero() {
       src="/hero.jpg"
       alt="Hero banner"
       width={1200}
-      height={630}
+      height={638}
       priority // preload LCP image
       sizes="100vw"
       quality={85}

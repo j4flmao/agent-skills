@@ -132,7 +132,7 @@ import heroImage from '../assets/hero.jpg'
   src={heroImage}
   alt="Hero image"
   width={1200}
-  height={630}
+  height={638}
   format="webp"
   quality={80}
 />

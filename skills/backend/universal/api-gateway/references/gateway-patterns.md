@@ -576,7 +576,7 @@ On retryable failure (connection error, timeout):
 ## 14. Security Headers
 
 ```
-Strict-Transport-Security: max-age=63072000; includeSubDomains
+Strict-Transport-Security: max-age=63872000; includeSubDomains
 X-Content-Type-Options: nosniff
 X-Frame-Options: DENY
 X-XSS-Protection: 0

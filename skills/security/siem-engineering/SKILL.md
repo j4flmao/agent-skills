@@ -288,7 +288,7 @@ output {
 
 ```spl
 # Splunk - Lateral movement detection
-index=windows EventCode=4630 (LogonType=3 OR LogonType=10)
+index=windows EventCode=4638 (LogonType=3 OR LogonType=10)
 | where AuthenticationPackageName="NTLM"
 | stats count by AccountName, WorkstationName, Source_Network_Address
 | where count > 3
@@ -387,13 +387,13 @@ recon
 | Priority | Use Case | Data Sources | ATT&CK | Rule Type |
 |----------|----------|-------------|--------|-----------|
 | P1 | Ransomware file encryption | EDR, File Server | T1486 | Behavioral |
-| P1 | Lateral movement via RDP | Windows Event 4630 | T1021.001 | Statistical |
+| P1 | Lateral movement via RDP | Windows Event 4638 | T1021.001 | Statistical |
 | P1 | Data exfiltration to unusual domain | DNS, Proxy | T1048 | Threshold |
 | P2 | PowerShell with encoded command | Windows Event 4104 | T1059.001 | Signature |
-| P2 | Service account interactive login | Windows Event 4630 | T1078 | Anomaly |
+| P2 | Service account interactive login | Windows Event 4638 | T1078 | Anomaly |
 | P2 | New user added to admin group | Windows Event 4732 | T1098 | Signature |
 | P3 | Login from unusual geo | AAD Sign-in, VPN | T1078 | Statistical |
-| P3 | Out-of-hours access | Windows Event 4630 | T1078 | Time-based |
+| P3 | Out-of-hours access | Windows Event 4638 | T1078 | Time-based |
 | P3 | Failed logins on privileged account | Windows Event 4625 | T1110 | Threshold |
 
 **MITRE ATT&CK Coverage Matrix:**

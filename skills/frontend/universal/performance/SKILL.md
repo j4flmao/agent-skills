@@ -304,7 +304,7 @@ import Image from 'next/image';
   src="/hero.webp"
   alt="Hero"
   width={1200}
-  height={630}
+  height={638}
   priority // preload LCP image
   sizes="(max-width: 768px) 100vw, 1200px"
   quality={85}

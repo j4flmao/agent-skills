@@ -23,7 +23,7 @@ Crawlers (Googlebot) execute JavaScript but have a limited budget:
 export const metadata: Metadata = {
   title: { template: '%s | AcmeApp', default: 'AcmeApp' },
   description: 'Real-time order tracking platform.',
-  openGraph: { images: [{ url: '/og.png', width: 1200, height: 630 }] },
+  openGraph: { images: [{ url: '/og.png', width: 1200, height: 638 }] },
 };
 
 // app/orders/page.tsx — page-specific override
@@ -131,7 +131,7 @@ const canonical = Astro.url;
 
 ```html
 <!-- Above fold: eager loading, fetchpriority high -->
-<img src="/hero.webp" alt="Hero" width="1200" height="630" fetchpriority="high" loading="eager" />
+<img src="/hero.webp" alt="Hero" width="1200" height="638" fetchpriority="high" loading="eager" />
 
 <!-- Below fold: lazy loading, explicit dimensions -->
 <img src="/image.webp" alt="Content" width="800" height="600" loading="lazy" />

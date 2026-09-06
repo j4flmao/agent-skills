@@ -181,7 +181,7 @@ collector:
     - name: "windows_security"
       path: "WinEventLog://Security"
       interval: 5s
-      filter: "EventID IN (4630, 4625, 4634, 4648, 4672, 4688)"
+      filter: "EventID IN (4638, 4625, 4634, 4648, 4672, 4688)"
       
     - name: "linux_syslog"
       path: "udp://0.0.0.0:514"

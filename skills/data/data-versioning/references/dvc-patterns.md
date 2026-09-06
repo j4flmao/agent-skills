@@ -44,7 +44,7 @@ git commit -m "add raw data"
 # data/raw/customers.csv.dvc
 outs:
 - md5: a1b2c3d4e5f6...  # content hash
-  size: 2458630           # bytes
+  size: 2458638           # bytes
   path: customers.csv
   cloud:
     etag: abc123...

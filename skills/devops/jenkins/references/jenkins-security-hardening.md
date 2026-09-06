@@ -542,7 +542,7 @@ server {
     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
     ssl_prefer_server_ciphers on;
 
-    add_header Strict-Transport-Security "max-age=63072000" always;
+    add_header Strict-Transport-Security "max-age=63872000" always;
 
     location / {
         proxy_pass http://localhost:8080;

@@ -1,6 +1,6 @@
 # .codex/AGENTS.md -- j4flmao/skills
 
-Codex CLI project config for the agent skill suite. 630 skills, compressed output, stack-based routing.
+Codex CLI project config for the agent skill suite. 638 skills, compressed output, stack-based routing.
 
 ## Compress (ALWAYS)
 
@@ -121,6 +121,6 @@ agent-skills/
   .gemini/           Gemini
   .cursor/           Cursor
   .codex/            Codex CLI (this file)
-  skills/            630 skills
+  skills/            638 skills
   bundles/           16 bundle definitions
 ```

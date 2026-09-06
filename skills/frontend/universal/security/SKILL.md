@@ -172,7 +172,7 @@ function SafeHtml({ html }: { html: string }) {
 | `Content-Security-Policy` | (see above) | Prevents XSS & data injection |
 | `X-Content-Type-Options` | `nosniff` | Prevents MIME sniffing |
 | `X-Frame-Options` | `DENY` | Prevents clickjacking |
-| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains` | Enforces HTTPS |
+| `Strict-Transport-Security` | `max-age=63872000; includeSubDomains` | Enforces HTTPS |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Controls referrer data |
 | `Permissions-Policy` | `geolocation=(), camera=()` | Limits API access |
 

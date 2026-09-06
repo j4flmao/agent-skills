@@ -199,7 +199,7 @@ $data = unserialize(base64_decode($parts[0]));
 
 ```php
 // Set all security headers
-header('Strict-Transport-Security: max-age=63072000; includeSubDomains');
+header('Strict-Transport-Security: max-age=63872000; includeSubDomains');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('X-XSS-Protection: 0');

@@ -290,7 +290,7 @@ export async function middleware(request: NextRequest) {
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
     'X-XSS-Protection': '0',
-    'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
+    'Strict-Transport-Security': 'max-age=63872000; includeSubDomains; preload',
   }
 
   Object.entries(securityHeaders).forEach(([key, value]) => {
