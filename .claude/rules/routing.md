@@ -1,10 +1,10 @@
-# Routing — 542 skills
+# Routing — 640 skills
 
 ## Entry
 `skills/core/master-orchestrator/SKILL.md` (no trigger match → route here)
 
 ## Phase Order
-planning → backend → frontend → mobile → desktop → dev-loop → devops → management
+planning → backend → frontend → mobile → desktop → dev-loop → devops → management → game
 
 ## Quick Map
 | Phase | Skills |
@@ -33,6 +33,7 @@ planning → backend → frontend → mobile → desktop → dev-loop → devops
 | product (10) | analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization, customer-journey, persona-development |
 | ml (16) | ml-experiment-tracking, ml-classical-ml, ml-deep-learning, ml-feature-engineering, ml-hyperparameter-tuning, ml-model-evaluation, ml-model-interpretability, ml-time-series, ml-nlp, ml-computer-vision, ml-recommender, ml-anomaly-detection, ml-ml-pipeline, ml-feature-store, ml-model-serving, ml-math-foundations |
 | blockchain (16) | blockchain-core, blockchain-cryptography, blockchain-ethereum, blockchain-bitcoin, blockchain-patterns, blockchain-application, blockchain-web3, blockchain-testing, blockchain-infrastructure, blockchain-security, blockchain-management, blockchain-solana, blockchain-defi, blockchain-cross-chain, blockchain-zk, blockchain-data-indexing |
+| game (29) | unity, unreal, godot, cocos2d, ecs-architecture, multiplayer-netcode, game-engine/ecs-pattern, game-engine/patterns, game-engine/multiplayer-netcode, game-engine/memory-management, game-engine/job-system, game-engine/platform-abstraction, game-engine/asset-pipeline, game-engine/math-foundation, game-engine/render-graph, game-server/authoritative-server, game-server/interest-management, game-server/matchmaking-lobby, game-server/anti-cheat-server, game-server/scaling-architecture, client-engine/animation-systems, client-engine/input-systems, client-engine/level-streaming, client-engine/audio-engine, game-development/vulkan, game-development/physics-engine, game-development/unity-csharp, game-development/godot-gdscript, game-development/cocos2d-patterns |
 
 ## Trigger Keywords
 ```
@@ -407,6 +408,35 @@ defi/amm/lending/uniswap/curve/aave/yearn               → blockchain/blockchai
 cross-chain/ibc/layerzero/wormhole/axelar/ccip          → blockchain/blockchain-cross-chain
 zk/zero-knowledge/circom/noir/zk-rollup/zk-evm          → blockchain/blockchain-zk
 subgraph/the-graph/dune/indexing/blockchain-data         → blockchain/blockchain-data-indexing
+
+# game
+unity/unreal/godot/cocos2d                                → game/{engine}
+ecs/entity-component/archetype/component-system          → game/ecs-architecture, game/game-engine/ecs-pattern
+game-loop/tick/timestep/update-loops/frame-graph         → game/game-engine/patterns
+vulkan/swapchain/render-pass/shader/command-buffer       → game/game-development/vulkan
+physics/collision/ragdoll/rigid-body/constraint-solver   → game/game-development/physics-engine
+netcode/prediction/reconciliation/interpolation/lag-comp → game/multiplayer-netcode, game/game-engine/multiplayer-netcode
+unity/dots/burst/jobs/c# → game/game-development/unity-csharp
+godot/gdscript/server   → game/game-development/godot-gdscript
+cocos2d/scene-graph/director → game/game-development/cocos2d-patterns
+# game engine core
+memory/allocator/arena/pool/soa/cache-layout/gc               → game/game-engine/memory-management
+job-system/job-graph/scheduler/parallel-for/dependency → game/game-engine/job-system
+platform-abstraction/os/filesystem/thread/window/sdl → game/game-engine/platform-abstraction
+asset-pipeline/import/cook/pak/hot-reload/shader-compile/streaming → game/game-engine/asset-pipeline
+math-foundation/simd/quaternion/transform/frustum/collision-primitive/distance → game/game-engine/math-foundation
+render-graph/pass/attachment/barrier/sync/gpu-driven/command-list → game/game-engine/render-graph
+# game server
+authoritative-server/tick/snapshot/input-authority/rollback/lag-comp → game/game-server/authoritative-server
+interest-management/visibility/observer/interest/lod → game/game-server/interest-management
+matchmaking-lobby/elo/queue/region/ping/party → game/game-server/matchmaking-lobby
+anti-cheat/validation/integrity/anomaly/cheat/audit → game/game-server/anti-cheat-server
+scaling/zone/shard/stateless/edge/autoscaling → game/game-server/scaling-architecture
+# client engine
+animation/skeleton/skinning/blend/ik/retarget → game/client-engine/animation-systems
+input/action-mapping/ime/touch/gesture/haptics → game/client-engine/input-systems
+level-streaming/cells/residency/async-load → game/client-engine/level-streaming
+audio-engine/dsp/graph/spatial/reverb/ducking/voice → game/client-engine/audio-engine
 ```
 
 ## Stack Detection

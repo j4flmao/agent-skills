@@ -1,4 +1,4 @@
-# Routing -- 646 skills
+# Routing -- 640 skills
 
 ## Entry
 
@@ -194,11 +194,37 @@ defi/amm/lending/uniswap/yearn/curve                   -> blockchain/blockchain-
 cross-chain/ibc/layerzero/wormhole/axelar               -> blockchain/blockchain-cross-chain
 zk/circom/noir/zk-rollup/zkevm                          -> blockchain/blockchain-zk
 subgraph/dune/indexing/the-graph                        -> blockchain/blockchain-data-indexing
+
+# game
+unity/dots/burst/jobs                                   -> game/unity
+unreal/c++/blueprint/editor                             -> game/unreal
+godot/gdscript/scene                                    -> game/godot
+cocos2d/scene-graph/director                            -> game/cocos2d
+ecs/entity-component/archetype                          -> game/ecs-architecture
+netcode/prediction/reconciliation                       -> game/multiplayer-netcode
+vulkan/swapchain/render-pass/shader                     -> game/game-development/vulkan
+physics/collision/ragdoll/rigid-body                    -> game/game-development/physics-engine
+game-loop/tick/update-loop/frame-graph                  -> game/game-engine/patterns
+memory/allocator/arena/pool/soa/cache-layout            -> game/game-engine/memory-management
+job-system/job-graph/scheduler/parallel-for/dependency  -> game/game-engine/job-system
+platform/os/filesystem/thread/window/sdl                -> game/game-engine/platform-abstraction
+asset-pipeline/import/cook/pak/hot-reload/streaming     -> game/game-engine/asset-pipeline
+math-foundation/simd/quaternion/transform/frustum       -> game/game-engine/math-foundation
+render-graph/pass/attachment/barrier/sync/gpu-driven    -> game/game-engine/render-graph
+game-server/authoritative/tick/snapshot/rollback/lag    -> game/game-server/authoritative-server
+interest-management/visibility/observer/interest/lod    -> game/game-server/interest-management
+matchmaking/elo/queue/region/ping/party                 -> game/game-server/matchmaking-lobby
+anti-cheat/validation/integrity/anomaly/cheat/audit     -> game/game-server/anti-cheat-server
+scaling/zone/shard/stateless/edge/autoscaling           -> game/game-server/scaling-architecture
+animation/skeleton/skin/blend/ik/retarget               -> game/client-engine/animation-systems
+input/action-mapping/ime/touch/gesture/haptics          -> game/client-engine/input-systems
+level-streaming/cells/residency/async-load              -> game/client-engine/level-streaming
+audio-engine/dsp/graph/spatial/reverb/duck/voice        -> game/client-engine/audio-engine
 ```
 
 ## Phase order
 
-planning -> backend -> frontend -> mobile -> desktop -> dev-loop -> devops -> management
+planning -> backend -> frontend -> mobile -> desktop -> dev-loop -> devops -> management -> game
 
 ## Full skill table
 
@@ -228,3 +254,4 @@ planning -> backend -> frontend -> mobile -> desktop -> dev-loop -> devops -> ma
 | enterprise (12) | compliance-audit, multi-tenant, integration-patterns, data-governance, sla-management, legacy-migration, identity-provider, cost-governance, togaf-zachman, itil-service-mgmt, vendor-management, architecture-governance |
 | product (10) | analytics, ab-testing, user-research, growth-engineering, pricing-strategy, go-to-market, onboarding-flow, feature-prioritization, customer-journey, persona-development |
 | blockchain (16) | blockchain-core, blockchain-cryptography, blockchain-ethereum, blockchain-bitcoin, blockchain-patterns, blockchain-application, blockchain-web3, blockchain-testing, blockchain-infrastructure, blockchain-security, blockchain-management, blockchain-solana, blockchain-defi, blockchain-cross-chain, blockchain-zk, blockchain-data-indexing |
+| game (29) | unity, unreal, godot, cocos2d, ecs-architecture, multiplayer-netcode, game-engine/ecs-pattern, game-engine/patterns, game-engine/multiplayer-netcode, game-engine/memory-management, game-engine/job-system, game-engine/platform-abstraction, game-engine/asset-pipeline, game-engine/math-foundation, game-engine/render-graph, game-server/authoritative-server, game-server/interest-management, game-server/matchmaking-lobby, game-server/anti-cheat-server, game-server/scaling-architecture, client-engine/animation-systems, client-engine/input-systems, client-engine/level-streaming, client-engine/audio-engine, game-development/vulkan, game-development/physics-engine, game-development/unity-csharp, game-development/godot-gdscript, game-development/cocos2d-patterns |

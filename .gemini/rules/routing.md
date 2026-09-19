@@ -1,4 +1,4 @@
-# Routing — 542 skills
+# Routing — 640 skills
 
 No match -> skills/core/master-orchestrator/SKILL.md. Detect stack then route.
 
@@ -21,6 +21,7 @@ quality/        e2e-testing/visual/load-testing/contract-testing/unit-testing/in
 data/           etl/warehouse/streaming/bi/data-quality/distributed-storage/distributed-compute/data-lake/lakehouse/batch-processing/workflow-orchestration/cdc/data-replication/data-platform/data-catalog/data-observability/data-contracts/data-mesh/data-versioning/data-api/data-virtualization/schema-registry/relational-database/nosql/graph-database/search-engine/clean-room/cost-optimization/formats/lineage/pipeline-cicd/testing/reverse-etl/data-strategy/dimensional-modeling
 data-science/   statistical-analysis/experimentation/causal-inference/analytics-engineering
 blockchain/     core/cryptography/ethereum/bitcoin/patterns/application/web3/testing/infrastructure/security/management/solana/defi/cross-chain/zk/data-indexing
+game/           unity/unreal/godot/cocos2d + ecs-architecture/multiplayer-netcode/game-engine (patterns/ecs-pattern/multiplayer-netcode/memory-management/job-system/platform-abstraction/asset-pipeline/math-foundation/render-graph) + game-server (authoritative-server/interest-management/matchmaking-lobby/anti-cheat-server/scaling-architecture) + client-engine (animation-systems/input-systems/level-streaming/audio-engine) + game-development (vulkan/physics-engine/unity-csharp/godot-gdscript/cocos2d-patterns)
 
 ## Compression
 

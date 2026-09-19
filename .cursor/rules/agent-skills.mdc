@@ -1,5 +1,5 @@
 ---
-description: "j4flmao/skills — 646 skills, compressed output, stack routing"
+description: "j4flmao/skills — 640 skills, compressed output, stack routing"
 glob: "**/*"
 ---
 
@@ -24,4 +24,5 @@ mobile/         ios/android/flutter/react-native + universal (7)
 devops/         docker/k8s/terraform/helm/ansible
 dev-loop/       review/debug/refactor/git
 management/     pm/ba/qa/qc/security
+game/           unity/unreal/godot/cocos2d + ecs/multiplayer-netcode/game-engine (patterns/ecs-pattern/multiplayer-netcode/memory-management/job-system/platform-abstraction/asset-pipeline/math-foundation/render-graph) + game-server (authoritative-server/interest-management/matchmaking-lobby/anti-cheat-server/scaling-architecture) + client-engine (animation-systems/input-systems/level-streaming/audio-engine) + game-development (vulkan/physics-engine/unity-csharp/godot-gdscript/cocos2d-patterns)
 ```
