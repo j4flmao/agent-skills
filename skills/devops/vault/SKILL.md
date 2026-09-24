@@ -529,6 +529,7 @@ resource "vault_database_secret_backend_role" "app_role" {
   - references/secrets-engines.md — Secrets Engines
   - references/vault-advanced.md — Vault Advanced Topics
   - references/vault-basics.md — Vault Basics
+  - references/vault-clustering.md — Vault Clustering and HA
   - references/vault-fundamentals.md — Vault Fundamentals
   - references/vault-integration.md — Vault Integration
   - references/vault-policies.md — Vault Policies

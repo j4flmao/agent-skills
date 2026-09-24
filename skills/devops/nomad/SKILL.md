@@ -661,14 +661,13 @@ Key metrics to alert on:
 ## References
   - references/nomad-advanced.md — Nomad Advanced Topics
   - references/nomad-fundamentals.md — Nomad Fundamentals
-  - references/nomad-cluster-setup.md — Nomad Cluster Configuration
-  - references/nomad-job-spec.md — Nomad Job Specification Reference
-  - references/nomad-consul-connect.md — Consul Connect with Nomad
-  - references/nomad-csi.md — CSI Volume Integration
-  - references/nomad-autoscaling.md — Nomad Autoscaler
-  - references/nomad-security.md — ACLs and Vault Integration
+  - references/nomad-jobs.md — Nomad Job Specification Reference
+  - references/nomad-operations.md — Nomad Cluster Operations
+  - references/nomad-integrations.md — Nomad Integrations (Consul, Vault, CSI)
+  - references/nomad-production.md — Nomad Production Hardening
+  - references/nomad-security-hardening.md — ACLs, Secrets, and Vault Integration
 ## Handoff
-- `devops-consul` for Consul service discovery and Connect mesh.
+- `devops/consul` for Consul service discovery and Connect mesh.
 - `devops-vault` for Vault secrets management integration.
 - `devops-terraform` for Nomad cluster Terraform provisioning.
 - `devops-monitoring` for Prometheus/Grafana monitoring of Nomad.

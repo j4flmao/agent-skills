@@ -6,11 +6,11 @@ Generated: 2026-09-19
 
 | Metric | Count |
 |--------|-------|
-| Skills (SKILL.md) | 640 |
-| SKILL.md lines | 249,518 |
-| Reference files | 3,935 |
-| Reference lines | 1,678,127 |
-| Grand total lines | 1,927,645 |
+| Skills (SKILL.md) | 641 |
+| SKILL.md lines | 249,901 |
+| Reference files | 3,942 |
+| Reference lines | 1,678,927 |
+| Grand total lines | 1,928,828 |
 
 ## Skills by Category
 
@@ -36,6 +36,7 @@ Generated: 2026-09-19
 | frontend | 60 |
 | fundamental-truths | 4 |
 | game | 29 |
+| devops | 70 |
 | hardware-acceleration | 11 |
 | harness-engineering | 2 |
 | languages | 14 |

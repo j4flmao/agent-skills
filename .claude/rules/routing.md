@@ -1,4 +1,4 @@
-# Routing — 640 skills
+# Routing — 641 skills
 
 ## Entry
 `skills/core/master-orchestrator/SKILL.md` (no trigger match → route here)
@@ -19,7 +19,7 @@ planning → backend → frontend → mobile → desktop → dev-loop → devops
 | mobile-universal (16) | patterns, testing, performance, security, networking, storage, deployment, push-notifications, in-app-purchase, crash-reporting, deep-linking, offline-first, biometrics, map-location, camera-media, analytics |
 | desktop (12) | desktop-electron, desktop-tauri, desktop-qt, desktop-gtk, desktop-wpf, desktop-winui3, desktop-uwp, desktop-winforms, desktop-swiftui, desktop-appkit, desktop-gnome, desktop-kde |
 | dev-loop (12) | code-review, debugging-strategy, refactor-guide, git-workflow, security-auditor, performance-profiler, changelog-generator, readme-writer, pr-writer, dev-container, tech-debt-tracker, api-client-generator |
-| devops (56) | docker-patterns, cicd-pipeline, kubernetes-patterns, observability, helm-patterns, terraform, ansible, jenkins, longhorn, monitoring, github-actions, gitops, vault, aws, serverless, monorepo, dependency-management, api-documentation, argo-cd, azure, gcp, chaos-engineering, service-mesh, finops, backup-dr, database-migration, dataops, mlops, kubernetes-for-data, cloud-cost-optimization, cloud-architecture, nomad, incident-response, cost-benefit, devops-hiring, platform-engineering, sre-practices, internal-developer-platform, kubernetes-operators, gitops-advanced, progressive-delivery, policy-as-code, cloud-migration, pulumi, crossplane, gitlab-ci, circleci, kubernetes-autoscaling, apm-observability, cilium-ebpf, opentelemetry, oracle-cloud, digitalocean, ibm-cloud, alibaba-cloud, hetzner |
+| devops (57) | docker-patterns, cicd-pipeline, kubernetes-patterns, observability, helm-patterns, terraform, ansible, jenkins, longhorn, monitoring, github-actions, gitops, vault, aws, serverless, monorepo, dependency-management, api-documentation, argo-cd, azure, gcp, chaos-engineering, service-mesh, finops, backup-dr, database-migration, dataops, mlops, kubernetes-for-data, cloud-cost-optimization, cloud-architecture, nomad, consul, incident-response, cost-benefit, devops-hiring, platform-engineering, sre-practices, internal-developer-platform, kubernetes-operators, gitops-advanced, progressive-delivery, policy-as-code, cloud-migration, pulumi, crossplane, gitlab-ci, circleci, kubernetes-autoscaling, apm-observability, cilium-ebpf, opentelemetry, oracle-cloud, digitalocean, ibm-cloud, alibaba-cloud, hetzner |
 | management (17) | pm, ba, qa, qc, team-rules, security, pentesting, alerting, okr-kpi, sprint-retro, risk-management, hiring, stakeholder, cost-benefit, agile-scrum-kanban, team-topology, change-management |
 | ai (15) | ai-prompt-engineering, ai-rag-patterns, ai-llm-ops, ai-vector-databases, ai-ai-agents, ai-ai-evals, ai-model-training, ai-embeddings, ai-multimodal, ai-ai-safety, ai-ai-testing, ai-ai-cost-optimization, ai-langchain-patterns, ai-mcp-patterns, ai-ai-observability |
 | security (17) | security-sast-dast, security-sbom, security-secrets-management, security-container-security, security-api-security, security-data-security, soc-operations, siem-engineering, soar-automation, threat-intelligence, edr-xdr, zero-trust, cspm, penetration-testing, iam-governance, rbac, abac |
@@ -197,6 +197,7 @@ finops/cloud-cost               → devops/finops
 backup/dr/disaster-recovery     → devops/backup-dr
 db-migration/flyway/liquibase   → devops/database-migration
 nomad/hashi-nomad               → devops/nomad
+consul/consul-connect/service-discovery → devops/consul
 incident-response/on-call       → devops/incident-response
 pr-writer/pull-request          → dev-loop/pr-writer
 dev-container/devcontainer      → dev-loop/dev-container
