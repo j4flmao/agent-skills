@@ -1,6 +1,6 @@
 # @j4flmao/agent-skills
 
-646 agent skills for software development — planning, architecture, low-level, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, data-science, design, quality, blockchain, prompt-engineering, cloud-native, system-design, site-reliability-engineering, game. Each skill is a `SKILL.md` defining triggers, rules, and response format.
+641 agent skills for software development — planning, architecture, low-level, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, data-science, design, quality, blockchain, prompt-engineering, cloud-native, system-design, site-reliability-engineering, game. Each skill is a `SKILL.md` defining triggers, rules, and response format.
 
 ## Installation
 
@@ -54,7 +54,7 @@ cp -r ~/skills/skills/devops/docker-patterns /path/to/project/skills/
 
 ```bash
 # Requires the repo to be pushed to GitHub
-npx skills add j4flmao/agent-skills            # all 646 skills
+npx skills add j4flmao/agent-skills            # all 641 skills
 npx skills add j4flmao/agent-skills --bundle backend-only
 npx skills add j4flmao/agent-skills -g          # global (every project)
 ```
@@ -67,28 +67,32 @@ npx skills add j4flmao/agent-skills --bundle <name>
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| `blockchain-all` | 16+ | All blockchain: core, cryptography, Ethereum, Bitcoin, patterns, application, web3, testing, infrastructure, security, management, Solana, DeFi, cross-chain, ZK, data indexing |
-| `game-dev` | 4+ | Godot, Unity, Cocos2d, Unreal |
-| `fullstack-nestjs-react` | 230+ | NestJS + React |
-| `fullstack-golang-vue` | 230+ | Go + Vue |
-| `fullstack-rust-angular` | 230+ | Rust + Angular |
-| `fullstack-dotnet-react` | 230+ | .NET + React |
-| `fullstack-nodejs-react` | 230+ | Node.js + React |
-| `fullstack-elysia-react` | 230+ | ElysiaJS + React |
-| `fullstack-rails-svelte` | 228+ | Rails + SvelteKit |
-| `backend-only` | 190+ | Backend only (includes ai, ml, security, data skills) |
-| `backend-patterns` | 28+ | CQRS, Event Sourcing, Saga, Outbox + universal patterns |
-| `infra-cloud` | 34+ | Infrastructure & Cloud: IaC, CI/CD, K8s, cloud providers, observability |
-| `security-all` | 23+ | All security: Zero Trust, CSPM, EDR, SOC, SIEM, SOAR, Threat Intel, Red Team, Blue Team |
-| `advanced-security-bundle` | 8+ | Advanced security (Educational): Red Team, Blue Team, Cloud Attacks, Exploit Patterns |
-| `frontend-only` | 80+ | Frontend only (includes design skills) |
-| `devops-only` | 55+ | DevOps only (includes security, nomad, incident-response) |
-| `management-only` | 65+ | Management only (includes data, quality, cost-benefit, hiring, stakeholder) |
-| `mobile-ios` | 95+ | iOS + universal mobile skills + deployment |
-| `mobile-android` | 95+ | Android + universal mobile skills + deployment |
-| `mobile-flutter` | 98+ | Flutter + universal mobile skills + deployment |
-| `mobile-react-native` | 98+ | React Native + universal mobile skills + deployment |
-| `backend-patterns` | 28+ | CQRS, Event Sourcing, Saga, Outbox + universal patterns |
+| `blockchain-all` | 16 | All blockchain: core, cryptography, Ethereum, Bitcoin, patterns, application, web3, testing, infrastructure, security, management, Solana, DeFi, cross-chain, ZK, data indexing |
+| `fullstack-nestjs-react` | 229 | NestJS + React |
+| `fullstack-golang-vue` | 229 | Go + Vue |
+| `fullstack-rust-angular` | 229 | Rust + Angular |
+| `fullstack-dotnet-react` | 229 | .NET + React |
+| `fullstack-nodejs-react` | 229 | Node.js + React |
+| `fullstack-elysia-react` | 229 | ElysiaJS + React |
+| `fullstack-rails-svelte` | 227 | Rails + SvelteKit |
+| `backend-only` | 190 | Backend only (includes ai, ml, security, data skills) |
+| `backend-patterns` | 29 | CQRS, Event Sourcing, Saga, Outbox + universal patterns |
+| `infra-cloud` | 37 | Infrastructure & Cloud: IaC, CI/CD, K8s, cloud providers, observability |
+| `security-all` | 26 | All security: Zero Trust, CSPM, EDR, SOC, SIEM, SOAR, Threat Intel, Red Team, Blue Team |
+| `advanced-security-bundle` | 11 | Advanced security (Educational): Red Team, Blue Team, Cloud Attacks, Exploit Patterns |
+| `frontend-only` | 64 | Frontend only (includes design skills) |
+| `devops-only` | 67 | DevOps only (includes security, nomad, consul, incident-response) |
+| `management-only` | 68 | Management only (includes data, quality, cost-benefit, hiring, stakeholder) |
+| `mobile-ios` | 113 | iOS + universal mobile skills + deployment |
+| `mobile-android` | 113 | Android + universal mobile skills + deployment |
+| `mobile-flutter` | 116 | Flutter + universal mobile skills + deployment |
+| `mobile-react-native` | 116 | React Native + universal mobile skills + deployment |
+| `desktop-all` | 34 | Desktop: Electron, Tauri, Qt, Gtk, WPF, WinUI, UWP, WinForms, SwiftUI, AppKit, GNOME, KDE |
+| `data-platform` | 42 | ETL, warehouse, streaming, BI, quality, storage, compute, lake, lakehouse, batch, orchestration, CDC, replication, catalog, observability, contracts, mesh, versioning, API, virtualization, schema registry, relational, NoSQL, graph, search, clean-room, cost-optimization, formats, lineage, pipeline-CI/CD, testing, reverse-ETL |
+| `soc-all` | 19 | SOC: operations, SIEM engineering, SOAR automation, threat intelligence, EDR/XDR |
+| `cloud-architecture` | 16 | Cloud architecture: landing zone, well-architected framework, governance, multi-cloud |
+| `ecommerce-all` | 12 | E-commerce: payment processing, checkout and cart, order management |
+| `api-all` | 10 | API ecosystem: GraphQL Federation, API product management, API design, API gateway |
 
 ## How Skills Work
 
@@ -136,8 +140,8 @@ No keyword match? Agent routes through `master-orchestrator`, detects the projec
 | **8b — Mobile Universal** | `mobile-patterns`, `mobile-testing`, `mobile-performance`, `mobile-security`, `mobile-networking`, `mobile-storage`, `mobile-deployment`, `push-notifications`, `in-app-purchase`, `crash-reporting`, `mobile-deep-linking`, `mobile-offline-first`, `mobile-biometrics`, `mobile-map-location`, `mobile-camera-media`, `mobile-analytics`, `mobile-ar-vr`, `mobile-widgets`, `mobile-localization` |
 | **9 — Enterprise** | `enterprise-compliance-audit`, `enterprise-cost-governance`, `enterprise-data-governance`, `enterprise-identity-provider`, `enterprise-integration-patterns`, `enterprise-legacy-migration`, `enterprise-multi-tenant`, `enterprise-sla-management`, `enterprise-high-availability`, `enterprise-business-continuity`, `enterprise-capacity-planning`, `togaf-zachman`, `itil-service-mgmt`, `vendor-management`, `architecture-governance` |
 | **10 — Product** | `product-ab-testing`, `product-analytics`, `product-feature-prioritization`, `product-go-to-market`, `product-growth-engineering`, `product-onboarding-flow`, `product-pricing-strategy`, `product-user-research`, `customer-journey`, `persona-development` |
-| **11 — Blockchain** (16) | `blockchain-core`, `blockchain-cryptography`, `blockchain-ethereum`, `blockchain-bitcoin`, `blockchain-patterns`, `blockchain-application`, `blockchain-web3`, `blockchain-testing`, `blockchain-infrastructure`, `blockchain-security`, `blockchain-management`, `blockchain-solana`, `blockchain-defi`, `blockchain-cross-chain`, `blockchain-zk`, `blockchain-data-indexing` |
-| **12 — Game** (4) | `game-godot`, `game-unity`, `game-cocos2d`, `game-unreal` |
+| **11 — Blockchain** (19) | `blockchain-core`, `blockchain-cryptography`, `blockchain-ethereum`, `blockchain-bitcoin`, `blockchain-patterns`, `blockchain-application`, `blockchain-web3`, `blockchain-testing`, `blockchain-infrastructure`, `blockchain-security`, `blockchain-management`, `blockchain-solana`, `blockchain-defi`, `blockchain-cross-chain`, `blockchain-zk`, `blockchain-data-indexing`, `defi-protocols`, `smart-contract-security`, `zero-knowledge-proofs` |
+| **12 — Game** (29) | `game-engine` (core, math, platform, asset, render-graph, ecs-architecture), `game-server` (authoritative, interest-management, matchmaking, anti-cheat, scaling), `client-engine` (input, animation, level-streaming, audio), `game-godot`, `game-unity`, `game-cocos2d`, `game-unreal`, `game-development`, `multiplayer-netcode` |
 | **13 — Cloud Native** | `cloud-security-offensive`, `cloud-security-defensive`, `distributed-tracing`, `event-driven-scaling`, `gitops-workflows`, `kubernetes-patterns`, `serverless-cold-starts` |
 
 Mobile universal skills apply across all platforms: patterns, testing, performance, security, networking, storage, deployment, push-notifications, in-app-purchase, crash-reporting, deep-linking, offline-first, biometrics, map-location, camera-media, analytics, widgets, localization.
@@ -176,7 +180,6 @@ Agent config files contain the compression rules:
 ├── .opencode/        OpenCode
 ├── .amp/             Amp
 ├── .github/          GitHub Copilot
-├── .github/          GitHub Copilot (copilot-instructions.md)
 ├── .gemini/          Gemini
 ├── .cursor/          Cursor
 ├── .codex/           Codex CLI
@@ -185,10 +188,11 @@ Agent config files contain the compression rules:
 │                     ai-ml-guide, data-guide, security-guide, ci-cd-patterns,
 │                     backend-guide, frontend-guide, devops-guide, mobile-guide,
 │                     desktop-guide, dev-loop-guide, management-guide, product-guide
-├── skills/
+├── skills/          641 skills
 │   ├── core/         4 skills
-│   ├── planning/     8 skills
-│   ├── backend/      84 skills (36 stack + 48 universal)
+│   ├── planning/     13 skills (8 + bpmn-modeling, bdd-atdd, create-roadmap, create-pitch-deck, market-analysis)
+│   ├── backend/      91 skills (46 universal + 45 stack/specialized)
+│   │   ├── universal/    46 skills (incl. authorization, firebase, supabase)
 │   │   ├── nodejs/       Node.js (architecture, patterns, express, prisma, fastify, hono, drizzle)
 │   │   ├── nestjs/       NestJS (architecture, patterns)
 │   │   ├── go/           Go (architecture, patterns)
@@ -206,24 +210,29 @@ Agent config files contain the compression rules:
 │   │   ├── elixir/       Elixir
 │   │   ├── deno/         Deno (oak)
 │   │   ├── bun/          Bun
-│   │   └── universal/    46 skills (incl. authorization, firebase, supabase)
-│   ├── frontend/     52 skills (25 stack + 27 universal)
-│   │   ├── react/        React (architecture, nextjs)
-│   │   ├── vue/          Vue (architecture, nuxt, patterns)
+│   │   └── specialized/  bulk-import, caching-strategies, event-driven-architecture, fintech-patterns, graphql-optimization, report-generation, sms-messaging, transactional-email, web-real-time
+│   ├── frontend/     60 skills (32 stack/specialized + 28 universal)
+│   │   ├── universal/    28 skills
+│   │   ├── react/        React (architecture, patterns)
+│   │   ├── vue/          Vue (architecture, patterns, nuxt)
 │   │   ├── angular/      Angular (architecture, patterns)
 │   │   ├── svelte/       Svelte (architecture, patterns, sveltekit)
 │   │   ├── remix/        Remix (architecture, patterns)
 │   │   ├── astro/        Astro (architecture, patterns)
 │   │   ├── solidjs/      SolidJS (architecture, patterns)
 │   │   ├── qwik/         Qwik (architecture, patterns)
+│   │   ├── nextjs/       Next.js
 │   │   ├── lit/          Lit
 │   │   ├── preact/       Preact
 │   │   ├── alpinejs/     Alpine.js
 │   │   ├── htmx/         htmx
 │   │   ├── ember/        Ember.js
 │   │   ├── stencil/      Stencil
-│   │   └── universal/    27 skills
-│   ├── desktop/    12 skills
+│   │   ├── e2e-testing/  e2e testing
+│   │   ├── state-management/  state management
+│   │   ├── architecture/  frontend architecture
+│   │   └── advanced-architecture/  advanced architecture
+│   ├── desktop/     10 skills (12 dirs, kde/winui3 empty)
 │   │   ├── electron/     Cross-platform (Chromium + Node)
 │   │   ├── tauri/        Cross-platform (Rust + web)
 │   │   ├── qt/           Cross-platform (C++, QML)
@@ -236,7 +245,7 @@ Agent config files contain the compression rules:
 │   │   ├── appkit/       macOS (AppKit)
 │   │   ├── gnome/        Linux (GTK 4, libadwaita)
 │   │   └── kde/          Linux (Qt 6, Kirigami)
-│   ├── mobile/      26+ skills
+│   ├── mobile/      28 skills (universal 17 + 7 platforms + cross-platform 2 + localization/widgets)
 │   │   ├── ios/           iOS native
 │   │   ├── android/       Android native
 │   │   ├── flutter/       Flutter
@@ -244,28 +253,50 @@ Agent config files contain the compression rules:
 │   │   ├── kotlin-multiplatform/  KMP
 │   │   ├── ionic-capacitor/       Ionic/Capacitor
 │   │   ├── dotnet-maui/           .NET MAUI
-│   │   └── universal/     18 skills
+│   │   ├── cross-platform/ 2 skills
+│   │   └── universal/     17 skills (+ mobile-localization, mobile-widgets)
 │   ├── dev-loop/     12 skills
-│   ├── devops/       60 skills (incl. bare-metal, datacenter, network-infrastructure, storage-infrastructure, cdn-edge, hybrid-cloud, platform-engineering, sre-practices, internal-developer-platform, kubernetes-operators, gitops-advanced, progressive-delivery, policy-as-code, cloud-migration, cloud-architecture)
-│   ├── management/   17 skills (11 + cost-benefit, hiring, stakeholder, agile-scrum-kanban, team-topology, change-management)
-│   ├── enterprise/   15 skills (8 + high-availability, business-continuity, capacity-planning, togaf-zachman, itil-service-mgmt, vendor-management, architecture-governance)
-│   ├── product/       10 skills (8 + customer-journey, persona-development)
-│   ├── ai/            15 skills
-│   ├── ml/            16 skills (15 + math-foundations)
-│   ├── security/      17 skills
+│   ├── devops/       70 skills (incl. bare-metal, datacenter, network-infrastructure, storage-infrastructure, cdn-edge, hybrid-cloud, platform-engineering, sre-practices, internal-developer-platform, kubernetes-operators, gitops-advanced, progressive-delivery, policy-as-code, cloud-migration, cloud-architecture, nomad, consul, vault)
+│   ├── management/   18 skills (incl. cost-benefit, hiring, stakeholder, agile-scrum-kanban, team-topology, change-management)
+│   ├── enterprise/   18 skills (incl. high-availability, business-continuity, capacity-planning, togaf-zachman, itil-service-mgmt, vendor-management, architecture-governance)
+│   ├── product/       9 skills (8 + customer-journey, persona-development)
+│   ├── game/          29 skills (engine core + game server + client engine + godot, unity, unreal, cocos2d)
+│   ├── ai/            12 skills
+│   ├── ml/            17 skills (16 + math-foundations)
+│   ├── security/      23 skills (incl. redteam, blueteam, malware-analysis, exploit-development, reverse-engineering)
+│   ├── blockchain/    19 skills (incl. cross-chain, ZK, data-indexing, defi-protocols, smart-contract-security, zero-knowledge-proofs)
 │   ├── data-science/   4 skills
-│   ├── data/          37 skills
-│   ├── design/        8 skills
+│   ├── data/          39 skills
+│   ├── design/        7 skills
 │   ├── quality/       11 skills
-│   ├── prompt-engineering/ 5 skills
-│   ├── cloud-native/   4 skills
+│   ├── prompt-engineering/ 4 skills
+│   ├── cloud-native/  18 skills
 │   ├── system-design/  4 skills
 │   ├── site-reliability-engineering/ 4 skills
+│   ├── architecture/   7 skills
+│   ├── languages/     14 skills
+│   ├── low-level/      5 skills
+│   ├── embedded-systems/ 6 skills
+│   ├── hardware-acceleration/ 11 skills
+│   ├── quantum-computing/ 8 skills
+│   ├── cybersecurity/   7 skills
+│   ├── rnd/            6 skills
+│   ├── niche/          8 skills
+│   ├── personas/      17 skills
+│   ├── seo/            4 skills
+│   ├── ecommerce/      5 skills
+│   ├── tools/          3 skills
+│   ├── playbooks/      3 skills
+│   ├── web/            4 skills
+│   ├── fundamental-truths/ 4 skills
+│   ├── harness-engineering/ 2 skills
+│   ├── quality-assurance/  2 skills
+│   └── aspirational/   1 skill
 └── bundles/
     └── bundle-definitions.json
 ```
 
-**Current Scale:** 509 Ultra-Deep Technical Skills | ~4,072+ Reference Files
+**Current Scale:** 641 Ultra-Deep Technical Skills | 3,942 Reference Files (1,928,828 total lines)
 
 This repository contains the most exhaustive, hardcore collection of AI agent coding skills.
 Generated via an advanced **20-Subagent Mega Architecture** focusing heavily on SA, Cloud, AI, Data, and Blockchain.
