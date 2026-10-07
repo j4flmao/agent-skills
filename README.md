@@ -2,6 +2,12 @@
 
 641 agent skills for software development — planning, architecture, low-level, backend, frontend, desktop, mobile, devops, management, enterprise, product, ml, ai, security, data, data-science, design, quality, blockchain, prompt-engineering, cloud-native, system-design, site-reliability-engineering, game. Each skill is a `SKILL.md` defining triggers, rules, and response format.
 
+> **Looking for guardrails, not just knowledge?**
+> This repo is a free library of skills. If you want rules managed as one
+> system across Claude Code, Cursor, Codex CLI, Gemini CLI, OpenCode, Copilot
+> and Windsurf, plus safety hooks and an eval kit, see
+> [Agent Discipline Pro](https://buy.polar.sh/polar_cl_kCJAUXacBrFJfYhxZCMqYXLmhNCvA0ao7RYKC4HTsuI).
+
 ## Installation
 
 ### Option 1: Use in the repo directly (no install needed)
