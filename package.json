@@ -65,7 +65,8 @@
   ],
   "scripts": {
     "validate": "pwsh -NoProfile -Command \"exit (Get-ChildItem skills -Recurse -Filter SKILL.md | Where-Object { (Get-Content $_.FullName -Raw) -notmatch '^---' }).Count\"",
-    "lint": "pwsh -NoProfile -Command \"exit (Get-ChildItem skills -Recurse -Filter SKILL.md | ForEach-Object { $c=Get-Content $_.FullName -Raw; $d=$_.DirectoryName; [regex]::Matches($c,'references/[\\w-]+\\.md') | Where-Object { -not (Test-Path (Join-Path $d $_.Value)) } }).Count\""
+    "lint": "pwsh -NoProfile -Command \"exit (Get-ChildItem skills -Recurse -Filter SKILL.md | ForEach-Object { $c=Get-Content $_.FullName -Raw; $d=$_.DirectoryName; [regex]::Matches($c,'references/[\\w-]+\\.md') | Where-Object { -not (Test-Path (Join-Path $d $_.Value)) } }).Count\"",
+    "validate:governance": "node scripts/validate-agent-governance.js"
   },
   "skillCount": 399
 }
